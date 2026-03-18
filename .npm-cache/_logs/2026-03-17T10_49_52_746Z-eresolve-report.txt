@@ -1,0 +1,21 @@
+'Log files:
+/Users/juju/Talk foot aplli/talk-foot-appli/.npm-cache/_logs/2026-03-17T10_49_52_746Z-debug-0.log
+
+# npm resolution error report
+
+While resolving: talk-foot-appli@0.0.0
+Found: vite@8.0.0
+node_modules/vite
+  dev vite@"^8.0.0" from the root project
+  peer vite@"*" from @vitejs/devtools@0.0.0-alpha.34
+  node_modules/@vitejs/devtools
+    peerOptional @vitejs/devtools@"^0.0.0-alpha.31" from vite@8.0.0
+
+Could not resolve dependency:
+peer vite@"^5.2.0 || ^6 || ^7" from @tailwindcss/vite@4.2.1
+node_modules/@tailwindcss/vite
+  dev @tailwindcss/vite@"*" from the root project
+
+Fix the upstream dependency conflict, or retry
+this command with --force or --legacy-peer-deps
+to accept an incorrect (and potentially broken) dependency resolution.
