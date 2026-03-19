@@ -38,5 +38,26 @@ export const initialMessages: Message[] = [
     text: 'Avant-match: qui marque en premier?',
     createdAt: base + 95_000,
   },
+  {
+    id: 'msg-d1',
+    matchId: 'm-demo-live',
+    userId: 'u-2',
+    text: 'Le Classique, ça chauffe déjà.',
+    createdAt: base + 10_000,
+  },
+  {
+    id: 'msg-d2',
+    matchId: 'm-demo-live',
+    userId: 'u-1',
+    text: 'PSG mène 1-0 mais l’OM pousse bien.',
+    createdAt: base + 120_000,
+  },
+  {
+    id: 'msg-d3',
+    matchId: 'm-demo-live',
+    userId: 'u-4',
+    text: 'Quel but de #9 à la 23e, quelle frappe.',
+    createdAt: base + 150_000,
+  },
 ]
 

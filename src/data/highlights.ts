@@ -40,5 +40,29 @@ export const mockHighlights: Highlight[] = [
     title: 'Compos annoncées',
     detail: 'Les onze sont sortis: gros duel au milieu, match sous tension.',
   },
+  {
+    id: 'h-d1',
+    matchId: 'm-demo-live',
+    minute: 12,
+    type: 'Occasion',
+    title: 'Occasion',
+    detail: 'Frappe de l’OM repoussée par Donnarumma.',
+  },
+  {
+    id: 'h-d2',
+    matchId: 'm-demo-live',
+    minute: 23,
+    type: 'But',
+    title: 'But',
+    detail: 'PSG 1-0 — Frappe lointaine parfaite de #9.',
+  },
+  {
+    id: 'h-d3',
+    matchId: 'm-demo-live',
+    minute: 35,
+    type: 'Carton',
+    title: 'Carton',
+    detail: 'Carton jaune côté OM après une faute dangereuse.',
+  },
 ]
 

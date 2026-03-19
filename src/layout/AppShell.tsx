@@ -9,22 +9,22 @@ export function AppShell() {
 
   useSwipeNavigate({
     enabled: !isChannel,
-    order: ['/', '/calendar', '/profile'],
+    order: ['/', '/calendar', '/boutique', '/profile'],
   })
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh min-w-0 overflow-x-hidden">
       <TopBar />
       {isChannel ? (
-        <div className="mx-auto w-full max-w-[1400px] px-2 pb-20 pt-2 sm:px-4 sm:pt-4">
+        <div className="mx-auto w-full max-w-[1400px] px-3 pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))] pt-4 sm:px-5 sm:pt-6">
           <main className="min-w-0">
             <Outlet />
           </main>
         </div>
       ) : (
-        <div className="mx-auto w-full max-w-[1240px] px-4 pb-24 pt-4 sm:px-6 sm:pt-6">
+        <div className="mx-auto w-full max-w-[1240px] px-3 pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] pt-5 sm:px-5 sm:pt-7">
           <main className="min-w-0">
-            <div className="tf-panel rounded-[28px] p-3 shadow-[0_18px_55px_rgba(11,27,58,.10)] sm:p-4">
+            <div className="tf-panel rounded-[28px] p-4 shadow-[0_18px_55px_rgba(1,30,51,.08)] sm:p-6">
               <Outlet />
             </div>
           </main>

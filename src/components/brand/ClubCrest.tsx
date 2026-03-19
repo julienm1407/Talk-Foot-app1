@@ -48,7 +48,10 @@ export function ClubCrest({
       aria-hidden="true"
     >
       <div className="absolute inset-0 bg-gradient-to-t from-black/18 to-transparent" />
-      <div className="relative px-2 text-[12px] font-black tracking-tight text-white/95">
+      <div
+        className="relative flex items-center justify-center px-1.5 font-black tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+        style={{ fontSize: Math.round(size * 0.32), lineHeight: 1 }}
+      >
         {shortName}
       </div>
       <div

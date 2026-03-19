@@ -4,37 +4,48 @@ import { reactionMeta } from './reactions'
 
 export function ReactionBar({
   onReact,
+  tokens = 0,
 }: {
   onReact: (type: ReactionType) => void
+  tokens?: number
 }) {
   const items: ReactionType[] = ['flare', 'confetti', 'goal', 'rage']
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {items.map((type) => {
-        const meta = reactionMeta[type]
-        return (
-          <button
-            key={type}
-            type="button"
-            onClick={() => onReact(type)}
-            className={cn(
-              'group inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900',
-              'shadow-sm outline-none transition',
-              'hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-600/20',
-              'active:scale-[0.98]',
-            )}
-            aria-label={`Réagir avec ${meta.label}`}
-            title={`${meta.emoji} ${meta.label} • ${meta.hint}`}
-          >
-            <span className="text-base leading-none" aria-hidden="true">
-              {meta.emoji}
-            </span>
-            <span className="hidden sm:inline">{meta.label}</span>
-          </button>
-        )
-      })}
+    <div className="space-y-1.5">
+      <span className="block text-[10px] font-bold tracking-wide text-tf-grey">
+        Réagir
+      </span>
+      <div className="grid grid-cols-4 gap-1.5">
+        {items.map((type) => {
+          const meta = reactionMeta[type]
+          const cost = meta.cost
+          const canAfford = tokens >= cost
+          return (
+            <button
+              key={type}
+              type="button"
+              onClick={() => canAfford && onReact(type)}
+              disabled={!canAfford}
+              className={cn(
+                'flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-1.5 text-xs font-bold shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-tf-grey/30 active:scale-[0.98]',
+                canAfford
+                  ? 'border-tf-grey-pastel/50 bg-tf-white text-tf-dark hover:border-tf-grey/40 hover:bg-tf-grey-pastel/20'
+                  : 'cursor-not-allowed border-tf-grey-pastel/40 bg-tf-grey-pastel/20 text-tf-grey',
+              )}
+              aria-label={`${meta.label} — ${canAfford ? cost : 'pas assez de crédits'} crédits`}
+              title={`${meta.emoji} ${meta.label} — ${cost} crédits`}
+            >
+              <span className="text-base leading-none" aria-hidden="true">
+                {meta.emoji}
+              </span>
+              <span className="text-[10px] font-bold tabular-nums text-tf-grey">
+                {cost} 💰
+              </span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
-

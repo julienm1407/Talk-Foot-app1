@@ -86,7 +86,7 @@ export const mockPredictions: Prediction[] = [
       id: 'pm-bvb-bay-2',
       competition: { id: 'bund', name: 'Bundesliga', shortName: 'BUN' },
       home: { id: 'bvb', name: 'Dortmund', shortName: 'BVB' },
-      away: { id: 'bay', name: 'Bayern', shortName: 'FCB' },
+      away: { id: 'bay', name: 'Bayern', shortName: 'BAY' },
       kickoffAt: inDays(3),
     },
     predictedScore: { home: 1, away: 2 },

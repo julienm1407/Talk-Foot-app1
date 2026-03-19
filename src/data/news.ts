@@ -6,6 +6,23 @@ export type NewsItem = {
   minutesAgo: number
 }
 
+// Images football Unsplash - licence libre (Unsplash License)
+const FOOTBALL_IMAGES = [
+  '1574629810360-7efbbe195018', // Stade, vue terrain
+  '1579952363873-27f3bade9f55', // Ballon sur la pelouse
+  '1522778119026-d647482059dc', // Match, ambiance
+  '1715270525118-ce589797568b', // Joueur en action
+  '1508098682722-e3c9e7a2e26a', // Stade aérien
+]
+
+export function footballImageUrl(articleId: string): string {
+  const idx =
+    articleId.split('').reduce((a, c) => a + c.charCodeAt(0), 0) %
+    FOOTBALL_IMAGES.length
+  const photoId = FOOTBALL_IMAGES[idx]
+  return `https://images.unsplash.com/photo-${photoId}?w=360&h=200&fit=crop&q=80`
+}
+
 export const mockNews: NewsItem[] = [
   {
     id: 'n-1',

@@ -5,6 +5,7 @@ export type User = {
   username: string
   avatarSeed: string
   accent: 'violet' | 'emerald' | 'rose' | 'amber'
+  isAdmin?: boolean
 }
 
 export type Message = {
@@ -13,6 +14,8 @@ export type Message = {
   userId: string
   text: string
   createdAt: number
+  gifUrl?: string
+  emoteId?: string
 }
 
 export type ReactionEvent = {

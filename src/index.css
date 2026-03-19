@@ -1,30 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Montserrat:wght@600..900&display=swap');
+/* Bigail : police principale Talk Foot (titres, éléments importants) */
+@font-face {
+  font-family: 'Bigail';
+  src: url('/fonts/Bigail.woff2') format('woff2'),
+       url('/fonts/Bigail.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400..800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Talk Foot base theme (dark-first) */
+/* Charte Talk Foot - Couleurs principales */
 :root {
-  --tf-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
-  --tf-font-display: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
+  --tf-dark: #011e33;
+  --tf-dark-alt: #023458;
+  --tf-white: #ffffff;
+  --tf-grey: #5d86a2;
+  --tf-grey-pastel: #b3c3cf;
+
+  --tf-font-display: 'Bigail', 'Bebas Neue', 'Impact', ui-sans-serif, system-ui, sans-serif;
+  --tf-font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
   color-scheme: light;
-  --tf-navy: #0b1b3a;
-  --tf-navy-2: #102a56;
-  --tf-bg: #e8f1ff;
-  --tf-bg-2: #dbeaff;
-  --tf-card: rgba(255, 255, 255, 0.82);
-  --tf-border: rgba(16, 42, 86, 0.12);
-  --tf-text: rgba(11, 27, 58, 0.92);
-  --tf-muted: rgba(11, 27, 58, 0.68);
-  --tf-faint: rgba(11, 27, 58, 0.46);
-  --tf-accent: #0a3dff;
-  --tf-shadow: 0 18px 55px rgba(11, 27, 58, 0.12);
+  --tf-navy: var(--tf-dark);
+  --tf-navy-2: var(--tf-dark-alt);
+  --tf-bg: #f0f5f9;
+  --tf-bg-2: #e8eef4;
+  --tf-card: rgba(255, 255, 255, 0.92);
+  --tf-border: rgba(1, 30, 51, 0.12);
+  --tf-text: rgba(1, 30, 51, 0.92);
+  --tf-muted: rgba(1, 30, 51, 0.65);
+  --tf-faint: rgba(1, 30, 51, 0.42);
+  --tf-accent: #5d86a2;
+  --tf-shadow: 0 18px 55px rgba(1, 30, 51, 0.10);
+}
+
+/* Match page theming (set by Channel) */
+.tf-match-page {
+  --tf-match-home: #011e33;
+  --tf-match-away: #5d86a2;
+  --tf-match-accent: #5d86a2;
+  --tf-match-surface: rgba(255, 255, 255, 0.92);
+  --tf-match-surface-alt: rgba(1, 30, 51, 0.04);
 }
 
 html,
@@ -32,57 +55,58 @@ body {
   height: 100%;
 }
 
+/* Safe area pour iPhone notch / barre d'accueil */
+
 body {
   margin: 0;
-  font-family: 'Manrope', var(--tf-font-sans);
+  font-family: var(--tf-font-sans);
   letter-spacing: 0.1px;
-  background: #ffffff;
+  background: var(--tf-white);
   color: var(--tf-text);
 }
 
 h1,
 h2,
-h3 {
-  font-family: 'Montserrat', var(--tf-font-display);
+h3,
+h4 {
+  font-family: var(--tf-font-display);
 }
 
-/* Clearer UI hierarchy (light navy tint surfaces) */
 .tf-surface {
-  background: rgba(11, 27, 58, 0.12);
-  border: 1px solid rgba(16, 42, 86, 0.22);
+  background: rgba(93, 134, 162, 0.12);
+  border: 1px solid rgba(1, 30, 51, 0.18);
 }
 
 .tf-panel {
-  background: rgba(255, 255, 255, 0.64);
-  border: 1px solid rgba(16, 42, 86, 0.24);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(1, 30, 51, 0.14);
 }
 
 .tf-section {
-  background: rgba(11, 27, 58, 0.085);
-  border: 1px solid rgba(16, 42, 86, 0.22);
+  background: rgba(179, 195, 207, 0.35);
+  border: 1px solid rgba(1, 30, 51, 0.12);
 }
 
 .tf-sectionHeader {
   background: linear-gradient(
     90deg,
-    rgba(11, 27, 58, 0.16),
-    rgba(10, 61, 255, 0.10) 55%,
-    rgba(56, 189, 248, 0.10)
+    rgba(1, 30, 51, 0.08),
+    rgba(93, 134, 162, 0.12) 55%,
+    rgba(179, 195, 207, 0.15)
   );
-  border: 1px solid rgba(16, 42, 86, 0.18);
+  border: 1px solid rgba(1, 30, 51, 0.14);
 }
 
 .tf-sectionHeaderAlt {
   background: linear-gradient(
     90deg,
-    rgba(56, 189, 248, 0.16),
-    rgba(255, 255, 255, 0.65) 45%,
-    rgba(10, 61, 255, 0.10)
+    rgba(93, 134, 162, 0.12),
+    rgba(255, 255, 255, 0.7) 45%,
+    rgba(179, 195, 207, 0.2)
   );
-  border: 1px solid rgba(16, 42, 86, 0.18);
+  border: 1px solid rgba(1, 30, 51, 0.14);
 }
 
-/* subtle grid overlay */
 body::before {
   content: '';
   position: fixed;
@@ -93,24 +117,98 @@ body::before {
 }
 
 ::selection {
-  background: rgba(10, 61, 255, 0.20);
+  background: rgba(93, 134, 162, 0.25);
 }
 
-/* Minimal, readable scrollbars (WebKit) */
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(16, 42, 86, 0.18);
+  background: rgba(93, 134, 162, 0.35);
   border-radius: 999px;
-  border: 2px solid rgba(0, 0, 0, 0);
+  border: 2px solid transparent;
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 42, 86, 0.26);
-  border: 2px solid rgba(0, 0, 0, 0);
+  background: rgba(93, 134, 162, 0.5);
+  border: 2px solid transparent;
   background-clip: padding-box;
+}
+
+/* Live match card animation */
+@keyframes tf-live-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 8px 2px rgba(225, 29, 72, 0.28);
+  }
+}
+@keyframes tf-live-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+}
+@keyframes tf-live-bar {
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* Match page: ambient gradient shift */
+@keyframes tf-arena-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.tf-arena-glow {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tf-match-home) 6%, transparent) 0%,
+    transparent 40%,
+    transparent 60%,
+    color-mix(in srgb, var(--tf-match-away) 6%, transparent) 100%
+  );
+  animation: tf-arena-pulse 8s ease-in-out infinite;
+}
+
+/* Score pop on change */
+@keyframes tf-score-pop {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.12);
+  }
+  30% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tf-score-pop {
+  animation: tf-score-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Floating reactions */
@@ -133,18 +231,29 @@ body::before {
 .tf-float-reaction {
   animation: tf-float-up 1600ms cubic-bezier(0.18, 0.9, 0.2, 1) forwards;
   will-change: transform, opacity;
-  text-shadow: 0 12px 24px rgba(11, 27, 58, 0.18);
+  text-shadow: 0 12px 24px rgba(1, 30, 51, 0.18);
 }
 
-/* Live pitch 2D (clear + immersive) */
+/* Live pitch 2D */
+@keyframes tf-ball-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.88; }
+}
 .tf-pitch2d {
   position: relative;
   overflow: hidden;
-  border-radius: 1.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: linear-gradient(180deg, rgba(16, 42, 86, 0.04), rgba(16, 42, 86, 0.02));
+  border-radius: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: linear-gradient(180deg, #e8f5ec 0%, #dcefe4 100%);
   height: 100%;
   min-height: 200px;
+  animation: tf-arena-pulse 12s ease-in-out infinite;
+}
+.tf-pitch2d svg {
+  transition: opacity 80ms ease-out;
+}
+.tf-pitch-ball {
+  animation: tf-ball-pulse 2.2s ease-in-out infinite;
 }
 @media (min-width: 640px) {
   .tf-pitch2d {
@@ -156,77 +265,88 @@ body::before {
   left: 12px;
   top: 12px;
   z-index: 2;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: rgba(255, 255, 255, 0.9);
-  padding: 8px 10px;
-  font-size: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(93, 134, 162, 0.35);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 10px 14px;
+  font-size: 13px;
   font-weight: 900;
-  color: rgba(11, 27, 58, 0.92);
-  backdrop-filter: blur(6px);
+  color: rgba(1, 30, 51, 0.94);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(1, 30, 51, 0.08);
 }
 
 /* Chat message entrance */
 @keyframes tf-chat-in {
   0% {
     opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.98);
-    filter: blur(0.8px);
+    transform: translate3d(0, 8px, 0) scale(0.98);
   }
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0px);
   }
 }
 .tf-chat-in {
-  animation: tf-chat-in 420ms cubic-bezier(0.16, 0.9, 0.2, 1) both;
+  animation: tf-chat-in 380ms cubic-bezier(0.16, 0.9, 0.2, 1) both;
 }
 
-/* Confetti + flare smoke (live effects) */
+/* Confetti + flare : courte durée, pas de flou */
 @keyframes tf-ambience-pulse {
   0% {
     opacity: 0;
-    transform: scale(1);
+    transform: scale(0.98);
   }
-  20% {
-    opacity: 1;
+  15% {
+    opacity: 0.9;
   }
   100% {
     opacity: 0;
-    transform: scale(1.02);
+    transform: scale(1);
   }
 }
 
+/* Effets dynamiques : bords uniquement, courts, sans flou écran */
 .tf-ambience {
   position: absolute;
-  inset: -40px;
-  animation: tf-ambience-pulse 2400ms ease-out forwards;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  animation: tf-ambience-pulse 1100ms ease-out forwards;
   pointer-events: none;
-  filter: blur(10px);
 }
 .tf-ambience--confetti {
   background: radial-gradient(
-      600px 320px at 20% 10%,
-      rgba(10, 61, 255, 0.18),
-      transparent 60%
-    ),
-    radial-gradient(
-      600px 320px at 80% 15%,
-      rgba(56, 189, 248, 0.18),
-      transparent 60%
+      ellipse 120px 200px at 50% 30%,
+      rgba(93, 134, 162, 0.25),
+      transparent 70%
+    );
+  left: 0;
+}
+.tf-ambience--confetti.tf-ambience--right {
+  left: auto;
+  right: 0;
+  background: radial-gradient(
+      ellipse 120px 200px at 50% 30%,
+      rgba(56, 189, 248, 0.2),
+      transparent 70%
     );
 }
 .tf-ambience--flare {
   background: radial-gradient(
-      650px 360px at 20% 75%,
-      rgba(255, 59, 48, 0.20),
-      transparent 60%
-    ),
-    radial-gradient(
-      650px 360px at 80% 75%,
-      rgba(255, 59, 48, 0.14),
-      transparent 62%
+      ellipse 100px 180px at 50% 80%,
+      rgba(255, 59, 48, 0.2),
+      transparent 70%
+    );
+  left: 0;
+}
+.tf-ambience--flare.tf-ambience--right {
+  left: auto;
+  right: 0;
+  background: radial-gradient(
+      ellipse 100px 180px at 50% 80%,
+      rgba(255, 59, 48, 0.15),
+      transparent 70%
     );
 }
 
@@ -246,13 +366,13 @@ body::before {
 
 .tf-confetti {
   position: absolute;
-  width: 12px;
-  height: 7px;
+  width: 10px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--c, #0a3dff);
-  animation: tf-confetti 2400ms cubic-bezier(0.14, 0.86, 0.22, 1) forwards;
+  background: var(--c, #5d86a2);
+  animation: tf-confetti 1100ms cubic-bezier(0.14, 0.86, 0.22, 1) forwards;
   animation-delay: var(--d, 0ms);
-  box-shadow: 0 16px 40px rgba(11, 27, 58, 0.16);
+  box-shadow: 0 16px 40px rgba(1, 30, 51, 0.14);
 }
 .tf-confetti--left {
   left: 3%;
@@ -283,22 +403,22 @@ body::before {
 .tf-smoke {
   position: absolute;
   left: var(--l, 50%);
-  bottom: 10%;
-  width: 150px;
-  height: 150px;
+  bottom: 12%;
+  width: 100px;
+  height: 100px;
   border-radius: 999px;
   background: radial-gradient(
     circle at 35% 35%,
-    rgba(255, 59, 48, 0.30),
-    rgba(255, 59, 48, 0.14) 48%,
+    rgba(255, 59, 48, 0.28),
+    rgba(255, 59, 48, 0.12) 48%,
     rgba(255, 255, 255, 0) 70%
   );
-  animation: tf-smoke 3000ms cubic-bezier(0.16, 0.85, 0.2, 1) forwards;
+  animation: tf-smoke 1100ms cubic-bezier(0.16, 0.85, 0.2, 1) forwards;
   animation-delay: var(--d, 0ms);
   mix-blend-mode: multiply;
 }
 
-/* GOAL overlay (modern, stadium shake) */
+/* GOAL overlay */
 @keyframes tf-goal-bg {
   0% {
     opacity: 0;
@@ -378,9 +498,9 @@ body::before {
   position: relative;
   width: min(720px, calc(100vw - 32px));
   border-radius: 28px;
-  border: 1px solid rgba(16, 42, 86, 0.22);
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 30px 90px rgba(11, 27, 58, 0.22);
+  border: 1px solid rgba(1, 30, 51, 0.18);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 30px 90px rgba(1, 30, 51, 0.18);
   padding: 22px 22px;
   animation: tf-goal-pop 8000ms cubic-bezier(0.16, 0.9, 0.2, 1) forwards;
   backdrop-filter: blur(8px);
@@ -389,32 +509,23 @@ body::before {
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.16em;
-  color: rgba(11, 27, 58, 0.62);
+  color: rgba(1, 30, 51, 0.62);
 }
 .tf-goalOverlay__title {
   margin-top: 6px;
-  font-family: 'Montserrat', var(--tf-font-display);
+  font-family: var(--tf-font-display);
   font-weight: 900;
   letter-spacing: -0.03em;
   font-size: clamp(40px, 7vw, 78px);
   line-height: 0.95;
-  color: rgba(11, 27, 58, 0.94);
-  text-shadow: 0 18px 40px rgba(10, 61, 255, 0.10);
+  color: rgba(1, 30, 51, 0.94);
+  text-shadow: 0 18px 40px rgba(93, 134, 162, 0.15);
 }
 .tf-goalOverlay__sub {
   margin-top: 10px;
   font-size: 14px;
   font-weight: 700;
-  color: rgba(11, 27, 58, 0.70);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tf-goalOverlay__bg,
-  .tf-goalOverlay__shake,
-  .tf-goalOverlay__card,
-  .tf-firework {
-    animation: none !important;
-  }
+  color: rgba(1, 30, 51, 0.70);
 }
 
 @keyframes tf-firework {
@@ -455,4 +566,94 @@ body::before {
   opacity: 0.95;
   mix-blend-mode: screen;
   filter: blur(0.2px);
+}
+
+/* Match page: timeline item entrance */
+@keyframes tf-timeline-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tf-timeline-in {
+  animation: tf-timeline-in 400ms cubic-bezier(0.16, 0.9, 0.2, 1) both;
+}
+
+/* Commentateur live : barres de son */
+.tf-sound-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 4px;
+}
+.tf-sound-bars span {
+  display: block;
+  width: 4px;
+  min-height: 4px;
+  background: #f43f5e;
+  border-radius: 2px;
+  animation: tf-sound-bar 0.5s ease-in-out infinite alternate;
+}
+.tf-sound-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+.tf-sound-bars span:nth-child(2) { height: 70%; animation-delay: 0.1s; }
+.tf-sound-bars span:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+.tf-sound-bars span:nth-child(4) { height: 60%; animation-delay: 0.15s; }
+.tf-sound-bars span:nth-child(5) { height: 30%; animation-delay: 0.05s; }
+@keyframes tf-sound-bar {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1); }
+}
+
+/* Entrée overlay commentaire */
+@keyframes tf-commentary-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Glow ambiance live (barre d'hype chaude) */
+@keyframes tf-hype-glow {
+  0% { opacity: 0.15; }
+  100% { opacity: 0.4; }
+}
+.tf-hype-glow {
+  animation: tf-hype-glow 2s ease-in-out infinite alternate;
+}
+
+/* Effet caméra quand tu parles (PIP) */
+@keyframes tf-pip-speak {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.6), 0 0 20px rgba(244, 63, 94, 0.3); }
+}
+.tf-pip-speak {
+  animation: tf-pip-speak 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tf-sound-bars span {
+    animation: none;
+  }
+  .tf-goalOverlay__bg,
+  .tf-goalOverlay__shake,
+  .tf-goalOverlay__card,
+  .tf-firework,
+  .tf-arena-glow,
+  .tf-score-pop,
+  .tf-timeline-in,
+  .tf-hype-glow,
+  .tf-pip-speak {
+    animation: none !important;
+  }
 }

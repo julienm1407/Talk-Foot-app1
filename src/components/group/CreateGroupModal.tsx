@@ -3,6 +3,8 @@ import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Badge } from '../ui/Badge'
+import { cn } from '../../utils/cn'
+import { containsBannedWord } from '../../utils/bannedWords'
 import type { SupporterGroup } from '../../types/group'
 import { GroupCard } from './GroupCard'
 
@@ -26,6 +28,7 @@ export function CreateGroupModal({
   const [background, setBackground] = useState<'clean' | 'smoke' | 'stripe'>(
     'smoke',
   )
+  const [nameError, setNameError] = useState<string | null>(null)
 
   const draft = useMemo<SupporterGroup>(() => {
     return {
@@ -102,9 +105,17 @@ export function CreateGroupModal({
                 </label>
                 <Input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1"
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setNameError(null)
+                  }}
+                  className={cn('mt-1', nameError && 'border-rose-500')}
                 />
+                {nameError && (
+                  <p className="mt-1.5 text-xs font-semibold text-rose-600">
+                    {nameError}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-700/70">
@@ -205,6 +216,11 @@ export function CreateGroupModal({
                 variant="primary"
                 className="rounded-3xl"
                 onClick={() => {
+                  setNameError(null)
+                  if (containsBannedWord(draft.name)) {
+                    setNameError('Ce nom contient des propos inappropriés. Choisis un autre nom.')
+                    return
+                  }
                   onCreate({
                     name: draft.name,
                     emoji: draft.emoji,

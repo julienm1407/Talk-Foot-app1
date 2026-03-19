@@ -13,5 +13,6 @@ export const currentUser: User = {
   username: 'You',
   avatarSeed: 'you',
   accent: 'emerald',
+  isAdmin: true,
 }
 

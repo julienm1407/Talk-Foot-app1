@@ -1,76 +1,75 @@
 import { useMemo, useState } from 'react'
-import { upcomingMatches } from '../data/matches'
+import { Link } from 'react-router-dom'
+import { useMatches } from '../contexts/MatchesContext'
 import { MatchCard } from '../components/match/MatchCard'
-import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { ProgressBar } from '../components/ui/ProgressBar'
 import { themeForCompetition } from '../data/competitionThemes'
+import { formatKickoff } from '../utils/time'
+import { ClubCrest } from '../components/brand/ClubCrest'
+import { cn } from '../utils/cn'
 
 export function CalendarPage() {
   const now = Date.now()
 
+  const { matches, loading } = useMatches()
   const sorted = useMemo(() => {
-    return [...upcomingMatches]
+    return [...matches]
       .filter((m) => m.status !== 'finished')
       .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
-  }, [])
+  }, [matches])
 
   const competitions = useMemo(() => {
     const map = new Map<string, { id: string; name: string; shortName: string }>()
     for (const m of sorted) map.set(m.competition.id, m.competition)
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
+    return Array.from(map.values()).sort((a, b) => a.shortName.localeCompare(b.shortName))
   }, [sorted])
 
   const [competitionId, setCompetitionId] = useState<string>('all')
   const [dayKey, setDayKey] = useState<string>('all')
 
-  const activeTheme = useMemo(() => {
-    return competitionId === 'all' ? null : themeForCompetition(competitionId)
-  }, [competitionId])
+  const activeTheme = useMemo(
+    () => (competitionId === 'all' ? null : themeForCompetition(competitionId)),
+    [competitionId],
+  )
 
   const featured = useMemo(() => {
-    const nextUpcoming = sorted.find(
+    const pool =
+      competitionId === 'all'
+        ? sorted
+        : sorted.filter((m) => m.competition.id === competitionId)
+    const live = pool.find((m) => m.status === 'live')
+    const next = pool.find(
       (m) => m.status === 'upcoming' && +new Date(m.kickoffAt) >= now - 60_000,
-    )
-    return nextUpcoming ?? sorted[0]
-  }, [sorted, now])
+    ) ?? pool.filter((m) => m.status === 'upcoming')[0]
+    return live ?? next
+  }, [competitionId, sorted, now])
 
   const filtered = useMemo(() => {
     const base =
       competitionId === 'all'
         ? sorted
         : sorted.filter((m) => m.competition.id === competitionId)
-
-    // Keep the featured match up top only (no duplicate in list).
-    return base.filter((m) => !featured || m.id !== featured.id)
+    return featured ? base.filter((m) => m.id !== featured.id) : base
   }, [competitionId, featured, sorted])
 
   const grouped = useMemo(() => {
     const fmt = new Intl.DateTimeFormat('fr-FR', {
-      weekday: 'short',
-      day: '2-digit',
+      weekday: 'long',
+      day: 'numeric',
       month: 'long',
     })
-
-    const groups = new Map<
-      string,
-      { ts: number; label: string; matches: typeof filtered }
-    >()
+    const groups = new Map<string, { ts: number; label: string; matches: typeof filtered }>()
 
     for (const m of filtered) {
       const d = new Date(m.kickoffAt)
-      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate(),
-      ).padStart(2, '0')}`
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
       const existing = groups.get(key)
       if (existing) {
         existing.matches.push(m)
-        continue
+      } else {
+        groups.set(key, { ts: d.getTime(), label: fmt.format(d), matches: [m] })
       }
-
-      groups.set(key, { ts: day.getTime(), label: fmt.format(d), matches: [m] })
     }
 
     return Array.from(groups.entries())
@@ -83,233 +82,283 @@ export function CalendarPage() {
     return grouped.filter((g) => g.key === dayKey)
   }, [dayKey, grouped])
 
-  const totalVisible = useMemo(() => {
-    return visible.reduce((acc, g) => acc + g.matches.length, 0)
-  }, [visible])
-
   const dayChips = useMemo(() => {
-    const chips = grouped.slice(0, 7).map((g) => ({
-      key: g.key,
-      label: g.label,
-      count: g.matches.length,
-    }))
-    return chips
+    const today = new Date()
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+    const shortFmt = new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'short',
+      day: 'numeric',
+    })
+
+    return grouped.slice(0, 8).map((g) => {
+      const label =
+        g.key === todayKey
+          ? "Aujourd'hui"
+          : g.key === tomorrowKey
+            ? 'Demain'
+            : shortFmt.format(new Date(g.key))
+      return { key: g.key, label, count: g.matches.length }
+    })
   }, [grouped])
 
+  const totalCount = useMemo(
+    () => visible.reduce((acc, g) => acc + g.matches.length, 0) + (featured ? 1 : 0),
+    [visible, featured],
+  )
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center">
+        <p className="text-sm font-semibold text-tf-grey">Chargement des matchs…</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-5">
-      <Card className="p-4 sm:p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
-              CALENDRIER
-            </div>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-              Matchs à venir
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-700/70">
-              Clique sur une ligue pour filtrer.
-            </p>
-          </div>
-        </div>
+    <div className="space-y-8 pb-8">
+      {/* En-tête clair */}
+      <header className="space-y-2 pb-2">
+        <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
+          Calendrier
+        </h1>
+        <p className="text-sm font-medium text-tf-grey">
+          {totalCount} match{totalCount > 1 ? 's' : ''} à venir
+          {competitionId !== 'all' && (
+            <> • {competitions.find((c) => c.id === competitionId)?.shortName ?? ''}</>
+          )}
+        </p>
+      </header>
 
-        <div
-          className="mt-3 rounded-3xl border bg-white/70 p-4"
-          style={{
-            borderColor: activeTheme
-              ? `color-mix(in srgb, ${activeTheme.accent} 55%, rgba(148,163,184,0.6))`
-              : 'rgba(148,163,184,0.55)',
-          }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-sm font-black text-slate-900">
-              Résumé
-            </div>
-            <div className="text-sm font-semibold text-slate-700/70">
-              {competitionId === 'all'
-                ? 'Toutes compétitions'
-                : competitions.find((c) => c.id === competitionId)?.name ??
-                  'Compétition'}{' '}
-              • {totalVisible} match(s)
-            </div>
-          </div>
-          <div className="mt-2">
-            <ProgressBar
-              value={
-                totalVisible === 0
-                  ? 0
-                  : Math.min(
-                      100,
-                      Math.round((totalVisible / Math.max(1, sorted.length)) * 100),
-                    )
+      {/* Match en direct ou prochain — priorité visuelle */}
+      {featured && (
+        <section aria-label="Match à la une">
+          <Link
+            to={`/channel/${featured.id}`}
+            className="block rounded-2xl outline-none ring-2 ring-transparent transition-all focus-visible:ring-tf-grey/40 hover:opacity-95"
+            aria-label={`Rejoindre ${featured.home.shortName} vs ${featured.away.shortName}`}
+          >
+            <Card
+              className="overflow-hidden p-0"
+              elevation="soft"
+              style={
+                activeTheme && competitionId === featured.competition.id
+                  ? { borderColor: `${activeTheme.accent}40` }
+                  : undefined
               }
-              tone={
-                !activeTheme
-                  ? 'slate'
-                  : activeTheme.id === 'epl'
-                    ? 'violet'
-                    : activeTheme.id === 'laliga'
-                      ? 'amber'
-                      : activeTheme.id === 'bund'
-                        ? 'amber'
-                        : activeTheme.id === 'serie-a'
-                          ? 'blue'
-                          : 'blue'
-              }
-            />
-          </div>
-        </div>
-
-        {featured ? (
-          <div className="mt-4">
-            <div className="mb-2 flex items-end justify-between gap-3 px-1">
-              <div>
-                <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/65">
-                  ÉVÉNEMENT FORT
+            >
+              <div
+                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
+                style={
+                  themeForCompetition(featured.competition.id)
+                    ? {
+                        background: `linear-gradient(135deg, ${themeForCompetition(featured.competition.id)!.accent}08, ${themeForCompetition(featured.competition.id)!.accent2}08)`,
+                      }
+                    : undefined
+                }
+              >
+                <div className="flex shrink-0 items-center gap-3">
+                  <ClubCrest
+                    id={featured.home.id}
+                    shortName={featured.home.shortName}
+                    colors={featured.home.colors}
+                    size={48}
+                  />
+                  <div className="text-center">
+                    {featured.status === 'live' ? (
+                      <>
+                        <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-black text-white">
+                          EN DIRECT
+                        </span>
+                        {featured.score && (
+                          <div className="mt-1 font-display text-lg font-black text-tf-dark">
+                            {featured.score.home} – {featured.score.away}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-sm font-bold text-tf-grey">
+                        {formatKickoff(featured.kickoffAt)}
+                      </span>
+                    )}
+                    <div className="mt-1 text-[11px] font-semibold text-tf-grey">
+                      {featured.competition.shortName}
+                    </div>
+                  </div>
+                  <ClubCrest
+                    id={featured.away.id}
+                    shortName={featured.away.shortName}
+                    colors={featured.away.colors}
+                    size={48}
+                  />
                 </div>
-                <div className="mt-1 text-sm font-extrabold text-slate-900">
-                  Prochain match à ne pas rater
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-xl font-black text-tf-dark sm:text-2xl">
+                    {featured.home.shortName} – {featured.away.shortName}
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-tf-grey">
+                    {new Intl.DateTimeFormat('fr-FR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }).format(new Date(featured.kickoffAt))}
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-tf-dark">
+                    {featured.status === 'live' ? 'Rejoindre le live' : "Voir l'avant-match"} →
+                  </div>
                 </div>
               </div>
-            </div>
-            <div
-              className="rounded-3xl"
-              style={{
-                boxShadow: activeTheme
-                  ? `0 0 0 2px color-mix(in srgb, ${activeTheme.accent} 18%, transparent)`
-                  : undefined,
-              }}
-            >
-              <MatchCard match={featured} />
-            </div>
-          </div>
-        ) : null}
+            </Card>
+          </Link>
+        </section>
+      )}
 
-        <div className="mt-4 rounded-3xl border border-slate-200/80 bg-white/70 p-2">
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <Button
-            variant={competitionId === 'all' ? 'primary' : 'soft'}
-            className="h-10 rounded-2xl px-4"
-            onClick={() => {
-              setCompetitionId('all')
-              setDayKey('all')
-            }}
-            aria-pressed={competitionId === 'all'}
+      {/* Filtres — compacts et accessibles */}
+      <section aria-label="Filtrer les matchs" className="space-y-5">
+        <div className="space-y-4">
+          <h2 className="text-xs font-black uppercase tracking-wider text-tf-grey">
+            Ligue
+          </h2>
+          <div
+            className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Sélectionner une compétition"
           >
-            Toutes
-          </Button>
-          {competitions.map((c) => (
-            (() => {
+            <button
+              type="button"
+              onClick={() => {
+                setCompetitionId('all')
+                setDayKey('all')
+              }}
+              className={cn(
+                'shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-tf-grey/40 focus:ring-offset-2',
+                competitionId === 'all'
+                  ? 'bg-tf-dark text-white'
+                  : 'bg-tf-grey-pastel/40 text-tf-dark hover:bg-tf-grey-pastel/60',
+              )}
+              aria-pressed={competitionId === 'all'}
+            >
+              Toutes
+            </button>
+            {competitions.map((c) => {
               const th = themeForCompetition(c.id)
               const selected = competitionId === c.id
               return (
-            <Button
-              key={c.id}
-              variant={selected ? 'soft' : 'soft'}
-              className={
-                `h-10 rounded-2xl px-4 ${th && !selected ? `${th.labelBg} ${th.labelText} border border-slate-200/70` : ''}`
-              }
-              style={
-                th && selected
-                  ? ({
-                      background: `linear-gradient(135deg, ${th.accent}, ${th.accent2})`,
-                      borderColor: 'transparent',
-                      color: '#fff',
-                    } as React.CSSProperties)
-                  : undefined
-              }
-              onClick={() => {
-                setCompetitionId(c.id)
-                setDayKey('all')
-              }}
-              aria-pressed={competitionId === c.id}
-            >
-              {c.name}
-            </Button>
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setCompetitionId(c.id)
+                    setDayKey('all')
+                  }}
+                  className={cn(
+                    'shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-offset-2',
+                    selected
+                      ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-tf-grey-pastel/40 shadow-lg'
+                      : 'opacity-50 hover:opacity-70',
+                    th ? 'text-white focus:ring-white/60' : 'bg-tf-dark text-white focus:ring-tf-grey/40',
+                  )}
+                  style={
+                    th
+                      ? {
+                          background: `linear-gradient(135deg, ${th.accent}, ${th.accent2})`,
+                        }
+                      : undefined
+                  }
+                  aria-pressed={selected}
+                >
+                  {c.shortName}
+                </button>
               )
-            })()
-          ))}
+            })}
           </div>
         </div>
 
-        <div className="mt-3 rounded-3xl border border-slate-200/80 bg-white/70 p-2">
-          <div className="flex items-center justify-between gap-3 px-2 pb-2">
-            <div className="text-xs font-black tracking-[0.14em] text-slate-700/70">
-              JOURS
-            </div>
-            <Button
-              variant={dayKey === 'all' ? 'primary' : 'ghost'}
-              className="h-8 rounded-2xl px-3"
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black uppercase tracking-wider text-tf-grey">
+              Jour
+            </h2>
+            <span className="text-xs font-medium text-tf-grey">
+              {dayKey === 'all' ? 'Tous les jours' : dayChips.find((d) => d.key === dayKey)?.label}
+            </span>
+          </div>
+          <div
+            className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Sélectionner un jour"
+          >
+            <button
+              type="button"
               onClick={() => setDayKey('all')}
+              className={cn(
+                'shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-tf-grey/40 focus:ring-offset-2',
+                dayKey === 'all'
+                  ? 'bg-tf-dark text-white'
+                  : 'border border-tf-grey-pastel/60 bg-tf-white text-tf-dark hover:bg-tf-grey-pastel/30',
+              )}
               aria-pressed={dayKey === 'all'}
             >
-              Tout
-            </Button>
-          </div>
-          <div className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 px-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {dayChips.map((d) => (
-              <Button
-                key={d.key}
-                variant={dayKey === d.key ? 'primary' : 'soft'}
-                className="h-9 rounded-2xl px-4"
-                onClick={() => setDayKey(d.key)}
-                aria-pressed={dayKey === d.key}
-                style={
-                  dayKey === d.key && activeTheme
-                    ? ({
-                        background: `linear-gradient(135deg, ${activeTheme.accent}, ${activeTheme.accent2})`,
-                        borderColor: 'transparent',
-                        color: '#fff',
-                      } as React.CSSProperties)
-                    : activeTheme
-                      ? ({
-                          borderColor: `color-mix(in srgb, ${activeTheme.accent} 16%, rgba(148,163,184,0.6))`,
-                        } as React.CSSProperties)
-                      : undefined
-                }
-              >
-                {d.label} · {d.count}
-              </Button>
-            ))}
+              Tous
+            </button>
+            {dayChips.map((d) => {
+              const selected = dayKey === d.key
+              return (
+                <button
+                  key={d.key}
+                  type="button"
+                  onClick={() => setDayKey(d.key)}
+                  className={cn(
+                    'shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-tf-grey/40 focus:ring-offset-2',
+                    selected
+                      ? 'bg-tf-dark text-white'
+                      : 'border border-tf-grey-pastel/60 bg-tf-white text-tf-dark hover:bg-tf-grey-pastel/30',
+                  )}
+                  aria-pressed={selected}
+                >
+                  {d.label}
+                  <span className="ml-1.5 font-normal opacity-75">({d.count})</span>
+                </button>
+              )
+            })}
           </div>
         </div>
-      </Card>
+      </section>
 
-      <div className="space-y-4">
-        {visible.map((g) => (
-          <Card key={g.key} className="p-4 sm:p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="text-sm font-black text-slate-900">
-                {g.label}
-              </div>
-              <div className="text-xs font-bold text-slate-700/70">
-                {competitionId === 'all'
-                  ? 'Toutes compétitions'
-                  : competitions.find((c) => c.id === competitionId)?.name ??
-                    'Compétition'}
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              {g.matches.map((m) => (
-                <MatchCard key={m.id} match={m} compact />
-              ))}
-            </div>
-          </Card>
-        ))}
-
+      {/* Liste des matchs par jour */}
+      <section aria-label="Liste des matchs">
         {visible.length === 0 ? (
-          <Card className="p-5 text-center">
-            <div className="text-sm font-extrabold text-slate-900">
-              Aucun match à venir pour cette ligue.
-            </div>
-            <div className="mt-1 text-sm font-semibold text-slate-700/70">
-              Essaie une autre compétition.
-            </div>
+          <Card className="p-8 text-center" elevation="soft">
+            <p className="text-base font-bold text-tf-dark">
+              Aucun match à afficher
+            </p>
+            <p className="mt-1 text-sm font-medium text-tf-grey">
+              {featured
+                ? 'Le match à la une est au-dessus.'
+                : 'Choisis une autre ligue ou un autre jour.'}
+            </p>
           </Card>
-        ) : null}
-      </div>
+        ) : (
+          <div className="space-y-8">
+            {visible.map((g) => (
+              <div key={g.key}>
+                <h3 className="mb-4 text-sm font-black uppercase tracking-wider text-tf-grey">
+                  {g.label}
+                </h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {g.matches.map((m) => (
+                    <MatchCard key={m.id} match={m} compact />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
-

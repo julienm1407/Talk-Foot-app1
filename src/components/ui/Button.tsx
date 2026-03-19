@@ -12,14 +12,14 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold outline-none transition',
-        'focus-visible:ring-2 focus-visible:ring-blue-600/25',
+        'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold font-display outline-none transition',
+        'focus-visible:ring-2 focus-visible:ring-tf-grey/30',
         variant === 'primary' &&
-          'bg-[#0b1b3a] text-white hover:bg-[#102a56]',
+          'bg-tf-dark text-tf-white hover:bg-tf-dark-alt',
         variant === 'soft' &&
-          'border border-slate-200 bg-white/80 text-slate-900 hover:bg-white',
+          'border border-tf-grey/25 bg-tf-white/90 text-[#011e33] hover:bg-tf-white',
         variant === 'ghost' &&
-          'text-slate-700 hover:bg-slate-100 hover:text-slate-900',
+          'text-tf-grey hover:bg-tf-grey-pastel/30 hover:text-tf-dark',
         className,
       )}
       {...props}

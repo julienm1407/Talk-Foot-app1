@@ -35,7 +35,7 @@ export function GroupCard({
         }}
       />
 
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div

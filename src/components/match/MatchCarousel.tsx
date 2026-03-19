@@ -42,9 +42,14 @@ export function MatchCarousel({
     return () => window.clearInterval(id)
   }, [sorted.length])
 
+  // Scroller uniquement le carrousel horizontal, pas la page (évite de ramener l'utilisateur)
   useEffect(() => {
+    const container = listRef.current
     const el = itemRefs.current[index]
-    el?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
+    if (!container || !el) return
+    const targetScroll = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2)
+    const clamped = Math.max(0, Math.min(targetScroll, container.scrollWidth - container.clientWidth))
+    container.scrollTo({ left: clamped, behavior: 'smooth' })
   }, [index])
 
   const viewMatches = useMemo(() => {
@@ -61,17 +66,14 @@ export function MatchCarousel({
   }, [index, viewMatches])
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-black tracking-wide text-slate-600">
-            MATCHS
-          </div>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
             {title}
           </h2>
-          <p className="mt-2 text-sm font-semibold text-slate-700 sm:text-base">
-            {subtitle}
+          <p className="text-sm font-medium text-tf-grey">
+            {subtitle || 'Matchs en direct et à venir — clique pour accéder au live'}
           </p>
         </div>
 
@@ -79,7 +81,7 @@ export function MatchCarousel({
           <button
             type="button"
             onClick={() => setIndex((i) => (i - 1 + sorted.length) % sorted.length)}
-            className="rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-sm font-black text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
+            className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2 text-sm font-black text-tf-dark transition hover:bg-tf-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/30"
             aria-label="Match précédent"
           >
             ←
@@ -87,7 +89,7 @@ export function MatchCarousel({
           <button
             type="button"
             onClick={() => setIndex((i) => (i + 1) % sorted.length)}
-            className="rounded-2xl border border-slate-200 bg-white/90 px-3 py-2 text-sm font-black text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
+            className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2 text-sm font-black text-tf-dark transition hover:bg-tf-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/30"
             aria-label="Match suivant"
           >
             →
@@ -98,7 +100,7 @@ export function MatchCarousel({
       <div
         ref={listRef}
         data-no-swipe="true"
-        className="flex gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory"
+        className="-mx-1 flex gap-5 overflow-x-auto px-1 py-6 pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory"
         aria-label="Carrousel des matchs"
       >
         {viewMatches.map((m, i) => (
@@ -107,9 +109,11 @@ export function MatchCarousel({
             ref={(node) => {
               itemRefs.current[i] = node
             }}
-            className="min-w-[320px] max-w-[420px] flex-1 snap-start sm:min-w-[420px]"
+            className="flex shrink-0 snap-start flex-col items-center py-4 px-2"
           >
-            <MatchCard match={m} elevation="none" />
+            <div className="flex w-full min-w-[240px] max-w-[320px] sm:min-w-[280px] lg:min-w-[300px]">
+              <MatchCard match={m} />
+            </div>
           </div>
         ))}
       </div>

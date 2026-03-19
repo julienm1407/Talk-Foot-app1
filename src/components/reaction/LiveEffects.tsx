@@ -32,41 +32,41 @@ export function LiveEffects({
     if (last.type === 'confetti') {
       setAmbience('confetti')
       const make = (side: Fx['side']) =>
-        Array.from({ length: 32 }).map((_, i) => ({
+        Array.from({ length: 24 }).map((_, i) => ({
           id: `${last.id}-${side}-${i}`,
           type: 'confetti' as const,
           createdAt: last.createdAt,
           side,
           x: (Math.random() - 0.5) * 280,
-          delay: Math.random() * 220,
+          delay: Math.random() * 180,
           color: confettiColors[(Math.random() * confettiColors.length) | 0],
         }))
       setFx((prev) =>
-        [...prev, ...make('left'), ...make('right')].slice(-220),
+        [...prev, ...make('left'), ...make('right')].slice(-200),
       )
       const timeout = window.setTimeout(() => {
         setFx((prev) => prev.filter((p) => p.createdAt !== last.createdAt))
         setAmbience(null)
-      }, 2600)
+      }, 1200)
       return () => window.clearTimeout(timeout)
     }
 
     if (last.type === 'flare') {
       setAmbience('flare')
-      const smoke = Array.from({ length: 22 }).map((_, i) => ({
+      const smoke = Array.from({ length: 16 }).map((_, i) => ({
         id: `${last.id}-smoke-${i}`,
         type: 'flare' as const,
         createdAt: last.createdAt,
         side: Math.random() < 0.5 ? ('left' as const) : ('right' as const),
-        x: (Math.random() - 0.5) * 260,
-        delay: Math.random() * 260,
+        x: (Math.random() - 0.5) * 220,
+        delay: Math.random() * 200,
         color: '#ff3b30',
       }))
-      setFx((prev) => [...prev, ...smoke].slice(-220))
+      setFx((prev) => [...prev, ...smoke].slice(-200))
       const timeout = window.setTimeout(() => {
         setFx((prev) => prev.filter((p) => p.createdAt !== last.createdAt))
         setAmbience(null)
-      }, 3400)
+      }, 1200)
       return () => window.clearTimeout(timeout)
     }
   }, [latest])
@@ -81,13 +81,22 @@ export function LiveEffects({
       aria-hidden="true"
     >
       {ambience && (
-        <div
-          className={
-            ambience === 'flare'
-              ? 'tf-ambience tf-ambience--flare'
-              : 'tf-ambience tf-ambience--confetti'
-          }
-        />
+        <>
+          <div
+            className={
+              ambience === 'flare'
+                ? 'tf-ambience tf-ambience--flare'
+                : 'tf-ambience tf-ambience--confetti'
+            }
+          />
+          <div
+            className={
+              ambience === 'flare'
+                ? 'tf-ambience tf-ambience--flare tf-ambience--right'
+                : 'tf-ambience tf-ambience--confetti tf-ambience--right'
+            }
+          />
+        </>
       )}
       {fx.map((p) => {
         if (p.type === 'confetti') {

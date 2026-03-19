@@ -1,19 +1,50 @@
 import { currentUser } from '../data/users'
-import { Avatar } from '../components/ui/Avatar'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { HumanAvatar } from '../components/ui/HumanAvatar'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { mockPredictions } from '../data/predictions'
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { formatKickoff } from '../utils/time'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
+import { AvatarEditor } from '../components/profile/AvatarEditor'
+import { EditProfileModal } from '../components/profile/EditProfileModal'
+import { UserRankCard } from '../components/profile/UserRankCard'
 import { useLocalStorageState } from '../hooks/useLocalStorage'
+import { useProfile } from '../hooks/useProfile'
+import { useWallet } from '../hooks/useWallet'
 import type { Bet } from '../types/bet'
-import { upcomingMatches } from '../data/matches'
+import { useMatches } from '../contexts/MatchesContext'
+
+const TIER_COLORS: Record<string, string> = {
+  bronze: 'from-amber-700 to-amber-900',
+  silver: 'from-slate-400 to-slate-600',
+  gold: 'from-amber-400 to-amber-600',
+  platinum: 'from-violet-400 to-violet-600',
+  diamond: 'from-cyan-400 to-cyan-600',
+}
 
 export function ProfilePage() {
+  const navigate = useNavigate()
+  const { user: authUser, logout } = useAuth()
+  const { matches } = useMatches()
+  const [editOpen, setEditOpen] = useState(false)
+  const { wallet } = useWallet()
+  const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [])
+
+  useEffect(() => {
+    const wonBets = bets.filter((b) => b.status === 'won').map((b) => b.id)
+    if (wonBets.length) creditWonBets(wonBets)
+  }, [bets, creditWonBets])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   const predictions = useMemo(() => {
     return [...mockPredictions].sort(
@@ -22,7 +53,7 @@ export function ProfilePage() {
   }, [])
 
   const betsView = useMemo(() => {
-    const matchesById = new Map(upcomingMatches.map((m) => [m.id, m]))
+    const matchesById = new Map(matches.map((m) => [m.id, m]))
     const open = bets.filter((b) => b.status === 'open')
     const settled = bets.filter((b) => b.status !== 'open')
     const lastOpen = open.slice(0, 8)
@@ -59,7 +90,7 @@ export function ProfilePage() {
     }
 
     return { open, settled, lastOpen, lastSettled, marketLabel, selectionLabel, matchLine }
-  }, [bets])
+  }, [bets, matches])
 
   const stats = useMemo(() => {
     const total = predictions.length
@@ -143,7 +174,7 @@ export function ProfilePage() {
         kind: 'league',
         label: `Fan de ${stats.fav.name}`,
         hint: 'Compétition la plus pronostiquée',
-        className: 'border-slate-200 bg-white/70 text-slate-700',
+        className: 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey',
       })
 
     return b
@@ -167,30 +198,76 @@ export function ProfilePage() {
   }, [stats])
 
   return (
-    <div className="space-y-5">
-      <div className="px-1">
-        <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
-          PROFIL
+    <div className="space-y-7">
+      <header className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
+            PROFIL
+          </div>
+          <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
+            {authUser?.displayName ?? currentUser.username}
+          </h1>
+          <p className="text-sm font-semibold text-tf-grey">
+            {authUser?.email ? (
+              <span className="text-tf-grey">{authUser.email} • </span>
+            ) : null}
+            Badges + historique de tes prédictions
+          </p>
         </div>
-        <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-          {currentUser.username}
-        </h2>
-        <p className="mt-1 text-sm font-semibold text-slate-700/70">
-          Badges + historique de tes prédictions (mock).
-        </p>
-      </div>
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          className="shrink-0 self-start rounded-2xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 sm:self-center"
+          aria-label="Se déconnecter"
+        >
+          Déconnexion
+        </Button>
+      </header>
+
+      {/* Niveau & jetons */}
+      <Card className="p-5 sm:p-6" elevation="soft">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div
+              className={`flex items-center gap-2 rounded-2xl bg-gradient-to-br px-4 py-2 ${TIER_COLORS[tier.tier] ?? TIER_COLORS.bronze}`}
+            >
+              <span className="text-2xl font-black text-white">Niv. {profile.level}</span>
+              <span className="text-xs font-bold text-white/90">{tier.label}</span>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-tf-grey">Progression</div>
+              <ProgressBar value={xpProgress} tone="blue" className="mt-1 max-w-[140px]" />
+              <div className="mt-0.5 text-[10px] font-medium text-tf-grey">
+                {xpProgress}% vers le niveau {profile.level + 1} • XP : paris gagnés, pronos
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2">
+            <span className="text-lg">🪙</span>
+            <span className="font-display text-xl font-black text-tf-dark">
+              {wallet.tokens} jetons
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      {/* Classement parieur */}
+      <UserRankCard />
+
+      {/* Avatar personnalisable */}
+      <AvatarEditor />
 
       <Card className="p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
-            <Avatar
+            <HumanAvatar
               seed={currentUser.avatarSeed}
               accent={currentUser.accent}
               alt={currentUser.username}
               className="size-12 rounded-[22px]"
             />
             <div>
-              <div className="text-base font-black text-slate-900">
+              <div className="text-base font-black text-tf-dark">
                 @{currentUser.username}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -208,12 +285,12 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <Button variant="soft" aria-label="Modifier le profil (placeholder)">
+          <Button variant="soft" onClick={() => setEditOpen(true)} aria-label="Modifier le profil">
             Modifier
           </Button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid gap-3 grid-cols-2 sm:grid-cols-4">
           <Stat label="Pronos" value={`${stats.total}`} hint="Au total" />
           <Stat
             label="Précision"
@@ -232,18 +309,18 @@ export function ProfilePage() {
       <Card className="p-5 sm:p-6">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
               MES PARIS
             </div>
-            <div className="mt-1 text-lg font-black tracking-tight text-slate-900">
+            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
               En cours & validés
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-700/70">
-            <Badge className="border-slate-200 bg-white/70 text-slate-700">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-tf-grey">
+            <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey">
               En cours: {betsView.open.length}
             </Badge>
-            <Badge className="border-slate-200 bg-white/70 text-slate-700">
+            <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey">
               Validés: {betsView.settled.length}
             </Badge>
           </div>
@@ -251,30 +328,30 @@ export function ProfilePage() {
 
         {bets.length ? (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+            <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-black text-slate-900">En cours</div>
+                <div className="text-sm font-black text-tf-dark">En cours</div>
                 <Badge className="border-blue-200 bg-blue-50 text-blue-700">
                   {betsView.open.length}
                 </Badge>
               </div>
               {betsView.lastOpen.length ? (
-                <div className="mt-3 divide-y divide-slate-200/70 rounded-3xl border border-slate-200/70 bg-white/70">
+                <div className="mt-3 divide-y divide-tf-grey-pastel/50 rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90">
                   {betsView.lastOpen.map((b) => {
                     const m = betsView.matchLine(b.matchId)
                     return (
                       <div key={b.id} className="p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-slate-900">
+                            <div className="truncate text-xs font-black text-tf-dark">
                               {m.title}
                             </div>
                             {m.sub ? (
-                              <div className="mt-0.5 text-[11px] font-semibold text-slate-700/70">
+                              <div className="mt-0.5 text-[11px] font-semibold text-tf-grey">
                                 {m.sub}
                               </div>
                             ) : null}
-                            <div className="mt-2 text-xs font-bold text-slate-800">
+                            <div className="mt-2 text-xs font-bold text-tf-dark">
                               {betsView.marketLabel(b.market)} •{' '}
                               {betsView.selectionLabel(b, b.matchId)} • {b.stake}j • x
                               {b.odds.toFixed(2).replace('.', ',')}
@@ -289,21 +366,21 @@ export function ProfilePage() {
                   })}
                 </div>
               ) : (
-                <div className="mt-3 text-sm font-semibold text-slate-700/70">
+                <div className="mt-3 text-sm font-semibold text-tf-grey">
                   Aucun pari en cours.
                 </div>
               )}
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+            <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-black text-slate-900">Validés</div>
-                <Badge className="border-slate-200 bg-white/70 text-slate-700">
+                <div className="text-sm font-black text-tf-dark">Validés</div>
+                <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey">
                   {betsView.settled.length}
                 </Badge>
               </div>
               {betsView.lastSettled.length ? (
-                <div className="mt-3 divide-y divide-slate-200/70 rounded-3xl border border-slate-200/70 bg-white/70">
+                <div className="mt-3 divide-y divide-tf-grey-pastel/50 rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90">
                   {betsView.lastSettled.map((b) => {
                     const m = betsView.matchLine(b.matchId)
                     const statusBadge =
@@ -318,22 +395,22 @@ export function ProfilePage() {
                               label: 'Perdu',
                             }
                           : {
-                              cls: 'border-slate-200 bg-white/70 text-slate-700',
+                              cls: 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey',
                               label: 'Annulé',
                             }
                     return (
                       <div key={b.id} className="p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-slate-900">
+                            <div className="truncate text-xs font-black text-tf-dark">
                               {m.title}
                             </div>
                             {m.sub ? (
-                              <div className="mt-0.5 text-[11px] font-semibold text-slate-700/70">
+                              <div className="mt-0.5 text-[11px] font-semibold text-tf-grey">
                                 {m.sub}
                               </div>
                             ) : null}
-                            <div className="mt-2 text-xs font-bold text-slate-800">
+                            <div className="mt-2 text-xs font-bold text-tf-dark">
                               {betsView.marketLabel(b.market)} •{' '}
                               {betsView.selectionLabel(b, b.matchId)} • {b.stake}j
                             </div>
@@ -345,14 +422,14 @@ export function ProfilePage() {
                   })}
                 </div>
               ) : (
-                <div className="mt-3 text-sm font-semibold text-slate-700/70">
+                <div className="mt-3 text-sm font-semibold text-tf-grey">
                   Aucun pari validé pour le moment.
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="mt-3 text-sm font-semibold text-slate-700/70">
+          <div className="mt-3 text-sm font-semibold text-tf-grey">
             Pas encore de paris. Lance un match live et tente un prono.
           </div>
         )}
@@ -361,14 +438,14 @@ export function ProfilePage() {
       <Card className="p-5 sm:p-6">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
               BADGES PRONOS
             </div>
-            <div className="mt-1 text-lg font-black tracking-tight text-slate-900">
+            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
               Tes badges
             </div>
           </div>
-          <div className="text-xs font-semibold text-slate-700/70">
+          <div className="text-xs font-semibold text-tf-grey">
             {badges.length} badges
           </div>
         </div>
@@ -377,16 +454,16 @@ export function ProfilePage() {
           {badges.map((b) => (
             <div
               key={b.label}
-              className="rounded-3xl border border-slate-200/80 bg-white/70 p-4"
+              className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4"
               title={b.hint}
             >
               <div className="flex items-start gap-3">
                 <BadgeIllustration kind={b.kind} />
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-slate-900">
+                  <div className="text-sm font-black text-tf-dark">
                     {b.label}
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-slate-700/70">
+                  <div className="mt-1 text-sm font-semibold text-tf-grey">
                     {b.hint}
                   </div>
                   <div className="mt-2">
@@ -407,25 +484,25 @@ export function ProfilePage() {
       <Card className="p-5 sm:p-6">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
               PROGRESSION
             </div>
-            <div className="mt-1 text-lg font-black tracking-tight text-slate-900">
+            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
               Prochains paliers
             </div>
           </div>
-          <div className="text-xs font-semibold text-slate-700/70">
+          <div className="text-xs font-semibold text-tf-grey">
             Gagne des badges en jouant
           </div>
         </div>
 
         <div className="mt-4 space-y-3">
-          <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+          <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-sm font-black text-slate-900">
+              <div className="text-sm font-black text-tf-dark">
                 {progress.predictor.label}
               </div>
-              <div className="text-xs font-bold text-slate-700/70">
+              <div className="text-xs font-bold text-tf-grey">
                 {progress.predictor.cur}/{progress.predictor.next}
               </div>
             </div>
@@ -434,12 +511,12 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+          <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-sm font-black text-slate-900">
+              <div className="text-sm font-black text-tf-dark">
                 {progress.accuracy.label}
               </div>
-              <div className="text-xs font-bold text-slate-700/70">
+              <div className="text-xs font-bold text-tf-grey">
                 {progress.accuracy.cur}/{progress.accuracy.next}%
               </div>
             </div>
@@ -448,12 +525,12 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+          <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-sm font-black text-slate-900">
+              <div className="text-sm font-black text-tf-dark">
                 {progress.streak.label}
               </div>
-              <div className="text-xs font-bold text-slate-700/70">
+              <div className="text-xs font-bold text-tf-grey">
                 {progress.streak.cur}/{progress.streak.next}
               </div>
             </div>
@@ -467,10 +544,10 @@ export function ProfilePage() {
       <Card className="p-5 sm:p-6">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
               HISTORIQUE
             </div>
-            <div className="mt-1 text-lg font-black tracking-tight text-slate-900">
+            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
               Prédictions récentes
             </div>
           </div>
@@ -487,12 +564,12 @@ export function ProfilePage() {
           {predictions.map((p) => (
             <div
               key={p.id}
-              className="rounded-3xl border border-slate-200/80 bg-white/70 p-4"
+              className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-black text-slate-900">
+                    <div className="text-sm font-black text-tf-dark">
                       {p.match.home.shortName} – {p.match.away.shortName}
                     </div>
                     <Badge
@@ -501,7 +578,7 @@ export function ProfilePage() {
                           ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                           : p.outcome === 'lost'
                             ? 'border-rose-200 bg-rose-50 text-rose-700'
-                            : 'border-slate-200 bg-white/70 text-slate-700'
+                            : 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey'
                       }
                     >
                       {p.outcome === 'won'
@@ -514,20 +591,20 @@ export function ProfilePage() {
                       {p.match.competition.shortName}
                     </Badge>
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-slate-700/70">
+                  <div className="mt-1 text-sm font-semibold text-tf-grey">
                     Coup d’envoi {formatKickoff(p.match.kickoffAt)}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge
-                    className="border-slate-200 bg-white/70 text-slate-900"
+                    className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-dark"
                     title="Score prédit"
                   >
                     Prono {p.predictedScore.home}-{p.predictedScore.away}
                   </Badge>
                   <Badge
-                    className="border-slate-200 bg-white/70 text-slate-900"
+                    className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-dark"
                     title="Score réel (si dispo)"
                   >
                     Réel{' '}
@@ -539,7 +616,7 @@ export function ProfilePage() {
                     className={
                       p.points > 0
                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                        : 'border-slate-200 bg-white/70 text-slate-700'
+                        : 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey'
                     }
                     title="Points gagnés"
                   >
@@ -551,6 +628,8 @@ export function ProfilePage() {
           ))}
         </div>
       </Card>
+
+      <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
     </div>
   )
 }
@@ -565,14 +644,14 @@ function Stat({
   hint: string
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
-      <div className="text-xs font-semibold tracking-wide text-slate-700/70">
+    <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
+      <div className="text-xs font-semibold tracking-wide text-tf-grey">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+      <div className="mt-1 font-display text-2xl font-black tracking-tight text-tf-dark">
         {value}
       </div>
-      <div className="mt-1 text-xs font-semibold text-slate-700/70">{hint}</div>
+      <div className="mt-1 text-xs font-semibold text-tf-grey">{hint}</div>
     </div>
   )
 }

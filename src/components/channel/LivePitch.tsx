@@ -35,21 +35,19 @@ export function LivePitch({ match }: { match: Match }) {
   } | null>(null)
   const ballRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 })
 
+  const homeColor = match.home.colors.primary
+  const awayColor = match.away.colors.primary
+
   useEffect(() => {
     startRef.current = performance.now()
-    rngRef.current = mulberry32(
-      (match.id.length * 10007 + (match.minute ?? 0) * 97) | 0,
-    )
-
-    // init play
+    rngRef.current = mulberry32((match.id.length * 10007) | 0)
     playRef.current = {
       from: { x: 0.5, y: 0.5 },
       to: { x: 0.58, y: 0.52 },
       startedAt: performance.now(),
-      durationMs: 1900,
+      durationMs: 1400 + Math.random() * 600,
     }
     const tick = (now: number) => {
-      // 60fps-ish clock for smooth animation
       setT((now - startRef.current) / 1000)
       rafRef.current = requestAnimationFrame(tick)
     }
@@ -57,7 +55,7 @@ export function LivePitch({ match }: { match: Match }) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [match.id, match.minute])
+  }, [match.id])
 
   const sim = useMemo(() => {
     const now = performance.now()
@@ -79,7 +77,6 @@ export function LivePitch({ match }: { match: Match }) {
     const y = clamp01(lerp(play.from.y, play.to.y, e))
     ballRef.current = { x, y }
 
-    // Decide next action when segment ends: more "match-like" than circular.
     if (p >= 1) {
       const cur = play.to
       const inAttack = cur.x > 0.62
@@ -89,15 +86,12 @@ export function LivePitch({ match }: { match: Match }) {
       let nx = cur.x
       let ny = cur.y
       if (turnover) {
-        // reset a bit back to midfield
         nx = clamp01(0.42 + rng() * 0.18)
         ny = clamp01(0.22 + rng() * 0.56)
       } else if (longPass) {
-        // diagonal / vertical pass forward
         nx = clamp01(cur.x + 0.10 + rng() * 0.22)
         ny = clamp01(cur.y + (rng() - 0.5) * 0.32)
       } else {
-        // small circulation / build-up
         nx = clamp01(cur.x + (rng() - 0.35) * 0.14)
         ny = clamp01(cur.y + (rng() - 0.5) * 0.18)
       }
@@ -111,12 +105,10 @@ export function LivePitch({ match }: { match: Match }) {
     }
 
     const danger = clamp01((x - 0.62) * 2.2)
-
     return { x, y, danger, seg: { from: play.from, to: play.to, p } }
   }, [t])
 
   const players = useMemo(() => {
-    // Formation anchors (roughly 4-3-3 vs 4-4-2), then shift towards ball.
     const home = [
       [0.18, 0.52],
       [0.26, 0.22],
@@ -155,33 +147,26 @@ export function LivePitch({ match }: { match: Match }) {
         const dir = team === 'home' ? 1 : -1
         const x = clamp01(ax + (bx - 0.5) * shift * dir)
         const y = clamp01(ay + (by - 0.5) * shift)
-        const depth = 0.95 - y * 0.35
-        return { id: `${team}-${i}`, x, y, depth, team }
+        return { id: `${team}-${i}`, x, y, team }
       })
 
     return [...mk(home, 'home'), ...mk(away, 'away')]
   }, [sim.x, sim.y])
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm font-black text-slate-900">Schéma live</div>
-        <div className="text-xs font-semibold text-slate-600">
-          Simulation fictive • pression: {Math.round(sim.danger * 100)}%
-        </div>
-      </div>
-
-      <div className="tf-pitch2d flex-1" role="img" aria-label="Terrain 2D (simulation)">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="tf-pitch2d flex-1" role="img" aria-label="Terrain 2D en direct">
         <svg viewBox="0 0 100 64" className="block h-full w-full">
           <defs>
             <linearGradient id="grass2d" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0" stopColor="#e9fbf2" />
-              <stop offset="1" stopColor="#d5f2e2" />
+              <stop offset="0" stopColor="#e8f5ec" />
+              <stop offset="0.5" stopColor="#dcefe4" />
+              <stop offset="1" stopColor="#d0e8dc" />
             </linearGradient>
             <linearGradient id="pass" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stopColor="#0a3dff" stopOpacity="0.0" />
-              <stop offset="0.45" stopColor="#0a3dff" stopOpacity="0.55" />
-              <stop offset="1" stopColor="#38bdf8" stopOpacity="0.0" />
+              <stop offset="0" stopColor={homeColor} stopOpacity="0" />
+              <stop offset="0.45" stopColor={homeColor} stopOpacity="0.5" />
+              <stop offset="1" stopColor={awayColor} stopOpacity="0" />
             </linearGradient>
             <filter id="glow">
               <feGaussianBlur stdDeviation="0.6" result="coloredBlur" />
@@ -194,27 +179,36 @@ export function LivePitch({ match }: { match: Match }) {
 
           <rect x="0" y="0" width="100" height="64" fill="url(#grass2d)" />
 
-          <g opacity="0.92" stroke="#0b1b3a" strokeOpacity="0.14" strokeWidth="0.8" fill="none">
+          <g
+            opacity="0.9"
+            stroke="rgba(11,27,58,0.12)"
+            strokeWidth="0.75"
+            fill="none"
+          >
             <rect x="2.5" y="2.5" width="95" height="59" rx="3" />
             <line x1="50" y1="2.5" x2="50" y2="61.5" />
             <circle cx="50" cy="32" r="7.2" />
-            <circle cx="50" cy="32" r="0.8" fill="#0b1b3a" fillOpacity="0.18" stroke="none" />
+            <circle
+              cx="50"
+              cy="32"
+              r="0.8"
+              fill="rgba(11,27,58,0.16)"
+              stroke="none"
+            />
             <rect x="2.5" y="18" width="14" height="28" rx="2" />
             <rect x="83.5" y="18" width="14" height="28" rx="2" />
             <rect x="2.5" y="24" width="5" height="16" rx="1.5" />
             <rect x="92.5" y="24" width="5" height="16" rx="1.5" />
           </g>
 
-          {/* pressure */}
           <circle
             cx={sim.x * 100}
             cy={sim.y * 64}
             r={8 + sim.danger * 10}
-            fill="#0a3dff"
-            fillOpacity={0.06 + sim.danger * 0.14}
+            fill={homeColor}
+            fillOpacity={0.05 + sim.danger * 0.12}
           />
 
-          {/* pass line for current segment */}
           <line
             x1={sim.seg.from.x * 100}
             y1={sim.seg.from.y * 64}
@@ -223,51 +217,60 @@ export function LivePitch({ match }: { match: Match }) {
             stroke="url(#pass)"
             strokeWidth={0.9 + sim.danger * 0.8}
             strokeLinecap="round"
-            strokeDasharray="2.2 2.2"
-            opacity={0.25 + (1 - Math.abs(sim.seg.p - 0.5) * 2) * 0.35}
+            strokeDasharray="2 2"
+            opacity={0.2 + (1 - Math.abs(sim.seg.p - 0.5) * 2) * 0.3}
           />
 
-          {/* players (home/away) */}
           {players.map((p) => (
-            <g key={p.id} opacity={0.9}>
+            <g key={p.id} opacity={0.92}>
               <circle
                 cx={p.x * 100}
                 cy={p.y * 64}
-                r={1.2 + (p.team === 'home' ? 0.15 : 0)}
-                fill={p.team === 'home' ? '#0b1b3a' : '#0ea5e9'}
+                r={1.2}
+                fill={p.team === 'home' ? homeColor : awayColor}
                 filter="url(#glow)"
               />
               <circle
                 cx={p.x * 100}
                 cy={p.y * 64}
-                r={2.1}
+                r={2}
                 fill="none"
-                stroke={p.team === 'home' ? 'rgba(11,27,58,0.18)' : 'rgba(14,165,233,0.18)'}
+                stroke={
+                  p.team === 'home'
+                    ? `${homeColor}40`
+                    : `${awayColor}40`
+                }
                 strokeWidth="0.5"
               />
             </g>
           ))}
 
-          {/* ball */}
-          <g filter="url(#glow)">
+          <g filter="url(#glow)" className="tf-pitch-ball">
             <circle
               cx={sim.x * 100}
               cy={sim.y * 64}
-              r="2.3"
-              fill="#0b1b3a"
-              fillOpacity="0.18"
+              r="2.4"
+              fill="rgba(11,27,58,0.14)"
             />
             <circle cx={sim.x * 100} cy={sim.y * 64} r="1.8" fill="#ffffff" />
-            <circle cx={sim.x * 100} cy={sim.y * 64} r="0.65" fill="#0b1b3a" fillOpacity="0.16" />
+            <circle
+              cx={sim.x * 100}
+              cy={sim.y * 64}
+              r="0.6"
+              fill="rgba(11,27,58,0.14)"
+            />
           </g>
         </svg>
 
-        <div className="tf-pitch2d__score">
-          {match.home.shortName} {match.score ? match.score.home : '—'} –{' '}
-          {match.score ? match.score.away : '—'} {match.away.shortName}
+        <div className="tf-pitch2d__score flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate">{match.home.shortName}</span>
+          <span className="tabular-nums shrink-0">
+            {match.score ? match.score.home : '—'} –{' '}
+            {match.score ? match.score.away : '—'}
+          </span>
+          <span className="min-w-0 truncate">{match.away.shortName}</span>
         </div>
       </div>
     </div>
   )
 }
-

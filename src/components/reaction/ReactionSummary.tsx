@@ -1,11 +1,7 @@
 import type { ReactionEvent, ReactionType } from '../../types/chat'
 import { reactionMeta } from './reactions'
 
-export function ReactionSummary({
-  reactions,
-}: {
-  reactions: ReactionEvent[]
-}) {
+export function ReactionSummary({ reactions }: { reactions: ReactionEvent[] }) {
   const counts = reactions.reduce<Record<ReactionType, number>>(
     (acc, r) => {
       acc[r.type] = (acc[r.type] ?? 0) + 1
@@ -15,20 +11,24 @@ export function ReactionSummary({
   )
 
   const items: ReactionType[] = ['flare', 'confetti', 'goal', 'rage']
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {items.map((t) => (
-        <div
-          key={t}
-          className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-white/70"
-          aria-label={`${reactionMeta[t].label} count`}
-        >
-          <span aria-hidden="true">{reactionMeta[t].emoji}</span>
-          <span className="tabular-nums">{counts[t]}</span>
-        </div>
-      ))}
+    <div className="space-y-1.5">
+      <span className="text-[10px] font-bold tracking-wide text-slate-500">
+        Compteur réactions
+      </span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {items.map((t) => (
+          <div
+            key={t}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200/60 bg-white/90 px-2 py-1 text-[11px] font-bold text-slate-700 shadow-sm"
+            aria-label={`${reactionMeta[t].label}: ${counts[t]}`}
+            title={`${reactionMeta[t].label}: ${counts[t]}`}
+          >
+            <span aria-hidden="true">{reactionMeta[t].emoji}</span>
+            <span className="tabular-nums">{counts[t]}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
-

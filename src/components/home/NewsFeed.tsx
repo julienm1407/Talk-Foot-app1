@@ -1,4 +1,5 @@
 import type { NewsItem } from '../../data/news'
+import { footballImageUrl } from '../../data/news'
 import { Card } from '../ui/Card'
 
 const tagStyles: Record<NewsItem['tag'], string> = {
@@ -11,16 +12,16 @@ const tagStyles: Record<NewsItem['tag'], string> = {
 export function NewsFeed({ items }: { items: NewsItem[] }) {
   return (
     <Card className="overflow-hidden">
-      <div className="px-5 py-4 sm:px-6">
-        <div className="flex items-end justify-between gap-3">
-          <div>
+      <div className="px-5 py-5 sm:px-6 sm:py-6">
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-2">
             <div className="text-[11px] font-black tracking-wide text-slate-600">
               ACTU
             </div>
-            <div className="mt-1 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-              Revue du matchday
+            <div className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+              Actu
             </div>
-            <div className="mt-2 text-sm font-semibold text-slate-700 sm:text-base">
+            <div className="text-sm font-semibold text-slate-700 sm:text-base">
               Des vraies sensations “journalistiques” (mock).
             </div>
           </div>
@@ -29,9 +30,17 @@ export function NewsFeed({ items }: { items: NewsItem[] }) {
 
       <div className="divide-y divide-slate-200/80">
         {items.map((n) => (
-          <article key={n.id} className="px-5 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
+          <article key={n.id} className="flex flex-col sm:flex-row gap-4 px-5 py-5 sm:px-6 sm:py-5">
+            <div className="shrink-0 w-full sm:w-36 h-28 sm:h-24 rounded-2xl overflow-hidden bg-slate-100">
+              <img
+                src={footballImageUrl(n.id)}
+                alt=""
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div className="min-w-0 flex-1 flex flex-col justify-between">
+              <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${tagStyles[n.tag]}`}
@@ -49,10 +58,10 @@ export function NewsFeed({ items }: { items: NewsItem[] }) {
                   {n.excerpt}
                 </p>
               </div>
-              <div className="shrink-0">
-                <div className="rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-black text-slate-900 transition hover:bg-white">
+              <div className="mt-3">
+                <span className="inline-flex rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-black text-slate-900 transition hover:bg-white cursor-pointer">
                   Lire →
-                </div>
+                </span>
               </div>
             </div>
           </article>

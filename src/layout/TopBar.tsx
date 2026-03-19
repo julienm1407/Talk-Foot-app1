@@ -7,19 +7,19 @@ export function TopBar() {
   const isHome = location.pathname === '/'
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-tf-grey-pastel/60 bg-tf-white/95 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between px-4 py-3 sm:px-6">
         <Link
           to="/"
-          className="group inline-flex items-center gap-2 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
+          className="group inline-flex items-center gap-2 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/30"
           aria-label="Accueil Talk Foot"
         >
           <LogoMark />
-          <div className="leading-tight">
-            <div className="text-sm font-black tracking-tight text-slate-900">
+          <div className="min-w-0 leading-tight">
+            <div className="font-display text-sm font-black tracking-tight text-tf-dark">
               Talk Foot
             </div>
-            <div className="text-[11px] font-semibold text-slate-600">
+            <div className="hidden truncate text-[11px] font-semibold text-tf-grey sm:block">
               Réseau social foot en direct
             </div>
           </div>
@@ -27,9 +27,10 @@ export function TopBar() {
 
         <nav className="hidden sm:block" aria-label="Primary">
           <div className="tf-surface rounded-[22px] p-1">
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-4 gap-1">
               <TopLink to="/" label="Accueil" active={isHome} />
               <TopLink to="/calendar" label="Calendrier" />
+              <TopLink to="/boutique" label="Boutique" />
               <TopLink to="/profile" label="Profil" />
             </div>
           </div>
@@ -39,8 +40,8 @@ export function TopBar() {
           to="/profile"
           className={({ isActive }) =>
             cn(
-              'inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-blue-600/20',
-              isActive && 'border-slate-300 bg-white',
+              'inline-flex items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2 text-sm font-semibold text-tf-dark shadow-sm outline-none transition hover:bg-tf-white focus-visible:ring-2 focus-visible:ring-tf-grey/30',
+              isActive && 'border-tf-grey/40 bg-tf-white',
             )
           }
           aria-label="Ouvrir le profil"
@@ -69,9 +70,9 @@ function TopLink({
       to={to}
       className={({ isActive }) =>
         cn(
-          'rounded-[18px] px-3 py-2 text-center text-sm font-black text-slate-700 outline-none transition hover:bg-white/60 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-600/20',
+          'rounded-[18px] px-3 py-2 text-center text-sm font-black text-tf-grey outline-none transition hover:bg-tf-white/80 hover:text-tf-dark focus-visible:ring-2 focus-visible:ring-tf-grey/30',
           (active ?? isActive) &&
-            'bg-white/80 text-slate-900 shadow-sm',
+            'bg-tf-white/90 text-tf-dark shadow-sm',
         )
       }
     >

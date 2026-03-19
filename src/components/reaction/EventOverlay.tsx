@@ -52,7 +52,7 @@ export function EventOverlay({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[80] grid place-items-center">
-      <div className="pointer-events-none absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
+      <div className="pointer-events-none absolute inset-0 bg-black/5" />
       <div
         className={`pointer-events-none w-[min(680px,calc(100vw-32px))] rounded-[28px] border border-slate-200/70 ${m.bg} p-6 shadow-[0_30px_90px_rgba(0,0,0,.18)]`}
         style={{

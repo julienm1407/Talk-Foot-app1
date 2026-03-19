@@ -1,5 +1,5 @@
 import type { Highlight } from '../../data/highlights'
-import { Card } from '../ui/Card'
+import { cn } from '../../utils/cn'
 
 const icon: Record<Highlight['type'], string> = {
   But: '⚽',
@@ -11,12 +11,12 @@ const icon: Record<Highlight['type'], string> = {
 }
 
 const pill: Record<Highlight['type'], string> = {
-  But: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-  Occasion: 'bg-blue-50 text-blue-700 ring-blue-200',
-  Carton: 'bg-amber-50 text-amber-700 ring-amber-200',
-  VAR: 'bg-slate-50 text-slate-700 ring-slate-200',
-  Arrêt: 'bg-violet-50 text-violet-700 ring-violet-200',
-  Info: 'bg-slate-50 text-slate-700 ring-slate-200',
+  But: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  Occasion: 'bg-blue-100 text-blue-800 border-blue-200',
+  Carton: 'bg-amber-100 text-amber-800 border-amber-200',
+  VAR: 'bg-slate-100 text-slate-700 border-slate-200',
+  Arrêt: 'bg-violet-100 text-violet-800 border-violet-200',
+  Info: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
 const shortTitle: Record<Highlight['type'], string> = {
@@ -37,73 +37,72 @@ export function MatchHighlights({
 }) {
   if (items.length === 0) {
     return (
-      <Card elevation="none" className="border-dashed bg-white/60 p-5">
-        <div className="text-sm font-black text-slate-900">Moments forts</div>
-        <div className="mt-1 text-sm font-semibold text-slate-600">
-          Rien à signaler pour l’instant (mock).
-        </div>
-      </Card>
+      <div className="rounded-xl border border-dashed border-slate-200/70 bg-slate-50/50 p-5">
+        <p className="text-sm font-semibold text-slate-600">
+          Aucun moment enregistré pour l'instant.
+        </p>
+      </div>
     )
   }
 
-  return (
-    <div className="space-y-2">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <div className="text-sm font-black text-slate-900">Moments forts</div>
-          <div className="mt-0.5 text-xs font-semibold text-slate-600">
-            Résumé façon OneFootball (simulation).
-          </div>
-        </div>
-      </div>
+  const sorted = [...items].sort((a, b) => b.minute - a.minute)
 
-      <div className="space-y-2">
-        {items
-          .slice()
-          .sort((a, b) => b.minute - a.minute)
-          .map((h) => {
-            const title = shortTitle[h.type]
-            const detail =
-              h.title.trim() && h.title.trim() !== title
-                ? `${h.title} — ${h.detail}`
-                : h.detail
-            return (
-            <Card
-              key={h.id}
-              elevation="none"
-              className={
-                h.id === activeId
-                  ? 'bg-white/85 px-5 py-4 ring-2 ring-blue-600/20'
-                  : 'bg-white/75 px-5 py-4'
-              }
+  return (
+    <ul className="space-y-2" role="list">
+      {sorted.map((h, idx) => {
+        const title = shortTitle[h.type]
+        const detail =
+          h.title.trim() && h.title.trim() !== title
+            ? `${h.title} — ${h.detail}`
+            : h.detail
+        const isActive = h.id === activeId
+
+        return (
+          <li key={h.id}>
+            <div
+              className={cn(
+                'tf-timeline-in rounded-xl border px-4 py-3 transition-colors',
+                isActive
+                  ? 'border-blue-300/60 bg-blue-50/70 ring-1 ring-blue-200/50'
+                  : 'border-slate-200/60 bg-white/80 hover:bg-white',
+              )}
+              style={{ animationDelay: `${Math.min(idx * 40, 200)}ms` }}
             >
-              <div className="grid grid-cols-[40px_1fr] items-start gap-3">
-                <div className="grid size-10 place-items-center rounded-3xl bg-gradient-to-br from-blue-700 to-sky-400 text-base font-black text-white shadow-sm">
-                  <span aria-hidden="true">{icon[h.type]}</span>
+              <div className="flex gap-3">
+                <div
+                  className={cn(
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-base',
+                    isActive ? 'bg-blue-100' : 'bg-slate-100/80',
+                  )}
+                >
+                  {icon[h.type]}
                 </div>
-                <div className="min-w-0 w-full">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-black tabular-nums text-slate-500">
                       {h.minute > 0 ? `${h.minute}'` : '—'}
                     </span>
                     <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${pill[h.type]}`}
+                      className={cn(
+                        'inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold',
+                        pill[h.type],
+                      )}
                     >
                       {h.type}
                     </span>
                   </div>
-                  <div className="mt-1 text-[15px] font-black tracking-tight text-slate-900">
+                  <p className="mt-1 text-sm font-black text-slate-900">
                     {title}
-                  </div>
-                  <div className="mt-1 w-full text-[13px] font-semibold leading-relaxed text-slate-600/90">
+                  </p>
+                  <p className="mt-0.5 text-xs font-medium leading-relaxed text-slate-600">
                     {detail}
-                  </div>
+                  </p>
                 </div>
               </div>
-            </Card>
-          )})}
-      </div>
-    </div>
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
-

@@ -117,6 +117,64 @@ export function useBetting(matchId: string) {
     [matchId, setBets, setWallet],
   )
 
+  const settleMatchResult = useCallback(
+    (finalScore: { home: number; away: number }) => {
+      setBets((prev) => {
+        const now = new Date().toISOString()
+        let delta = 0
+        const { home, away } = finalScore
+        const totalGoals = home + away
+        const homeWins = home > away
+        const awayWins = away > home
+        const isDraw = home === away
+
+        const next = prev.map((b) => {
+          if (b.matchId !== matchId) return b
+          if (b.status !== 'open') return b
+
+          if (b.market === 'result_1x2') {
+            const won =
+              (b.selection === 'home' && homeWins) ||
+              (b.selection === 'draw' && isDraw) ||
+              (b.selection === 'away' && awayWins)
+            if (won) {
+              const payout = Math.round(b.stake * b.odds)
+              delta += payout
+              return { ...b, status: 'won' as const, settledAt: now, payout }
+            }
+            return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+          }
+
+          if (b.market === 'over25') {
+            const won =
+              (b.selection === 'over' && totalGoals > 2) ||
+              (b.selection === 'under' && totalGoals <= 2)
+            if (won) {
+              const payout = Math.round(b.stake * b.odds)
+              delta += payout
+              return { ...b, status: 'won' as const, settledAt: now, payout }
+            }
+            return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+          }
+
+          return b
+        })
+        if (delta) setWallet((w) => ({ ...w, tokens: w.tokens + delta }))
+        return next
+      })
+    },
+    [matchId, setBets, setWallet],
+  )
+
+  const spendTokens = useCallback(
+    (amount: number, _reason: string) => {
+      if (wallet.tokens < amount) return { ok: false as const, reason: 'not_enough_tokens' as const }
+      setWallet((w) => ({ ...w, tokens: w.tokens - amount }))
+      return { ok: true as const }
+    },
+    [setWallet, wallet.tokens],
+  )
+
   const stats = useMemo(() => {
     const decided = matchBets.filter((b) => b.status !== 'open')
     const won = decided.filter((b) => b.status === 'won').length
@@ -133,6 +191,8 @@ export function useBetting(matchId: string) {
     cancelBet,
     settleNextGoal,
     settleFirstGoal,
+    settleMatchResult,
+    spendTokens,
   }
 }
 
