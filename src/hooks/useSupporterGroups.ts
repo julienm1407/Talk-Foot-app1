@@ -6,7 +6,11 @@ import { useLocalStorageState } from './useLocalStorage'
 const KEY = 'talkfoot.groups.v1'
 
 export function useSupporterGroups() {
-  const [custom, setCustom] = useLocalStorageState<SupporterGroup[]>(KEY, [])
+  const [custom, setCustom] = useLocalStorageState<SupporterGroup[]>(
+    KEY,
+    [],
+    Array.isArray,
+  )
 
   const groups = useMemo(() => {
     const merged = [...custom, ...starterGroups]

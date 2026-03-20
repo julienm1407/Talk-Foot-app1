@@ -3,8 +3,8 @@ import { cn } from '../utils/cn'
 import { LogoMark } from './LogoMark'
 
 const items = [
-  { to: '/', label: 'Accueil', icon: '🏟️', hint: 'Matchs + serveurs' },
-  { to: '/calendar', label: 'Calendrier', icon: '🗓️', hint: 'Matchs à venir' },
+  { to: '/', label: 'Accueil', icon: '🏟️', hint: 'Matchs & salons' },
+  { to: '/calendar', label: 'Agenda', icon: '🗓️', hint: 'Matchs à venir' },
   { to: '/profile', label: 'Profil', icon: '👤', hint: 'Ton compte' },
 ]
 
@@ -12,22 +12,18 @@ export function SidebarNav() {
   return (
     <aside className="hidden sm:block">
       <div className="sticky top-[76px] space-y-3">
-        <div className="tf-surface rounded-3xl p-5 shadow-[0_18px_55px_rgba(11,27,58,.10)]">
+        <div className="tf-surface rounded-3xl p-5 shadow-tf-card">
           <div className="flex items-center gap-3">
-            <LogoMark />
+            <LogoMark variant="compact" />
             <div className="leading-tight">
-              <div className="text-sm font-black tracking-tight text-slate-900">
-                Talk Foot
-              </div>
-              <div className="text-[11px] font-semibold text-slate-600">
-                deuxième écran live
-              </div>
+              <span className="sr-only">Talk Foot</span>
+              <div className="text-[11px] font-semibold text-tf-grey">deuxième écran live</div>
             </div>
           </div>
         </div>
 
         <nav
-          className="tf-surface rounded-3xl p-2 shadow-[0_18px_55px_rgba(11,27,58,.10)]"
+          className="tf-surface rounded-3xl p-2 shadow-tf-card"
           aria-label="Sidebar"
         >
           {items.map((item) => (
@@ -38,9 +34,9 @@ export function SidebarNav() {
                 cn(
                   'group flex items-center justify-between gap-3 rounded-2xl px-3 py-3 outline-none transition',
                   isActive
-                    ? 'bg-slate-100 text-slate-900'
-                    : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900',
-                  'focus-visible:ring-2 focus-visible:ring-blue-600/20',
+                    ? 'bg-tf-electric-soft text-tf-dark ring-1 ring-tf-electric/25'
+                    : 'text-tf-dark/80 hover:bg-white/60 hover:text-tf-dark',
+                  'focus-visible:ring-2 focus-visible:ring-tf-electric/35',
                 )
               }
             >
@@ -50,23 +46,23 @@ export function SidebarNav() {
                 </span>
                 <div>
                   <div className="text-sm font-black">{item.label}</div>
-                  <div className="text-[11px] font-semibold text-slate-600">
+                  <div className="text-[11px] font-semibold text-tf-grey">
                     {item.hint}
                   </div>
                 </div>
               </div>
-              <span className="text-sm text-slate-400 transition group-hover:text-slate-600">
+              <span className="text-sm text-tf-grey/50 transition group-hover:text-tf-electric-deep">
                 →
               </span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="tf-surface rounded-3xl p-5 shadow-[0_18px_55px_rgba(11,27,58,.10)]">
-          <div className="text-sm font-black text-slate-900">
+        <div className="tf-surface rounded-3xl p-5 shadow-tf-card">
+          <div className="text-sm font-black text-tf-dark">
             Conseil du jour
           </div>
-          <div className="mt-1 text-xs font-semibold text-slate-600">
+          <div className="mt-1 text-xs font-semibold text-tf-grey">
             Ouvre un match et balance des réactions quand le rythme change.
           </div>
         </div>

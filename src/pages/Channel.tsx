@@ -33,6 +33,7 @@ import { useUnlockedEmotes } from '../hooks/useUnlockedEmotes'
 import { useMessageLikes } from '../hooks/useMessageLikes'
 import { themeForCompetition } from '../data/competitionThemes'
 import { RENNES_PSG_REPLAY } from '../data/rennesPsgReplay'
+import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { cn } from '../utils/cn'
 
 const MS_PER_MATCH_MINUTE = 3000
@@ -50,6 +51,9 @@ export function ChannelPage() {
     () => Object.fromEntries(users.map((u) => [u.id, u])),
     [users],
   )
+
+  const { virageMode, favoriteClubId, preferencesComplete, setVirageMode } =
+    useFanPreferences()
 
   const [messages, setMessages] = useState<Message[]>(() => {
     const seeded = initialMessages.filter((m) => m.matchId === matchId)
@@ -100,7 +104,6 @@ export function ChannelPage() {
   const eventQueueRef = useRef<Array<{ kind: 'yellow' | 'red' | 'save'; line1: string; line2: string }>>([])
   const matchEndSettledRef = useRef(false)
 
-  const feedRef = useAutoScroll<HTMLDivElement>([messages.length, floating.length])
   const pipContainerRef = useRef<HTMLDivElement | null>(null)
 
   const betting = useBetting(matchId ?? 'unknown')
@@ -111,6 +114,20 @@ export function ChannelPage() {
     const now = Date.now()
     return reactions.filter((r) => now - r.createdAt < 60_000)
   }, [reactions])
+
+  const visibleMessages = useMemo(() => {
+    if (!virageMode || !favoriteClubId) return messages
+    return messages.filter((m) => {
+      if (m.userId === currentUser.id) return true
+      const u = usersById[m.userId]
+      return u?.fanClubId === favoriteClubId
+    })
+  }, [messages, virageMode, favoriteClubId, usersById])
+
+  const feedRef = useAutoScroll<HTMLDivElement>([
+    visibleMessages.length,
+    floating.length,
+  ])
 
   // Le live s'ouvre 1 min avant le coup d'envoi
   const [msUntilKickoff, setMsUntilKickoff] = useState(() =>
@@ -673,14 +690,36 @@ export function ChannelPage() {
               {isLiveOpen && <FloatingReactions items={floating} />}
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div className="shrink-0 border-b border-tf-grey-pastel/50 px-4 py-3 sm:px-5">
-                  <h2 className="font-display text-sm font-black text-tf-dark">
-                    Chat live
-                  </h2>
-                  <p className="mt-0.5 text-xs font-medium text-slate-600">
-                    {isLiveOpen
-                      ? 'Ambiance stade • réagis aux actions'
-                      : 'Ouvre 1 minute avant le coup d\'envoi'}
-                  </p>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <h2 className="font-display text-sm font-black text-tf-dark">
+                        Chat live
+                      </h2>
+                      <p className="mt-0.5 text-xs font-medium text-slate-600">
+                        {isLiveOpen
+                          ? 'Ambiance stade • réagis aux actions'
+                          : 'Ouvre 1 minute avant le coup d\'envoi'}
+                      </p>
+                    </div>
+                    {isLiveOpen &&
+                    match.status === 'live' &&
+                    preferencesComplete &&
+                    favoriteClubId ? (
+                      <button
+                        type="button"
+                        onClick={() => setVirageMode(!virageMode)}
+                        className={cn(
+                          'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black transition',
+                          virageMode
+                            ? 'border-tf-dark bg-tf-dark text-white'
+                            : 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20',
+                        )}
+                        title="Messages filtrés sur ton club de cœur"
+                      >
+                        {virageMode ? '🔥 Virage ON' : 'Mode Virage'}
+                      </button>
+                    ) : null}
+                  </div>
                   {isLiveOpen && (
                     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1 space-y-2">
@@ -712,8 +751,14 @@ export function ChannelPage() {
                       aria-label="Messages en direct"
                       aria-live="polite"
                     >
+                      {virageMode && favoriteClubId ? (
+                        <div className="mb-3 rounded-xl border border-tf-dark/20 bg-tf-dark/5 px-3 py-2 text-xs font-bold text-tf-dark">
+                          Mode Virage : tu vois surtout les messages des supporters de ton club (+ les
+                          tiens).
+                        </div>
+                      ) : null}
                       <MessageList
-                        messages={messages}
+                        messages={visibleMessages}
                         usersById={usersById}
                         getLikes={messageLikes.getLikes}
                         hasLiked={(id) => messageLikes.hasLiked(id, 'me')}

@@ -10,9 +10,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <BrowserRouter
-        basename={
-          import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
-        }
+        basename={(() => {
+          const base = import.meta.env.BASE_URL ?? '/'
+          const trimmed = typeof base === 'string' ? base.replace(/\/$/, '') : ''
+          return trimmed || undefined
+        })()}
       >
         <AuthProvider>
           <App />

@@ -1,6 +1,8 @@
 import type { Message, User } from '../../types/chat'
 import { Avatar } from '../ui/Avatar'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { getEmoteById } from '../../data/emotes'
+import { useProfile } from '../../hooks/useProfile'
 import { cn } from '../../utils/cn'
 
 function clamp01(v: number) {
@@ -44,6 +46,7 @@ export function MessageList({
   hasLiked?: (messageId: string) => boolean
   onToggleLike?: (message: Message) => void
 }) {
+  const { profile } = useProfile()
   const safeGetLikes = getLikes ?? (() => 0)
   const safeHasLiked = hasLiked ?? (() => false)
   return (
@@ -76,12 +79,21 @@ export function MessageList({
               filter: t > 0.7 ? `blur(${(t - 0.7) * 2}px)` : undefined,
             }}
           >
-            <Avatar
-              seed={u?.avatarSeed ?? 'fan'}
-              accent={u?.accent ?? 'violet'}
-              alt={u?.username ?? 'Utilisateur'}
-              className="mt-0.5 shrink-0"
-            />
+            {m.userId === 'me' ? (
+              <ProfileCharacterThumb
+                profile={profile}
+                size="sm"
+                className="mt-0.5"
+                aria-label={u?.username ?? 'Moi'}
+              />
+            ) : (
+              <Avatar
+                seed={u?.avatarSeed ?? 'fan'}
+                accent={u?.accent ?? 'violet'}
+                alt={u?.username ?? 'Utilisateur'}
+                className="mt-0.5 shrink-0"
+              />
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span

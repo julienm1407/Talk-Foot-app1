@@ -5,6 +5,8 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { cn } from '../utils/cn'
+import { LogoMark } from '../layout/LogoMark'
+import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
 
 type Mode = 'login' | 'signup'
 
@@ -44,35 +46,35 @@ export function LoginPage() {
         setError('Merci de remplir l\'email et le mot de passe.')
         return
       }
+      markPendingFanOnboardingAfterLogin()
     } else {
       if (!loginWithEmail(email, password)) {
         setError('Merci de remplir l\'email et le mot de passe.')
         return
       }
+      markPendingFanOnboardingAfterLogin()
     }
   }
 
   const handleGoogle = () => {
     setError(null)
+    markPendingFanOnboardingAfterLogin()
     loginWithGoogle()
   }
 
   const handleApple = () => {
     setError(null)
+    markPendingFanOnboardingAfterLogin()
     loginWithApple()
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-tf-grey-pastel/30 to-white p-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-tf-mist p-4">
       <div className="w-full max-w-[400px]">
-        <div className="mb-8 text-center">
-          <div className="inline-flex size-16 items-center justify-center rounded-2xl bg-tf-dark/10 text-3xl">
-            ⚽
-          </div>
-          <h1 className="mt-4 font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
-            Talk Foot
-          </h1>
-          <p className="mt-2 text-sm font-semibold text-tf-grey">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <LogoMark variant="hero" className="max-w-[220px]" decorative={false} />
+          <h1 className="sr-only">Talk Foot</h1>
+          <p className="mt-4 text-sm font-semibold text-tf-grey">
             Rejoins la communauté foot en direct
           </p>
         </div>

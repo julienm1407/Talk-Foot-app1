@@ -11,6 +11,13 @@ export type SupporterChannel = {
   emoji: string
 }
 
+/** Pour filtrage / accès : ligues (ids competitionThemes) et clubs (ids équipes) */
+export type GroupFanTags = {
+  leagueIds: string[]
+  clubIds: string[]
+}
+
+/** Communauté de supporters : on dit « groupe de supporters », pas « serveur ». */
 export type SupporterGroup = {
   id: string
   name: string
@@ -23,5 +30,7 @@ export type SupporterGroup = {
   channels: SupporterChannel[]
   createdBy: 'system' | 'me'
   createdAt: string
+  /** Salons rattachés à des clubs / ligues (personnalisation & restrictions) */
+  fanTags?: GroupFanTags
 }
 

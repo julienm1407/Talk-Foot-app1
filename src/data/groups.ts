@@ -43,6 +43,7 @@ export const starterGroups: SupporterGroup[] = [
     channels: [...baseChannels],
     createdBy: 'system',
     createdAt: daysAgo(14),
+    fanTags: { leagueIds: ['ligue-1'], clubIds: ['om'] },
   },
   {
     id: 'g-ultras-nuit',
@@ -56,6 +57,7 @@ export const starterGroups: SupporterGroup[] = [
     channels: [...baseChannels],
     createdBy: 'system',
     createdAt: daysAgo(21),
+    fanTags: { leagueIds: ['ligue-1'], clubIds: ['psg'] },
   },
   {
     id: 'g-kop-bleu',
@@ -69,6 +71,7 @@ export const starterGroups: SupporterGroup[] = [
     channels: [...baseChannels],
     createdBy: 'system',
     createdAt: daysAgo(10),
+    fanTags: { leagueIds: ['epl'], clubIds: ['mci'] },
   },
   {
     id: 'g-tribune-rouge',
@@ -82,6 +85,7 @@ export const starterGroups: SupporterGroup[] = [
     channels: [...baseChannels],
     createdBy: 'system',
     createdAt: daysAgo(18),
+    fanTags: { leagueIds: ['epl'], clubIds: ['liv'] },
   },
 ]
 

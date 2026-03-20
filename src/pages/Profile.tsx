@@ -1,7 +1,7 @@
 import { currentUser } from '../data/users'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { HumanAvatar } from '../components/ui/HumanAvatar'
+import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -11,6 +11,7 @@ import { formatKickoff } from '../utils/time'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
 import { AvatarEditor } from '../components/profile/AvatarEditor'
+import { CharacterLookEditor } from '../components/profile/CharacterLookEditor'
 import { EditProfileModal } from '../components/profile/EditProfileModal'
 import { UserRankCard } from '../components/profile/UserRankCard'
 import { useLocalStorageState } from '../hooks/useLocalStorage'
@@ -18,6 +19,9 @@ import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
 import type { Bet } from '../types/bet'
 import { useMatches } from '../contexts/MatchesContext'
+import { useFanPreferences } from '../contexts/FanPreferencesContext'
+import { competitionThemes } from '../data/competitionThemes'
+import { teams } from '../data/teams'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -31,10 +35,30 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const { user: authUser, logout } = useAuth()
   const { matches } = useMatches()
+  const {
+    favoriteLeagueId,
+    favoriteClubId,
+    virageMode,
+    setVirageMode,
+    hideRivalSalons,
+    setHideRivalSalons,
+    openOnboarding,
+  } = useFanPreferences()
+
+  const leagueName =
+    favoriteLeagueId && competitionThemes[favoriteLeagueId]
+      ? competitionThemes[favoriteLeagueId].name
+      : '—'
+  const clubName = (() => {
+    if (!favoriteClubId || !favoriteLeagueId) return '—'
+    const key = favoriteLeagueId as keyof typeof teams
+    const list = teams[key]
+    return list?.find((t) => t.id === favoriteClubId)?.shortName ?? favoriteClubId
+  })()
   const [editOpen, setEditOpen] = useState(false)
   const { wallet } = useWallet()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
-  const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [])
+  const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [], Array.isArray)
 
   useEffect(() => {
     const wonBets = bets.filter((b) => b.status === 'won').map((b) => b.id)
@@ -251,20 +275,67 @@ export function ProfilePage() {
         </div>
       </Card>
 
+      <Card className="p-5 sm:p-6" elevation="soft">
+        <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
+          SUPPORTER
+        </div>
+        <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+          Club & ligue
+        </div>
+        <p className="mt-1 text-sm font-semibold text-tf-grey">
+          Personnalise l’accueil, les actus et le filtrage des salons. Le{' '}
+          <strong className="text-tf-dark">mode supporter</strong> (Profil → Apparence, teinte maillot) pousse encore
+          plus loin : matchs, actus et top commentaires centrés sur ton club.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
+            <div className="text-xs font-bold text-tf-grey">Ligue favorite</div>
+            <div className="mt-1 text-base font-black text-tf-dark">{leagueName}</div>
+          </div>
+          <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
+            <div className="text-xs font-bold text-tf-grey">Club de cœur</div>
+            <div className="mt-1 text-base font-black text-tf-dark">{clubName}</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Button variant="primary" className="rounded-2xl" onClick={openOnboarding}>
+            Modifier club / ligue
+          </Button>
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
+            <input
+              type="checkbox"
+              checked={virageMode}
+              onChange={(e) => setVirageMode(e.target.checked)}
+              className="size-4 rounded"
+            />
+            Mode Virage (live filtré)
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
+            <input
+              type="checkbox"
+              checked={hideRivalSalons}
+              onChange={(e) => setHideRivalSalons(e.target.checked)}
+              className="size-4 rounded"
+            />
+            Masquer salons rivaux
+          </label>
+        </div>
+      </Card>
+
       {/* Classement parieur */}
       <UserRankCard />
 
       {/* Avatar personnalisable */}
+      <CharacterLookEditor />
       <AvatarEditor />
 
       <Card className="p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
-            <HumanAvatar
-              seed={currentUser.avatarSeed}
-              accent={currentUser.accent}
-              alt={currentUser.username}
-              className="size-12 rounded-[22px]"
+            <ProfileCharacterThumb
+              profile={profile}
+              size="md"
+              aria-label={`Personnage de ${currentUser.username}`}
             />
             <div>
               <div className="text-base font-black text-tf-dark">

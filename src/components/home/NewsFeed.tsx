@@ -9,7 +9,17 @@ const tagStyles: Record<NewsItem['tag'], string> = {
   Débrief: 'bg-slate-50 text-slate-700 ring-slate-200',
 }
 
-export function NewsFeed({ items }: { items: NewsItem[] }) {
+export function NewsFeed({
+  items,
+  personalized,
+  supporterClubShort,
+}: {
+  items: NewsItem[]
+  personalized?: boolean
+  /** Mode supporter (maillot) : titres orientés club */
+  supporterClubShort?: string | null
+}) {
+  const focus = supporterClubShort?.trim()
   return (
     <Card className="overflow-hidden">
       <div className="px-5 py-5 sm:px-6 sm:py-6">
@@ -19,10 +29,14 @@ export function NewsFeed({ items }: { items: NewsItem[] }) {
               ACTU
             </div>
             <div className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-              Actu
+              {focus ? `Actus ${focus}` : 'Actu'}
             </div>
             <div className="text-sm font-semibold text-slate-700 sm:text-base">
-              Des vraies sensations “journalistiques” (mock).
+              {focus
+                ? `Mode supporter : actus de ta ligue, de ${focus} et brèves Talk Foot — le reste est masqué (mock).`
+                : personalized
+                  ? 'Filtré et trié selon ta ligue et ton club (mock).'
+                  : 'Des vraies sensations “journalistiques” (mock).'}
             </div>
           </div>
         </div>

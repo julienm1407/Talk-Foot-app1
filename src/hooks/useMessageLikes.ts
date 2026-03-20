@@ -52,14 +52,19 @@ const defaultTop: TopComment[] = [
   },
 ]
 
+const isLikeRecordMap = (p: unknown) =>
+  p !== null && typeof p === 'object' && !Array.isArray(p)
+
 export function useMessageLikes() {
   const [likesByMsg, setLikesByMsg] = useLocalStorageState<Record<string, LikeRecord>>(
     LIKES_KEY,
     defaultLikes,
+    isLikeRecordMap,
   )
   const [topComments, setTopComments] = useLocalStorageState<TopComment[]>(
     TOP_COMMENTS_KEY,
     defaultTop,
+    Array.isArray,
   )
 
   const getLikes = useCallback(

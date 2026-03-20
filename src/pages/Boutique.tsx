@@ -4,9 +4,12 @@ import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { TokenPaymentModal } from '../components/shop/TokenPaymentModal'
+import { JerseyPurchaseModal } from '../components/shop/JerseyPurchaseModal'
+import { JerseyPreviewThumb } from '../components/shop/JerseyPreviewThumb'
 import { useWallet } from '../hooks/useWallet'
 import { useProfile } from '../hooks/useProfile'
-import { avatarItems, tokenPacks } from '../data/shop'
+import { baseAvatarItems, tokenPacks } from '../data/shop'
+import { inspiredJerseyItems } from '../data/inspiredJerseys'
 import type { AvatarItem as AvatarItemType, AvatarSlot } from '../types/profile'
 import type { TokenPack } from '../types/profile'
 import { cn } from '../utils/cn'
@@ -27,10 +30,11 @@ const RARITY_STYLES: Record<string, string> = {
 
 export function BoutiquePage() {
   const { wallet, addTokens, spendTokens } = useWallet()
-  const { ownsItem, addOwnedItem } = useProfile()
-  const [activeTab, setActiveTab] = useState<'equipment' | 'tokens'>('equipment')
+  const { ownsItem, addOwnedItem, setJerseyCustomization, equipItem } = useProfile()
+  const [activeTab, setActiveTab] = useState<'equipment' | 'jerseys' | 'tokens'>('equipment')
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
   const [paymentPack, setPaymentPack] = useState<TokenPack | null>(null)
+  const [jerseyModalItem, setJerseyModalItem] = useState<(typeof inspiredJerseyItems)[number] | null>(null)
 
   const showNotice = (tone: 'ok' | 'err', text: string) => {
     setNotice({ tone, text })
@@ -72,10 +76,10 @@ export function BoutiquePage() {
       <header className="space-y-2 pb-2">
         <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">BOUTIQUE</div>
         <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
-          Équipement & jetons
+          Boutique supporter
         </h1>
         <p className="text-sm font-medium text-tf-grey">
-          Personnalise ton avatar et booste tes jetons pour les pronos et réactions
+          Personnage, équipement, maillots inspirés (sans logos officiels) et jetons pour le live
         </p>
       </header>
 
@@ -120,7 +124,20 @@ export function BoutiquePage() {
               : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
           )}
         >
-          Équipement supporter
+          Accessoires
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('jerseys')}
+          className={cn(
+            'rounded-2xl px-4 py-2.5 text-sm font-black transition',
+            activeTab === 'jerseys'
+              ? 'bg-tf-dark text-tf-white'
+              : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
+          )}
+        >
+          <span className="hidden sm:inline">Maillots inspirés</span>
+          <span className="sm:hidden">Maillots</span>
         </button>
         <button
           type="button"
@@ -132,7 +149,8 @@ export function BoutiquePage() {
               : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
           )}
         >
-          Offres jetons
+          <span className="hidden sm:inline">Offres jetons</span>
+          <span className="sm:hidden">Jetons</span>
         </button>
       </div>
 
@@ -142,10 +160,10 @@ export function BoutiquePage() {
             Personnalise ton avatar
           </h3>
           <p className="mt-2 text-sm font-medium text-tf-grey">
-            Écharpes, casquettes, maillots — affiche ton style de supporter dans le chat
+            Écharpes, casquettes, maillots — ton style dans le chat.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {avatarItems.map((item) => {
+            {baseAvatarItems.map((item) => {
               const owned = ownsItem(item.id)
               return (
                 <div
@@ -181,6 +199,87 @@ export function BoutiquePage() {
             })}
           </div>
         </Card>
+      )}
+
+      {activeTab === 'jerseys' && (
+        <div className="space-y-6">
+          <Card className="p-5 sm:p-6" elevation="soft">
+            <h3 className="font-display text-lg font-black text-tf-dark">Maillots inspirés</h3>
+            <p className="mt-2 text-sm font-medium text-tf-grey">
+              Couleurs et motifs qui évoquent l’ambiance des tribunes — aucun logo ni marque déposée. Aperçu sur
+              ton personnage : achète avec flocage fictif (prénom + numéro), taille et coupe.
+            </p>
+            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+              {inspiredJerseyItems.map((item) => {
+                const owned = ownsItem(item.id)
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <div className="flex shrink-0 justify-center sm:w-28">
+                      <JerseyPreviewThumb item={item} />
+                    </div>
+                    <div className="min-w-0 flex-1 pt-3 sm:pt-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-black text-tf-dark">{item.name}</span>
+                        <Badge className={cn('text-[10px] font-black', RARITY_STYLES[item.rarity])}>
+                          {item.rarity}
+                        </Badge>
+                      </div>
+                      {item.inspirationNote && (
+                        <p className="mt-1 text-[11px] font-semibold text-violet-800/90">{item.inspirationNote}</p>
+                      )}
+                      {item.description && (
+                        <p className="mt-1 text-xs text-tf-grey">{item.description}</p>
+                      )}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-black text-tf-dark">{item.cost} 🪙</span>
+                        <Button
+                          variant={owned ? 'ghost' : 'primary'}
+                          className="rounded-xl px-3 py-1.5 text-xs"
+                          disabled={owned}
+                          onClick={() => !owned && setJerseyModalItem(item)}
+                          title={
+                            owned
+                              ? 'Déjà acheté — flocage et équipement dans Profil'
+                              : 'Personnaliser le maillot et acheter avec des jetons'
+                          }
+                        >
+                          {owned ? (
+                            <>
+                              <span className="sm:hidden">Possédé</span>
+                              <span className="hidden sm:inline">Possédé (Profil)</span>
+                            </>
+                          ) : (
+                            'Personnaliser'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          <Card className="border border-dashed border-tf-grey-pastel/60 bg-tf-grey-pastel/10 p-5">
+            <div className="text-center">
+              <div className="text-xs font-black uppercase tracking-wider text-tf-grey">Produits réels</div>
+              <p className="mt-2 text-sm font-medium text-tf-dark">
+                Pour une vraie boutique e-commerce (maillots textiles), branche ton lien (Shopify, Etsy, etc.).
+              </p>
+              <a
+                href="https://example.com/shop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex rounded-2xl bg-tf-dark px-5 py-2.5 text-sm font-black text-white transition hover:opacity-90"
+              >
+                Exemple lien boutique externe →
+              </a>
+            </div>
+          </Card>
+        </div>
       )}
 
       {activeTab === 'tokens' && (
@@ -247,9 +346,24 @@ export function BoutiquePage() {
         />
       )}
 
+      {jerseyModalItem && (
+        <JerseyPurchaseModal
+          item={jerseyModalItem}
+          walletTokens={wallet.tokens}
+          spendTokens={spendTokens}
+          addOwnedItem={addOwnedItem}
+          setJerseyCustomization={setJerseyCustomization}
+          equipItem={equipItem}
+          onClose={() => setJerseyModalItem(null)}
+          onSuccess={(msg) => showNotice('ok', msg)}
+          onError={(msg) => showNotice('err', msg)}
+        />
+      )}
+
       <Card className="border-tf-grey-pastel/50 bg-tf-grey-pastel/10 p-4">
         <p className="text-center text-sm font-medium text-tf-grey">
-          Équipement : paye avec les jetons (gagnés en live). Recharge jetons : paiement carte simulé pour les offres payantes.
+          Accessoires & maillots digitaux : jetons Talk Foot. Maillots inspirés : aperçu SVG sur ton personnage,
+          flocage fictif. Recharge jetons : paiement simulé pour les offres payantes.
         </p>
       </Card>
     </div>

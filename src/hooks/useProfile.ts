@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react'
-import type { AvatarSlot, UserProfile } from '../types/profile'
+import type { AvatarCharacterLook, AvatarSlot, JerseyCustomization, UserProfile } from '../types/profile'
 import { useLocalStorageState } from './useLocalStorage'
 import { levelFromXp, getLevelTier, xpPerLevel } from '../data/shop'
+import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../data/characterPresets'
 
 const PROFILE_KEY = 'talkfoot.profile.v1'
 
@@ -10,10 +11,40 @@ const defaultProfile: UserProfile = {
   xp: 45,
   equippedItems: { scarf: null, hat: null, jersey: null, accessory: null },
   ownedItemIds: [],
+  characterLook: DEFAULT_CHARACTER_LOOK,
+}
+
+function isUserProfileStored(p: unknown): boolean {
+  if (p === null || typeof p !== 'object' || Array.isArray(p)) return false
+  const o = p as Record<string, unknown>
+  if (
+    typeof o.level !== 'number' ||
+    typeof o.xp !== 'number' ||
+    o.equippedItems === null ||
+    typeof o.equippedItems !== 'object' ||
+    Array.isArray(o.equippedItems) ||
+    !Array.isArray(o.ownedItemIds)
+  ) {
+    return false
+  }
+  if (o.characterLook != null && (typeof o.characterLook !== 'object' || Array.isArray(o.characterLook))) {
+    return false
+  }
+  if (
+    o.jerseyCustomizations != null &&
+    (typeof o.jerseyCustomizations !== 'object' || Array.isArray(o.jerseyCustomizations))
+  ) {
+    return false
+  }
+  return true
 }
 
 export function useProfile() {
-  const [profile, setProfile] = useLocalStorageState<UserProfile>(PROFILE_KEY, defaultProfile)
+  const [profile, setProfile] = useLocalStorageState<UserProfile>(
+    PROFILE_KEY,
+    defaultProfile,
+    isUserProfileStored,
+  )
 
   const computedLevel = useMemo(() => levelFromXp(profile.xp), [profile.xp])
   const tier = useMemo(() => getLevelTier(computedLevel), [computedLevel])
@@ -70,6 +101,31 @@ export function useProfile() {
     [setProfile],
   )
 
+  const updateCharacterLook = useCallback(
+    (patch: Partial<AvatarCharacterLook>) => {
+      setProfile((p) => {
+        const base = mergeCharacterLook(p.characterLook ?? {})
+        return { ...p, characterLook: { ...base, ...patch } }
+      })
+    },
+    [setProfile],
+  )
+
+  const setJerseyCustomization = useCallback(
+    (jerseyId: string, data: JerseyCustomization) => {
+      setProfile((p) => ({
+        ...p,
+        jerseyCustomizations: {
+          ...(typeof p.jerseyCustomizations === 'object' && p.jerseyCustomizations !== null
+            ? p.jerseyCustomizations
+            : {}),
+          [jerseyId]: data,
+        },
+      }))
+    },
+    [setProfile],
+  )
+
   const creditWonBets = useCallback(
     (wonBetIds: string[]) => {
       const credited = profile.creditedBetIds ?? []
@@ -85,18 +141,28 @@ export function useProfile() {
     [profile.creditedBetIds, setProfile],
   )
 
-  const safeProfile = useMemo(() => ({
-    ...profile,
-    level: computedLevel,
-    ownedItemIds: Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
-    equippedItems: (() => {
-      const def = { scarf: null, hat: null, jersey: null, accessory: null } as Record<AvatarSlot, string | null>
-      if (profile.equippedItems && typeof profile.equippedItems === 'object') {
-        return { ...def, ...profile.equippedItems }
-      }
-      return def
-    })(),
-  }), [profile, computedLevel])
+  const safeProfile = useMemo(() => {
+    const jerseyCustomizations =
+      profile.jerseyCustomizations &&
+      typeof profile.jerseyCustomizations === 'object' &&
+      !Array.isArray(profile.jerseyCustomizations)
+        ? profile.jerseyCustomizations
+        : {}
+    return {
+      ...profile,
+      level: computedLevel,
+      ownedItemIds: Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
+      equippedItems: (() => {
+        const def = { scarf: null, hat: null, jersey: null, accessory: null } as Record<AvatarSlot, string | null>
+        if (profile.equippedItems && typeof profile.equippedItems === 'object') {
+          return { ...def, ...profile.equippedItems }
+        }
+        return def
+      })(),
+      characterLook: mergeCharacterLook(profile.characterLook),
+      jerseyCustomizations,
+    }
+  }, [profile, computedLevel])
 
   return {
     profile: safeProfile,
@@ -107,6 +173,8 @@ export function useProfile() {
     equipItem,
     unequipSlot,
     addOwnedItem,
+    updateCharacterLook,
+    setJerseyCustomization,
     creditWonBets,
     ownsItem: (id: string) => (Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []).includes(id),
     setProfile,

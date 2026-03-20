@@ -8,6 +8,7 @@ export function useUnlockedEmotes() {
   const [unlockedIds, setUnlockedIds] = useLocalStorageState<string[]>(
     UNLOCKED_KEY,
     ['fire', 'goal', 'clap'],
+    (p): p is string[] => Array.isArray(p) && p.every((x) => typeof x === 'string'),
   )
 
   const isUnlocked = useCallback(

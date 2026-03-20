@@ -12,38 +12,54 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Charte Talk Foot - Couleurs principales */
+/* Charte Talk Foot — surfaces sobres (équipes / ligues : couleurs injectées par la page match uniquement) */
 :root {
   --tf-dark: #011e33;
   --tf-dark-alt: #023458;
+  --tf-night: #061222;
   --tf-white: #ffffff;
   --tf-grey: #5d86a2;
   --tf-grey-pastel: #b3c3cf;
+  --tf-electric: #0ea5e9;
+  --tf-electric-soft: #e0f2fe;
+  --tf-electric-deep: #0284c7;
+  --tf-pitch: #0d9488;
+  --tf-pitch-soft: #ccfbf1;
+  /* Pelouse & ligne de touche */
+  --tf-grass: #15803d;
+  --tf-grass-dark: #14532d;
+  --tf-grass-soft: #dcfce7;
+  --tf-grass-bright: #4ade80;
+  --tf-chalk: #f0fdf4;
+  --tf-ember: #ea580c;
+  --tf-ember-soft: #ffedd5;
+  --tf-ice: #e8f4fc;
+  --tf-mist: #d8e8f4;
+  --tf-vibe: #6366f1;
+  --tf-vibe-soft: #eef2ff;
 
   --tf-font-display: 'Bigail', 'Bebas Neue', 'Impact', ui-sans-serif, system-ui, sans-serif;
   --tf-font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-}
 
-  :root {
   color-scheme: light;
   --tf-navy: var(--tf-dark);
   --tf-navy-2: var(--tf-dark-alt);
-  --tf-bg: #f0f5f9;
-  --tf-bg-2: #e8eef4;
-  --tf-card: rgba(255, 255, 255, 0.92);
-  --tf-border: rgba(1, 30, 51, 0.12);
-  --tf-text: rgba(1, 30, 51, 0.92);
-  --tf-muted: rgba(1, 30, 51, 0.65);
+  --tf-bg: #d0e2f0;
+  --tf-bg-2: #c5daf0;
+  --tf-card: rgba(255, 255, 255, 0.88);
+  --tf-border: rgba(1, 30, 51, 0.14);
+  --tf-text: rgba(1, 30, 51, 0.94);
+  --tf-muted: rgba(1, 30, 51, 0.62);
   --tf-faint: rgba(1, 30, 51, 0.42);
-  --tf-accent: #5d86a2;
-  --tf-shadow: 0 18px 55px rgba(1, 30, 51, 0.10);
+  --tf-accent: var(--tf-electric-deep);
+  --tf-shadow: 0 18px 48px rgba(1, 30, 51, 0.1);
 }
 
-/* Match page theming (set by Channel) */
+/* Fallbacks neutres uniquement — home/away/accent réels via inline style (Channel) */
 .tf-match-page {
   --tf-match-home: #011e33;
   --tf-match-away: #5d86a2;
-  --tf-match-accent: #5d86a2;
+  --tf-match-accent: #0ea5e9;
   --tf-match-surface: rgba(255, 255, 255, 0.92);
   --tf-match-surface-alt: rgba(1, 30, 51, 0.04);
 }
@@ -53,14 +69,20 @@ body {
   height: 100%;
 }
 
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+}
+
 /* Safe area pour iPhone notch / barre d'accueil */
 
 body {
   margin: 0;
   font-family: var(--tf-font-sans);
   letter-spacing: 0.1px;
-  background: var(--tf-white);
   color: var(--tf-text);
+  background-color: var(--tf-mist);
 }
 
 h1,
@@ -71,51 +93,43 @@ h4 {
 }
 
 .tf-surface {
-  background: rgba(93, 134, 162, 0.12);
-  border: 1px solid rgba(1, 30, 51, 0.18);
+  background: color-mix(in srgb, var(--tf-white) 88%, var(--tf-ice));
+  border: 1px solid color-mix(in srgb, var(--tf-electric) 12%, rgba(1, 30, 51, 0.12));
 }
 
+/*
+ * Rythme page (Gestalt — séparation des « figures ») :
+ * - sections majeures : gap large (ex. space-y-8 sur Home)
+ * - sous-blocs dans une carte : gap plus serré (space-y-3 / space-y-4)
+ */
+
 .tf-panel {
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(1, 30, 51, 0.14);
+  background: color-mix(in srgb, var(--tf-white) 92%, var(--tf-ice));
+  border: 1px solid rgba(1, 30, 51, 0.12);
+  box-shadow: var(--tf-shadow);
 }
 
 .tf-section {
-  background: rgba(179, 195, 207, 0.35);
-  border: 1px solid rgba(1, 30, 51, 0.12);
+  background: color-mix(in srgb, var(--tf-grey-pastel) 32%, transparent);
+  border: 1px solid rgba(1, 30, 51, 0.1);
 }
 
 .tf-sectionHeader {
-  background: linear-gradient(
-    90deg,
-    rgba(1, 30, 51, 0.08),
-    rgba(93, 134, 162, 0.12) 55%,
-    rgba(179, 195, 207, 0.15)
-  );
-  border: 1px solid rgba(1, 30, 51, 0.14);
+  background: color-mix(in srgb, var(--tf-electric-soft) 55%, var(--tf-white));
+  border: 1px solid color-mix(in srgb, var(--tf-electric) 14%, rgba(1, 30, 51, 0.1));
 }
 
 .tf-sectionHeaderAlt {
-  background: linear-gradient(
-    90deg,
-    rgba(93, 134, 162, 0.12),
-    rgba(255, 255, 255, 0.7) 45%,
-    rgba(179, 195, 207, 0.2)
-  );
-  border: 1px solid rgba(1, 30, 51, 0.14);
+  background: color-mix(in srgb, var(--tf-white) 82%, var(--tf-ice));
+  border: 1px solid rgba(1, 30, 51, 0.11);
 }
 
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background-image: none;
+  display: none;
 }
 
 ::selection {
-  background: rgba(93, 134, 162, 0.25);
+  background: color-mix(in srgb, var(--tf-electric-soft) 85%, var(--tf-white));
 }
 
 *::-webkit-scrollbar {
@@ -123,13 +137,13 @@ body::before {
   height: 8px;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(93, 134, 162, 0.35);
+  background: color-mix(in srgb, var(--tf-grey) 55%, var(--tf-electric-deep));
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(93, 134, 162, 0.5);
+  background: var(--tf-electric-deep);
   border: 2px solid transparent;
   background-clip: padding-box;
 }

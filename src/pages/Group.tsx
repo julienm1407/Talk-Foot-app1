@@ -4,11 +4,26 @@ import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
+import { useFanPreferences } from '../contexts/FanPreferencesContext'
+import { getGroupAccess } from '../utils/groupAccess'
 
 export function GroupPage() {
   const { groupId } = useParams()
   const { byId } = useSupporterGroups()
   const group = groupId ? byId(groupId) : null
+  const {
+    favoriteClubId,
+    favoriteLeagueId,
+    hideRivalSalons,
+  } = useFanPreferences()
+
+  const accessLevel = group
+    ? getGroupAccess(group, {
+        favoriteClubId,
+        favoriteLeagueId,
+        hideRivalSalons,
+      })
+    : 'full'
 
   const [channelId, setChannelId] = useState('general')
 
@@ -21,10 +36,10 @@ export function GroupPage() {
     return (
       <Card className="p-6" elevation="soft">
         <div className="font-display text-lg font-black tracking-tight text-tf-dark">
-          Serveur introuvable
+          Groupe introuvable
         </div>
         <div className="mt-2 text-sm font-medium text-tf-grey">
-          Ce serveur n’existe pas (ou a été supprimé).
+          Ce salon n’existe plus ou le lien est invalide.
         </div>
       </Card>
     )
@@ -83,7 +98,7 @@ export function GroupPage() {
 
             <div className="flex items-center gap-2">
               <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-dark">
-                {group.createdBy === 'me' ? 'Ton serveur' : 'Public'}
+                {group.createdBy === 'me' ? 'Ton groupe' : 'Groupe public'}
               </Badge>
               <Button variant="soft" className="rounded-3xl">
                 Personnaliser
@@ -142,6 +157,13 @@ export function GroupPage() {
               Mock
             </Badge>
           </div>
+
+          {accessLevel === 'readonly' ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+              Lecture seule : ce salon est tagué pour un club rival du tien. Tu peux consulter
+              l’ambiance, pas participer aux discussions (réduit les tensions).
+            </div>
+          ) : null}
 
           <div className="mt-4 rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
             <div className="text-sm font-semibold text-tf-grey/80">

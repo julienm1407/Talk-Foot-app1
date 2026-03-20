@@ -6,6 +6,8 @@ export type User = {
   avatarSeed: string
   accent: 'violet' | 'emerald' | 'rose' | 'amber'
   isAdmin?: boolean
+  /** Club de cœur simulé (mode Virage / filtrage live) */
+  fanClubId?: string
 }
 
 export type Message = {

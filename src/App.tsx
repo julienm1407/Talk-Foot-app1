@@ -9,6 +9,7 @@ import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
+import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
@@ -33,9 +34,11 @@ export default function App() {
         path="/"
         element={
           <ProtectedRoute>
-            <MatchesProvider>
-              <AppShell />
-            </MatchesProvider>
+            <FanPreferencesProvider>
+              <MatchesProvider>
+                <AppShell />
+              </MatchesProvider>
+            </FanPreferencesProvider>
           </ProtectedRoute>
         }
       >

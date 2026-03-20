@@ -12,10 +12,10 @@ export function Badge({
 } & React.HTMLAttributes<HTMLSpanElement>) {
   const toneClass =
     tone === 'live'
-      ? 'border-tf-grey-pastel/60 bg-tf-white/90 text-rose-600'
+      ? 'border-rose-300/60 bg-rose-50 text-rose-700'
       : tone === 'upcoming'
-        ? 'border-tf-grey-pastel/60 bg-tf-white/85 text-tf-grey'
-        : 'border-tf-grey-pastel/60 bg-tf-white/85 text-tf-grey'
+        ? 'border-tf-electric/35 bg-tf-electric-soft text-tf-electric-deep'
+        : 'border-tf-grey-pastel/60 bg-tf-ice/90 text-tf-grey'
 
   return (
     <span

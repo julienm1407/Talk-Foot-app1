@@ -1,6 +1,6 @@
 /**
  * Liste de mots interdits en français (gros mots, insultes, propos haineux).
- * Utilisé pour valider les noms de serveurs, groupes, etc.
+ * Utilisé pour valider les noms de groupes de supporters, etc.
  */
 const BANNED_WORDS_FR = [
   'putain',

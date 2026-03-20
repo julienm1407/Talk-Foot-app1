@@ -6,6 +6,12 @@ const WALLET_KEY = 'talkfoot.wallet.v1'
 
 const defaultWallet: Wallet = { tokens: 750 }
 
+const isWalletStored = (p: unknown) =>
+  p !== null &&
+  typeof p === 'object' &&
+  !Array.isArray(p) &&
+  typeof (p as Wallet).tokens === 'number'
+
 function parseWallet(raw: unknown): Wallet {
   if (raw && typeof raw === 'object' && 'tokens' in raw && typeof (raw as Wallet).tokens === 'number') {
     return { tokens: Math.max(0, (raw as Wallet).tokens) }
@@ -14,7 +20,11 @@ function parseWallet(raw: unknown): Wallet {
 }
 
 export function useWallet() {
-  const [raw, setRaw] = useLocalStorageState<Wallet>(WALLET_KEY, defaultWallet)
+  const [raw, setRaw] = useLocalStorageState<Wallet>(
+    WALLET_KEY,
+    defaultWallet,
+    isWalletStored,
+  )
   const wallet = parseWallet(raw)
 
   const addTokens = useCallback(

@@ -7,7 +7,7 @@ import type { Bet } from '../types/bet'
 import type { LeaderboardEntry } from '../data/leaderboard'
 
 export function useLeaderboard() {
-  const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [])
+  const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [], Array.isArray)
 
   const { myScore, myWins, myTotal } = useMemo(() => {
     const predPoints = mockPredictions

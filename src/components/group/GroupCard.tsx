@@ -1,13 +1,16 @@
 import { cn } from '../../utils/cn'
 import type { SupporterGroup } from '../../types/group'
+import type { GroupAccessLevel } from '../../utils/groupAccess'
 import { Badge } from '../ui/Badge'
 
 export function GroupCard({
   group,
   className,
+  accessLevel = 'full',
 }: {
   group: SupporterGroup
   className?: string
+  accessLevel?: GroupAccessLevel
 }) {
   return (
     <div
@@ -64,11 +67,16 @@ export function GroupCard({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {accessLevel === 'readonly' ? (
+            <Badge className="border-amber-200 bg-amber-50 text-amber-900">
+              Lecture seule
+            </Badge>
+          ) : null}
           <Badge className="border-slate-200 bg-white/80 text-slate-900">
             {group.intensity}% ambiance
           </Badge>
           <div className="text-xs font-bold text-slate-600">
-            {group.createdBy === 'me' ? 'Ton serveur' : 'Groupe public'}
+            {group.createdBy === 'me' ? 'Ton groupe' : 'Groupe public'}
           </div>
         </div>
       </div>

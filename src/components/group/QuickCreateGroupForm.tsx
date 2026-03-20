@@ -5,6 +5,7 @@ import { cn } from '../../utils/cn'
 import { containsBannedWord } from '../../utils/bannedWords'
 import type { SupporterGroup } from '../../types/group'
 import type { GroupTheme } from '../../types/group'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 
 const DEFAULT_CHANNELS = [
   { id: 'general', name: 'Général', description: 'Débats, ambiance.', emoji: '💬' },
@@ -36,6 +37,11 @@ export function QuickCreateGroupForm({
 }: {
   onCreate: (g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>) => void
 }) {
+  const {
+    preferencesComplete,
+    favoriteLeagueId,
+    favoriteClubId,
+  } = useFanPreferences()
   const [name, setName] = useState('')
   const [emojis, setEmojis] = useState<string[]>(['⚽'])
   const [primary, setPrimary] = useState('#011e33')
@@ -80,6 +86,14 @@ export function QuickCreateGroupForm({
       members: Math.round(12 + Math.random() * 40),
       intensity: Math.round(50 + Math.random() * 40),
       channels: DEFAULT_CHANNELS,
+      ...(preferencesComplete &&
+      favoriteLeagueId &&
+      favoriteClubId && {
+        fanTags: {
+          leagueIds: [favoriteLeagueId],
+          clubIds: [favoriteClubId],
+        },
+      }),
     })
     setName('')
     setEmojis(['⚽'])
@@ -96,7 +110,7 @@ export function QuickCreateGroupForm({
       <div className="space-y-3">
         <div>
           <label htmlFor="quick-name" className="mb-1 block text-xs font-bold text-tf-grey">
-            Nom du serveur
+            Nom du groupe
           </label>
           <Input
             id="quick-name"
@@ -170,7 +184,7 @@ export function QuickCreateGroupForm({
         </div>
 
         <div className="space-y-2">
-          <span className="block text-xs font-bold text-tf-grey">Thème du serveur</span>
+          <span className="block text-xs font-bold text-tf-grey">Thème du groupe</span>
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-xl border border-tf-grey-pastel/50 bg-white px-2 py-1.5">
               <span className="text-[10px] font-bold text-tf-grey">Primaire</span>
@@ -218,7 +232,7 @@ export function QuickCreateGroupForm({
           className="mt-2 w-full rounded-xl py-3 font-bold"
           disabled={!name.trim()}
         >
-          Créer le serveur
+          Créer le groupe
         </Button>
       </div>
     </form>

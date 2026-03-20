@@ -14,20 +14,36 @@ function formatKickoffDay(iso: string) {
   }).format(new Date(iso))
 }
 
-export function MatchQuickAccess({ matches }: { matches: Match[] }) {
+export function MatchQuickAccess({
+  matches,
+  clubFocusId = null,
+}: {
+  matches: Match[]
+  /** Mode supporter : n’afficher que les matchs du club si possible */
+  clubFocusId?: string | null
+}) {
   const { liveMatches, upcomingMatches } = useMemo(() => {
-    const live = matches.filter((m) => m.status === 'live')
-    const upcoming = matches
+    const pool =
+      clubFocusId != null && clubFocusId !== ''
+        ? (() => {
+            const mine = matches.filter(
+              (m) => m.home.id === clubFocusId || m.away.id === clubFocusId,
+            )
+            return mine.length > 0 ? mine : matches
+          })()
+        : matches
+    const live = pool.filter((m) => m.status === 'live')
+    const upcoming = pool
       .filter((m) => m.status !== 'live')
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
       .slice(0, 3)
     return { liveMatches: live, upcomingMatches: upcoming }
-  }, [matches])
+  }, [matches, clubFocusId])
 
   return (
     <div className="flex h-full flex-col gap-3">
       <h3 className="font-display text-lg font-black tracking-tight text-tf-dark">
-        Accès rapide
+        {clubFocusId ? 'Ton club en direct' : 'Accès rapide'}
       </h3>
 
       {/* En direct */}

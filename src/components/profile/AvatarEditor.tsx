@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { HumanAvatar } from '../ui/HumanAvatar'
 import { Card } from '../ui/Card'
+import { ProfileCharacterThumb } from './ProfileCharacterThumb'
 import { Button } from '../ui/Button'
 import { RotatableAvatarPreview } from './RotatableAvatarPreview'
 import { useProfile } from '../../hooks/useProfile'
@@ -27,10 +27,10 @@ export function AvatarEditor() {
             MON PERSONNAGE
           </div>
           <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
-            Personnalise ton avatar
+            Équipement (dessus du personnage)
           </div>
           <p className="mt-0.5 text-sm font-medium text-tf-grey">
-            Affiche ton style de supporter dans le chat live
+            Écharpes, casquettes, maillots boutique, accessoires — visibles sur ton personnage 3D ci-dessus
           </p>
         </div>
         <Link to="/boutique">
@@ -44,16 +44,15 @@ export function AvatarEditor() {
         {/* Photo de profil + avatar rotatable */}
         <div className="flex shrink-0 flex-col items-center gap-5">
           <div className="flex flex-col items-center">
-            <div className="rounded-2xl border-2 border-tf-grey-pastel/50 bg-tf-grey-pastel/10 p-4">
-              <HumanAvatar
-                seed={currentUser.avatarSeed}
-                accent={currentUser.accent}
-                alt={currentUser.username}
-                className="size-20 rounded-[28px] sm:size-24"
+            <div className="rounded-2xl border-2 border-tf-grey-pastel/50 bg-tf-grey-pastel/10 p-3">
+              <ProfileCharacterThumb
+                profile={profile}
+                size="lg"
+                aria-label={`Personnage de ${currentUser.username}`}
               />
             </div>
-            <p className="mt-2 text-center text-xs font-medium text-tf-grey">
-              Ta photo de profil
+            <p className="mt-2 max-w-[200px] text-center text-xs font-medium text-tf-grey">
+              Photo de profil = ton personnage (même rendu qu’ici et sur la carte profil)
             </p>
           </div>
           <RotatableAvatarPreview profile={profile} />

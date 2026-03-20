@@ -1,6 +1,8 @@
 import type { AvatarItem, TokenPack } from '../types/profile'
+import { inspiredJerseyItems } from './inspiredJerseys'
 
-export const avatarItems: AvatarItem[] = [
+/** Écharpes, casquettes, maillots emoji — sans la collection « inspirée » */
+export const baseAvatarItems: AvatarItem[] = [
   { id: 'scarf-1', name: 'Écharpe bleue', slot: 'scarf', emoji: '🔵', cost: 50, rarity: 'common', description: 'Écharpe aux couleurs du club' },
   { id: 'scarf-2', name: 'Écharpe rouge', slot: 'scarf', emoji: '🔴', cost: 50, rarity: 'common', description: 'Écharpe passion' },
   { id: 'scarf-3', name: 'Écharpe rayée', slot: 'scarf', emoji: '🌈', cost: 120, rarity: 'rare', description: 'Écharpe arc-en-ciel légendaire' },
@@ -9,15 +11,74 @@ export const avatarItems: AvatarItem[] = [
   { id: 'hat-2', name: 'Béret supporteur', slot: 'hat', emoji: '🎩', cost: 100, rarity: 'common', description: 'Style stade' },
   { id: 'hat-3', name: 'Bonnet hiver', slot: 'hat', emoji: '🧶', cost: 150, rarity: 'rare', description: 'Bonnet pour les matchs soirs de décembre' },
   { id: 'hat-4', name: 'Couronne buteur', slot: 'hat', emoji: '👑', cost: 400, rarity: 'legendary', description: 'Pour les vrais rois du stade' },
-  { id: 'jersey-1', name: 'Maillot domicile', slot: 'jersey', emoji: '👕', cost: 100, rarity: 'common', description: 'Maillot domicile classique' },
-  { id: 'jersey-2', name: 'Maillot extérieur', slot: 'jersey', emoji: '💪', cost: 100, rarity: 'common', description: 'Maillot extérieur' },
-  { id: 'jersey-3', name: 'Maillot third', slot: 'jersey', emoji: '🦁', cost: 200, rarity: 'rare', description: 'Maillot third édition limitée' },
-  { id: 'jersey-4', name: 'Maillot collector', slot: 'jersey', emoji: '🏆', cost: 500, rarity: 'legendary', description: 'Édition anniversaire' },
+  {
+    id: 'jersey-1',
+    name: 'Maillot domicile',
+    slot: 'jersey',
+    emoji: '👕',
+    cost: 100,
+    rarity: 'common',
+    description: 'Marine, bande centrale & parements — rendu type maillot pro.',
+    jerseyVisual: {
+      primary: '#0f2744',
+      secondary: '#c8102e',
+      pattern: 'hechter',
+      stripeLight: '#f8fafc',
+    },
+  },
+  {
+    id: 'jersey-2',
+    name: 'Maillot extérieur',
+    slot: 'jersey',
+    emoji: '💪',
+    cost: 100,
+    rarity: 'common',
+    description: 'Blanc cassé & bandes horizontales.',
+    jerseyVisual: {
+      primary: '#f8fafc',
+      secondary: '#0ea5e9',
+      pattern: 'horizontal',
+      stripeLight: '#e2e8f0',
+    },
+  },
+  {
+    id: 'jersey-3',
+    name: 'Maillot third',
+    slot: 'jersey',
+    emoji: '🦁',
+    cost: 200,
+    rarity: 'rare',
+    description: 'Noir mesh technique, accents néon.',
+    jerseyVisual: {
+      primary: '#0f172a',
+      secondary: '#22d3ee',
+      pattern: 'kit_mesh',
+      stripeLight: '#e2e8f0',
+    },
+  },
+  {
+    id: 'jersey-4',
+    name: 'Maillot collector',
+    slot: 'jersey',
+    emoji: '🏆',
+    cost: 500,
+    rarity: 'legendary',
+    description: 'Rayures verticales premium or & minuit.',
+    jerseyVisual: {
+      primary: '#0f172a',
+      secondary: '#d4a574',
+      pattern: 'vertical',
+      stripeLight: '#fef3c7',
+    },
+  },
   { id: 'acc-1', name: 'Sifflet', slot: 'accessory', emoji: '📣', cost: 30, rarity: 'common', description: 'Pour encourager l\'équipe' },
   { id: 'acc-2', name: 'Drapeau', slot: 'accessory', emoji: '🚩', cost: 60, rarity: 'common', description: 'Petit drapeau de poche' },
   { id: 'acc-3', name: 'Megaphone', slot: 'accessory', emoji: '📢', cost: 180, rarity: 'rare', description: 'Se faire entendre dans le stade' },
   { id: 'acc-4', name: 'Fumigène virtuel', slot: 'accessory', emoji: '💨', cost: 350, rarity: 'epic', description: 'Ambiance ultime' },
 ]
+
+/** Équipement classique + maillots inspirés (personnalisables à l’achat) */
+export const avatarItems: AvatarItem[] = [...baseAvatarItems, ...inspiredJerseyItems]
 
 export const tokenPacks: TokenPack[] = [
   { id: 'pack-starter', name: 'Starter', tokens: 100, priceDisplay: 'Gratuit', description: 'Pour commencer', bonus: 10, free: true },

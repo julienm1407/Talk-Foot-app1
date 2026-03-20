@@ -10,11 +10,21 @@ function clampStake(n: number) {
   return Math.max(5, Math.min(250, Math.round(n)))
 }
 
+const isWallet = (p: unknown) =>
+  p !== null &&
+  typeof p === 'object' &&
+  !Array.isArray(p) &&
+  typeof (p as Wallet).tokens === 'number'
+
 export function useBetting(matchId: string) {
-  const [wallet, setWallet] = useLocalStorageState<Wallet>(WALLET_KEY, {
-    tokens: 750,
-  })
-  const [bets, setBets] = useLocalStorageState<Bet[]>(BETS_KEY, [])
+  const [wallet, setWallet] = useLocalStorageState<Wallet>(
+    WALLET_KEY,
+    {
+      tokens: 750,
+    },
+    isWallet,
+  )
+  const [bets, setBets] = useLocalStorageState<Bet[]>(BETS_KEY, [], Array.isArray)
 
   const matchBets = useMemo(() => bets.filter((b) => b.matchId === matchId), [bets, matchId])
   const openBets = useMemo(() => matchBets.filter((b) => b.status === 'open'), [matchBets])

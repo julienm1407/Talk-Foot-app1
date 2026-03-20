@@ -15,8 +15,8 @@ export function Card({
     <div
       style={style}
       className={cn(
-        'rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 backdrop-blur',
-        elevation === 'soft' && 'shadow-[0_18px_55px_rgba(1,30,51,.08)]',
+        'rounded-3xl border border-tf-grey-pastel/55 bg-white/95 backdrop-blur-sm',
+        elevation === 'soft' && 'shadow-tf-card',
         className,
       )}
     >

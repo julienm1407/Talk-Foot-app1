@@ -1,7 +1,10 @@
-import { HumanAvatar } from '../ui/HumanAvatar'
 import { avatarItems } from '../../data/shop'
 import type { UserProfile } from '../../types/profile'
 import { currentUser } from '../../data/users'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
+import { teamColors } from '../../data/teams'
+import { mergeCharacterLook } from '../../data/characterPresets'
+import { CharacterAvatarSvg } from './CharacterAvatarSvg'
 
 function jerseyNumberFromSeed(seed: string): number {
   const n = seed.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
@@ -17,6 +20,9 @@ export function DressableCharacter({
   variant: 'front' | 'back'
   className?: string
 }) {
+  const { favoriteClubId } = useFanPreferences()
+  const look = mergeCharacterLook(profile.characterLook)
+
   const eq = profile.equippedItems ?? {}
   const hatItem = eq.hat ? avatarItems.find((i) => i.id === eq.hat) : null
   const scarfItem = eq.scarf ? avatarItems.find((i) => i.id === eq.scarf) : null
@@ -25,65 +31,74 @@ export function DressableCharacter({
 
   const flocageNum = jerseyNumberFromSeed(currentUser.avatarSeed)
   const flocageName = currentUser.username.slice(0, 8).toUpperCase()
+  const custom = jerseyItem?.id ? profile.jerseyCustomizations?.[jerseyItem.id] : undefined
+  const flocage = custom
+    ? {
+        name: (custom.displayName || flocageName).toUpperCase().slice(0, 10),
+        number: String(custom.number || flocageNum).replace(/\D/g, '').slice(0, 2) || String(flocageNum),
+      }
+    : { name: flocageName, number: String(flocageNum) }
+
+  const supporterColors: [string, string] | null =
+    look.supporterTint && favoriteClubId && teamColors[favoriteClubId]
+      ? (teamColors[favoriteClubId] as [string, string])
+      : null
+
+  const jerseyOverride = jerseyItem?.jerseyVisual
+    ? {
+        primary: jerseyItem.jerseyVisual.primary,
+        secondary: jerseyItem.jerseyVisual.secondary,
+        pattern: jerseyItem.jerseyVisual.pattern,
+        stripeLight: jerseyItem.jerseyVisual.stripeLight,
+      }
+    : null
 
   return (
     <div
-      className={`relative inline-flex flex-col items-center ${className ?? ''}`}
+      className={`relative inline-flex flex-col items-center justify-center ${className ?? ''}`}
       style={{ width: 100, height: 140 }}
     >
-      {/* Casquette / chapeau */}
+      <CharacterAvatarSvg
+        look={look}
+        jerseyOverride={jerseyOverride}
+        supporterColors={supporterColors}
+        variant={variant}
+        flocage={variant === 'back' ? flocage : undefined}
+        suppressBaseHeadwear={!!hatItem}
+      />
+
+      {jerseyItem && !jerseyItem.jerseyVisual && variant === 'front' && (
+        <div
+          className="pointer-events-none absolute left-1/2 top-[56%] -translate-x-1/2 text-2xl drop-shadow-sm"
+          aria-hidden
+        >
+          {jerseyItem.emoji}
+        </div>
+      )}
+
       {hatItem && (
-        <div className="absolute -top-1 z-10 text-2xl">
+        <div
+          className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 text-2xl drop-shadow"
+          aria-hidden
+        >
           {hatItem.emoji}
         </div>
       )}
 
-      {/* Tête */}
-      <div className="relative z-5 mt-1 shrink-0">
-        <HumanAvatar
-          seed={currentUser.avatarSeed}
-          accent={currentUser.accent}
-          alt=""
-          className="size-14 rounded-full border-2 border-amber-200 shadow-md"
-        />
-      </div>
-
-      {/* Écharpe (coulant autour du cou) */}
       {scarfItem && (
-        <div className="-mt-2 z-5 text-xl">
+        <div
+          className="pointer-events-none absolute left-1/2 top-[38%] z-[5] -translate-x-1/2 text-xl drop-shadow"
+          aria-hidden
+        >
           {scarfItem.emoji}
         </div>
       )}
 
-      {/* Torse / maillot */}
-      <div className="relative -mt-1 flex w-16 flex-col items-center justify-center rounded-b-xl rounded-t-sm border-2 border-slate-300 bg-slate-100 px-2 py-2 shadow-inner">
-        {jerseyItem ? (
-          variant === 'front' ? (
-            <span className="text-2xl">{jerseyItem.emoji}</span>
-          ) : (
-            <div className="flex flex-col items-center">
-              <span className="font-display text-lg font-black text-slate-800">
-                {flocageNum}
-              </span>
-              <span className="text-[8px] font-bold uppercase tracking-wider text-slate-600">
-                {flocageName}
-              </span>
-            </div>
-          )
-        ) : (
-          <span className="text-lg text-slate-400">👕</span>
-        )}
-      </div>
-
-      {/* Jambes (short / bas) */}
-      <div className="-mt-0.5 flex gap-1">
-        <div className="h-7 w-4 rounded-b-md bg-slate-500/80" />
-        <div className="h-7 w-4 rounded-b-md bg-slate-500/80" />
-      </div>
-
-      {/* Accessoire (à la main) */}
       {accItem && (
-        <div className="absolute right-0 top-1/2 z-10 -translate-y-1/2 text-xl">
+        <div
+          className="pointer-events-none absolute right-0 top-[55%] z-10 -translate-y-1/2 text-xl drop-shadow"
+          aria-hidden
+        >
           {accItem.emoji}
         </div>
       )}

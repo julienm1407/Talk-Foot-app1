@@ -1,8 +1,11 @@
+import { useMemo } from 'react'
 import { useMessageLikes } from '../../hooks/useMessageLikes'
 import { Card } from '../ui/Card'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../ui/Avatar'
 import { currentUser, mockUsers } from '../../data/users'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
+import { useSupporterTintMode } from '../../hooks/useSupporterTintMode'
 
 const usersById = Object.fromEntries(
   [currentUser, ...mockUsers].map((u) => [u.id, u]),
@@ -10,6 +13,19 @@ const usersById = Object.fromEntries(
 
 export function TopCommentsFeed() {
   const { topComments } = useMessageLikes()
+  const { virageMode, favoriteClubId } = useFanPreferences()
+  const { supporterTintActive, team } = useSupporterTintMode()
+
+  const filtered = useMemo(() => {
+    const clubFilter =
+      favoriteClubId && (virageMode || supporterTintActive) ? favoriteClubId : null
+    if (!clubFilter) return topComments
+    return topComments.filter((c) => {
+      if (c.userId === currentUser.id) return true
+      const u = usersById[c.userId]
+      return u?.fanClubId === clubFilter
+    })
+  }, [topComments, virageMode, supporterTintActive, favoriteClubId])
 
   return (
     <Card className="overflow-hidden">
@@ -18,13 +34,24 @@ export function TopCommentsFeed() {
           COMMUNAUTÉ
         </div>
         <div className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
-          Commentaires marquants
+          {supporterTintActive && team?.shortName
+            ? `Top com. ${team.shortName}`
+            : 'Top commentaires'}
         </div>
         <div className="text-sm font-semibold text-slate-700 sm:text-base">
           Les meilleurs commentaires des lives, likés par la communauté
+          {favoriteClubId && (virageMode || supporterTintActive) ? (
+            <span className="mt-1 block text-xs font-bold text-violet-700">
+              {virageMode && supporterTintActive
+                ? 'Mode Virage + supporter : commentaires de ton club.'
+                : virageMode
+                  ? 'Mode Virage : filtré sur ton club.'
+                  : 'Mode supporter : filtré sur ton club (comme en Virage).'}
+            </span>
+          ) : null}
         </div>
       </div>
-      {topComments.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="px-5 py-12 text-center sm:px-6">
           <div className="text-4xl opacity-40">💬</div>
           <p className="mt-3 text-sm font-bold text-slate-600">
@@ -42,7 +69,7 @@ export function TopCommentsFeed() {
         </div>
       ) : (
         <div className="divide-y divide-slate-200/80">
-          {topComments.map((c) => {
+          {filtered.map((c) => {
             const u = usersById[c.userId]
             return (
               <Link

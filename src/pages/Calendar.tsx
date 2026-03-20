@@ -7,16 +7,27 @@ import { themeForCompetition } from '../data/competitionThemes'
 import { formatKickoff } from '../utils/time'
 import { ClubCrest } from '../components/brand/ClubCrest'
 import { cn } from '../utils/cn'
+import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
+import { filterMatchesForSupporterClub } from '../utils/supporterMode'
 
 export function CalendarPage() {
   const now = Date.now()
 
   const { matches, loading } = useMatches()
+  const { supporterTintActive, favoriteClubId, team } = useSupporterTintMode()
+
+  const matchesForView = useMemo(() => {
+    if (supporterTintActive && favoriteClubId) {
+      return filterMatchesForSupporterClub(matches, favoriteClubId)
+    }
+    return matches
+  }, [matches, supporterTintActive, favoriteClubId])
+
   const sorted = useMemo(() => {
-    return [...matches]
+    return [...matchesForView]
       .filter((m) => m.status !== 'finished')
       .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
-  }, [matches])
+  }, [matchesForView])
 
   const competitions = useMemo(() => {
     const map = new Map<string, { id: string; name: string; shortName: string }>()
@@ -122,12 +133,26 @@ export function CalendarPage() {
       {/* En-tête clair */}
       <header className="space-y-2 pb-2">
         <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
-          Calendrier
+          {supporterTintActive && team ? `Agenda ${team.shortName}` : 'Agenda'}
         </h1>
         <p className="text-sm font-medium text-tf-grey">
-          {totalCount} match{totalCount > 1 ? 's' : ''} à venir
-          {competitionId !== 'all' && (
-            <> • {competitions.find((c) => c.id === competitionId)?.shortName ?? ''}</>
+          {supporterTintActive && team ? (
+            <>
+              Mode supporter : matchs où {team.name} joue (sinon calendrier complet si aucun).
+              {totalCount > 0 && (
+                <>
+                  {' '}
+                  — {totalCount} rencontre{totalCount > 1 ? 's' : ''} listée{totalCount > 1 ? 's' : ''}
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              {totalCount} match{totalCount > 1 ? 's' : ''} à venir
+              {competitionId !== 'all' && (
+                <> • {competitions.find((c) => c.id === competitionId)?.shortName ?? ''}</>
+              )}
+            </>
           )}
         </p>
       </header>

@@ -8,10 +8,15 @@ export function MatchCarousel({
   matches,
   title,
   subtitle,
+  eyebrow,
+  titleId,
 }: {
   matches: Match[]
   title: string
   subtitle: string
+  /** Libellé de section (cohérence Gestalt avec le reste du site) */
+  eyebrow?: string
+  titleId?: string
 }) {
   const sorted = useMemo(() => {
     const ms = [...matches]
@@ -69,10 +74,16 @@ export function MatchCarousel({
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-1">
-          <h2 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
+          {eyebrow ? (
+            <p className="text-[11px] font-black tracking-[0.2em] text-tf-grey">{eyebrow}</p>
+          ) : null}
+          <h2
+            id={titleId}
+            className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl"
+          >
             {title}
           </h2>
-          <p className="text-sm font-medium text-tf-grey">
+          <p className="text-sm font-semibold leading-relaxed text-tf-grey">
             {subtitle || 'Matchs en direct et à venir — clique pour accéder au live'}
           </p>
         </div>

@@ -4,6 +4,10 @@ export type NewsItem = {
   excerpt: string
   tag: 'Breaking' | 'Analyse' | 'Rumeurs' | 'Débrief'
   minutesAgo: number
+  /** Ligues concernées (ids type competitionThemes). Vide = général */
+  leagueIds?: string[]
+  /** Clubs mentionnés (optionnel, pour filtre fin) */
+  clubIds?: string[]
 }
 
 // Images football Unsplash - licence libre (Unsplash License)
@@ -28,33 +32,56 @@ export const mockNews: NewsItem[] = [
     id: 'n-1',
     tag: 'Breaking',
     minutesAgo: 7,
-    title: 'Changement tactique: le coach surprend au coup d’envoi',
+    title: 'Ligue 1 : tension avant le choc du week-end',
     excerpt:
-      'Un système inattendu pour bloquer les transitions. Les supporters réagissent déjà en masse sur les serveurs.',
+      'Les groupes de supporters Talk Foot saturent avant le derby. Ambiance électrique côté tribunes virtuelles.',
+    leagueIds: ['ligue-1'],
+    clubIds: ['psg', 'om'],
   },
   {
     id: 'n-2',
     tag: 'Analyse',
     minutesAgo: 22,
-    title: 'Pourquoi le pressing haut fait la différence ce soir',
+    title: 'Premier League : le pressing haut qui change tout',
     excerpt:
-      'Deux séquences clés montrent comment l’équipe récupère dans les 5 secondes. À suivre: le couloir gauche.',
+      'Deux séquences clés en EPL montrent comment récupérer haut. Focus tactique pour les kop connectés.',
+    leagueIds: ['epl'],
   },
   {
     id: 'n-3',
     tag: 'Rumeurs',
     minutesAgo: 48,
-    title: 'Mercato: un profil “box-to-box” dans le viseur',
+    title: 'Mercato : la Serie A sur un milieu prioritaire',
     excerpt:
-      'Selon plusieurs sources, le club explore une piste prioritaire. Rien d’officiel, mais les signaux s’accumulent.',
+      'Plusieurs clubs italiens suivent la même piste. Rien d’officiel, mais les rumeurs circulent sur les salons.',
+    leagueIds: ['serie-a'],
   },
   {
     id: 'n-4',
     tag: 'Débrief',
     minutesAgo: 75,
-    title: 'Le match d’avant: 3 moments qui ont fait basculer l’ambiance',
+    title: 'LaLiga : trois actions qui ont fait vibrer le live',
     excerpt:
-      'Un arrêt décisif, une relance risquée et un but refusé: retour sur les actions qui ont enflammé le live.',
+      'Arrêt décisif, contre rapide et VAR : retour sur une soirée intense pour les supporters connectés.',
+    leagueIds: ['laliga'],
+  },
+  {
+    id: 'n-5',
+    tag: 'Analyse',
+    minutesAgo: 90,
+    title: 'Bundesliga : intensité et transitions',
+    excerpt:
+      'Pourquoi le championnat allemand reste une référence pour les stats live et les réactions en tribune.',
+    leagueIds: ['bund'],
+  },
+  {
+    id: 'n-global',
+    tag: 'Breaking',
+    minutesAgo: 5,
+    title: 'Talk Foot : nouveautés pour ton expérience supporter',
+    excerpt:
+      'Personnalise ton club et ta ligue, filtre les salons et active le mode Virage pour un live 100 % tribune.',
+    // pas de leagueIds = visible pour tous
   },
 ]
 
