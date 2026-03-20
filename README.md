@@ -16,15 +16,38 @@ Copie `.env.example` en `.env` et ajoute ta clé API (optionnel pour le mode dé
 VITE_API_SPORTS_KEY=ta_cle_api
 ```
 
-## Structure (aperçu)
+## Structure du projet (Vite + React)
 
-| Dossier / fichier | Rôle |
-|-------------------|------|
-| `index.html` | Point d’entrée Vite (dev + build) |
-| `public/` | Fichiers statiques copiés tels quels (favicon, polices…) |
-| `src/` | Code React / TypeScript |
-| `dist/` | Build **classique** (`npm run build`) — hébergement type Netlify / serveur |
-| `docs/` | Build **GitHub Pages** (`npm run build:pages`) — contient `index.html` prêt à servir |
+> **Important — ne pas mettre `index.html` dans `public/`**  
+> Avec **Vite**, le fichier **`index.html` doit être à la racine** du projet (à côté de `package.json`).  
+> Ce n’est **pas** le même modèle que certains anciens tutos (ex. tout dans `src/` ou HTML dans `public/`).  
+> La [doc officielle Vite](https://vite.dev/guide/#index-html-and-project-root) : *« index.html at project root »*.
+
+```
+talk-foot-appli/
+├── index.html          ← entrée Vite (OBLIGATOIRE ici, pas dans public/)
+├── package.json
+├── vite.config.ts
+├── public/             ← assets bruts copiés tels quels (favicon, fonts…)
+│   ├── favicon.svg
+│   └── …
+├── src/
+│   ├── main.tsx        ← monté sur #root depuis index.html
+│   ├── App.tsx
+│   └── …
+├── dist/               ← généré par `npm run build` (index.html + assets/)
+└── docs/               ← généré par `npm run build:pages` (pour GitHub Pages)
+```
+
+| Élément | Rôle |
+|--------|------|
+| `index.html` (racine) | Point d’entrée : charge `<script src="/src/main.tsx">`, Vite le transforme au build |
+| `public/` | Fichiers servis à l’URL racine **sans** passer par le bundler |
+| `src/` | Tout le code React / TS / CSS importé par l’app |
+| `dist/` | **Site compilé** après `npm run build` → `dist/index.html` + `dist/assets/` |
+| `docs/` | Même chose pour GitHub Pages après `npm run build:pages` |
+
+**GitHub Pages** ne doit servir que le **résultat du build** (`docs/` ou `dist/`), jamais le dossier `src/` directement.
 
 ## GitHub Pages
 
