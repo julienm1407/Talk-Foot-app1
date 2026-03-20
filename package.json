@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && GITHUB_PAGES=true vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs"
   },
   "dependencies": {
     "react": "^19.2.4",
