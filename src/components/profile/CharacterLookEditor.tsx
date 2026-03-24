@@ -9,7 +9,7 @@ import {
   PRESET_EYES,
   mergeCharacterLook,
 } from '../../data/characterPresets'
-import { teams } from '../../data/teams'
+import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
 import type { AvatarCharacterLook, JerseyPattern } from '../../types/profile'
 import { cn } from '../../utils/cn'
 import { ProfileCharacterThumb } from './ProfileCharacterThumb'
@@ -92,13 +92,10 @@ function SwatchRow({
 export function CharacterLookEditor() {
   const [open, setOpen] = useState(false)
   const { profile, updateCharacterLook } = useProfile()
-  const { favoriteClubId, favoriteLeagueId, preferencesComplete } = useFanPreferences()
+  const { favoriteClubId, preferencesComplete } = useFanPreferences()
   const look = mergeCharacterLook(profile.characterLook)
 
-  const clubShort =
-    favoriteClubId && favoriteLeagueId
-      ? teams[favoriteLeagueId as keyof typeof teams]?.find((t) => t.id === favoriteClubId)?.shortName
-      : null
+  const clubShort = favoriteClubId ? findTeamInAnyLeague(favoriteClubId)?.shortName ?? null : null
 
   /** Dès qu’on touche au maillot de base, on coupe le mode supporter pour que la preview suive (sinon les couleurs club masquent tout). */
   const patch = (p: Partial<AvatarCharacterLook>) => {

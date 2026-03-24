@@ -1,5 +1,5 @@
 import { currentUser } from '../data/users'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
 import { Card } from '../components/ui/Card'
@@ -21,7 +21,7 @@ import type { Bet } from '../types/bet'
 import { useMatches } from '../contexts/MatchesContext'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
-import { teams } from '../data/teams'
+import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -37,7 +37,7 @@ export function ProfilePage() {
   const { matches } = useMatches()
   const {
     favoriteLeagueId,
-    favoriteClubId,
+    favoriteClubIds,
     virageMode,
     setVirageMode,
     hideRivalSalons,
@@ -49,11 +49,14 @@ export function ProfilePage() {
     favoriteLeagueId && competitionThemes[favoriteLeagueId]
       ? competitionThemes[favoriteLeagueId].name
       : '—'
-  const clubName = (() => {
-    if (!favoriteClubId || !favoriteLeagueId) return '—'
-    const key = favoriteLeagueId as keyof typeof teams
-    const list = teams[key]
-    return list?.find((t) => t.id === favoriteClubId)?.shortName ?? favoriteClubId
+  const clubsLabel = (() => {
+    if (favoriteClubIds.length === 0) return 'Aucun (optionnel)'
+    return favoriteClubIds
+      .map((id) => {
+        const c = ALL_CLUBS_BY_ID[id]
+        return c ? `${c.shortName} (${c.leagueName})` : id
+      })
+      .join(' · ')
   })()
   const [editOpen, setEditOpen] = useState(false)
   const { wallet } = useWallet()
@@ -248,6 +251,34 @@ export function ProfilePage() {
         </Button>
       </header>
 
+      <Link
+        to="/boutique"
+        className="block outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 rounded-3xl"
+        aria-label="Ouvrir la boutique Talk Foot"
+      >
+        <Card
+          className="tf-card-hover border-tf-electric/25 bg-gradient-to-br from-tf-electric-soft/90 to-white/95 p-5 sm:p-6"
+          elevation="soft"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-black tracking-[0.18em] text-tf-electric-deep">
+                BOUTIQUE
+              </p>
+              <h2 className="mt-1 font-display text-xl font-black text-tf-dark">
+                Maillots, emotes & cosmétiques
+              </h2>
+              <p className="mt-1 text-sm font-semibold text-tf-grey">
+                La boutique n’est plus dans la barre principale — tout passe par ton profil.
+              </p>
+            </div>
+            <span className="inline-flex rounded-2xl bg-tf-dark px-5 py-2.5 text-sm font-black text-white shadow-sm">
+              Ouvrir →
+            </span>
+          </div>
+        </Card>
+      </Link>
+
       {/* Niveau & jetons */}
       <Card className="p-5 sm:p-6" elevation="soft">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -285,7 +316,7 @@ export function ProfilePage() {
         <p className="mt-1 text-sm font-semibold text-tf-grey">
           Personnalise l’accueil, les actus et le filtrage des salons. Le{' '}
           <strong className="text-tf-dark">mode supporter</strong> (Profil → Apparence, teinte maillot) pousse encore
-          plus loin : matchs, actus et top commentaires centrés sur ton club.
+          plus loin : matchs, actus et top commentaires centrés sur tes clubs (jusqu’à 3).
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
@@ -293,13 +324,13 @@ export function ProfilePage() {
             <div className="mt-1 text-base font-black text-tf-dark">{leagueName}</div>
           </div>
           <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
-            <div className="text-xs font-bold text-tf-grey">Club de cœur</div>
-            <div className="mt-1 text-base font-black text-tf-dark">{clubName}</div>
+            <div className="text-xs font-bold text-tf-grey">Clubs favoris (max. 3)</div>
+            <div className="mt-1 text-base font-black text-tf-dark">{clubsLabel}</div>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Button variant="primary" className="rounded-2xl" onClick={openOnboarding}>
-            Modifier club / ligue
+            Modifier ligue / clubs
           </Button>
           <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
             <input

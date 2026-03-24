@@ -7,15 +7,17 @@ export function Badge({
   ...props
 }: {
   children: React.ReactNode
-  tone?: 'neutral' | 'live' | 'upcoming'
+  tone?: 'neutral' | 'live' | 'upcoming' | 'navy'
   className?: string
 } & React.HTMLAttributes<HTMLSpanElement>) {
   const toneClass =
     tone === 'live'
-      ? 'border-rose-300/60 bg-rose-50 text-rose-700'
+      ? 'border-rose-400/55 bg-gradient-to-b from-rose-50 to-white text-rose-800 shadow-sm'
       : tone === 'upcoming'
         ? 'border-tf-electric/35 bg-tf-electric-soft text-tf-electric-deep'
-        : 'border-tf-grey-pastel/60 bg-tf-ice/90 text-tf-grey'
+        : tone === 'navy'
+          ? 'border-tf-dark/22 bg-white/90 text-tf-dark shadow-sm'
+          : 'border-tf-grey-pastel/60 bg-tf-ice/90 text-tf-grey'
 
   return (
     <span

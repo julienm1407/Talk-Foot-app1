@@ -11,15 +11,11 @@ export function GroupPage() {
   const { groupId } = useParams()
   const { byId } = useSupporterGroups()
   const group = groupId ? byId(groupId) : null
-  const {
-    favoriteClubId,
-    favoriteLeagueId,
-    hideRivalSalons,
-  } = useFanPreferences()
+  const { favoriteClubIds, favoriteLeagueId, hideRivalSalons } = useFanPreferences()
 
   const accessLevel = group
     ? getGroupAccess(group, {
-        favoriteClubId,
+        favoriteClubIds,
         favoriteLeagueId,
         hideRivalSalons,
       })

@@ -3,6 +3,12 @@ import type { SupporterGroup } from '../../types/group'
 import type { GroupAccessLevel } from '../../utils/groupAccess'
 import { Badge } from '../ui/Badge'
 
+const kindLabel: Record<NonNullable<SupporterGroup['groupKind']>, string> = {
+  public: 'Public',
+  private: 'Privé',
+  club: 'Club',
+}
+
 export function GroupCard({
   group,
   className,
@@ -12,16 +18,21 @@ export function GroupCard({
   className?: string
   accessLevel?: GroupAccessLevel
 }) {
+  const kind = group.groupKind ?? 'public'
+  const online = group.onlineNow ?? 0
+  const msgs = group.messagesToday ?? 0
+  const preview = group.lastMessagePreview
+
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 px-5 py-4',
+        'relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 px-5 py-4 transition-shadow duration-200 group-hover:shadow-md',
         className,
       )}
       style={
         {
-          ['--p' as any]: group.theme.primary,
-          ['--s' as any]: group.theme.secondary,
+          ['--p' as string]: group.theme.primary,
+          ['--s' as string]: group.theme.secondary,
         } as React.CSSProperties
       }
     >
@@ -39,7 +50,7 @@ export function GroupCard({
       />
 
       <div className="relative flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div
               className="grid size-10 place-items-center rounded-3xl text-lg font-black text-white shadow-sm"
@@ -61,12 +72,36 @@ export function GroupCard({
             </div>
           </div>
 
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge className="border-amber-200/80 bg-amber-50/90 text-amber-950">
+              🔥 {online} en ligne
+            </Badge>
+            <Badge className="border-emerald-200/80 bg-emerald-50/90 text-emerald-950">
+              📈 +{msgs} messages aujourd’hui
+            </Badge>
+            <Badge className="border-slate-200 bg-white/90 text-slate-800">
+              {kindLabel[kind]}
+            </Badge>
+          </div>
+
           <div className="mt-3 line-clamp-2 text-sm font-semibold text-slate-700/80">
             “{group.motto}”
           </div>
+
+          {preview ? (
+            <div
+              className="mt-0 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/50 px-3 py-2 text-xs font-semibold text-slate-600 opacity-0 max-h-0 translate-y-1 transition-all duration-200 group-hover:mt-3 group-hover:max-h-24 group-hover:translate-y-0 group-hover:opacity-100"
+              aria-hidden="true"
+            >
+              <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                Dernier message
+              </span>
+              <p className="mt-0.5 line-clamp-2 text-slate-700">{preview}</p>
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-2">
+        <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
           {accessLevel === 'readonly' ? (
             <Badge className="border-amber-200 bg-amber-50 text-amber-900">
               Lecture seule
@@ -76,11 +111,13 @@ export function GroupCard({
             {group.intensity}% ambiance
           </Badge>
           <div className="text-xs font-bold text-slate-600">
-            {group.createdBy === 'me' ? 'Ton groupe' : 'Groupe public'}
+            {group.createdBy === 'me' ? 'Ton groupe' : 'Communauté'}
           </div>
+          <span className="tf-interactive-press inline-flex items-center justify-center rounded-2xl bg-tf-dark px-4 py-2 text-center text-xs font-black text-white shadow-sm sm:min-w-[7.5rem]">
+            Rejoindre
+          </span>
         </div>
       </div>
     </div>
   )
 }
-

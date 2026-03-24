@@ -7,7 +7,8 @@ export function formatKickoff(iso: string) {
 }
 
 export function formatRelativeMinute(minute?: number) {
-  if (!minute || minute <= 0) return ''
+  if (minute == null || minute <= 0) return ''
+  if (minute > 90) return `${90}+${minute - 90}'`
   return `${minute}'`
 }
 

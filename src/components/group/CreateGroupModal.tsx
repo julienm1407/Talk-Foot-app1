@@ -62,6 +62,10 @@ export function CreateGroupModal({
       ],
       createdBy: 'me',
       createdAt: new Date().toISOString(),
+      onlineNow: 1,
+      messagesToday: 0,
+      groupKind: 'public',
+      lastMessagePreview: 'Crée ton premier message…',
     }
   }, [background, emoji, location, motto, name, primary, secondary])
 

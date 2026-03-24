@@ -3,11 +3,17 @@ import { Avatar } from '../ui/Avatar'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 
-export function BettorLeaderboard() {
+export function BettorLeaderboard({ embedded }: { embedded?: boolean }) {
   const { top12, myRank } = useLeaderboard()
 
   return (
-    <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 p-4">
+    <div
+      className={cn(
+        embedded
+          ? 'p-0'
+          : 'rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 p-3 sm:p-4',
+      )}
+    >
       <div className="flex items-end justify-between gap-2">
         <h3 className="text-sm font-black tracking-tight text-tf-dark">
           Top 250 parieurs

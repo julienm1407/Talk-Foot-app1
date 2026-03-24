@@ -37,11 +37,7 @@ export function QuickCreateGroupForm({
 }: {
   onCreate: (g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>) => void
 }) {
-  const {
-    preferencesComplete,
-    favoriteLeagueId,
-    favoriteClubId,
-  } = useFanPreferences()
+  const { preferencesComplete, favoriteLeagueId, favoriteClubIds } = useFanPreferences()
   const [name, setName] = useState('')
   const [emojis, setEmojis] = useState<string[]>(['⚽'])
   const [primary, setPrimary] = useState('#011e33')
@@ -87,13 +83,13 @@ export function QuickCreateGroupForm({
       intensity: Math.round(50 + Math.random() * 40),
       channels: DEFAULT_CHANNELS,
       ...(preferencesComplete &&
-      favoriteLeagueId &&
-      favoriteClubId && {
-        fanTags: {
-          leagueIds: [favoriteLeagueId],
-          clubIds: [favoriteClubId],
-        },
-      }),
+        favoriteLeagueId &&
+        favoriteClubIds.length > 0 && {
+          fanTags: {
+            leagueIds: [favoriteLeagueId],
+            clubIds: [...favoriteClubIds],
+          },
+        }),
     })
     setName('')
     setEmojis(['⚽'])

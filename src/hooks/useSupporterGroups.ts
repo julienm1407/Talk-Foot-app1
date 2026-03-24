@@ -25,6 +25,10 @@ export function useSupporterGroups() {
         id,
         createdBy: 'me',
         createdAt: new Date().toISOString(),
+        onlineNow: g.onlineNow ?? 1,
+        messagesToday: g.messagesToday ?? 0,
+        groupKind: g.groupKind ?? 'public',
+        lastMessagePreview: g.lastMessagePreview ?? 'Nouveau groupe — dis bonjour !',
       }
       setCustom((prev) => [next, ...prev].slice(0, 30))
       return next

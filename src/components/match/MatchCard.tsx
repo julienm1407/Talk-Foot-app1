@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
+import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { formatKickoff, formatRelativeMinute } from '../../utils/time'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
@@ -95,14 +96,38 @@ function TeamPattern({
   )
 }
 
+function MirroredScore({
+  home,
+  away,
+  bumpSide,
+  className,
+}: {
+  home: number
+  away: number
+  bumpSide: 'home' | 'away' | null
+  className?: string
+}) {
+  return (
+    <div className={cn('w-full text-center text-base font-black tabular-nums text-tf-dark sm:text-lg', className)}>
+      <span className={cn('inline-block', bumpSide === 'home' && 'tf-score-pop')}>{home}</span>
+      <span className="font-normal text-slate-500"> — </span>
+      <span className={cn('inline-block', bumpSide === 'away' && 'tf-score-pop')}>{away}</span>
+    </div>
+  )
+}
+
 export function MatchCard({
   match,
   compact,
+  liveMirror,
 }: {
   match: Match
   compact?: boolean
+  /** Synchronisé avec le hero accueil (même match en live). */
+  liveMirror?: LiveMirrorForCard
 }) {
   const isLive = match.status === 'live'
+  const sim = isLive && liveMirror?.active ? liveMirror : null
   const compTheme = themeForCompetition(match.competition.id)
   const timeTone = isLive ? 'live' : 'upcoming'
   const kickoffTime = formatKickoff(match.kickoffAt)
@@ -113,15 +138,20 @@ export function MatchCard({
   }).format(new Date(match.kickoffAt))
 
   const fixedSize = !isLive
+  const channelTo = `/channel/${match.id}`
+  const monoFont = compact
+    ? 'clamp(1.35rem, 5.5vw, 2.35rem)'
+    : 'clamp(2rem, 9vw, 3.25rem)'
 
   return (
-    <Link
-      to={`/channel/${match.id}`}
+    <div
       className={cn(
-        'group block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/30 transition-transform duration-200 hover:scale-[1.03] active:scale-[1.01]',
-        fixedSize && (compact ? 'h-full min-h-[170px] sm:min-h-[185px]' : 'h-full min-h-[200px] sm:min-h-[220px]'),
+        'tf-card-hover rounded-lg outline-none focus-within:ring-2 focus-within:ring-tf-grey/30',
+        fixedSize &&
+          (compact ? 'h-full min-h-[200px] sm:min-h-[220px]' : 'h-full min-h-[200px] sm:min-h-[220px]'),
       )}
-      aria-label={`Ouvrir le live ${match.home.name} vs ${match.away.name}`}
+      role="group"
+      aria-label={`Match ${match.home.name} contre ${match.away.name}`}
     >
       {/* Cadre épais style écran/télé + traits autour */}
       <div
@@ -129,6 +159,10 @@ export function MatchCard({
           'relative flex h-full overflow-hidden transition-shadow',
           compTheme ? 'p-[6px] rounded-lg' : 'p-0 rounded-lg',
           isLive && 'animate-[tf-live-glow_2s_ease-in-out_infinite]',
+          sim?.rim === 'yellow' && 'ring-2 ring-amber-400/80 ring-offset-2 ring-offset-white/10',
+          sim?.rim === 'red' && 'ring-2 ring-red-500/85 ring-offset-2 ring-offset-white/10',
+          sim?.rim === 'goal' && 'ring-2 ring-amber-300/70 shadow-[0_0_20px_rgba(250,204,21,0.35)]',
+          sim?.rim === 'var' && 'ring-2 ring-violet-500/65',
         )}
         style={
           compTheme
@@ -143,8 +177,8 @@ export function MatchCard({
           elevation="none"
           className={cn(
             'relative flex flex-1 flex-col overflow-hidden bg-tf-white/95 transition hover:bg-tf-white rounded-md border border-tf-grey-pastel/40',
-            compact ? 'p-3' : 'p-4',
-            fixedSize && (compact ? 'min-h-[155px] sm:min-h-[170px]' : 'min-h-[180px] sm:min-h-[200px]'),
+            compact ? 'p-3.5 sm:p-4' : 'p-4',
+            fixedSize && (compact ? 'min-h-[185px] sm:min-h-[205px]' : 'min-h-[180px] sm:min-h-[200px]'),
           )}
         >
           {/* Arrière-plan : monogrammes + motifs variés (traits, bulles, carrés, losanges) */}
@@ -169,7 +203,7 @@ export function MatchCard({
                 className="absolute inset-0 flex items-center pl-3"
                 style={{
                   color: `${match.home.colors.primary}55`,
-                  fontSize: 'clamp(2rem, 9vw, 3.25rem)',
+                  fontSize: monoFont,
                   fontFamily: 'Montserrat, sans-serif',
                   fontWeight: 900,
                   letterSpacing: '-0.02em',
@@ -195,7 +229,7 @@ export function MatchCard({
                 className="absolute inset-0 flex items-center justify-end pr-3"
                 style={{
                   color: `${match.away.colors.primary}55`,
-                  fontSize: 'clamp(2rem, 9vw, 3.25rem)',
+                  fontSize: monoFont,
                   fontFamily: 'Montserrat, sans-serif',
                   fontWeight: 900,
                   letterSpacing: '-0.02em',
@@ -225,6 +259,27 @@ export function MatchCard({
           </div>
 
         <div className="relative z-10">
+          {sim?.burst?.kind === 'goal' ? (
+            <div
+              className="pointer-events-none absolute inset-x-2 top-10 z-[15] flex justify-center sm:top-11"
+              aria-hidden
+            >
+              <span className="tf-live-goal-burst rounded-full bg-gradient-to-r from-amber-500 to-orange-600 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-lg">
+                But !
+              </span>
+            </div>
+          ) : null}
+          {sim?.burst?.kind === 'var' ? (
+            <div
+              className="pointer-events-none absolute inset-x-1 top-8 z-[15] flex justify-center"
+              aria-hidden
+            >
+              <span className="tf-live-var-bar max-w-[95%] truncate rounded-lg border border-violet-400/40 bg-violet-950/90 px-2 py-1 text-center text-[9px] font-bold leading-tight text-violet-100">
+                {sim.burst.line}
+              </span>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0 flex flex-wrap items-baseline gap-x-2 gap-y-1">
               {compTheme ? (
@@ -242,7 +297,7 @@ export function MatchCard({
               ) : (
                 <span className="text-[11px] font-bold text-tf-dark">{match.competition.shortName}</span>
               )}
-              <span className="text-[11px] font-medium text-tf-grey">
+              <span className="hidden text-[11px] font-medium text-tf-grey sm:inline">
                 {match.competition.name}
               </span>
             </div>
@@ -266,18 +321,28 @@ export function MatchCard({
 
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 sm:grid-cols-[minmax(5rem,1fr)_auto_minmax(5rem,1fr)]">
             <div className="min-w-0 overflow-hidden">
-              <TeamStack team={match.home} align="left" size={compact ? 52 : 64} />
+              <TeamStack team={match.home} align="left" size={compact ? 58 : 64} />
             </div>
             <div
-              className="relative flex min-w-[5.5rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg bg-white/50 px-2 py-1.5 text-center backdrop-blur-md border border-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:min-w-[7rem] sm:px-3 sm:py-2"
+              className="relative flex min-w-[6rem] shrink-0 flex-col items-center justify-center gap-1 rounded-lg bg-white/50 px-2.5 py-2 text-center backdrop-blur-md border border-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:min-w-[7.25rem] sm:px-3 sm:py-2"
               style={{
                 borderLeft: `2px solid ${match.home.colors.primary}40`,
                 borderRight: `2px solid ${match.away.colors.primary}40`,
               }}
             >
-              <div className="w-full text-center text-xs font-black leading-tight text-tf-dark">
+              <div
+                key={
+                  isLive
+                    ? `m-${sim ? sim.minute : (match.minute ?? 0)}`
+                    : `k-${match.kickoffAt}`
+                }
+                className={cn(
+                  'w-full text-center text-xs font-black leading-tight text-tf-dark',
+                  isLive && 'animate-[tf-live-bar_0.75s_ease-out]',
+                )}
+              >
                 {isLive
-                  ? (formatRelativeMinute(match.minute) || '—')
+                  ? formatRelativeMinute(sim ? sim.minute : match.minute) || '—'
                   : (
                     <>
                       <span className="block">{kickoffDay}</span>
@@ -285,9 +350,25 @@ export function MatchCard({
                     </>
                   )}
               </div>
-              {match.score ? (
+              {isLive ? (
+                sim ? (
+                  <MirroredScore
+                    home={sim.score.home}
+                    away={sim.score.away}
+                    bumpSide={sim.bumpSide}
+                  />
+                ) : match.score ? (
+                  <div className="w-full text-center text-lg font-black tabular-nums text-tf-dark">
+                    {match.score.home} <span className="font-normal text-slate-500">-</span>{' '}
+                    {match.score.away}
+                  </div>
+                ) : (
+                  <div className="w-full text-center text-base font-black text-tf-dark">VS</div>
+                )
+              ) : match.score ? (
                 <div className="w-full text-center text-lg font-black tabular-nums text-tf-dark">
-                  {match.score.home} <span className="font-normal text-slate-500">-</span> {match.score.away}
+                  {match.score.home} <span className="font-normal text-slate-500">-</span>{' '}
+                  {match.score.away}
                 </div>
               ) : (
                 <div className="w-full text-center text-base font-black text-tf-dark">VS</div>
@@ -297,21 +378,27 @@ export function MatchCard({
               )}
             </div>
             <div className="min-w-0 overflow-hidden">
-              <TeamStack team={match.away} align="right" size={compact ? 52 : 64} />
+              <TeamStack team={match.away} align="right" size={compact ? 58 : 64} />
             </div>
           </div>
-          <div className="mt-3 flex flex-col items-center gap-0.5">
-            <span className="text-[13px] font-bold text-tf-dark">
-              {isLive ? 'Rejoindre le live' : 'Voir l\'avant-match'}
-            </span>
-            <span className="text-[11px] font-medium text-tf-grey">
-              {isLive ? 'Chat, réactions et commentaire' : 'Compos, forme, pronos'}
-            </span>
+          <div className="mt-4 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+            <Link
+              to={channelTo}
+              className="tf-interactive-press inline-flex items-center justify-center rounded-2xl bg-tf-dark px-3 py-2.5 text-center text-xs font-black text-white shadow-sm transition hover:bg-tf-dark-alt"
+            >
+              Rejoindre le live
+            </Link>
+            <Link
+              to={channelTo}
+              className="tf-interactive-press inline-flex items-center justify-center rounded-2xl border border-tf-grey-pastel/60 bg-white/90 px-3 py-2.5 text-center text-xs font-black text-tf-dark transition hover:border-tf-electric/30 hover:bg-tf-ice/80"
+            >
+              Voir l&apos;avant-match
+            </Link>
           </div>
           </div>
         </Card>
       </div>
-    </Link>
+    </div>
   )
 }
 

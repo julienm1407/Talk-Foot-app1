@@ -47,13 +47,17 @@ export function ChannelPage() {
   )
 
   const users = useMemo(() => [currentUser, ...mockUsers], [])
-  const usersById = useMemo(
-    () => Object.fromEntries(users.map((u) => [u.id, u])),
-    [users],
-  )
-
-  const { virageMode, favoriteClubId, preferencesComplete, setVirageMode } =
+  const { virageMode, favoriteClubIds, preferencesComplete, setVirageMode } =
     useFanPreferences()
+
+  const usersById = useMemo(() => {
+    const base = Object.fromEntries(users.map((u) => [u.id, u]))
+    const meClub = favoriteClubIds[0]
+    if (meClub && base.me && !base.me.fanClubId) {
+      base.me = { ...base.me, fanClubId: meClub }
+    }
+    return base
+  }, [users, favoriteClubIds])
 
   const [messages, setMessages] = useState<Message[]>(() => {
     const seeded = initialMessages.filter((m) => m.matchId === matchId)
@@ -116,13 +120,14 @@ export function ChannelPage() {
   }, [reactions])
 
   const visibleMessages = useMemo(() => {
-    if (!virageMode || !favoriteClubId) return messages
+    if (!virageMode || favoriteClubIds.length === 0) return messages
     return messages.filter((m) => {
       if (m.userId === currentUser.id) return true
       const u = usersById[m.userId]
-      return u?.fanClubId === favoriteClubId
+      const fid = u?.fanClubId
+      return Boolean(fid && favoriteClubIds.includes(fid))
     })
-  }, [messages, virageMode, favoriteClubId, usersById])
+  }, [messages, virageMode, favoriteClubIds, usersById])
 
   const feedRef = useAutoScroll<HTMLDivElement>([
     visibleMessages.length,
@@ -704,7 +709,7 @@ export function ChannelPage() {
                     {isLiveOpen &&
                     match.status === 'live' &&
                     preferencesComplete &&
-                    favoriteClubId ? (
+                    favoriteClubIds.length > 0 ? (
                       <button
                         type="button"
                         onClick={() => setVirageMode(!virageMode)}
@@ -714,7 +719,7 @@ export function ChannelPage() {
                             ? 'border-tf-dark bg-tf-dark text-white'
                             : 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20',
                         )}
-                        title="Messages filtrés sur ton club de cœur"
+                        title="Messages filtrés sur tes clubs favoris"
                       >
                         {virageMode ? '🔥 Virage ON' : 'Mode Virage'}
                       </button>
@@ -751,10 +756,10 @@ export function ChannelPage() {
                       aria-label="Messages en direct"
                       aria-live="polite"
                     >
-                      {virageMode && favoriteClubId ? (
+                      {virageMode && favoriteClubIds.length > 0 ? (
                         <div className="mb-3 rounded-xl border border-tf-dark/20 bg-tf-dark/5 px-3 py-2 text-xs font-bold text-tf-dark">
-                          Mode Virage : tu vois surtout les messages des supporters de ton club (+ les
-                          tiens).
+                          Mode Virage : tu vois surtout les messages des supporters de tes clubs favoris
+                          (+ les tiens).
                         </div>
                       ) : null}
                       <MessageList

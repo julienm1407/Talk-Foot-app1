@@ -4,6 +4,7 @@ import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { getEmoteById } from '../../data/emotes'
 import { useProfile } from '../../hooks/useProfile'
 import { cn } from '../../utils/cn'
+import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 
 function clamp01(v: number) {
   return Math.max(0, Math.min(1, v))
@@ -123,6 +124,13 @@ export function MessageList({
                   </span>
                 )}
               </div>
+              {u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
+                <div className="mt-0.5">
+                  <span className="inline-flex rounded-full border border-slate-200/80 bg-white/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-600">
+                    {ALL_CLUBS_BY_ID[u.fanClubId].shortName}
+                  </span>
+                </div>
+              ) : null}
               <div
                 className={cn(
                   'mt-1.5 rounded-2xl border px-4 py-2.5 text-sm font-medium leading-relaxed text-slate-700',

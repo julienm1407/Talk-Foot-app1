@@ -32,5 +32,11 @@ export type SupporterGroup = {
   createdAt: string
   /** Salons rattachés à des clubs / ligues (personnalisation & restrictions) */
   fanTags?: GroupFanTags
+  /** Stats mock (UI engagement) */
+  onlineNow?: number
+  messagesToday?: number
+  /** public = ouvert, private = sur invitation, club = rattaché tribune */
+  groupKind?: 'public' | 'private' | 'club'
+  lastMessagePreview?: string
 }
 

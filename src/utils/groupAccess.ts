@@ -1,10 +1,11 @@
 import type { SupporterGroup } from '../types/group'
-import { groupHasRivalClub } from '../data/fanRivals'
+import { groupHasRivalForFanClubs } from '../data/fanRivals'
 
 export type GroupAccessLevel = 'full' | 'readonly' | 'hidden'
 
 export type FanPrefsForAccess = {
-  favoriteClubId: string | null
+  /** Jusqu’à 3 clubs ; accès / rivaux évalués sur l’ensemble */
+  favoriteClubIds: string[]
   favoriteLeagueId: string | null
   hideRivalSalons: boolean
 }
@@ -18,11 +19,13 @@ export function getGroupAccess(
     return 'full'
   }
 
-  if (prefs.hideRivalSalons && groupHasRivalClub(prefs.favoriteClubId, tags.clubIds)) {
+  const fanClubs = prefs.favoriteClubIds
+
+  if (prefs.hideRivalSalons && groupHasRivalForFanClubs(fanClubs, tags.clubIds)) {
     return 'hidden'
   }
 
-  if (groupHasRivalClub(prefs.favoriteClubId, tags.clubIds)) {
+  if (groupHasRivalForFanClubs(fanClubs, tags.clubIds)) {
     return 'readonly'
   }
 
@@ -34,14 +37,16 @@ export function sortGroupsByFanAffinity(
   prefs: FanPrefsForAccess,
 ): SupporterGroup[] {
   const league = prefs.favoriteLeagueId
-  const club = prefs.favoriteClubId
+  const clubs = prefs.favoriteClubIds
 
   return [...groups].sort((a, b) => {
     const score = (g: SupporterGroup) => {
       const t = g.fanTags
       if (!t) return 0
       let s = 0
-      if (club && t.clubIds.includes(club)) s += 100
+      for (const cid of clubs) {
+        if (t.clubIds.includes(cid)) s += 100
+      }
       if (league && t.leagueIds.includes(league)) s += 40
       return s
     }

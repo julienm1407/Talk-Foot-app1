@@ -8,27 +8,51 @@ import {
   useState,
 } from 'react'
 import { useLocalStorageState } from '../hooks/useLocalStorage'
-import { PENDING_FAN_ONBOARDING_KEY } from '../constants/fanSession'
+import {
+  DEMO_FAN_ONBOARDING_EVERY_LOGIN,
+  PENDING_FAN_ONBOARDING_KEY,
+} from '../constants/fanSession'
 
 const STORAGE_KEY = 'talkfoot.fanPreferences.v1'
+const MAX_FAVORITE_CLUBS = 3
+
+type StoredShape = {
+  favoriteLeagueId?: string | null
+  favoriteClubId?: string | null
+  favoriteClubIds?: string[]
+  preferencesComplete?: boolean
+  hideRivalSalons?: boolean
+  virageMode?: boolean
+}
+
+function normalizeClubIds(stored: StoredShape): string[] {
+  const fromArray = stored.favoriteClubIds
+  if (Array.isArray(fromArray) && fromArray.length > 0) {
+    return [...new Set(fromArray.filter(Boolean))].slice(0, MAX_FAVORITE_CLUBS)
+  }
+  if (stored.favoriteClubId) return [stored.favoriteClubId]
+  return []
+}
 
 export type FanPreferencesState = {
   favoriteLeagueId: string | null
+  /** Premier club (rétrocompat & teinte maillot) */
   favoriteClubId: string | null
-  /** Onboarding terminé (club + ligue choisis) */
+  /** Jusqu’à 3 clubs dans la ligue favorite */
+  favoriteClubIds: string[]
+  /** Onboarding terminé dès qu’une ligue favorite est choisie (clubs optionnels) */
   preferencesComplete: boolean
-  /** Masquer totalement les salons des clubs rivaux (sinon lecture seule) */
   hideRivalSalons: boolean
-  /** Mode Virage : live / commentaires filtrés sur ton club uniquement */
   virageMode: boolean
 }
 
 type FanPreferencesContextValue = FanPreferencesState & {
   setFavoriteLeagueId: (id: string | null) => void
   setFavoriteClubId: (id: string | null) => void
+  setFavoriteClubIds: (ids: string[]) => void
   setHideRivalSalons: (v: boolean) => void
   setVirageMode: (v: boolean) => void
-  completeOnboarding: (leagueId: string, clubId: string) => void
+  completeOnboarding: (leagueId: string, clubIds: string[]) => void
   resetPreferences: () => void
   openOnboarding: () => void
   onboardingOpen: boolean
@@ -38,7 +62,7 @@ type FanPreferencesContextValue = FanPreferencesState & {
 const FanPreferencesContext = createContext<FanPreferencesContextValue | null>(null)
 
 export function FanPreferencesProvider({ children }: { children: React.ReactNode }) {
-  const [stored, setStored] = useLocalStorageState<Partial<FanPreferencesState>>(
+  const [stored, setStored] = useLocalStorageState<StoredShape>(
     STORAGE_KEY,
     {},
     (p) => p !== null && typeof p === 'object' && !Array.isArray(p),
@@ -46,16 +70,18 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const consumedPostLoginFlag = useRef(false)
 
-  const state: FanPreferencesState = useMemo(
-    () => ({
+  const state: FanPreferencesState = useMemo(() => {
+    const favoriteClubIds = normalizeClubIds(stored)
+    const favoriteClubId = favoriteClubIds[0] ?? null
+    return {
       favoriteLeagueId: stored.favoriteLeagueId ?? null,
-      favoriteClubId: stored.favoriteClubId ?? null,
+      favoriteClubId,
+      favoriteClubIds,
       preferencesComplete: stored.preferencesComplete ?? false,
       hideRivalSalons: stored.hideRivalSalons ?? false,
       virageMode: stored.virageMode ?? false,
-    }),
-    [stored],
-  )
+    }
+  }, [stored])
 
   /** Modal config : uniquement juste après la connexion (flag session), pas à chaque visite */
   useEffect(() => {
@@ -64,7 +90,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       if (sessionStorage.getItem(PENDING_FAN_ONBOARDING_KEY) === '1') {
         consumedPostLoginFlag.current = true
         sessionStorage.removeItem(PENDING_FAN_ONBOARDING_KEY)
-        if (!state.preferencesComplete) {
+        if (DEMO_FAN_ONBOARDING_EVERY_LOGIN || !state.preferencesComplete) {
           setOnboardingOpen(true)
         }
       }
@@ -74,8 +100,22 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
   }, [state.preferencesComplete])
 
   const patch = useCallback(
-    (p: Partial<FanPreferencesState>) => {
-      setStored((prev) => ({ ...prev, ...p }))
+    (p: Partial<StoredShape>) => {
+      setStored((prev) => {
+        const next = { ...prev, ...p }
+        if (next.favoriteClubIds !== undefined) {
+          const ids = [...new Set((next.favoriteClubIds ?? []).filter(Boolean))].slice(
+            0,
+            MAX_FAVORITE_CLUBS,
+          )
+          next.favoriteClubIds = ids
+          next.favoriteClubId = ids[0] ?? null
+        } else if (next.favoriteClubId !== undefined && next.favoriteClubIds === undefined) {
+          const id = next.favoriteClubId
+          next.favoriteClubIds = id ? [id] : []
+        }
+        return next
+      })
     },
     [setStored],
   )
@@ -85,7 +125,14 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     [patch],
   )
   const setFavoriteClubId = useCallback(
-    (id: string | null) => patch({ favoriteClubId: id }),
+    (id: string | null) => patch({ favoriteClubId: id, favoriteClubIds: id ? [id] : [] }),
+    [patch],
+  )
+  const setFavoriteClubIds = useCallback(
+    (ids: string[]) =>
+      patch({
+        favoriteClubIds: [...new Set(ids.filter(Boolean))].slice(0, MAX_FAVORITE_CLUBS),
+      }),
     [patch],
   )
   const setHideRivalSalons = useCallback(
@@ -95,10 +142,12 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
   const setVirageMode = useCallback((v: boolean) => patch({ virageMode: v }), [patch])
 
   const completeOnboarding = useCallback(
-    (leagueId: string, clubId: string) => {
+    (leagueId: string, clubIds: string[]) => {
+      const ids = [...new Set(clubIds.filter(Boolean))].slice(0, MAX_FAVORITE_CLUBS)
       patch({
         favoriteLeagueId: leagueId,
-        favoriteClubId: clubId,
+        favoriteClubIds: ids,
+        favoriteClubId: ids[0] ?? null,
         preferencesComplete: true,
       })
       setOnboardingOpen(false)
@@ -121,6 +170,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       ...state,
       setFavoriteLeagueId,
       setFavoriteClubId,
+      setFavoriteClubIds,
       setHideRivalSalons,
       setVirageMode,
       completeOnboarding,
@@ -133,6 +183,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       state,
       setFavoriteLeagueId,
       setFavoriteClubId,
+      setFavoriteClubIds,
       setHideRivalSalons,
       setVirageMode,
       completeOnboarding,

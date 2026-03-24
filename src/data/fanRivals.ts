@@ -34,3 +34,12 @@ export function groupHasRivalClub(
   if (!userClubId || groupClubIds.length === 0) return false
   return groupClubIds.some((cid) => isRivalClub(userClubId, cid))
 }
+
+/** Même logique avec plusieurs clubs favoris (jusqu’à 3). */
+export function groupHasRivalForFanClubs(
+  userClubIds: string[],
+  groupClubIds: string[],
+): boolean {
+  if (userClubIds.length === 0 || groupClubIds.length === 0) return false
+  return userClubIds.some((uid) => groupClubIds.some((gid) => isRivalClub(uid, gid)))
+}

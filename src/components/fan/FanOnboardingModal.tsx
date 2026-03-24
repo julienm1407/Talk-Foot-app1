@@ -1,19 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
 import { competitionThemes } from '../../data/competitionThemes'
-import { teams } from '../../data/teams'
-import type { Team } from '../../types/match'
+import {
+  ALL_CLUBS_BY_ID,
+  GLOBAL_SUGGESTED_CLUB_IDS,
+  type ClubCatalogEntry,
+} from '../../data/allClubsCatalog'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/cn'
 import { LogoMark } from '../../layout/LogoMark'
+import { ClubSearchCombobox } from './ClubSearchCombobox'
 
-function clubsForLeague(leagueId: string): Team[] {
-  const key = leagueId as keyof typeof teams
-  const raw = teams[key]
-  return raw ? [...raw] : []
-}
+const MAX_CLUBS = 3
 
 const LEAGUE_ORDER = ['ligue-1', 'epl', 'laliga', 'serie-a', 'bund'] as const
+
+function toggleClubId(current: string[], id: string): string[] {
+  if (current.includes(id)) return current.filter((x) => x !== id)
+  if (current.length >= MAX_CLUBS) return current
+  return [...current, id]
+}
+
+function labelForClubId(id: string): string {
+  return ALL_CLUBS_BY_ID[id]?.shortName ?? id
+}
 
 export function FanOnboardingModal() {
   const {
@@ -22,18 +32,20 @@ export function FanOnboardingModal() {
     closeOnboarding,
     preferencesComplete,
     favoriteLeagueId,
-    favoriteClubId,
+    favoriteClubIds,
   } = useFanPreferences()
   const [step, setStep] = useState<1 | 2>(1)
   const [leagueId, setLeagueId] = useState<string | null>(null)
-  const [clubId, setClubId] = useState<string | null>(null)
+  const [clubIds, setClubIds] = useState<string[]>([])
+  const [clubQuery, setClubQuery] = useState('')
 
   useEffect(() => {
     if (!onboardingOpen) return
     setStep(1)
     setLeagueId(favoriteLeagueId)
-    setClubId(favoriteClubId)
-  }, [onboardingOpen, favoriteLeagueId, favoriteClubId])
+    setClubIds([...favoriteClubIds].slice(0, MAX_CLUBS))
+    setClubQuery('')
+  }, [onboardingOpen, favoriteLeagueId, favoriteClubIds])
 
   const leagueList = useMemo(
     () =>
@@ -43,15 +55,20 @@ export function FanOnboardingModal() {
     [],
   )
 
-  const clubList: Team[] = useMemo(
-    () => (leagueId ? clubsForLeague(leagueId) : []),
-    [leagueId],
-  )
+  const suggestedEntries = useMemo(() => {
+    return GLOBAL_SUGGESTED_CLUB_IDS.map((id) => ALL_CLUBS_BY_ID[id]).filter(
+      (e): e is ClubCatalogEntry => Boolean(e),
+    )
+  }, [])
 
   if (!onboardingOpen) return null
 
   const handleFinish = () => {
-    if (leagueId && clubId) completeOnboarding(leagueId, clubId)
+    if (leagueId) completeOnboarding(leagueId, clubIds)
+  }
+
+  const addClubFromCatalog = (c: ClubCatalogEntry) => {
+    setClubIds((prev) => toggleClubId(prev, c.id))
   }
 
   return (
@@ -73,12 +90,12 @@ export function FanOnboardingModal() {
                 id="fan-onboard-title"
                 className="mt-1 font-display text-2xl font-black tracking-tight text-tf-dark"
               >
-                {step === 1 ? 'Ta ligue favorite' : 'Ton club de cœur'}
+                {step === 1 ? 'Ta ligue favorite' : 'Tes clubs favoris'}
               </h2>
               <p className="mt-1 text-sm font-semibold text-tf-grey">
                 {step === 1
                   ? 'On adapte actus, salons et recommandations.'
-                  : 'Filtrage des salons rivaux & mode Virage possibles.'}
+                  : `Optionnel — jusqu’à ${MAX_CLUBS} clubs parmi toutes les équipes du catalogue. Tape quelques lettres pour ouvrir le menu.`}
               </p>
             </div>
           </div>
@@ -107,10 +124,7 @@ export function FanOnboardingModal() {
                   <button
                     key={L.id}
                     type="button"
-                    onClick={() => {
-                      setLeagueId(L.id)
-                      setClubId(null)
-                    }}
+                    onClick={() => setLeagueId(L.id)}
                     className={cn(
                       'rounded-2xl border px-4 py-3 text-left text-sm font-black transition',
                       selected
@@ -131,28 +145,74 @@ export function FanOnboardingModal() {
               })}
             </div>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {clubList.map((t) => {
-                const selected = clubId === t.id
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setClubId(t.id)}
-                    className={cn(
-                      'rounded-2xl border px-3 py-2.5 text-left transition',
-                      selected
-                        ? 'border-tf-dark bg-tf-dark text-white'
-                        : 'border-tf-grey-pastel/60 bg-white hover:bg-tf-grey-pastel/15',
-                    )}
-                  >
-                    <div className="text-sm font-black">{t.shortName}</div>
-                    <div className="truncate text-xs font-semibold opacity-80">
-                      {t.name}
-                    </div>
-                  </button>
-                )
-              })}
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="fan-club-combobox" className="mb-1 block text-xs font-bold text-tf-grey">
+                  Rechercher un club
+                </label>
+                <ClubSearchCombobox
+                  query={clubQuery}
+                  onQueryChange={setClubQuery}
+                  onPick={addClubFromCatalog}
+                  excludeIds={clubIds}
+                  maxReached={clubIds.length >= MAX_CLUBS}
+                />
+              </div>
+
+              {clubIds.length > 0 ? (
+                <div>
+                  <div className="mb-2 text-[11px] font-black uppercase tracking-wider text-tf-grey">
+                    Sélectionnés ({clubIds.length}/{MAX_CLUBS})
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {clubIds.map((id) => {
+                      const meta = ALL_CLUBS_BY_ID[id]
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setClubIds((prev) => prev.filter((x) => x !== id))}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-tf-dark/20 bg-tf-dark/5 px-3 py-1.5 text-left text-xs font-black text-tf-dark transition hover:bg-tf-dark/10"
+                          title="Retirer ce club"
+                        >
+                          <span>{meta ? `${meta.shortName} (${meta.leagueName})` : labelForClubId(id)}</span>
+                          <span className="text-tf-grey" aria-hidden>
+                            ×
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              <div>
+                <div className="mb-2 text-[11px] font-black uppercase tracking-wider text-tf-grey">
+                  Suggestions rapides
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedEntries.map((c) => {
+                    const selected = clubIds.includes(c.id)
+                    const atMax = clubIds.length >= MAX_CLUBS && !selected
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        disabled={atMax}
+                        onClick={() => addClubFromCatalog(c)}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-40',
+                          selected
+                            ? 'border-tf-dark bg-tf-dark text-white'
+                            : 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:bg-tf-grey-pastel/20',
+                        )}
+                      >
+                        {c.shortName}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -164,16 +224,12 @@ export function FanOnboardingModal() {
             </Button>
           ) : (
             <span className="text-xs font-semibold text-tf-grey">
-              Étape {step}/2 — obligatoire pour continuer
+              Étape {step}/2 — ligue obligatoire, clubs libres
             </span>
           )}
           <div className="flex gap-2">
             {step === 2 ? (
-              <Button
-                variant="soft"
-                className="rounded-2xl"
-                onClick={() => setStep(1)}
-              >
+              <Button variant="soft" className="rounded-2xl" onClick={() => setStep(1)}>
                 Retour
               </Button>
             ) : null}
@@ -190,7 +246,7 @@ export function FanOnboardingModal() {
               <Button
                 variant="primary"
                 className="rounded-2xl"
-                disabled={!clubId}
+                disabled={!leagueId}
                 onClick={handleFinish}
               >
                 Valider

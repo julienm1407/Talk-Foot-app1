@@ -16,18 +16,18 @@ function formatKickoffDay(iso: string) {
 
 export function MatchQuickAccess({
   matches,
-  clubFocusId = null,
+  clubFocusIds = null,
 }: {
   matches: Match[]
-  /** Mode supporter : n’afficher que les matchs du club si possible */
-  clubFocusId?: string | null
+  /** Mode supporter : matchs impliquant au moins un de ces clubs */
+  clubFocusIds?: string[] | null
 }) {
   const { liveMatches, upcomingMatches } = useMemo(() => {
     const pool =
-      clubFocusId != null && clubFocusId !== ''
+      clubFocusIds != null && clubFocusIds.length > 0
         ? (() => {
-            const mine = matches.filter(
-              (m) => m.home.id === clubFocusId || m.away.id === clubFocusId,
+            const mine = matches.filter((m) =>
+              clubFocusIds.some((id) => m.home.id === id || m.away.id === id),
             )
             return mine.length > 0 ? mine : matches
           })()
@@ -38,12 +38,12 @@ export function MatchQuickAccess({
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
       .slice(0, 3)
     return { liveMatches: live, upcomingMatches: upcoming }
-  }, [matches, clubFocusId])
+  }, [matches, clubFocusIds])
 
   return (
     <div className="flex h-full flex-col gap-3">
       <h3 className="font-display text-lg font-black tracking-tight text-tf-dark">
-        {clubFocusId ? 'Ton club en direct' : 'Accès rapide'}
+        {clubFocusIds != null && clubFocusIds.length > 0 ? 'Tes clubs en direct' : 'Accès rapide'}
       </h3>
 
       {/* En direct */}

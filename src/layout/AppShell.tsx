@@ -11,7 +11,7 @@ export function AppShell() {
 
   useSwipeNavigate({
     enabled: !isChannel,
-    order: ['/', '/calendar', '/boutique', '/profile'],
+    order: ['/', '/matches', '/groups', '/rankings'],
   })
 
   return (

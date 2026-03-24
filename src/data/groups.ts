@@ -44,6 +44,10 @@ export const starterGroups: SupporterGroup[] = [
     createdBy: 'system',
     createdAt: daysAgo(14),
     fanTags: { leagueIds: ['ligue-1'], clubIds: ['om'] },
+    onlineNow: 312,
+    messagesToday: 1240,
+    groupKind: 'club',
+    lastMessagePreview: 'Kolo : « On les enfonce au Vélodrome » — 12 likes',
   },
   {
     id: 'g-ultras-nuit',
@@ -58,6 +62,10 @@ export const starterGroups: SupporterGroup[] = [
     createdBy: 'system',
     createdAt: daysAgo(21),
     fanTags: { leagueIds: ['ligue-1'], clubIds: ['psg'] },
+    onlineNow: 428,
+    messagesToday: 2103,
+    groupKind: 'public',
+    lastMessagePreview: 'Dembélé en feu ce soir 🔥',
   },
   {
     id: 'g-kop-bleu',
@@ -72,6 +80,10 @@ export const starterGroups: SupporterGroup[] = [
     createdBy: 'system',
     createdAt: daysAgo(10),
     fanTags: { leagueIds: ['epl'], clubIds: ['mci'] },
+    onlineNow: 156,
+    messagesToday: 890,
+    groupKind: 'private',
+    lastMessagePreview: 'Haaland encore buteur ? Les cotes explosent',
   },
   {
     id: 'g-tribune-rouge',
@@ -86,6 +98,10 @@ export const starterGroups: SupporterGroup[] = [
     createdBy: 'system',
     createdAt: daysAgo(18),
     fanTags: { leagueIds: ['epl'], clubIds: ['liv'] },
+    onlineNow: 267,
+    messagesToday: 1456,
+    groupKind: 'club',
+    lastMessagePreview: 'You’ll Never Walk Alone — chants avant coup d’envoi',
   },
 ]
 

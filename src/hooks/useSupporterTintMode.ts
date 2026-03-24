@@ -6,7 +6,8 @@ import { getFavoriteTeamRecord, isSupporterTintActive } from '../utils/supporter
 /** Contenu app centré club quand le mode supporter (teinte maillot) est actif + club choisi */
 export function useSupporterTintMode() {
   const { profile } = useProfile()
-  const { favoriteClubId, favoriteLeagueId, preferencesComplete } = useFanPreferences()
+  const { favoriteClubId, favoriteClubIds, favoriteLeagueId, preferencesComplete } =
+    useFanPreferences()
 
   const active = useMemo(
     () =>
@@ -23,6 +24,7 @@ export function useSupporterTintMode() {
     supporterTintActive: active,
     team,
     favoriteClubId,
+    favoriteClubIds,
     favoriteLeagueId,
   }
 }

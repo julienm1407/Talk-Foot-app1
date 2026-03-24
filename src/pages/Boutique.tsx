@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
-import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { TokenPaymentModal } from '../components/shop/TokenPaymentModal'
 import { JerseyPurchaseModal } from '../components/shop/JerseyPurchaseModal'
 import { JerseyPreviewThumb } from '../components/shop/JerseyPreviewThumb'
+import {
+  ShopEncartContentPanel,
+  ShopRarityEncart,
+  shopEncartButtonClass,
+} from '../components/shop/ShopRarityEncart'
 import { useWallet } from '../hooks/useWallet'
 import { useProfile } from '../hooks/useProfile'
 import { baseAvatarItems, tokenPacks } from '../data/shop'
@@ -19,13 +23,6 @@ const SLOT_LABELS: Record<AvatarSlot, string> = {
   hat: 'Casquette / chapeau',
   jersey: 'Maillot',
   accessory: 'Accessoire',
-}
-
-const RARITY_STYLES: Record<string, string> = {
-  common: 'border-tf-grey-pastel/60 bg-tf-white/90 text-tf-dark',
-  rare: 'border-blue-200/80 bg-blue-50/80 text-blue-800',
-  epic: 'border-violet-300/80 bg-violet-50/80 text-violet-800',
-  legendary: 'border-amber-300/80 bg-amber-50/90 text-amber-900',
 }
 
 export function BoutiquePage() {
@@ -162,39 +159,43 @@ export function BoutiquePage() {
           <p className="mt-2 text-sm font-medium text-tf-grey">
             Écharpes, casquettes, maillots — ton style dans le chat.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {baseAvatarItems.map((item) => {
               const owned = ownsItem(item.id)
               return (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-3xl" aria-hidden>{item.emoji}</span>
-                    <Badge className={cn('text-[10px] font-black', RARITY_STYLES[item.rarity])}>
-                      {item.rarity}
-                    </Badge>
+                <ShopRarityEncart key={item.id} rarity={item.rarity}>
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="flex min-h-0 flex-1 items-center justify-center">
+                      <span className="text-5xl drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" aria-hidden>
+                        {item.emoji}
+                      </span>
+                    </div>
+                    <ShopEncartContentPanel>
+                      <div className="font-display font-black tracking-tight text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">
+                        {item.name}
+                      </div>
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-white/80">
+                        {SLOT_LABELS[item.slot]}
+                      </div>
+                      {item.description && (
+                        <div className="text-xs font-medium leading-snug text-white/75">{item.description}</div>
+                      )}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="font-display text-sm font-black tabular-nums text-white">
+                          {item.cost} 🪙
+                        </span>
+                        <Button
+                          variant="soft"
+                          className={shopEncartButtonClass(owned)}
+                          disabled={owned}
+                          onClick={() => !owned && handleBuyEquipment(item)}
+                        >
+                          {owned ? 'Possédé' : 'Acheter'}
+                        </Button>
+                      </div>
+                    </ShopEncartContentPanel>
                   </div>
-                  <div className="mt-2 font-bold text-tf-dark">{item.name}</div>
-                  <div className="mt-0.5 text-xs font-medium text-tf-grey">
-                    {SLOT_LABELS[item.slot]}
-                  </div>
-                  {item.description && (
-                    <div className="mt-1 text-xs text-tf-grey">{item.description}</div>
-                  )}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <span className="text-sm font-black text-tf-dark">{item.cost} 🪙</span>
-                    <Button
-                      variant={owned ? 'ghost' : 'primary'}
-                      className="rounded-xl px-3 py-1.5 text-xs"
-                      disabled={owned}
-                      onClick={() => !owned && handleBuyEquipment(item)}
-                    >
-                      {owned ? 'Possédé' : 'Acheter'}
-                    </Button>
-                  </div>
-                </div>
+                </ShopRarityEncart>
               )
             })}
           </div>
@@ -213,51 +214,51 @@ export function BoutiquePage() {
               {inspiredJerseyItems.map((item) => {
                 const owned = ownsItem(item.id)
                 return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4 sm:flex-row sm:items-center sm:gap-4"
-                  >
-                    <div className="flex shrink-0 justify-center sm:w-28">
-                      <JerseyPreviewThumb item={item} />
-                    </div>
-                    <div className="min-w-0 flex-1 pt-3 sm:pt-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-black text-tf-dark">{item.name}</span>
-                        <Badge className={cn('text-[10px] font-black', RARITY_STYLES[item.rarity])}>
-                          {item.rarity}
-                        </Badge>
+                  <ShopRarityEncart key={item.id} rarity={item.rarity}>
+                    <div className="flex min-h-0 flex-1 flex-col">
+                      <div className="flex min-h-0 flex-1 items-center justify-center py-1">
+                        <div className="drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]">
+                          <JerseyPreviewThumb item={item} />
+                        </div>
                       </div>
-                      {item.inspirationNote && (
-                        <p className="mt-1 text-[11px] font-semibold text-violet-800/90">{item.inspirationNote}</p>
-                      )}
-                      {item.description && (
-                        <p className="mt-1 text-xs text-tf-grey">{item.description}</p>
-                      )}
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-black text-tf-dark">{item.cost} 🪙</span>
-                        <Button
-                          variant={owned ? 'ghost' : 'primary'}
-                          className="rounded-xl px-3 py-1.5 text-xs"
-                          disabled={owned}
-                          onClick={() => !owned && setJerseyModalItem(item)}
-                          title={
-                            owned
-                              ? 'Déjà acheté — flocage et équipement dans Profil'
-                              : 'Personnaliser le maillot et acheter avec des jetons'
-                          }
-                        >
-                          {owned ? (
-                            <>
-                              <span className="sm:hidden">Possédé</span>
-                              <span className="hidden sm:inline">Possédé (Profil)</span>
-                            </>
-                          ) : (
-                            'Personnaliser'
-                          )}
-                        </Button>
-                      </div>
+                      <ShopEncartContentPanel>
+                        <div className="font-display font-black tracking-tight text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">
+                          {item.name}
+                        </div>
+                        {item.inspirationNote && (
+                          <p className="text-[11px] font-bold leading-snug text-amber-100">{item.inspirationNote}</p>
+                        )}
+                        {item.description && (
+                          <p className="text-xs font-medium leading-snug text-white/75">{item.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <span className="font-display text-sm font-black tabular-nums text-white">
+                            {item.cost} 🪙
+                          </span>
+                          <Button
+                            variant="soft"
+                            className={shopEncartButtonClass(owned)}
+                            disabled={owned}
+                            onClick={() => !owned && setJerseyModalItem(item)}
+                            title={
+                              owned
+                                ? 'Déjà acheté — flocage et équipement dans Profil'
+                                : 'Personnaliser le maillot et acheter avec des jetons'
+                            }
+                          >
+                            {owned ? (
+                              <>
+                                <span className="sm:hidden">Possédé</span>
+                                <span className="hidden sm:inline">Possédé (Profil)</span>
+                              </>
+                            ) : (
+                              'Personnaliser'
+                            )}
+                          </Button>
+                        </div>
+                      </ShopEncartContentPanel>
                     </div>
-                  </div>
+                  </ShopRarityEncart>
                 )
               })}
             </div>

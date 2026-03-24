@@ -8,20 +8,24 @@ import { formatKickoff } from '../utils/time'
 import { ClubCrest } from '../components/brand/ClubCrest'
 import { cn } from '../utils/cn'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
-import { filterMatchesForSupporterClub } from '../utils/supporterMode'
+import {
+  filterMatchesForSupporterClub,
+  filterMatchesForSupporterClubs,
+} from '../utils/supporterMode'
 
 export function CalendarPage() {
   const now = Date.now()
 
   const { matches, loading } = useMatches()
-  const { supporterTintActive, favoriteClubId, team } = useSupporterTintMode()
+  const { supporterTintActive, favoriteClubIds, team } = useSupporterTintMode()
 
   const matchesForView = useMemo(() => {
-    if (supporterTintActive && favoriteClubId) {
-      return filterMatchesForSupporterClub(matches, favoriteClubId)
+    if (!supporterTintActive || favoriteClubIds.length === 0) return matches
+    if (favoriteClubIds.length === 1) {
+      return filterMatchesForSupporterClub(matches, favoriteClubIds[0])
     }
-    return matches
-  }, [matches, supporterTintActive, favoriteClubId])
+    return filterMatchesForSupporterClubs(matches, favoriteClubIds)
+  }, [matches, supporterTintActive, favoriteClubIds])
 
   const sorted = useMemo(() => {
     return [...matchesForView]
@@ -175,7 +179,7 @@ export function CalendarPage() {
               }
             >
               <div
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
+                className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
                 style={
                   themeForCompetition(featured.competition.id)
                     ? {
@@ -184,31 +188,31 @@ export function CalendarPage() {
                     : undefined
                 }
               >
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="flex shrink-0 items-center gap-4">
                   <ClubCrest
                     id={featured.home.id}
                     shortName={featured.home.shortName}
                     colors={featured.home.colors}
-                    size={48}
+                    size={56}
                   />
-                  <div className="text-center">
+                  <div className="min-w-[4.5rem] text-center">
                     {featured.status === 'live' ? (
                       <>
-                        <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-black text-white">
+                        <span className="inline-block rounded-full bg-rose-500 px-3 py-1.5 text-[11px] font-black text-white sm:text-xs">
                           EN DIRECT
                         </span>
                         {featured.score && (
-                          <div className="mt-1 font-display text-lg font-black text-tf-dark">
+                          <div className="mt-2 font-display text-2xl font-black tabular-nums text-tf-dark sm:text-3xl">
                             {featured.score.home} – {featured.score.away}
                           </div>
                         )}
                       </>
                     ) : (
-                      <span className="text-sm font-bold text-tf-grey">
+                      <span className="text-sm font-bold text-tf-dark sm:text-base">
                         {formatKickoff(featured.kickoffAt)}
                       </span>
                     )}
-                    <div className="mt-1 text-[11px] font-semibold text-tf-grey">
+                    <div className="mt-2 text-xs font-bold text-tf-grey">
                       {featured.competition.shortName}
                     </div>
                   </div>
@@ -216,14 +220,14 @@ export function CalendarPage() {
                     id={featured.away.id}
                     shortName={featured.away.shortName}
                     colors={featured.away.colors}
-                    size={48}
+                    size={56}
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-display text-xl font-black text-tf-dark sm:text-2xl">
+                  <div className="font-display text-2xl font-black leading-tight text-tf-dark sm:text-3xl">
                     {featured.home.shortName} – {featured.away.shortName}
                   </div>
-                  <div className="mt-1 text-sm font-medium text-tf-grey">
+                  <div className="mt-2 text-sm font-medium leading-snug text-tf-dark/80 sm:text-base">
                     {new Intl.DateTimeFormat('fr-FR', {
                       weekday: 'long',
                       day: 'numeric',
@@ -232,7 +236,7 @@ export function CalendarPage() {
                       minute: '2-digit',
                     }).format(new Date(featured.kickoffAt))}
                   </div>
-                  <div className="mt-2 text-sm font-bold text-tf-dark">
+                  <div className="mt-3 text-base font-black text-tf-electric-deep">
                     {featured.status === 'live' ? 'Rejoindre le live' : "Voir l'avant-match"} →
                   </div>
                 </div>
@@ -245,7 +249,7 @@ export function CalendarPage() {
       {/* Filtres — compacts et accessibles */}
       <section aria-label="Filtrer les matchs" className="space-y-5">
         <div className="space-y-4">
-          <h2 className="text-xs font-black uppercase tracking-wider text-tf-grey">
+          <h2 className="border-b border-tf-grey-pastel/50 pb-2 text-sm font-black uppercase tracking-wider text-tf-dark">
             Ligue
           </h2>
           <div
@@ -305,7 +309,7 @@ export function CalendarPage() {
 
         <div className="mt-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-black uppercase tracking-wider text-tf-grey">
+            <h2 className="border-b border-tf-grey-pastel/50 pb-2 text-sm font-black uppercase tracking-wider text-tf-dark">
               Jour
             </h2>
             <span className="text-xs font-medium text-tf-grey">
@@ -371,12 +375,12 @@ export function CalendarPage() {
           <div className="space-y-8">
             {visible.map((g) => (
               <div key={g.key}>
-                <h3 className="mb-4 text-sm font-black uppercase tracking-wider text-tf-grey">
+                <h3 className="mb-4 border-b border-tf-grey-pastel/45 pb-2 text-base font-black uppercase tracking-wide text-tf-dark">
                   {g.label}
                 </h3>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
                   {g.matches.map((m) => (
-                    <MatchCard key={m.id} match={m} compact />
+                    <MatchCard key={m.id} match={m} />
                   ))}
                 </div>
               </div>

@@ -13,12 +13,15 @@ export function isSupporterTintActive(
 }
 
 export function getFavoriteTeamRecord(
-  favoriteLeagueId: string | null,
+  _favoriteLeagueId: string | null,
   favoriteClubId: string | null,
 ): { id: string; name: string; shortName: string } | null {
-  if (!favoriteLeagueId || !favoriteClubId) return null
-  const list = teams[favoriteLeagueId as keyof typeof teams]
-  return list?.find((t) => t.id === favoriteClubId) ?? null
+  if (!favoriteClubId) return null
+  for (const key of Object.keys(teams) as (keyof typeof teams)[]) {
+    const t = teams[key].find((x) => x.id === favoriteClubId)
+    if (t) return t
+  }
+  return null
 }
 
 export function matchInvolvesClub(m: Match, clubId: string): boolean {
@@ -31,6 +34,13 @@ export function filterMatchesForSupporterClub(matches: Match[], clubId: string):
   return mine.length > 0 ? mine : matches
 }
 
+/** Matchs impliquant au moins un des clubs favoris */
+export function filterMatchesForSupporterClubs(matches: Match[], clubIds: string[]): Match[] {
+  if (clubIds.length === 0) return matches
+  const mine = matches.filter((m) => clubIds.some((id) => matchInvolvesClub(m, id)))
+  return mine.length > 0 ? mine : matches
+}
+
 /**
  * Actus : ligue du fan + son club + brèves globales app ; exclut les autres championnats « purs ».
  */
@@ -39,21 +49,30 @@ export function filterNewsForSupporterClub(
   favoriteLeagueId: string | null,
   favoriteClubId: string,
 ): NewsItem[] {
-  return items.filter((n) => articleVisibleInSupporterMode(n, favoriteLeagueId, favoriteClubId))
+  return filterNewsForSupporterClubs(items, favoriteLeagueId, [favoriteClubId])
+}
+
+export function filterNewsForSupporterClubs(
+  items: NewsItem[],
+  favoriteLeagueId: string | null,
+  favoriteClubIds: string[],
+): NewsItem[] {
+  if (favoriteClubIds.length === 0) return items
+  return items.filter((n) => articleVisibleInSupporterMode(n, favoriteLeagueId, favoriteClubIds))
 }
 
 function articleVisibleInSupporterMode(
   n: NewsItem,
   favoriteLeagueId: string | null,
-  favoriteClubId: string,
+  favoriteClubIds: string[],
 ): boolean {
   const hasLeague = Boolean(n.leagueIds?.length)
   const hasClub = Boolean(n.clubIds?.length)
   if (!hasLeague && !hasClub) return true
-  if (hasClub && n.clubIds!.includes(favoriteClubId)) return true
+  if (hasClub && n.clubIds!.some((id) => favoriteClubIds.includes(id))) return true
   if (hasLeague && favoriteLeagueId && n.leagueIds!.includes(favoriteLeagueId)) {
     if (!hasClub) return true
-    return n.clubIds!.includes(favoriteClubId)
+    return n.clubIds!.some((id) => favoriteClubIds.includes(id))
   }
   return false
 }

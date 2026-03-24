@@ -4,6 +4,12 @@ import { CalendarPage } from './pages/Calendar'
 import { ChannelPage } from './pages/Channel'
 import { GroupPage } from './pages/Group'
 import { HomePage } from './pages/Home'
+import { MatchesPage } from './pages/Matches'
+import { DebatesPage } from './pages/Debates'
+import { DebateDetailPage } from './pages/DebateDetail'
+import { GroupsHubPage } from './pages/GroupsHub'
+import { VideosPage } from './pages/Videos'
+import { RankingsPage } from './pages/Rankings'
 import { BoutiquePage } from './pages/Boutique'
 import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
@@ -43,6 +49,12 @@ export default function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="matches" element={<MatchesPage />} />
+        <Route path="debates" element={<DebatesPage />} />
+        <Route path="debate/:debateId" element={<DebateDetailPage />} />
+        <Route path="groups" element={<GroupsHubPage />} />
+        <Route path="videos" element={<VideosPage />} />
+        <Route path="rankings" element={<RankingsPage />} />
         <Route path="channel/:matchId" element={<ChannelPage />} />
         <Route path="group/:groupId" element={<GroupPage />} />
         <Route path="calendar" element={<CalendarPage />} />
