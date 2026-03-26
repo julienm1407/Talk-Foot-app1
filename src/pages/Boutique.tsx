@@ -17,6 +17,7 @@ import { inspiredJerseyItems } from '../data/inspiredJerseys'
 import type { AvatarItem as AvatarItemType, AvatarSlot } from '../types/profile'
 import type { TokenPack } from '../types/profile'
 import { cn } from '../utils/cn'
+import { getAppSectionTheme } from '../theme/appSectionThemes'
 
 const SLOT_LABELS: Record<AvatarSlot, string> = {
   scarf: 'Écharpe',
@@ -68,10 +69,14 @@ export function BoutiquePage() {
     showNotice('ok', `Paiement accepté • +${total} jetons ajoutés !`)
   }
 
+  const shop = getAppSectionTheme('boutique')
+
   return (
     <div className="space-y-8">
-      <header className="space-y-2 pb-2">
-        <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">BOUTIQUE</div>
+      <header className={cn('space-y-2 border-b pb-4', shop.page.borderBottomClass)}>
+        <div className={cn('text-[11px] font-black tracking-[0.18em]', shop.page.eyebrowClass)}>
+          Boutique
+        </div>
         <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
           Boutique supporter
         </h1>

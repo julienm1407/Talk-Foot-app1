@@ -56,7 +56,7 @@ export function DebateOfTheDayCard({ debate }: { debate: Debate }) {
                 <div className="flex -space-x-2">
                   {participants.map((p, i) => (
                     <Avatar
-                      key={i}
+                      key={`${debate.id}-ap-${p.avatarSeed}-${i}`}
                       seed={p.avatarSeed}
                       accent={p.accent}
                       className="size-9 ring-2 ring-white/30 sm:size-10"
@@ -68,15 +68,21 @@ export function DebateOfTheDayCard({ debate }: { debate: Debate }) {
             ) : null}
           </div>
 
-          <div className="flex shrink-0 flex-col items-stretch sm:items-end">
+          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
             <Link
-              to={`/debate/${debate.id}`}
+              to={`/group/${debate.groupId}?debate=${encodeURIComponent(debate.id)}`}
               className={cn(
                 'tf-interactive-press inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-center text-xs font-black text-white shadow-lg sm:w-auto sm:min-w-[200px] sm:px-6 sm:text-sm',
                 'bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800',
               )}
             >
-              💬 Rejoindre le débat
+              ✍️ Écrire dans le salon
+            </Link>
+            <Link
+              to={`/debate/${debate.id}`}
+              className="tf-interactive-press inline-flex w-full items-center justify-center rounded-2xl border border-white/40 bg-white/10 px-5 py-2.5 text-center text-[11px] font-black text-white backdrop-blur-sm hover:bg-white/20 sm:w-auto sm:text-xs"
+            >
+              Lire le fil du débat
             </Link>
           </div>
         </div>
@@ -87,7 +93,7 @@ export function DebateOfTheDayCard({ debate }: { debate: Debate }) {
           <p className="text-xs font-black uppercase tracking-[0.2em] text-tf-grey">Aperçu du fil</p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
             {previews.map((m, i) => (
-              <DebateMessagePreview key={i} message={m} compact />
+              <DebateMessagePreview key={`${debate.id}-p-${i}`} message={m} compact />
             ))}
           </div>
         </div>

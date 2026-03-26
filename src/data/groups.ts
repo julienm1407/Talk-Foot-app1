@@ -47,6 +47,7 @@ export const starterGroups: SupporterGroup[] = [
     onlineNow: 312,
     messagesToday: 1240,
     groupKind: 'club',
+    hashtags: ['om', 'marseille', 'ligue1', 'supporters', 'velodrome'],
     lastMessagePreview: 'Kolo : « On les enfonce au Vélodrome » — 12 likes',
   },
   {
@@ -65,6 +66,7 @@ export const starterGroups: SupporterGroup[] = [
     onlineNow: 428,
     messagesToday: 2103,
     groupKind: 'public',
+    hashtags: ['psg', 'paris', 'ligue1', 'ultras', 'champions'],
     lastMessagePreview: 'Dembélé en feu ce soir 🔥',
   },
   {
@@ -83,6 +85,7 @@ export const starterGroups: SupporterGroup[] = [
     onlineNow: 156,
     messagesToday: 890,
     groupKind: 'private',
+    hashtags: ['mancity', 'city', 'epl', 'premierleague', 'haaland'],
     lastMessagePreview: 'Haaland encore buteur ? Les cotes explosent',
   },
   {
@@ -101,6 +104,7 @@ export const starterGroups: SupporterGroup[] = [
     onlineNow: 267,
     messagesToday: 1456,
     groupKind: 'club',
+    hashtags: ['liverpool', 'lfc', 'epl', 'ynwa', 'anfield'],
     lastMessagePreview: 'You’ll Never Walk Alone — chants avant coup d’envoi',
   },
 ]

@@ -8,6 +8,9 @@ export function AdSlot({
   tone = 'blue',
   imageSeed = 'ad',
   compact,
+  /** Colonne latérale type skyscraper (desktop). */
+  variant = 'default',
+  className,
 }: {
   title?: string
   brand?: string
@@ -15,6 +18,8 @@ export function AdSlot({
   tone?: 'blue' | 'navy' | 'sky'
   imageSeed?: string
   compact?: boolean
+  variant?: 'default' | 'rail'
+  className?: string
 }) {
   const gradient =
     tone === 'navy'
@@ -23,8 +28,47 @@ export function AdSlot({
         ? 'from-sky-400/18 via-white/70 to-white/80'
         : 'from-blue-600/14 via-white/70 to-white/80'
 
+  if (variant === 'rail') {
+    return (
+      <div
+        role="complementary"
+        className={cn('overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm', className)}
+        aria-label={title}
+      >
+        <div className={cn('bg-gradient-to-b', gradient)}>
+          <div className="relative aspect-[3/5] w-full min-h-[200px] max-h-[min(52vh,420px)] overflow-hidden">
+            <img
+              src={`https://picsum.photos/seed/${imageSeed}/300/500`}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div className="border-t border-slate-200/60 px-2.5 py-2">
+            <div className="flex items-start justify-between gap-1">
+              <div className="min-w-0">
+                <div className="text-[8px] font-black uppercase tracking-wide text-slate-500">
+                  {title}
+                </div>
+                <div className="mt-0.5 line-clamp-2 text-[10px] font-black leading-tight text-slate-900">
+                  {brand}
+                </div>
+              </div>
+              <span className="shrink-0 rounded bg-slate-100 px-1 py-0.5 text-[8px] font-bold text-slate-500">
+                Ad
+              </span>
+            </div>
+            <p className="mt-1 line-clamp-3 text-[9px] font-semibold leading-snug text-slate-600">
+              {body}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <Card elevation="none" className="overflow-hidden">
+    <Card elevation="none" className={cn('overflow-hidden', className)}>
       <div className={`bg-gradient-to-br ${gradient}`}>
         <div
           className={cn(

@@ -1,3 +1,5 @@
+import type { TribuneId } from './tribune'
+
 export type ReactionType = 'flare' | 'confetti' | 'goal' | 'rage'
 
 export type User = {
@@ -18,6 +20,8 @@ export type Message = {
   createdAt: number
   gifUrl?: string
   emoteId?: string
+  /** Tribune du stade digital ; absent = visible dans toutes les tribunes (ex. messages globaux). */
+  tribune?: TribuneId
 }
 
 export type ReactionEvent = {

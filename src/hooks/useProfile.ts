@@ -1,10 +1,13 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import type { AvatarCharacterLook, AvatarSlot, JerseyCustomization, UserProfile } from '../types/profile'
 import { useLocalStorageState } from './useLocalStorage'
 import { levelFromXp, getLevelTier, xpPerLevel } from '../data/shop'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../data/characterPresets'
 
-const PROFILE_KEY = 'talkfoot.profile.v1'
+export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
+
+/** Synchronise tous les hooks useProfile() dans l’onglet après une mise à jour. */
+export const PROFILE_BROADCAST = 'talkfoot-profile-broadcast'
 
 const defaultProfile: UserProfile = {
   level: 1,
@@ -36,15 +39,66 @@ function isUserProfileStored(p: unknown): boolean {
   ) {
     return false
   }
+  if (
+    o.profilePhotoDataUrl != null &&
+    (typeof o.profilePhotoDataUrl !== 'string' || !o.profilePhotoDataUrl.startsWith('data:image/'))
+  ) {
+    return false
+  }
   return true
 }
 
 export function useProfile() {
-  const [profile, setProfile] = useLocalStorageState<UserProfile>(
-    PROFILE_KEY,
+  const [profile, setProfileRaw] = useLocalStorageState<UserProfile>(
+    PROFILE_STORAGE_KEY,
     defaultProfile,
     isUserProfileStored,
   )
+
+  const broadcastProfile = useCallback((next: UserProfile) => {
+    queueMicrotask(() => {
+      window.dispatchEvent(new CustomEvent<UserProfile>(PROFILE_BROADCAST, { detail: next }))
+    })
+  }, [])
+
+  const setProfileStore = useCallback(
+    (u: React.SetStateAction<UserProfile>) => {
+      setProfileRaw((prev) => {
+        const next = typeof u === 'function' ? (u as (p: UserProfile) => UserProfile)(prev) : u
+        try {
+          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(next))
+        } catch {
+          /* quota — laisser useLocalStorage retenter au prochain render */
+        }
+        broadcastProfile(next)
+        return next
+      })
+    },
+    [setProfileRaw, broadcastProfile],
+  )
+
+  useEffect(() => {
+    const onBroadcast = (e: Event) => {
+      const ce = e as CustomEvent<UserProfile>
+      const d = ce.detail
+      if (d && isUserProfileStored(d)) setProfileRaw(d as UserProfile)
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== PROFILE_STORAGE_KEY || !e.newValue) return
+      try {
+        const parsed: unknown = JSON.parse(e.newValue)
+        if (isUserProfileStored(parsed)) setProfileRaw(parsed as UserProfile)
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener(PROFILE_BROADCAST, onBroadcast as EventListener)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(PROFILE_BROADCAST, onBroadcast as EventListener)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [setProfileRaw])
 
   const computedLevel = useMemo(() => levelFromXp(profile.xp), [profile.xp])
   const tier = useMemo(() => getLevelTier(computedLevel), [computedLevel])
@@ -62,58 +116,68 @@ export function useProfile() {
 
   const addXp = useCallback(
     (amount: number) => {
-      setProfile((p) => ({ ...p, xp: p.xp + amount }))
+      setProfileStore((p) => ({ ...p, xp: p.xp + amount }))
     },
-    [setProfile],
+    [setProfileStore],
   )
 
   const equipItem = useCallback(
     (itemId: string, slot: AvatarSlot) => {
-      setProfile((p) => {
+      setProfileStore((p) => {
         if (!(Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []).includes(itemId)) return p
-        const current = p.equippedItems && typeof p.equippedItems === 'object' ? p.equippedItems : { scarf: null, hat: null, jersey: null, accessory: null }
+        const current =
+          p.equippedItems && typeof p.equippedItems === 'object'
+            ? p.equippedItems
+            : { scarf: null, hat: null, jersey: null, accessory: null }
         return {
           ...p,
           equippedItems: { ...current, [slot]: itemId },
         }
       })
     },
-    [setProfile],
+    [setProfileStore],
   )
 
   const unequipSlot = useCallback(
     (slot: AvatarSlot) => {
-      setProfile((p) => ({
+      setProfileStore((p) => ({
         ...p,
-        equippedItems: { scarf: null, hat: null, jersey: null, accessory: null, ...(p.equippedItems && typeof p.equippedItems === 'object' ? p.equippedItems : {}), [slot]: null },
+        equippedItems: {
+          scarf: null,
+          hat: null,
+          jersey: null,
+          accessory: null,
+          ...(p.equippedItems && typeof p.equippedItems === 'object' ? p.equippedItems : {}),
+          [slot]: null,
+        },
       }))
     },
-    [setProfile],
+    [setProfileStore],
   )
 
   const addOwnedItem = useCallback(
     (itemId: string) => {
-      setProfile((p) => {
+      setProfileStore((p) => {
         const ids = Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []
         return ids.includes(itemId) ? p : { ...p, ownedItemIds: [...ids, itemId] }
       })
     },
-    [setProfile],
+    [setProfileStore],
   )
 
   const updateCharacterLook = useCallback(
     (patch: Partial<AvatarCharacterLook>) => {
-      setProfile((p) => {
+      setProfileStore((p) => {
         const base = mergeCharacterLook(p.characterLook ?? {})
         return { ...p, characterLook: { ...base, ...patch } }
       })
     },
-    [setProfile],
+    [setProfileStore],
   )
 
   const setJerseyCustomization = useCallback(
     (jerseyId: string, data: JerseyCustomization) => {
-      setProfile((p) => ({
+      setProfileStore((p) => ({
         ...p,
         jerseyCustomizations: {
           ...(typeof p.jerseyCustomizations === 'object' && p.jerseyCustomizations !== null
@@ -123,7 +187,19 @@ export function useProfile() {
         },
       }))
     },
-    [setProfile],
+    [setProfileStore],
+  )
+
+  const setProfilePhotoDataUrl = useCallback(
+    (url: string | null) => {
+      setProfileStore((p) => {
+        const next = { ...p }
+        if (url) next.profilePhotoDataUrl = url
+        else delete next.profilePhotoDataUrl
+        return next
+      })
+    },
+    [setProfileStore],
   )
 
   const creditWonBets = useCallback(
@@ -132,13 +208,13 @@ export function useProfile() {
       const toCredit = wonBetIds.filter((id) => !credited.includes(id))
       if (toCredit.length === 0) return
       const xpGain = toCredit.length * 35
-      setProfile((p) => ({
+      setProfileStore((p) => ({
         ...p,
         xp: p.xp + xpGain,
         creditedBetIds: [...(p.creditedBetIds ?? []), ...toCredit],
       }))
     },
-    [profile.creditedBetIds, setProfile],
+    [profile.creditedBetIds, setProfileStore],
   )
 
   const safeProfile = useMemo(() => {
@@ -153,7 +229,10 @@ export function useProfile() {
       level: computedLevel,
       ownedItemIds: Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
       equippedItems: (() => {
-        const def = { scarf: null, hat: null, jersey: null, accessory: null } as Record<AvatarSlot, string | null>
+        const def = { scarf: null, hat: null, jersey: null, accessory: null } as Record<
+          AvatarSlot,
+          string | null
+        >
         if (profile.equippedItems && typeof profile.equippedItems === 'object') {
           return { ...def, ...profile.equippedItems }
         }
@@ -175,8 +254,10 @@ export function useProfile() {
     addOwnedItem,
     updateCharacterLook,
     setJerseyCustomization,
+    setProfilePhotoDataUrl,
     creditWonBets,
-    ownsItem: (id: string) => (Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []).includes(id),
-    setProfile,
+    ownsItem: (id: string) =>
+      (Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []).includes(id),
+    setProfile: setProfileStore,
   }
 }

@@ -2,12 +2,7 @@ import { useMatches } from '../contexts/MatchesContext'
 import { mockNews } from '../data/news'
 import { debateOfTheDay, trendingDebates } from '../data/debates'
 import { Card } from '../components/ui/Card'
-import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { MatchCarousel } from '../components/match/MatchCarousel'
-import { NewsFeed } from '../components/home/NewsFeed'
-import { TopCommentsFeed } from '../components/home/TopCommentsFeed'
-import { BettorLeaderboard } from '../components/home/BettorLeaderboard'
 import { AdSlot } from '../components/ui/AdSlot'
 import { Link } from 'react-router-dom'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
@@ -23,16 +18,15 @@ import { cn } from '../utils/cn'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { sortGroupsByFanAffinity, getGroupAccess } from '../utils/groupAccess'
 import { filterNewsForFan } from '../utils/filterNews'
-import { SectionIntro } from '../components/ui/SectionIntro'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
-import {
-  filterMatchesForSupporterClub,
-  filterMatchesForSupporterClubs,
-  filterNewsForSupporterClub,
-  filterNewsForSupporterClubs,
-} from '../utils/supporterMode'
-import { mergeWithSyntheticIfSparse } from '../data/supporterSyntheticNews'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { FavoritesEncart } from '../components/fan/FavoritesEncart'
+import { HomeDesktopExperience } from '../components/home/HomeDesktopExperience'
+import { HomeFeedContinuation } from '../components/home/HomeFeedContinuation'
+import { HomeUpcomingHero } from '../components/home/HomeUpcomingHero'
+import { HubStripUpcoming } from '../components/match/HubMatchEncart'
+import { useAppearance } from '../contexts/AppearanceContext'
+import { hubGlassPanel, hubTrendsShell } from '../utils/hubSurface'
 
 export function HomePage() {
   const { carouselMatches, matches, loading } = useMatches()
@@ -44,6 +38,7 @@ export function HomePage() {
     setHideRivalSalons,
   } = useFanPreferences()
   const { supporterTintActive, team } = useSupporterTintMode()
+  const { appearance, setAppearance } = useAppearance()
 
   const accessPrefs = useMemo(
     () => ({
@@ -66,39 +61,14 @@ export function HomePage() {
 
   const activeGroupsRail = visibleGroups.slice(0, 4)
 
-  const displayMatches = useMemo(() => {
-    if (!supporterTintActive || favoriteClubIds.length === 0) return carouselMatches
-    if (favoriteClubIds.length === 1) {
-      return filterMatchesForSupporterClub(carouselMatches, favoriteClubIds[0])
-    }
-    return filterMatchesForSupporterClubs(carouselMatches, favoriteClubIds)
-  }, [carouselMatches, supporterTintActive, favoriteClubIds])
+  const displayMatches = carouselMatches
+  const displayMatchesFull = matches
 
-  const displayMatchesFull = useMemo(() => {
-    if (!supporterTintActive || favoriteClubIds.length === 0) return matches
-    if (favoriteClubIds.length === 1) {
-      return filterMatchesForSupporterClub(matches, favoriteClubIds[0])
-    }
-    return filterMatchesForSupporterClubs(matches, favoriteClubIds)
-  }, [matches, supporterTintActive, favoriteClubIds])
-
-  const personalizedNews = useMemo(() => {
-    if (supporterTintActive && favoriteClubIds.length > 0 && favoriteLeagueId && team) {
-      const strict =
-        favoriteClubIds.length === 1
-          ? filterNewsForSupporterClub(mockNews, favoriteLeagueId, favoriteClubIds[0])
-          : filterNewsForSupporterClubs(mockNews, favoriteLeagueId, favoriteClubIds)
-      return mergeWithSyntheticIfSparse(
-        strict,
-        3,
-        favoriteClubIds[0],
-        team.shortName,
-        team.name,
-        favoriteLeagueId,
-      )
-    }
-    return filterNewsForFan(mockNews, favoriteLeagueId, favoriteClubIds)
-  }, [supporterTintActive, favoriteClubIds, favoriteLeagueId, team])
+  /** Le mode supporter (teinte maillot) ne restreint plus le fil : seul le Mode Virage filtre chats / top com. */
+  const personalizedNews = useMemo(
+    () => filterNewsForFan(mockNews, favoriteLeagueId, favoriteClubIds),
+    [favoriteClubIds, favoriteLeagueId],
+  )
 
   const [createOpen, setCreateOpen] = useState(false)
   const [feedTab, setFeedTab] = useState<'actu' | 'comments'>('comments')
@@ -128,6 +98,13 @@ export function HomePage() {
 
   const supporterFocusUi = Boolean(supporterTintActive && team && favoriteClubIds.length > 0)
 
+  const upcomingHeaderPool = useMemo(() => {
+    return [...displayMatchesFull]
+      .filter((m) => m.status === 'upcoming')
+      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
+      .slice(0, 8)
+  }, [displayMatchesFull])
+
   if (loading) {
     return (
       <div className="flex min-h-[200px] items-center justify-center">
@@ -137,6 +114,8 @@ export function HomePage() {
   }
 
   const railDebates = trendingDebates.slice(0, 4)
+
+  const trendsShell = hubTrendsShell(appearance)
 
   /** Maquette : 3 colonnes ; hero sur gauche+centre ; rail droit sur 2 rangées ; bas de page en pleine largeur utile. */
   const bentoCols =
@@ -150,20 +129,111 @@ export function HomePage() {
 
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
+      {/* Hub desktop (≥xl) — maquette TalkFoot sombre 3 colonnes */}
+      <div className="hidden xl:block xl:space-y-10">
+        <HomeDesktopExperience
+          liveMatches={liveMatches}
+          upcomingMatches={displayMatchesFull}
+          tribuneGroups={visibleGroups.slice(0, 4)}
+          trendingDebates={trendingDebates}
+          onCreateTribune={() => setCreateOpen(true)}
+        />
+        <section className={cn('mx-auto w-full max-w-[1200px]', trendsShell)} aria-label="Débats tendances">
+          <TrendingDebatesSection debates={trendingDebates} variant="band" />
+        </section>
+        <FavoritesEncart className="mx-auto max-w-[1200px]" />
+        <div className="mx-auto w-full max-w-[1200px] space-y-6 sm:space-y-8">
+          <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
+            <AdSlot
+              compact
+              tone="navy"
+              brand="Matchday sponsor"
+              body="Sous le hub desktop — débat du jour."
+              imageSeed="home-under-hero-desktop"
+            />
+            <div className="mt-5 sm:mt-6">
+              <DebateOfTheDayCard debate={debateOfTheDay} />
+            </div>
+          </div>
+          <HomeFeedContinuation
+            idPrefix="d-"
+            displayMatches={displayMatches}
+            heroLiveMatch={heroLiveMatch}
+            heroLiveSim={heroLiveSim}
+            personalizedNews={personalizedNews}
+            feedTab={feedTab}
+            setFeedTab={setFeedTab}
+            supporterFocusUi={supporterFocusUi}
+            clubFocusLabel={clubFocusLabel}
+            team={team}
+          />
+        </div>
+      </div>
+
+      <div className="xl:hidden space-y-6 sm:space-y-8">
+      <FavoritesEncart className="mx-auto max-w-[1200px]" />
+      <header className={cn('mx-auto w-full max-w-[1200px] p-4 sm:p-5', hubGlassPanel(appearance))}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
+              Bienvenue sur TalkFoot <span className="inline-block">💙</span>
+            </h1>
+            <p className="mt-1 max-w-xl text-xs font-semibold text-tf-app-muted sm:text-sm">
+              Rejoins la communauté des passionnés et vis le football autrement.
+            </p>
+          </div>
+          <div
+            className={cn(
+              'flex shrink-0 gap-1 rounded-xl p-1',
+              appearance === 'light'
+                ? 'border border-tf-dark/10 bg-tf-dark/[0.04]'
+                : 'bg-white/[0.06]',
+            )}
+            role="group"
+            aria-label="Thème d’affichage"
+          >
+            <button
+              type="button"
+              onClick={() => setAppearance('dark')}
+              className={cn(
+                'rounded-lg px-3 py-2 text-[11px] font-black transition',
+                appearance === 'dark'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-tf-app-muted hover:bg-white/80 hover:text-tf-app-fg',
+              )}
+            >
+              Nuit stade
+            </button>
+            <button
+              type="button"
+              onClick={() => setAppearance('light')}
+              className={cn(
+                'rounded-lg px-3 py-2 text-[11px] font-black transition',
+                appearance === 'light'
+                  ? 'bg-sky-500 text-white shadow-sm'
+                  : 'text-tf-app-muted hover:bg-white/10 hover:text-tf-app-fg',
+              )}
+            >
+              Mode jour
+            </button>
+          </div>
+        </div>
+      </header>
       <div className="mx-auto w-full max-w-[1200px] space-y-6 sm:space-y-8">
         {supporterTintActive && team ? (
           <div
             className="rounded-2xl border border-tf-electric/30 bg-tf-electric-soft/90 px-4 py-3 text-sm font-bold text-tf-dark shadow-sm"
             role="status"
           >
-            Mode supporter actif : accueil orienté{' '}
-            <span className="font-black">{clubFocusLabel || team.name}</span> (matchs, actus, commentaires).
-            Désactive la teinte maillot dans Profil → Apparence pour retrouver le fil général.
+            Mode supporter actif : couleurs & titres autour de{' '}
+            <span className="font-black">{clubFocusLabel || team.name}</span>. Les matchs et actus restent
+            larges — pour filtrer les messages (live, salons, top com.), utilise le{' '}
+            <strong className="font-black">Mode Virage</strong> dans Profil.
           </div>
         ) : null}
 
-        {/* Bloc supérieur : hero, rails, débat du jour — se termine avant Tendances */}
-        <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
+        {/* Bloc supérieur : même verre que le hub desktop */}
+        <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:mb-5">
           <label
             className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"
@@ -200,19 +270,44 @@ export function HomePage() {
           <div className={cn(bentoGrid)}>
           <div className={cn('order-1', spanTwoCenter)}>
             {heroLiveMatch ? (
-              <LiveMatchHero
-                match={heroLiveMatch}
-                simulation={heroLiveSim}
-                carousel={
-                  liveMatches.length > 1
-                    ? {
-                        count: liveMatches.length,
-                        index: heroSlide,
-                        onSelect: setHeroSlide,
-                      }
-                    : undefined
-                }
-              />
+              <div className="space-y-4">
+                <LiveMatchHero
+                  match={heroLiveMatch}
+                  simulation={heroLiveSim}
+                  carousel={
+                    liveMatches.length > 1
+                      ? {
+                          count: liveMatches.length,
+                          index: heroSlide,
+                          onSelect: setHeroSlide,
+                        }
+                      : undefined
+                  }
+                />
+                {upcomingHeaderPool.length > 0 ? (
+                  <div className="min-w-0">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-0.5">
+                      <h3 className="font-display text-sm font-black text-tf-app-fg sm:text-base">Prochains matchs</h3>
+                      <Link
+                        to="/matches"
+                        className={cn(
+                          'text-xs font-black hover:underline',
+                          appearance === 'light' ? 'text-sky-700' : 'text-sky-300',
+                        )}
+                      >
+                        Voir tout
+                      </Link>
+                    </div>
+                    <div className="-mx-1 flex gap-3 overflow-x-auto pb-1 pt-0.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-tf-dark/15">
+                      {upcomingHeaderPool.map((m) => (
+                        <HubStripUpcoming key={m.id} match={m} className="min-w-[260px] max-w-[300px]" />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : upcomingHeaderPool.length > 0 ? (
+              <HomeUpcomingHero matches={upcomingHeaderPool} />
             ) : (
               <Card className="border-dashed border-tf-grey-pastel/60 p-6 text-center sm:p-8" elevation="soft">
                 <p className="text-sm font-bold text-tf-grey">
@@ -242,163 +337,44 @@ export function HomePage() {
           </aside>
 
           <div className="order-2 flex min-w-0 flex-col gap-5 sm:gap-6 lg:order-none lg:col-start-2 lg:row-start-2">
+            <AdSlot
+              compact
+              tone="navy"
+              brand="Matchday sponsor"
+              body="Sous le live, au-dessus du débat du jour."
+              imageSeed="home-under-hero"
+            />
             <DebateOfTheDayCard debate={debateOfTheDay} />
           </div>
           </div>
         </div>
+
+        <div className="mt-5 sm:mt-6">
+          <AdSlot
+            tone="blue"
+            brand="Bannière milieu de page"
+            body="Entre le bloc accueil (live & débat) et la bande tendances — format horizontal type leaderboard."
+            imageSeed="home-hero-trends-gap"
+          />
+        </div>
       </div>
 
-      {/* Encart Tendances : pleine largeur du panneau, délimite le haut de page et le reste */}
-      <section
-        className={cn(
-          'relative -mx-4 w-[calc(100%+2rem)] border-y border-tf-dark/14',
-          'bg-gradient-to-b from-tf-night/[0.09] via-tf-electric-soft/42 to-tf-ice/65',
-          'py-7 shadow-[inset_0_3px_0_rgba(225,29,72,0.12),inset_0_1px_0_rgba(255,255,255,0.88)] sm:-mx-6 sm:w-[calc(100%+3rem)] sm:py-9',
-        )}
-        aria-label="Débats tendances"
-      >
-        <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-6">
-          <TrendingDebatesSection debates={trendingDebates} variant="band" />
-        </div>
+      <section className={cn('mx-auto w-full max-w-[1200px]', trendsShell)} aria-label="Débats tendances">
+        <TrendingDebatesSection debates={trendingDebates} variant="band" />
       </section>
 
-      <div className="mx-auto w-full max-w-[1200px] space-y-6 sm:space-y-8">
-        {/* Suite : carrousel + feed dans un cadre cohérent */}
-        <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
-          <section className="min-w-0" aria-labelledby="home-carousel-heading">
-          <Card className="flex flex-col overflow-visible p-4 sm:p-5" elevation="soft">
-            <MatchCarousel
-              matches={displayMatches}
-              eyebrow={supporterFocusUi && clubFocusLabel ? `FOCUS ${clubFocusLabel}` : 'LIVE & À VENIR'}
-              title={supporterFocusUi && clubFocusLabel ? `À l’affiche — ${clubFocusLabel}` : 'À l’affiche'}
-              titleId="home-carousel-heading"
-              subtitle={
-                supporterFocusUi && team
-                  ? `Autres rencontres autour de ${clubFocusLabel || team.name}.`
-                  : 'Matchs en direct et à venir — ouvre un salon pour suivre le live.'
-              }
-              liveMirror={
-                heroLiveMatch ? { matchId: heroLiveMatch.id, ...heroLiveSim } : undefined
-              }
-            />
-          </Card>
-          </section>
-
-          <section className="mt-6 min-w-0 lg:mt-8" aria-labelledby="home-feed-heading">
-          <Card className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-6" elevation="soft">
-            <SectionIntro
-              titleId="home-feed-heading"
-              eyebrow="FEED"
-              title={
-                supporterFocusUi && clubFocusLabel
-                  ? `Actus ${clubFocusLabel} & communauté`
-                  : 'Actus & communauté'
-              }
-              description={
-                supporterFocusUi && team
-                  ? `Fil compatible ${clubFocusLabel || team.shortName} et commentaires du kop.`
-                  : 'Fil d’actus ou meilleurs commentaires des lives.'
-              }
-              actions={
-                <Link to="/groups" className="w-full sm:w-auto">
-                  <Button
-                    variant="soft"
-                    className="tf-interactive-press w-full rounded-2xl border-2 border-tf-dark/10 px-4 py-2.5 text-xs font-black uppercase tracking-wide sm:w-auto sm:py-2"
-                  >
-                    Toutes les tribunes
-                  </Button>
-                </Link>
-              }
-            />
-            <div
-              className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2"
-              role="tablist"
-              aria-label="Choisir le contenu du fil"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={feedTab === 'actu'}
-                id="home-feed-tab-actu"
-                aria-controls="home-feed-panel"
-                onClick={() => setFeedTab('actu')}
-                className={cn(
-                  'min-h-11 rounded-2xl px-3 py-2.5 text-center text-xs font-black transition sm:min-h-0 sm:px-4 sm:text-sm',
-                  feedTab === 'actu'
-                    ? 'bg-tf-dark text-tf-white shadow-sm'
-                    : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
-                )}
-              >
-                Actu
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={feedTab === 'comments'}
-                id="home-feed-tab-comments"
-                aria-controls="home-feed-panel"
-                onClick={() => setFeedTab('comments')}
-                className={cn(
-                  'min-h-11 rounded-2xl px-3 py-2.5 text-center text-xs font-black transition sm:min-h-0 sm:px-4 sm:text-sm',
-                  feedTab === 'comments'
-                    ? 'bg-tf-dark text-tf-white shadow-sm'
-                    : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
-                )}
-              >
-                <span className="hidden sm:inline">Top commentaires</span>
-                <span className="leading-tight sm:hidden">Top com.</span>
-              </button>
-            </div>
-            <div
-              id="home-feed-panel"
-              role="tabpanel"
-              aria-labelledby={feedTab === 'actu' ? 'home-feed-tab-actu' : 'home-feed-tab-comments'}
-              className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-start lg:gap-8"
-            >
-              <div className="min-w-0 flex-1">
-                {feedTab === 'actu' ? (
-                  <NewsFeed
-                    embedded
-                    items={personalizedNews}
-                    personalized
-                    supporterClubShort={supporterFocusUi ? clubFocusLabel : null}
-                  />
-                ) : (
-                  <TopCommentsFeed embedded />
-                )}
-              </div>
-              <aside className="flex w-full shrink-0 flex-col gap-4 border-t border-tf-dark/10 pt-6 lg:w-72 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 xl:w-80">
-                <BettorLeaderboard embedded />
-                <AdSlot
-                  tone="navy"
-                  brand="BetMock"
-                  body="Boost de cote — offre fictive pour visualiser une pub premium."
-                  imageSeed="ad-bet"
-                />
-                <AdSlot
-                  tone="blue"
-                  brand="Sponsor: UltraWear"
-                  body="Nouveau maillot 25/26 — placement publicitaire (mock)."
-                  imageSeed="ad-wear"
-                />
-                <AdSlot
-                  tone="sky"
-                  brand="Streaming+"
-                  body="Regarde le match en HD — emplacement pub (mock)."
-                  imageSeed="ad-stream"
-                />
-              </aside>
-            </div>
-          </Card>
-          </section>
-        </div>
-
-        <div className="flex flex-wrap justify-center gap-2 rounded-2xl border border-tf-dark/12 bg-gradient-to-r from-tf-night/[0.06] via-tf-ice/70 to-tf-night/[0.04] px-3 py-3 pb-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-          <Badge tone="navy">💬 Général</Badge>
-          <Badge tone="navy">🧾 Transferts{supporterFocusUi && clubFocusLabel ? ` ${clubFocusLabel}` : ''}</Badge>
-          <Badge tone="live">🎯 Pronos{supporterFocusUi && clubFocusLabel ? ` ${clubFocusLabel}` : ''}</Badge>
-          <Badge tone="navy">😂 Memes</Badge>
-        </div>
+      <HomeFeedContinuation
+        idPrefix="m-"
+        displayMatches={displayMatches}
+        heroLiveMatch={heroLiveMatch}
+        heroLiveSim={heroLiveSim}
+        personalizedNews={personalizedNews}
+        feedTab={feedTab}
+        setFeedTab={setFeedTab}
+        supporterFocusUi={supporterFocusUi}
+        clubFocusLabel={clubFocusLabel}
+        team={team}
+      />
       </div>
 
       <CreateGroupModal

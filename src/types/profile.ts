@@ -88,4 +88,9 @@ export type UserProfile = {
   characterLook?: AvatarCharacterLook
   /** Flocage / taille par maillot inspiré possédé */
   jerseyCustomizations?: Record<string, JerseyCustomization>
+  /**
+   * Photo de profil (data URL JPEG), affichée à la place du pictogramme / miniature
+   * sur toute l’app quand elle est définie.
+   */
+  profilePhotoDataUrl?: string
 }

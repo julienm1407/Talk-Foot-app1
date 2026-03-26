@@ -13,10 +13,13 @@ export function GroupCard({
   group,
   className,
   accessLevel = 'full',
+  member = false,
 }: {
   group: SupporterGroup
   className?: string
   accessLevel?: GroupAccessLevel
+  /** Déjà dans « Mes groupes » (rejoint ou créé par toi). */
+  member?: boolean
 }) {
   const kind = group.groupKind ?? 'public'
   const online = group.onlineNow ?? 0
@@ -88,6 +91,19 @@ export function GroupCard({
             “{group.motto}”
           </div>
 
+          {group.hashtags && group.hashtags.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {group.hashtags.map((h) => (
+                <span
+                  key={h}
+                  className="rounded-full border border-slate-200/90 bg-white/80 px-2 py-0.5 text-[11px] font-bold text-slate-600"
+                >
+                  #{h}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
           {preview ? (
             <div
               className="mt-0 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/50 px-3 py-2 text-xs font-semibold text-slate-600 opacity-0 max-h-0 translate-y-1 transition-all duration-200 group-hover:mt-3 group-hover:max-h-24 group-hover:translate-y-0 group-hover:opacity-100"
@@ -113,8 +129,15 @@ export function GroupCard({
           <div className="text-xs font-bold text-slate-600">
             {group.createdBy === 'me' ? 'Ton groupe' : 'Communauté'}
           </div>
-          <span className="tf-interactive-press inline-flex items-center justify-center rounded-2xl bg-tf-dark px-4 py-2 text-center text-xs font-black text-white shadow-sm sm:min-w-[7.5rem]">
-            Rejoindre
+          <span
+            className={cn(
+              'tf-interactive-press inline-flex items-center justify-center rounded-2xl px-4 py-2 text-center text-xs font-black shadow-sm sm:min-w-[7.5rem]',
+              member
+                ? 'border-2 border-emerald-500/40 bg-emerald-50 text-emerald-900'
+                : 'bg-tf-dark text-white',
+            )}
+          >
+            {member ? 'Membre ✓' : 'Rejoindre'}
           </span>
         </div>
       </div>

@@ -20,12 +20,20 @@ export function getGroupAccess(
   }
 
   const fanClubs = prefs.favoriteClubIds
+  const groupClubs = tags.clubIds
 
-  if (prefs.hideRivalSalons && groupHasRivalForFanClubs(fanClubs, tags.clubIds)) {
+  /** Même tribune qu’un de tes clubs → accès complet (évite PSG+OM → salon PSG en lecture seule). */
+  const sharesClubAffinity =
+    fanClubs.length > 0 && groupClubs.some((gid) => fanClubs.includes(gid))
+  if (sharesClubAffinity) {
+    return 'full'
+  }
+
+  if (prefs.hideRivalSalons && groupHasRivalForFanClubs(fanClubs, groupClubs)) {
     return 'hidden'
   }
 
-  if (groupHasRivalForFanClubs(fanClubs, tags.clubIds)) {
+  if (groupHasRivalForFanClubs(fanClubs, groupClubs)) {
     return 'readonly'
   }
 

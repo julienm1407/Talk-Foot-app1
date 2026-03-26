@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Avatar } from '../ui/Avatar'
+import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
 import { cn } from '../../utils/cn'
 import type { User } from '../../types/chat'
+import { useProfile } from '../../hooks/useProfile'
 
 const SPEAK_DURATION_MS = 8000
 
@@ -30,6 +31,8 @@ export function LiveCommentator({
   const speakTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pipVideoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  /** Cible portail : lu dans layout effect uniquement (pas pendant le render — React 19). */
+  const [pipPortalHost, setPipPortalHost] = useState<HTMLDivElement | null>(null)
 
   const startSpeaking = useCallback(() => {
     if (speakTimeoutRef.current) clearTimeout(speakTimeoutRef.current)
@@ -71,6 +74,14 @@ export function LiveCommentator({
   useEffect(() => {
     if (cameraOn) setIsMinimized(true)
   }, [cameraOn])
+
+  useLayoutEffect(() => {
+    if (!cameraOn) {
+      setPipPortalHost(null)
+      return
+    }
+    setPipPortalHost(pipTargetRef?.current ?? null)
+  }, [cameraOn, pipTargetRef])
 
   useEffect(() => {
     if (!cameraOn) {
@@ -130,13 +141,27 @@ export function LiveCommentator({
     return () => clearInterval(id)
   }, [liveCommentary])
 
+  const { profile } = useProfile()
+
   if (!user.isAdmin) return null
+
+  const Face = (
+    props: { className?: string; size?: 'sm' | 'md' },
+  ) => (
+    <ProfilePhotoAvatar
+      photoDataUrl={profile.profilePhotoDataUrl}
+      seed={user.avatarSeed}
+      accent={user.accent}
+      alt={user.username}
+      className={props.className ?? (props.size === 'sm' ? 'size-8' : 'size-10')}
+    />
+  )
 
   return (
     <>
       {/* PIP stream en haut à droite de la simulation match (portail) ou fallback */}
       {cameraOn &&
-        (pipTargetRef?.current
+        (pipPortalHost
           ? createPortal(
               <div className="absolute right-0 top-0 z-30 w-max pointer-events-auto" style={{ contain: 'layout' }}>
                 <div
@@ -168,7 +193,7 @@ export function LiveCommentator({
             </div>
           </div>
         </div>,
-              pipTargetRef.current,
+              pipPortalHost,
             )
           : (
         <div className="absolute top-3 right-3 z-30 sm:top-4 sm:right-4 pointer-events-auto" style={{ contain: 'layout' }}>
@@ -295,12 +320,7 @@ export function LiveCommentator({
         ) : (
           <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 p-3 shadow-xl backdrop-blur">
             <div className="flex items-center gap-2 pb-2">
-              <Avatar
-                seed={user.avatarSeed}
-                accent={user.accent}
-                alt={user.username}
-                className="size-8"
-              />
+              <Face size="sm" />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-slate-800">{user.username}</span>
@@ -401,7 +421,7 @@ export function LiveCommentator({
           <div className="animate-[tf-commentary-in_0.3s_ease-out] rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur">
             <div className="flex items-start gap-3">
               <div className="relative shrink-0">
-                <Avatar seed={user.avatarSeed} accent={user.accent} alt={user.username} className="size-10" />
+                <Face />
                 <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
                   <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-600" />

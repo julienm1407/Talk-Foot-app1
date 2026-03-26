@@ -1,6 +1,6 @@
 import type { User } from '../types/chat'
 
-/** Ligne de chat affichée en aperçu (pseudo + club + texte). */
+/** Ligne de chat affichée en aperçu (le club reste en données mock, non affiché — débat indépendant). */
 export type DebatePreviewMessage = {
   username: string
   fanClubId: string
@@ -21,8 +21,6 @@ export type Debate = {
   messagesCount: number
   participantsCount: number
   trending?: boolean
-  /** Pour vignette tendance (logo club). */
-  clubCrestId?: string
   /** Image hero (débat du jour). */
   heroImageUrl?: string
   /** 2–3 visuels “en ligne” sur la carte principale. */
@@ -78,7 +76,6 @@ export const trendingDebates: Debate[] = [
     participantsCount: 1820,
     messagesCount: 6420,
     trending: true,
-    clubCrestId: 'psg',
     previewMessages: [
       {
         username: 'RougeEtBleu',
@@ -96,7 +93,6 @@ export const trendingDebates: Debate[] = [
     participantsCount: 3102,
     messagesCount: 15400,
     trending: true,
-    clubCrestId: 'mci',
     previewMessages: [
       {
         username: 'NordicStriker',
@@ -114,7 +110,6 @@ export const trendingDebates: Debate[] = [
     participantsCount: 980,
     messagesCount: 4102,
     trending: true,
-    clubCrestId: 'rma',
     previewMessages: [
       {
         username: 'MadridistaXX',
@@ -132,7 +127,6 @@ export const trendingDebates: Debate[] = [
     participantsCount: 756,
     messagesCount: 2840,
     trending: true,
-    clubCrestId: 'psg',
     previewMessages: [
       {
         username: 'ZonalMark',
@@ -150,7 +144,6 @@ export const trendingDebates: Debate[] = [
     participantsCount: 420,
     messagesCount: 1188,
     trending: true,
-    clubCrestId: 'om',
     previewMessages: [
       {
         username: 'SudForever',
@@ -168,7 +161,6 @@ export const trendingDebates: Debate[] = [
     participantsCount: 1104,
     messagesCount: 4320,
     trending: true,
-    clubCrestId: 'fcb',
     previewMessages: [
       {
         username: 'TikiFan',

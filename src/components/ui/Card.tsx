@@ -5,17 +5,20 @@ export function Card({
   children,
   elevation = 'soft',
   style,
+  id,
 }: {
   className?: string
   children: React.ReactNode
   elevation?: 'none' | 'soft'
   style?: React.CSSProperties
+  id?: string
 }) {
   return (
     <div
+      id={id}
       style={style}
       className={cn(
-        'rounded-3xl border border-tf-grey-pastel/55 bg-white/95 backdrop-blur-sm',
+        'rounded-3xl border border-tf-grey-pastel/55 bg-white/95 text-tf-dark backdrop-blur-sm',
         elevation === 'soft' && 'shadow-tf-card',
         className,
       )}

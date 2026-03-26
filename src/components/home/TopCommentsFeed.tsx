@@ -3,7 +3,9 @@ import { useMessageLikes } from '../../hooks/useMessageLikes'
 import { Card } from '../ui/Card'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../ui/Avatar'
+import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
 import { currentUser, mockUsers } from '../../data/users'
+import { useProfile } from '../../hooks/useProfile'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useSupporterTintMode } from '../../hooks/useSupporterTintMode'
 import { cn } from '../../utils/cn'
@@ -18,11 +20,12 @@ export function TopCommentsFeed({
   embedded?: boolean
 } = {}) {
   const { topComments } = useMessageLikes()
+  const { profile } = useProfile()
   const { virageMode, favoriteClubIds } = useFanPreferences()
   const { supporterTintActive, team } = useSupporterTintMode()
 
   const filtered = useMemo(() => {
-    const active = favoriteClubIds.length > 0 && (virageMode || supporterTintActive)
+    const active = favoriteClubIds.length > 0 && virageMode
     if (!active) return topComments
     return topComments.filter((c) => {
       if (c.userId === currentUser.id) return true
@@ -30,16 +33,12 @@ export function TopCommentsFeed({
       const fid = u?.fanClubId
       return Boolean(fid && favoriteClubIds.includes(fid))
     })
-  }, [topComments, virageMode, supporterTintActive, favoriteClubIds])
+  }, [topComments, virageMode, favoriteClubIds])
 
   const filterHint =
-    favoriteClubIds.length > 0 && (virageMode || supporterTintActive) ? (
+    favoriteClubIds.length > 0 && virageMode ? (
       <p className="text-[10px] font-bold text-violet-700 sm:text-xs">
-        {virageMode && supporterTintActive
-          ? 'Filtré : tes clubs favoris.'
-          : virageMode
-            ? 'Mode Virage : tes clubs.'
-            : 'Mode supporter : tes clubs.'}
+        Mode Virage : commentaires liés à tes clubs favoris.
       </p>
     ) : null
 
@@ -74,12 +73,22 @@ export function TopCommentsFeed({
               embedded ? 'px-4 py-3 sm:px-5' : 'px-5 py-4 sm:px-6',
             )}
           >
-            <Avatar
-              seed={u?.avatarSeed ?? 'fan'}
-              accent={u?.accent ?? 'violet'}
-              alt={u?.username ?? ''}
-              className="mt-0.5 size-9 shrink-0 sm:size-10"
-            />
+            {c.userId === currentUser.id ? (
+              <ProfilePhotoAvatar
+                photoDataUrl={profile.profilePhotoDataUrl}
+                seed={u?.avatarSeed ?? 'fan'}
+                accent={u?.accent ?? 'violet'}
+                alt={u?.username ?? ''}
+                className="mt-0.5 size-9 shrink-0 sm:size-10"
+              />
+            ) : (
+              <Avatar
+                seed={u?.avatarSeed ?? 'fan'}
+                accent={u?.accent ?? 'violet'}
+                alt={u?.username ?? ''}
+                className="mt-0.5 size-9 shrink-0 sm:size-10"
+              />
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="text-xs font-bold text-slate-800 sm:text-sm">{c.username}</span>

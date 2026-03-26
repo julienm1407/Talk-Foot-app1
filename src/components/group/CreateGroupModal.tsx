@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -6,6 +6,11 @@ import { Badge } from '../ui/Badge'
 import { cn } from '../../utils/cn'
 import { containsBannedWord } from '../../utils/bannedWords'
 import type { SupporterGroup } from '../../types/group'
+import {
+  GROUP_HASHTAG_LIMITS,
+  normalizeHashtagList,
+  parseHashtagInput,
+} from '../../utils/groupHashtags'
 import { GroupCard } from './GroupCard'
 
 export function CreateGroupModal({
@@ -29,6 +34,44 @@ export function CreateGroupModal({
     'smoke',
   )
   const [nameError, setNameError] = useState<string | null>(null)
+  const [groupKind, setGroupKind] = useState<'public' | 'private'>('public')
+  const [hashtags, setHashtags] = useState<string[]>([])
+  const [tagDraft, setTagDraft] = useState('')
+  const [tagError, setTagError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    setName('Mon groupe')
+    setEmoji('🧢')
+    setLocation('Ma ville')
+    setMotto('On vit le foot ensemble.')
+    setPrimary('#0b1b3a')
+    setSecondary('#0ea5e9')
+    setBackground('smoke')
+    setNameError(null)
+    setGroupKind('public')
+    setHashtags([])
+    setTagDraft('')
+    setTagError(null)
+  }, [open])
+
+  const previewHashtags = useMemo(
+    () => normalizeHashtagList([...hashtags, ...parseHashtagInput(tagDraft)]),
+    [hashtags, tagDraft],
+  )
+
+  const addTagsFromDraft = () => {
+    setTagError(null)
+    const parsed = parseHashtagInput(tagDraft)
+    if (parsed.length === 0) return
+    const next = normalizeHashtagList([...hashtags, ...parsed])
+    if (next.length > GROUP_HASHTAG_LIMITS.maxTags) {
+      setTagError(`Maximum ${GROUP_HASHTAG_LIMITS.maxTags} hashtags.`)
+      return
+    }
+    setHashtags(next)
+    setTagDraft('')
+  }
 
   const draft = useMemo<SupporterGroup>(() => {
     return {
@@ -40,6 +83,8 @@ export function CreateGroupModal({
       theme: { primary, secondary, background },
       members: Math.round(18 + Math.random() * 60),
       intensity: Math.round(55 + Math.random() * 35),
+      groupKind,
+      hashtags: previewHashtags.length ? previewHashtags : undefined,
       channels: [
         {
           id: 'general',
@@ -64,10 +109,9 @@ export function CreateGroupModal({
       createdAt: new Date().toISOString(),
       onlineNow: 1,
       messagesToday: 0,
-      groupKind: 'public',
       lastMessagePreview: 'Crée ton premier message…',
     }
-  }, [background, emoji, location, motto, name, primary, secondary])
+  }, [background, emoji, groupKind, location, motto, name, previewHashtags, primary, secondary])
 
   if (!open) return null
 
@@ -153,6 +197,100 @@ export function CreateGroupModal({
               </div>
             </div>
 
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="text-sm font-black text-slate-900">Visibilité</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={groupKind === 'public' ? 'primary' : 'soft'}
+                    className="h-9 rounded-2xl px-4"
+                    onClick={() => {
+                      setGroupKind('public')
+                      setTagError(null)
+                    }}
+                    aria-pressed={groupKind === 'public'}
+                  >
+                    Salon public
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={groupKind === 'private' ? 'primary' : 'soft'}
+                    className="h-9 rounded-2xl px-4"
+                    onClick={() => {
+                      setGroupKind('private')
+                      setTagError(null)
+                    }}
+                    aria-pressed={groupKind === 'private'}
+                  >
+                    Salon privé
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-slate-600">
+                  {groupKind === 'public'
+                    ? 'Un salon public doit avoir au moins un hashtag : les personnes qui partagent les mêmes centres d’intérêt te retrouvent dans « Tous les salons ».'
+                    : 'Les hashtags restent optionnels sur un salon privé.'}
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="create-group-hashtags"
+                  className="text-xs font-bold text-slate-700/70"
+                >
+                  Centres d’intérêt (hashtags)
+                  {groupKind === 'public' ? (
+                    <span className="font-black text-rose-600"> *</span>
+                  ) : null}
+                </label>
+                <div className="mt-2 flex min-h-9 flex-wrap gap-2">
+                  {hashtags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-800"
+                    >
+                      #{t}
+                      <button
+                        type="button"
+                        className="rounded-full px-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                        onClick={() =>
+                          setHashtags((prev) => prev.filter((x) => x !== t))
+                        }
+                        aria-label={`Retirer ${t}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <Input
+                  id="create-group-hashtags"
+                  value={tagDraft}
+                  onChange={(e) => {
+                    setTagDraft(e.target.value)
+                    setTagError(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      addTagsFromDraft()
+                    }
+                  }}
+                  placeholder="Ex : ligue1, pronos, marseille (Entrée pour ajouter)"
+                  className={cn('mt-2', tagError && 'border-rose-500')}
+                />
+                {tagError ? (
+                  <p className="mt-1.5 text-xs font-semibold text-rose-600">
+                    {tagError}
+                  </p>
+                ) : null}
+                <p className="mt-1.5 text-[11px] font-semibold text-slate-500">
+                  Lettres, chiffres, tirets — max {GROUP_HASHTAG_LIMITS.maxTags}{' '}
+                  tags, {GROUP_HASHTAG_LIMITS.maxTagLen} caractères chacun.
+                </p>
+              </div>
+            </div>
+
             <div className="mt-4">
               <div className="text-sm font-black text-slate-900">Thème</div>
               <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -221,9 +359,28 @@ export function CreateGroupModal({
                 className="rounded-3xl"
                 onClick={() => {
                   setNameError(null)
+                  setTagError(null)
                   if (containsBannedWord(draft.name)) {
                     setNameError('Ce nom contient des propos inappropriés. Choisis un autre nom.')
                     return
+                  }
+                  const finalTags = normalizeHashtagList([
+                    ...hashtags,
+                    ...parseHashtagInput(tagDraft),
+                  ])
+                  if (groupKind === 'public' && finalTags.length === 0) {
+                    setTagError(
+                      'Ajoute au moins un hashtag pour que les autres trouvent ton salon public.',
+                    )
+                    return
+                  }
+                  for (const t of finalTags) {
+                    if (containsBannedWord(t)) {
+                      setTagError(
+                        'Un hashtag contient des propos inappropriés. Modifie-le.',
+                      )
+                      return
+                    }
                   }
                   onCreate({
                     name: draft.name,
@@ -234,6 +391,8 @@ export function CreateGroupModal({
                     members: draft.members,
                     intensity: draft.intensity,
                     channels: draft.channels,
+                    groupKind,
+                    hashtags: finalTags.length > 0 ? finalTags : undefined,
                   })
                   onClose()
                 }}

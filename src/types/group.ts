@@ -37,6 +37,11 @@ export type SupporterGroup = {
   messagesToday?: number
   /** public = ouvert, private = sur invitation, club = rattaché tribune */
   groupKind?: 'public' | 'private' | 'club'
+  /**
+   * Centres d’intérêt (sans #, minuscules). Obligatoires pour un salon public
+   * afin que d’autres utilisateurs le retrouvent par recherche.
+   */
+  hashtags?: string[]
   lastMessagePreview?: string
 }
 

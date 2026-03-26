@@ -381,18 +381,16 @@ export function MatchCard({
               <TeamStack team={match.away} align="right" size={compact ? 58 : 64} />
             </div>
           </div>
-          <div className="mt-4 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="mt-4 w-full">
             <Link
               to={channelTo}
-              className="tf-interactive-press inline-flex items-center justify-center rounded-2xl bg-tf-dark px-3 py-2.5 text-center text-xs font-black text-white shadow-sm transition hover:bg-tf-dark-alt"
+              className="tf-interactive-press inline-flex w-full items-center justify-center rounded-2xl bg-tf-dark px-3 py-2.5 text-center text-xs font-black text-white shadow-sm transition hover:bg-tf-dark-alt"
             >
-              Rejoindre le live
-            </Link>
-            <Link
-              to={channelTo}
-              className="tf-interactive-press inline-flex items-center justify-center rounded-2xl border border-tf-grey-pastel/60 bg-white/90 px-3 py-2.5 text-center text-xs font-black text-tf-dark transition hover:border-tf-electric/30 hover:bg-tf-ice/80"
-            >
-              Voir l&apos;avant-match
+              {isLive
+                ? 'Rejoindre le live'
+                : match.status === 'upcoming'
+                  ? "Voir l'avant-match"
+                  : 'Salon match'}
             </Link>
           </div>
           </div>

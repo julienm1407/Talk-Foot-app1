@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
-import { MatchCard } from './MatchCard'
+import { HubMatchStrip } from './HubMatchEncart'
 import { cn } from '../../utils/cn'
 import { themeForCompetition } from '../../data/competitionThemes'
 
@@ -40,7 +40,7 @@ function DesktopMatchGrid({
 
   const nodes: ReactNode[] = slice.map((m) => (
     <div key={m.id} className="min-w-0">
-      <MatchCard match={m} liveMirror={mirrorForCard(liveMirror, m)} />
+      <HubMatchStrip match={m} liveMirror={mirrorForCard(liveMirror, m)} />
     </div>
   ))
 
@@ -214,7 +214,7 @@ export function MatchCarousel({
               }}
               className="flex w-[min(100vw-2.5rem,320px)] shrink-0 snap-center flex-col items-stretch px-1 py-2 sm:w-[min(100%,300px)] sm:px-2"
             >
-              <MatchCard match={m} liveMirror={mirrorForCard(liveMirror, m)} />
+              <HubMatchStrip match={m} liveMirror={mirrorForCard(liveMirror, m)} />
             </div>
           ))}
         </div>

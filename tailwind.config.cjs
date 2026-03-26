@@ -8,7 +8,18 @@ module.exports = {
         sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
+        /** Texte / chrome qui suit le thème jour·nuit (voir --tf-app-*-rgb dans index.css) */
+        'tf-app-fg': 'rgb(var(--tf-app-fg-rgb) / <alpha-value>)',
+        'tf-app-muted': 'rgb(var(--tf-app-muted-rgb) / <alpha-value>)',
+        'tf-app-subtle': 'rgb(var(--tf-app-subtle-rgb) / <alpha-value>)',
         tf: {
+          /** Bleu quasi noir — gradins / ciel de nuit */
+          void: '#020a14',
+          /** Projecteurs chauds (stade) */
+          flood: '#f97316',
+          'flood-soft': '#ffedd5',
+          /** Rouge live type écran géant */
+          'live-red': '#e11d48',
           dark: '#011e33',
           'dark-alt': '#023458',
           night: '#061222',
@@ -43,12 +54,24 @@ module.exports = {
       },
       boxShadow: {
         'tf-card': '0 18px 48px rgba(1, 30, 51, 0.1)',
+        /** Panneau vitré sur fond nuit */
+        'tf-glass': '0 24px 64px rgba(0, 8, 22, 0.38), inset 0 1px 0 rgba(255,255,255,0.72)',
         'tf-glow': '0 6px 20px rgba(14, 165, 233, 0.18)',
         'tf-glow-pitch': '0 6px 22px rgba(13, 148, 136, 0.2)',
+        'tf-glow-live': '0 8px 28px rgba(225, 29, 72, 0.22)',
       },
       borderRadius: {
         '2xl': '1.25rem',
         '3xl': '1.75rem',
+      },
+      keyframes: {
+        'tf-stadium-pulse': {
+          '0%, 100%': { transform: 'scale(1.04)', opacity: '1' },
+          '50%': { transform: 'scale(1.08)', opacity: '0.92' },
+        },
+      },
+      animation: {
+        'tf-stadium-pulse': 'tf-stadium-pulse 2s ease-in-out infinite',
       },
     },
   },

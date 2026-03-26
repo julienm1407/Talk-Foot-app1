@@ -80,7 +80,7 @@ export function MessageComposer({
                   setShowGif((v) => !v)
                 }}
                 className={cn(
-                  'rounded-xl border px-2.5 py-2 text-lg transition focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
+                  'tf-interactive-press rounded-xl border px-2.5 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
                   showGif
                     ? 'border-tf-grey/50 bg-tf-grey-pastel/30'
                     : 'border-slate-200/70 bg-white/80 hover:bg-slate-50',
@@ -99,7 +99,7 @@ export function MessageComposer({
                   setShowEmote((v) => !v)
                 }}
                 className={cn(
-                  'rounded-xl border px-2.5 py-2 text-lg transition focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
+                  'tf-interactive-press rounded-xl border px-2.5 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
                   showEmote
                     ? 'border-tf-grey/50 bg-tf-grey-pastel/30'
                     : 'border-slate-200/70 bg-white/80 hover:bg-slate-50',

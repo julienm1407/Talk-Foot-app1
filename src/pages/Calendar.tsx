@@ -1,37 +1,25 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
-import { MatchCard } from '../components/match/MatchCard'
+import { HubMatchStrip } from '../components/match/HubMatchEncart'
 import { Card } from '../components/ui/Card'
 import { themeForCompetition } from '../data/competitionThemes'
 import { formatKickoff } from '../utils/time'
 import { ClubCrest } from '../components/brand/ClubCrest'
 import { cn } from '../utils/cn'
+import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
-import {
-  filterMatchesForSupporterClub,
-  filterMatchesForSupporterClubs,
-} from '../utils/supporterMode'
-
 export function CalendarPage() {
   const now = Date.now()
 
   const { matches, loading } = useMatches()
-  const { supporterTintActive, favoriteClubIds, team } = useSupporterTintMode()
-
-  const matchesForView = useMemo(() => {
-    if (!supporterTintActive || favoriteClubIds.length === 0) return matches
-    if (favoriteClubIds.length === 1) {
-      return filterMatchesForSupporterClub(matches, favoriteClubIds[0])
-    }
-    return filterMatchesForSupporterClubs(matches, favoriteClubIds)
-  }, [matches, supporterTintActive, favoriteClubIds])
+  const { supporterTintActive, team } = useSupporterTintMode()
 
   const sorted = useMemo(() => {
-    return [...matchesForView]
+    return [...matches]
       .filter((m) => m.status !== 'finished')
       .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
-  }, [matchesForView])
+  }, [matches])
 
   const competitions = useMemo(() => {
     const map = new Map<string, { id: string; name: string; shortName: string }>()
@@ -132,17 +120,29 @@ export function CalendarPage() {
     )
   }
 
+  const calTheme = getAppSectionTheme('calendar')
+
   return (
     <div className="space-y-8 pb-8">
       {/* En-tête clair */}
-      <header className="space-y-2 pb-2">
+      <header
+        className={cn('space-y-2 border-b pb-4', calTheme.page.borderBottomClass)}
+      >
+        <p
+          className={cn(
+            'text-[11px] font-black uppercase tracking-[0.2em]',
+            calTheme.page.eyebrowClass,
+          )}
+        >
+          Agenda
+        </p>
         <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
           {supporterTintActive && team ? `Agenda ${team.shortName}` : 'Agenda'}
         </h1>
         <p className="text-sm font-medium text-tf-grey">
           {supporterTintActive && team ? (
             <>
-              Mode supporter : matchs où {team.name} joue (sinon calendrier complet si aucun).
+              Calendrier complet — titre mis en avant pour {team.shortName}.
               {totalCount > 0 && (
                 <>
                   {' '}
@@ -380,7 +380,7 @@ export function CalendarPage() {
                 </h3>
                 <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
                   {g.matches.map((m) => (
-                    <MatchCard key={m.id} match={m} />
+                    <HubMatchStrip key={m.id} match={m} />
                   ))}
                 </div>
               </div>

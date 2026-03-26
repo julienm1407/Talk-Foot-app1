@@ -1,15 +1,24 @@
+import type { ReactNode } from 'react'
 import { cn } from '../../utils/cn'
+import type { AppSectionId } from '../../theme/appSectionThemes'
+import { getAppSectionTheme } from '../../theme/appSectionThemes'
 
 type Props = {
   /** Petit libellé (CAPS) — même style sur tout le site */
   eyebrow?: string
   title: string
-  description?: string
-  actions?: React.ReactNode
+  description?: ReactNode
+  actions?: ReactNode
   className?: string
   titleId?: string
   /** Moins de texte secondaire sur mobile */
   compact?: boolean
+  /** Teinte de section (navigation & hiérarchie visuelle) */
+  section?: AppSectionId
+  /** Titre principal de page (SEO) vs sous-section */
+  titleAs?: 'h1' | 'h2'
+  /** Désactiver le caps lock sur le titre (pages « sentence case ») */
+  uppercaseTitle?: boolean
 }
 
 /**
@@ -23,11 +32,18 @@ export function SectionIntro({
   className,
   titleId,
   compact,
+  section,
+  titleAs = 'h2',
+  uppercaseTitle = true,
 }: Props) {
+  const tone = section ? getAppSectionTheme(section) : null
+  const TitleTag = titleAs
+
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 border-b border-tf-grey-pastel/50 pb-4 sm:gap-4 sm:pb-5',
+        'flex flex-col gap-3 border-b pb-4 sm:gap-4 sm:pb-5',
+        tone?.page.borderBottomClass ?? 'border-tf-grey-pastel/50',
         compact ? 'mb-4 sm:mb-5' : 'mb-5 sm:mb-6',
         'sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-6 sm:gap-y-3',
         className,
@@ -35,21 +51,27 @@ export function SectionIntro({
     >
       <div className="min-w-0 flex-1 space-y-2 sm:space-y-3">
         {eyebrow ? (
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-tf-electric-deep sm:text-xs">
+          <p
+            className={cn(
+              'text-[11px] font-black uppercase tracking-[0.22em] sm:text-xs',
+              tone?.page.eyebrowClass ?? 'text-tf-electric-deep',
+            )}
+          >
             {eyebrow}
           </p>
         ) : null}
-        <h2
+        <TitleTag
           id={titleId}
           className={cn(
-            'font-display font-black uppercase leading-[1.1] tracking-tight text-tf-dark',
+            'font-display font-black leading-[1.1] tracking-tight text-tf-dark',
+            uppercaseTitle && 'uppercase',
             compact
               ? 'text-xl sm:text-2xl'
               : 'text-2xl sm:text-[1.65rem] lg:text-3xl lg:leading-[1.08]',
           )}
         >
           {title}
-        </h2>
+        </TitleTag>
         {description ? (
           <p
             className={cn(

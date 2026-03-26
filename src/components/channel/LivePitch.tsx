@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import type { Match } from '../../types/match'
 
 function clamp01(v: number) {
@@ -22,10 +22,79 @@ function mulberry32(seed: number) {
   }
 }
 
+type SimState = {
+  x: number
+  y: number
+  danger: number
+  seg: {
+    from: { x: number; y: number }
+    to: { x: number; y: number }
+    p: number
+  }
+}
+
+const initialSim: SimState = {
+  x: 0.5,
+  y: 0.5,
+  danger: 0,
+  seg: { from: { x: 0.5, y: 0.5 }, to: { x: 0.5, y: 0.5 }, p: 0 },
+}
+
+function stepPitch(
+  now: number,
+  rng: () => number,
+  playRef: MutableRefObject<{
+    from: { x: number; y: number }
+    to: { x: number; y: number }
+    startedAt: number
+    durationMs: number
+  } | null>,
+): SimState {
+  const play = playRef.current
+
+  if (!play) {
+    return initialSim
+  }
+
+  const p = clamp01((now - play.startedAt) / play.durationMs)
+  const e = easeInOut(p)
+  const x = clamp01(lerp(play.from.x, play.to.x, e))
+  const y = clamp01(lerp(play.from.y, play.to.y, e))
+
+  if (p >= 1) {
+    const cur = play.to
+    const inAttack = cur.x > 0.62
+    const turnover = rng() < (inAttack ? 0.22 : 0.12)
+    const longPass = rng() < (inAttack ? 0.18 : 0.26)
+
+    let nx = cur.x
+    let ny = cur.y
+    if (turnover) {
+      nx = clamp01(0.42 + rng() * 0.18)
+      ny = clamp01(0.22 + rng() * 0.56)
+    } else if (longPass) {
+      nx = clamp01(cur.x + 0.1 + rng() * 0.22)
+      ny = clamp01(cur.y + (rng() - 0.5) * 0.32)
+    } else {
+      nx = clamp01(cur.x + (rng() - 0.35) * 0.14)
+      ny = clamp01(cur.y + (rng() - 0.5) * 0.18)
+    }
+
+    playRef.current = {
+      from: { x: cur.x, y: cur.y },
+      to: { x: nx, y: ny },
+      startedAt: now,
+      durationMs: 1200 + rng() * 1600,
+    }
+  }
+
+  const danger = clamp01((x - 0.62) * 2.2)
+  return { x, y, danger, seg: { from: play.from, to: play.to, p } }
+}
+
 export function LivePitch({ match }: { match: Match }) {
-  const [t, setT] = useState(0)
+  const [sim, setSim] = useState<SimState>(initialSim)
   const rafRef = useRef<number | null>(null)
-  const startRef = useRef<number>(0)
   const rngRef = useRef<(() => number) | null>(null)
   const playRef = useRef<{
     from: { x: number; y: number }
@@ -33,13 +102,11 @@ export function LivePitch({ match }: { match: Match }) {
     startedAt: number
     durationMs: number
   } | null>(null)
-  const ballRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 })
 
   const homeColor = match.home.colors.primary
   const awayColor = match.away.colors.primary
 
   useEffect(() => {
-    startRef.current = performance.now()
     rngRef.current = mulberry32((match.id.length * 10007) | 0)
     playRef.current = {
       from: { x: 0.5, y: 0.5 },
@@ -48,7 +115,8 @@ export function LivePitch({ match }: { match: Match }) {
       durationMs: 1400 + Math.random() * 600,
     }
     const tick = (now: number) => {
-      setT((now - startRef.current) / 1000)
+      const rng = rngRef.current ?? (() => 0.5)
+      setSim(stepPitch(now, rng, playRef))
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -56,57 +124,6 @@ export function LivePitch({ match }: { match: Match }) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [match.id])
-
-  const sim = useMemo(() => {
-    const now = performance.now()
-    const rng = rngRef.current ?? (() => 0.5)
-    const play = playRef.current
-
-    if (!play) {
-      return {
-        x: 0.5,
-        y: 0.5,
-        danger: 0,
-        seg: { from: { x: 0.5, y: 0.5 }, to: { x: 0.5, y: 0.5 }, p: 0 },
-      }
-    }
-
-    const p = clamp01((now - play.startedAt) / play.durationMs)
-    const e = easeInOut(p)
-    const x = clamp01(lerp(play.from.x, play.to.x, e))
-    const y = clamp01(lerp(play.from.y, play.to.y, e))
-    ballRef.current = { x, y }
-
-    if (p >= 1) {
-      const cur = play.to
-      const inAttack = cur.x > 0.62
-      const turnover = rng() < (inAttack ? 0.22 : 0.12)
-      const longPass = rng() < (inAttack ? 0.18 : 0.26)
-
-      let nx = cur.x
-      let ny = cur.y
-      if (turnover) {
-        nx = clamp01(0.42 + rng() * 0.18)
-        ny = clamp01(0.22 + rng() * 0.56)
-      } else if (longPass) {
-        nx = clamp01(cur.x + 0.10 + rng() * 0.22)
-        ny = clamp01(cur.y + (rng() - 0.5) * 0.32)
-      } else {
-        nx = clamp01(cur.x + (rng() - 0.35) * 0.14)
-        ny = clamp01(cur.y + (rng() - 0.5) * 0.18)
-      }
-
-      playRef.current = {
-        from: { x: cur.x, y: cur.y },
-        to: { x: nx, y: ny },
-        startedAt: now,
-        durationMs: 1200 + rng() * 1600,
-      }
-    }
-
-    const danger = clamp01((x - 0.62) * 2.2)
-    return { x, y, danger, seg: { from: play.from, to: play.to, p } }
-  }, [t])
 
   const players = useMemo(() => {
     const home = [

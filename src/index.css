@@ -53,6 +53,13 @@
   --tf-faint: rgba(1, 30, 51, 0.42);
   --tf-accent: var(--tf-electric-deep);
   --tf-shadow: 0 18px 48px rgba(1, 30, 51, 0.1);
+  /** Halo stade (réutilisable en dégradés) */
+  --tf-flood: #f97316;
+  --tf-live-glow: rgba(225, 29, 72, 0.28);
+  /** Texte interface (barres, hubs sombres) : clair en mode stade */
+  --tf-app-fg-rgb: 241 245 249;
+  --tf-app-muted-rgb: 148 163 184;
+  --tf-app-subtle-rgb: 100 116 139;
 }
 
 /* Fallbacks neutres uniquement — home/away/accent réels via inline style (Channel) */
@@ -81,8 +88,102 @@ body {
   margin: 0;
   font-family: var(--tf-font-sans);
   letter-spacing: 0.1px;
+  /* Mode stade : texte clair sur fond sombre (p. ex. hors panneau) */
+  color: rgb(var(--tf-app-fg-rgb));
+  background-color: #030b18;
+  background-image:
+    radial-gradient(ellipse 130% 92% at 50% -28%, color-mix(in srgb, var(--tf-flood) 16%, transparent), transparent 52%),
+    radial-gradient(ellipse 88% 72% at -6% 38%, rgba(14, 165, 233, 0.11), transparent 48%),
+    radial-gradient(ellipse 78% 58% at 104% 30%, rgba(225, 29, 72, 0.08), transparent 46%),
+    linear-gradient(180deg, #020a14 0%, #0a1628 44%, #0f2236 100%);
+  background-attachment: fixed;
+}
+
+/* Mode jour — fond clair, lisible (persisté via data-tf-appearance sur <html>) */
+html[data-tf-appearance='light'] {
+  --tf-app-fg-rgb: 1 30 51;
+  --tf-app-muted-rgb: 71 85 105;
+  --tf-app-subtle-rgb: 100 116 139;
+}
+
+html[data-tf-appearance='light'] body {
   color: var(--tf-text);
-  background-color: var(--tf-mist);
+  background-color: var(--tf-bg);
+  background-image:
+    radial-gradient(ellipse 130% 92% at 50% -28%, color-mix(in srgb, var(--tf-electric) 22%, transparent), transparent 52%),
+    radial-gradient(ellipse 88% 72% at -6% 38%, rgba(14, 165, 233, 0.08), transparent 48%),
+    radial-gradient(ellipse 78% 58% at 104% 30%, rgba(225, 29, 72, 0.05), transparent 46%),
+    linear-gradient(180deg, #f4f9fc 0%, #e8f2f8 44%, #dceaf4 100%);
+  background-attachment: fixed;
+}
+
+html[data-tf-appearance='light'] .tf-panel {
+  background: linear-gradient(
+    168deg,
+    rgba(255, 255, 255, 0.97) 0%,
+    rgba(248, 252, 255, 0.94) 55%,
+    rgba(241, 248, 252, 0.92) 100%
+  );
+  border: 1px solid rgba(1, 30, 51, 0.12);
+  box-shadow:
+    0 18px 48px rgba(1, 30, 51, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 3px 0 0 color-mix(in srgb, var(--tf-electric) 35%, transparent),
+    inset 0 6px 0 0 color-mix(in srgb, var(--tf-live-glow) 45%, transparent);
+}
+
+html[data-tf-appearance='light'] .tf-home-block {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--tf-white) 96%, var(--tf-ice)) 0%,
+    color-mix(in srgb, var(--tf-ice) 42%, var(--tf-white)) 45%,
+    color-mix(in srgb, var(--tf-white) 98%, var(--tf-ice)) 100%
+  );
+  border: 1px solid rgba(1, 30, 51, 0.11);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 14px 36px rgba(1, 30, 51, 0.06);
+}
+
+/**
+ * Fond plein écran (hors AppShell) : même logique que body, pour pages article / chargement.
+ * Le thème suit `data-tf-appearance` sur <html> — toute largeur, tout breakpoint.
+ */
+.tf-page-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: #030b18;
+  background-image:
+    radial-gradient(ellipse 130% 92% at 50% -28%, color-mix(in srgb, var(--tf-flood) 16%, transparent), transparent 52%),
+    radial-gradient(ellipse 88% 72% at -6% 38%, rgba(14, 165, 233, 0.11), transparent 48%),
+    radial-gradient(ellipse 78% 58% at 104% 30%, rgba(225, 29, 72, 0.08), transparent 46%),
+    linear-gradient(180deg, #020a14 0%, #0a1628 44%, #0f2236 100%);
+}
+
+html[data-tf-appearance='light'] .tf-page-backdrop {
+  background-color: var(--tf-bg);
+  background-image:
+    radial-gradient(ellipse 130% 92% at 50% -28%, color-mix(in srgb, var(--tf-electric) 22%, transparent), transparent 52%),
+    radial-gradient(ellipse 88% 72% at -6% 38%, rgba(14, 165, 233, 0.08), transparent 48%),
+    radial-gradient(ellipse 78% 58% at 104% 30%, rgba(225, 29, 72, 0.05), transparent 46%),
+    linear-gradient(180deg, #f4f9fc 0%, #e8f2f8 44%, #dceaf4 100%);
+}
+
+html[data-tf-appearance='light'] .tf-surface {
+  border: 1px solid rgba(1, 30, 51, 0.12);
+  box-shadow: 0 10px 32px rgba(1, 30, 51, 0.07);
+}
+
+html[data-tf-appearance='light'] .tf-panel input,
+html[data-tf-appearance='light'] .tf-panel textarea,
+html[data-tf-appearance='light'] .tf-panel select {
+  color: var(--tf-text);
+}
+
+html[data-tf-appearance='light'] .tf-panel input::placeholder,
+html[data-tf-appearance='light'] .tf-panel textarea::placeholder {
+  color: rgba(1, 30, 51, 0.48);
 }
 
 h1,
@@ -93,8 +194,15 @@ h4 {
 }
 
 .tf-surface {
-  background: color-mix(in srgb, var(--tf-white) 88%, var(--tf-ice));
-  border: 1px solid color-mix(in srgb, var(--tf-electric) 12%, rgba(1, 30, 51, 0.12));
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--tf-white) 90%, var(--tf-ice)),
+    color-mix(in srgb, var(--tf-white) 78%, var(--tf-ice))
+  );
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  box-shadow: 0 12px 40px rgba(0, 10, 24, 0.2);
 }
 
 /*
@@ -104,28 +212,40 @@ h4 {
  */
 
 .tf-panel {
-  background: color-mix(in srgb, var(--tf-white) 92%, var(--tf-ice));
-  border: 1px solid rgba(1, 30, 51, 0.12);
-  /* Liseré haut : rappel hero (bleu nuit + touche rouge live) — toutes les pages */
+  /* Toujours une surface « papier » : texte foncé par défaut (WCAG sur glace/blanc) */
+  color: var(--tf-text);
+  background: linear-gradient(
+    168deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(248, 252, 255, 0.82) 55%,
+    rgba(241, 248, 252, 0.78) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+  /* Liseré haut : nuit + live — effet « vitre sur tribunes » */
   box-shadow:
-    var(--tf-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 28px 72px rgba(0, 8, 22, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
     inset 0 4px 0 0 color-mix(in srgb, var(--tf-dark) 88%, transparent),
-    inset 0 7px 0 0 rgba(225, 29, 72, 0.22);
+    inset 0 7px 0 0 var(--tf-live-glow);
 }
 
 /** Blocs type bas de home : même ADN que le hero (fond bleuté + bordure nuit). */
 .tf-home-block {
+  color: var(--tf-text);
   background: linear-gradient(
     165deg,
-    color-mix(in srgb, var(--tf-night) 7%, var(--tf-white)) 0%,
-    color-mix(in srgb, var(--tf-ice) 55%, var(--tf-white)) 48%,
-    color-mix(in srgb, var(--tf-white) 94%, var(--tf-ice)) 100%
+    color-mix(in srgb, var(--tf-night) 12%, var(--tf-white)) 0%,
+    color-mix(in srgb, var(--tf-ice) 50%, var(--tf-white)) 45%,
+    color-mix(in srgb, var(--tf-white) 92%, var(--tf-ice)) 100%
   );
-  border: 1px solid color-mix(in srgb, var(--tf-dark) 16%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.5) inset,
-    0 12px 32px rgba(1, 30, 51, 0.06);
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 16px 40px rgba(0, 10, 24, 0.12);
 }
 
 .tf-section {
@@ -788,11 +908,77 @@ body::before {
 
 /* Micro-interactions — cartes & boutons */
 .tf-interactive-press {
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    filter 200ms ease;
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .tf-interactive-press:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 14px 36px rgba(0, 12, 28, 0.18),
+      0 4px 14px rgba(0, 8, 20, 0.1);
+  }
+}
+
 .tf-interactive-press:active {
+  transition-duration: 120ms;
   transform: scale(0.97);
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .tf-interactive-press:hover:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: 0 4px 14px rgba(1, 30, 51, 0.1);
+  }
+}
+
+/**
+ * Boutons natifs / composant Button sans classe tf-interactive-press
+ * (évite les doubles ombres si les deux sont combinés)
+ */
+.tf-btn-fluid {
+  transition:
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tf-btn-fluid:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(1, 30, 51, 0.11), 0 4px 10px rgba(1, 30, 51, 0.05);
+  }
+}
+
+.tf-btn-fluid:active:not(:disabled) {
+  transition-duration: 110ms;
+  transform: translateY(0) scale(0.98);
+}
+
+/* Navigation (haut / bas) — léger lift au survol */
+.tf-nav-pill {
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 200ms ease,
+    box-shadow 260ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tf-nav-pill:hover {
+    transform: translateY(-1px);
+  }
+}
+
 .tf-card-hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -801,8 +987,13 @@ body::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .tf-interactive-press:hover,
+  .tf-interactive-press:hover:active,
   .tf-interactive-press:active,
-  .tf-card-hover:hover {
+  .tf-btn-fluid:hover,
+  .tf-btn-fluid:active,
+  .tf-card-hover:hover,
+  .tf-nav-pill:hover {
     transform: none;
   }
   .tf-shop-particle {

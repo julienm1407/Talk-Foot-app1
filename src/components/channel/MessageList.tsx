@@ -5,6 +5,7 @@ import { getEmoteById } from '../../data/emotes'
 import { useProfile } from '../../hooks/useProfile'
 import { cn } from '../../utils/cn'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
+import { tribuneById } from '../../data/tribunes'
 
 function clamp01(v: number) {
   return Math.max(0, Math.min(1, v))
@@ -51,7 +52,7 @@ export function MessageList({
   const safeGetLikes = getLikes ?? (() => 0)
   const safeHasLiked = hasLiked ?? (() => false)
   return (
-    <ul className="space-y-4" role="list">
+    <ul className="space-y-3" role="list">
       {messages.map((m, i) => {
         const idxFromEnd = messages.length - 1 - i
         const fadeStart = 20
@@ -96,44 +97,54 @@ export function MessageList({
               />
             )}
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 <span
                   className={cn(
-                    'truncate text-sm font-bold',
+                    'max-w-[42%] truncate text-sm font-bold sm:max-w-none',
                     nameClass(kind, u?.accent),
                   )}
                 >
                   {u?.username ?? 'Inconnu'}
                 </span>
-                <span className="text-[11px] font-medium text-slate-500">
+                {u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
+                  <span className="inline-flex max-w-[28%] shrink-0 truncate rounded border border-slate-200/90 bg-slate-50 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide text-slate-600 sm:max-w-[120px]">
+                    {ALL_CLUBS_BY_ID[u.fanClubId].shortName}
+                  </span>
+                ) : null}
+                <span className="shrink-0 text-[11px] font-medium text-slate-500">
                   {time}
                 </span>
                 {kind === 'vip' && (
-                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">
+                  <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[9px] font-bold text-violet-700">
                     VIP
                   </span>
                 )}
                 {kind === 'mod' && (
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
                     MOD
                   </span>
                 )}
                 {kind === 'me' && (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                  <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
                     Toi
                   </span>
                 )}
-              </div>
-              {u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
-                <div className="mt-0.5">
-                  <span className="inline-flex rounded-full border border-slate-200/80 bg-white/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-600">
-                    {ALL_CLUBS_BY_ID[u.fanClubId].shortName}
+                {m.tribune && tribuneById[m.tribune] ? (
+                  <span
+                    className={cn(
+                      'rounded-full border border-tf-grey-pastel/60 bg-white/90 px-1.5 py-0 text-[8px] font-black leading-tight tracking-wide',
+                      tribuneById[m.tribune].text,
+                    )}
+                    title={`Tribune ${tribuneById[m.tribune].label}`}
+                  >
+                    <span aria-hidden>{tribuneById[m.tribune].emoji}</span>{' '}
+                    {tribuneById[m.tribune].label}
                   </span>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
               <div
                 className={cn(
-                  'mt-1.5 rounded-2xl border px-4 py-2.5 text-sm font-medium leading-relaxed text-slate-700',
+                  'mt-1 rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed text-slate-700',
                   bubbleClass(kind),
                   (m.gifUrl || m.emoteId) && 'p-2',
                 )}

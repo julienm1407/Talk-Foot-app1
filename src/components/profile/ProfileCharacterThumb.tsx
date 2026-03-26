@@ -26,6 +26,30 @@ export function ProfileCharacterThumb({
   'aria-label'?: string
 }) {
   const p = PRESETS[size]
+  const photo = profile.profilePhotoDataUrl
+
+  if (photo) {
+    return (
+      <div
+        className={cn(
+          'relative shrink-0 overflow-hidden rounded-[22px] border-2 border-tf-grey-pastel/50 bg-tf-white shadow-[inset_0_1px_0_rgba(255,255,255,.6)]',
+          p.box,
+          className,
+        )}
+        role="img"
+        aria-label={ariaLabel ?? 'Ma photo de profil'}
+      >
+        <img
+          src={photo}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { CalendarPage } from './pages/Calendar'
 import { ChannelPage } from './pages/Channel'
+import { ChannelStadiumPage } from './pages/ChannelStadium'
 import { GroupPage } from './pages/Group'
 import { HomePage } from './pages/Home'
 import { MatchesPage } from './pages/Matches'
@@ -13,6 +14,7 @@ import { RankingsPage } from './pages/Rankings'
 import { BoutiquePage } from './pages/Boutique'
 import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
+import { ArticlePage } from './pages/ArticlePage'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
@@ -21,8 +23,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
   if (!isReady) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-tf-grey-pastel/20">
-        <div className="text-sm font-semibold text-tf-grey">Chargement…</div>
+      <div className="relative flex min-h-dvh items-center justify-center">
+        <div className="tf-page-backdrop" aria-hidden />
+        <div className="relative text-sm font-semibold text-tf-grey">Chargement…</div>
       </div>
     )
   }
@@ -36,6 +39,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/article/:slug" element={<ArticlePage />} />
       <Route
         path="/"
         element={
@@ -55,6 +59,7 @@ export default function App() {
         <Route path="groups" element={<GroupsHubPage />} />
         <Route path="videos" element={<VideosPage />} />
         <Route path="rankings" element={<RankingsPage />} />
+        <Route path="channel/:matchId/stade" element={<ChannelStadiumPage />} />
         <Route path="channel/:matchId" element={<ChannelPage />} />
         <Route path="group/:groupId" element={<GroupPage />} />
         <Route path="calendar" element={<CalendarPage />} />

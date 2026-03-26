@@ -12,14 +12,15 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold font-display outline-none transition',
-        'focus-visible:ring-2 focus-visible:ring-tf-electric/40',
+        'tf-btn-fluid inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold font-display outline-none',
+        'focus-visible:ring-2 focus-visible:ring-tf-electric/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+        'disabled:pointer-events-none disabled:opacity-45',
         variant === 'primary' &&
-          'bg-tf-dark text-tf-white shadow-sm hover:bg-tf-dark-alt',
+          'border-2 border-sky-800/25 bg-gradient-to-b from-sky-500 to-blue-700 text-white shadow-[0_8px_24px_rgba(14,165,233,0.35)] [text-shadow:0_1px_1px_rgba(0,0,0,0.22)] hover:from-sky-400 hover:to-blue-600',
         variant === 'soft' &&
-          'border border-tf-grey-pastel/60 bg-white/95 text-[#011e33] hover:border-tf-electric/25 hover:bg-tf-ice/80',
+          'border-2 border-tf-dark/14 bg-white text-tf-dark shadow-[0_2px_10px_rgba(1,30,51,0.06)] hover:border-tf-electric/40 hover:bg-tf-ice',
         variant === 'ghost' &&
-          'text-tf-grey hover:bg-tf-grey-pastel/35 hover:text-tf-dark',
+          'border-2 border-transparent bg-white/90 text-tf-dark/85 shadow-none hover:border-tf-dark/10 hover:bg-white hover:text-tf-dark',
         className,
       )}
       {...props}

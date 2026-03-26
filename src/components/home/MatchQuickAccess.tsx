@@ -1,18 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
-import { ClubCrest } from '../brand/ClubCrest'
-import { themeForCompetition } from '../../data/competitionThemes'
-import { formatKickoff, formatRelativeMinute } from '../../utils/time'
-import { cn } from '../../utils/cn'
-
-function formatKickoffDay(iso: string) {
-  return new Intl.DateTimeFormat('fr-FR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-  }).format(new Date(iso))
-}
+import { HubRailRowLive, HubRailRowUpcoming } from '../match/HubMatchEncart'
 
 export function MatchQuickAccess({
   matches,
@@ -34,7 +23,7 @@ export function MatchQuickAccess({
         : matches
     const live = pool.filter((m) => m.status === 'live')
     const upcoming = pool
-      .filter((m) => m.status !== 'live')
+      .filter((m) => m.status === 'upcoming')
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
       .slice(0, 3)
     return { liveMatches: live, upcomingMatches: upcoming }
@@ -46,108 +35,40 @@ export function MatchQuickAccess({
         {clubFocusIds != null && clubFocusIds.length > 0 ? 'Tes clubs en direct' : 'Accès rapide'}
       </h3>
 
-      {/* En direct */}
       {liveMatches.length > 0 && (
-        <div className="rounded-xl border border-tf-grey-pastel/50 bg-tf-white">
-          <div className="border-b border-tf-grey-pastel/40 px-3 py-2 sm:px-4">
+        <div className="relative overflow-hidden rounded-2xl border border-white/12 bg-[#030b18]/95 shadow-[0_18px_52px_rgba(0,0,0,0.42)] ring-1 ring-white/10">
+          <div className="border-b border-white/10 px-3 py-2 sm:px-4">
             <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden />
-              <h4 className="text-sm font-black uppercase tracking-wider text-tf-dark">
-                En direct
-              </h4>
+              <span
+                className="flex h-2 w-2 animate-pulse rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.85)]"
+                aria-hidden
+              />
+              <h4 className="text-sm font-black uppercase tracking-[0.12em] text-white">En direct</h4>
             </div>
           </div>
           <div className="space-y-2 p-2.5 sm:p-3">
-            {liveMatches.map((m) => {
-              const theme = themeForCompetition(m.competition.id)
-              const score = m.score ? `${m.score.home} - ${m.score.away}` : null
-              const minute = formatRelativeMinute(m.minute)
-              return (
-                <Link
-                  key={m.id}
-                  to={`/channel/${m.id}`}
-                  className="block rounded-lg border border-tf-grey-pastel/40 bg-tf-white p-2.5 transition hover:border-tf-grey-pastel/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/25"
-                  aria-label={`Rejoindre le live ${m.home.name} vs ${m.away.name}`}
-                >
-                  <div className="flex min-w-0 items-center justify-between gap-2">
-                    <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden sm:gap-2">
-                      <ClubCrest
-                        id={m.home.id}
-                        shortName={m.home.shortName}
-                        colors={m.home.colors}
-                        size={24}
-                        className="shrink-0"
-                      />
-                      <span className="truncate text-xs font-bold text-tf-dark sm:text-sm">
-                        {m.home.shortName}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-black text-tf-grey">
-                        {score ?? minute}
-                      </span>
-                      <ClubCrest
-                        id={m.away.id}
-                        shortName={m.away.shortName}
-                        colors={m.away.colors}
-                        size={24}
-                        className="shrink-0"
-                      />
-                      <span className="truncate text-xs font-bold text-tf-dark sm:text-sm">
-                        {m.away.shortName}
-                      </span>
-                    </div>
-                    <span
-                      className={cn(
-                        'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase text-white',
-                        theme ? '' : 'bg-rose-500',
-                      )}
-                      style={theme ? { background: theme.accent } : undefined}
-                    >
-                      Rejoindre
-                    </span>
-                  </div>
-                </Link>
-              )
-            })}
+            {liveMatches.map((m) => (
+              <HubRailRowLive key={m.id} match={m} />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Prochains matchs */}
       {upcomingMatches.length > 0 && (
-        <div className="min-w-0 rounded-xl border border-tf-grey-pastel/50 bg-tf-white">
-          <div className="border-b border-tf-grey-pastel/40 px-2.5 py-1.5 sm:px-3">
-            <h4 className="text-sm font-black uppercase tracking-wider text-tf-dark">
-              À venir
-            </h4>
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#030b18]/95 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+          <div className="border-b border-white/10 px-2.5 py-1.5 sm:px-3">
+            <h4 className="text-sm font-black uppercase tracking-wider text-white">À venir</h4>
           </div>
-          <ul className="space-y-0.5 p-2 sm:p-2.5">
+          <ul className="space-y-2 p-2 sm:p-2.5" role="list">
             {upcomingMatches.map((m) => (
               <li key={m.id}>
-                <Link
-                  to={`/channel/${m.id}`}
-                  className="flex flex-col gap-0.5 rounded-lg p-2 transition hover:bg-tf-grey-pastel/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/25"
-                  aria-label={`Voir ${m.home.name} vs ${m.away.name}`}
-                >
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <ClubCrest id={m.home.id} shortName={m.home.shortName} colors={m.home.colors} size={24} className="shrink-0" />
-                    <span className="font-semibold text-tf-dark">{m.home.shortName}</span>
-                    <span className="text-tf-grey">–</span>
-                    <span className="font-semibold text-tf-dark">{m.away.shortName}</span>
-                    <ClubCrest id={m.away.id} shortName={m.away.shortName} colors={m.away.colors} size={24} className="shrink-0" />
-                  </div>
-                  <div className="flex items-center gap-2 text-[12px] font-medium text-tf-grey">
-                    <span>{formatKickoffDay(m.kickoffAt)}</span>
-                    <span>•</span>
-                    <span>{formatKickoff(m.kickoffAt)}</span>
-                  </div>
-                </Link>
+                <HubRailRowUpcoming match={m} />
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* Calendrier */}
       <Link
         to="/calendar"
         className="mt-auto rounded-xl border border-tf-grey-pastel/50 bg-tf-white px-3 py-2 text-center transition hover:border-tf-grey-pastel/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-grey/25"

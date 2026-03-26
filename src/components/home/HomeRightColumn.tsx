@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import type { Debate } from '../../data/debates'
 import type { SupporterGroup } from '../../types/group'
 import { cn } from '../../utils/cn'
+import { AdSlot } from '../ui/AdSlot'
 
 export function HomeRightColumn({
   debates,
@@ -53,6 +54,14 @@ export function HomeRightColumn({
           Tous les débats
         </Link>
       </Card>
+
+      <AdSlot
+        compact
+        tone="blue"
+        brand="Débats sponsorisés"
+        body="Colonne droite — entre débats et groupes."
+        imageSeed="home-right-mid"
+      />
 
       <Card className="rounded-2xl p-4 shadow-sm" elevation="soft">
         <h3 className="border-b border-tf-grey-pastel/45 pb-2 font-display text-sm font-black uppercase tracking-[0.18em] text-tf-dark">

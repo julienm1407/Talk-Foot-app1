@@ -5,18 +5,29 @@ import { reactionMeta } from './reactions'
 export function ReactionBar({
   onReact,
   tokens = 0,
+  density = 'full',
 }: {
   onReact: (type: ReactionType) => void
   tokens?: number
+  /** full = toutes les réactions ; chill = toutes avec libellé adapté ; minimal = tribune Analyse (2 réactions). */
+  density?: 'full' | 'chill' | 'minimal'
 }) {
-  const items: ReactionType[] = ['flare', 'confetti', 'goal', 'rage']
+  const items: ReactionType[] =
+    density === 'minimal' ? ['confetti', 'flare'] : ['flare', 'confetti', 'goal', 'rage']
+
+  const label =
+    density === 'minimal'
+      ? 'Réactions légères'
+      : density === 'chill'
+        ? 'Réactions cool'
+        : 'Réagir'
 
   return (
     <div className="space-y-1.5">
       <span className="block text-[10px] font-bold tracking-wide text-tf-grey">
-        Réagir
+        {label}
       </span>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className={cn('grid gap-1.5', density === 'minimal' ? 'grid-cols-2' : 'grid-cols-4')}>
         {items.map((type) => {
           const meta = reactionMeta[type]
           const cost = meta.cost

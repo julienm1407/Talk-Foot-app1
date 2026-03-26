@@ -9,6 +9,7 @@ export const initialMessages: Message[] = [
     userId: 'u-2',
     text: 'Pressing de malade… ça sent le but.',
     createdAt: base + 15_000,
+    tribune: 'virage',
   },
   {
     id: 'msg-2',
@@ -16,6 +17,7 @@ export const initialMessages: Message[] = [
     userId: 'u-1',
     text: 'Le stade est en feu, on entend tout même à la TV.',
     createdAt: base + 35_000,
+    tribune: 'virage',
   },
   {
     id: 'msg-3',
@@ -23,6 +25,7 @@ export const initialMessages: Message[] = [
     userId: 'u-3',
     text: 'Carton? Non mais sérieux…',
     createdAt: base + 58_000,
+    tribune: 'chill',
   },
   {
     id: 'msg-4',
@@ -30,6 +33,7 @@ export const initialMessages: Message[] = [
     userId: 'u-4',
     text: 'On a perdu le milieu là… faut calmer.',
     createdAt: base + 77_000,
+    tribune: 'analyse',
   },
   {
     id: 'msg-5',
@@ -37,6 +41,7 @@ export const initialMessages: Message[] = [
     userId: 'u-5',
     text: 'Avant-match: qui marque en premier?',
     createdAt: base + 95_000,
+    tribune: 'analyse',
   },
   {
     id: 'msg-d1',
@@ -44,6 +49,7 @@ export const initialMessages: Message[] = [
     userId: 'u-2',
     text: 'Le Classique, ça chauffe déjà.',
     createdAt: base + 10_000,
+    tribune: 'virage',
   },
   {
     id: 'msg-d2',
@@ -51,6 +57,7 @@ export const initialMessages: Message[] = [
     userId: 'u-1',
     text: 'PSG mène 1-0 mais l’OM pousse bien.',
     createdAt: base + 120_000,
+    tribune: 'analyse',
   },
   {
     id: 'msg-d3',
@@ -58,6 +65,7 @@ export const initialMessages: Message[] = [
     userId: 'u-4',
     text: 'Quel but de #9 à la 23e, quelle frappe.',
     createdAt: base + 150_000,
+    tribune: 'virage',
   },
 ]
 

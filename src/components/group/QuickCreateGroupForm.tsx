@@ -4,6 +4,11 @@ import { Input } from '../ui/Input'
 import { cn } from '../../utils/cn'
 import { containsBannedWord } from '../../utils/bannedWords'
 import type { SupporterGroup } from '../../types/group'
+import {
+  GROUP_HASHTAG_LIMITS,
+  normalizeHashtagList,
+  parseHashtagInput,
+} from '../../utils/groupHashtags'
 import type { GroupTheme } from '../../types/group'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 
@@ -45,7 +50,23 @@ export function QuickCreateGroupForm({
   const [background, setBackground] = useState<GroupTheme['background']>('smoke')
   const [emojiOpen, setEmojiOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hashtags, setHashtags] = useState<string[]>([])
+  const [tagDraft, setTagDraft] = useState('')
+  const [tagError, setTagError] = useState<string | null>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
+
+  const addTagsFromDraft = () => {
+    setTagError(null)
+    const parsed = parseHashtagInput(tagDraft)
+    if (parsed.length === 0) return
+    const next = normalizeHashtagList([...hashtags, ...parsed])
+    if (next.length > GROUP_HASHTAG_LIMITS.maxTags) {
+      setTagError(`Maximum ${GROUP_HASHTAG_LIMITS.maxTags} hashtags.`)
+      return
+    }
+    setHashtags(next)
+    setTagDraft('')
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -68,11 +89,28 @@ export function QuickCreateGroupForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setTagError(null)
     const trimmedName = name.trim() || 'Mon groupe'
     if (!trimmedName) return
     if (containsBannedWord(trimmedName)) {
       setError('Ce nom contient des propos inappropriés. Choisis un autre nom.')
       return
+    }
+    const finalTags = normalizeHashtagList([
+      ...hashtags,
+      ...parseHashtagInput(tagDraft),
+    ])
+    if (finalTags.length === 0) {
+      setTagError(
+        'Ajoute au moins un hashtag : les autres te retrouvent avec les mêmes centres d’intérêt.',
+      )
+      return
+    }
+    for (const t of finalTags) {
+      if (containsBannedWord(t)) {
+        setTagError('Un hashtag contient des propos inappropriés.')
+        return
+      }
     }
     onCreate({
       name: trimmedName,
@@ -82,6 +120,8 @@ export function QuickCreateGroupForm({
       members: Math.round(12 + Math.random() * 40),
       intensity: Math.round(50 + Math.random() * 40),
       channels: DEFAULT_CHANNELS,
+      groupKind: 'public',
+      hashtags: finalTags,
       ...(preferencesComplete &&
         favoriteLeagueId &&
         favoriteClubIds.length > 0 && {
@@ -96,6 +136,8 @@ export function QuickCreateGroupForm({
     setPrimary('#011e33')
     setSecondary('#5d86a2')
     setBackground('smoke')
+    setHashtags([])
+    setTagDraft('')
   }
 
   return (
@@ -177,6 +219,52 @@ export function QuickCreateGroupForm({
               </div>
             </div>
           )}
+        </div>
+
+        <div>
+          <label
+            htmlFor="quick-hashtags"
+            className="mb-1 block text-xs font-bold text-tf-grey"
+          >
+            Hashtags (obligatoire) <span className="font-normal">— mêmes centres d’intérêt</span>
+          </label>
+          <div className="mb-2 flex min-h-9 flex-wrap gap-2">
+            {hashtags.map((t) => (
+              <span
+                key={t}
+                className="inline-flex items-center gap-1 rounded-full border border-tf-grey-pastel/60 bg-white px-2 py-0.5 text-xs font-bold text-tf-dark"
+              >
+                #{t}
+                <button
+                  type="button"
+                  className="rounded-full px-1 text-tf-grey hover:bg-tf-grey-pastel/40"
+                  onClick={() => setHashtags((prev) => prev.filter((x) => x !== t))}
+                  aria-label={`Retirer ${t}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <Input
+            id="quick-hashtags"
+            value={tagDraft}
+            onChange={(e) => {
+              setTagDraft(e.target.value)
+              setTagError(null)
+            }}
+            onKeyDown={(ev) => {
+              if (ev.key === 'Enter' || ev.key === ',') {
+                ev.preventDefault()
+                addTagsFromDraft()
+              }
+            }}
+            placeholder="ligue1, pronos… puis Entrée"
+            className={cn('w-full rounded-xl', tagError && 'border-rose-500')}
+          />
+          {tagError ? (
+            <p className="mt-1.5 text-xs font-semibold text-rose-600">{tagError}</p>
+          ) : null}
         </div>
 
         <div className="space-y-2">

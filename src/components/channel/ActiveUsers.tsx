@@ -1,27 +1,193 @@
+import { useMemo, useState } from 'react'
 import type { User } from '../../types/chat'
-import { Avatar } from '../ui/Avatar'
+import { ClubCrest } from '../brand/ClubCrest'
+import { useProfile } from '../../hooks/useProfile'
+import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
+import { cn } from '../../utils/cn'
+
+/** Styles illustrés différents pour varier les silhouettes (DiceBear 9.x). */
+const DICEBEAR_STYLES = ['lorelei', 'notionists', 'avataaars', 'micah'] as const
+
+function dicebearSrc(seed: string, styleIndex: number) {
+  const style = DICEBEAR_STYLES[styleIndex % DICEBEAR_STYLES.length]
+  const bg = 'b6e3f4,c0aede,d1d4f9,ffd5dc'
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&size=128`
+}
+
+const ACCENT_FALLBACK: Record<User['accent'], string> = {
+  violet: 'from-violet-500 to-violet-700',
+  emerald: 'from-emerald-500 to-emerald-700',
+  rose: 'from-rose-500 to-rose-700',
+  amber: 'from-amber-500 to-amber-700',
+}
+
+function InitialFallback({ seed, accent }: { seed: string; accent: User['accent'] }) {
+  const ch = seed.trim().slice(0, 1).toUpperCase() || '⚽'
+  const grad = ACCENT_FALLBACK[accent] ?? ACCENT_FALLBACK.violet
+  return (
+    <div
+      className={cn(
+        'grid size-full place-items-center rounded-full bg-gradient-to-br text-sm font-black text-white shadow-inner',
+        grad,
+      )}
+    >
+      {ch}
+    </div>
+  )
+}
+
+function LiveFanFaceRow({
+  user,
+  stackIndex,
+  totalShown,
+  profilePhotoDataUrl,
+}: {
+  user: User
+  stackIndex: number
+  totalShown: number
+  profilePhotoDataUrl?: string
+}) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const team = user.fanClubId ? findTeamInAnyLeague(user.fanClubId) : null
+  const z = totalShown - stackIndex
+  const title = team ? `${user.username} · ${team.shortName}` : user.username
+
+  const shell = (inner: React.ReactNode) => (
+    <div
+      className={cn(
+        'relative size-[2.75rem] shrink-0 rounded-full bg-white shadow-[0_4px_14px_rgba(1,30,51,0.12)] ring-[3px] ring-white',
+        'motion-safe:transition motion-safe:duration-200 motion-safe:ease-out',
+        'hover:z-50 motion-safe:hover:scale-[1.08] motion-safe:hover:shadow-[0_8px_22px_rgba(244,63,94,0.18)]',
+      )}
+      style={{ zIndex: z }}
+      title={title}
+    >
+      <div className="relative size-full overflow-hidden rounded-full">{inner}</div>
+      {team ? (
+        <div
+          className="pointer-events-none absolute -bottom-0.5 -left-0.5 z-10 rounded-full bg-white p-[1px] shadow-sm ring-1 ring-slate-200/80"
+          aria-hidden
+        >
+          <ClubCrest
+            id={team.id}
+            shortName={team.shortName}
+            colors={team.colors}
+            size={17}
+            className="rounded-full"
+          />
+        </div>
+      ) : null}
+      <span
+        className="pointer-events-none absolute bottom-0.5 right-0.5 z-10 size-2.5 rounded-full border-[2px] border-white bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.75)] motion-safe:animate-[tf-live-dot_2.4s_ease-in-out_infinite]"
+        aria-hidden
+      />
+    </div>
+  )
+
+  if (user.id === 'me') {
+    return shell(
+      profilePhotoDataUrl ? (
+        <img
+          src={profilePhotoDataUrl}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : imgFailed ? (
+        <InitialFallback seed={user.avatarSeed} accent={user.accent} />
+      ) : (
+        <img
+          src={dicebearSrc(`${user.id}-${user.username}`, stackIndex)}
+          alt=""
+          className="size-full object-cover object-top"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImgFailed(true)}
+        />
+      ),
+    )
+  }
+
+  return shell(
+    imgFailed ? (
+      <InitialFallback seed={user.avatarSeed} accent={user.accent} />
+    ) : (
+      <img
+        src={dicebearSrc(`${user.id}-${user.avatarSeed}`, stackIndex)}
+        alt=""
+        className="size-full object-cover object-top"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+      />
+    ),
+  )
+}
 
 export function ActiveUsers({ users }: { users: User[] }) {
+  const { profile } = useProfile()
   const shown = users.slice(0, 6)
   const remaining = Math.max(0, users.length - shown.length)
 
+  const clubLine = useMemo(() => {
+    const ids = [...new Set(shown.map((u) => u.fanClubId).filter(Boolean) as string[])]
+    const names = ids
+      .map((id) => findTeamInAnyLeague(id)?.shortName)
+      .filter(Boolean) as string[]
+    if (names.length === 0) return null
+    return names.slice(0, 4).join(' · ')
+  }, [shown])
+
   return (
-    <div className="flex shrink-0 items-center gap-3">
-      <div className="flex -space-x-2.5">
-        {shown.map((u) => (
-          <Avatar
-            key={u.id}
-            seed={u.avatarSeed}
-            accent={u.accent}
-            alt={u.username}
-            className="ring-2 ring-white"
-          />
-        ))}
+    <div className="flex min-w-0 shrink-0 items-center gap-3 sm:gap-4">
+      <div
+        className={cn(
+          'relative flex items-center rounded-full border border-rose-200/45 bg-gradient-to-r from-white via-rose-50/35 to-emerald-50/30',
+          'py-1.5 pl-2 pr-1 shadow-[0_6px_24px_rgba(244,63,94,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]',
+          'ring-1 ring-rose-500/10',
+        )}
+        aria-label={`${users.length} personnes suivent ce live`}
+      >
+        <span
+          className="absolute left-2 top-1/2 size-2 -translate-y-1/2 rounded-full bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.85)] motion-safe:animate-pulse"
+          aria-hidden
+        />
+        <div className="flex items-center pl-3">
+          <div className="flex items-center -space-x-3">
+            {shown.map((u, i) => (
+              <LiveFanFaceRow
+                key={u.id}
+                user={u}
+                stackIndex={i}
+                totalShown={shown.length}
+                profilePhotoDataUrl={u.id === 'me' ? profile.profilePhotoDataUrl : undefined}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      <span className="text-xs font-semibold text-slate-600">
-        {users.length} en live
-        {remaining > 0 ? ` (+${remaining})` : ''}
-      </span>
+
+      <div className="min-w-0 text-left">
+        <p className="text-[13px] font-black leading-tight tracking-tight text-slate-900 sm:text-sm">
+          <span className="tabular-nums">{users.length}</span>{' '}
+          <span className="bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">
+            en direct
+          </span>
+        </p>
+        {clubLine ? (
+          <p className="mt-0.5 max-w-[11rem] truncate text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 sm:max-w-[14rem] sm:text-[11px]">
+            Tribunes · {clubLine}
+          </p>
+        ) : (
+          <p className="mt-0.5 text-[10px] font-semibold text-slate-500 sm:text-[11px]">
+            Supporters connectés
+          </p>
+        )}
+        {remaining > 0 ? (
+          <p className="mt-0.5 text-[10px] font-bold text-slate-400">+{remaining} autres</p>
+        ) : null}
+      </div>
     </div>
   )
 }

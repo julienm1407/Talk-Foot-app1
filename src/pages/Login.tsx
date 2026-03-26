@@ -1,17 +1,23 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { cn } from '../utils/cn'
 import { LogoMark } from '../layout/LogoMark'
+import { useAppearance } from '../contexts/AppearanceContext'
 import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
+import { safeInternalNext } from '../utils/safeInternalPath'
 
 type Mode = 'login' | 'signup'
 
 export function LoginPage() {
+  const [searchParams] = useSearchParams()
+  const nextPath = safeInternalNext(searchParams.get('next'))
   const { user, isReady, loginWithEmail, signUpWithEmail, loginWithGoogle, loginWithApple } = useAuth()
+  const { appearance, toggleAppearance } = useAppearance()
+  const isLight = appearance === 'light'
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,13 +27,14 @@ export function LoginPage() {
 
   if (!isReady) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-tf-grey-pastel/20">
-        <div className="text-sm font-semibold text-tf-grey">Chargement…</div>
+      <div className="relative flex min-h-dvh items-center justify-center">
+        <div className="tf-page-backdrop" aria-hidden />
+        <div className="relative text-sm font-semibold text-tf-grey">Chargement…</div>
       </div>
     )
   }
   if (user) {
-    return <Navigate to="/" replace />
+    return <Navigate to={nextPath ?? '/'} replace />
   }
 
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -69,17 +76,39 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-tf-mist p-4">
-      <div className="w-full max-w-[400px]">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center bg-transparent p-4">
+      <div className="tf-page-backdrop" aria-hidden />
+      <button
+        type="button"
+        onClick={toggleAppearance}
+        className={cn(
+          'absolute right-3 top-3 z-10 rounded-2xl border p-2.5 text-lg outline-none transition sm:right-5 sm:top-5',
+          isLight
+            ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
+            : 'border-white/15 bg-white/[0.08] text-white hover:bg-white/12',
+        )}
+        aria-label={isLight ? 'Passer en mode nuit stade' : 'Passer en mode jour'}
+      >
+        {isLight ? '🌙' : '☀️'}
+      </button>
+      <div className="relative w-full max-w-[400px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <LogoMark variant="hero" className="max-w-[220px]" decorative={false} />
           <h1 className="sr-only">Talk Foot</h1>
-          <p className="mt-4 text-sm font-semibold text-tf-grey">
+          <p
+            className={cn(
+              'mt-4 text-sm font-semibold',
+              isLight ? 'text-tf-dark/55' : 'text-slate-300',
+            )}
+          >
             Rejoins la communauté foot en direct
           </p>
         </div>
 
-        <Card className="p-6 sm:p-8" elevation="soft">
+        <Card
+          className="border-white/45 bg-white/[0.88] p-6 shadow-tf-glass backdrop-blur-xl sm:p-8"
+          elevation="soft"
+        >
           <div className="flex gap-1 rounded-xl bg-tf-grey-pastel/40 p-1">
             <button
               type="button"

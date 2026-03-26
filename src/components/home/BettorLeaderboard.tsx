@@ -1,10 +1,21 @@
 import { useLeaderboard } from '../../hooks/useLeaderboard'
+import { useProfile } from '../../hooks/useProfile'
 import { Avatar } from '../ui/Avatar'
+import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 
-export function BettorLeaderboard({ embedded }: { embedded?: boolean }) {
-  const { top12, myRank } = useLeaderboard()
+export function BettorLeaderboard({
+  embedded,
+  extended,
+}: {
+  embedded?: boolean
+  /** Page classements : plus de lignes + stats perso */
+  extended?: boolean
+}) {
+  const { top12, top250, myRank, myEntry } = useLeaderboard()
+  const { profile } = useProfile()
+  const rows = extended ? top250.slice(0, 40) : top12
 
   return (
     <div
@@ -16,16 +27,43 @@ export function BettorLeaderboard({ embedded }: { embedded?: boolean }) {
     >
       <div className="flex items-end justify-between gap-2">
         <h3 className="text-sm font-black tracking-tight text-tf-dark">
-          Top 250 parieurs
+          {extended ? 'Classement des parieurs' : 'Top 250 parieurs'}
         </h3>
         <span className="text-[10px] font-bold text-tf-grey">Classement live</span>
       </div>
       <p className="mt-0.5 text-[11px] font-medium text-tf-grey">
-        Meilleurs pronostiqueurs
+        {extended
+          ? 'Pronos + paris gagnants (mock) — top 40 affichés'
+          : 'Meilleurs pronostiqueurs'}
       </p>
 
-      <ol className="mt-3 space-y-1.5" role="list">
-        {top12.map((e) => (
+      {extended ? (
+        <div className="mt-4 grid gap-3 rounded-xl border border-tf-electric/20 bg-tf-electric-soft/40 p-3 sm:grid-cols-3">
+          <div>
+            <p className="text-[10px] font-black uppercase text-tf-grey">Ton rang</p>
+            <p className="font-display text-2xl font-black text-tf-dark">#{myRank}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-tf-grey">Points</p>
+            <p className="font-display text-2xl font-black text-tf-dark">{myEntry.score}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-tf-grey">Victoires / tentatives</p>
+            <p className="text-lg font-black text-tf-dark">
+              {myEntry.wins} / {myEntry.totalBets || '—'}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <ol
+        className={cn(
+          'mt-3 space-y-1.5',
+          extended && 'max-h-[min(520px,55vh)] overflow-y-auto pr-1 sm:grid sm:max-h-none sm:grid-cols-2 sm:gap-x-4 sm:gap-y-1.5 sm:space-y-0',
+        )}
+        role="list"
+      >
+        {rows.map((e) => (
           <li
             key={e.userId}
             className={cn(
@@ -41,17 +79,30 @@ export function BettorLeaderboard({ embedded }: { embedded?: boolean }) {
             >
               {e.rank}
             </span>
-            <Avatar
-              seed={e.avatarSeed}
-              accent={e.accent}
-              alt={e.username}
-              className="size-7 shrink-0 rounded-lg"
-            />
+            {e.userId === 'me' ? (
+              <ProfilePhotoAvatar
+                photoDataUrl={profile.profilePhotoDataUrl}
+                seed={e.avatarSeed}
+                accent={e.accent}
+                alt={e.username}
+                className="size-7 shrink-0 rounded-lg"
+              />
+            ) : (
+              <Avatar
+                seed={e.avatarSeed}
+                accent={e.accent}
+                alt={e.username}
+                className="size-7 shrink-0 rounded-lg"
+              />
+            )}
             <span className="min-w-0 flex-1 truncate text-xs font-bold text-tf-dark">
               {e.username}
             </span>
             <span className="shrink-0 text-[11px] font-black text-tf-grey">
               {e.score} pts
+              {extended && e.totalBets ? (
+                <span className="ml-1 font-medium text-tf-grey/80">· {e.wins}V</span>
+              ) : null}
             </span>
           </li>
         ))}

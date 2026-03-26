@@ -11,6 +11,7 @@ import { formatKickoff } from '../utils/time'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
 import { AvatarEditor } from '../components/profile/AvatarEditor'
+import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
 import { CharacterLookEditor } from '../components/profile/CharacterLookEditor'
 import { EditProfileModal } from '../components/profile/EditProfileModal'
 import { UserRankCard } from '../components/profile/UserRankCard'
@@ -22,6 +23,8 @@ import { useMatches } from '../contexts/MatchesContext'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { cn } from '../utils/cn'
+import { getAppSectionTheme } from '../theme/appSectionThemes'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -43,6 +46,7 @@ export function ProfilePage() {
     hideRivalSalons,
     setHideRivalSalons,
     openOnboarding,
+    preferencesComplete,
   } = useFanPreferences()
 
   const leagueName =
@@ -224,12 +228,19 @@ export function ProfilePage() {
     }
   }, [stats])
 
+  const pr = getAppSectionTheme('profile')
+
   return (
     <div className="space-y-7">
-      <header className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-start sm:justify-between">
+      <header
+        className={cn(
+          'flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
+          pr.page.borderBottomClass,
+        )}
+      >
         <div className="space-y-2">
-          <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
-            PROFIL
+          <div className={cn('text-[11px] font-black tracking-[0.18em]', pr.page.eyebrowClass)}>
+            Profil
           </div>
           <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
             {authUser?.displayName ?? currentUser.username}
@@ -250,6 +261,106 @@ export function ProfilePage() {
           Déconnexion
         </Button>
       </header>
+
+      {/* Mode Virage : réglage principal, visible dès l’ouverture du profil */}
+      <Card
+        id="mode-virage"
+        className={cn(
+          'scroll-mt-4 overflow-hidden p-0 shadow-[0_12px_40px_rgba(1,30,51,0.08)] transition-shadow',
+          virageMode
+            ? 'border-2 border-rose-500/50 ring-2 ring-rose-400/25'
+            : 'border border-tf-grey-pastel/60',
+        )}
+        elevation="soft"
+      >
+        <div
+          className={cn(
+            'px-5 py-5 sm:px-6 sm:py-6',
+            virageMode
+              ? 'bg-gradient-to-br from-rose-50/95 via-white to-tf-ice/80'
+              : 'bg-gradient-to-br from-tf-white to-tf-grey-pastel/15',
+          )}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-[11px] font-black tracking-[0.22em] text-rose-600">
+                CHAT LIVE & SALONS
+              </p>
+              <h2 className="font-display text-xl font-black tracking-tight text-tf-dark sm:text-2xl">
+                Mode Virage
+              </h2>
+              <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-dark/80">
+                Quand il est <strong className="text-tf-dark">activé</strong>, tu ne vois (en plus de toi) que les
+                messages des supporters qui portent{' '}
+                <strong className="text-tf-dark">tes clubs favoris</strong> — sur le live match, dans les salons groupe
+                et dans le top commentaires. Le mode supporter (teinte maillot) ne limite pas ça : c’est uniquement
+                Virage.
+              </p>
+              {!preferencesComplete || favoriteClubIds.length === 0 ? (
+                <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-bold text-amber-950">
+                  Choisis au moins une ligue et un club avec « Modifier ligue / clubs » pour que le filtrage ait du
+                  sens.
+                </p>
+              ) : (
+                <p className="text-xs font-bold text-tf-grey">
+                  Clubs pris en compte : {clubsLabel}
+                </p>
+              )}
+            </div>
+
+            <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:flex-col xl:flex-row">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={virageMode}
+                aria-label={virageMode ? 'Désactiver le Mode Virage' : 'Activer le Mode Virage'}
+                onClick={() => setVirageMode(!virageMode)}
+                className={cn(
+                  'relative h-16 min-w-[200px] rounded-2xl border-2 px-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/40 focus-visible:ring-offset-2',
+                  virageMode
+                    ? 'border-tf-dark bg-tf-dark text-white shadow-lg'
+                    : 'border-tf-dark/15 bg-white text-tf-dark shadow-sm hover:border-rose-300/60 hover:bg-rose-50/50',
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none absolute top-1.5 size-[3.25rem] rounded-xl bg-white shadow-md transition-all duration-300 ease-out',
+                    virageMode ? 'left-[calc(100%-3.65rem)]' : 'left-1.5',
+                  )}
+                  aria-hidden
+                />
+                <span
+                  className={cn(
+                    'relative z-[1] flex h-full w-full items-center gap-2 text-sm font-black',
+                    virageMode ? 'justify-end pr-3.5' : 'justify-start pl-[3.75rem]',
+                  )}
+                >
+                  {virageMode ? (
+                    <>
+                      <span className="text-lg" aria-hidden>
+                        🔥
+                      </span>
+                      Virage ON
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg opacity-80" aria-hidden>
+                        💬
+                      </span>
+                      Activer Virage
+                    </>
+                  )}
+                </span>
+              </button>
+              <p className="text-center text-[11px] font-bold text-tf-grey lg:max-w-[11rem] lg:text-left">
+                {virageMode
+                  ? 'Tu peux aussi couper depuis le live ou un salon.'
+                  : 'Un clic : ton fil redevient « tribune ».'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <Link
         to="/boutique"
@@ -314,9 +425,9 @@ export function ProfilePage() {
           Club & ligue
         </div>
         <p className="mt-1 text-sm font-semibold text-tf-grey">
-          Personnalise l’accueil, les actus et le filtrage des salons. Le{' '}
-          <strong className="text-tf-dark">mode supporter</strong> (Profil → Apparence, teinte maillot) pousse encore
-          plus loin : matchs, actus et top commentaires centrés sur tes clubs (jusqu’à 3).
+          Ta ligue et tes clubs (jusqu’à 3) servent aux titres, couleurs et repères — tu gardes accès à tous les
+          salons compatibles (ex. ultras du même club). Seul le{' '}
+          <strong className="text-tf-dark">Mode Virage</strong> filtre les messages (live, salons, top com.).
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
@@ -332,15 +443,12 @@ export function ProfilePage() {
           <Button variant="primary" className="rounded-2xl" onClick={openOnboarding}>
             Modifier ligue / clubs
           </Button>
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
-            <input
-              type="checkbox"
-              checked={virageMode}
-              onChange={(e) => setVirageMode(e.target.checked)}
-              className="size-4 rounded"
-            />
-            Mode Virage (live filtré)
-          </label>
+          <a
+            href="#mode-virage"
+            className="self-center text-xs font-black text-tf-electric-deep underline decoration-2 underline-offset-2 sm:px-2"
+          >
+            ↑ Mode Virage (réglage rapide)
+          </a>
           <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
             <input
               type="checkbox"
@@ -355,6 +463,8 @@ export function ProfilePage() {
 
       {/* Classement parieur */}
       <UserRankCard />
+
+      <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
 
       {/* Avatar personnalisable */}
       <CharacterLookEditor />
