@@ -1,5 +1,6 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { getDebateById } from '../data/debates'
+import { findCustomDebateById } from '../utils/customGroupDebatesStorage'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
@@ -8,7 +9,9 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 
 export function DebateDetailPage() {
   const { debateId } = useParams()
-  const debate = debateId ? getDebateById(debateId) : undefined
+  const debate = debateId
+    ? getDebateById(debateId) ?? findCustomDebateById(debateId)
+    : undefined
 
   if (!debate) {
     return <Navigate to="/debates" replace />

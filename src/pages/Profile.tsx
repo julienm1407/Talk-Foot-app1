@@ -25,6 +25,7 @@ import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
+import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -287,14 +288,17 @@ export function ProfilePage() {
                 CHAT LIVE & SALONS
               </p>
               <h2 className="font-display text-xl font-black tracking-tight text-tf-dark sm:text-2xl">
-                Mode Virage
+                {LIVE_FIL_EQUIPE_COEUR.label}
               </h2>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-tf-grey">
+                À ne pas confondre avec la zone stade « Virage » sur un live, ni avec un salon de groupe privé.
+              </p>
               <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-dark/80">
                 Quand il est <strong className="text-tf-dark">activé</strong>, tu ne vois (en plus de toi) que les
-                messages des supporters qui portent{' '}
-                <strong className="text-tf-dark">tes clubs favoris</strong> — sur le live match, dans les salons groupe
-                et dans le top commentaires. Le mode supporter (teinte maillot) ne limite pas ça : c’est uniquement
-                Virage.
+                messages des personnes qui ont renseigné{' '}
+                <strong className="text-tf-dark">un de tes clubs favoris</strong> — sur le live public, dans les salons
+                groupe et dans le top commentaires. Le mode supporter (teinte maillot) ne fait pas ce filtrage : c’est
+                uniquement ce réglage.
               </p>
               {!preferencesComplete || favoriteClubIds.length === 0 ? (
                 <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-bold text-amber-950">
@@ -313,7 +317,11 @@ export function ProfilePage() {
                 type="button"
                 role="switch"
                 aria-checked={virageMode}
-                aria-label={virageMode ? 'Désactiver le Mode Virage' : 'Activer le Mode Virage'}
+                aria-label={
+                  virageMode
+                    ? `Désactiver ${LIVE_FIL_EQUIPE_COEUR.label}`
+                    : `Activer ${LIVE_FIL_EQUIPE_COEUR.label}`
+                }
                 onClick={() => setVirageMode(!virageMode)}
                 className={cn(
                   'relative h-16 min-w-[200px] rounded-2xl border-2 px-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/40 focus-visible:ring-offset-2',
@@ -338,24 +346,24 @@ export function ProfilePage() {
                   {virageMode ? (
                     <>
                       <span className="text-lg" aria-hidden>
-                        🔥
+                        ✓
                       </span>
-                      Virage ON
+                      {LIVE_FIL_EQUIPE_COEUR.labelOn}
                     </>
                   ) : (
                     <>
                       <span className="text-lg opacity-80" aria-hidden>
                         💬
                       </span>
-                      Activer Virage
+                      Activer le fil
                     </>
                   )}
                 </span>
               </button>
               <p className="text-center text-[11px] font-bold text-tf-grey lg:max-w-[11rem] lg:text-left">
                 {virageMode
-                  ? 'Tu peux aussi couper depuis le live ou un salon.'
-                  : 'Un clic : ton fil redevient « tribune ».'}
+                  ? 'Raccourci aussi sur le live (bouton à côté du chat).'
+                  : 'Un clic : tu vois tout le monde (sauf filtres zone stade sur le live).'}
               </p>
             </div>
           </div>
@@ -427,7 +435,8 @@ export function ProfilePage() {
         <p className="mt-1 text-sm font-semibold text-tf-grey">
           Ta ligue et tes clubs (jusqu’à 3) servent aux titres, couleurs et repères — tu gardes accès à tous les
           salons compatibles (ex. ultras du même club). Seul le{' '}
-          <strong className="text-tf-dark">Mode Virage</strong> filtre les messages (live, salons, top com.).
+          <strong className="text-tf-dark">{LIVE_FIL_EQUIPE_COEUR.label}</strong> filtre les messages (live, salons,
+          top com.).
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
@@ -447,7 +456,7 @@ export function ProfilePage() {
             href="#mode-virage"
             className="self-center text-xs font-black text-tf-electric-deep underline decoration-2 underline-offset-2 sm:px-2"
           >
-            ↑ Mode Virage (réglage rapide)
+            ↑ {LIVE_FIL_EQUIPE_COEUR.label} (réglage rapide)
           </a>
           <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
             <input

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { salonsForMatch } from '../utils/matchSalons'
@@ -8,10 +8,11 @@ import { Button } from '../components/ui/Button'
 import { ChannelHeader } from '../components/channel/ChannelHeader'
 import { StadiumTribunes } from '../components/channel/StadiumTribunes'
 import { MatchSalonsModal } from '../components/channel/MatchSalonsModal'
-import { useMatchTribune } from '../hooks/useMatchTribune'
+import { useMatchStadiumGroup } from '../hooks/useMatchStadiumGroup'
 
 export function ChannelStadiumPage() {
   const { matchId } = useParams()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const fromSalonEntry = searchParams.get('salons') === '1'
   const { matches } = useMatches()
@@ -19,7 +20,7 @@ export function ChannelStadiumPage() {
     () => matches.find((m) => m.id === matchId) ?? null,
     [matches, matchId],
   )
-  const { tribune: activeTribune, setTribune } = useMatchTribune(matchId)
+  const { stadiumGroupId, setStadiumGroup } = useMatchStadiumGroup(matchId)
   const { groups: supporterGroups } = useSupporterGroups()
   const matchSalonPicks = useMemo(
     () => (match ? salonsForMatch(match, supporterGroups) : []),
@@ -36,7 +37,7 @@ export function ChannelStadiumPage() {
         <div className="mt-2 text-sm font-medium text-tf-grey">
           Ce match n’existe pas dans les données de test.
         </div>
-        <Link to="/matches" className="mt-4 inline-block text-sm font-black text-tf-electric">
+        <Link to="/match" className="mt-4 inline-block text-sm font-black text-tf-electric">
           ← Retour aux matchs
         </Link>
       </Card>
@@ -44,7 +45,7 @@ export function ChannelStadiumPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-9.5rem)] w-full max-w-3xl flex-col gap-2 sm:max-w-4xl sm:gap-3">
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-2 sm:max-w-4xl sm:gap-3">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <Link
           to={`/channel/${matchId}`}
@@ -79,12 +80,16 @@ export function ChannelStadiumPage() {
         <div className="shrink-0 border-b border-tf-grey-pastel/50 px-3 py-2 sm:px-4 sm:py-2.5">
           <ChannelHeader match={match} />
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
           <StadiumTribunes
             match={match}
-            selected={activeTribune}
-            onSelect={setTribune}
             layout="stadiumPage"
+            salonPicks={matchSalonPicks}
+            selectedGroupId={stadiumGroupId}
+            onSelectGroup={(id) => {
+              setStadiumGroup(id)
+              navigate(`/channel/${matchId}`)
+            }}
           />
         </div>
       </div>

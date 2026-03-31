@@ -172,7 +172,11 @@ export function LivePitch({ match }: { match: Match }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="tf-pitch2d flex-1" role="img" aria-label="Terrain 2D en direct">
+      <div
+        className="tf-pitch2d tf-pitch2d--live-embed flex-1"
+        role="img"
+        aria-label="Terrain 2D en direct"
+      >
         <svg viewBox="0 0 100 64" className="block h-full w-full">
           <defs>
             <linearGradient id="grass2d" x1="0" x2="0" y1="0" y2="1">

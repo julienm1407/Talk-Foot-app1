@@ -10,20 +10,50 @@ function shouldIgnoreTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false
   if (
     target.closest(
-      'input, textarea, select, button, [contenteditable="true"]',
+      'input, textarea, select, button, a, label, summary, [contenteditable="true"]',
     )
   )
     return true
   if (target.closest('[data-no-swipe="true"]')) return true
+  /** Modales / overlays : ne pas voler le scroll ou les gestes tactiles */
+  if (target.closest('[role="dialog"], [data-tf-modal="true"]')) return true
+  return false
+}
+
+/** Évite de confondre navigation latérale et scroll (molette / trackpad / doigt dans une liste). */
+function isInsideScrollableAncestor(target: EventTarget | null): boolean {
+  let el = target instanceof Element ? target : null
+  while (el && el !== document.documentElement) {
+    const st = window.getComputedStyle(el)
+    const box = el as HTMLElement
+    const oy = st.overflowY
+    const ox = st.overflowX
+    if (
+      (oy === 'auto' || oy === 'scroll' || oy === 'overlay') &&
+      box.scrollHeight > box.clientHeight + 2
+    ) {
+      return true
+    }
+    if (
+      (ox === 'auto' || ox === 'scroll' || ox === 'overlay') &&
+      box.scrollWidth > box.clientWidth + 2
+    ) {
+      return true
+    }
+    el = el.parentElement
+  }
   return false
 }
 
 export function useSwipeNavigate({ enabled, order }: Options) {
   const navigate = useNavigate()
   const location = useLocation()
+  /** N’écouter les gestes que sur les onglets hub — évite les conflits avec /group/…, articles, etc. */
+  const path = location.pathname === '' ? '/' : location.pathname
+  const swipeActive = enabled && order.includes(path)
 
   useEffect(() => {
-    if (!enabled) return
+    if (!swipeActive) return
 
     let startX = 0
     let startY = 0
@@ -34,7 +64,10 @@ export function useSwipeNavigate({ enabled, order }: Options) {
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0) return
       if (pointerId !== null) return
+      /** Souris / stylet : pas de changement de page au drag (évite conflit avec sélection & scroll). */
+      if (e.pointerType !== 'touch') return
       if (shouldIgnoreTarget(e.target)) return
+      if (isInsideScrollableAncestor(e.target)) return
 
       pointerId = e.pointerId
       startX = e.clientX
@@ -65,8 +98,7 @@ export function useSwipeNavigate({ enabled, order }: Options) {
       if (Math.abs(dx) < Math.abs(dy) * 1.3) return
       if (dt > 900) return
 
-      const current = location.pathname
-      const idx = order.findIndex((p) => p === current)
+      const idx = order.findIndex((p) => p === path)
       if (idx === -1) return
 
       // Swipe left -> next page, swipe right -> prev page
@@ -87,6 +119,6 @@ export function useSwipeNavigate({ enabled, order }: Options) {
       window.removeEventListener('pointerup', onPointerUp)
       window.removeEventListener('pointercancel', onPointerUp)
     }
-  }, [enabled, location.pathname, navigate, order])
+  }, [swipeActive, path, navigate, order])
 }
 

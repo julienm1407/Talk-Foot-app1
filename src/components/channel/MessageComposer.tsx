@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
+import type { Message } from '../../types/chat'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { GifPicker } from '../chat/GifPicker'
 import { EmotePicker } from '../chat/EmotePicker'
 import { cn } from '../../utils/cn'
+
+export type ScarfSendPayload = NonNullable<Message['groupScarf']>
 
 export function MessageComposer({
   onSend,
@@ -13,6 +16,14 @@ export function MessageComposer({
   unlockedEmoteIds = [],
   onUnlockEmote,
   placeholder = 'Écrire un message…',
+  /** Zone Chill live : texte uniquement (pas GIF / emotes). */
+  richMedia = true,
+  /** Emotes rapides (salons groupe / perso). */
+  quickEmotes,
+  onQuickEmote,
+  /** Écharpes des groupes rejoints — envoi dans le chat. */
+  scarfChoices,
+  onSendScarf,
 }: {
   onSend: (text: string) => void
   onSendGif?: (url: string) => void
@@ -21,13 +32,22 @@ export function MessageComposer({
   unlockedEmoteIds?: string[]
   onUnlockEmote?: (emoteId: string, cost: number) => boolean
   placeholder?: string
+  richMedia?: boolean
+  quickEmotes?: string[]
+  onQuickEmote?: (emoji: string) => void
+  scarfChoices?: ScarfSendPayload[]
+  onSendScarf?: (payload: ScarfSendPayload) => void
 }) {
   const [text, setText] = useState('')
   const [showGif, setShowGif] = useState(false)
   const [showEmote, setShowEmote] = useState(false)
+  const [scarfOpen, setScarfOpen] = useState(false)
   const canSend = useMemo(() => text.trim().length > 0, [text])
-  const hasExtras = Boolean(onSendGif || onSendEmote)
-
+  const hasExtras = richMedia && Boolean(onSendGif || onSendEmote)
+  const showQuickRow = Boolean(
+    (quickEmotes && quickEmotes.length > 0 && onQuickEmote) ||
+      (scarfChoices && scarfChoices.length > 0 && onSendScarf),
+  )
 
   return (
     <div className="relative">
@@ -61,6 +81,71 @@ export function MessageComposer({
           className="z-50"
         />
       )}
+      {showQuickRow ? (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          {quickEmotes?.map((em) => (
+            <button
+              key={em}
+              type="button"
+              className="grid size-9 place-items-center rounded-xl border border-slate-200/80 bg-white/90 text-lg shadow-sm transition hover:border-tf-electric/35 hover:bg-slate-50"
+              onClick={() => onQuickEmote?.(em)}
+              aria-label={`Envoyer ${em}`}
+            >
+              {em}
+            </button>
+          ))}
+          {scarfChoices && scarfChoices.length > 0 && onSendScarf ? (
+            <div className="relative">
+              <button
+                type="button"
+                className="rounded-xl border border-violet-200 bg-violet-50/90 px-2.5 py-1.5 text-[11px] font-black text-violet-950 shadow-sm transition hover:bg-violet-100"
+                aria-expanded={scarfOpen}
+                aria-haspopup="listbox"
+                onClick={() => setScarfOpen((v) => !v)}
+              >
+                🧣 Écharpe
+              </button>
+              {scarfOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-30 cursor-default"
+                    aria-label="Fermer"
+                    onClick={() => setScarfOpen(false)}
+                  />
+                  <ul
+                    className="absolute bottom-full left-0 z-40 mb-1 max-h-48 min-w-[12rem] overflow-y-auto rounded-xl border border-violet-200/80 bg-white py-1 shadow-lg"
+                    role="listbox"
+                  >
+                    {scarfChoices.map((s) => (
+                      <li key={s.groupId} role="option">
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-800 hover:bg-violet-50"
+                          onClick={() => {
+                            onSendScarf(s)
+                            setScarfOpen(false)
+                          }}
+                        >
+                          <span
+                            className="inline-flex h-6 w-10 overflow-hidden rounded border border-slate-200"
+                            aria-hidden
+                          >
+                            <span className="h-full w-1/3" style={{ background: s.colorA }} />
+                            <span className="h-full w-1/3" style={{ background: s.colorB }} />
+                            <span className="h-full w-1/3" style={{ background: s.colorC }} />
+                          </span>
+                          <span className="min-w-0 truncate">{s.groupName}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <form
         className="flex items-center gap-2"
         onSubmit={(e) => {

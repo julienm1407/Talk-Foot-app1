@@ -1,7 +1,17 @@
 import type { TribuneId } from '../types/tribune'
 
 export const TRIBUNE_TAGLINE = 'TalkFoot — Le stade dans ta poche.'
-export const TRIBUNE_PROMISE = 'Ne regarde plus les matchs seul. Choisis ta tribune et vis le match avec les autres.'
+export const TRIBUNE_PROMISE =
+  'Choisis une zone d’ambiance pour le chat de ce match (salon de groupe = autre page).'
+
+/** Filtre Profil uniquement (pas de bouton doublon sur le live). */
+export const LIVE_FIL_EQUIPE_COEUR = {
+  label: 'Fil équipe de cœur',
+  labelOn: 'Même club · ON',
+  title:
+    'Réglage dans Profil : n’afficher que les messages des supporters qui partagent un de tes clubs favoris.',
+} as const
+
 
 export type TribuneMeta = {
   id: TribuneId
@@ -22,9 +32,9 @@ export const TRIBUNES: TribuneMeta[] = [
     id: 'virage',
     label: 'Virage',
     emoji: '🔥',
-    mood: 'Intense, émotionnelle, bruyante',
+    mood: 'Ambiance intense — chat public du match',
     dominant: 'vocal',
-    objective: "Recréer l'énergie des supporters actifs",
+    objective: "Recréer l'énergie des supporters les plus actifs dans le chat public",
     features: ['Réactions en direct', 'Interactions rapides', 'Forte activité en continu'],
     ring: 'ring-rose-500/50',
     bg: 'from-rose-500/12 via-white to-amber-50/40',
@@ -46,10 +56,10 @@ export const TRIBUNES: TribuneMeta[] = [
     id: 'chill',
     label: 'Chill',
     emoji: '😌',
-    mood: 'Détendue',
+    mood: 'Chat posé : texte seulement ici, pas de GIF/emotes ni effets flottants',
     dominant: 'mixte',
-    objective: 'Expérience accessible et sans pression',
-    features: ['Réactions simples', 'Humour', 'Discussions légères'],
+    objective: 'Lecture confortable, ambiance calme (mock : comptes vérifiés à brancher)',
+    features: ['Discussions légères', 'Réactions réduites', 'Sans animations overlay'],
     ring: 'ring-teal-500/45',
     bg: 'from-teal-500/10 via-white to-emerald-50/30',
     text: 'text-teal-900',

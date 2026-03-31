@@ -1,0 +1,141 @@
+/**
+ * TalkFoot — design tokens (source de vérité pour spacing, radius, typo, élévation, focus).
+ * Consommé par Tailwind (theme.extend) et par les composants via var(--tf-*).
+ */
+:root {
+  /* ——— Spacing (échelle 4px) ——— */
+  --tf-space-0: 0;
+  --tf-space-1: 0.25rem;
+  --tf-space-2: 0.5rem;
+  --tf-space-3: 0.75rem;
+  --tf-space-4: 1rem;
+  --tf-space-5: 1.25rem;
+  --tf-space-6: 1.5rem;
+  --tf-space-8: 2rem;
+  --tf-space-10: 2.5rem;
+  --tf-space-12: 3rem;
+  --tf-space-16: 4rem;
+  --tf-space-20: 5rem;
+
+  /* ——— Rayons ——— */
+  /* Cartes DA : 12–16px → échelle proche (14px base) */
+  --tf-radius-sm: 0.5rem;
+  --tf-radius-md: 0.625rem;
+  --tf-radius-lg: 0.875rem;
+  --tf-radius-xl: 1rem;
+  --tf-radius-2xl: 1rem;
+  --tf-radius-3xl: 1.25rem;
+  --tf-radius-pill: 9999px;
+
+  /* ——— Marque TalkFoot (DA globale) ——— */
+  --tf-brand-primary: #023458;
+  --tf-brand-primary-rgb: 2 52 88;
+  --tf-brand-primary-dark: #012a45;
+  --tf-brand-accent: #ff3b3b;
+  --tf-brand-accent-hover: #e62e2e;
+  --tf-brand-accent-rgb: 255 59 59;
+  /** Secondaire brief #5D6422 (noté « bleu désaturé ») + #B3C3CF ; texte secondaire UI en gris-bleu lisible */
+  --tf-ui-muted: #5d6978;
+  --tf-da-secondary-olive: #5d6422;
+  --tf-ui-blue-light: #b3c3cf;
+  --tf-page-bg-light: #f4f8fb;
+  --tf-card-bg-light: #ffffff;
+  --tf-page-bg-dark: #051a2d;
+  --tf-card-bg-dark: #0d2135;
+
+  /**
+   * Repérage navigation (~5 % UI) — accents légers uniquement.
+   * Jamais fond principal, jamais en concurrence avec le rouge CTA (#ff3b3b).
+   */
+  --tf-nav-match: #ff9f43;
+  --tf-nav-groups: #6c5ce7;
+  --tf-nav-rankings: #00b894;
+
+  /* ——— Typographie (tailles ; line-height en ratio) ——— */
+  --tf-text-xs: 0.6875rem;
+  --tf-text-xs--line: 1.35;
+  --tf-text-sm: 0.8125rem;
+  --tf-text-sm--line: 1.4;
+  --tf-text-base: 0.9375rem;
+  --tf-text-base--line: 1.5;
+  --tf-text-md: 1rem;
+  --tf-text-md--line: 1.45;
+  --tf-text-lg: 1.125rem;
+  --tf-text-lg--line: 1.35;
+  --tf-text-xl: 1.375rem;
+  --tf-text-xl--line: 1.2;
+  --tf-text-2xl: 1.625rem;
+  --tf-text-2xl--line: 1.15;
+  --tf-text-display: clamp(1.75rem, 4.5vw, 2.75rem);
+  --tf-text-display--line: 1.05;
+
+  /* ——— Layout max-widths ——— */
+  --tf-max-w-sm: 40rem;
+  --tf-max-w-content: 77.5rem; /* 1240px */
+  --tf-max-w-wide: 87.5rem; /* 1400px */
+  --tf-max-w-ultra: 105rem; /* 1680px */
+  /**
+   * Largeurs fluides (mobile-first) : jamais plus que le viewport, cap en rem.
+   */
+  --tf-max-w-channel: min(100%, 87.5rem);
+  --tf-max-w-channel-stadium: min(100%, 60rem);
+  --tf-rails-shell: min(100%, 107.5rem);
+  --tf-rail-ad-width: min(8.25rem, 11vw);
+  --tf-rail-ad-width-2xl: min(9.5rem, 12vw);
+  --tf-carousel-slide: min(calc(100vw - 2rem), 22.5rem);
+  --tf-article-body: min(100%, 75rem);
+  --tf-article-inner: min(100%, 68.75rem);
+  --tf-modal-wide: min(calc(100% - 2rem), 61.25rem);
+  --tf-hub-rail-cap: min(100%, 22.5rem);
+  --tf-page-gutter: var(--tf-space-3);
+  --tf-page-gutter-sm: var(--tf-space-2);
+
+  /* ——— Élévation (ombres) ——— */
+  --tf-elev-0: none;
+  --tf-elev-1: 0 2px 8px rgba(2, 52, 88, 0.06);
+  --tf-elev-2: 0 6px 20px rgba(2, 52, 88, 0.09);
+  --tf-elev-3: 0 18px 48px rgba(2, 52, 88, 0.12);
+  --tf-elev-glass-dark: 0 28px 72px rgba(0, 8, 22, 0.36);
+  --tf-elev-nav-light: 0 12px 40px rgba(2, 52, 88, 0.08);
+  --tf-elev-nav-dark: 0 20px 50px rgba(0, 0, 0, 0.45);
+
+  /* ——— Sémantique UI ——— */
+  --tf-color-primary: var(--tf-brand-primary);
+  --tf-color-primary-mid: color-mix(in srgb, var(--tf-brand-primary) 88%, white);
+  --tf-color-live: var(--tf-brand-accent);
+  --tf-color-success: #059669;
+  --tf-color-warning: #d97706;
+  --tf-color-danger: #dc2626;
+
+  /* ——— Focus visible (WCAG) ——— */
+  --tf-focus-ring: 2px solid color-mix(in srgb, var(--tf-brand-primary) 90%, black);
+  --tf-focus-ring-offset: 2px;
+  --tf-focus-ring-bg: var(--tf-page-bg-light);
+
+  /* ——— Cible tactile minimale (WCAG 2.5.5) ——— */
+  --tf-touch-target-min: 44px;
+
+  /* ——— Durées motion ——— */
+  --tf-duration-fast: 150ms;
+  --tf-duration-base: 220ms;
+  --tf-duration-slow: 320ms;
+  --tf-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --tf-page-gutter: var(--tf-space-5);
+  }
+}
+
+html[data-tf-appearance='light'] {
+  --tf-focus-ring: 2px solid color-mix(in srgb, var(--tf-brand-primary) 92%, black);
+  --tf-focus-ring-bg: var(--tf-page-bg-light);
+}
+
+/* Mode nuit stade */
+html:not([data-tf-appearance='light']) {
+  --tf-focus-ring-offset: 2px;
+  --tf-focus-ring: 2px solid color-mix(in srgb, var(--tf-ui-blue-light) 55%, var(--tf-brand-primary));
+  --tf-focus-ring-bg: var(--tf-page-bg-dark);
+}

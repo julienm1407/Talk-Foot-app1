@@ -176,7 +176,10 @@ export function getAllDebates(): Debate[] {
   return [debateOfTheDay, ...trendingDebates]
 }
 
-export function getDebateById(id: string): Debate | undefined {
+/** Résout un débat catalogue ou débats `extras` (ex. sujets publiés dans ton groupe). */
+export function getDebateById(id: string, extras: Debate[] = []): Debate | undefined {
+  const fromExtras = extras.find((d) => d.id === id)
+  if (fromExtras) return fromExtras
   return getAllDebates().find((d) => d.id === id)
 }
 

@@ -1,11 +1,16 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { TopBar } from './TopBar'
+import { SkipLink } from './SkipLink'
 import { useSwipeNavigate } from '../hooks/useSwipeNavigate'
 import { FanOnboardingModal } from '../components/fan/FanOnboardingModal'
 import { FanSetupBanner } from '../components/fan/FanSetupBanner'
 import { PageAdRails } from './PageAdRails'
 import { cn } from '../utils/cn'
+
+const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
+const mainBottomPadChannel = 'pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))]'
+const mainBottomPadHomeXl = 'xl:pb-[max(2.5rem,calc(2.5rem+env(safe-area-inset-bottom,0px)))]'
 
 export function AppShell() {
   const location = useLocation()
@@ -15,60 +20,62 @@ export function AppShell() {
 
   useSwipeNavigate({
     enabled: !isChannel,
-    order: ['/', '/matches', '/groups', '/rankings'],
+    order: ['/', '/match', '/groups', '/rankings'],
   })
 
   return (
-    <div className="min-h-dvh min-w-0 overflow-x-hidden">
+    <div className="flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden overflow-x-hidden">
+      <SkipLink />
       <FanOnboardingModal />
       <TopBar />
       <FanSetupBanner />
-      {isChannel ? (
-        <div
-          className={
-            isChannelStadium
-              ? 'mx-auto w-full max-w-[min(100%,960px)] px-2 pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))] pt-3 sm:px-4 sm:pt-4'
-              : 'mx-auto w-full max-w-[1400px] px-3 pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))] pt-4 sm:px-5 sm:pt-6'
-          }
-        >
-          <main className="min-w-0">
-            <Outlet />
-          </main>
-        </div>
-      ) : isHome ? (
-        <>
-          {/* Accueil tablette / mobile : même logique que desktop (fond body + hub), rails pub */}
-          <div className="w-full px-3 pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] pt-4 sm:px-5 sm:pt-6 xl:hidden">
-            <PageAdRails>
-              <main className="mx-auto min-w-0 w-full max-w-[1680px]">
-                <Outlet />
-              </main>
-            </PageAdRails>
-          </div>
-          {/* Accueil desktop : hub sombre pleine largeur (sans rails — 3 colonnes dans la page) */}
+
+      <main
+        id="main-content"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none"
+        tabIndex={-1}
+      >
+        {isChannel ? (
           <div
             className={cn(
-              'hidden w-full pt-6 xl:block pb-[max(2.5rem,calc(2.5rem+env(safe-area-inset-bottom,0px)))]',
+              'mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
+              mainBottomPadChannel,
+              isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',
             )}
           >
-            <main className="mx-auto min-w-0 max-w-[1680px] px-5">
-              <Outlet />
-            </main>
+            <Outlet />
           </div>
-        </>
-      ) : (
-        <div className="w-full px-2 pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] pt-5 sm:px-4 sm:pt-7">
-          <PageAdRails>
-            <main className="min-w-0">
-              <div className="tf-panel rounded-[28px] p-4 sm:p-6">
+        ) : isHome ? (
+          <div
+            className={cn(
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
+              'w-full min-w-0 px-[var(--tf-page-gutter)] pt-4 sm:pt-6',
+              mainBottomPadMobile,
+              mainBottomPadHomeXl,
+            )}
+          >
+            <PageAdRails variant="centerOnly" centerMax="ultra">
+              <Outlet />
+            </PageAdRails>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
+              'w-full min-w-0 px-[var(--tf-page-gutter)] pt-5 sm:pt-7',
+              mainBottomPadMobile,
+            )}
+          >
+            <PageAdRails>
+              <div className="tf-panel rounded-tf-3xl p-tf-4 sm:p-tf-6">
                 <Outlet />
               </div>
-            </main>
-          </PageAdRails>
-        </div>
-      )}
+            </PageAdRails>
+          </div>
+        )}
+      </main>
+
       <BottomNav />
     </div>
   )
 }
-

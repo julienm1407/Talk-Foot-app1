@@ -23,6 +23,7 @@ import {
 } from '../theme/appSectionThemes'
 import { cn } from '../utils/cn'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 
 const tagStyles: Record<string, string> = {
   Breaking: 'bg-rose-500/15 text-rose-800 ring-rose-300/50',
@@ -56,7 +57,7 @@ export function ArticlePage() {
   const { slug } = useParams()
   const article = slug ? getArticleBySlug(slug) : undefined
   const { user, isReady } = useAuth()
-  const { appearance, toggleAppearance } = useAppearance()
+  const { appearance } = useAppearance()
   const isLight = appearance === 'light'
 
   const encarts = useMemo(
@@ -150,7 +151,7 @@ export function ArticlePage() {
           >
             Article introuvable
           </h1>
-          <p className={cn('mt-3 text-sm font-semibold', isLight ? 'text-tf-grey' : 'text-slate-400')}>
+          <p className={cn('mt-3 text-sm font-semibold', isLight ? 'text-tf-grey' : 'text-slate-200')}>
             Ce lien n’est plus valide ou l’article a été déplacé.
           </p>
           <Link
@@ -173,7 +174,7 @@ export function ArticlePage() {
   const toStade = user ? stadePath : loginWithNext(stadePath)
   const toDebates = user ? debatesPath : loginWithNext(debatesPath)
   const toGroups = user ? groupsPath : loginWithNext(groupsPath)
-  const toMatches = user ? '/matches' : loginWithNext('/matches')
+  const toMatches = user ? '/match' : loginWithNext('/match')
   const toRankingsBets = user ? '/rankings' : loginWithNext('/rankings')
   const appHome = user ? '/' : '/login'
 
@@ -217,7 +218,7 @@ export function ArticlePage() {
           )}
           aria-hidden
         />
-        <div className="relative mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-3 py-3 sm:gap-4 sm:px-5">
+        <div className="relative mx-auto flex w-full max-w-tf-content min-w-0 items-center justify-between gap-3 px-[var(--tf-page-gutter)] py-3 sm:gap-4">
           <Link
             to={appHome}
             className={cn(
@@ -234,19 +235,7 @@ export function ArticlePage() {
             />
           </Link>
           <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={toggleAppearance}
-              className={cn(
-                'rounded-2xl border p-2 text-lg outline-none transition',
-                isLight
-                  ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
-                  : 'border-white/15 bg-white/[0.08] text-white hover:bg-white/12',
-              )}
-              aria-label={isLight ? 'Passer en mode nuit stade' : 'Passer en mode jour'}
-            >
-              {isLight ? '🌙' : '☀️'}
-            </button>
+            <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
             <Link to={toLive} className="shrink-0">
               <span
                 className={cn(
@@ -274,9 +263,9 @@ export function ArticlePage() {
         <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-tf-electric to-cyan-400 opacity-95" aria-hidden />
       </header>
 
-      <main className="relative mx-auto w-full max-w-[1200px] px-2 pb-10 pt-4 sm:px-4 sm:pb-14 sm:pt-6">
+      <main className="relative mx-auto w-full min-w-0 max-w-tf-article-body px-[var(--tf-page-gutter)] pb-10 pt-4 sm:pb-14 sm:pt-6">
         <div className="tf-panel rounded-[22px] p-4 sm:rounded-[28px] sm:p-5 md:p-6">
-          <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8 sm:gap-10">
+          <div className="mx-auto flex w-full min-w-0 max-w-tf-article-inner flex-col gap-8 sm:gap-10">
             {/* Ligne 1 : image ~30 % | live compact ~70 % */}
             <section aria-label="Illustration et match en direct">
               <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-10 lg:gap-5">

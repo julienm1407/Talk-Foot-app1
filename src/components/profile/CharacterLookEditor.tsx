@@ -300,7 +300,7 @@ export function CharacterLookEditor() {
                     <div className="text-xs font-black text-violet-950">Mode supporter</div>
                     <p className="mt-0.5 text-xs font-medium text-violet-900/80">
                       {preferencesComplete && clubShort
-                        ? `Couleurs « ${clubShort} » sur le haut + titres d’accueil mis en avant. Les matchs et actus restent larges ; seul le Mode Virage filtre les messages.`
+                        ? `Couleurs « ${clubShort} » sur le haut + titres d’accueil mis en avant. Les matchs et actus restent larges ; seul le fil équipe de cœur (Profil) filtre les messages.`
                         : 'Choisis un club dans les préférences fan pour activer les couleurs tribune.'}
                     </p>
                   </div>

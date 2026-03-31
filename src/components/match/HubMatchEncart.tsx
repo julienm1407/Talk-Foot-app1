@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
-import type { LiveMirrorForCard } from '../../types/liveSimulation'
+import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
+import { LiveSalonPresenceStrip } from '../home/LiveSalonPresenceStrip'
 import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { formatKickoff, formatRelativeMinute } from '../../utils/time'
+import { useAppearance } from '../../contexts/AppearanceContext'
+import { themeForCompetition } from '../../data/competitionThemes'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
@@ -71,24 +74,41 @@ function StripScore({
   )
 }
 
+/** `overflow-visible` sur la racine : ombres, ring live et scale hover ne sont plus rognés par le parent scroll */
 const stripLinkBase =
-  'group tf-card-hover relative flex w-full min-w-0 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.45)] outline-none transition-[box-shadow,transform] focus-visible:ring-2 focus-visible:ring-sky-400/50'
+  'group tf-card-hover relative flex w-full min-w-0 shrink-0 snap-start flex-col overflow-visible rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.45)] outline-none transition-[box-shadow,transform] focus-visible:ring-2 focus-visible:ring-sky-400/50'
 
 const imageAreaH = 'h-[132px]'
+const imageAreaHCompact = 'h-[104px]'
+/** Colonne « À venir » à côté du live (desktop hub) — plus bas que compact */
+const imageAreaHSidebar = 'h-[76px]'
+/** Accueil desktop : un peu plus haut que la colonne « à venir » pour aligner les bas (proximité visuelle) */
+const imageAreaHHero = 'min-h-[152px] sm:min-h-[168px] xl:min-h-[min(188px,20vh)]'
 const crestMd = 36
 const crestSm = 28
+const crestXs = 24
+const crestHero = 32
 
 export function HubStripLive({
   match,
   liveMirror,
   className,
   showProgress = true,
+  layout = 'strip',
+  visualSize = 'default',
+  /** À côté de « À venir » : étire la carte pour aligner les bas de colonne */
+  fillColumnHeight = false,
 }: {
   match: Match
   liveMirror?: LiveMirrorForCard
   className?: string
   /** Désactivé sur le rail ultra-compact */
   showProgress?: boolean
+  /** `featured` : colonne live desktop — image plus haute, carte étirable avec la grille */
+  layout?: 'strip' | 'featured'
+  /** `compact` : rail à venir · `hero` : live accueil desktop (remplit l’encart) */
+  visualSize?: 'default' | 'compact' | 'hero'
+  fillColumnHeight?: boolean
 }) {
   const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
   const minute = sim ? sim.minute : match.minute ?? 0
@@ -96,14 +116,47 @@ export function HubStripLive({
   const bump = sim?.bumpSide ?? null
   const fans = hubFansK(match)
   const rim = liveRimClass(sim?.rim ?? null)
+  const featured = layout === 'featured'
+  const imgBand =
+    featured
+      ? 'min-h-[min(200px,28vh)] flex-1'
+      : visualSize === 'compact'
+        ? imageAreaHCompact
+        : visualSize === 'hero'
+          ? imageAreaHHero
+          : imageAreaH
+  const crestLive =
+    visualSize === 'compact' ? crestSm : visualSize === 'hero' ? crestHero : crestMd
+
+  const simulationForPresence: LiveEncartSimulation = {
+    active: Boolean(sim),
+    minute,
+    score: sc,
+    bumpSide: bump,
+    burst: sim?.burst ?? null,
+    toast: sim?.toast ?? null,
+    rim: sim?.rim ?? null,
+  }
 
   return (
     <Link
       to={`/channel/${match.id}`}
-      className={cn(stripLinkBase, rim, className)}
+      className={cn(
+        stripLinkBase,
+        rim,
+        featured && 'h-full min-h-[280px] flex-1 flex flex-col',
+        fillColumnHeight && visualSize === 'hero' && 'h-full min-h-0',
+        className,
+      )}
       aria-label={`${match.home.shortName} contre ${match.away.shortName}, en direct`}
     >
-      <div className={cn('relative shrink-0 overflow-hidden', imageAreaH)}>
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-t-2xl',
+          imgBand,
+          fillColumnHeight && visualSize === 'hero' ? 'min-h-0 flex-1' : 'shrink-0',
+        )}
+      >
         <img
           src={HUB_STADIUM_URL}
           alt=""
@@ -120,82 +173,290 @@ export function HubStripLive({
           </span>
         ) : null}
         <div className="absolute inset-x-0 bottom-0 flex flex-col justify-end">
-          <div className="flex items-end justify-between gap-2 px-3 pb-1 pt-6">
+          <div
+            className={cn(
+              'flex items-end justify-between gap-2 px-3 pb-1',
+              visualSize === 'compact' ? 'pt-4' : visualSize === 'hero' ? 'pt-4' : 'pt-6',
+            )}
+          >
             <div className="flex min-w-0 items-center gap-2">
-              <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestMd} />
-              <span className="truncate text-xs font-black text-white drop-shadow-md">{match.home.shortName}</span>
+              <ClubCrest
+                id={match.home.id}
+                shortName={match.home.shortName}
+                colors={match.home.colors}
+                size={crestLive}
+              />
+              <span
+                className={cn(
+                  'truncate font-black text-white drop-shadow-md',
+                  visualSize === 'hero' ? 'text-sm' : 'text-xs',
+                )}
+              >
+                {match.home.shortName}
+              </span>
             </div>
             <div className="flex shrink-0 flex-col items-center px-1">
-              <StripScore home={sc.home} away={sc.away} bumpSide={bump} className="text-xl sm:text-2xl" />
-              <span className="mt-0.5 rounded-md bg-emerald-500/95 px-2 py-0.5 text-[10px] font-black text-white shadow">
+              <StripScore
+                home={sc.home}
+                away={sc.away}
+                bumpSide={bump}
+                className={
+                  visualSize === 'compact'
+                    ? 'text-lg sm:text-xl'
+                    : visualSize === 'hero'
+                      ? 'text-lg sm:text-xl xl:text-xl'
+                      : 'text-xl sm:text-2xl'
+                }
+              />
+              <span
+                className={cn(
+                  'mt-0.5 rounded-md bg-emerald-500/95 font-black text-white shadow',
+                  visualSize === 'hero' ? 'px-2 py-0.5 text-[11px]' : 'px-2 py-0.5 text-[10px]',
+                )}
+              >
                 {formatRelativeMinute(minute) ?? `${minute}′`}
               </span>
             </div>
             <div className="flex min-w-0 items-center justify-end gap-2 text-right">
-              <span className="truncate text-xs font-black text-white drop-shadow-md">{match.away.shortName}</span>
-              <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestMd} />
+              <span
+                className={cn(
+                  'truncate font-black text-white drop-shadow-md',
+                  visualSize === 'hero' ? 'text-sm' : 'text-xs',
+                )}
+              >
+                {match.away.shortName}
+              </span>
+              <ClubCrest
+                id={match.away.id}
+                shortName={match.away.shortName}
+                colors={match.away.colors}
+                size={crestLive}
+              />
             </div>
           </div>
           {showProgress ? (
-            <div className="px-3 pb-2 pt-0.5">
+            <div
+              className={cn(
+                'px-3 pt-0.5',
+                visualSize === 'compact' ? 'pb-1.5' : visualSize === 'hero' ? 'pb-1.5' : 'pb-2',
+              )}
+            >
               <HubMatchProgressBar minute={minute} />
             </div>
           ) : null}
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
-        <span className="truncate text-[11px] font-semibold text-white/60">
-          {(fans * 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k fans
-        </span>
-        <span className="shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-1.5 text-xs font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition group-hover:from-sky-400 group-hover:to-blue-500">
-          Rejoindre
-        </span>
-      </div>
+      {visualSize === 'hero' ? (
+        <div className="rounded-b-2xl border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
+          <div className="flex flex-col gap-2.5">
+            <LiveSalonPresenceStrip match={match} simulation={simulationForPresence} />
+            <div className="flex justify-end border-t border-white/5 pt-2">
+              <span className="shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-1.5 text-xs font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition group-hover:from-sky-400 group-hover:to-blue-500">
+                Rejoindre
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            'flex items-center justify-between gap-2 rounded-b-2xl border-t border-white/10 bg-[#071422]/90 px-3',
+            visualSize === 'compact' ? 'py-2' : 'py-2.5',
+          )}
+        >
+          <span className="truncate text-[11px] font-semibold text-sky-100/85">
+            {(fans * 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k fans
+          </span>
+          <span
+            className={cn(
+              'shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition group-hover:from-sky-400 group-hover:to-blue-500',
+              visualSize === 'compact' ? 'px-3 py-1 text-[11px]' : 'px-4 py-1.5 text-xs',
+            )}
+          >
+            Rejoindre
+          </span>
+        </div>
+      )}
     </Link>
   )
 }
 
-export function HubStripUpcoming({ match, className }: { match: Match; className?: string }) {
+export function HubStripUpcoming({
+  match,
+  className,
+  visualSize = 'default',
+  /** Agenda : fond dégradé compétition, sans photo terrain (contraste avec les lives) */
+  visualStyle = 'stadium',
+}: {
+  match: Match
+  className?: string
+  visualSize?: 'default' | 'compact' | 'sidebar'
+  visualStyle?: 'stadium' | 'solid'
+}) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+  const compTh = themeForCompetition(match.competition.id)
+  const solid = visualStyle === 'solid'
+
+  const imgBand =
+    visualSize === 'sidebar'
+      ? imageAreaHSidebar
+      : visualSize === 'compact'
+        ? imageAreaHCompact
+        : imageAreaH
+  const crestUp =
+    visualSize === 'sidebar' ? crestXs : visualSize === 'compact' ? crestSm : crestMd
+  const isSidebar = visualSize === 'sidebar'
+
+  const solidBackground =
+    solid &&
+    (compTh
+      ? L
+        ? `linear-gradient(145deg, ${compTh.accent}12 0%, ${compTh.accent2}20 42%, ${compTh.accent}08 100%)`
+        : `linear-gradient(145deg, ${compTh.accent} 0%, ${compTh.accent2} 50%, ${compTh.accent} 100%)`
+      : L
+        ? 'linear-gradient(145deg, rgba(14,165,233,0.1), rgba(59,130,246,0.16))'
+        : 'linear-gradient(145deg, #0f172a 0%, #0369a1 48%, #082f49 100%)')
+
+  const nameCls = (sidebar: boolean) =>
+    cn(
+      'truncate font-black',
+      solid && L ? 'text-tf-dark' : 'text-white drop-shadow-md',
+      sidebar ? 'max-w-[3.25rem] text-[10px]' : 'text-xs',
+    )
+  const scoreTimeCls = cn(
+    'font-display font-black tabular-nums',
+    solid && L ? 'text-tf-dark' : 'text-white drop-shadow-lg',
+    isSidebar ? 'text-sm leading-none' : 'text-lg',
+  )
+  const dayChipCls = cn(
+    'rounded-md font-black shadow',
+    solid && L && compTh
+      ? cn(compTh.labelBg, compTh.labelText, 'ring-1 ring-black/5')
+      : 'bg-sky-500/90 text-white',
+    isSidebar ? 'mt-0.5 px-1.5 py-px text-[8px]' : 'mt-0.5 px-2 py-0.5 text-[10px]',
+  )
+
   return (
     <Link
       to={`/channel/${match.id}`}
       className={cn(
         stripLinkBase,
-        'border-sky-400/25 shadow-[0_12px_40px_rgba(14,165,233,0.18)]',
+        solid
+          ? L
+            ? 'border-black/10 shadow-[0_10px_28px_rgba(15,23,42,0.08)]'
+            : 'border-white/15 shadow-[0_12px_36px_rgba(0,0,0,0.35)]'
+          : 'border-sky-400/25 shadow-[0_12px_40px_rgba(14,165,233,0.18)]',
+        isSidebar && !solid && 'rounded-xl shadow-[0_8px_24px_rgba(14,165,233,0.12)]',
+        isSidebar && solid && 'rounded-xl',
         className,
       )}
+      style={
+        solid && compTh && !L
+          ? { borderColor: `${compTh.accent2}55` }
+          : undefined
+      }
       aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
     >
-      <div className={cn('relative shrink-0 overflow-hidden', imageAreaH)}>
-        <img
-          src={HUB_STADIUM_URL}
-          alt=""
-          className="absolute inset-0 size-full scale-110 object-cover blur-[2px] transition duration-500 group-hover:scale-[1.06] group-hover:blur-[1px]"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030b18] via-[#061a2e]/85 to-sky-950/40" />
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-md bg-sky-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg ring-1 ring-sky-400/50">
+      <div
+        className={cn(
+          'relative shrink-0 overflow-hidden rounded-t-2xl',
+          imgBand,
+          isSidebar && 'rounded-t-xl',
+          solid && 'ring-1 ring-inset ring-white/10',
+        )}
+        style={typeof solidBackground === 'string' ? { background: solidBackground } : undefined}
+      >
+        {!solid ? (
+          <>
+            <img
+              src={HUB_STADIUM_URL}
+              alt=""
+              className="absolute inset-0 size-full scale-110 object-cover blur-[2px] transition duration-500 group-hover:scale-[1.06] group-hover:blur-[1px]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#030b18] via-[#061a2e]/85 to-sky-950/40" />
+          </>
+        ) : (
+          <>
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.16]"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(-28deg, transparent, transparent 11px, rgba(255,255,255,0.045) 11px, rgba(255,255,255,0.045) 12px)',
+              }}
+              aria-hidden
+            />
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-0',
+                L ? 'bg-gradient-to-t from-black/[0.07] to-transparent' : 'bg-gradient-to-t from-black/40 to-transparent',
+              )}
+              aria-hidden
+            />
+          </>
+        )}
+        <span
+          className={cn(
+            'absolute inline-flex items-center gap-0.5 font-black uppercase tracking-wide shadow ring-1',
+            solid && compTh && !L
+              ? 'bg-white/15 text-white ring-white/25 backdrop-blur-[2px]'
+              : solid && compTh && L
+                ? cn(compTh.labelBg, compTh.labelText, 'ring-black/8')
+                : 'bg-sky-600 text-white ring-sky-400/50',
+            isSidebar
+              ? 'left-2 top-2 px-1.5 py-0.5 text-[8px]'
+              : 'left-3 top-3 gap-1 rounded-md px-2 py-0.5 text-[10px] shadow-lg',
+          )}
+        >
           À venir
         </span>
-        <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestMd} />
-            <span className="truncate text-xs font-black text-white drop-shadow-md">{match.home.shortName}</span>
+        <div
+          className={cn(
+            'absolute flex items-end justify-between',
+            isSidebar ? 'bottom-1 left-2 right-2 gap-1' : 'bottom-2 left-3 right-3 gap-2',
+          )}
+        >
+          <div className={cn('flex min-w-0 items-center', isSidebar ? 'gap-1' : 'gap-2')}>
+            <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestUp} />
+            <span className={nameCls(isSidebar)}>{match.home.shortName}</span>
           </div>
-          <div className="flex shrink-0 flex-col items-center px-1">
-            <p className="font-display text-lg font-black tabular-nums text-white drop-shadow-lg">{formatKickoff(match.kickoffAt)}</p>
-            <span className="mt-0.5 rounded-md bg-sky-500/90 px-2 py-0.5 text-[10px] font-black text-white shadow">
-              {formatHubDayLabel(match.kickoffAt)}
-            </span>
+          <div className="flex shrink-0 flex-col items-center px-0.5">
+            <p className={scoreTimeCls}>{formatKickoff(match.kickoffAt)}</p>
+            <span className={dayChipCls}>{formatHubDayLabel(match.kickoffAt)}</span>
           </div>
-          <div className="flex min-w-0 items-center justify-end gap-2 text-right">
-            <span className="truncate text-xs font-black text-white drop-shadow-md">{match.away.shortName}</span>
-            <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestMd} />
+          <div className={cn('flex min-w-0 items-center justify-end text-right', isSidebar ? 'gap-1' : 'gap-2')}>
+            <span className={nameCls(isSidebar)}>{match.away.shortName}</span>
+            <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestUp} />
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
-        <span className="line-clamp-1 text-[11px] font-semibold text-white/60">{match.competition.shortName}</span>
-        <span className="shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-1.5 text-xs font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.35)] transition group-hover:from-sky-400 group-hover:to-blue-500">
+      <div
+        className={cn(
+          'flex items-center justify-between gap-2 border-t',
+          solid && L ? 'border-black/10 bg-white/90' : 'border-white/10 bg-[#071422]/90',
+          isSidebar ? 'rounded-b-xl px-2.5 py-1.5' : 'rounded-b-2xl px-3',
+          !isSidebar && (visualSize === 'compact' ? 'py-2' : 'py-2.5'),
+        )}
+      >
+        <span
+          className={cn(
+            'line-clamp-1 font-bold',
+            solid && L ? 'text-tf-dark/75' : 'text-sky-100/90',
+            isSidebar ? 'text-[10px]' : 'text-[11px]',
+          )}
+        >
+          {match.competition.shortName}
+        </span>
+        <span
+          className={cn(
+            'shrink-0 rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 font-black text-white transition group-hover:from-sky-400 group-hover:to-blue-500',
+            isSidebar
+              ? 'px-2 py-0.5 text-[9px] shadow-[0_2px_10px_rgba(14,165,233,0.28)]'
+              : visualSize === 'compact'
+                ? 'rounded-xl px-3 py-1 text-[11px] shadow-[0_4px_16px_rgba(14,165,233,0.35)]'
+                : 'rounded-xl px-4 py-1.5 text-xs shadow-[0_4px_16px_rgba(14,165,233,0.35)]',
+          )}
+        >
           Voir le salon
         </span>
       </div>
@@ -211,7 +472,7 @@ export function HubStripFinished({ match, className }: { match: Match; className
       className={cn(stripLinkBase, 'border-white/15 opacity-[0.92]', className)}
       aria-label={`${match.home.shortName} contre ${match.away.shortName}, terminé`}
     >
-      <div className={cn('relative shrink-0 overflow-hidden', imageAreaH)}>
+      <div className={cn('relative shrink-0 overflow-hidden rounded-t-2xl', imageAreaH)}>
         <img
           src={HUB_STADIUM_URL}
           alt=""
@@ -230,7 +491,7 @@ export function HubStripFinished({ match, className }: { match: Match; className
             <p className="font-display text-2xl font-black tabular-nums text-white drop-shadow-lg">
               {sc.home} – {sc.away}
             </p>
-            <span className="mt-0.5 text-[10px] font-bold text-white/55">Score final</span>
+            <span className="mt-0.5 text-[10px] font-bold text-sky-100/80">Score final</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-2 text-right">
             <span className="truncate text-xs font-black text-white drop-shadow-md">{match.away.shortName}</span>
@@ -238,8 +499,8 @@ export function HubStripFinished({ match, className }: { match: Match; className
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
-        <span className="line-clamp-1 text-[11px] font-semibold text-white/60">{match.competition.shortName}</span>
+      <div className="flex items-center justify-between gap-2 rounded-b-2xl border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
+        <span className="line-clamp-1 text-[11px] font-bold text-sky-100/90">{match.competition.shortName}</span>
         <span className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-black text-white transition group-hover:bg-white/15">
           Salon
         </span>
@@ -253,13 +514,34 @@ export function HubMatchStrip({
   match,
   liveMirror,
   className,
+  /** Page agenda : live en format compact, sans « hero » encart */
+  agendaCalm = false,
+  /** Page agenda : à venir en dégradé compétition (sans photo terrain) */
+  agendaUpcomingSolid = false,
 }: {
   match: Match
   liveMirror?: LiveMirrorForCard
   className?: string
+  agendaCalm?: boolean
+  agendaUpcomingSolid?: boolean
 }) {
-  if (match.status === 'live') return <HubStripLive match={match} liveMirror={liveMirror} className={className} />
-  if (match.status === 'upcoming') return <HubStripUpcoming match={match} className={className} />
+  if (match.status === 'live')
+    return (
+      <HubStripLive
+        match={match}
+        liveMirror={liveMirror}
+        className={className}
+        visualSize={agendaCalm ? 'compact' : 'default'}
+      />
+    )
+  if (match.status === 'upcoming')
+    return (
+      <HubStripUpcoming
+        match={match}
+        className={className}
+        visualStyle={agendaUpcomingSolid ? 'solid' : 'stadium'}
+      />
+    )
   return <HubStripFinished match={match} className={className} />
 }
 
@@ -269,18 +551,18 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
     <Link
       to={`/channel/${match.id}`}
       className={cn(
-        'group flex w-full min-w-0 items-stretch gap-0 overflow-hidden rounded-xl border border-white/10 bg-[#050d18]/90 shadow-md outline-none transition hover:border-sky-400/35 focus-visible:ring-2 focus-visible:ring-sky-400/45',
+        'group flex w-full min-w-0 items-stretch gap-0 overflow-visible rounded-xl border border-white/10 bg-[#050d18]/90 shadow-md outline-none transition hover:border-sky-400/35 focus-visible:ring-2 focus-visible:ring-sky-400/45',
         className,
       )}
     >
-      <div className="relative w-[76px] shrink-0 overflow-hidden">
+      <div className="relative w-[76px] shrink-0 overflow-hidden rounded-l-xl">
         <img src={HUB_STADIUM_URL} alt="" className="absolute inset-0 size-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#050d18]" />
         <span className="absolute left-1 top-1 rounded bg-sky-600 px-1 py-0.5 text-[8px] font-black uppercase text-white">
           À venir
         </span>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-2.5 py-2">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 rounded-r-xl bg-[#050d18]/90 px-2.5 py-2">
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
             <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestSm} />
@@ -293,9 +575,9 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
             <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestSm} />
             <span className="truncate text-[11px] font-black text-white">{match.away.shortName}</span>
           </div>
-          <span className="shrink-0 text-[9px] font-bold text-white/45">{formatHubDayLabel(match.kickoffAt)}</span>
+          <span className="shrink-0 text-[9px] font-bold text-sky-100/78">{formatHubDayLabel(match.kickoffAt)}</span>
         </div>
-        <span className="truncate text-[9px] font-semibold text-white/40">{match.competition.shortName}</span>
+        <span className="truncate text-[9px] font-bold text-sky-200/85">{match.competition.shortName}</span>
       </div>
     </Link>
   )

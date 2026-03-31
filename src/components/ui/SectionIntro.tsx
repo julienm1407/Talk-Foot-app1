@@ -2,6 +2,12 @@ import type { ReactNode } from 'react'
 import { cn } from '../../utils/cn'
 import type { AppSectionId } from '../../theme/appSectionThemes'
 import { getAppSectionTheme } from '../../theme/appSectionThemes'
+import { useAppearance } from '../../contexts/AppearanceContext'
+
+/** Sombre : libellés caps lisibles sur fond bleu nuit. */
+function eyebrowDarkClass() {
+  return 'text-sky-100'
+}
 
 type Props = {
   /** Petit libellé (CAPS) — même style sur tout le site */
@@ -36,6 +42,8 @@ export function SectionIntro({
   titleAs = 'h2',
   uppercaseTitle = true,
 }: Props) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   const tone = section ? getAppSectionTheme(section) : null
   const TitleTag = titleAs
 
@@ -43,7 +51,7 @@ export function SectionIntro({
     <div
       className={cn(
         'flex flex-col gap-3 border-b pb-4 sm:gap-4 sm:pb-5',
-        tone?.page.borderBottomClass ?? 'border-tf-grey-pastel/50',
+        L ? tone?.page.borderBottomClass ?? 'border-tf-grey-pastel/50' : 'border-white/15',
         compact ? 'mb-4 sm:mb-5' : 'mb-5 sm:mb-6',
         'sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-6 sm:gap-y-3',
         className,
@@ -54,7 +62,7 @@ export function SectionIntro({
           <p
             className={cn(
               'text-[11px] font-black uppercase tracking-[0.22em] sm:text-xs',
-              tone?.page.eyebrowClass ?? 'text-tf-electric-deep',
+              L ? tone?.page.eyebrowClass ?? 'text-tf-electric-deep' : eyebrowDarkClass(),
             )}
           >
             {eyebrow}
@@ -63,7 +71,7 @@ export function SectionIntro({
         <TitleTag
           id={titleId}
           className={cn(
-            'font-display font-black leading-[1.1] tracking-tight text-tf-dark',
+            'font-display font-black leading-[1.1] tracking-tight text-tf-app-fg',
             uppercaseTitle && 'uppercase',
             compact
               ? 'text-xl sm:text-2xl'
@@ -75,8 +83,8 @@ export function SectionIntro({
         {description ? (
           <p
             className={cn(
-              'max-w-2xl text-sm font-semibold leading-relaxed text-tf-dark/75',
-              compact && 'line-clamp-2 text-tf-grey sm:line-clamp-none sm:text-tf-dark/75',
+              'max-w-2xl text-sm font-medium leading-relaxed text-tf-app-muted',
+              compact && 'line-clamp-2 sm:line-clamp-none',
             )}
           >
             {description}

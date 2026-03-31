@@ -48,7 +48,7 @@ export function HomeFeedContinuation({
   const pid = (s: string) => `${idPrefix}${s}`
 
   return (
-    <div className={cn('mx-auto w-full max-w-[1200px] space-y-6 sm:space-y-8', wrapClassName)}>
+    <div className={cn('mx-auto w-full min-w-0 max-w-tf-content space-y-6 sm:space-y-8', wrapClassName)}>
       <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
         <section className="min-w-0" aria-labelledby={pid('home-carousel-heading')}>
           <Card

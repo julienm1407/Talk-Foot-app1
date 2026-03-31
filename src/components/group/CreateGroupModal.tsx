@@ -12,6 +12,8 @@ import {
   parseHashtagInput,
 } from '../../utils/groupHashtags'
 import { GroupCard } from './GroupCard'
+import { GROUP_THEME_PRESETS } from '../../data/groupThemePresets'
+import type { GroupTheme } from '../../types/group'
 
 export function CreateGroupModal({
   open,
@@ -30,6 +32,8 @@ export function CreateGroupModal({
   const [motto, setMotto] = useState('On vit le foot ensemble.')
   const [primary, setPrimary] = useState('#0b1b3a')
   const [secondary, setSecondary] = useState('#0ea5e9')
+  const [accent, setAccent] = useState('')
+  const [intensity, setIntensity] = useState(72)
   const [background, setBackground] = useState<'clean' | 'smoke' | 'stripe'>(
     'smoke',
   )
@@ -47,6 +51,8 @@ export function CreateGroupModal({
     setMotto('On vit le foot ensemble.')
     setPrimary('#0b1b3a')
     setSecondary('#0ea5e9')
+    setAccent('')
+    setIntensity(72)
     setBackground('smoke')
     setNameError(null)
     setGroupKind('public')
@@ -73,6 +79,12 @@ export function CreateGroupModal({
     setTagDraft('')
   }
 
+  const draftTheme = useMemo<GroupTheme>(() => {
+    const t: GroupTheme = { primary, secondary, background }
+    if (accent.trim()) t.accent = accent.trim()
+    return t
+  }, [accent, background, primary, secondary])
+
   const draft = useMemo<SupporterGroup>(() => {
     return {
       id: 'draft',
@@ -80,9 +92,9 @@ export function CreateGroupModal({
       emoji: emoji.trim() || '🧢',
       location: location.trim() || undefined,
       motto: motto.trim() || 'On vit le foot ensemble.',
-      theme: { primary, secondary, background },
+      theme: draftTheme,
       members: Math.round(18 + Math.random() * 60),
-      intensity: Math.round(55 + Math.random() * 35),
+      intensity,
       groupKind,
       hashtags: previewHashtags.length ? previewHashtags : undefined,
       channels: [
@@ -111,25 +123,43 @@ export function CreateGroupModal({
       messagesToday: 0,
       lastMessagePreview: 'Crée ton premier message…',
     }
-  }, [background, emoji, groupKind, location, motto, name, previewHashtags, primary, secondary])
+  }, [
+    draftTheme,
+    emoji,
+    groupKind,
+    intensity,
+    location,
+    motto,
+    name,
+    previewHashtags,
+  ])
 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[90] grid place-items-center px-4 py-6">
-      <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
+    <div
+      className="fixed inset-0 z-[90] overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      data-no-swipe="true"
+      data-tf-modal="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-group-title"
+    >
+      <button
+        type="button"
+        className="fixed inset-0 bg-black/20 backdrop-blur-[2px]"
         onClick={onClose}
-        aria-hidden="true"
+        aria-label="Fermer la création de groupe"
       />
 
-      <Card className="relative w-full max-w-[980px] p-4 sm:p-5">
+      <div className="relative z-10 mx-auto w-full max-w-tf-modal-wide px-4 py-8 pb-[max(2rem,calc(2rem+env(safe-area-inset-bottom)))] sm:py-10">
+        <Card className="relative w-full min-w-0 p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
               NOUVEAU GROUPE
             </div>
-            <div className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+            <div id="create-group-title" className="mt-1 text-2xl font-black tracking-tight text-slate-900">
               Créer un groupe
             </div>
             <div className="mt-1 text-sm font-semibold text-slate-700/70">
@@ -292,9 +322,46 @@ export function CreateGroupModal({
             </div>
 
             <div className="mt-4">
+              <div className="text-sm font-black text-slate-900">Ambiance (démo)</div>
+              <label className="mt-2 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700/70">
+                Intensité du salon
+                <input
+                  type="range"
+                  min={15}
+                  max={98}
+                  value={intensity}
+                  onChange={(e) => setIntensity(Number(e.target.value))}
+                  className="min-w-[140px] flex-1"
+                />
+                <span className="tabular-nums text-slate-900">{intensity}%</span>
+              </label>
+            </div>
+
+            <div className="mt-4">
+              <div className="text-sm font-black text-slate-900">Palettes</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {GROUP_THEME_PRESETS.map((p) => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => {
+                      setPrimary(p.primary)
+                      setSecondary(p.secondary)
+                      if (p.accent) setAccent(p.accent)
+                      else setAccent('')
+                    }}
+                    className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-800 shadow-sm transition hover:border-violet-300"
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4">
               <div className="text-sm font-black text-slate-900">Thème</div>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
+              <div className="mt-2 flex flex-nowrap items-center gap-3 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible">
+                <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
                   <span className="text-xs font-bold text-slate-700/70">
                     Primaire
                   </span>
@@ -306,7 +373,7 @@ export function CreateGroupModal({
                     aria-label="Couleur primaire"
                   />
                 </div>
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
+                <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
                   <span className="text-xs font-bold text-slate-700/70">
                     Secondaire
                   </span>
@@ -318,7 +385,17 @@ export function CreateGroupModal({
                     aria-label="Couleur secondaire"
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
+                  <span className="text-xs font-bold text-slate-700/70">Accent</span>
+                  <input
+                    type="color"
+                    value={accent.trim() ? accent : secondary}
+                    onChange={(e) => setAccent(e.target.value)}
+                    className="h-7 w-10 cursor-pointer rounded-lg border border-slate-200 bg-white"
+                    aria-label="Couleur d’accent (optionnelle)"
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
                   <Badge className="border-slate-200 bg-white/80 text-slate-900">
                     Fond
                   </Badge>
@@ -348,6 +425,29 @@ export function CreateGroupModal({
                   </Button>
                 </div>
               </div>
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <Input
+                  value={primary}
+                  onChange={(e) => setPrimary(e.target.value)}
+                  className="font-mono text-xs"
+                  placeholder="#000000"
+                  aria-label="Primaire hex"
+                />
+                <Input
+                  value={secondary}
+                  onChange={(e) => setSecondary(e.target.value)}
+                  className="font-mono text-xs"
+                  placeholder="#000000"
+                  aria-label="Secondaire hex"
+                />
+                <Input
+                  value={accent}
+                  onChange={(e) => setAccent(e.target.value)}
+                  className="font-mono text-xs"
+                  placeholder="Accent (optionnel)"
+                  aria-label="Accent hex"
+                />
+              </div>
             </div>
 
             <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
@@ -360,7 +460,16 @@ export function CreateGroupModal({
                 onClick={() => {
                   setNameError(null)
                   setTagError(null)
-                  if (containsBannedWord(draft.name)) {
+                  const trimmedName = name.trim()
+                  if (trimmedName.length < 2) {
+                    setNameError('Donne un nom d’au moins 2 caractères à ton salon.')
+                    return
+                  }
+                  if (trimmedName.length > 80) {
+                    setNameError('Raccourcis le nom (80 caractères max).')
+                    return
+                  }
+                  if (containsBannedWord(trimmedName)) {
                     setNameError('Ce nom contient des propos inappropriés. Choisis un autre nom.')
                     return
                   }
@@ -382,14 +491,16 @@ export function CreateGroupModal({
                       return
                     }
                   }
+                  const theme: GroupTheme = { primary, secondary, background }
+                  if (accent.trim()) theme.accent = accent.trim()
                   onCreate({
-                    name: draft.name,
-                    emoji: draft.emoji,
-                    location: draft.location,
-                    motto: draft.motto,
-                    theme: draft.theme,
-                    members: draft.members,
-                    intensity: draft.intensity,
+                    name: trimmedName,
+                    emoji: (emoji.trim() || '🧢').slice(0, 8),
+                    location: location.trim() || undefined,
+                    motto: (motto.trim() || 'On vit le foot ensemble.').slice(0, 200),
+                    theme,
+                    members: Math.max(1, draft.members),
+                    intensity,
                     channels: draft.channels,
                     groupKind,
                     hashtags: finalTags.length > 0 ? finalTags : undefined,
@@ -408,11 +519,13 @@ export function CreateGroupModal({
               <GroupCard group={draft} />
             </div>
             <div className="mt-3 text-sm font-semibold text-slate-700/70">
-              Tu peux modifier ces paramètres quand tu veux (mock).
+              Après validation, tu es redirigé vers ton salon. Le groupe est sauvegardé dans ton navigateur (onglet
+              Groupes → Mes groupes).
             </div>
           </div>
         </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

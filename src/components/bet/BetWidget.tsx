@@ -17,8 +17,11 @@ function fmtOdds(n: number) {
 export function BetWidget({
   match,
   betting,
+  /** Bandeau pronos plus bas sur le live (moins de padding / hauteurs). */
+  compact = false,
 }: {
   match: Match
+  compact?: boolean
   betting?: {
     wallet: Wallet
     matchBets: Bet[]
@@ -37,7 +40,7 @@ export function BetWidget({
 }) {
   const fallback = useBetting(match.id)
   const { wallet, openBets, matchBets, placeBet, cancelBet: _cancelBet, stats } = betting ?? fallback
-  const [open, setOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [stake, setStake] = useState(25)
   const [pending, setPending] = useState<null | {
     market: BetMarket
@@ -49,6 +52,10 @@ export function BetWidget({
 
   const isLive = match.status === 'live'
   const isUpcoming = match.status === 'upcoming'
+
+  const maxStakeCap = 250
+  const maxStake = Math.min(maxStakeCap, Math.max(0, wallet.tokens))
+  const minStake = 5
 
   const markets = useMemo(() => {
     const base = [
@@ -101,62 +108,98 @@ export function BetWidget({
     return [scorer, ...base]
   }, [isLive, isUpcoming, match.away.shortName, match.home.shortName])
 
-  const canStake = stake >= 5 && stake <= 250
-  const stakePct = Math.round((Math.min(250, Math.max(0, stake)) / 250) * 100)
+  const canStake =
+    maxStake >= minStake && stake >= minStake && stake <= maxStake && stake <= wallet.tokens
+  const stakePct =
+    maxStake > 0 ? Math.round((Math.min(maxStake, Math.max(0, stake)) / maxStake) * 100) : 0
   const settled = useMemo(() => matchBets.filter((b) => b.status !== 'open'), [matchBets])
+
+  const openSheet = () => setSheetOpen(true)
+
+  const pickQuick = (side: 'home' | 'away') => {
+    setPending({
+      market: isLive ? 'next_goal' : 'first_goal',
+      selection: side,
+      odds: 1.9,
+      label:
+        side === 'home'
+          ? `${isLive ? 'Prochain but' : '1er but'} ${match.home.shortName}`
+          : `${isLive ? 'Prochain but' : '1er but'} ${match.away.shortName}`,
+    })
+    if (maxStake >= minStake) {
+      setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+    }
+    openSheet()
+  }
 
   const placePending = () => {
     if (!pending) return
     const res = placeBet(pending.market, pending.selection, stake, pending.odds)
-    if (res && typeof res === 'object' && 'ok' in res && (res as any).ok === false) {
+    if (res && typeof res === 'object' && 'ok' in res && (res as { ok: boolean }).ok === false) {
       setNotice({ tone: 'err', text: 'Pas assez de jetons.' })
       return
     }
     setNotice({ tone: 'ok', text: 'Pari activé.' })
     setPending(null)
-    window.setTimeout(() => setNotice(null), 1400)
+    window.setTimeout(() => {
+      setNotice(null)
+      setSheetOpen(false)
+    }, 1100)
   }
 
+  const potentialReturn = pending ? Math.round(stake * pending.odds * 10) / 10 : 0
+
   return (
-    <div className="rounded-xl border border-slate-200/60 bg-white/90 p-3 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 rounded-lg outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-500/30"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-        >
-          <span className="text-lg" aria-hidden="true">
+    <div className={cn('rounded-xl border border-slate-200/60 bg-white/90 shadow-sm', compact ? 'p-2' : 'p-3')}>
+      <button
+        type="button"
+        className={cn(
+          'flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/50 bg-gradient-to-r from-sky-50/80 to-white text-left outline-none transition hover:border-sky-200 hover:from-sky-50 focus-visible:ring-2 focus-visible:ring-sky-500/35',
+          compact ? 'px-2.5 py-2' : 'px-3 py-2.5',
+        )}
+        onClick={openSheet}
+        aria-haspopup="dialog"
+        aria-expanded={sheetOpen}
+      >
+        <span className="inline-flex items-center gap-1.5 sm:gap-2">
+          <span className={cn(compact ? 'text-base' : 'text-lg')} aria-hidden="true">
             🎯
           </span>
-          <span className="text-sm font-black text-slate-900">Pronos</span>
-          <span className="text-xs font-bold text-slate-500">
-            {open ? '▼' : '▶'}
+          <span>
+            <span className="block text-sm font-black text-slate-900">Pronos</span>
+            {!compact ? (
+              <span className="block text-[11px] font-semibold text-slate-500">
+                Touche pour choisir ta mise et parier
+              </span>
+            ) : (
+              <span className="hidden text-[10px] font-semibold text-slate-500 sm:block">
+                Mise & marchés
+              </span>
+            )}
           </span>
-        </button>
-        <div className="flex items-center gap-2">
+        </span>
+        <span className="flex flex-wrap items-center justify-end gap-2">
           <Badge className="border-slate-200/70 bg-white text-slate-800">
             {wallet.tokens} jetons
           </Badge>
           <Badge className="border-slate-200/60 bg-slate-50/80 text-slate-600">
             {stats.won}/{Math.max(1, stats.total)} ✓
           </Badge>
-        </div>
-      </div>
+          <span className="rounded-lg bg-sky-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+            Ouvrir
+          </span>
+        </span>
+      </button>
 
-      <div className="mt-3 space-y-2">
-        <div className="grid grid-cols-2 gap-2">
+      <div className={cn('space-y-2', compact ? 'mt-2' : 'mt-3')}>
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
           <Button
             variant="soft"
-            className="h-10 min-w-0 rounded-xl justify-between gap-2 px-4 text-sm font-bold"
-            onClick={() =>
-              setPending({
-                market: isLive ? 'next_goal' : 'first_goal',
-                selection: 'home',
-                odds: 1.9,
-                label: `${isLive ? 'Prochain but' : '1er but'} ${match.home.shortName}`,
-              })
-            }
+            className={cn(
+              'min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:px-4',
+              compact ? 'h-9' : 'h-10',
+            )}
+            onClick={() => pickQuick('home')}
           >
             <span className="min-w-0 overflow-hidden text-ellipsis">
               {match.home.shortName}
@@ -167,15 +210,11 @@ export function BetWidget({
           </Button>
           <Button
             variant="soft"
-            className="h-10 min-w-0 rounded-xl justify-between gap-2 px-4 text-sm font-bold"
-            onClick={() =>
-              setPending({
-                market: isLive ? 'next_goal' : 'first_goal',
-                selection: 'away',
-                odds: 1.9,
-                label: `${isLive ? 'Prochain but' : '1er but'} ${match.away.shortName}`,
-              })
-            }
+            className={cn(
+              'min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:px-4',
+              compact ? 'h-9' : 'h-10',
+            )}
+            onClick={() => pickQuick('away')}
           >
             <span className="min-w-0 overflow-hidden text-ellipsis">
               {match.away.shortName}
@@ -186,50 +225,12 @@ export function BetWidget({
           </Button>
         </div>
 
-        {pending ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-200/60 bg-blue-50/50 px-4 py-2.5">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-black text-slate-900">
-                {pending.label}
-              </div>
-              <div className="mt-0.5 text-xs font-semibold text-slate-600">
-                {stake}j • {fmtOdds(pending.odds)}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                className="h-8 rounded-lg px-3 text-sm"
-                onClick={() => setPending(null)}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="primary"
-                className="h-8 rounded-lg px-4 text-sm font-bold"
-                disabled={!canStake}
-                onClick={placePending}
-              >
-                Valider
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        {notice ? (
-          <div
-            className={cn(
-              'rounded-xl px-4 py-2.5 text-sm font-semibold',
-              notice.tone === 'ok'
-                ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
-                : 'border border-rose-200 bg-rose-50 text-rose-800',
-            )}
-          >
-            {notice.text}
-          </div>
-        ) : null}
-
-        <div className="flex items-center justify-between rounded-xl border border-slate-200/50 bg-slate-50/50 px-3 py-2">
+        <div
+          className={cn(
+            'flex items-center justify-between rounded-xl border border-slate-200/50 bg-slate-50/50 px-2.5 sm:px-3',
+            compact ? 'py-1.5' : 'py-2',
+          )}
+        >
           <div className="flex gap-2 text-xs font-semibold text-slate-600">
             <span>En cours: {openBets.length}</span>
             <span>•</span>
@@ -244,79 +245,252 @@ export function BetWidget({
         </div>
       </div>
 
-      {open && (
-        <div className="mt-3 max-h-[280px] space-y-3 overflow-y-auto pr-1">
-          <div className="rounded-xl border border-slate-200/60 bg-white/80 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-slate-600">Mise</span>
-              <span
-                className={cn(
-                  'text-sm font-black',
-                  canStake ? 'text-slate-900' : 'text-rose-600',
-                )}
-              >
-                {stake}j
-              </span>
-            </div>
-            <div className="mt-2">
-              <ProgressBar value={stakePct} tone="blue" />
-            </div>
-            <div className="mt-2 flex gap-2">
-              {[10, 25, 50, 100].map((n) => (
-                <Button
-                  key={n}
-                  variant={stake === n ? 'primary' : 'soft'}
-                  className="h-8 rounded-lg px-3"
-                  onClick={() => setStake(n)}
+      {sheetOpen ? (
+        <div
+          className="fixed inset-0 z-[88] flex items-end justify-center sm:items-center sm:p-4"
+          data-no-swipe="true"
+          data-tf-modal="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bet-sheet-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
+            onClick={() => setSheetOpen(false)}
+            aria-label="Fermer les pronos"
+          />
+          <div
+            className={cn(
+              'relative z-10 flex max-h-[min(92vh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200/80 bg-white shadow-2xl',
+              'sm:max-h-[min(85vh,620px)] sm:rounded-3xl',
+            )}
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-5">
+              <div>
+                <h2 id="bet-sheet-title" className="text-base font-black text-slate-900">
+                  Pronos
+                </h2>
+                <p className="text-[11px] font-semibold text-slate-500">
+                  Mise d’abord, puis valide ta sélection
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className="border-slate-200 bg-slate-50 text-slate-800">
+                  {wallet.tokens} j.
+                </Badge>
+                <button
+                  type="button"
+                  className="grid size-10 place-items-center rounded-2xl border border-slate-200 bg-white text-lg font-bold text-slate-600 transition hover:bg-slate-50"
+                  onClick={() => setSheetOpen(false)}
+                  aria-label="Fermer"
                 >
-                  {n}
-                </Button>
-              ))}
+                  ×
+                </button>
+              </div>
             </div>
-          </div>
 
-          {markets.map((m) => (
-            <div
-              key={m.id}
-              className="rounded-xl border border-slate-200/60 bg-white/80 p-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-slate-900">
-                  {m.label}
-                </span>
-                {!m.enabled && (
-                  <Badge className="border-slate-200 bg-slate-100 text-slate-600">
-                    Live
-                  </Badge>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+              <div className="rounded-2xl border border-sky-200/70 bg-gradient-to-b from-sky-50/90 to-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-sky-900/80">
+                    Ta mise
+                  </span>
+                  <span
+                    className={cn(
+                      'text-lg font-black tabular-nums',
+                      canStake ? 'text-slate-900' : 'text-rose-600',
+                    )}
+                  >
+                    {stake} j.
+                  </span>
+                </div>
+                {maxStake < minStake ? (
+                  <p className="mt-2 text-xs font-semibold text-rose-600">
+                    Pas assez de jetons pour miser (minimum {minStake} j.).
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-3">
+                      <input
+                        type="range"
+                        min={minStake}
+                        max={maxStake}
+                        step={5}
+                        value={Math.min(stake, maxStake)}
+                        onChange={(e) => setStake(Number(e.target.value))}
+                        className="h-2 w-full cursor-pointer accent-sky-600"
+                        aria-label="Réglage de la mise"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <ProgressBar value={stakePct} tone="blue" />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[10, 25, 50, 100].map((n) => (
+                        <Button
+                          key={n}
+                          type="button"
+                          variant={stake === n ? 'primary' : 'soft'}
+                          className="h-9 rounded-xl px-3 text-sm font-black"
+                          disabled={n > maxStake}
+                          onClick={() => setStake(Math.min(n, maxStake))}
+                        >
+                          {n}
+                        </Button>
+                      ))}
+                      <Button
+                        type="button"
+                        variant={stake === maxStake ? 'primary' : 'soft'}
+                        className="h-9 rounded-xl px-3 text-sm font-black"
+                        disabled={maxStake < minStake}
+                        onClick={() => setStake(maxStake)}
+                      >
+                        Max
+                      </Button>
+                    </div>
+                  </>
+                )}
+                {pending ? (
+                  <p className="mt-3 text-xs font-semibold text-slate-600">
+                    Gain potentiel (brut) :{' '}
+                    <span className="font-black text-emerald-700">{potentialReturn} j.</span>{' '}
+                    <span className="text-slate-400">(@ {fmtOdds(pending.odds)})</span>
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs font-semibold text-slate-500">
+                    Choisis un marché ci-dessous pour voir le gain estimé.
+                  </p>
                 )}
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {m.picks.map((p) => (
+
+              {pending ? (
+                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-200/70 bg-blue-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-wide text-blue-900/70">
+                      Sélection
+                    </div>
+                    <div className="truncate text-sm font-black text-slate-900">{pending.label}</div>
+                    <div className="mt-0.5 text-xs font-semibold text-slate-600">
+                      {stake} j. · cote {fmtOdds(pending.odds)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      variant="ghost"
+                      className="h-10 rounded-xl px-4"
+                      onClick={() => setPending(null)}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      variant="primary"
+                      className="h-10 rounded-xl px-5 font-black"
+                      disabled={!canStake}
+                      onClick={placePending}
+                    >
+                      Valider le pari
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {notice ? (
+                <div
+                  className={cn(
+                    'mt-4 rounded-2xl px-4 py-3 text-sm font-semibold',
+                    notice.tone === 'ok'
+                      ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                      : 'border border-rose-200 bg-rose-50 text-rose-800',
+                  )}
+                >
+                  {notice.text}
+                </div>
+              ) : null}
+
+              <div className="mt-5">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  Coup rapide — but
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   <Button
-                    key={p.id}
                     variant="soft"
-                    className="h-9 rounded-lg justify-between text-xs"
-                    disabled={!m.enabled}
-                    onClick={() => {
-                      setPending({
-                        market: m.id,
-                        selection: p.id,
-                        odds: p.odds,
-                        label: `${m.label} • ${p.label}`,
-                      })
-                    }}
+                    className="h-11 justify-between rounded-xl px-4 text-sm font-bold"
+                    onClick={() => pickQuick('home')}
                   >
-                    <span className="truncate">{p.label}</span>
-                    <span className="font-black text-slate-500">
-                      {fmtOdds(p.odds)}
+                    <span className="truncate">{match.home.shortName}</span>
+                    <span className="shrink-0 text-xs font-black text-slate-500">
+                      {fmtOdds(1.9)}
                     </span>
                   </Button>
+                  <Button
+                    variant="soft"
+                    className="h-11 justify-between rounded-xl px-4 text-sm font-bold"
+                    onClick={() => pickQuick('away')}
+                  >
+                    <span className="truncate">{match.away.shortName}</span>
+                    <span className="shrink-0 text-xs font-black text-slate-500">
+                      {fmtOdds(1.9)}
+                    </span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3 pb-2">
+                {markets.map((m) => (
+                  <div
+                    key={m.id}
+                    className="rounded-2xl border border-slate-200/70 bg-slate-50/40 p-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-black text-slate-900">{m.label}</span>
+                      {!m.enabled && (
+                        <Badge className="border-slate-200 bg-slate-100 text-slate-600">
+                          Live
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-2 grid grid-cols-3 gap-2">
+                      {m.picks.map((p) => (
+                        <Button
+                          key={p.id}
+                          variant="soft"
+                          className="h-10 min-w-0 justify-between gap-1 rounded-xl px-2 text-xs font-bold"
+                          disabled={!m.enabled}
+                          onClick={() => {
+                            setPending({
+                              market: m.id,
+                              selection: p.id,
+                              odds: p.odds,
+                              label: `${m.label} • ${p.label}`,
+                            })
+                            if (maxStake >= minStake) {
+                              setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                            }
+                          }}
+                        >
+                          <span className="min-w-0 truncate">{p.label}</span>
+                          <span className="shrink-0 font-black text-slate-500">
+                            {fmtOdds(p.odds)}
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
+
+              <Link
+                to="/profile"
+                className="mt-2 block pb-2 text-center text-xs font-bold text-blue-600 hover:text-blue-700"
+                onClick={() => setSheetOpen(false)}
+              >
+                Voir l’historique dans le profil →
+              </Link>
             </div>
-          ))}
+          </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

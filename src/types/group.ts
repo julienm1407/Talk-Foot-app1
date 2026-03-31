@@ -1,7 +1,38 @@
+/** Fond de la zone de discussion des salons (couleur, image CSS preset, ou hériter du thème carte). */
+export type GroupSalonChatBackdrop =
+  | { mode: 'inherit' }
+  | { mode: 'solid'; color: string }
+  | { mode: 'preset'; presetId: string }
+
+/** Bandes de l’écharpe débloquée quand tu rejoins le groupe (envoyable dans les chats). */
+export type GroupScarfStyle = {
+  label: string
+  colorA: string
+  colorB: string
+  colorC: string
+}
+
+/** Média de présentation sur la fiche groupe (modération plateforme — démo). */
+export type GroupPresentationMedia = {
+  type: 'image' | 'video'
+  url: string
+  posterUrl?: string
+  moderationStatus: 'pending' | 'approved' | 'rejected'
+  caption?: string
+}
+
 export type GroupTheme = {
   primary: string
   secondary: string
   background: 'clean' | 'smoke' | 'stripe'
+  /** Bordures / petits accents (optionnel, sinon dérivé du secondaire en UI) */
+  accent?: string
+  /** Contour des cartes / liste des salons (hex). */
+  salonBoxBorder?: string
+  /** Fond derrière le fil de messages du salon. */
+  salonChatBackdrop?: GroupSalonChatBackdrop
+  /** Emojis rapides dans le composer (max 8 recommandé). */
+  quickEmotes?: string[]
 }
 
 export type SupporterChannel = {
@@ -43,5 +74,9 @@ export type SupporterGroup = {
    */
   hashtags?: string[]
   lastMessagePreview?: string
+  /** Écharpe du groupe (partage dans live, général, etc.). */
+  scarf?: GroupScarfStyle
+  /** Photo ou vidéo supporters sur l’encart (après validation). */
+  presentationMedia?: GroupPresentationMedia
 }
 

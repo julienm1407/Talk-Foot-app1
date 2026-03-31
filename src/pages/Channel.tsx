@@ -38,6 +38,9 @@ import { StadiumModeEncart, TribuneQuickSwitch } from '../components/channel/Sta
 import { Button } from '../components/ui/Button'
 import { cn } from '../utils/cn'
 import { useMatchTribune } from '../hooks/useMatchTribune'
+import { useMatchStadiumGroup } from '../hooks/useMatchStadiumGroup'
+import { useSupporterGroups } from '../hooks/useSupporterGroups'
+import { salonsForMatch } from '../utils/matchSalons'
 import { aggregateTribuneStats, useTribuneLiveStats } from '../hooks/useTribuneLiveStats'
 import { randomTribuneForBot } from '../data/tribunes'
 
@@ -53,9 +56,36 @@ export function ChannelPage() {
   )
 
   const users = useMemo(() => [currentUser, ...mockUsers], [])
-  const { virageMode, favoriteClubIds, preferencesComplete, setVirageMode } =
-    useFanPreferences()
+  const { virageMode, favoriteClubIds } = useFanPreferences()
   const { tribune: activeTribune, setTribune } = useMatchTribune(matchId)
+  const { stadiumGroupId, clearStadiumGroup } = useMatchStadiumGroup(matchId)
+  const { groups: supporterGroupsAll, joinedGroupIds } = useSupporterGroups()
+  const activeStadiumGroup = useMemo(
+    () =>
+      stadiumGroupId
+        ? supporterGroupsAll.find((g) => g.id === stadiumGroupId) ?? null
+        : null,
+    [stadiumGroupId, supporterGroupsAll],
+  )
+  const salonPoolGroupIds = useMemo(() => {
+    if (!match) return [] as string[]
+    return salonsForMatch(match, supporterGroupsAll).map((p) => p.group.id)
+  }, [match, supporterGroupsAll])
+
+  const scarfChoices = useMemo(
+    () =>
+      supporterGroupsAll
+        .filter((g) => joinedGroupIds.includes(g.id) && g.scarf)
+        .map((g) => ({
+          groupId: g.id,
+          groupName: g.name,
+          text: g.scarf!.label,
+          colorA: g.scarf!.colorA,
+          colorB: g.scarf!.colorB,
+          colorC: g.scarf!.colorC,
+        })),
+    [supporterGroupsAll, joinedGroupIds],
+  )
   const tribuneLiveStats = useTribuneLiveStats()
   const [chatFeedScope, setChatFeedScope] = useState<'general' | 'tribune'>('tribune')
 
@@ -138,7 +168,11 @@ export function ChannelPage() {
         return Boolean(fid && favoriteClubIds.includes(fid))
       })
     }
-    if (chatFeedScope === 'tribune') {
+    if (stadiumGroupId) {
+      list = list.filter(
+        (m) => m.userId === currentUser.id || m.supporterGroupId === stadiumGroupId,
+      )
+    } else if (chatFeedScope === 'tribune') {
       list = list.filter((m) => !m.tribune || m.tribune === activeTribune)
     }
     return list
@@ -149,32 +183,54 @@ export function ChannelPage() {
     usersById,
     activeTribune,
     chatFeedScope,
+    stadiumGroupId,
   ])
 
   const crowdMetrics = useMemo(() => {
+    if (stadiumGroupId && activeStadiumGroup) {
+      const est = Math.round(
+        activeStadiumGroup.members * (activeStadiumGroup.intensity / 100) * 0.04,
+      )
+      return {
+        participants: Math.max(28, Math.min(9200, est)),
+        activity: activeStadiumGroup.intensity,
+      }
+    }
     if (chatFeedScope === 'general') {
       return aggregateTribuneStats(tribuneLiveStats)
     }
     return tribuneLiveStats[activeTribune]
-  }, [chatFeedScope, activeTribune, tribuneLiveStats])
+  }, [
+    activeStadiumGroup,
+    chatFeedScope,
+    activeTribune,
+    stadiumGroupId,
+    tribuneLiveStats,
+  ])
 
   const reactionDensity =
-    chatFeedScope === 'general'
-      ? 'full'
-      : activeTribune === 'analyse'
+    stadiumGroupId && activeStadiumGroup
+      ? activeStadiumGroup.intensity < 42
         ? 'minimal'
-        : activeTribune === 'chill'
-          ? 'chill'
-          : 'full'
+        : 'full'
+      : chatFeedScope === 'general'
+        ? 'full'
+        : activeTribune === 'analyse'
+          ? 'minimal'
+          : activeTribune === 'chill'
+            ? 'chill'
+            : 'full'
 
   const tribuneAccentClass =
-    chatFeedScope === 'general'
-      ? 'border-l-slate-400/45'
-      : activeTribune === 'virage'
-        ? 'border-l-rose-400/55'
-        : activeTribune === 'analyse'
-          ? 'border-l-slate-400/50'
-          : 'border-l-teal-400/50'
+    stadiumGroupId && activeStadiumGroup
+      ? 'border-l-transparent'
+      : chatFeedScope === 'general'
+        ? 'border-l-slate-400/45'
+        : activeTribune === 'virage'
+          ? 'border-l-rose-400/55'
+          : activeTribune === 'analyse'
+            ? 'border-l-slate-400/50'
+            : 'border-l-teal-400/50'
 
   const feedRef = useAutoScroll<HTMLDivElement>([
     visibleMessages.length,
@@ -478,6 +534,11 @@ export function ChannelPage() {
     })
   }
 
+  const messageExtras = () =>
+    stadiumGroupId
+      ? { tribune: activeTribune, supporterGroupId: stadiumGroupId }
+      : { tribune: activeTribune }
+
   const onSend = (text: string) => {
     const msg: Message = {
       id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -485,7 +546,7 @@ export function ChannelPage() {
       userId: currentUser.id,
       text,
       createdAt: Date.now(),
-      tribune: activeTribune,
+      ...messageExtras(),
     }
     setMessages((prev) => [...prev, msg])
   }
@@ -498,7 +559,7 @@ export function ChannelPage() {
       text: '[GIF]',
       createdAt: Date.now(),
       gifUrl,
-      tribune: activeTribune,
+      ...messageExtras(),
     }
     setMessages((prev) => [...prev, msg])
   }
@@ -511,7 +572,20 @@ export function ChannelPage() {
       text: '[Emote]',
       createdAt: Date.now(),
       emoteId,
-      tribune: activeTribune,
+      ...messageExtras(),
+    }
+    setMessages((prev) => [...prev, msg])
+  }
+
+  const onSendScarf = (payload: NonNullable<Message['groupScarf']>) => {
+    const msg: Message = {
+      id: `msg-scarf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      matchId: channelMatchId,
+      userId: currentUser.id,
+      text: '',
+      createdAt: Date.now(),
+      groupScarf: payload,
+      ...messageExtras(),
     }
     setMessages((prev) => [...prev, msg])
   }
@@ -574,6 +648,11 @@ export function ChannelPage() {
     const tick = () => {
       const u = mockUsers[(Math.random() * mockUsers.length) | 0]
       const text = phrases[(Math.random() * phrases.length) | 0]
+      const gid = stadiumGroupId
+        ? stadiumGroupId
+        : salonPoolGroupIds.length > 0
+          ? salonPoolGroupIds[(Math.random() * salonPoolGroupIds.length) | 0]
+          : undefined
       setMessages((prev) =>
         [
           ...prev,
@@ -584,6 +663,7 @@ export function ChannelPage() {
             text,
             createdAt: Date.now(),
             tribune: randomTribuneForBot(),
+            ...(gid ? { supporterGroupId: gid } : {}),
           },
         ].slice(-220),
       )
@@ -598,7 +678,7 @@ export function ChannelPage() {
 
     timeout = window.setTimeout(tick, 900)
     return () => window.clearTimeout(timeout)
-  }, [match?.status, matchId])
+  }, [match?.status, matchId, stadiumGroupId, salonPoolGroupIds, channelMatchId])
 
   if (!match || !matchId || !matchView) {
     return (
@@ -615,7 +695,9 @@ export function ChannelPage() {
 
   return (
     <div
-      className="tf-match-page h-[calc(100dvh-120px)] min-w-0 overflow-hidden"
+      className={cn(
+        'tf-match-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden',
+      )}
       style={
         {
           '--tf-match-home': match.home.colors.primary,
@@ -642,7 +724,11 @@ export function ChannelPage() {
         onDone={flushEventQueue}
       />
 
-      <div className="relative h-full overflow-hidden rounded-2xl border border-tf-grey-pastel/50 bg-tf-white shadow-[0_8px_40px_rgba(1,30,51,0.08)]">
+      <div
+        className={cn(
+          'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 bg-tf-white shadow-[0_8px_40px_rgba(1,30,51,0.08)]',
+        )}
+      >
         {isLiveOpen && match.status === 'live' && (
           <LiveCommentator
             pipTargetRef={pipContainerRef}
@@ -654,13 +740,15 @@ export function ChannelPage() {
                 userId: currentUser.id,
                 text: `🎙️ ${text}`,
                 createdAt: Date.now(),
-                tribune: activeTribune,
+                ...messageExtras(),
               }
               setMessages((prev) => [...prev, msg])
             }}
           />
         )}
-        <LiveEffects events={recentReactions} fullScreen />
+        {reactionDensity !== 'chill' ? (
+          <LiveEffects events={recentReactions} fullScreen />
+        ) : null}
         {isLiveOpen && (
           <div
             className="absolute top-0 left-0 right-0 z-20 h-1 overflow-hidden rounded-t-2xl"
@@ -676,14 +764,19 @@ export function ChannelPage() {
             />
           </div>
         )}
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* Hero header */}
-          <div className={cn('shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 px-4 py-3 backdrop-blur-md sm:px-5', isLiveOpen && 'pt-4')}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <div
+            className={cn(
+              'shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 px-3 py-2 backdrop-blur-md sm:px-4 lg:py-2.5',
+              isLiveOpen && 'pt-2.5 sm:pt-3',
+            )}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
               <ChannelHeader match={matchView} />
               <ActiveUsers users={users} />
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               <Button
                 variant="primary"
                 type="button"
@@ -711,7 +804,7 @@ export function ChannelPage() {
               </Link>
             </div>
             {isLiveOpen && match.status === 'live' && lastMoment ? (
-              <div className="mt-3 flex items-center gap-3 overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-4 py-2.5">
+              <div className="mt-2 flex items-center gap-2 overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-3 py-2 sm:gap-3 sm:px-3.5">
                 <span className="text-xs font-black tabular-nums text-tf-grey">
                   {lastMoment.minute > 0 ? `${lastMoment.minute}'` : '—'}
                 </span>
@@ -724,26 +817,46 @@ export function ChannelPage() {
               </div>
             ) : null}
             {isLiveOpen ? (
-              <StadiumModeEncart matchId={match.id} activeTribune={activeTribune} />
+              <StadiumModeEncart
+                matchId={match.id}
+                activeTribune={activeTribune}
+                stadiumGroupLabel={activeStadiumGroup?.name ?? null}
+                stadiumGroupEmoji={activeStadiumGroup?.emoji ?? null}
+                onClearStadiumGroup={stadiumGroupId ? clearStadiumGroup : undefined}
+              />
             ) : null}
           </div>
 
-          <div className="grid flex-1 min-h-0 gap-3 p-3 sm:p-4 lg:grid-cols-[1.25fr_0.75fr] lg:items-stretch">
-            {/* Left: Pitch + Moments + Bets */}
-            <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
-              <div className="min-h-0 flex flex-1 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 bg-gradient-to-b from-tf-grey-pastel/20 to-tf-white/90 shadow-sm">
-                <div className="order-2 shrink-0 border-b border-tf-grey-pastel/50 p-4 lg:order-1">
-                  <BetWidget match={matchView} betting={betting} />
+          <div
+            className={cn(
+              'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2 sm:gap-3 sm:p-3',
+              'lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch xl:grid-cols-[1.25fr_0.75fr]',
+            )}
+          >
+            {/* Left: Pitch + Moments + Bets — scroll interne sur mobile pour laisser la place au chat fixe */}
+            <div
+              className={cn(
+                'flex w-full min-w-0 flex-col gap-2 sm:gap-3',
+                'max-h-[min(48vh,26rem)] shrink-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
+                'lg:max-h-none lg:min-h-0 lg:flex-1 lg:overflow-hidden',
+              )}
+            >
+              <div className="flex flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 bg-gradient-to-b from-tf-grey-pastel/20 to-tf-white/90 shadow-sm lg:min-h-0 lg:flex-1">
+                <div className="order-2 shrink-0 border-b border-tf-grey-pastel/50 p-2.5 sm:p-3 lg:order-1">
+                  <BetWidget match={matchView} betting={betting} compact />
                 </div>
-                <div className="order-1 min-h-0 flex-1 p-4 lg:order-2">
+                <div className="order-1 min-h-0 flex-1 p-2.5 sm:p-3 lg:order-2">
                   <div
                     className={cn(
-                      'grid h-full min-h-0 gap-4',
-                      isLiveOpen ? 'lg:grid-cols-[1.4fr_0.6fr]' : 'grid-cols-1',
+                      'grid min-h-0 gap-2 sm:gap-3',
+                      'max-lg:auto-rows-min',
+                      isLiveOpen
+                        ? 'lg:h-full lg:grid-cols-1 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[1.05fr_0.95fr] xl:grid-rows-none'
+                        : 'grid-cols-1 lg:h-full',
                     )}
                   >
                     {isLiveOpen && (
-                      <div className="relative min-h-0 overflow-visible">
+                      <div className="relative flex min-h-[10rem] flex-col overflow-visible max-lg:h-[min(36vh,280px)] lg:min-h-0 lg:h-full">
                         <div
                           ref={pipContainerRef}
                           className="absolute top-3 right-3 z-30 h-0 w-0 overflow-visible sm:top-4 sm:right-4"
@@ -752,8 +865,8 @@ export function ChannelPage() {
                         <LivePitch match={matchView} />
                       </div>
                     )}
-                    <div className="min-h-0 flex flex-col overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 shadow-sm">
-                      <div className="shrink-0 border-b border-tf-grey-pastel/50 px-4 py-3">
+                    <div className="flex min-h-[10rem] flex-col overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 shadow-sm lg:min-h-0 lg:flex-1">
+                      <div className="shrink-0 border-b border-tf-grey-pastel/50 px-3 py-2 sm:px-3.5">
                         <h2 className="font-display text-sm font-black text-tf-dark">
                           {match.status === 'live' ? 'Moments forts' : 'Avant-match'}
                         </h2>
@@ -763,7 +876,12 @@ export function ChannelPage() {
                             : 'Compos probables, forme, infos'}
                         </p>
                       </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+                      <div
+                        className={cn(
+                          'min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-2 sm:px-3.5',
+                          '[-webkit-overflow-scrolling:touch]',
+                        )}
+                      >
                         {match.status === 'live' ? (
                           <MatchHighlights
                             items={highlights}
@@ -785,45 +903,57 @@ export function ChannelPage() {
               ref={chatColumnRef}
               id="channel-live-chat"
               className={cn(
-                'relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 border-l-4 bg-gradient-to-b from-tf-grey-pastel/15 to-tf-white/95 shadow-sm',
+                'relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 border-l-4 bg-gradient-to-b from-tf-grey-pastel/15 to-tf-white/95 shadow-sm',
                 tribuneAccentClass,
               )}
+              style={
+                activeStadiumGroup
+                  ? { borderLeftColor: activeStadiumGroup.theme.primary }
+                  : undefined
+              }
             >
-              {isLiveOpen && <FloatingReactions items={floating} />}
+              {isLiveOpen && reactionDensity !== 'chill' ? (
+                <FloatingReactions items={floating} />
+              ) : null}
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div className="shrink-0 border-b border-tf-grey-pastel/50 px-3 py-2 sm:px-4 sm:py-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="font-display text-sm font-black text-tf-dark">Chat live</h2>
-                    {isLiveOpen &&
-                    match.status === 'live' &&
-                    preferencesComplete &&
-                    favoriteClubIds.length > 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => setVirageMode(!virageMode)}
-                        className={cn(
-                          'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black transition sm:px-3 sm:text-[11px]',
-                          virageMode
-                            ? 'border-tf-dark bg-tf-dark text-white'
-                            : 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20',
-                        )}
-                        title="Messages filtrés sur tes clubs favoris"
-                      >
-                        {virageMode ? '🔥 Virage ON' : 'Mode Virage'}
-                      </button>
-                    ) : null}
-                  </div>
+                <div className="shrink-0 border-b border-tf-grey-pastel/50 px-3 py-1.5 sm:px-3.5 sm:py-2">
+                  <h2 className="font-display text-sm font-black text-tf-dark">Chat live</h2>
                   {isLiveOpen ? (
-                    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-                      <TribuneQuickSwitch
-                        feedScope={chatFeedScope}
-                        onSelectGeneral={() => setChatFeedScope('general')}
-                        selected={activeTribune}
-                        onSelect={(id) => {
-                          setTribune(id)
-                          setChatFeedScope('tribune')
-                        }}
-                      />
+                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 sm:mt-2 sm:gap-x-3">
+                      {stadiumGroupId && activeStadiumGroup ? (
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            className="h-8 shrink-0 rounded-xl px-2.5 py-0 text-[10px] font-black sm:h-9 sm:px-3 sm:text-[11px]"
+                            onClick={clearStadiumGroup}
+                          >
+                            🏟️ Tout le stade
+                          </Button>
+                          <span
+                            className="max-w-[min(100%,200px)] truncate rounded-xl border border-violet-200/80 bg-violet-50/90 px-2 py-1 text-[10px] font-black text-violet-950"
+                            title={activeStadiumGroup.name}
+                          >
+                            {activeStadiumGroup.emoji} {activeStadiumGroup.name}
+                          </span>
+                          <Link
+                            to={`/channel/${match.id}/stade`}
+                            className="shrink-0 text-[10px] font-black text-tf-electric underline decoration-2 underline-offset-2"
+                          >
+                            Tribunes
+                          </Link>
+                        </div>
+                      ) : (
+                        <TribuneQuickSwitch
+                          feedScope={chatFeedScope}
+                          onSelectGeneral={() => setChatFeedScope('general')}
+                          selected={activeTribune}
+                          onSelect={(id) => {
+                            setTribune(id)
+                            setChatFeedScope('tribune')
+                          }}
+                        />
+                      )}
                       <span
                         className="shrink-0 text-[10px] font-semibold tabular-nums text-slate-500"
                         aria-live="polite"
@@ -838,25 +968,47 @@ export function ChannelPage() {
                     </p>
                   )}
                   {isLiveOpen && (
-                    <div className="mt-2 flex flex-col gap-1.5 border-t border-tf-grey-pastel/40 pt-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <HypeMeter
-                          value={ambianceLevel}
-                          totalReactions={recentReactions.length}
-                          className="w-full max-w-[240px]"
-                          homeColor={match.home.colors.primary}
-                          awayColor={match.away.colors.primary}
-                        />
-                        <ReactionBar
-                          onReact={onReact}
-                          tokens={betting.wallet.tokens}
-                          density={reactionDensity}
-                        />
+                    <>
+                      <div className="mt-2 hidden flex-col gap-1.5 border-t border-tf-grey-pastel/40 pt-2 sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <HypeMeter
+                            value={ambianceLevel}
+                            totalReactions={recentReactions.length}
+                            className="w-full max-w-[240px]"
+                            homeColor={match.home.colors.primary}
+                            awayColor={match.away.colors.primary}
+                          />
+                          <ReactionBar
+                            onReact={onReact}
+                            tokens={betting.wallet.tokens}
+                            density={reactionDensity}
+                          />
+                        </div>
+                        <div className="shrink-0 border-t border-tf-grey-pastel/40 pt-2 sm:border-t-0 sm:border-l sm:border-tf-grey-pastel/40 sm:pl-3 sm:pt-0">
+                          <ReactionSummary reactions={recentReactions} />
+                        </div>
                       </div>
-                      <div className="shrink-0 border-t border-tf-grey-pastel/40 pt-2 sm:border-t-0 sm:border-l sm:border-tf-grey-pastel/40 sm:pl-3 sm:pt-0">
-                        <ReactionSummary reactions={recentReactions} />
-                      </div>
-                    </div>
+                      <details className="mt-2 border-t border-tf-grey-pastel/40 pt-1.5 sm:hidden">
+                        <summary className="cursor-pointer list-none text-[10px] font-black uppercase tracking-wide text-slate-500 [&::-webkit-details-marker]:hidden">
+                          Ambiance & réactions
+                        </summary>
+                        <div className="mt-2 flex flex-col gap-2">
+                          <HypeMeter
+                            value={ambianceLevel}
+                            totalReactions={recentReactions.length}
+                            className="w-full max-w-[240px]"
+                            homeColor={match.home.colors.primary}
+                            awayColor={match.away.colors.primary}
+                          />
+                          <ReactionBar
+                            onReact={onReact}
+                            tokens={betting.wallet.tokens}
+                            density={reactionDensity}
+                          />
+                          <ReactionSummary reactions={recentReactions} />
+                        </div>
+                      </details>
+                    </>
                   )}
                 </div>
 
@@ -864,16 +1016,13 @@ export function ChannelPage() {
                   <>
                     <div
                       ref={feedRef}
-                      className="min-h-0 flex-1 overflow-y-auto px-3 py-2 sm:px-4 sm:py-3"
+                      className={cn(
+                        'min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] sm:px-4 sm:py-3',
+                      )}
                       role="log"
                       aria-label="Messages en direct"
                       aria-live="polite"
                     >
-                      {virageMode && favoriteClubIds.length > 0 ? (
-                        <div className="mb-2 rounded-lg border border-tf-dark/15 bg-tf-dark/[0.04] px-2.5 py-1.5 text-[11px] font-semibold text-tf-dark">
-                          Mode Virage : messages plutôt liés à tes clubs favoris (+ les tiens).
-                        </div>
-                      ) : null}
                       <MessageList
                         messages={visibleMessages}
                         usersById={usersById}
@@ -890,7 +1039,7 @@ export function ChannelPage() {
                       <div className="h-4" />
                     </div>
 
-                    <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-tf-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
+                    <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-tf-white/95 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-2.5">
                       <MessageComposer
                         onSend={onSend}
                         onSendGif={onSendGif}
@@ -898,6 +1047,14 @@ export function ChannelPage() {
                         tokens={betting.wallet.tokens}
                         unlockedEmoteIds={unlockedEmoteIds}
                         onUnlockEmote={handleUnlockEmote}
+                        richMedia={reactionDensity !== 'chill'}
+                        placeholder={
+                          reactionDensity === 'chill'
+                            ? 'Message texte (zone Chill)…'
+                            : 'Écrire un message…'
+                        }
+                        scarfChoices={scarfChoices.length > 0 ? scarfChoices : undefined}
+                        onSendScarf={scarfChoices.length > 0 ? onSendScarf : undefined}
                       />
                     </div>
                   </>

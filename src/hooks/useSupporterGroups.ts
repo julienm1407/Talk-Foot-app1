@@ -62,8 +62,24 @@ export function useSupporterGroups() {
         lastMessagePreview: g.lastMessagePreview ?? 'Nouveau groupe — dis bonjour !',
         hashtags: hashtags?.length ? hashtags : undefined,
       }
-      setCustom((prev) => [next, ...prev].slice(0, 30))
-      setJoinedGroupIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+      setCustom((prev) => {
+        const merged = [next, ...prev].slice(0, 30)
+        try {
+          localStorage.setItem(KEY, JSON.stringify(merged))
+        } catch {
+          /* ignore quota / private mode */
+        }
+        return merged
+      })
+      setJoinedGroupIds((prev) => {
+        const joined = prev.includes(id) ? prev : [...prev, id]
+        try {
+          localStorage.setItem(JOINED_KEY, JSON.stringify(joined))
+        } catch {
+          /* ignore */
+        }
+        return joined
+      })
       return next
     },
     [setCustom, setJoinedGroupIds],
@@ -74,9 +90,50 @@ export function useSupporterGroups() {
     [groups],
   )
 
+  const updateGroup = useCallback(
+    (
+      id: string,
+      patch: Partial<Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>>,
+    ) => {
+      setCustom((prev) => {
+        const idx = prev.findIndex((g) => g.id === id)
+        if (idx < 0) return prev
+        const cur = prev[idx]
+        const mergedTheme =
+          patch.theme !== undefined
+            ? { ...cur.theme, ...patch.theme }
+            : cur.theme
+        const nextGroup: SupporterGroup = {
+          ...cur,
+          ...patch,
+          id: cur.id,
+          createdAt: cur.createdAt,
+          createdBy: cur.createdBy,
+          theme: mergedTheme,
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, 'presentationMedia')) {
+          if (patch.presentationMedia === undefined) delete nextGroup.presentationMedia
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, 'scarf')) {
+          if (patch.scarf === undefined) delete nextGroup.scarf
+        }
+        const next = [...prev]
+        next[idx] = nextGroup
+        try {
+          localStorage.setItem(KEY, JSON.stringify(next))
+        } catch {
+          /* ignore */
+        }
+        return next
+      })
+    },
+    [setCustom],
+  )
+
   return {
     groups,
     createGroup,
+    updateGroup,
     byId,
     joinedGroupIds,
     joinGroup,

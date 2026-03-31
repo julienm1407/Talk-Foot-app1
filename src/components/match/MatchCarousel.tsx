@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
-import { HubMatchStrip } from './HubMatchEncart'
+import { MatchSpotlightCard } from './MatchSpotlightCard'
 import { cn } from '../../utils/cn'
 import { themeForCompetition } from '../../data/competitionThemes'
+import { useAppearance } from '../../contexts/AppearanceContext'
 
 export type CarouselLiveMirror = LiveEncartSimulation & { matchId: string }
 
@@ -27,9 +28,11 @@ function mirrorForCard(
 function DesktopMatchGrid({
   matches,
   liveMirror,
+  light,
 }: {
   matches: Match[]
   liveMirror?: CarouselLiveMirror
+  light: boolean
 }) {
   if (matches.length === 0) return null
 
@@ -38,41 +41,39 @@ function DesktopMatchGrid({
   const slice = matches.slice(0, count)
   const extra = matches.length - count
 
-  const nodes: ReactNode[] = slice.map((m) => (
-    <div key={m.id} className="min-w-0">
-      <HubMatchStrip match={m} liveMirror={mirrorForCard(liveMirror, m)} />
-    </div>
-  ))
-
-  if (extra > 0) {
-    nodes.push(
-      <Link
-        key="more-matches"
-        to="/matches"
-        className="flex min-h-[min(220px,28vw)] min-w-0 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-tf-electric/25 bg-gradient-to-br from-tf-ice/50 to-white p-4 text-center transition hover:border-tf-electric/45"
-      >
-        <span className="font-display text-lg font-black text-tf-dark">+{extra}</span>
-        <span className="mt-1 text-xs font-bold text-tf-grey">Autres matchs sur le hub</span>
-      </Link>,
-    )
-  }
-
-  const pad = (2 - (nodes.length % 2)) % 2
-  for (let i = 0; i < pad; i++) {
-    nodes.push(
-      <Link
-        key={`pad-${i}`}
-        to="/matches"
-        className="flex min-h-[200px] min-w-0 flex-col items-center justify-center rounded-2xl border border-dashed border-tf-grey-pastel/70 bg-tf-grey-pastel/12 p-4 text-center text-xs font-black uppercase tracking-wide text-tf-grey transition hover:border-tf-electric/35 hover:text-tf-dark"
-      >
-        Hub matchs →
-      </Link>,
-    )
-  }
-
   return (
     <div className="hidden lg:block" aria-label="Matchs à l’affiche">
-      <div className="grid grid-cols-2 gap-5 xl:gap-6">{nodes}</div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:gap-8 2xl:gap-10">
+        {slice.map((m) => (
+          <div key={m.id} className="min-w-0">
+            <MatchSpotlightCard match={m} liveMirror={mirrorForCard(liveMirror, m)} />
+          </div>
+        ))}
+        {extra > 0 ? (
+          <Link
+            to="/match"
+            className={cn(
+              'flex min-h-[240px] min-w-0 flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center shadow-inner transition',
+              light
+                ? 'border-sky-400/35 bg-gradient-to-br from-sky-50/90 via-white to-tf-ice/80 hover:border-sky-500/55 hover:from-sky-50'
+                : 'border-sky-500/40 bg-gradient-to-br from-[#0d1a2e]/90 via-[#071422]/95 to-[#030b18]/98 hover:border-sky-400/55',
+            )}
+          >
+            <span className="font-display text-2xl font-black text-tf-app-fg">+{extra}</span>
+            <span className="mt-2 max-w-[14rem] text-sm font-semibold leading-snug text-tf-app-muted">
+              Autres rencontres sur la page Match — dates, ligues et rappels.
+            </span>
+            <span
+              className={cn(
+                'mt-4 rounded-xl px-4 py-2 text-xs font-black',
+                light ? 'bg-tf-dark text-white' : 'bg-white text-tf-night',
+              )}
+            >
+              Ouvrir le calendrier
+            </span>
+          </Link>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -93,6 +94,9 @@ export function MatchCarousel({
   /** Synchronise la carte du match « hero » avec l’encart live accueil. */
   liveMirror?: CarouselLiveMirror
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+
   const sorted = useMemo(() => {
     const ms = [...matches]
     ms.sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
@@ -153,28 +157,41 @@ export function MatchCarousel({
     return m ? themeForCompetition(m.competition.id) : null
   }, [index, viewMatches])
 
-  const navBtn =
-    'flex size-11 shrink-0 items-center justify-center rounded-full border border-tf-dark/15 bg-white text-base font-black text-tf-dark shadow-sm transition hover:border-rose-400/40 hover:bg-tf-night/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 active:scale-95'
+  const navBtn = cn(
+    'flex size-11 shrink-0 items-center justify-center rounded-full border text-base font-black shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 active:scale-95',
+    L
+      ? 'border-tf-dark/15 bg-white text-tf-dark hover:border-rose-400/40 hover:bg-tf-night/[0.04]'
+      : 'border-white/20 bg-white/10 text-tf-app-fg hover:border-rose-400/45 hover:bg-white/[0.14]',
+  )
 
   return (
     <section className="space-y-4 sm:space-y-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-        <div className="min-w-0 flex-1 space-y-2 border-b border-tf-dark/10 pb-4 sm:space-y-3 sm:pb-5 lg:border-0 lg:border-l-4 lg:border-rose-500/80 lg:pb-0 lg:pl-4">
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+        <div
+          className={cn(
+            'min-w-0 flex-1 space-y-3 border-b pb-5 sm:space-y-3 sm:pb-6 lg:border-0 lg:border-l-[3px] lg:border-rose-500 lg:pb-0 lg:pl-5',
+            L ? 'border-tf-dark/10' : 'border-white/15',
+          )}
+        >
           {eyebrow ? (
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-tf-electric-deep sm:text-xs">
+            <p
+              className={cn(
+                'text-xs font-black uppercase tracking-[0.14em] sm:text-[13px]',
+                L ? 'text-sky-700' : 'text-sky-300',
+              )}
+            >
               {eyebrow}
             </p>
           ) : null}
           <h2
             id={titleId}
             className={cn(
-              'font-display text-2xl font-black uppercase leading-[1.1] tracking-tight text-tf-dark',
-              'sm:text-[1.65rem] lg:text-3xl',
+              'font-display text-[1.65rem] font-black leading-[1.12] tracking-tight text-tf-app-fg sm:text-3xl lg:text-[2rem]',
             )}
           >
             {title}
           </h2>
-          <p className="max-w-2xl text-sm font-semibold leading-relaxed text-tf-dark/75 line-clamp-2 sm:line-clamp-none">
+          <p className="max-w-2xl text-[15px] font-medium leading-relaxed text-tf-app-muted sm:text-base">
             {subtitle || 'Matchs en direct et à venir — ouvre un salon pour suivre le live.'}
           </p>
         </div>
@@ -203,7 +220,7 @@ export function MatchCarousel({
         <div
           ref={listRef}
           data-no-swipe="true"
-          className="-mx-1 flex gap-4 overflow-x-auto px-1 py-2 pb-1 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:gap-5 sm:py-3"
+          className="-mx-1 flex gap-5 overflow-x-auto px-1 py-2 pb-2 [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:gap-6 sm:py-4"
           aria-label="Carrousel des matchs"
         >
           {viewMatches.map((m, i) => (
@@ -212,15 +229,22 @@ export function MatchCarousel({
               ref={(node) => {
                 itemRefs.current[i] = node
               }}
-              className="flex w-[min(100vw-2.5rem,320px)] shrink-0 snap-center flex-col items-stretch px-1 py-2 sm:w-[min(100%,300px)] sm:px-2"
+              className="flex w-[var(--tf-carousel-slide)] max-w-full shrink-0 snap-center flex-col items-stretch px-1 py-1 sm:px-2"
             >
-              <HubMatchStrip match={m} liveMirror={mirrorForCard(liveMirror, m)} />
+              <MatchSpotlightCard match={m} liveMirror={mirrorForCard(liveMirror, m)} />
             </div>
           ))}
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tf-dark/55">Navigation</p>
+          <p
+            className={cn(
+              'text-[10px] font-black uppercase tracking-[0.2em]',
+              L ? 'text-tf-dark/75' : 'text-sky-200/95',
+            )}
+          >
+            Navigation
+          </p>
           <div
             className="flex flex-wrap items-center gap-1.5 sm:justify-end"
             role="tablist"
@@ -238,8 +262,12 @@ export function MatchCarousel({
                   i === index
                     ? m.status === 'live'
                       ? 'border-rose-400/90 ring-2 ring-rose-300/50'
-                      : 'border-slate-400'
-                    : 'border-slate-300 bg-white',
+                      : L
+                        ? 'border-slate-400'
+                        : 'border-slate-500'
+                    : L
+                      ? 'border-slate-300 bg-white'
+                      : 'border-slate-600 bg-slate-800/90',
                 )}
                 style={
                   i === index && m.status === 'live'
@@ -257,7 +285,7 @@ export function MatchCarousel({
         </div>
       </div>
 
-      <DesktopMatchGrid matches={viewMatches} liveMirror={liveMirror} />
+      <DesktopMatchGrid matches={viewMatches} liveMirror={liveMirror} light={L} />
     </section>
   )
 }

@@ -8,9 +8,11 @@ import {
   tribuneById,
   type TribuneMeta,
 } from '../../data/tribunes'
+import type { MatchSalonPick } from '../../utils/matchSalons'
 import { cn } from '../../utils/cn'
 import { Button } from '../ui/Button'
 import { useTribuneLiveStats } from '../../hooks/useTribuneLiveStats'
+import { StadiumSupporterPicker } from './StadiumSupporterPicker'
 
 function tribuneZoneStyle(id: TribuneId, active: boolean): string {
   if (!active) return ''
@@ -63,7 +65,7 @@ function MiniStadium({
             background: `radial-gradient(ellipse 55% 80% at 50% 50%, ${home.colors.primary}55, transparent 65%), radial-gradient(ellipse 50% 75% at 50% 50%, ${away.colors.secondary}44, transparent 62%)`,
           }}
         />
-        {/* Virage : tribune populaire en face caméra (bande haute) */}
+        {/* Virage : zone intense en face caméra */}
         {zone('virage', 'top-[4%] left-[18%] right-[18%] z-[14] h-[18%]')}
         {/* Pelouse — ovale horizontal */}
         <div
@@ -75,7 +77,7 @@ function MiniStadium({
         {/* Analyse · Chill : tribunes latérales */}
         {zone('analyse', 'left-[3%] top-[22%] bottom-[6%] z-[12] w-[12%]')}
         {zone('chill', 'right-[3%] top-[22%] bottom-[6%] z-[12] w-[12%]')}
-        <p className="pointer-events-none absolute bottom-[5%] left-0 right-0 z-[11] text-center text-[7px] font-bold uppercase tracking-[0.2em] text-white/40 sm:text-[8px]">
+        <p className="pointer-events-none absolute bottom-[5%] left-0 right-0 z-[11] text-center text-[7px] font-bold uppercase tracking-[0.2em] text-white/65 sm:text-[8px]">
           Stade digital
         </p>
       </div>
@@ -105,7 +107,7 @@ function MiniStadium({
       {zone('analyse', 'bottom-[5%] left-[9%] h-[12%] w-[39%] rounded-lg')}
       {zone('chill', 'bottom-[5%] right-[9%] h-[12%] w-[39%] rounded-lg')}
       {zone('virage', 'top-[4%] left-[9%] right-[9%] h-[13%]')}
-      <p className="pointer-events-none absolute bottom-[17%] left-0 right-0 z-[11] text-center text-[8px] font-bold uppercase tracking-[0.22em] text-white/40">
+      <p className="pointer-events-none absolute bottom-[17%] left-0 right-0 z-[11] text-center text-[8px] font-bold uppercase tracking-[0.22em] text-white/65">
         Stade digital
       </p>
     </div>
@@ -196,16 +198,34 @@ export function StadiumTribunes({
   selected,
   onSelect,
   layout = 'page',
+  salonPicks,
+  selectedGroupId,
+  onSelectGroup,
 }: {
   match: Match
-  selected: TribuneId
-  onSelect: (id: TribuneId) => void
-  /** page / modal / stadiumPage — page stade = paysage + grille large. */
+  /** Zones Virage / Analyse / Chill (hors page stade « tribunes groupes »). */
+  selected?: TribuneId
+  onSelect?: (id: TribuneId) => void
   layout?: 'page' | 'modal' | 'stadiumPage'
+  salonPicks?: MatchSalonPick[]
+  selectedGroupId?: string | null
+  onSelectGroup?: (groupId: string | null) => void
 }) {
   const stats = useTribuneLiveStats()
-  const meta = tribuneById[selected]
+  const tribuneSelected = selected ?? 'virage'
+  const meta = tribuneById[tribuneSelected]
   const isStadiumPage = layout === 'stadiumPage'
+
+  if (isStadiumPage && onSelectGroup) {
+    return (
+      <StadiumSupporterPicker
+        match={match}
+        salonPicks={salonPicks ?? []}
+        selectedGroupId={selectedGroupId ?? null}
+        onSelectGroup={onSelectGroup}
+      />
+    )
+  }
 
   return (
     <section
@@ -218,7 +238,12 @@ export function StadiumTribunes({
       )}
       aria-labelledby="stadium-tribunes-heading"
     >
-      <div className={cn(isStadiumPage ? 'mx-auto w-full max-w-[1200px]' : 'mx-auto max-w-[1100px]')}>
+      <div
+        className={cn(
+          'mx-auto w-full min-w-0',
+          isStadiumPage ? 'max-w-tf-article-body' : 'max-w-tf-article-inner',
+        )}
+      >
         <p
           className={cn(
             'text-center font-black uppercase tracking-[0.2em] text-tf-grey',
@@ -234,7 +259,7 @@ export function StadiumTribunes({
             isStadiumPage ? 'text-base sm:text-lg' : layout === 'page' ? 'text-lg sm:text-xl' : 'text-base sm:text-lg',
           )}
         >
-          Choisis ta tribune
+          Choisis ta zone (stade digital)
         </h2>
         <p
           className={cn(
@@ -260,7 +285,7 @@ export function StadiumTribunes({
             <MiniStadium
               home={match.home}
               away={match.away}
-              selected={selected}
+              selected={tribuneSelected}
               orientation={isStadiumPage ? 'landscape' : 'portrait'}
             />
           </div>
@@ -276,10 +301,10 @@ export function StadiumTribunes({
               <TribuneCard
                 key={t.id}
                 t={t}
-                selected={selected === t.id}
+                selected={tribuneSelected === t.id}
                 participants={stats[t.id].participants}
                 activity={stats[t.id].activity}
-                onSelect={() => onSelect(t.id)}
+                onSelect={() => onSelect?.(t.id)}
                 compact={isStadiumPage}
               />
             ))}
@@ -319,44 +344,77 @@ export function StadiumTribunes({
   )
 }
 
-/** Encart sur le live : lien vers la page stade (sans parcours salons). */
+/** Encart sur le live : salon tribune groupe ou zone classique. */
 export function StadiumModeEncart({
   matchId,
   activeTribune,
+  stadiumGroupLabel,
+  stadiumGroupEmoji,
+  onClearStadiumGroup,
 }: {
   matchId: string
   activeTribune: TribuneId
+  stadiumGroupLabel?: string | null
+  stadiumGroupEmoji?: string | null
+  onClearStadiumGroup?: () => void
 }) {
   const m = tribuneById[activeTribune]
+  const groupMode = Boolean(stadiumGroupLabel)
+
   return (
     <div
-      className="mt-3 flex flex-col gap-3 rounded-2xl border border-tf-grey-pastel/55 bg-gradient-to-br from-tf-ice/35 via-white to-tf-grey-pastel/15 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4"
+      className={cn(
+        'mt-2 flex flex-col gap-2 rounded-xl border px-2.5 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-3 sm:py-2.5',
+        groupMode
+          ? 'border-violet-200/70 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/40'
+          : 'border-tf-grey-pastel/55 bg-gradient-to-br from-tf-ice/35 via-white to-tf-grey-pastel/15',
+      )}
       role="region"
       aria-label="Mode stade digital"
     >
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tf-grey">
-          Stade digital
+          {groupMode ? 'Salon tribune' : 'Stade digital'}
         </p>
-        <p className="mt-1 text-sm font-black text-tf-dark">
-          <span aria-hidden>{m.emoji}</span> Tribune {m.label} dans le chat — ouvre le plan stade pour changer
-          d’ambiance.
+        <p className="mt-0.5 text-xs font-black leading-snug text-tf-dark sm:mt-1 sm:text-sm">
+          {groupMode ? (
+            <>
+              <span aria-hidden>{stadiumGroupEmoji ?? '🏟️'}</span> {stadiumGroupLabel} — chat réservé aux présents
+              dans ce salon.
+            </>
+          ) : (
+            <>
+              <span aria-hidden>{m.emoji}</span> Zone {m.label} dans le fil — ouvre le plan pour choisir une tribune
+              groupe.
+            </>
+          )}
         </p>
       </div>
-      <Link
-        to={`/channel/${matchId}/stade`}
-        className={cn(
-          'tf-btn-fluid inline-flex shrink-0 items-center justify-center self-start rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
-          'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40 sm:self-center',
-        )}
-      >
-        Voir le stade
-      </Link>
+      <div className="flex shrink-0 flex-wrap gap-2 self-start sm:self-center">
+        {groupMode && onClearStadiumGroup ? (
+          <button
+            type="button"
+            onClick={onClearStadiumGroup}
+            className="tf-btn-fluid inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-tf-dark shadow-sm transition hover:bg-slate-50"
+          >
+            Tout le stade
+          </button>
+        ) : null}
+        <Link
+          to={`/channel/${matchId}/stade`}
+          className={cn(
+            'tf-btn-fluid inline-flex shrink-0 items-center justify-center rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
+            'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40',
+          )}
+        >
+          Plan stade
+        </Link>
+      </div>
     </div>
   )
 }
 
-/** Virage / Analyse / Chill + **Général** (tout le stade) sur une seule rangée. */
+/** Virage / Analyse / Chill + Général — sans texte d’aide au-dessus (gain de place). */
 export function TribuneQuickSwitch({
   selected,
   onSelect,
@@ -369,11 +427,7 @@ export function TribuneQuickSwitch({
   onSelectGeneral: () => void
 }) {
   return (
-    <div
-      className="flex flex-wrap items-center gap-1.5"
-      role="group"
-      aria-label="Fil du chat : tribune ou ambiance générale"
-    >
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5" role="group" aria-label="Zone du chat live">
       <Button
         type="button"
         variant={feedScope === 'general' ? 'primary' : 'soft'}

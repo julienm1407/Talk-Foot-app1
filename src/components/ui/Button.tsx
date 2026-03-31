@@ -1,4 +1,5 @@
 import { cn } from '../../utils/cn'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
 type Variant = 'primary' | 'ghost' | 'soft'
 
@@ -12,13 +13,13 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'tf-btn-fluid inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold font-display outline-none',
-        'focus-visible:ring-2 focus-visible:ring-tf-electric/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white',
+        'tf-btn-fluid inline-flex min-h-tf-touch items-center justify-center gap-tf-2 rounded-tf-2xl px-tf-5 py-tf-3 text-tf-md font-semibold font-display',
+        TF_FOCUS_VISIBLE,
         'disabled:pointer-events-none disabled:opacity-45',
         variant === 'primary' &&
-          'border-2 border-sky-800/25 bg-gradient-to-b from-sky-500 to-blue-700 text-white shadow-[0_8px_24px_rgba(14,165,233,0.35)] [text-shadow:0_1px_1px_rgba(0,0,0,0.22)] hover:from-sky-400 hover:to-blue-600',
+          'border-2 border-tf-cta-hover/40 bg-tf-cta text-white shadow-tf-cta transition hover:border-tf-cta-hover/50 hover:bg-tf-cta-hover hover:shadow-[0_8px_24px_rgba(255,59,59,0.28)] active:scale-[0.99]',
         variant === 'soft' &&
-          'border-2 border-tf-dark/14 bg-white text-tf-dark shadow-[0_2px_10px_rgba(1,30,51,0.06)] hover:border-tf-electric/40 hover:bg-tf-ice',
+          'border border-tf-dark bg-white/95 text-tf-dark shadow-tf-elev-1 hover:border-tf-dark hover:bg-tf-electric-soft',
         variant === 'ghost' &&
           'border-2 border-transparent bg-white/90 text-tf-dark/85 shadow-none hover:border-tf-dark/10 hover:bg-white hover:text-tf-dark',
         className,
@@ -27,4 +28,3 @@ export function Button({
     />
   )
 }
-

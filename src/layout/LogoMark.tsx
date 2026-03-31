@@ -1,6 +1,7 @@
 import { cn } from '../utils/cn'
 
-const LOGO_PATH = `${import.meta.env.BASE_URL}logo-talk-foot.png`
+export const TALKFOOT_LOGO_URL = `${import.meta.env.BASE_URL}logo-talk-foot.png`
+const LOGO_PATH = TALKFOOT_LOGO_URL
 
 type LogoVariant = 'compact' | 'header' | 'hero'
 

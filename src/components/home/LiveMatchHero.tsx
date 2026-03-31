@@ -4,7 +4,8 @@ import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { ClubCrest } from '../brand/ClubCrest'
 import { formatRelativeMinute } from '../../utils/time'
 import { cn } from '../../utils/cn'
-import { HUB_STADIUM_URL, HubMatchProgressBar, hubFansK } from '../match/HubMatchEncart'
+import { LiveSalonPresenceStrip } from './LiveSalonPresenceStrip'
+import { HUB_STADIUM_URL, HubMatchProgressBar } from '../match/HubMatchEncart'
 
 function AnimatedLiveScore({
   home,
@@ -57,20 +58,41 @@ function GoalSparks() {
   )
 }
 
-/** Hero mobile / tablette : même DA que les encarts hub (stade, LIVE, barre verte, Rejoindre). */
+/** Hero mobile / tablette / hub desktop : stade, LIVE, animations, salon, Rejoindre. */
 export function LiveMatchHero({
   match,
   simulation,
   carousel,
+  compact = false,
+  /** Hub desktop ≥xl : blasons + score plus grands, zone visuelle plus haute */
+  variant = 'default',
+  fillColumnHeight = false,
+  className,
 }: {
   match: Match
   simulation: LiveEncartSimulation
   carousel?: { count: number; index: number; onSelect: (i: number) => void }
+  /** Hauteur réduite (accueil : laisser le hub raccourcis au-dessus de la ligne de flottaison) */
+  compact?: boolean
+  variant?: 'default' | 'spotlight'
+  fillColumnHeight?: boolean
+  className?: string
 }) {
+  const spotlight = variant === 'spotlight' && !compact
   const minute = simulation.active ? simulation.minute : match.minute ?? 0
   const score = simulation.active ? simulation.score : match.score ?? { home: 0, away: 0 }
   const { bumpSide, burst, toast, rim } = simulation
-  const fans = hubFansK(match)
+  /** Effets plein hero : flouter le terrain + renforcer le voile pour lisibilité */
+  const heroAnimBackdrop =
+    Boolean(burst) || Boolean(toast)
+  /** But plein encart : masquer quasi tout le HUD match derrière */
+  const goalFullTakeover = burst?.kind === 'goal'
+  const crestSize = compact ? 40 : spotlight ? 56 : 60
+  const minHero = compact
+    ? 'min-h-[108px] sm:min-h-[118px]'
+    : spotlight
+      ? 'min-h-[128px] sm:min-h-[144px] xl:min-h-[min(168px,22vh)]'
+      : 'min-h-[200px] sm:min-h-[220px]'
 
   const rimClass =
     rim === 'yellow'
@@ -84,20 +106,56 @@ export function LiveMatchHero({
             : ''
 
   return (
-    <section
-      className={cn(
-        'relative overflow-hidden rounded-3xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-[box-shadow,ring] duration-300',
-        rimClass,
-      )}
-      aria-label="Match en direct mis en avant"
-    >
-      <div className="relative min-h-[200px] overflow-hidden sm:min-h-[220px]">
+    <div className={cn('relative isolate', fillColumnHeight && 'flex h-full min-h-0 flex-col', className)}>
+      <div className="tf-live-encart-halo" aria-hidden />
+      <div className="tf-live-encart-halo-ring" aria-hidden />
+      <section
+        className={cn(
+          'relative z-[1] min-w-0 overflow-hidden rounded-3xl border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)] transition-[box-shadow,ring] duration-300',
+          spotlight &&
+            'border-white/15 shadow-[0_28px_90px_rgba(0,0,0,0.62)] ring-1 ring-rose-500/25',
+          fillColumnHeight && 'flex h-full min-h-0 flex-1 flex-col',
+          rimClass,
+        )}
+        aria-label="Match en direct mis en avant"
+      >
+      <div
+        className={cn(
+          'relative isolate min-h-0 overflow-hidden rounded-t-3xl',
+          minHero,
+          fillColumnHeight && !spotlight && 'min-h-[240px] flex-1 xl:min-h-[280px]',
+        )}
+      >
         <img
           src={HUB_STADIUM_URL}
           alt=""
-          className="absolute inset-0 size-full scale-110 object-cover blur-[2px]"
+          className={cn(
+            'absolute inset-0 size-full scale-110 object-cover transition-[filter] duration-300 ease-out',
+            /* Flou uniquement sur l’image (clip overflow) — pas sur le HUD : évite le halo qui “mange” les coins du cadre */
+            heroAnimBackdrop ? 'blur-lg sm:blur-xl' : 'blur-[2px]',
+          )}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030b18] via-[#030b18]/78 to-[#061a2e]/50" />
+        <div
+          className={cn(
+            'absolute inset-0 bg-gradient-to-t from-[#030b18] transition-opacity duration-300',
+            heroAnimBackdrop
+              ? 'via-[#030b18]/90 to-[#030b18]/68'
+              : spotlight
+                ? 'via-[#030b18]/72 to-sky-950/35'
+                : 'via-[#030b18]/78 to-[#061a2e]/50',
+          )}
+        />
+        {heroAnimBackdrop ? (
+          <div
+            className={cn(
+              'absolute inset-0 z-[1] transition-opacity duration-300',
+              goalFullTakeover
+                ? 'bg-[#030b18]/82 sm:bg-[#030b18]/78'
+                : 'bg-[#030b18]/68 sm:bg-[#030b18]/62',
+            )}
+            aria-hidden
+          />
+        ) : null}
 
         {burst?.kind === 'goal' ? <GoalSparks /> : null}
 
@@ -134,7 +192,10 @@ export function LiveMatchHero({
 
         {toast ? (
           <div
-            className="tf-live-toast-in pointer-events-none absolute bottom-[5.5rem] left-1/2 z-30 max-w-[min(100%,22rem)] -translate-x-1/2 px-3 sm:bottom-[6rem]"
+            className={cn(
+              'tf-live-toast-in pointer-events-none absolute left-1/2 z-30 max-w-[min(100%,22rem)] -translate-x-1/2 px-3',
+              spotlight ? 'bottom-[4.25rem]' : 'bottom-[5.5rem] sm:bottom-[6rem]',
+            )}
             aria-live="polite"
           >
             <div
@@ -173,87 +234,183 @@ export function LiveMatchHero({
           </div>
         ) : null}
 
-        <div className="relative z-10 flex h-full min-h-[200px] flex-col sm:min-h-[220px]">
-          <div className="flex flex-wrap items-start justify-between gap-2 px-4 pb-2 pt-4">
-            <span className="inline-flex items-center gap-1 rounded-md bg-rose-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-lg ring-1 ring-rose-400/60">
-              <span className="size-1.5 animate-pulse rounded-full bg-white" aria-hidden />
+        <div
+          className={cn(
+            'relative z-10 flex h-full flex-col transition-[opacity] duration-300 ease-out',
+            minHero,
+            heroAnimBackdrop && 'pointer-events-none',
+            goalFullTakeover
+              ? 'opacity-[0.14] grayscale sm:opacity-[0.1]'
+              : heroAnimBackdrop && 'opacity-[0.32] grayscale sm:opacity-[0.26]',
+          )}
+        >
+          <div
+            className={cn(
+              'flex flex-wrap items-start justify-between gap-2 px-3 pb-1',
+              compact ? 'pt-2' : spotlight ? 'px-3 pb-0 pt-2 sm:px-4 sm:pt-2.5' : 'px-4 pb-2 pt-4',
+            )}
+          >
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md bg-rose-600 font-black uppercase tracking-wide text-white shadow-[0_0_20px_rgba(244,63,94,0.55),0_4px_14px_rgba(225,29,72,0.45)] ring-2 ring-rose-300/70 ring-offset-2 ring-offset-[#030b18]/90',
+                compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]',
+              )}
+            >
+              <span
+                className="tf-live-badge-dot size-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.95)]"
+                aria-hidden
+              />
               LIVE
             </span>
-            <span className="max-w-[min(100%,14rem)] truncate rounded-md border border-white/15 bg-black/25 px-2.5 py-1 text-[10px] font-bold text-white/90 backdrop-blur-sm sm:max-w-none sm:text-xs">
+            <span
+              className={cn(
+                'max-w-[min(100%,14rem)] truncate rounded-md border border-white/15 bg-black/25 font-bold text-white/90 backdrop-blur-sm sm:max-w-none',
+                compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px] sm:text-xs',
+              )}
+            >
               {match.competition.shortName}
             </span>
           </div>
 
           <div className="flex flex-1 flex-col justify-end">
-            <div className="flex items-end justify-between gap-2 px-4 pb-2 pt-4">
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center">
+            <div
+              className={cn(
+                'flex items-end justify-between gap-2 px-3 pb-1',
+                compact ? 'pt-1' : spotlight ? 'px-3 pb-0 pt-2 sm:px-4 sm:pt-2' : 'px-4 pb-2 pt-4',
+              )}
+            >
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
                 <ClubCrest
                   id={match.home.id}
                   shortName={match.home.shortName}
                   colors={match.home.colors}
-                  size={60}
+                  size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
                     bumpSide === 'home' && 'scale-110 drop-shadow-[0_0_20px_rgba(250,204,21,0.45)]',
                   )}
                 />
-                <span className="truncate text-xs font-black text-white sm:text-sm">{match.home.shortName}</span>
+                <span
+                  className={cn(
+                    'truncate font-black text-white',
+                    compact
+                      ? 'max-w-[4.5rem] text-[10px]'
+                      : spotlight
+                        ? 'max-w-[5rem] text-[11px] sm:text-xs'
+                        : 'text-xs sm:text-sm',
+                  )}
+                >
+                  {match.home.shortName}
+                </span>
               </div>
-              <div className="flex shrink-0 flex-col items-center gap-1 px-1">
-                <span className="font-display text-3xl font-black tabular-nums text-white drop-shadow-lg sm:text-4xl">
+              <div className="flex shrink-0 flex-col items-center gap-0.5 px-0.5">
+                <span
+                  className={cn(
+                    'font-display font-black tabular-nums text-white drop-shadow-lg',
+                    compact
+                      ? 'text-xl sm:text-2xl'
+                      : spotlight
+                        ? 'text-3xl sm:text-4xl xl:text-[2.65rem]'
+                        : 'text-3xl sm:text-4xl',
+                  )}
+                >
                   <AnimatedLiveScore home={score.home} away={score.away} bumpSide={bumpSide} />
                 </span>
                 <span
                   key={minute}
-                  className="rounded-md bg-emerald-500/95 px-2.5 py-0.5 text-[11px] font-black text-white shadow animate-[tf-live-bar_0.85s_ease-out] sm:text-xs"
+                  className={cn(
+                    'rounded-md bg-emerald-500/95 font-black text-white shadow animate-[tf-live-bar_0.85s_ease-out]',
+                    compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[11px] sm:text-xs',
+                  )}
                 >
                   {formatRelativeMinute(minute) ?? `${minute}′`}
                 </span>
               </div>
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 text-center">
+              <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
                 <ClubCrest
                   id={match.away.id}
                   shortName={match.away.shortName}
                   colors={match.away.colors}
-                  size={60}
+                  size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
                     bumpSide === 'away' && 'scale-110 drop-shadow-[0_0_20px_rgba(250,204,21,0.45)]',
                   )}
                 />
-                <span className="truncate text-xs font-black text-white sm:text-sm">{match.away.shortName}</span>
+                <span
+                  className={cn(
+                    'truncate font-black text-white',
+                    compact
+                      ? 'max-w-[4.5rem] text-[10px]'
+                      : spotlight
+                        ? 'max-w-[5rem] text-[11px] sm:text-xs'
+                        : 'text-xs sm:text-sm',
+                  )}
+                >
+                  {match.away.shortName}
+                </span>
               </div>
             </div>
-            <div className="px-4 pb-3 pt-1">
-              <HubMatchProgressBar minute={minute} />
+            <div className={cn(compact ? 'px-3 pb-1.5 pt-0' : spotlight ? 'px-3 pb-2 pt-0 sm:px-4' : 'px-4 pb-3 pt-1')}>
+              <HubMatchProgressBar
+                minute={minute}
+                className={
+                  spotlight ? 'h-1 sm:h-1.5 [&>div]:shadow-[0_0_12px_rgba(16,185,129,0.55)]' : undefined
+                }
+              />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-[#071422]/95 px-4 py-3">
-        <span className="text-[11px] font-semibold text-white/60 sm:text-xs">
-          {(fans * 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k fans
-        </span>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Link
-            to={`/channel/${match.id}/stade?salons=1`}
-            className="text-[11px] font-black text-sky-300 underline-offset-2 hover:text-sky-200 hover:underline sm:text-xs"
-          >
-            Salon stade
-          </Link>
-          <Link
-            to={`/channel/${match.id}`}
-            className="rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-5 py-2 text-xs font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition hover:from-sky-400 hover:to-blue-500 sm:px-6 sm:py-2.5 sm:text-sm"
-          >
-            Rejoindre
-          </Link>
-        </div>
+      <div
+        className={cn(
+          'relative z-10 shrink-0 border-t border-white/10 bg-[#071422]/95',
+          compact ? 'px-3 py-2' : spotlight ? 'px-3 py-2 sm:px-4' : 'px-4 py-3',
+        )}
+      >
+        {spotlight ? (
+          <div className="flex flex-col gap-2 sm:gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+            <div className="min-w-0 flex-1">
+              <LiveSalonPresenceStrip
+                match={match}
+                simulation={simulation}
+                variant="dense"
+              />
+            </div>
+            <div className="flex shrink-0 justify-end xl:items-center">
+              <Link
+                to={`/channel/${match.id}`}
+                className="rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-1.5 text-[11px] font-black text-white shadow-[0_4px_14px_rgba(14,165,233,0.38)] transition hover:from-sky-400 hover:to-blue-500 sm:rounded-xl sm:px-5 sm:py-2 sm:text-xs"
+              >
+                Rejoindre
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className={cn('flex flex-col gap-3', compact && 'gap-2')}>
+            <LiveSalonPresenceStrip match={match} simulation={simulation} compact={compact} />
+            <div className="flex flex-wrap items-center justify-end border-t border-white/5 pt-2.5 sm:pt-3">
+              <Link
+                to={`/channel/${match.id}`}
+                className={cn(
+                  'rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition hover:from-sky-400 hover:to-blue-500',
+                  compact ? 'px-3 py-1.5 text-[10px]' : 'rounded-xl px-5 py-2 text-xs sm:px-6 sm:py-2.5 sm:text-sm',
+                )}
+              >
+                Rejoindre
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {carousel && carousel.count > 1 ? (
         <div
-          className="flex justify-end gap-1.5 border-t border-white/5 bg-[#050d14]/90 px-4 py-2.5"
+          className={cn(
+            'flex shrink-0 justify-end gap-1.5 border-t border-white/5 bg-[#050d14]/90',
+            compact ? 'px-3 py-1.5' : spotlight ? 'px-3 py-1.5 sm:px-4' : 'px-4 py-2.5',
+          )}
           role="tablist"
           aria-label="Choisir le match en direct affiché"
         >
@@ -273,6 +430,7 @@ export function LiveMatchHero({
           ))}
         </div>
       ) : null}
-    </section>
+      </section>
+    </div>
   )
 }

@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { cn } from '../utils/cn'
 import { LogoMark } from '../layout/LogoMark'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
 import { safeInternalNext } from '../utils/safeInternalPath'
 
@@ -16,7 +17,7 @@ export function LoginPage() {
   const [searchParams] = useSearchParams()
   const nextPath = safeInternalNext(searchParams.get('next'))
   const { user, isReady, loginWithEmail, signUpWithEmail, loginWithGoogle, loginWithApple } = useAuth()
-  const { appearance, toggleAppearance } = useAppearance()
+  const { appearance } = useAppearance()
   const isLight = appearance === 'light'
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -78,27 +79,17 @@ export function LoginPage() {
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center bg-transparent p-4">
       <div className="tf-page-backdrop" aria-hidden />
-      <button
-        type="button"
-        onClick={toggleAppearance}
-        className={cn(
-          'absolute right-3 top-3 z-10 rounded-2xl border p-2.5 text-lg outline-none transition sm:right-5 sm:top-5',
-          isLight
-            ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
-            : 'border-white/15 bg-white/[0.08] text-white hover:bg-white/12',
-        )}
-        aria-label={isLight ? 'Passer en mode nuit stade' : 'Passer en mode jour'}
-      >
-        {isLight ? '🌙' : '☀️'}
-      </button>
-      <div className="relative w-full max-w-[400px]">
+      <div className="absolute right-3 top-3 z-10 sm:right-5 sm:top-5">
+        <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
+      </div>
+      <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           <LogoMark variant="hero" className="max-w-[220px]" decorative={false} />
           <h1 className="sr-only">Talk Foot</h1>
           <p
             className={cn(
               'mt-4 text-sm font-semibold',
-              isLight ? 'text-tf-dark/55' : 'text-slate-300',
+              isLight ? 'text-tf-dark/72' : 'text-slate-200',
             )}
           >
             Rejoins la communauté foot en direct

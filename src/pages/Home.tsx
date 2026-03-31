@@ -1,10 +1,10 @@
-import { useMatches } from '../contexts/MatchesContext'
+import { useMatches, REPLAY_LIVE_ID } from '../contexts/MatchesContext'
 import { mockNews } from '../data/news'
 import { debateOfTheDay, trendingDebates } from '../data/debates'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { AdSlot } from '../components/ui/AdSlot'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { CreateGroupModal } from '../components/group/CreateGroupModal'
 import { LiveMatchHero } from '../components/home/LiveMatchHero'
@@ -27,8 +27,13 @@ import { HomeUpcomingHero } from '../components/home/HomeUpcomingHero'
 import { HubStripUpcoming } from '../components/match/HubMatchEncart'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { hubGlassPanel, hubTrendsShell } from '../utils/hubSurface'
+import { HomeLandingHub } from '../components/home/HomeLandingHub'
+import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
+import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
+import { ThemeArrivalHint } from '../components/ui/ThemeArrivalHint'
 
 export function HomePage() {
+  const navigate = useNavigate()
   const { carouselMatches, matches, loading } = useMatches()
   const { groups, createGroup } = useSupporterGroups()
   const {
@@ -38,7 +43,7 @@ export function HomePage() {
     setHideRivalSalons,
   } = useFanPreferences()
   const { supporterTintActive, team } = useSupporterTintMode()
-  const { appearance, setAppearance } = useAppearance()
+  const { appearance } = useAppearance()
 
   const accessPrefs = useMemo(
     () => ({
@@ -59,12 +64,14 @@ export function HomePage() {
     [sortedGroups, accessPrefs],
   )
 
-  const activeGroupsRail = visibleGroups.slice(0, 4)
+  const myCreatedGroups = useMemo(() => groups.filter((g) => g.createdBy === 'me'), [groups])
+
+  const activeGroupsRail = visibleGroups.slice(0, 2)
 
   const displayMatches = carouselMatches
   const displayMatchesFull = matches
 
-  /** Le mode supporter (teinte maillot) ne restreint plus le fil : seul le Mode Virage filtre chats / top com. */
+  /** Teinte supporter ≠ fil messages : seul le fil équipe de cœur (Profil) filtre chats / top com. */
   const personalizedNews = useMemo(
     () => filterNewsForFan(mockNews, favoriteLeagueId, favoriteClubIds),
     [favoriteClubIds, favoriteLeagueId],
@@ -74,19 +81,20 @@ export function HomePage() {
   const [feedTab, setFeedTab] = useState<'actu' | 'comments'>('comments')
   const [heroSlide, setHeroSlide] = useState(0)
 
-  const liveMatches = useMemo(
-    () => displayMatches.filter((m) => m.status === 'live'),
+  /** Hub (desktop + bento mobile) : seul le live replay principal PSG ; les autres lives restent sur /match */
+  const hubLiveMatches = useMemo(
+    () => displayMatches.filter((m) => m.status === 'live' && m.id === REPLAY_LIVE_ID),
     [displayMatches],
   )
 
-  const liveIds = liveMatches.map((m) => m.id).join('|')
+  const hubLiveIds = hubLiveMatches.map((m) => m.id).join('|')
   useEffect(() => {
-    // Réinitialiser l’index du hero quand la liste des lives change (filtre / données).
+    // Réinitialiser l’index du hero quand le live mis en avant change.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset contrôlé du carousel multi-live
     setHeroSlide(0)
-  }, [liveIds])
+  }, [hubLiveIds])
 
-  const heroLiveMatch = useMemo(() => liveMatches[heroSlide] ?? null, [liveMatches, heroSlide])
+  const heroLiveMatch = useMemo(() => hubLiveMatches[heroSlide] ?? null, [hubLiveMatches, heroSlide])
   const heroLiveSim = useLiveEncartSimulation(heroLiveMatch)
 
   const clubFocusLabel = useMemo(() => {
@@ -102,8 +110,11 @@ export function HomePage() {
     return [...displayMatchesFull]
       .filter((m) => m.status === 'upcoming')
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-      .slice(0, 8)
+      .slice(0, 4)
   }, [displayMatchesFull])
+
+  /** Sous le live : 2 lignes compactes rail, sans scroll horizontal */
+  const upcomingUnderLiveStrip = useMemo(() => upcomingHeaderPool.slice(0, 2), [upcomingHeaderPool])
 
   if (loading) {
     return (
@@ -113,13 +124,11 @@ export function HomePage() {
     )
   }
 
-  const railDebates = trendingDebates.slice(0, 4)
-
   const trendsShell = hubTrendsShell(appearance)
 
-  /** Maquette : 3 colonnes ; hero sur gauche+centre ; rail droit sur 2 rangées ; bas de page en pleine largeur utile. */
+  /** Maquette : 3 colonnes fluides (minmax + fr) ; mobile = 1 colonne empilée. */
   const bentoCols =
-    'lg:grid-cols-[minmax(0,200px)_minmax(300px,1fr)_minmax(0,248px)] xl:grid-cols-[minmax(0,212px)_minmax(320px,1fr)_minmax(0,260px)]'
+    'lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_minmax(0,15rem)] xl:grid-cols-[minmax(0,13.5rem)_minmax(0,1fr)_minmax(0,17rem)]'
   const bentoGrid = cn(
     'grid grid-cols-1 gap-4 sm:gap-5 lg:grid-rows-[auto_auto] lg:items-start lg:gap-x-5',
     bentoCols,
@@ -129,31 +138,32 @@ export function HomePage() {
 
   return (
     <div className="w-full min-w-0 space-y-6 sm:space-y-8">
+      <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
       {/* Hub desktop (≥xl) — maquette TalkFoot sombre 3 colonnes */}
       <div className="hidden xl:block xl:space-y-10">
         <HomeDesktopExperience
-          liveMatches={liveMatches}
+          liveMatches={hubLiveMatches}
           upcomingMatches={displayMatchesFull}
           tribuneGroups={visibleGroups.slice(0, 4)}
+          supporterGroupsPool={visibleGroups}
+          myCreatedGroups={myCreatedGroups}
           trendingDebates={trendingDebates}
+          debateOfTheDay={debateOfTheDay}
           onCreateTribune={() => setCreateOpen(true)}
         />
-        <section className={cn('mx-auto w-full max-w-[1200px]', trendsShell)} aria-label="Débats tendances">
+        <section className={cn('mx-auto w-full max-w-tf-content', trendsShell)} aria-label="Débats tendances">
           <TrendingDebatesSection debates={trendingDebates} variant="band" />
         </section>
-        <FavoritesEncart className="mx-auto max-w-[1200px]" />
-        <div className="mx-auto w-full max-w-[1200px] space-y-6 sm:space-y-8">
+        <FavoritesEncart className="mx-auto max-w-tf-content" />
+        <div className="mx-auto w-full max-w-tf-content space-y-6 sm:space-y-8">
           <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
             <AdSlot
               compact
               tone="navy"
               brand="Matchday sponsor"
-              body="Sous le hub desktop — débat du jour."
+              body="Sous le hub desktop — suite du fil d’actualité."
               imageSeed="home-under-hero-desktop"
             />
-            <div className="mt-5 sm:mt-6">
-              <DebateOfTheDayCard debate={debateOfTheDay} />
-            </div>
           </div>
           <HomeFeedContinuation
             idPrefix="d-"
@@ -171,55 +181,14 @@ export function HomePage() {
       </div>
 
       <div className="xl:hidden space-y-6 sm:space-y-8">
-      <FavoritesEncart className="mx-auto max-w-[1200px]" />
-      <header className={cn('mx-auto w-full max-w-[1200px] p-4 sm:p-5', hubGlassPanel(appearance))}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
-              Bienvenue sur TalkFoot <span className="inline-block">💙</span>
-            </h1>
-            <p className="mt-1 max-w-xl text-xs font-semibold text-tf-app-muted sm:text-sm">
-              Rejoins la communauté des passionnés et vis le football autrement.
-            </p>
-          </div>
-          <div
-            className={cn(
-              'flex shrink-0 gap-1 rounded-xl p-1',
-              appearance === 'light'
-                ? 'border border-tf-dark/10 bg-tf-dark/[0.04]'
-                : 'bg-white/[0.06]',
-            )}
-            role="group"
-            aria-label="Thème d’affichage"
-          >
-            <button
-              type="button"
-              onClick={() => setAppearance('dark')}
-              className={cn(
-                'rounded-lg px-3 py-2 text-[11px] font-black transition',
-                appearance === 'dark'
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-tf-app-muted hover:bg-white/80 hover:text-tf-app-fg',
-              )}
-            >
-              Nuit stade
-            </button>
-            <button
-              type="button"
-              onClick={() => setAppearance('light')}
-              className={cn(
-                'rounded-lg px-3 py-2 text-[11px] font-black transition',
-                appearance === 'light'
-                  ? 'bg-sky-500 text-white shadow-sm'
-                  : 'text-tf-app-muted hover:bg-white/10 hover:text-tf-app-fg',
-              )}
-            >
-              Mode jour
-            </button>
-          </div>
-        </div>
-      </header>
-      <div className="mx-auto w-full max-w-[1200px] space-y-6 sm:space-y-8">
+      <HomeLandingHub
+        appearance={appearance}
+        className={cn('mx-auto w-full max-w-tf-content', hubGlassPanel(appearance))}
+        compact
+        onCreateGroup={() => setCreateOpen(true)}
+      />
+      <FavoritesEncart className="mx-auto max-w-tf-content" />
+      <div className="mx-auto w-full max-w-tf-content space-y-6 sm:space-y-8">
         {supporterTintActive && team ? (
           <div
             className="rounded-2xl border border-tf-electric/30 bg-tf-electric-soft/90 px-4 py-3 text-sm font-bold text-tf-dark shadow-sm"
@@ -228,34 +197,26 @@ export function HomePage() {
             Mode supporter actif : couleurs & titres autour de{' '}
             <span className="font-black">{clubFocusLabel || team.name}</span>. Les matchs et actus restent
             larges — pour filtrer les messages (live, salons, top com.), utilise le{' '}
-            <strong className="font-black">Mode Virage</strong> dans Profil.
+            <strong className="font-black">{LIVE_FIL_EQUIPE_COEUR.label}</strong> dans Profil (pas les zones Virage /
+            Chill du live, ni un salon groupe).
           </div>
         ) : null}
 
         {/* Bloc supérieur : même verre que le hub desktop */}
         <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:mb-5">
-          <label
-            className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"
-            title="Ex. masquer le salon OM si ton club de cœur est le PSG"
-          >
-            <input
-              type="checkbox"
-              checked={hideRivalSalons}
-              onChange={(e) => setHideRivalSalons(e.target.checked)}
-              className="size-4 rounded border-tf-grey-pastel"
-            />
-            <span className="leading-snug">Masquer salons rivaux</span>
-          </label>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-            <Link to="/matches" className="w-full sm:w-auto">
-              <Button
-                variant="soft"
-                className="tf-interactive-press w-full rounded-2xl px-4 py-2.5 text-xs font-black sm:w-auto sm:py-2"
-              >
-                Hub matchs
-              </Button>
-            </Link>
+            <label
+              className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"
+              title="Ex. masquer le salon OM si ton club de cœur est le PSG"
+            >
+              <input
+                type="checkbox"
+                checked={hideRivalSalons}
+                onChange={(e) => setHideRivalSalons(e.target.checked)}
+                className="size-4 rounded border-tf-grey-pastel"
+              />
+              <span className="leading-snug">Masquer salons rivaux</span>
+            </label>
             <Button
               variant="primary"
               className="tf-interactive-press w-full rounded-2xl px-4 py-2.5 text-xs font-black sm:w-auto sm:py-2"
@@ -264,43 +225,51 @@ export function HomePage() {
               ➕ Créer un groupe
             </Button>
           </div>
-          </div>
 
           {/* Bento type maquette : hero sur 2 colonnes, rail droit sur 2 rangées, matchs sous le hero à gauche */}
           <div className={cn(bentoGrid)}>
           <div className={cn('order-1', spanTwoCenter)}>
             {heroLiveMatch ? (
-              <div className="space-y-4">
+              <div className="space-y-2">
+                <HubEncartTopAccent appearance={appearance} preset="live" />
                 <LiveMatchHero
                   match={heroLiveMatch}
                   simulation={heroLiveSim}
                   carousel={
-                    liveMatches.length > 1
+                    hubLiveMatches.length > 1
                       ? {
-                          count: liveMatches.length,
+                          count: hubLiveMatches.length,
                           index: heroSlide,
                           onSelect: setHeroSlide,
                         }
                       : undefined
                   }
                 />
-                {upcomingHeaderPool.length > 0 ? (
-                  <div className="min-w-0">
-                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-0.5">
-                      <h3 className="font-display text-sm font-black text-tf-app-fg sm:text-base">Prochains matchs</h3>
-                      <Link
-                        to="/matches"
+                {upcomingUnderLiveStrip.length > 0 ? (
+                  <div className="min-w-0 border-t border-tf-dark/10 pt-2 dark:border-white/10">
+                    <HubEncartTopAccent appearance={appearance} preset="upcoming" className="mb-2" />
+                    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 px-0.5">
+                      <h3
                         className={cn(
-                          'text-xs font-black hover:underline',
-                          appearance === 'light' ? 'text-sky-700' : 'text-sky-300',
+                          'text-[10px] font-black uppercase tracking-wider',
+                          appearance === 'light' ? 'text-tf-dark/90' : 'text-sky-100',
+                        )}
+                      >
+                        À venir
+                      </h3>
+                      <Link
+                        to="/match"
+                        className={cn(
+                          'text-[10px] font-black hover:underline',
+                          appearance === 'light' ? 'text-tf-dark' : 'text-sky-300',
                         )}
                       >
                         Voir tout
                       </Link>
                     </div>
-                    <div className="-mx-1 flex gap-3 overflow-x-auto pb-1 pt-0.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-tf-dark/15">
-                      {upcomingHeaderPool.map((m) => (
-                        <HubStripUpcoming key={m.id} match={m} className="min-w-[260px] max-w-[300px]" />
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+                      {upcomingUnderLiveStrip.map((m) => (
+                        <HubStripUpcoming key={m.id} match={m} visualSize="compact" className="min-w-0" />
                       ))}
                     </div>
                   </div>
@@ -313,26 +282,34 @@ export function HomePage() {
                 <p className="text-sm font-bold text-tf-grey">
                   Aucun match en direct pour l’instant — vois les encarts matchs ou le carrousel ci-dessous.
                 </p>
-                <Link to="/matches" className="mt-4 inline-block text-sm font-black text-tf-electric-deep underline">
+                <Link to="/match" className="mt-4 inline-block text-sm font-black text-tf-electric-deep underline">
                   Voir les matchs
                 </Link>
               </Card>
             )}
+            <div className="mt-5 space-y-4 sm:mt-6">
+              <DebateOfTheDayCard debate={debateOfTheDay} />
+            </div>
           </div>
 
           <aside className="order-5 flex justify-center lg:order-none lg:col-start-3 lg:row-start-1 lg:row-span-2 lg:block lg:justify-start">
-            <div className="w-full max-w-[360px] lg:max-w-none">
+            <div className="w-full max-w-tf-hub-rail min-w-0 lg:max-w-none">
               <HomeRightColumn
-                debates={railDebates}
+                debates={[]}
                 groups={activeGroupsRail}
                 onCreateGroup={() => setCreateOpen(true)}
+                showDebatesSection={false}
               />
             </div>
           </aside>
 
           <aside className="order-4 flex justify-center lg:order-none lg:col-start-1 lg:row-start-2 lg:block lg:justify-start">
-            <div className="w-full max-w-[360px] lg:max-w-none">
-              <HomeLeftColumn upcomingPool={displayMatchesFull} resultsPool={displayMatchesFull} />
+            <div className="w-full max-w-tf-hub-rail min-w-0 lg:max-w-none">
+              <HomeLeftColumn
+                upcomingPool={displayMatchesFull}
+                resultsPool={displayMatchesFull}
+                omitUpcoming
+              />
             </div>
           </aside>
 
@@ -341,25 +318,15 @@ export function HomePage() {
               compact
               tone="navy"
               brand="Matchday sponsor"
-              body="Sous le live, au-dessus du débat du jour."
+              body="Sous le débat du jour dans la colonne principale."
               imageSeed="home-under-hero"
             />
-            <DebateOfTheDayCard debate={debateOfTheDay} />
           </div>
           </div>
-        </div>
-
-        <div className="mt-5 sm:mt-6">
-          <AdSlot
-            tone="blue"
-            brand="Bannière milieu de page"
-            body="Entre le bloc accueil (live & débat) et la bande tendances — format horizontal type leaderboard."
-            imageSeed="home-hero-trends-gap"
-          />
         </div>
       </div>
 
-      <section className={cn('mx-auto w-full max-w-[1200px]', trendsShell)} aria-label="Débats tendances">
+      <section className={cn('mx-auto w-full max-w-tf-content', trendsShell)} aria-label="Débats tendances">
         <TrendingDebatesSection debates={trendingDebates} variant="band" />
       </section>
 
@@ -381,7 +348,8 @@ export function HomePage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreate={(g) => {
-          createGroup(g)
+          const created = createGroup(g)
+          navigate(`/group/${created.id}`)
         }}
       />
     </div>

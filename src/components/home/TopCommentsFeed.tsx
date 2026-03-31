@@ -7,6 +7,7 @@ import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
 import { currentUser, mockUsers } from '../../data/users'
 import { useProfile } from '../../hooks/useProfile'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
+import { LIVE_FIL_EQUIPE_COEUR } from '../../data/tribunes'
 import { useSupporterTintMode } from '../../hooks/useSupporterTintMode'
 import { cn } from '../../utils/cn'
 
@@ -38,7 +39,7 @@ export function TopCommentsFeed({
   const filterHint =
     favoriteClubIds.length > 0 && virageMode ? (
       <p className="text-[10px] font-bold text-violet-700 sm:text-xs">
-        Mode Virage : commentaires liés à tes clubs favoris.
+        {LIVE_FIL_EQUIPE_COEUR.label} : commentaires liés à tes clubs favoris.
       </p>
     ) : null
 
@@ -50,7 +51,7 @@ export function TopCommentsFeed({
         Like des commentaires dans les lives pour les voir ici
       </p>
       <Link
-        to="/matches"
+        to="/match"
         className="mt-3 inline-flex rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-black text-slate-900 transition hover:bg-white sm:mt-4 sm:px-4 sm:text-sm"
       >
         Voir les matchs →

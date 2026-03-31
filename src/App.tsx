@@ -5,7 +5,6 @@ import { ChannelPage } from './pages/Channel'
 import { ChannelStadiumPage } from './pages/ChannelStadium'
 import { GroupPage } from './pages/Group'
 import { HomePage } from './pages/Home'
-import { MatchesPage } from './pages/Matches'
 import { DebatesPage } from './pages/Debates'
 import { DebateDetailPage } from './pages/DebateDetail'
 import { GroupsHubPage } from './pages/GroupsHub'
@@ -53,7 +52,7 @@ export default function App() {
         }
       >
         <Route index element={<HomePage />} />
-        <Route path="matches" element={<MatchesPage />} />
+        <Route path="matches" element={<Navigate to="/match" replace />} />
         <Route path="debates" element={<DebatesPage />} />
         <Route path="debate/:debateId" element={<DebateDetailPage />} />
         <Route path="groups" element={<GroupsHubPage />} />
@@ -62,7 +61,9 @@ export default function App() {
         <Route path="channel/:matchId/stade" element={<ChannelStadiumPage />} />
         <Route path="channel/:matchId" element={<ChannelPage />} />
         <Route path="group/:groupId" element={<GroupPage />} />
-        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="match" element={<CalendarPage />} />
+        <Route path="agenda" element={<Navigate to="/match" replace />} />
+        <Route path="calendar" element={<Navigate to="/match" replace />} />
         <Route path="boutique" element={<BoutiquePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

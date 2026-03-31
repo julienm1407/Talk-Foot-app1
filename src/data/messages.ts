@@ -2,7 +2,57 @@ import type { Message } from '../types/chat'
 
 const base = Date.now() - 5 * 60_000
 
+/** Messages seed Rennes–PSG (replay) avec salons tribunes pour le fil groupe. */
+const replayRennesPsg: Message[] = [
+  {
+    id: 'msg-rp-1',
+    matchId: 'm-api-1213970',
+    userId: 'u-2',
+    text: 'Roazhon qui pousse — on sent la ferveur même devant l’écran.',
+    createdAt: base + 8_000,
+    tribune: 'virage',
+    supporterGroupId: 'g-roazhon-kop',
+  },
+  {
+    id: 'msg-rp-2',
+    matchId: 'm-api-1213970',
+    userId: 'u-1',
+    text: 'Paris en place haute, faut tenir les premières minutes.',
+    createdAt: base + 22_000,
+    tribune: 'analyse',
+    supporterGroupId: 'g-ultras-nuit',
+  },
+  {
+    id: 'msg-rp-3',
+    matchId: 'm-api-1213970',
+    userId: 'u-3',
+    text: 'Neutre ici : le milieu rennais va être testé sur les transitions.',
+    createdAt: base + 41_000,
+    tribune: 'analyse',
+    supporterGroupId: 'g-l1-neutral',
+  },
+  {
+    id: 'msg-rp-4',
+    matchId: 'm-api-1213970',
+    userId: 'u-4',
+    text: 'ALLEZ RENNES — corner à venir, ça sent le danger.',
+    createdAt: base + 55_000,
+    tribune: 'virage',
+    supporterGroupId: 'g-roazhon-kop',
+  },
+  {
+    id: 'msg-rp-5',
+    matchId: 'm-api-1213970',
+    userId: 'u-5',
+    text: 'Dembélé chaud ce soir, le couloir droit va fumer.',
+    createdAt: base + 71_000,
+    tribune: 'virage',
+    supporterGroupId: 'g-ultras-nuit',
+  },
+]
+
 export const initialMessages: Message[] = [
+  ...replayRennesPsg,
   {
     id: 'msg-1',
     matchId: 'm-rma-fcb',

@@ -9,6 +9,7 @@ import {
 import type { Match } from '../types/match'
 import { fetchFixtures, fetchLiveFixtures, fetchRennesPsgReplay } from '../api/footballApi'
 import { apiFixtureToMatch } from '../api/transformFixtures'
+import { DEMO_EXTRA_LIVE_MATCHES } from '../data/demoLiveMatches'
 import { generateRealFixtures } from '../data/realFixtures'
 import { teams } from '../data/teams'
 
@@ -69,10 +70,12 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
   const fetchMatches = useCallback(async () => {
     const apiKey = import.meta.env.VITE_API_SPORTS_KEY
     if (!apiKey) {
-      const fallback = [FALLBACK_LIVE_MATCH, ...generateRealFixtures()].filter(
-        (m) =>
-          m.id === REPLAY_LIVE_ID || new Date(m.kickoffAt).getTime() >= CUTOFF_DATE,
-      )
+      const demoIds = new Set(DEMO_EXTRA_LIVE_MATCHES.map((m) => m.id))
+      const fallback = [
+        FALLBACK_LIVE_MATCH,
+        ...DEMO_EXTRA_LIVE_MATCHES,
+        ...generateRealFixtures().filter((m) => !demoIds.has(m.id)),
+      ].filter((m) => m.id === REPLAY_LIVE_ID || new Date(m.kickoffAt).getTime() >= CUTOFF_DATE)
       setMatches(fallback)
       setLoading(false)
       return
@@ -115,15 +118,28 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       const upcomingSimulated = generateRealFixtures()
       let combined = [...baseList, ...upcomingSimulated]
       if (combined.length === 0) combined = [FALLBACK_LIVE_MATCH]
+
+      // Même avec l’API : garder les lives fictifs (L1 / EPL / Liga) pour l’agenda & l’accueil,
+      // comme sans clé — sinon il n’y a souvent que le replay + 0–1 vrai live.
+      const byId = new Map(combined.map((m) => [m.id, m]))
+      for (const extra of DEMO_EXTRA_LIVE_MATCHES) {
+        if (!byId.has(extra.id)) byId.set(extra.id, extra)
+      }
+
       setMatches(
-        combined.sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime()),
+        Array.from(byId.values()).sort(
+          (a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime(),
+        ),
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur chargement matchs')
-      const fallback = [FALLBACK_LIVE_MATCH, ...generateRealFixtures()].filter(
-        (m) =>
-          m.id === REPLAY_LIVE_ID ||
-          new Date(m.kickoffAt).getTime() >= CUTOFF_DATE,
+      const demoIds = new Set(DEMO_EXTRA_LIVE_MATCHES.map((m) => m.id))
+      const fallback = [
+        FALLBACK_LIVE_MATCH,
+        ...DEMO_EXTRA_LIVE_MATCHES,
+        ...generateRealFixtures().filter((m) => !demoIds.has(m.id)),
+      ].filter(
+        (m) => m.id === REPLAY_LIVE_ID || new Date(m.kickoffAt).getTime() >= CUTOFF_DATE,
       )
       setMatches(fallback)
     } finally {
@@ -137,16 +153,20 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
 
   const carouselMatches = useMemo(() => {
     const now = Date.now()
-    const liveMatch = matches.find((m) => m.id === REPLAY_LIVE_ID || m.status === 'live')
+    const lives = matches.filter((m) => m.status === 'live')
+    const replayFirst = lives.find((m) => m.id === REPLAY_LIVE_ID)
+    const otherLives = lives.filter((m) => m.id !== REPLAY_LIVE_ID)
+    const livesOrdered = replayFirst ? [replayFirst, ...otherLives] : lives
+    const liveIds = new Set(livesOrdered.map((m) => m.id))
     const rest = matches
-      .filter((m) => m.id !== liveMatch?.id)
+      .filter((m) => !liveIds.has(m.id))
       .filter((m) => {
         const kickoff = new Date(m.kickoffAt).getTime()
         return kickoff >= now - 60_000 && kickoff <= now + CAROUSEL_WINDOW_MS
       })
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
       .slice(0, 14)
-    return [...(liveMatch ? [liveMatch] : []), ...rest]
+    return [...livesOrdered, ...rest]
   }, [matches, tick])
 
   const value: MatchesContextValue = {

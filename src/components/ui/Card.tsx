@@ -18,8 +18,8 @@ export function Card({
       id={id}
       style={style}
       className={cn(
-        'rounded-3xl border border-tf-grey-pastel/55 bg-white/95 text-tf-dark backdrop-blur-sm',
-        elevation === 'soft' && 'shadow-tf-card',
+        'rounded-tf-3xl border border-tf-grey-pastel/55 bg-white/95 text-tf-dark backdrop-blur-sm',
+        elevation === 'soft' && 'shadow-tf-elev-3',
         className,
       )}
     >
@@ -27,4 +27,3 @@ export function Card({
     </div>
   )
 }
-

@@ -22,6 +22,17 @@ export type Message = {
   emoteId?: string
   /** Tribune du stade digital ; absent = visible dans toutes les tribunes (ex. messages globaux). */
   tribune?: TribuneId
+  /** Salon supporter (tribune groupe) — filtré sur le live quand une tribune groupe est active. */
+  supporterGroupId?: string
+  /** Bloc écharpe d’un groupe (message visuel). */
+  groupScarf?: {
+    groupId: string
+    groupName: string
+    text: string
+    colorA: string
+    colorB: string
+    colorC: string
+  }
 }
 
 export type ReactionEvent = {

@@ -3,6 +3,7 @@ import type { Debate } from '../../data/debates'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
 import { getAppSectionTheme } from '../../theme/appSectionThemes'
+import { useAppearance } from '../../contexts/AppearanceContext'
 import { DebateMessagePreview } from '../debate/DebateMessagePreview'
 
 export function TrendingDebatesSection({
@@ -14,6 +15,9 @@ export function TrendingDebatesSection({
   variant?: 'default' | 'band'
 }) {
   if (debates.length === 0) return null
+
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
 
   const gridCols =
     debates.length >= 6
@@ -38,7 +42,9 @@ export function TrendingDebatesSection({
         className={cn(
           'flex flex-col gap-3 pb-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:pb-4',
           variant === 'band'
-            ? 'border-b-2 border-tf-dark/14 pb-3 sm:pb-4'
+            ? L
+              ? 'border-b-2 border-tf-dark/14 pb-3 sm:pb-4'
+              : 'border-b-2 border-white/15 pb-3 sm:pb-4'
             : 'border-b border-tf-grey-pastel/50',
         )}
       >
@@ -60,13 +66,13 @@ export function TrendingDebatesSection({
           <h2
             id="trending-debates-heading"
             className={cn(
-              'font-display text-2xl font-black uppercase leading-[1.1] tracking-tight text-tf-dark',
+              'font-display text-2xl font-black uppercase leading-[1.1] tracking-tight text-tf-app-fg',
               'sm:text-[1.65rem] lg:text-3xl',
             )}
           >
             Tendances
           </h2>
-          <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-dark/75 line-clamp-2 sm:line-clamp-none">
+          <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-app-muted line-clamp-2 sm:line-clamp-none">
             Ouvre un fil — même importance que le match.
           </p>
         </div>

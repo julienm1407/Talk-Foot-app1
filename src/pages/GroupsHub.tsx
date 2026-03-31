@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { GroupCard } from '../components/group/GroupCard'
@@ -19,6 +19,7 @@ import {
 type HubTab = 'mine' | 'discover'
 
 export function GroupsHubPage() {
+  const navigate = useNavigate()
   const { groups, createGroup, joinGroup, isJoined } = useSupporterGroups()
   const {
     favoriteClubIds,
@@ -109,13 +110,21 @@ export function GroupsHubPage() {
           </>
         }
         actions={
-          <Button
-            variant="primary"
-            className="tf-interactive-press shrink-0 rounded-3xl px-5"
-            onClick={() => setCreateOpen(true)}
-          >
-            ➕ Créer un groupe
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <Link
+              to="/debates"
+              className="tf-interactive-press inline-flex min-h-11 items-center justify-center rounded-3xl border-2 border-violet-300/55 bg-violet-50/90 px-4 text-xs font-black text-tf-dark shadow-sm hover:bg-violet-100 sm:px-5 sm:text-sm"
+            >
+              💬 Débats
+            </Link>
+            <Button
+              variant="primary"
+              className="tf-interactive-press shrink-0 rounded-3xl px-5"
+              onClick={() => setCreateOpen(true)}
+            >
+              ➕ Créer un groupe
+            </Button>
+          </div>
         }
       />
 
@@ -230,7 +239,8 @@ export function GroupsHubPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreate={(payload) => {
-          createGroup(payload)
+          const created = createGroup(payload)
+          navigate(`/group/${created.id}`)
         }}
       />
     </div>

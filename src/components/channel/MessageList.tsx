@@ -146,10 +146,26 @@ export function MessageList({
                 className={cn(
                   'mt-1 rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed text-slate-700',
                   bubbleClass(kind),
-                  (m.gifUrl || m.emoteId) && 'p-2',
+                  (m.gifUrl || m.emoteId || m.groupScarf) && 'p-2',
                 )}
               >
-                {m.gifUrl ? (
+                {m.groupScarf ? (
+                  <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-900/5 shadow-inner">
+                    <div className="flex h-3 w-full">
+                      <span className="h-full flex-1" style={{ background: m.groupScarf.colorA }} />
+                      <span className="h-full flex-1" style={{ background: m.groupScarf.colorB }} />
+                      <span className="h-full flex-1" style={{ background: m.groupScarf.colorC }} />
+                    </div>
+                    <div className="px-3 py-2 text-center">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                        Écharpe · {m.groupScarf.groupName}
+                      </p>
+                      <p className="mt-1 font-display text-sm font-black tracking-tight text-slate-900">
+                        {m.groupScarf.text}
+                      </p>
+                    </div>
+                  </div>
+                ) : m.gifUrl ? (
                   <img
                     src={m.gifUrl}
                     alt="GIF"

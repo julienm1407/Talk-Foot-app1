@@ -1,8 +1,12 @@
 import { useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import { LogoMark } from './LogoMark'
-import { OVERLAY_NAV_ROUTES, getAppSectionTheme } from '../theme/appSectionThemes'
+import {
+  OVERLAY_NAV_ROUTES,
+  getAppSectionTheme,
+  isRouteActiveForSection,
+} from '../theme/appSectionThemes'
 
 export function OverlayMenu({
   open,
@@ -11,6 +15,7 @@ export function OverlayMenu({
   open: boolean
   onClose: () => void
 }) {
+  const location = useLocation()
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
@@ -31,7 +36,7 @@ export function OverlayMenu({
         onClick={onClose}
       />
 
-      <div className="absolute left-3 top-[72px] w-[320px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[28px] border border-tf-grey-pastel/55 bg-white/95 shadow-tf-card backdrop-blur-md sm:left-6">
+      <div className="absolute left-3 top-[72px] w-[min(100%,20rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[28px] border border-tf-grey-pastel/55 bg-white/95 shadow-tf-card backdrop-blur-md sm:left-6">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3">
             <LogoMark variant="compact" />
@@ -45,21 +50,21 @@ export function OverlayMenu({
         <nav className="border-t border-tf-grey-pastel/50 px-2 py-2" aria-label="Menu">
           {OVERLAY_NAV_ROUTES.map(({ to, end, section, icon, hint }) => {
             const th = getAppSectionTheme(section)
+            const active = isRouteActiveForSection(section, location.pathname)
             return (
               <NavLink
                 key={to}
                 to={to}
                 end={end}
                 onClick={onClose}
-                className={({ isActive }) =>
-                  cn(
-                    'group flex items-center justify-between gap-3 rounded-2xl px-3 py-3 outline-none transition',
-                    th.nav.focus,
-                    isActive
-                      ? cn(th.nav.active, 'ring-1 ring-inset ring-black/5')
-                      : cn('text-tf-dark/80 hover:text-tf-dark', th.nav.inactiveHover),
-                  )
-                }
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'group flex items-center justify-between gap-3 rounded-2xl px-3 py-3 outline-none transition',
+                  th.nav.focus,
+                  active
+                    ? cn(th.nav.active, 'ring-1 ring-inset ring-black/5')
+                    : cn('text-tf-dark/80 hover:text-tf-dark', th.nav.inactiveHover),
+                )}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-base leading-none" aria-hidden="true">
