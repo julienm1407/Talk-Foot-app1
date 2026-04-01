@@ -14,6 +14,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Bigail / Bebas : déjà condensées — le gras + tracking négatif rendait les titres illisibles */
+  .font-display:is(.font-black, .font-bold, .font-extrabold) {
+    letter-spacing: 0.02em;
+  }
+}
+
 /* Charte TalkFoot — DA : bleu #023458 structure, fond #F4F8FB jour, accent #FF3B3B actions & live */
 :root {
   --tf-dark: #023458;
@@ -49,14 +56,14 @@
   --tf-bg: var(--tf-page-bg-light);
   --tf-bg-2: #eef3f7;
   --tf-card: var(--tf-card-bg-light);
-  --tf-border: rgba(2, 52, 88, 0.12);
+  --tf-border: var(--tf-c30-border);
   --tf-text: rgba(2, 52, 88, 0.94);
   --tf-muted: rgba(2, 52, 88, 0.62);
   --tf-faint: rgba(2, 52, 88, 0.5);
   --tf-accent: var(--tf-brand-accent);
   --tf-shadow: var(--tf-elev-3);
   --tf-flood: #f97316;
-  --tf-live-glow: rgba(255, 59, 59, 0.28);
+  --tf-live-glow: var(--tf-c10-accent-glow);
   /** Mode nuit (défaut body) — muted/subtle assez clairs pour fond #0d2135 / verre sombre */
   --tf-app-fg-rgb: 244 248 251;
   --tf-app-muted-rgb: 198 212 226;
@@ -93,7 +100,12 @@ body {
   /* Nuit stade : fond bleu nuit (structure), peu de dégradés */
   color: rgb(var(--tf-app-fg-rgb));
   background-color: var(--tf-page-bg-dark);
-  background-image: linear-gradient(180deg, #041424 0%, var(--tf-page-bg-dark) 38%, #061a2e 100%);
+  background-image: linear-gradient(
+    180deg,
+    var(--tf-c60-deep) 0%,
+    var(--tf-c60-base) 42%,
+    var(--tf-c60-mid) 100%
+  );
   background-attachment: fixed;
 }
 
@@ -108,8 +120,15 @@ html[data-tf-appearance='light'] {
 html[data-tf-appearance='light'] body {
   color: var(--tf-text);
   font-weight: 500;
-  background-color: var(--tf-page-bg-light);
-  background-image: none;
+  background-color: var(--tf-c60-base);
+  /* 60 % dominante : léger dégradé vertical (détail sans saturer le blanc) */
+  background-image: linear-gradient(
+    180deg,
+    var(--tf-c60-deep) 0%,
+    var(--tf-c60-base) 40%,
+    var(--tf-c60-mid) 100%
+  );
+  background-attachment: fixed;
 }
 
 html[data-tf-appearance='light'] .tf-panel {
@@ -133,12 +152,22 @@ html[data-tf-appearance='light'] .tf-home-block {
   inset: 0;
   z-index: -1;
   background-color: var(--tf-page-bg-dark);
-  background-image: linear-gradient(180deg, #041424 0%, var(--tf-page-bg-dark) 50%, #061a2e 100%);
+  background-image: linear-gradient(
+    180deg,
+    var(--tf-c60-deep) 0%,
+    var(--tf-c60-base) 50%,
+    var(--tf-c60-mid) 100%
+  );
 }
 
 html[data-tf-appearance='light'] .tf-page-backdrop {
-  background-color: var(--tf-page-bg-light);
-  background-image: none;
+  background-color: var(--tf-c60-base);
+  background-image: linear-gradient(
+    180deg,
+    var(--tf-c60-deep) 0%,
+    var(--tf-c60-base) 45%,
+    var(--tf-c60-mid) 100%
+  );
 }
 
 html[data-tf-appearance='light'] .tf-surface {
@@ -165,18 +194,38 @@ html[data-tf-appearance='light'] .tf-panel textarea::placeholder {
   color: rgba(2, 52, 88, 0.52);
 }
 
+/*
+ * Mode nuit app : --tf-app-* vise les fonds bleu nuit. Les cartes blanches (Card) gardent un fond clair :
+ * sans ça, text-tf-app-fg / muted restent presque blancs → titres illisibles (ex. « À l’affiche »).
+ */
+html[data-tf-appearance='dark'] [data-tf-card-surface='light'] {
+  color: var(--tf-text);
+}
+
+html[data-tf-appearance='dark'] [data-tf-card-surface='light'] .text-tf-app-fg {
+  color: var(--tf-text) !important;
+}
+
+html[data-tf-appearance='dark'] [data-tf-card-surface='light'] .text-tf-app-muted {
+  color: var(--tf-muted) !important;
+}
+
+html[data-tf-appearance='dark'] [data-tf-card-surface='light'] .text-tf-app-subtle {
+  color: var(--tf-faint) !important;
+}
+
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--tf-font-display);
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.02em;
 }
 
 .tf-surface {
   background: var(--tf-card-bg-dark);
-  border: 1px solid rgba(179, 195, 207, 0.14);
+  border: 1px solid var(--tf-c30-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
@@ -198,7 +247,7 @@ html[data-tf-appearance='light'] .tf-surface {
 .tf-panel {
   color: rgb(var(--tf-app-fg-rgb));
   background: var(--tf-card-bg-dark);
-  border: 1px solid rgba(179, 195, 207, 0.12);
+  border: 1px solid var(--tf-c30-border);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: var(--tf-elev-glass-dark);
@@ -207,7 +256,7 @@ html[data-tf-appearance='light'] .tf-surface {
 .tf-home-block {
   color: rgb(var(--tf-app-fg-rgb));
   background: var(--tf-card-bg-dark);
-  border: 1px solid rgba(179, 195, 207, 0.12);
+  border: 1px solid var(--tf-c30-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--tf-elev-glass-dark);
@@ -874,7 +923,7 @@ body::before {
   margin-top: 6px;
   font-family: var(--tf-font-display);
   font-weight: 900;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.02em;
   font-size: clamp(40px, 7vw, 78px);
   line-height: 0.95;
   color: rgba(1, 30, 51, 0.94);

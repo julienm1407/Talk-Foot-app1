@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useLiveEncartSimulation } from '../hooks/useLiveEncartSimulation'
+import { HubStripLive } from '../components/match/HubMatchEncart'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
   articlePreviewLiveMatch,
@@ -14,7 +16,6 @@ import {
   DebatesRichBody,
   EncartChrome,
   GroupsDiscussRichBody,
-  LiveMatchRichPreview,
 } from '../components/article/ArticleEncartsRich'
 import {
   getAppSectionTheme,
@@ -25,11 +26,22 @@ import { cn } from '../utils/cn'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 
-const tagStyles: Record<string, string> = {
-  Breaking: 'bg-rose-500/15 text-rose-800 ring-rose-300/50',
-  Analyse: 'bg-sky-500/12 text-sky-900 ring-sky-300/45',
-  Rumeurs: 'bg-amber-500/15 text-amber-900 ring-amber-300/50',
-  Débrief: 'bg-slate-500/10 text-slate-800 ring-slate-300/40',
+/** Lisibles sur panneau clair (jour) et sur verre sombre (nuit). */
+function articleTagClass(tag: string, light: boolean): string {
+  const L = {
+    Breaking: 'bg-rose-500/15 text-rose-800 ring-rose-300/50',
+    Analyse: 'bg-sky-500/12 text-sky-900 ring-sky-300/45',
+    Rumeurs: 'bg-amber-500/15 text-amber-900 ring-amber-300/50',
+    Débrief: 'bg-slate-500/10 text-slate-800 ring-slate-300/40',
+  } as const
+  const D = {
+    Breaking: 'bg-rose-500/25 text-rose-50 ring-rose-400/35',
+    Analyse: 'bg-sky-500/20 text-sky-50 ring-sky-400/35',
+    Rumeurs: 'bg-amber-500/20 text-amber-50 ring-amber-400/35',
+    Débrief: 'bg-slate-400/15 text-slate-50 ring-slate-400/30',
+  } as const
+  const k = (tag in L ? tag : 'Débrief') as keyof typeof L
+  return light ? L[k] : D[k]
 }
 
 function loginWithNext(path: string): string {
@@ -55,6 +67,7 @@ function encartBlock(key: ArticleEncartKey) {
 
 export function ArticlePage() {
   const { slug } = useParams()
+  const navigate = useNavigate()
   const article = slug ? getArticleBySlug(slug) : undefined
   const { user, isReady } = useAuth()
   const { appearance } = useAppearance()
@@ -70,6 +83,8 @@ export function ArticlePage() {
     }),
     [],
   )
+
+  const articleLiveMirror = useLiveEncartSimulation(articlePreviewLiveMatch)
 
   const seoPayload = useMemo(() => {
     if (!article) return null
@@ -90,6 +105,9 @@ export function ArticlePage() {
   const debatesPath = '/debates'
   const groupsPath = '/groups'
 
+  /** Filets de section : lisibles sur panneau jour / nuit */
+  const articleDivider = isLight ? 'border-tf-dark/12' : 'border-white/14'
+
   if (!isReady) {
     return (
       <div className="relative flex min-h-dvh items-center justify-center">
@@ -103,7 +121,7 @@ export function ArticlePage() {
 
   if (!article) {
     return (
-      <div className="relative min-h-dvh overflow-x-hidden text-tf-dark">
+      <div className="relative min-h-dvh overflow-x-hidden text-tf-app-fg">
         <div className="tf-page-backdrop" aria-hidden />
         <header
           className={cn(
@@ -113,7 +131,21 @@ export function ArticlePage() {
               : 'border-white/10 bg-tf-night/80',
           )}
         >
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 sm:gap-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className={cn(
+                  'shrink-0 rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-wide transition',
+                  isLight
+                    ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
+                    : 'border-white/15 bg-white/10 text-white hover:bg-white/15',
+                )}
+                aria-label="Retour en arrière"
+              >
+                ← Retour
+              </button>
             <Link
               to="/login"
               className={cn(
@@ -129,6 +161,7 @@ export function ArticlePage() {
                 decorative={false}
               />
             </Link>
+            </div>
             <Link
               to="/login"
               className={cn(
@@ -200,7 +233,7 @@ export function ArticlePage() {
   const matchesEncart = getAppSectionTheme('matches').encart
 
   return (
-    <div className="relative min-h-dvh overflow-x-hidden text-tf-dark">
+    <div className="relative min-h-dvh overflow-x-hidden text-tf-app-fg">
       <div className="tf-page-backdrop pointer-events-none" aria-hidden />
 
       <header
@@ -219,21 +252,36 @@ export function ArticlePage() {
           aria-hidden
         />
         <div className="relative mx-auto flex w-full max-w-tf-content min-w-0 items-center justify-between gap-3 px-[var(--tf-page-gutter)] py-3 sm:gap-4">
-          <Link
-            to={appHome}
-            className={cn(
-              'shrink-0 rounded-2xl border px-2 py-1.5 transition sm:px-2.5 sm:py-2',
-              isLight
-                ? 'border-tf-dark/12 bg-white/95 hover:border-tf-dark/18 hover:bg-white'
-                : 'border-white/10 bg-white/[0.07] hover:border-white/20 hover:bg-white/[0.1]',
-            )}
-          >
-            <LogoMark
-              variant="header"
-              className={cn(!isLight && 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]')}
-              decorative={false}
-            />
-          </Link>
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className={cn(
+                'shrink-0 rounded-2xl border px-3 py-2 text-[11px] font-black uppercase tracking-wide transition sm:text-xs',
+                isLight
+                  ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
+                  : 'border-white/15 bg-white/10 text-white hover:bg-white/15',
+              )}
+              aria-label="Retour en arrière"
+            >
+              ← Retour
+            </button>
+            <Link
+              to={appHome}
+              className={cn(
+                'shrink-0 rounded-2xl border px-2 py-1.5 transition sm:px-2.5 sm:py-2',
+                isLight
+                  ? 'border-tf-dark/12 bg-white/95 hover:border-tf-dark/18 hover:bg-white'
+                  : 'border-white/10 bg-white/[0.07] hover:border-white/20 hover:bg-white/[0.1]',
+              )}
+            >
+              <LogoMark
+                variant="header"
+                className={cn(!isLight && 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]')}
+                decorative={false}
+              />
+            </Link>
+          </div>
           <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
             <Link to={toLive} className="shrink-0">
@@ -280,7 +328,12 @@ export function ArticlePage() {
                       fetchPriority="high"
                     />
                   </div>
-                  <figcaption className="mt-2 text-[9px] font-semibold leading-snug text-tf-grey sm:text-[10px]">
+                  <figcaption
+                    className={cn(
+                      'mt-2 text-[9px] font-semibold leading-snug sm:text-[10px]',
+                      isLight ? 'text-tf-grey' : 'text-sky-200/72',
+                    )}
+                  >
                     Photo Unsplash — licence libre (usage éditorial).
                   </figcaption>
                 </figure>
@@ -305,8 +358,13 @@ export function ArticlePage() {
                           </p>
                         </EncartChrome>
                       </div>
-                      <div className="min-h-0 flex-1 px-2 pb-2 pt-1.5 sm:px-3 sm:pb-2.5">
-                        <LiveMatchRichPreview match={articlePreviewLiveMatch} compact className="h-full" />
+                      <div className="min-h-0 flex-1 overflow-hidden px-1 pb-1 pt-1 sm:px-2 sm:pb-2 sm:pt-1.5">
+                        <HubStripLive
+                          match={articlePreviewLiveMatch}
+                          liveMirror={articleLiveMirror}
+                          asLink={false}
+                          className="h-full min-h-[200px] min-w-0"
+                        />
                       </div>
                       <div
                         className={cn(
@@ -332,14 +390,14 @@ export function ArticlePage() {
                     <span
                       className={cn(
                         'inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ring-1',
-                        tagStyles[article.tag] ?? tagStyles.Débrief,
+                        articleTagClass(article.tag, isLight),
                       )}
                     >
                       {article.tag}
                     </span>
                     <time
                       dateTime={published.toISOString()}
-                      className="text-[11px] font-bold text-tf-grey"
+                      className="text-[11px] font-bold text-tf-app-muted"
                     >
                       {published.toLocaleDateString('fr-FR', {
                         weekday: 'long',
@@ -349,16 +407,16 @@ export function ArticlePage() {
                       })}
                     </time>
                   </div>
-                  <h1 className="mt-4 font-display text-2xl font-black leading-[1.12] tracking-tight text-tf-dark sm:text-3xl">
+                  <h1 className="mt-4 max-w-[65ch] font-display text-2xl font-black leading-snug tracking-tight text-tf-app-fg sm:text-[1.85rem] sm:leading-[1.12] md:text-[2rem]">
                     {article.title}
                   </h1>
-                  <p className="mt-3 text-sm font-semibold leading-relaxed text-tf-dark/80 sm:text-base">
+                  <p className="mt-3 max-w-[65ch] text-sm font-semibold leading-relaxed text-tf-app-muted sm:text-base">
                     {article.excerpt}
                   </p>
                 </header>
 
-                <div className="mt-8 border-t border-tf-dark/10 pt-8">
-                  <div className="space-y-5 text-base font-semibold leading-[1.75] tracking-tight text-tf-dark/90 sm:text-[1.0625rem]">
+                <div className={cn('mt-8 border-t pt-8', articleDivider)}>
+                  <div className="max-w-[65ch] space-y-6 text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]">
                     {article.body.map((p, i) => (
                       <p key={`${article.id}-p-${i}`}>{p}</p>
                     ))}
@@ -371,10 +429,15 @@ export function ArticlePage() {
                 className="min-w-0 space-y-4 lg:col-span-3 lg:space-y-5"
               >
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-tf-electric-deep sm:text-[11px]">
+                  <p
+                    className={cn(
+                      'text-[10px] font-black uppercase tracking-[0.18em] sm:text-[11px]',
+                      isLight ? 'text-tf-electric-deep' : 'text-sky-200/88',
+                    )}
+                  >
                     Dans l’app
                   </p>
-                  <p className="mt-0.5 text-xs font-semibold text-tf-grey">À lire à côté de l’article.</p>
+                  <p className="mt-0.5 text-xs font-semibold text-tf-app-muted">À lire à côté de l’article.</p>
                 </div>
 
                 <Link
@@ -408,15 +471,15 @@ export function ArticlePage() {
             {/* Clôture : mises en bouche des autres encarts */}
             <section
               aria-label="Pour aller plus loin"
-              className="border-t border-tf-dark/10 pt-6 sm:pt-8"
+              className={cn('border-t pt-6 sm:pt-8', articleDivider)}
             >
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tf-grey sm:text-[11px]">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tf-app-muted sm:text-[11px]">
                 Poursuivre
               </p>
-              <h2 className="mt-1 font-display text-lg font-black text-tf-dark sm:text-xl">
+              <h2 className="mt-1 font-display text-lg font-black text-tf-app-fg sm:text-xl">
                 Encarts restants
               </h2>
-              <p className="mt-1 text-xs font-semibold text-tf-grey">
+              <p className="mt-1 text-xs font-semibold text-tf-app-muted">
                 Stade, paris et calendrier — accès rapide avant de quitter la page.
               </p>
 
@@ -425,64 +488,121 @@ export function ArticlePage() {
                   <Link
                     to={toStade}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl border-2 border-teal-400/40 bg-gradient-to-r from-teal-50/90 to-white px-3 py-2.5 transition hover:border-teal-500/60 hover:shadow-sm',
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 transition',
+                      isLight
+                        ? 'border-2 border-teal-400/40 bg-gradient-to-r from-teal-50/90 to-white hover:border-teal-500/60 hover:shadow-sm'
+                        : 'border border-teal-400/28 bg-teal-950/20 hover:border-teal-400/45 hover:bg-teal-950/30',
                     )}
                   >
                     <span className="text-lg" aria-hidden>
                       🏟️
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black text-teal-950">Mode stade</p>
-                      <p className="truncate text-[9px] font-semibold text-tf-grey">Courbe tribune · mock</p>
+                      <p
+                        className={cn(
+                          'text-[11px] font-black',
+                          isLight ? 'text-teal-950' : 'text-teal-100',
+                        )}
+                      >
+                        Mode stade
+                      </p>
+                      <p className="truncate text-[9px] font-semibold text-tf-app-muted">Courbe tribune · mock</p>
                     </div>
-                    <span className={cn('shrink-0 text-[10px] font-black', S.cta)}>→</span>
+                    <span className={cn('shrink-0 text-[10px] font-black', isLight ? S.cta : 'text-teal-200')}>
+                      →
+                    </span>
                   </Link>
                 </li>
                 <li>
                   <Link
                     to={toRankingsBets}
-                    className="flex items-center gap-3 rounded-xl border-2 border-amber-400/45 bg-gradient-to-r from-amber-50/90 to-white px-3 py-2.5 transition hover:border-amber-500/60 hover:shadow-sm"
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 transition',
+                      isLight
+                        ? 'border-2 border-amber-400/45 bg-gradient-to-r from-amber-50/90 to-white hover:border-amber-500/60 hover:shadow-sm'
+                        : 'border border-amber-400/28 bg-amber-950/20 hover:border-amber-400/45 hover:bg-amber-950/28',
+                    )}
                   >
                     <span className="text-lg" aria-hidden>
                       🏆
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black text-amber-950">Classements & paris</p>
-                      <p className="truncate text-[9px] font-semibold text-tf-grey">Volume 1-N-2</p>
+                      <p
+                        className={cn(
+                          'text-[11px] font-black',
+                          isLight ? 'text-amber-950' : 'text-amber-100',
+                        )}
+                      >
+                        Classements & paris
+                      </p>
+                      <p className="truncate text-[9px] font-semibold text-tf-app-muted">Volume 1-N-2</p>
                     </div>
-                    <span className={cn('shrink-0 text-[10px] font-black', B.cta)}>→</span>
+                    <span className={cn('shrink-0 text-[10px] font-black', isLight ? B.cta : 'text-amber-200')}>
+                      →
+                    </span>
                   </Link>
                 </li>
                 <li className="sm:col-span-2 lg:col-span-1">
                   <Link
                     to={toMatches}
                     className={cn(
-                      'flex h-full items-center gap-3 rounded-xl border-2 border-sky-400/45 bg-gradient-to-r from-sky-50/90 to-white px-3 py-2.5 transition hover:border-sky-500/55 hover:shadow-sm',
+                      'flex h-full items-center gap-3 rounded-xl px-3 py-2.5 transition',
+                      isLight
+                        ? 'border-2 border-sky-400/45 bg-gradient-to-r from-sky-50/90 to-white hover:border-sky-500/55 hover:shadow-sm'
+                        : 'border border-sky-400/28 bg-sky-950/25 hover:border-sky-400/45 hover:bg-sky-950/35',
                     )}
                   >
                     <span className="text-lg" aria-hidden>
                       📅
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black text-sky-950">Matchs & salons</p>
-                      <p className="truncate text-[9px] font-semibold text-tf-grey">Calendrier complet</p>
+                      <p
+                        className={cn(
+                          'text-[11px] font-black',
+                          isLight ? 'text-sky-950' : 'text-sky-100',
+                        )}
+                      >
+                        Matchs & salons
+                      </p>
+                      <p className="truncate text-[9px] font-semibold text-tf-app-muted">Calendrier complet</p>
                     </div>
-                    <span className="shrink-0 text-[10px] font-black text-sky-900">→</span>
+                    <span
+                      className={cn(
+                        'shrink-0 text-[10px] font-black',
+                        isLight ? 'text-sky-900' : 'text-sky-200',
+                      )}
+                    >
+                      →
+                    </span>
                   </Link>
                 </li>
                 <li className="sm:col-span-2 lg:col-span-1">
                   <Link
                     to={toDebates}
-                    className="flex h-full items-center gap-3 rounded-xl border-2 border-orange-400/40 bg-gradient-to-r from-orange-50/90 to-white px-3 py-2.5 transition hover:border-orange-500/55 hover:shadow-sm"
+                    className={cn(
+                      'flex h-full items-center gap-3 rounded-xl px-3 py-2.5 transition',
+                      isLight
+                        ? 'border-2 border-orange-400/40 bg-gradient-to-r from-orange-50/90 to-white hover:border-orange-500/55 hover:shadow-sm'
+                        : 'border border-orange-400/28 bg-orange-950/20 hover:border-orange-400/45 hover:bg-orange-950/28',
+                    )}
                   >
                     <span className="text-lg" aria-hidden>
                       💬
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black text-orange-950">Tous les débats</p>
-                      <p className="truncate text-[9px] font-semibold text-tf-grey">Fils & polémiques</p>
+                      <p
+                        className={cn(
+                          'text-[11px] font-black',
+                          isLight ? 'text-orange-950' : 'text-orange-100',
+                        )}
+                      >
+                        Tous les débats
+                      </p>
+                      <p className="truncate text-[9px] font-semibold text-tf-app-muted">Fils & polémiques</p>
                     </div>
-                    <span className={cn('shrink-0 text-[10px] font-black', D.cta)}>→</span>
+                    <span className={cn('shrink-0 text-[10px] font-black', isLight ? D.cta : 'text-orange-200')}>
+                      →
+                    </span>
                   </Link>
                 </li>
               </ul>
@@ -502,7 +622,7 @@ export function ArticlePage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-[11px] font-semibold text-slate-500">
+        <p className="mt-6 text-center text-[11px] font-semibold text-tf-app-muted">
           © {new Date().getFullYear()} Talk Foot — données article mock.
         </p>
       </main>

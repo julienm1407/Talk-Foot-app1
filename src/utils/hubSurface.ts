@@ -7,8 +7,8 @@ export function hubGlassPanel(appearance: Appearance) {
   return cn(
     'rounded-tf-xl backdrop-blur-md',
     L
-      ? 'border border-tf-dark/12 bg-tf-white shadow-tf-elev-2'
-      : 'border border-tf-grey-pastel/25 bg-[color:var(--tf-card-bg-dark)] shadow-tf-elev-glass-dark',
+      ? 'border border-[color:var(--tf-c30-border)] bg-[color:var(--tf-card-bg-light)] shadow-tf-elev-2'
+      : 'border border-[color:var(--tf-c30-border)] bg-[color:var(--tf-card-bg-dark)] shadow-tf-elev-glass-dark',
   )
 }
 
@@ -18,7 +18,7 @@ export function hubTrendsShell(appearance: Appearance) {
   return cn(
     'rounded-tf-xl border p-5 backdrop-blur-md sm:p-6',
     L
-      ? 'border-tf-dark/12 bg-tf-white shadow-tf-elev-1'
-      : 'border-tf-grey-pastel/20 bg-[color:var(--tf-card-bg-dark)] shadow-tf-elev-glass-dark',
+      ? 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-card-bg-light)] shadow-tf-elev-1'
+      : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-card-bg-dark)] shadow-tf-elev-glass-dark',
   )
 }

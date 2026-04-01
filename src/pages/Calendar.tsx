@@ -401,7 +401,7 @@ export function CalendarPage() {
                 key={m.id}
                 className="flex min-w-0 w-full grow basis-full sm:basis-[calc((100%-var(--tf-space-4))/2)] xl:basis-[calc((100%-3rem)/4)]"
               >
-                <HubMatchStrip match={m} className="max-w-full grow" agendaCalm />
+                <HubMatchStrip match={m} className="max-w-full grow" />
               </div>
             ))}
           </div>
@@ -549,7 +549,6 @@ export function CalendarPage() {
                         <HubMatchStrip
                           key={m.id}
                           match={m}
-                          agendaCalm={m.status === 'live'}
                           agendaUpcomingSolid={m.status === 'upcoming'}
                         />
                       ))}

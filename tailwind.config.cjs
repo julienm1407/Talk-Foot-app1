@@ -49,8 +49,14 @@ module.exports = {
         'tf-md': ['var(--tf-text-md)', { lineHeight: 'var(--tf-text-md--line)' }],
         'tf-lg': ['var(--tf-text-lg)', { lineHeight: 'var(--tf-text-lg--line)' }],
         'tf-xl': ['var(--tf-text-xl)', { lineHeight: 'var(--tf-text-xl--line)' }],
-        'tf-2xl': ['var(--tf-text-2xl)', { lineHeight: 'var(--tf-text-2xl--line)' }],
-        'tf-display': ['var(--tf-text-display)', { lineHeight: 'var(--tf-text-display--line)' }],
+        'tf-2xl': [
+          'var(--tf-text-2xl)',
+          { lineHeight: 'var(--tf-text-2xl--line)', letterSpacing: '0.02em' },
+        ],
+        'tf-display': [
+          'var(--tf-text-display)',
+          { lineHeight: 'var(--tf-text-display--line)', letterSpacing: '0.022em' },
+        ],
       },
       boxShadow: {
         'tf-elev-0': 'var(--tf-elev-0)',
@@ -76,6 +82,13 @@ module.exports = {
       fontFamily: {
         display: ['Bigail', 'Bebas Neue', 'Impact', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+      letterSpacing: {
+        /** Titres : éviter le crénage serré par défaut de Tailwind (-0.025em) avec police display */
+        tight: '0.02em',
+        snug: '0.01em',
+        /** Effet condensé volontaire (logos, rare) — préférer `tight` pour les titres */
+        condensed: '-0.025em',
       },
       colors: {
         /** Texte / chrome qui suit le thème jour·nuit (voir --tf-app-*-rgb dans index.css) */
@@ -124,6 +137,17 @@ module.exports = {
           'nav-match': '#ff9f43',
           'nav-groups': '#6c5ce7',
           'nav-rankings': '#00b894',
+          /** 60 · 30 · 10 — dominante / secondaire / accent (voir design-tokens.css) */
+          'c60-base': 'var(--tf-c60-base)',
+          'c60-mid': 'var(--tf-c60-mid)',
+          'c60-deep': 'var(--tf-c60-deep)',
+          'c30-surface': 'var(--tf-c30-surface)',
+          'c30-surface-soft': 'var(--tf-c30-surface-soft)',
+          'c30-border': 'var(--tf-c30-border)',
+          'c30-structure': 'var(--tf-c30-structure)',
+          'c10-accent': 'var(--tf-c10-accent)',
+          'c10-soft': 'var(--tf-c10-accent-soft)',
+          'c10-glow': 'var(--tf-c10-accent-glow)',
         },
       },
       keyframes: {

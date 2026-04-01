@@ -38,10 +38,28 @@
   --tf-ui-muted: #5d6978;
   --tf-da-secondary-olive: #5d6422;
   --tf-ui-blue-light: #b3c3cf;
+
+  /**
+   * Théorie 60 · 30 · 10 — même logique jour & nuit (détails visuels, hiérarchie).
+   * 60 % : masse = fond page / respiration (neutre dominant).
+   * 30 % : secondaire = cartes, panneaux, bordures, typo structure (#023458 jour · surfaces nuit).
+   * 10 % : accent = live & CTA uniquement (#ff3b3b) — jamais comme fond dominant.
+   */
+  --tf-c60-base: #051a2d;
+  --tf-c60-mid: #061a2e;
+  --tf-c60-deep: #041424;
+  --tf-c30-surface: #0d2135;
+  --tf-c30-surface-soft: #112a42;
+  --tf-c30-border: rgba(172, 196, 216, 0.16);
+  --tf-c30-structure: #023458;
+  --tf-c10-accent: var(--tf-brand-accent);
+  --tf-c10-accent-soft: color-mix(in srgb, var(--tf-brand-accent) 22%, transparent);
+  --tf-c10-accent-glow: rgba(255, 59, 59, 0.24);
+
+  --tf-page-bg-dark: var(--tf-c60-base);
+  --tf-card-bg-dark: var(--tf-c30-surface);
   --tf-page-bg-light: #f4f8fb;
   --tf-card-bg-light: #ffffff;
-  --tf-page-bg-dark: #051a2d;
-  --tf-card-bg-dark: #0d2135;
 
   /**
    * Repérage navigation (~5 % UI) — accents légers uniquement.
@@ -92,10 +110,10 @@
 
   /* ——— Élévation (ombres) ——— */
   --tf-elev-0: none;
-  --tf-elev-1: 0 2px 8px rgba(2, 52, 88, 0.06);
-  --tf-elev-2: 0 6px 20px rgba(2, 52, 88, 0.09);
-  --tf-elev-3: 0 18px 48px rgba(2, 52, 88, 0.12);
-  --tf-elev-glass-dark: 0 28px 72px rgba(0, 8, 22, 0.36);
+  --tf-elev-1: 0 2px 8px color-mix(in srgb, var(--tf-c30-structure) 8%, transparent);
+  --tf-elev-2: 0 6px 20px color-mix(in srgb, var(--tf-c30-structure) 11%, transparent);
+  --tf-elev-3: 0 18px 48px color-mix(in srgb, var(--tf-c30-structure) 14%, transparent);
+  --tf-elev-glass-dark: 0 28px 72px rgba(0, 8, 22, 0.38);
   --tf-elev-nav-light: 0 12px 40px rgba(2, 52, 88, 0.08);
   --tf-elev-nav-dark: 0 20px 50px rgba(0, 0, 0, 0.45);
 
@@ -131,6 +149,24 @@
 html[data-tf-appearance='light'] {
   --tf-focus-ring: 2px solid color-mix(in srgb, var(--tf-brand-primary) 92%, black);
   --tf-focus-ring-bg: var(--tf-page-bg-light);
+
+  /* 60 · 30 · 10 — jour : dominante gris-bleu air, secondaire blanc / structure marine, accent rouge */
+  --tf-c60-base: #f4f8fb;
+  --tf-c60-mid: #eef3f7;
+  --tf-c60-deep: #e8f0f7;
+  --tf-c30-surface: #ffffff;
+  --tf-c30-surface-soft: #f8fafc;
+  --tf-c30-border: rgba(2, 52, 88, 0.11);
+  --tf-c30-structure: #023458;
+  --tf-c10-accent-soft: color-mix(in srgb, var(--tf-brand-accent) 14%, transparent);
+  --tf-c10-accent-glow: rgba(255, 59, 59, 0.16);
+
+  --tf-page-bg-light: var(--tf-c60-base);
+  --tf-card-bg-light: var(--tf-c30-surface);
+
+  --tf-elev-1: 0 2px 8px rgba(2, 52, 88, 0.06);
+  --tf-elev-2: 0 6px 20px rgba(2, 52, 88, 0.09);
+  --tf-elev-3: 0 18px 48px rgba(2, 52, 88, 0.11);
 }
 
 /* Mode nuit stade */

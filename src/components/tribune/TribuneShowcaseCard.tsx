@@ -23,7 +23,7 @@ export function TribuneShowcaseCard({
   /** Rail colonne droite : carte plus courte (moins de répétition visuelle) */
   dense?: boolean
 }) {
-  const { isJoined, joinGroup } = useSupporterGroups()
+  const { isJoined } = useSupporterGroups()
   const { favoriteClubIds, favoriteLeagueId, hideRivalSalons } = useFanPreferences()
   const accessPrefs = useMemo(
     () => ({ favoriteClubIds, favoriteLeagueId, hideRivalSalons }),
@@ -36,14 +36,14 @@ export function TribuneShowcaseCard({
   return (
     <Link
       to={`/group/${group.id}`}
-      onClick={() => joinGroup(group.id)}
       className={cn(
-        'group block tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20',
+        'group block h-full min-h-0 tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20',
         className,
       )}
       aria-label={`Ouvrir le salon ${group.name}`}
     >
       <GroupCard
+        className="h-full min-h-0 w-full"
         group={group}
         variant={cardVariant}
         accessLevel={accessLevel}

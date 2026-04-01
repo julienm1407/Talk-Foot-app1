@@ -20,7 +20,7 @@ export function TopBar() {
   const location = useLocation()
   const L = appearance === 'light'
   const navPillBase = cn(
-    'tf-nav-pill shrink-0 rounded-[18px] px-2.5 py-2 text-center text-[13px] font-black outline-none transition active:scale-[0.97] sm:px-3',
+    'tf-nav-pill shrink-0 rounded-[18px] px-2 py-1.5 text-center text-[12px] font-black outline-none transition active:scale-[0.97] sm:px-2.5 sm:py-2 min-[860px]:text-[13px]',
     L ? 'text-tf-app-muted hover:text-tf-app-fg' : 'text-sky-200/92 hover:text-white',
   )
 
@@ -83,8 +83,14 @@ export function TopBar() {
           : 'border-tf-dark-alt/40 bg-tf-dark shadow-tf-elev-nav-dark',
       )}
     >
-      <div className="relative mx-auto grid w-full max-w-tf-content grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2 px-4 py-2.5 sm:gap-x-3 sm:px-6 sm:py-3">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div
+        className={cn(
+          'relative mx-auto grid w-full max-w-tf-content items-center gap-x-2 gap-y-1.5 px-3 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3',
+          /* <700px : 2 colonnes (logo + baseline | actions) — évite une colonne centrale vide quand la nav est masquée */
+          'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
+        )}
+      >
+        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1.5 sm:gap-2.5 md:gap-3">
           <Link
             to="/"
             className={cn(
@@ -95,7 +101,7 @@ export function TopBar() {
           >
             <div
               className={cn(
-                'relative size-11 overflow-hidden rounded-xl border-2 shadow-sm transition group-hover:opacity-95 sm:size-12',
+                'relative size-10 overflow-hidden rounded-xl border-2 shadow-sm transition group-hover:opacity-95 sm:size-11 md:size-12',
                 L ? 'border-tf-dark/20 bg-white ring-1 ring-tf-dark/[0.06]' : 'border-white/30 bg-white/[0.12] ring-1 ring-white/10',
               )}
             >
@@ -112,16 +118,17 @@ export function TopBar() {
 
           <p
             className={cn(
-              'hidden min-w-0 max-w-[18ch] text-pretty font-display text-[11px] font-black leading-snug tracking-tight sm:max-w-[22ch] sm:text-xs lg:max-w-[28ch] lg:text-sm min-[700px]:block',
-              L ? 'text-tf-dark/88' : 'text-white/90',
+              'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[480px]:block sm:text-[11px]',
+              L ? 'text-tf-dark/90' : 'text-white/92',
             )}
+            title="Talk Foot — le réseau foot en continu"
           >
-            Le seul réseau où le foot ne s’arrête jamais&nbsp;!
+            Foot live, sans fin.
           </p>
         </div>
 
         <nav
-          className="hidden min-w-0 justify-self-center min-[700px]:block"
+          className="hidden min-w-0 justify-self-center min-[700px]:col-start-2 min-[700px]:row-start-1 min-[700px]:block"
           aria-label="Primary"
         >
           <div
@@ -157,7 +164,7 @@ export function TopBar() {
           </div>
         </nav>
 
-        <div className="relative flex items-center justify-end gap-2 sm:gap-3">
+        <div className="relative col-start-2 row-start-1 flex min-w-0 items-center justify-end gap-1.5 sm:gap-2 min-[700px]:col-start-3 min-[700px]:gap-3">
           <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
           <div ref={inboxWrapRef} className="relative shrink-0">
             <button
@@ -166,7 +173,7 @@ export function TopBar() {
               aria-expanded={inboxOpen}
               aria-haspopup="dialog"
               className={cn(
-                'relative grid size-10 shrink-0 place-items-center rounded-xl border text-base transition sm:size-11',
+                'relative grid size-9 shrink-0 place-items-center rounded-xl border text-[15px] transition sm:size-10 min-[700px]:size-11 sm:text-base',
                 inboxOpen && (L ? 'ring-2 ring-sky-500/40' : 'ring-2 ring-sky-400/35'),
                 L
                   ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
@@ -195,7 +202,7 @@ export function TopBar() {
           <NavLink
             to="/profile"
             className={cn(
-              'tf-nav-pill inline-flex shrink-0 items-center gap-2 rounded-2xl border px-2.5 py-2 text-sm font-semibold outline-none sm:gap-2.5 sm:px-3',
+              'tf-nav-pill inline-flex max-w-[100%] shrink-0 items-center gap-1.5 overflow-hidden rounded-2xl border px-2 py-1.5 text-sm font-semibold outline-none min-[700px]:gap-2 min-[700px]:px-2.5 min-[700px]:py-2 sm:gap-2 sm:px-2.5 sm:py-2 md:px-3',
               profileTheme.nav.focus,
               profileActive
                 ? cn(
@@ -215,22 +222,24 @@ export function TopBar() {
               <img
                 src={profile.profilePhotoDataUrl}
                 alt=""
-                className="size-8 shrink-0 rounded-full object-cover ring-2 ring-white/25"
+                className="size-7 shrink-0 rounded-full object-cover ring-2 ring-white/25 sm:size-8"
                 loading="lazy"
                 decoding="async"
               />
             ) : (
-              <span className="text-base" aria-hidden="true">
+              <span className="text-[15px] leading-none sm:text-base" aria-hidden="true">
                 🧢
               </span>
             )}
             <span
-              className="shrink-0 rounded-lg bg-tf-cta px-2 py-1 text-[11px] font-black tabular-nums text-white shadow-tf-cta sm:px-2.5 sm:text-xs"
+              className="hidden shrink-0 rounded-lg bg-tf-cta px-1.5 py-0.5 text-[10px] font-black tabular-nums text-white shadow-tf-cta min-[400px]:inline-flex sm:px-2 sm:py-1 sm:text-[11px] md:text-xs"
               title={`Niveau ${profile.level}`}
             >
               Niv. {profile.level}
             </span>
-            <span className="hidden sm:inline">{profileTheme.label}</span>
+            <span className="hidden max-w-[4.25rem] truncate sm:inline-block md:max-w-[7rem] lg:max-w-none">
+              {profileTheme.label}
+            </span>
           </NavLink>
         </div>
       </div>

@@ -20,6 +20,7 @@ export function DebateOfTheDayCard({
 
   return (
     <Card
+      surface={hubCompact ? 'dark' : 'light'}
       className={cn(
         hubCompact
           ? 'overflow-hidden border-white/10 bg-white/[0.06] p-0 text-white shadow-none backdrop-blur-md'

@@ -98,6 +98,8 @@ export function HubStripLive({
   visualSize = 'default',
   /** À côté de « À venir » : étire la carte pour aligner les bas de colonne */
   fillColumnHeight = false,
+  /** `false` : contenu seul (ex. lien parent article) — même DA image + effets */
+  asLink = true,
 }: {
   match: Match
   liveMirror?: LiveMirrorForCard
@@ -106,9 +108,10 @@ export function HubStripLive({
   showProgress?: boolean
   /** `featured` : colonne live desktop — image plus haute, carte étirable avec la grille */
   layout?: 'strip' | 'featured'
-  /** `compact` : rail à venir · `hero` : live accueil desktop (remplit l’encart) */
+  /** `compact` : variante plus basse · `hero` : live accueil desktop (remplit l’encart) */
   visualSize?: 'default' | 'compact' | 'hero'
   fillColumnHeight?: boolean
+  asLink?: boolean
 }) {
   const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
   const minute = sim ? sim.minute : match.minute ?? 0
@@ -138,18 +141,16 @@ export function HubStripLive({
     rim: sim?.rim ?? null,
   }
 
-  return (
-    <Link
-      to={`/channel/${match.id}`}
-      className={cn(
-        stripLinkBase,
-        rim,
-        featured && 'h-full min-h-[280px] flex-1 flex flex-col',
-        fillColumnHeight && visualSize === 'hero' && 'h-full min-h-0',
-        className,
-      )}
-      aria-label={`${match.home.shortName} contre ${match.away.shortName}, en direct`}
-    >
+  const shellClass = cn(
+    stripLinkBase,
+    rim,
+    featured && 'h-full min-h-[280px] flex-1 flex flex-col',
+    fillColumnHeight && visualSize === 'hero' && 'h-full min-h-0',
+    className,
+  )
+
+  const inner = (
+    <>
       <div
         className={cn(
           'relative overflow-hidden rounded-t-2xl',
@@ -277,8 +278,22 @@ export function HubStripLive({
           </span>
         </div>
       )}
-    </Link>
+    </>
   )
+
+  if (asLink) {
+    return (
+      <Link
+        to={`/channel/${match.id}`}
+        className={shellClass}
+        aria-label={`${match.home.shortName} contre ${match.away.shortName}, en direct`}
+      >
+        {inner}
+      </Link>
+    )
+  }
+
+  return <div className={shellClass}>{inner}</div>
 }
 
 export function HubStripUpcoming({
@@ -514,15 +529,12 @@ export function HubMatchStrip({
   match,
   liveMirror,
   className,
-  /** Page agenda : live en format compact, sans « hero » encart */
-  agendaCalm = false,
-  /** Page agenda : à venir en dégradé compétition (sans photo terrain) */
+  /** Page agenda : à venir en dégradé compétition (sans photo terrain) — les lives gardent toujours la DA stade */
   agendaUpcomingSolid = false,
 }: {
   match: Match
   liveMirror?: LiveMirrorForCard
   className?: string
-  agendaCalm?: boolean
   agendaUpcomingSolid?: boolean
 }) {
   if (match.status === 'live')
@@ -531,7 +543,7 @@ export function HubMatchStrip({
         match={match}
         liveMirror={liveMirror}
         className={className}
-        visualSize={agendaCalm ? 'compact' : 'default'}
+        visualSize="default"
       />
     )
   if (match.status === 'upcoming')

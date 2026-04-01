@@ -3,25 +3,12 @@ import type { Match } from '../../types/match'
 import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
-import { formatKickoff, formatRelativeMinute } from '../../utils/time'
+import { formatKickoff } from '../../utils/time'
 import { themeForCompetition } from '../../data/competitionThemes'
-import {
-  HubMatchProgressBar,
-  formatHubDayLabel,
-  hubFansK,
-} from './HubMatchEncart'
-
-function liveRimClass(rim: LiveMirrorForCard['rim']) {
-  if (rim === 'yellow') return 'ring-2 ring-amber-400/80 ring-offset-2 ring-offset-white tf-live-rim-pulse'
-  if (rim === 'red') return 'ring-2 ring-red-500/85 ring-offset-2 ring-offset-white tf-live-rim-pulse'
-  if (rim === 'goal')
-    return 'ring-2 ring-amber-200/80 shadow-[0_0_24px_rgba(250,204,21,0.2)] ring-offset-2 ring-offset-white'
-  if (rim === 'var') return 'ring-2 ring-violet-400/70 ring-offset-2 ring-offset-white'
-  return ''
-}
+import { formatHubDayLabel, hubFansK, HubStripLive } from './HubMatchEncart'
 
 /**
- * Carte match page « stade » : dégradé domicile / extérieur (couleurs clubs), gros blasons, lisibilité renforcée.
+ * Carte « À l’affiche » / calendrier : **live** = strip stade global (`HubStripLive`) ; **à venir** = dégradé clubs ; **terminé** = variante débrief.
  */
 export function MatchSpotlightCard({
   match,
@@ -32,10 +19,6 @@ export function MatchSpotlightCard({
   liveMirror?: LiveMirrorForCard
   className?: string
 }) {
-  const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
-  const minute = sim ? sim.minute : match.minute ?? 0
-  const sc = sim ? sim.score : match.score ?? { home: 0, away: 0 }
-  const bump = sim?.bumpSide ?? null
   const fans = hubFansK(match)
   const comp = themeForCompetition(match.competition.id)
   const h = match.home.colors.primary
@@ -110,18 +93,24 @@ export function MatchSpotlightCard({
     )
   }
 
-  const isLive = match.status === 'live'
-  const rim = liveRimClass(sim?.rim ?? null)
+  if (match.status === 'live') {
+    return (
+      <HubStripLive
+        match={match}
+        liveMirror={liveMirror}
+        className={cn('min-h-[240px]', className)}
+      />
+    )
+  }
 
   return (
     <Link
       to={`/channel/${match.id}`}
       className={cn(
         'group relative flex min-h-[240px] flex-col overflow-hidden rounded-2xl border border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.28)] outline-none transition hover:-translate-y-0.5 hover:shadow-[0_20px_56px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-sky-400/50',
-        rim,
         className,
       )}
-      aria-label={`${match.home.shortName} contre ${match.away.shortName}${isLive ? ', en direct' : ', à venir'}`}
+      aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
     >
       <div className="relative min-h-[188px] flex-1 p-5 sm:min-h-[200px] sm:p-6" style={{ background: gradient }}>
         <div
@@ -133,16 +122,9 @@ export function MatchSpotlightCard({
         />
         <div className="relative flex h-full flex-col">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {isLive ? (
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-lg ring-1 ring-rose-400/50">
-                <span className="size-2 animate-pulse rounded-full bg-white" />
-                Live
-              </span>
-            ) : (
-              <span className="rounded-lg bg-sky-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-md ring-1 ring-sky-400/40">
-                À venir
-              </span>
-            )}
+            <span className="rounded-lg bg-sky-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow-md ring-1 ring-sky-400/40">
+              À venir
+            </span>
             {comp ? (
               <span
                 className={cn(
@@ -169,27 +151,12 @@ export function MatchSpotlightCard({
             </div>
 
             <div className="flex shrink-0 flex-col items-center gap-1.5 px-1">
-              {isLive ? (
-                <>
-                  <p className="font-display text-3xl font-black tabular-nums text-white drop-shadow-lg sm:text-4xl">
-                    <span className={cn(bump === 'home' && 'tf-score-pop inline-block')}>{sc.home}</span>
-                    <span className="mx-0.5 font-medium opacity-80">–</span>
-                    <span className={cn(bump === 'away' && 'tf-score-pop inline-block')}>{sc.away}</span>
-                  </p>
-                  <span className="rounded-lg bg-emerald-500 px-2.5 py-1 text-xs font-black text-white shadow-md">
-                    {formatRelativeMinute(minute) ?? `${minute}′`}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <p className="font-display text-2xl font-black tabular-nums text-white drop-shadow-lg sm:text-3xl">
-                    {formatKickoff(match.kickoffAt)}
-                  </p>
-                  <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-black text-white backdrop-blur-sm ring-1 ring-white/25">
-                    {formatHubDayLabel(match.kickoffAt)}
-                  </span>
-                </>
-              )}
+              <p className="font-display text-2xl font-black tabular-nums text-white drop-shadow-lg sm:text-3xl">
+                {formatKickoff(match.kickoffAt)}
+              </p>
+              <span className="rounded-lg bg-white/20 px-2.5 py-1 text-xs font-black text-white backdrop-blur-sm ring-1 ring-white/25">
+                {formatHubDayLabel(match.kickoffAt)}
+              </span>
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5 text-center">
@@ -200,11 +167,6 @@ export function MatchSpotlightCard({
             </div>
           </div>
 
-          {isLive ? (
-            <div className="mt-4">
-              <HubMatchProgressBar minute={minute} className="h-1.5 bg-black/35" />
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -213,7 +175,7 @@ export function MatchSpotlightCard({
           {(fans * 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k fans · {match.competition.shortName}
         </span>
         <span className="shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-2 text-xs font-black text-white shadow-md transition group-hover:from-sky-400 group-hover:to-blue-500">
-          {isLive ? 'Rejoindre le live' : 'Voir le salon'}
+          Voir le salon
         </span>
       </div>
     </Link>

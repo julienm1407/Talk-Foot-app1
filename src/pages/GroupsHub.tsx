@@ -20,7 +20,7 @@ type HubTab = 'mine' | 'discover'
 
 export function GroupsHubPage() {
   const navigate = useNavigate()
-  const { groups, createGroup, joinGroup, isJoined } = useSupporterGroups()
+  const { groups, createGroup, isJoined } = useSupporterGroups()
   const {
     favoriteClubIds,
     favoriteLeagueId,
@@ -154,7 +154,8 @@ export function GroupsHubPage() {
                 Aucun groupe pour l’instant
               </p>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-tf-grey">
-                Ouvre un salon depuis la liste : tu seras ajouté automatiquement à{' '}
+                Ouvre un salon depuis <strong className="text-tf-dark">Tous les salons</strong>, puis utilise{' '}
+                <strong className="text-tf-dark">Rejoindre ce salon</strong> pour l’ajouter à{' '}
                 <strong className="text-tf-dark">Mes groupes</strong>. Tu peux aussi créer le tien.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -172,7 +173,6 @@ export function GroupsHubPage() {
                 <Link
                   key={g.id}
                   to={`/group/${g.id}`}
-                  onClick={() => joinGroup(g.id)}
                   className="group block tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
                   aria-label={`Ouvrir le groupe ${g.name}`}
                 >
@@ -220,9 +220,8 @@ export function GroupsHubPage() {
               <Link
                 key={g.id}
                 to={`/group/${g.id}`}
-                onClick={() => joinGroup(g.id)}
                 className="group block tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
-                aria-label={`Rejoindre le groupe ${g.name}`}
+                aria-label={`Ouvrir le salon ${g.name}`}
               >
                 <GroupCard
                   group={g}

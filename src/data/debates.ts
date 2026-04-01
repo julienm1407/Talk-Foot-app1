@@ -21,6 +21,12 @@ export type Debate = {
   messagesCount: number
   participantsCount: number
   trending?: boolean
+  /**
+   * Écriture dans le salon « Général » quand ce débat est ouvert (`?debate=`).
+   * `public` (défaut) : comme sur l’accueil — tout le monde peut participer.
+   * `members` : le groupe restreint l’écriture aux membres (débat interne).
+   */
+  salonAccess?: 'public' | 'members'
   /** Image hero (débat du jour). */
   heroImageUrl?: string
   /** 2–3 visuels “en ligne” sur la carte principale. */
@@ -141,6 +147,7 @@ export const trendingDebates: Debate[] = [
     excerpt: 'Modération, ambiance, sécurité des débats.',
     groupId: 'g-virage-nord',
     accent: '#0ea5e9',
+    salonAccess: 'members',
     participantsCount: 420,
     messagesCount: 1188,
     trending: true,

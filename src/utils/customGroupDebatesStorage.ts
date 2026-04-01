@@ -37,6 +37,7 @@ export function createCustomGroupDebateRecord(
     excerpt: input.excerpt.trim().slice(0, 280) || 'Débat lancé dans le salon.',
     groupId,
     accent: input.accent.trim().slice(0, 20) || '#6366f1',
+    salonAccess: 'members',
     messagesCount: 1,
     participantsCount: 1,
     previewMessages: [

@@ -42,7 +42,8 @@ export function HomeLandingHub({
             <h1
               id="home-hero-heading"
               className={cn(
-                'font-display font-black tracking-tight text-tf-app-fg text-balance',
+                'font-display font-black tracking-tight text-balance',
+                L ? 'text-tf-dark' : 'text-tf-app-fg',
                 compact ? 'text-tf-xl sm:text-2xl xl:text-3xl' : 'text-tf-display',
               )}
             >

@@ -438,16 +438,24 @@ export function HomeDesktopExperience({
           <DebateOfTheDayCard debate={debateOfTheDay} />
         </section>
 
-        <section aria-labelledby="desk-tribunes-heading">
-          <h2 id="desk-tribunes-heading" className="font-display text-lg font-black text-tf-app-fg sm:text-xl">
+        <section aria-labelledby="desk-tribunes-heading" className="min-w-0">
+          <h2
+            id="desk-tribunes-heading"
+            className="font-display text-lg font-black leading-snug tracking-tight text-tf-app-fg sm:text-xl lg:text-2xl"
+          >
             En direct maintenant
           </h2>
-          <p className={cn('mt-1 max-w-prose text-pretty text-sm font-semibold leading-snug', hubSecondary)}>
+          <p
+            className={cn(
+              'mt-2 max-w-prose text-pretty text-sm font-semibold leading-relaxed sm:text-[0.9375rem]',
+              hubSecondary,
+            )}
+          >
             Choisis ta tribune et rejoins la conversation.
           </p>
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4">
+          <div className="mt-5 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-4 2xl:gap-5">
             {tribunes.map((g) => (
-              <TribuneShowcaseCard key={g.id} group={g} variant="grid" />
+              <TribuneShowcaseCard key={g.id} group={g} variant="grid" className="min-h-0 min-w-0" />
             ))}
           </div>
         </section>

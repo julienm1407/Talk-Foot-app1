@@ -92,9 +92,6 @@ export function GroupPage() {
       ? getDebateById(debateFromQuery, customForGroup)
       : undefined
 
-  useEffect(() => {
-    if (group?.id) joinGroup(group.id)
-  }, [group?.id, joinGroup])
   const {
     favoriteClubIds,
     favoriteLeagueId,
@@ -211,6 +208,12 @@ export function GroupPage() {
   const onSend = useCallback(
     (text: string) => {
       if (!group || !channel || !threadKey) return
+      if (accessLevel === 'readonly') return
+      const openDebateToAll =
+        debate != null &&
+        channel.id === 'general' &&
+        (debate.salonAccess ?? 'public') === 'public'
+      if (!openDebateToAll && group.createdBy !== 'me' && !isJoined(group.id)) return
       const msg: Message = {
         id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         matchId: groupThreadMatchId(group.id, channel.id),
@@ -223,12 +226,18 @@ export function GroupPage() {
         [threadKey]: [...(prev[threadKey] ?? []), msg],
       }))
     },
-    [group, channel, threadKey],
+    [group, channel, threadKey, isJoined, accessLevel, debate],
   )
 
   const onSendScarf = useCallback(
     (payload: NonNullable<Message['groupScarf']>) => {
       if (!group || !channel || !threadKey) return
+      if (accessLevel === 'readonly') return
+      const openDebateToAll =
+        debate != null &&
+        channel.id === 'general' &&
+        (debate.salonAccess ?? 'public') === 'public'
+      if (!openDebateToAll && group.createdBy !== 'me' && !isJoined(group.id)) return
       const msg: Message = {
         id: `msg-scarf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         matchId: groupThreadMatchId(group.id, channel.id),
@@ -242,7 +251,7 @@ export function GroupPage() {
         [threadKey]: [...(prev[threadKey] ?? []), msg],
       }))
     },
-    [group, channel, threadKey],
+    [group, channel, threadKey, isJoined, accessLevel, debate],
   )
 
   if (!group) {
@@ -258,6 +267,15 @@ export function GroupPage() {
     )
   }
 
+  const isGroupMember = group.createdBy === 'me' || isJoined(group.id)
+  const isPublicDebateInGeneral =
+    channel != null &&
+    channel.id === 'general' &&
+    debate != null &&
+    (debate.salonAccess ?? 'public') === 'public'
+  const canWriteInSalon =
+    accessLevel !== 'readonly' && (isGroupMember || isPublicDebateInGeneral)
+
   return (
     <>
       <div className="flex flex-col gap-7" data-no-swipe="true">
@@ -266,11 +284,20 @@ export function GroupPage() {
         role="status"
       >
         <p className="font-black text-violet-950">Salon de groupe (soirée privée)</p>
-        <p className="mt-1 text-[13px] font-medium leading-snug text-tf-dark/85">
-          Ici, seuls les membres de ce groupe voient ce fil — comme une viewing party entre vous. Ce n’est{' '}
-          <strong className="font-bold">pas</strong> le chat public du live (zones Virage, Analyse, Chill, Général){' '}
-          ni le <strong className="font-bold">{LIVE_FIL_EQUIPE_COEUR.label.toLowerCase()}</strong> du profil.
-        </p>
+        {isPublicDebateInGeneral ? (
+          <p className="mt-1 text-[13px] font-medium leading-snug text-tf-dark/85">
+            <strong className="font-bold">Fil débat ouvert</strong> (comme sur l’accueil) : tout le monde peut écrire
+            dans le salon <strong className="font-bold">Général</strong> tant que ce sujet est affiché. Les autres
+            salons (Transferts, Pronos, etc.) restent{' '}
+            <strong className="font-bold">réservés aux membres</strong> du groupe.
+          </p>
+        ) : (
+          <p className="mt-1 text-[13px] font-medium leading-snug text-tf-dark/85">
+            Ici, seuls les membres de ce groupe voient ce fil — comme une viewing party entre vous. Ce n’est{' '}
+            <strong className="font-bold">pas</strong> le chat public du live (zones Virage, Analyse, Chill, Général){' '}
+            ni le <strong className="font-bold">{LIVE_FIL_EQUIPE_COEUR.label.toLowerCase()}</strong> du profil.
+          </p>
+        )}
       </div>
       <Card className="order-3 overflow-hidden p-0 lg:order-2" elevation="soft">
         <div
@@ -453,6 +480,15 @@ export function GroupPage() {
               <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-dark">
                 {group.createdBy === 'me' ? 'Ton groupe' : 'Groupe public'}
               </Badge>
+              {group.createdBy !== 'me' && !isJoined(group.id) ? (
+                <Button
+                  variant="primary"
+                  className="rounded-2xl text-xs font-black"
+                  onClick={() => joinGroup(group.id)}
+                >
+                  Rejoindre ce salon
+                </Button>
+              ) : null}
               {group.createdBy !== 'me' && isJoined(group.id) ? (
                 <Button
                   variant="ghost"
@@ -806,6 +842,22 @@ export function GroupPage() {
           {accessLevel === 'readonly' ? (
             <div className="border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-4 py-4 text-center text-sm font-bold text-tf-grey sm:px-5">
               Écriture désactivée sur ce salon (mode lecture seule).
+            </div>
+          ) : !canWriteInSalon ? (
+            <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-gradient-to-b from-slate-50/95 to-tf-ice/90 px-4 py-4 sm:px-5">
+              <p className="text-center text-sm font-bold text-tf-dark">
+                {debate && channel?.id === 'general' && debate.salonAccess === 'members'
+                  ? 'Ce débat est réservé aux membres du groupe — rejoins pour participer.'
+                  : 'Tu n’as pas rejoint ce salon — lecture seule jusqu’à adhésion.'}
+              </p>
+              <Button
+                type="button"
+                variant="primary"
+                className="mx-auto mt-3 block w-full max-w-sm rounded-2xl text-sm font-black"
+                onClick={() => joinGroup(group.id)}
+              >
+                Rejoindre pour écrire
+              </Button>
             </div>
           ) : (
             <div
