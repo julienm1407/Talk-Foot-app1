@@ -12,14 +12,14 @@ export function ChannelHeader({ match }: { match: Match }) {
   const minuteText = isLive ? `${match.minute ?? 0}'` : 'AVANT'
 
   return (
-    <header className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <header className="flex min-w-0 flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       {/* Teams + competition */}
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-4">
         <ClubCrest
           id={match.home.id}
           shortName={match.home.shortName}
           colors={match.home.colors}
-          size={40}
+          size={36}
           className="shrink-0"
         />
         <div className="min-w-0 flex-1 overflow-hidden">
@@ -39,16 +39,16 @@ export function ChannelHeader({ match }: { match: Match }) {
           id={match.away.id}
           shortName={match.away.shortName}
           colors={match.away.colors}
-          size={40}
+          size={36}
           className="shrink-0"
         />
       </div>
 
       {/* Scoreboard bloc */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3">
+      <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
         <div
           className={cn(
-            'flex items-center gap-4 rounded-2xl px-5 py-3 shadow-sm',
+            'flex min-w-0 flex-1 items-center justify-center gap-3 rounded-2xl px-3 py-2 shadow-sm sm:flex-initial sm:gap-4 sm:px-5 sm:py-3',
             theme
               ? 'border'
               : 'border border-slate-200/80 bg-white/95',
@@ -62,16 +62,16 @@ export function ChannelHeader({ match }: { match: Match }) {
               : undefined
           }
         >
-          <span className="text-2xl font-black tabular-nums text-slate-900 sm:text-3xl">
+          <span className="text-xl font-black tabular-nums text-slate-900 sm:text-3xl">
             {homeScore}
           </span>
-          <span className="text-lg font-bold text-slate-400">–</span>
-          <span className="text-2xl font-black tabular-nums text-slate-900 sm:text-3xl">
+          <span className="text-base font-bold text-slate-400 sm:text-lg">–</span>
+          <span className="text-xl font-black tabular-nums text-slate-900 sm:text-3xl">
             {awayScore}
           </span>
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-sm">
+        <div className="flex min-w-0 flex-1 flex-col items-center rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-sm sm:flex-initial sm:px-4 sm:py-3">
           <div className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
             Temps
           </div>

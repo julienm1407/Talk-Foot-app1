@@ -1,8 +1,13 @@
 import { useCallback, useMemo } from 'react'
 import type { Bet, BetMarket, BetSelection, Wallet } from '../types/bet'
 import { useLocalStorageState } from './useLocalStorage'
+import {
+  DEFAULT_WALLET,
+  normalizeWallet,
+  isWalletStored,
+  WALLET_STORAGE_KEY,
+} from '../utils/walletNormalize'
 
-const WALLET_KEY = 'talkfoot.wallet.v1'
 const BETS_KEY = 'talkfoot.bets.v1'
 
 function clampStake(n: number) {
@@ -10,20 +15,13 @@ function clampStake(n: number) {
   return Math.max(5, Math.min(250, Math.round(n)))
 }
 
-const isWallet = (p: unknown) =>
-  p !== null &&
-  typeof p === 'object' &&
-  !Array.isArray(p) &&
-  typeof (p as Wallet).tokens === 'number'
-
 export function useBetting(matchId: string) {
-  const [wallet, setWallet] = useLocalStorageState<Wallet>(
-    WALLET_KEY,
-    {
-      tokens: 750,
-    },
-    isWallet,
+  const [stored, setWallet] = useLocalStorageState<Wallet>(
+    WALLET_STORAGE_KEY,
+    DEFAULT_WALLET,
+    isWalletStored,
   )
+  const wallet = normalizeWallet(stored)
   const [bets, setBets] = useLocalStorageState<Bet[]>(BETS_KEY, [], Array.isArray)
 
   const matchBets = useMemo(() => bets.filter((b) => b.matchId === matchId), [bets, matchId])
@@ -46,7 +44,10 @@ export function useBetting(matchId: string) {
         placedAt: new Date().toISOString(),
       }
 
-      setWallet((w) => ({ ...w, tokens: w.tokens - stake }))
+      setWallet((w) => {
+        const n = normalizeWallet(w)
+        return { ...n, tokens: n.tokens - stake }
+      })
       setBets((prev) => [bet, ...prev].slice(0, 200))
       return { ok: true as const, bet }
     },
@@ -58,7 +59,10 @@ export function useBetting(matchId: string) {
       setBets((prev) => {
         const b = prev.find((x) => x.id === betId)
         if (!b || b.status !== 'open') return prev
-        setWallet((w) => ({ ...w, tokens: w.tokens + b.stake }))
+        setWallet((w) => {
+          const n = normalizeWallet(w)
+          return { ...n, tokens: n.tokens + b.stake }
+        })
         return prev.map((x) =>
           x.id === betId
             ? {
@@ -93,7 +97,11 @@ export function useBetting(matchId: string) {
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
         })
-        if (delta) setWallet((w) => ({ ...w, tokens: w.tokens + delta }))
+        if (delta)
+          setWallet((w) => {
+            const n = normalizeWallet(w)
+            return { ...n, tokens: n.tokens + delta }
+          })
         return next
       })
     },
@@ -120,7 +128,11 @@ export function useBetting(matchId: string) {
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
         })
-        if (delta) setWallet((w) => ({ ...w, tokens: w.tokens + delta }))
+        if (delta)
+          setWallet((w) => {
+            const n = normalizeWallet(w)
+            return { ...n, tokens: n.tokens + delta }
+          })
         return next
       })
     },
@@ -169,7 +181,11 @@ export function useBetting(matchId: string) {
 
           return b
         })
-        if (delta) setWallet((w) => ({ ...w, tokens: w.tokens + delta }))
+        if (delta)
+          setWallet((w) => {
+            const n = normalizeWallet(w)
+            return { ...n, tokens: n.tokens + delta }
+          })
         return next
       })
     },
@@ -179,7 +195,10 @@ export function useBetting(matchId: string) {
   const spendTokens = useCallback(
     (amount: number, _reason: string) => {
       if (wallet.tokens < amount) return { ok: false as const, reason: 'not_enough_tokens' as const }
-      setWallet((w) => ({ ...w, tokens: w.tokens - amount }))
+      setWallet((w) => {
+        const n = normalizeWallet(w)
+        return { ...n, tokens: n.tokens - amount }
+      })
       return { ok: true as const }
     },
     [setWallet, wallet.tokens],

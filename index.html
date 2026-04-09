@@ -19,7 +19,32 @@
     <title>Talk Foot</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        id="tf-boot-fallback"
+        style="
+          min-height: 100dvh;
+          margin: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          text-align: center;
+          font-family: ui-sans-serif, system-ui, sans-serif;
+          font-size: 0.9375rem;
+          font-weight: 600;
+          color: #c8d8e8;
+          background: linear-gradient(180deg, #041424 0%, #051a2d 42%, #061a2e 100%);
+        "
+      >
+        <p style="max-width: 22rem; line-height: 1.45">
+          Chargement de Talk Foot…<br />
+          <span style="font-size: 0.8rem; font-weight: 500; opacity: 0.85"
+            >Si cet écran reste figé, ouvre la console (F12) ou réessaie en navigation privée.</span
+          >
+        </p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

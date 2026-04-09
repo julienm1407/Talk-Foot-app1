@@ -3,125 +3,61 @@ import { cn } from '../../utils/cn'
 
 export type ShopRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
-const RARITY_BG: Record<ShopRarity, string> = {
-  common: '/shop-rarity/common.png',
-  rare: '/shop-rarity/rare.png',
-  epic: '/shop-rarity/epic.png',
-  legendary: '/shop-rarity/legendary.png',
-}
-
 const RARITY_LABEL: Record<ShopRarity, string> = {
-  common: 'commun',
-  rare: 'rare',
-  epic: 'épique',
-  legendary: 'légendaire',
+  common: '⚪ Commun',
+  rare: '🔵 Rare',
+  epic: '🟣 Épique',
+  legendary: '🟡 Légendaire',
 }
 
-/** Zoom du PNG : on remplit l’encart avec la matière colorée au centre, sans le cadre de la carte source */
-const RARITY_BG_ZOOM: Record<ShopRarity, { size: string; pos: string }> = {
-  common: { size: '520% 520%', pos: '50% 36%' },
-  rare: { size: '500% 500%', pos: '50% 38%' },
-  epic: { size: '500% 500%', pos: '50% 37%' },
-  legendary: { size: '480% 480%', pos: '50% 40%' },
-}
-
-/** Contours + aura extérieure (dessinés en CSS, pas le cadre du PNG) */
-const RARITY_FRAME: Record<ShopRarity, string> = {
+/**
+ * Fonds type encart match « à venir » : dégradés dynamiques (couleurs ↔ nuit centrale),
+ * sans image — même logique visuelle que MatchSpotlightCard (overlay radial + assombrissement bas).
+ */
+const RARITY_GRADIENT: Record<ShopRarity, string> = {
   common:
-    'ring-2 ring-cyan-400/75 shadow-[0_0_0_1px_rgba(34,211,238,0.35),0_0_28px_rgba(34,211,238,0.5),0_0_72px_rgba(14,165,233,0.22),inset_0_0_0_1px_rgba(255,255,255,0.12)]',
-  rare: 'ring-2 ring-orange-400/80 shadow-[0_0_0_1px_rgba(251,146,60,0.4),0_0_32px_rgba(251,146,60,0.52),0_0_76px_rgba(234,88,12,0.2),inset_0_0_0_1px_rgba(255,255,255,0.1)]',
-  epic: 'ring-2 ring-violet-400/80 shadow-[0_0_0_1px_rgba(192,132,252,0.42),0_0_32px_rgba(168,85,247,0.5),0_0_76px_rgba(124,58,237,0.2),inset_0_0_0_1px_rgba(255,255,255,0.1)]',
+    'linear-gradient(125deg, #0e7490 0%, #38bdf8 34%, #0a0f1a 50%, #155e75 66%, #22d3ee 100%)',
+  rare: 'linear-gradient(125deg, #c2410c 0%, #fb923c 34%, #0a0f1a 50%, #ea580c 64%, #fdba74 100%)',
+  epic: 'linear-gradient(125deg, #5b21b6 0%, #a78bfa 32%, #0a0f1a 50%, #7c3aed 62%, #e879f9 100%)',
   legendary:
-    'ring-2 ring-amber-300/85 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_0_36px_rgba(251,191,36,0.58),0_0_88px_rgba(245,158,11,0.24),inset_0_0_0_1px_rgba(255,250,235,0.15)]',
+    'linear-gradient(125deg, #92400e 0%, #fcd34d 30%, #0a0f1a 48%, #d97706 58%, #fef9c3 100%)',
 }
 
-const RARITY_BLOOM: Record<ShopRarity, string> = {
-  common: 'rgba(34,211,238,0.42)',
-  rare: 'rgba(251,146,60,0.45)',
-  epic: 'rgba(192,132,252,0.45)',
-  legendary: 'rgba(251,191,36,0.5)',
-}
+const MATCH_STYLE_OVERLAY =
+  'radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255,255,255,0.14), transparent 55%), linear-gradient(to bottom, rgba(0,0,0,0.12), rgba(0,0,0,0.52))'
 
-/** Pastille rareté */
-const RARITY_PILL: Record<ShopRarity, string> = {
+/** Bordure / ombre proches de la carte à venir + halo rareté léger */
+const RARITY_SHELL: Record<ShopRarity, string> = {
   common:
-    'border border-cyan-300/70 bg-slate-950/80 shadow-[0_0_18px_rgba(34,211,238,0.55),0_0_32px_rgba(14,165,233,0.25),inset_0_1px_0_rgba(255,255,255,0.12)]',
-  rare: 'border border-amber-400/75 bg-black/55 shadow-[0_0_20px_rgba(251,146,60,0.55),0_0_36px_rgba(234,88,12,0.2),inset_0_1px_0_rgba(255,255,255,0.12)]',
-  epic:
-    'border border-violet-400/75 bg-violet-950/80 shadow-[0_0_20px_rgba(192,132,252,0.55),0_0_36px_rgba(124,58,237,0.22),inset_0_1px_0_rgba(255,255,255,0.1)]',
+    'border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.26)] ring-1 ring-cyan-400/35',
+  rare: 'border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.26)] ring-1 ring-orange-400/40',
+  epic: 'border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.26)] ring-1 ring-violet-400/40',
   legendary:
-    'border border-amber-200/85 bg-gradient-to-b from-amber-950/90 to-black/70 shadow-[0_0_22px_rgba(251,191,36,0.65),0_0_40px_rgba(245,158,11,0.28),inset_0_1px_0_rgba(255,250,235,0.2)]',
+    'border-white/15 shadow-[0_18px_52px_rgba(0,0,0,0.3)] ring-1 ring-amber-300/45',
 }
 
-function ShopRarityPill({ rarity }: { rarity: ShopRarity }) {
-  return (
-    <div
-      className={cn(
-        'pointer-events-none absolute left-1/2 z-30 -translate-x-1/2 rounded-full px-3.5 py-1 font-display text-[11px] font-black lowercase tracking-[0.14em] text-white sm:px-4 sm:text-xs',
-        RARITY_PILL[rarity],
-      )}
-      style={{ top: '0.65rem' }}
-    >
-      <span className="[text-shadow:0_0_12px_rgba(255,255,255,0.35)]">{RARITY_LABEL[rarity]}</span>
-    </div>
-  )
+const RARITY_BADGE_TOP: Record<ShopRarity, string> = {
+  common: 'bg-sky-600 ring-sky-400/45',
+  rare: 'bg-orange-600 ring-orange-400/45',
+  epic: 'bg-violet-600 ring-violet-400/45',
+  legendary: 'bg-amber-500 text-amber-950 ring-amber-200/50',
 }
 
-function FrameEdgeBloom({ rarity }: { rarity: ShopRarity }) {
-  const c = RARITY_BLOOM[rarity]
-  const top: CSSProperties = {
-    background: `radial-gradient(ellipse 72% 100% at 50% 0%, ${c}, transparent 68%)`,
-  }
-  const bottom: CSSProperties = {
-    background: `radial-gradient(ellipse 60% 100% at 50% 100%, ${c}, transparent 72%)`,
-  }
+function ShopRarityTopBadges({ rarity }: { rarity: ShopRarity }) {
   return (
-    <>
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-[26%] rounded-t-2xl mix-blend-screen opacity-90"
-        style={top}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[22%] rounded-b-2xl mix-blend-screen opacity-80"
-        style={bottom}
-        aria-hidden
-      />
-    </>
-  )
-}
-
-function ShopParticles({ rarity }: { rarity: ShopRarity }) {
-  const count = rarity === 'legendary' ? 10 : rarity === 'epic' ? 8 : 6
-  const positions = [
-    { t: '8%', l: '12%', s: 3 },
-    { t: '18%', r: '10%', s: 2 },
-    { t: '42%', l: '6%', s: 2 },
-    { t: '38%', r: '14%', s: 4 },
-    { t: '62%', l: '18%', s: 2 },
-    { t: '72%', r: '8%', s: 3 },
-    { t: '22%', l: '48%', s: 2 },
-    { t: '55%', r: '42%', s: 2 },
-    { t: '12%', r: '28%', s: 2 },
-    { t: '78%', l: '42%', s: 3 },
-  ]
-  return (
-    <div className="pointer-events-none absolute inset-0 z-[3] overflow-hidden rounded-2xl" aria-hidden>
-      {positions.slice(0, count).map((p, i) => (
-        <span
-          key={i}
-          className="tf-shop-particle absolute rounded-full bg-white blur-[1px]"
-          style={{
-            top: p.t,
-            left: 'l' in p ? p.l : undefined,
-            right: 'r' in p ? p.r : undefined,
-            width: p.s,
-            height: p.s,
-            opacity: rarity === 'legendary' ? 0.55 : 0.35,
-            animationDelay: `${i * 0.45}s`,
-          }}
-        />
-      ))}
+    <div className="pointer-events-none absolute left-3 right-3 top-3 z-30 flex flex-wrap items-center justify-between gap-2">
+      <span
+        className={cn(
+          'rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-md ring-1',
+          RARITY_BADGE_TOP[rarity],
+          rarity !== 'legendary' && 'text-white',
+        )}
+      >
+        {RARITY_LABEL[rarity]}
+      </span>
+      <span className="rounded-lg bg-white/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/25 backdrop-blur-sm">
+        Boutique
+      </span>
     </div>
   )
 }
@@ -135,56 +71,53 @@ export function ShopRarityEncart({
   children: ReactNode
   className?: string
 }) {
-  const src = RARITY_BG[rarity]
-  const zoom = RARITY_BG_ZOOM[rarity]
   const bgStyle: CSSProperties = {
-    backgroundImage: `url(${encodeURI(src)})`,
-    backgroundSize: zoom.size,
-    backgroundPosition: zoom.pos,
-    backgroundRepeat: 'no-repeat',
+    background: RARITY_GRADIENT[rarity],
   }
 
   return (
     <article
       className={cn(
-        'group relative isolate aspect-[3/4] w-full overflow-hidden rounded-2xl transition duration-300',
-        RARITY_FRAME[rarity],
+        'group relative isolate aspect-[3/4] w-full overflow-hidden rounded-2xl border transition duration-300',
+        'hover:-translate-y-0.5 hover:shadow-[0_20px_56px_rgba(0,0,0,0.32)]',
+        RARITY_SHELL[rarity],
         className,
       )}
       aria-label={`Carte boutique, rareté ${RARITY_LABEL[rarity]}`}
     >
+      <div className="pointer-events-none absolute inset-0" style={bgStyle} aria-hidden />
       <div
-        className="pointer-events-none absolute inset-0 transition duration-500 group-hover:brightness-105"
-        style={bgStyle}
+        className="pointer-events-none absolute inset-0 opacity-[0.92]"
+        style={{ background: MATCH_STYLE_OVERLAY }}
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.11] mix-blend-overlay"
+        className="pointer-events-none absolute inset-0 opacity-[0.06] mix-blend-overlay"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }}
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.07] via-transparent to-transparent mix-blend-soft-light"
+        className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.06] via-transparent to-transparent"
         aria-hidden
       />
-      <FrameEdgeBloom rarity={rarity} />
-      <ShopParticles rarity={rarity} />
-      <ShopRarityPill rarity={rarity} />
-      <div className="absolute inset-0 z-20 flex min-h-0 flex-col px-[6%] pb-[4.5%] pt-12">
+
+      <ShopRarityTopBadges rarity={rarity} />
+
+      <div className="absolute inset-0 z-20 flex min-h-0 flex-col px-[5%] pb-[4%] pt-14 sm:px-[6%] sm:pb-[4.5%] sm:pt-16">
         {children}
       </div>
     </article>
   )
 }
 
-/** Panneau lisible — corps en Manrope ; titres / prix en Bigail via classes sur les enfants */
+/** Bandeau bas type carte match (footer sombre + bordure haute) */
 export function ShopEncartContentPanel({ className, children }: { className?: string; children: ReactNode }) {
   return (
     <div
       className={cn(
-        'mt-auto space-y-1.5 rounded-xl bg-black/45 px-3 py-2.5 font-sans text-white shadow-inner backdrop-blur-md ring-1 ring-white/15',
+        'mt-auto space-y-1.5 rounded-b-xl border-t border-white/10 bg-[#050a12]/92 px-3 py-2.5 font-sans text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm',
         className,
       )}
     >
@@ -193,12 +126,25 @@ export function ShopEncartContentPanel({ className, children }: { className?: st
   )
 }
 
-/** Boutons encart : contrastes garantis + police display (charte Talk Foot) */
+/**
+ * Boutons encart (footer sombre) — `!` pour écraser le `variant="soft"` du composant Button
+ * (text-tf-dark / fond clair) qui rendait le bouton « Jetons » illisible.
+ */
 export const shopEncartButtonClass = (owned: boolean) =>
   cn(
-    'rounded-xl px-3 py-1.5 text-xs font-black font-display outline-none transition',
-    'focus-visible:ring-2 focus-visible:ring-tf-electric/50',
+    'rounded-xl px-3 py-2 text-xs font-black font-display outline-none transition',
+    'focus-visible:ring-2 focus-visible:ring-sky-300',
     owned
-      ? 'border border-white/50 bg-tf-dark text-tf-white shadow-none hover:bg-tf-dark hover:text-tf-white disabled:cursor-not-allowed disabled:bg-tf-dark disabled:text-tf-white disabled:opacity-100'
-      : 'border border-tf-dark/20 bg-tf-white text-tf-dark shadow-md hover:border-tf-electric/35 hover:bg-tf-ice hover:text-tf-dark',
+      ? '!border !border-white/60 !bg-white/20 !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] hover:!bg-white/28 disabled:cursor-not-allowed disabled:!opacity-100'
+      : '!border-2 !border-sky-200/50 !bg-gradient-to-b !from-sky-400 !to-blue-700 !text-white shadow-md [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] hover:!from-sky-300 hover:!to-blue-600',
+  )
+
+/** Jetons : fort contraste sur panneau sombre (texte blanc + relief lisible) */
+export const shopEncartTokenButtonClass = (owned: boolean) =>
+  cn(
+    'rounded-xl px-3 py-2 text-xs font-black font-display outline-none transition',
+    'focus-visible:ring-2 focus-visible:ring-lime-300',
+    owned
+      ? '!border !border-emerald-300/70 !bg-emerald-950/75 !text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] [text-shadow:0_1px_2px_rgba(0,0,0,0.9)] hover:!bg-emerald-950/90 disabled:cursor-not-allowed disabled:!opacity-100'
+      : '!border-2 !border-lime-200/80 !bg-gradient-to-b !from-lime-400 !to-emerald-800 !text-white shadow-lg [text-shadow:0_1px_3px_rgba(0,0,0,0.85)] hover:!from-lime-300 hover:!to-emerald-700',
   )

@@ -1,48 +1,90 @@
 import { useCallback } from 'react'
 import type { Wallet } from '../types/bet'
 import { useLocalStorageState } from './useLocalStorage'
-
-const WALLET_KEY = 'talkfoot.wallet.v1'
-
-const defaultWallet: Wallet = { tokens: 750 }
-
-const isWalletStored = (p: unknown) =>
-  p !== null &&
-  typeof p === 'object' &&
-  !Array.isArray(p) &&
-  typeof (p as Wallet).tokens === 'number'
-
-function parseWallet(raw: unknown): Wallet {
-  if (raw && typeof raw === 'object' && 'tokens' in raw && typeof (raw as Wallet).tokens === 'number') {
-    return { tokens: Math.max(0, (raw as Wallet).tokens) }
-  }
-  return defaultWallet
-}
+import {
+  DEFAULT_WALLET,
+  normalizeWallet,
+  isWalletStored,
+  WALLET_STORAGE_KEY,
+} from '../utils/walletNormalize'
 
 export function useWallet() {
   const [raw, setRaw] = useLocalStorageState<Wallet>(
-    WALLET_KEY,
-    defaultWallet,
+    WALLET_STORAGE_KEY,
+    DEFAULT_WALLET,
     isWalletStored,
   )
-  const wallet = parseWallet(raw)
+  const wallet = normalizeWallet(raw)
 
   const addTokens = useCallback(
     (amount: number) => {
-      setRaw((w) => ({ ...parseWallet(w), tokens: parseWallet(w).tokens + amount }))
+      setRaw((prev) => {
+        const w = normalizeWallet(prev)
+        return { ...w, tokens: w.tokens + amount }
+      })
     },
     [setRaw],
   )
 
   const spendTokens = useCallback(
     (amount: number): { ok: boolean } => {
-      const current = parseWallet(raw)
-      if (current.tokens < amount) return { ok: false }
-      setRaw((w) => ({ ...parseWallet(w), tokens: parseWallet(w).tokens - amount }))
-      return { ok: true }
+      let ok = false
+      setRaw((prev) => {
+        const w = normalizeWallet(prev)
+        if (w.tokens < amount) return prev as Wallet
+        ok = true
+        return { ...w, tokens: w.tokens - amount }
+      })
+      return { ok }
     },
-    [raw, setRaw],
+    [setRaw],
   )
 
-  return { wallet, addTokens, spendTokens }
+  const addMedals = useCallback(
+    (amount: number) => {
+      setRaw((prev) => {
+        const w = normalizeWallet(prev)
+        return { ...w, medals: w.medals + amount }
+      })
+    },
+    [setRaw],
+  )
+
+  const spendMedals = useCallback(
+    (amount: number): { ok: boolean } => {
+      let ok = false
+      setRaw((prev) => {
+        const w = normalizeWallet(prev)
+        if (w.medals < amount) return prev as Wallet
+        ok = true
+        return { ...w, medals: w.medals - amount }
+      })
+      return { ok }
+    },
+    [setRaw],
+  )
+
+  const claimDailyTokenBonus = useCallback((): { ok: boolean; amount?: number; reason?: string } => {
+    const today = new Date().toISOString().slice(0, 10)
+    let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
+    setRaw((prev) => {
+      const w = normalizeWallet(prev)
+      if (w.lastDailyTokenGrant === today) {
+        out = { ok: false, reason: 'already_claimed' }
+        return prev as Wallet
+      }
+      out = { ok: true, amount: 35 }
+      return { ...w, tokens: w.tokens + 35, lastDailyTokenGrant: today }
+    })
+    return out
+  }, [setRaw])
+
+  return {
+    wallet,
+    addTokens,
+    spendTokens,
+    addMedals,
+    spendMedals,
+    claimDailyTokenBonus,
+  }
 }

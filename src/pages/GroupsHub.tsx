@@ -103,12 +103,6 @@ export function GroupsHubPage() {
         uppercaseTitle={false}
         eyebrow="Groupes"
         title="Salons supporters"
-        description={
-          <>
-            <strong className="text-tf-dark">Mes groupes</strong> regroupe tout ce que tu as rejoint ; explore le
-            reste dans <strong className="text-tf-dark">Tous les salons</strong>.
-          </>
-        }
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <Link

@@ -14,8 +14,8 @@ import { getDebateById } from '../data/debates'
 import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
-import { currentUser, mockUsers } from '../data/users'
-import type { Message } from '../types/chat'
+import { chatPersonasPool, currentUser } from '../data/users'
+import type { Message, User } from '../types/chat'
 import { useMessageLikes } from '../hooks/useMessageLikes'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { cn } from '../utils/cn'
@@ -24,6 +24,7 @@ import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { EditGroupModal } from '../components/group/EditGroupModal'
 import { DebatePickerModal } from '../components/group/DebatePickerModal'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
+import { ShareButton } from '../components/ui/ShareButton'
 import type { SupporterChannel, SupporterGroup } from '../types/group'
 import { useMatches } from '../contexts/MatchesContext'
 import { getGroupQuickEmotes, getGroupSalonChatSurfaceStyles } from '../utils/groupSalonStyles'
@@ -180,8 +181,8 @@ export function GroupPage() {
   )
 
   const usersById = useMemo(() => {
-    const base: Record<string, (typeof mockUsers)[0]> = {
-      ...Object.fromEntries(mockUsers.map((u) => [u.id, u])),
+    const base: Record<string, User> = {
+      ...Object.fromEntries(chatPersonasPool.map((u) => [u.id, u])),
       [currentUser.id]: currentUser,
       ...debateUsers,
     }
@@ -406,7 +407,7 @@ export function GroupPage() {
                       Vérification en cours
                     </Badge>
                     <span className="text-[10px] font-bold text-amber-950/85">
-                      {group.presentationMedia.type === 'video' ? 'Vidéo' : 'Photo'} · contrôle auto (démo)
+                      {group.presentationMedia.type === 'video' ? 'Vidéo' : 'Photo'} · contrôle auto
                     </span>
                   </div>
                   <div className="relative aspect-video max-h-[min(52vh,320px)] w-full overflow-hidden bg-slate-900/90">
@@ -443,8 +444,7 @@ export function GroupPage() {
                         aria-hidden="true"
                       />
                       <p className="max-w-[20rem] text-[11px] font-bold leading-snug text-amber-50 drop-shadow-sm">
-                        Analyse du fichier (aperçu flouté) — en prod, un modérateur ou l’IA valident le contenu
-                        avant publication.
+                        Vérification du média en cours…
                       </p>
                       <div
                         className="w-full max-w-[14rem] rounded-full bg-amber-950/35 p-0.5"
@@ -471,6 +471,12 @@ export function GroupPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <ShareButton
+                path={`/group/${group.id}`}
+                title={group.name}
+                text={`Rejoins-moi sur Talk Foot — salon « ${group.name} »`}
+                label="Partager le salon"
+              />
               <Link
                 to="/groups"
                 className="rounded-2xl border border-tf-dark/12 bg-white/90 px-3 py-2 text-xs font-black text-tf-dark shadow-sm transition hover:border-tf-electric/35"
@@ -532,18 +538,24 @@ export function GroupPage() {
           <span className="min-w-0 flex-1 truncate text-center text-xs font-black text-tf-dark">
             <span aria-hidden>{group.emoji}</span> {group.name}
           </span>
-          {group.createdBy === 'me' ? (
-            <Button
-              type="button"
-              variant="soft"
-              className="h-8 shrink-0 rounded-2xl px-2.5 text-[10px] font-black"
-              onClick={() => setPersonalizeOpen(true)}
-            >
-              Perso
-            </Button>
-          ) : (
-            <span className="h-8 w-[3.25rem] shrink-0" aria-hidden />
-          )}
+          <div className="flex shrink-0 items-center gap-1">
+            <ShareButton
+              compact
+              path={`/group/${group.id}`}
+              title={group.name}
+              text={`Salon Talk Foot : ${group.name}`}
+            />
+            {group.createdBy === 'me' ? (
+              <Button
+                type="button"
+                variant="soft"
+                className="h-8 shrink-0 rounded-2xl px-2.5 text-[10px] font-black"
+                onClick={() => setPersonalizeOpen(true)}
+              >
+                Perso
+              </Button>
+            ) : null}
+          </div>
         </div>
         <Card className="p-4 sm:p-5 lg:max-h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain" elevation="soft">
           <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey/70">
@@ -693,9 +705,11 @@ export function GroupPage() {
 
         <Card
           className={cn(
-            'flex min-h-[18rem] flex-col overflow-hidden border-2 p-0',
-            'h-[min(76dvh,40rem)] max-h-[min(76dvh,40rem)] sm:h-[min(78dvh,42rem)] sm:max-h-[min(78dvh,42rem)]',
-            'lg:h-full lg:max-h-none lg:min-h-0',
+            'flex min-h-0 flex-col overflow-hidden border-2 p-0',
+            /* Mobile : plus de hauteur pour le fil — l’en-tête + débat ne doivent pas le tuer */
+            'max-lg:h-[min(92dvh,calc(100dvh-4.25rem))] max-lg:max-h-[min(92dvh,calc(100dvh-4.25rem))]',
+            'min-h-[min(50dvh,22rem)] sm:min-h-[min(52dvh,24rem)]',
+            'lg:min-h-[18rem] lg:h-full lg:max-h-none',
           )}
           elevation="soft"
           style={
@@ -704,26 +718,26 @@ export function GroupPage() {
               : undefined
           }
         >
-          <div className="shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 p-4 sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 p-3 sm:p-4 lg:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
               <div className="min-w-0">
-                <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey/70">
+                <div className="text-[10px] font-black tracking-[0.16em] text-tf-grey/70 sm:text-[11px] sm:tracking-[0.18em]">
                   {channel?.emoji} {channel?.name}
                 </div>
-                <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+                <div className="mt-0.5 font-display text-base font-black tracking-tight text-tf-dark sm:mt-1 sm:text-lg">
                   Salon — discussion
                 </div>
-                <div className="mt-1 text-sm font-semibold text-tf-grey/70">
+                <div className="mt-0.5 line-clamp-2 text-xs font-semibold text-tf-grey/70 sm:mt-1 sm:line-clamp-none sm:text-sm">
                   {channel?.description}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex max-w-full flex-nowrap items-center gap-1.5 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] sm:flex-wrap sm:overflow-visible sm:gap-2 sm:pb-0">
                 {preferencesComplete && favoriteClubIds.length > 0 ? (
                   <button
                     type="button"
                     onClick={() => setVirageMode(!virageMode)}
                     className={cn(
-                      'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-black transition',
+                      'shrink-0 rounded-full border px-2.5 py-1.5 text-[10px] font-black transition sm:px-3 sm:text-[11px]',
                       virageMode
                         ? 'border-tf-dark bg-tf-dark text-white'
                         : 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20',
@@ -733,13 +747,13 @@ export function GroupPage() {
                     {virageMode ? `✓ ${LIVE_FIL_EQUIPE_COEUR.labelOn}` : LIVE_FIL_EQUIPE_COEUR.label}
                   </button>
                 ) : null}
-                <Badge className="border-tf-dark/15 bg-tf-night/[0.06] text-tf-dark">Live</Badge>
+                <Badge className="shrink-0 border-tf-dark/15 bg-tf-night/[0.06] text-tf-dark">Live</Badge>
                 {channel?.id === 'general' ? (
                   <>
                     <Button
                       type="button"
                       variant="soft"
-                      className="rounded-2xl px-3 py-1.5 text-[11px] font-black"
+                      className="shrink-0 rounded-2xl px-2.5 py-1.5 text-[10px] font-black sm:px-3 sm:text-[11px]"
                       onClick={() => setDebatePickerOpen(true)}
                     >
                       {debateFromQuery ? 'Changer le débat' : 'Débat du salon'}
@@ -747,7 +761,7 @@ export function GroupPage() {
                     {debateFromQuery ? (
                       <button
                         type="button"
-                        className="rounded-2xl border border-tf-grey-pastel/60 bg-white px-3 py-1.5 text-[11px] font-bold text-tf-grey transition hover:bg-tf-grey-pastel/20"
+                        className="shrink-0 rounded-2xl border border-tf-grey-pastel/60 bg-white px-2.5 py-1.5 text-[10px] font-bold text-tf-grey transition hover:bg-tf-grey-pastel/20 sm:px-3 sm:text-[11px]"
                         onClick={() => {
                           setSearchParams((prev) => {
                             const next = new URLSearchParams(prev)
@@ -765,25 +779,56 @@ export function GroupPage() {
             </div>
 
             {debate && channel?.id === 'general' ? (
-              <div className="mt-4 rounded-2xl border border-tf-dark/12 bg-gradient-to-r from-tf-night/[0.06] to-tf-ice/80 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-tf-grey">
-                  Débat lié
-                </p>
-                <p className="mt-1 text-sm font-black text-tf-dark">{debate.title}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {debateFromQuery ? (
-                    <Link
-                      to={`/debate/${debateFromQuery}`}
-                      className="text-xs font-bold text-tf-electric-deep underline"
-                    >
-                      Voir la fiche débat
-                    </Link>
-                  ) : null}
-                  <span className="text-xs font-semibold text-tf-grey">
-                    · Messages ci-dessous dans le salon général
-                  </span>
+              <>
+                <div className="mt-3 hidden rounded-2xl border border-tf-dark/12 bg-gradient-to-r from-tf-night/[0.06] to-tf-ice/80 px-4 py-3 lg:mt-4 lg:block">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-tf-grey">
+                    Débat lié
+                  </p>
+                  <p className="mt-1 text-sm font-black text-tf-dark">{debate.title}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {debateFromQuery ? (
+                      <Link
+                        to={`/debate/${debateFromQuery}`}
+                        className="text-xs font-bold text-tf-electric-deep underline"
+                      >
+                        Voir la fiche débat
+                      </Link>
+                    ) : null}
+                    <span className="text-xs font-semibold text-tf-grey">
+                      · Messages ci-dessous dans le salon général
+                    </span>
+                  </div>
                 </div>
-              </div>
+                <details
+                  className="mt-2 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 to-tf-ice/70 lg:hidden"
+                  data-no-swipe="true"
+                >
+                  <summary className="cursor-pointer list-none px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-tf-grey">
+                      Débat lié — toucher pour déplier
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-xs font-black leading-snug text-tf-dark">{debate.title}</p>
+                    <p className="mt-1 text-[10px] font-bold text-tf-electric-deep">Détails + lien fiche</p>
+                  </summary>
+                  <div className="space-y-2 border-t border-sky-200/50 px-3 py-2.5">
+                    <p className="text-xs font-semibold text-tf-grey/90">{debate.excerpt}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {debateFromQuery ? (
+                        <Link
+                          to={`/debate/${debateFromQuery}`}
+                          className="text-xs font-bold text-tf-electric-deep underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Voir la fiche débat
+                        </Link>
+                      ) : null}
+                      <span className="text-[11px] font-semibold text-tf-grey">
+                        Les messages restent dans ce salon.
+                      </span>
+                    </div>
+                  </div>
+                </details>
+              </>
             ) : null}
           </div>
 
@@ -817,7 +862,14 @@ export function GroupPage() {
 
           <div
             ref={feedRef}
-            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-5"
+            className={cn(
+              'min-h-0 flex-1 overflow-y-auto px-3 py-3 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
+              /* Mobile : en bas du fil, le geste continue sur la page (accessibilité). Desktop : isole le bounce. */
+              'max-lg:overscroll-y-auto',
+              'lg:overscroll-y-contain',
+              /* Garde une zone de lecture minimum quand l’en-tête est chargé (débat, etc.) */
+              debate && channel?.id === 'general' ? 'max-lg:min-h-[min(42dvh,16rem)]' : 'max-lg:min-h-[min(38dvh,14rem)]',
+            )}
             style={salonSurface?.backdrop}
             role="log"
             aria-label="Messages du salon"
@@ -861,7 +913,7 @@ export function GroupPage() {
             </div>
           ) : (
             <div
-              className="shrink-0 border-t border-tf-grey-pastel/50 px-4 py-3 backdrop-blur-sm sm:px-5"
+              className="shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3"
               style={salonSurface?.backdrop}
             >
               <MessageComposer

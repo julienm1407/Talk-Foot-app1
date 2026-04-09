@@ -37,6 +37,7 @@ export const DEFAULT_CHARACTER_LOOK: AvatarCharacterLook = {
   eyeShape: 'round',
   beard: 'none',
   skinTone: '#e8b89a',
+  faceExpression: 'happy',
   headwear: 'none',
   glasses: 'none',
   outfitPrimary: '#0f2744',

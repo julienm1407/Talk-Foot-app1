@@ -35,6 +35,11 @@ export type Bet = {
 }
 
 export type Wallet = {
+  /** Jetons de pari — uniquement gagnés en jeu (paris, bonus), jamais achetés en € */
   tokens: number
+  /** Médailles premium — achetées en €, dépensées en boutique (cosmétiques) */
+  medals: number
+  /** Date ISO jour (YYYY-MM-DD) du dernier bonus jetons quotidien réclamé */
+  lastDailyTokenGrant?: string
 }
 

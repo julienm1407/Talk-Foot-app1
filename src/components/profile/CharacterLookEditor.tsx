@@ -34,6 +34,13 @@ const EYE_SHAPES: { id: AvatarCharacterLook['eyeShape']; label: string }[] = [
   { id: 'almond', label: 'Amande' },
 ]
 
+const FACE_EXPRESSIONS: { id: AvatarCharacterLook['faceExpression']; label: string }[] = [
+  { id: 'neutral', label: 'Posé' },
+  { id: 'happy', label: 'Souriant' },
+  { id: 'hyped', label: 'Tribune (max)' },
+  { id: 'serious', label: 'Concentré' },
+]
+
 const GLASSES: { id: AvatarCharacterLook['glasses']; label: string }[] = [
   { id: 'none', label: 'Sans' },
   { id: 'round', label: 'Rondes' },
@@ -217,6 +224,25 @@ export function CharacterLookEditor() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-black uppercase text-tf-grey">Expression</label>
+                    <select
+                      className="mt-1 w-full rounded-xl border border-tf-grey-pastel/60 bg-white px-3 py-2 text-sm font-semibold text-tf-dark"
+                      value={look.faceExpression}
+                      onChange={(e) =>
+                        patch({ faceExpression: e.target.value as AvatarCharacterLook['faceExpression'] })
+                      }
+                    >
+                      {FACE_EXPRESSIONS.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[11px] font-medium text-tf-grey">
+                      Bouche & sourcils — yeux plus détaillés (iris, reflets).
+                    </p>
                   </div>
                 </div>
               </div>

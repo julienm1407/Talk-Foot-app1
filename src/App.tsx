@@ -17,6 +17,7 @@ import { ArticlePage } from './pages/ArticlePage'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
+import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
@@ -45,7 +46,9 @@ export default function App() {
           <ProtectedRoute>
             <FanPreferencesProvider>
               <MatchesProvider>
-                <AppShell />
+                <MonEspaceDrawerProvider>
+                  <AppShell />
+                </MonEspaceDrawerProvider>
               </MatchesProvider>
             </FanPreferencesProvider>
           </ProtectedRoute>

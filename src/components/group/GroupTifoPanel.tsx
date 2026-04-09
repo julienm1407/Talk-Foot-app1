@@ -49,10 +49,6 @@ export function GroupTifoPanel({ matches }: { matches: Match[] }) {
           {remaining} px restants aujourd’hui
         </span>
       </div>
-      <p className="mt-1 text-[11px] font-medium leading-snug text-tf-grey">
-        Tableau blanc limité au match : un pixel à la fois, max 3 par jour (démo locale).
-      </p>
-
       <label className="mt-2 block text-[10px] font-black uppercase tracking-wide text-tf-grey/70">
         Match cible
       </label>
@@ -128,9 +124,6 @@ export function GroupTifoPanel({ matches }: { matches: Match[] }) {
           })}
         </div>
       </div>
-      <p className="mt-2 text-[10px] font-semibold text-tf-grey/80">
-        Grille {boardW}×{boardH} · reset si tu vides le stockage local (démo).
-      </p>
     </div>
   )
 }

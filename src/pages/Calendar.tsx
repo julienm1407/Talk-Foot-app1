@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
 import { HubMatchStrip } from '../components/match/HubMatchEncart'
+import { MatchSpotlightCard } from '../components/match/MatchSpotlightCard'
 import { Card } from '../components/ui/Card'
 import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
 import { themeForCompetition } from '../data/competitionThemes'
@@ -419,11 +420,7 @@ export function CalendarPage() {
             À la une
           </h2>
           <HubEncartTopAccent appearance={L ? 'light' : 'dark'} preset="upcoming" />
-          <HubMatchStrip
-            match={upcomingSpotlight}
-            className="max-w-full sm:max-w-md"
-            agendaUpcomingSolid
-          />
+          <MatchSpotlightCard match={upcomingSpotlight} className="w-full max-w-full sm:max-w-md" />
         </section>
       ) : null}
 
@@ -545,13 +542,13 @@ export function CalendarPage() {
                       {g.label}
                     </h3>
                     <div className="grid grid-cols-1 gap-tf-4 md:grid-cols-2 md:gap-tf-6">
-                      {g.matches.map((m) => (
-                        <HubMatchStrip
-                          key={m.id}
-                          match={m}
-                          agendaUpcomingSolid={m.status === 'upcoming'}
-                        />
-                      ))}
+                      {g.matches.map((m) =>
+                        m.status === 'upcoming' ? (
+                          <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+                        ) : (
+                          <HubMatchStrip key={m.id} match={m} />
+                        ),
+                      )}
                     </div>
                   </div>
                 ))}

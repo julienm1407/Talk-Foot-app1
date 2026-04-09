@@ -13,6 +13,7 @@ import { GoalsBalanceChart } from '../components/rankings/GoalsBalanceChart'
 import { TeamIndicesRadar } from '../components/rankings/TeamIndicesRadar'
 import { cn } from '../utils/cn'
 import { SectionIntro } from '../components/ui/SectionIntro'
+import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniRank'
 
 type MainTab = 'parieurs' | 'ligues' | 'forme'
 
@@ -39,7 +40,6 @@ export function RankingsPage() {
         uppercaseTitle={false}
         eyebrow="Classements"
         title="Parieurs · Big 5 · Forme des équipes"
-        description="Données mock pour la maquette — classement parieurs, tableaux L1 / PL / Liga / Serie A / Bundesliga, et graphiques de forme."
       />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" role="tablist" aria-label="Sections classements">
@@ -55,9 +55,13 @@ export function RankingsPage() {
       </div>
 
       {mainTab === 'parieurs' ? (
-        <Card className="p-5 sm:p-6" elevation="soft">
-          <BettorLeaderboard extended />
-        </Card>
+        <div className="space-y-4">
+          <FriendsParieurMiniRank />
+          <Card className="p-5 sm:p-6" elevation="soft">
+            <p className="mb-4 text-[10px] font-black uppercase tracking-wider text-tf-grey">Classement global</p>
+            <BettorLeaderboard extended />
+          </Card>
+        </div>
       ) : null}
 
       {mainTab === 'ligues' ? (

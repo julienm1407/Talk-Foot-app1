@@ -36,14 +36,14 @@ export function PageAdRails({
             imageSeed="tf-rail-left-a"
             tone="navy"
             brand="Partenaire officiel"
-            body="Emplacement skyscraper gauche — mock pour intégration réelle (GPT, IAB, etc.)."
+            body="Espace partenaire"
           />
           <AdSlot
             variant="rail"
             imageSeed="tf-rail-left-b"
             tone="blue"
             brand="Offre tribune"
-            body="Second encart latéral — visible sur grands écrans uniquement."
+            body="Offre partenaire"
           />
         </div>
       </aside>
@@ -60,14 +60,14 @@ export function PageAdRails({
             imageSeed="tf-rail-right-a"
             tone="sky"
             brand="Streaming & stats"
-            body="Colonne droite — même format que la gauche pour équilibre visuel."
+            body="Espace partenaire"
           />
           <AdSlot
             variant="rail"
             imageSeed="tf-rail-right-b"
             tone="navy"
             brand="Équipement pro"
-            body="Rappel : visuels fictifs ; remplacer par vos créas ou scripts ad server."
+            body="Offre partenaire"
           />
         </div>
       </aside>

@@ -135,7 +135,7 @@ export function useMatchTifoPixels(matchId: string | null) {
       const s = storeRef.current
       const curQ = s.quota[day]?.[matchId] ?? 0
       if (curQ >= MAX_PER_USER_DAY) {
-        setNotice(`Limite : ${MAX_PER_USER_DAY} pixels / jour et par match (démo).`)
+        setNotice(`Limite : ${MAX_PER_USER_DAY} pixels / jour sur ce match.`)
         return false
       }
       dispatch({ type: 'place', matchId, x, y, color, day })

@@ -29,18 +29,20 @@ export function TrendingDebatesSection({
   return (
     <section
       className={cn(
-        'relative space-y-4 sm:space-y-5',
+        'relative min-w-0 space-y-4 sm:space-y-5',
         variant === 'band' &&
           cn(
-            'sm:space-y-6 sm:pl-3.5',
-            'before:pointer-events-none before:absolute before:left-0 before:top-2 before:z-0 before:h-[calc(100%-1rem)] before:w-1.5 before:rounded-full before:bg-gradient-to-b before:from-tf-ember before:to-orange-600 before:content-[""]',
+            /* Barre accent à gauche : sans pl sur < sm, le texte et les cartes passaient sous le ::before */
+            'space-y-4 pl-4 sm:space-y-6 sm:pl-5',
+            'before:pointer-events-none before:absolute before:left-0 before:top-2 before:z-0 before:h-[calc(100%-1rem)] before:w-1 before:rounded-full before:bg-gradient-to-b before:from-tf-ember before:to-orange-600 before:content-[""] sm:before:w-1.5',
+            'overflow-x-clip',
           ),
       )}
       aria-labelledby="trending-debates-heading"
     >
       <header
         className={cn(
-          'flex flex-col gap-3 pb-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:pb-4',
+          'relative z-[1] flex min-w-0 flex-col gap-3 pb-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:pb-4',
           variant === 'band'
             ? L
               ? 'border-b-2 border-tf-dark/14 pb-3 sm:pb-4'
@@ -87,7 +89,7 @@ export function TrendingDebatesSection({
         </Link>
       </header>
 
-      <div className={cn('grid', gridCols)}>
+      <div className={cn('grid min-w-0', gridCols)}>
         {debates.map((d) => {
           const snippet = d.previewMessages[0]
 
@@ -130,7 +132,7 @@ export function TrendingDebatesSection({
                     <h3 className="mt-2.5 font-display text-base font-black leading-[1.22] tracking-tight text-white sm:text-[1.0625rem] sm:leading-[1.2] [text-shadow:0_2px_14px_rgba(0,0,0,0.35),0_1px_2px_rgba(0,0,0,0.5)]">
                       {d.title}
                     </h3>
-                    <p className="mt-2 text-[11px] font-bold text-white/88 sm:text-xs">
+                    <p className="mt-2 text-[11px] font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.55)] sm:text-xs">
                       💬 {d.messagesCount.toLocaleString('fr-FR')} messages
                     </p>
                   </div>

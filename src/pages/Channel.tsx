@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { initialMessages } from '../data/messages'
 import { useMatches, REPLAY_LIVE_ID } from '../contexts/MatchesContext'
-import { currentUser, mockUsers } from '../data/users'
+import { chatPersonasPool, currentUser, mockFriendUsers, mockUsers } from '../data/users'
 import type { Message, ReactionEvent, ReactionType } from '../types/chat'
 import { Card } from '../components/ui/Card'
 import { ChannelHeader } from '../components/channel/ChannelHeader'
@@ -23,6 +23,7 @@ import { EventOverlay } from '../components/reaction/EventOverlay'
 import { ReactionSummary } from '../components/reaction/ReactionSummary'
 import { HypeMeter } from '../components/reaction/HypeMeter'
 import { ActiveUsers } from '../components/channel/ActiveUsers'
+import { ShareButton } from '../components/ui/ShareButton'
 import { LiveCommentator } from '../components/channel/LiveCommentator'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { mockHighlights } from '../data/highlights'
@@ -55,7 +56,7 @@ export function ChannelPage() {
     [matches, matchId],
   )
 
-  const users = useMemo(() => [currentUser, ...mockUsers], [])
+  const users = useMemo(() => [currentUser, ...mockFriendUsers, ...mockUsers], [])
   const { virageMode, favoriteClubIds } = useFanPreferences()
   const { tribune: activeTribune, setTribune } = useMatchTribune(matchId)
   const { stadiumGroupId, clearStadiumGroup } = useMatchStadiumGroup(matchId)
@@ -646,7 +647,7 @@ export function ChannelPage() {
     let burst = 0
 
     const tick = () => {
-      const u = mockUsers[(Math.random() * mockUsers.length) | 0]
+      const u = chatPersonasPool[(Math.random() * chatPersonasPool.length) | 0]
       const text = phrases[(Math.random() * phrases.length) | 0]
       const gid = stadiumGroupId
         ? stadiumGroupId
@@ -696,7 +697,9 @@ export function ChannelPage() {
   return (
     <div
       className={cn(
-        'tf-match-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden',
+        'tf-match-page flex w-full min-w-0 flex-col',
+        'max-lg:flex-none max-lg:overflow-visible max-lg:pb-2',
+        'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
       )}
       style={
         {
@@ -726,7 +729,9 @@ export function ChannelPage() {
 
       <div
         className={cn(
-          'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 bg-tf-white shadow-[0_8px_40px_rgba(1,30,51,0.08)]',
+          'relative isolate flex flex-col rounded-2xl border border-tf-grey-pastel/50 bg-tf-white shadow-[0_8px_40px_rgba(1,30,51,0.08)]',
+          'max-lg:overflow-visible',
+          'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
         )}
       >
         {isLiveOpen && match.status === 'live' && (
@@ -764,22 +769,37 @@ export function ChannelPage() {
             />
           </div>
         )}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            'flex flex-col',
+            'max-lg:flex-none max-lg:overflow-visible',
+            'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
+          )}
+        >
           {/* Hero header */}
           <div
             className={cn(
-              'shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 px-3 py-2 backdrop-blur-md sm:px-4 lg:py-2.5',
-              isLiveOpen && 'pt-2.5 sm:pt-3',
+              'shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 px-2.5 py-1.5 backdrop-blur-md sm:px-4 sm:py-2 lg:py-2.5',
+              isLiveOpen && 'pt-2 sm:pt-2.5 sm:pt-3',
             )}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
               <ChannelHeader match={matchView} />
-              <ActiveUsers users={users} />
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:justify-start">
+                <ShareButton
+                  compact
+                  path={`/channel/${channelMatchId}`}
+                  title={`${match.home.shortName} – ${match.away.shortName}`}
+                  text={`Salon live Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
+                />
+                <ActiveUsers users={users} />
+              </div>
             </div>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-col gap-2 sm:mt-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="primary"
                 type="button"
+                className="min-h-11 w-full shrink-0 sm:min-h-0 sm:w-auto"
                 onClick={() =>
                   chatColumnRef.current?.scrollIntoView({
                     behavior: 'smooth',
@@ -796,8 +816,9 @@ export function ChannelPage() {
               <Link
                 to={`/channel/${match.id}/stade?salons=1`}
                 className={cn(
-                  'tf-btn-fluid inline-flex items-center justify-center gap-2 rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
+                  'tf-btn-fluid inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
                   'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40',
+                  'sm:min-h-0 sm:w-auto',
                 )}
               >
                 Rejoindre un salon
@@ -829,19 +850,20 @@ export function ChannelPage() {
 
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2 sm:gap-3 sm:p-3',
-              'lg:grid lg:grid-cols-[1.2fr_0.8fr] lg:items-stretch xl:grid-cols-[1.25fr_0.75fr]',
+              'flex flex-col gap-2 p-2 sm:gap-3 sm:p-3',
+              'max-lg:flex-none max-lg:overflow-visible',
+              'lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[1.2fr_0.8fr] lg:grid-rows-1 lg:items-stretch lg:overflow-hidden xl:grid-cols-[1.25fr_0.75fr]',
             )}
           >
-            {/* Left: Pitch + Moments + Bets — scroll interne sur mobile pour laisser la place au chat fixe */}
+            {/* Haut : terrain, moments, pronos — sur mobile tout suit le scroll page */}
             <div
               className={cn(
                 'flex w-full min-w-0 flex-col gap-2 sm:gap-3',
-                'max-h-[min(48vh,26rem)] shrink-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
-                'lg:max-h-none lg:min-h-0 lg:flex-1 lg:overflow-hidden',
+                'max-lg:flex-none max-lg:overflow-visible',
+                'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
               )}
             >
-              <div className="flex flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 bg-gradient-to-b from-tf-grey-pastel/20 to-tf-white/90 shadow-sm lg:min-h-0 lg:flex-1">
+              <div className="flex min-w-0 max-w-full flex-col overflow-visible rounded-2xl border border-tf-grey-pastel/50 bg-gradient-to-b from-tf-grey-pastel/20 to-tf-white/90 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-hidden">
                 <div className="order-2 shrink-0 border-b border-tf-grey-pastel/50 p-2.5 sm:p-3 lg:order-1">
                   <BetWidget match={matchView} betting={betting} compact />
                 </div>
@@ -856,10 +878,10 @@ export function ChannelPage() {
                     )}
                   >
                     {isLiveOpen && (
-                      <div className="relative flex min-h-[10rem] flex-col overflow-visible max-lg:h-[min(36vh,280px)] lg:min-h-0 lg:h-full">
+                      <div className="relative flex min-h-[9rem] flex-col overflow-hidden max-lg:max-h-[min(32vh,260px)] max-lg:min-h-[9rem] lg:min-h-0 lg:h-full lg:overflow-visible">
                         <div
                           ref={pipContainerRef}
-                          className="absolute top-3 right-3 z-30 h-0 w-0 overflow-visible sm:top-4 sm:right-4"
+                          className="absolute top-2 right-2 z-30 h-0 w-0 overflow-visible sm:top-4 sm:right-4"
                           aria-hidden="true"
                         />
                         <LivePitch match={matchView} />
@@ -878,8 +900,9 @@ export function ChannelPage() {
                       </div>
                       <div
                         className={cn(
-                          'min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-2 sm:px-3.5',
-                          '[-webkit-overflow-scrolling:touch]',
+                          'min-h-0 flex-1 overflow-y-auto px-3 py-2 sm:px-3.5 [-webkit-overflow-scrolling:touch]',
+                          'max-lg:overscroll-y-auto',
+                          'lg:overscroll-y-contain',
                         )}
                       >
                         {match.status === 'live' ? (
@@ -903,7 +926,9 @@ export function ChannelPage() {
               ref={chatColumnRef}
               id="channel-live-chat"
               className={cn(
-                'relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 border-l-4 bg-gradient-to-b from-tf-grey-pastel/15 to-tf-white/95 shadow-sm',
+                'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 border-l-4 bg-gradient-to-b from-tf-grey-pastel/15 to-tf-white/95 shadow-sm',
+                'max-lg:mt-1 max-lg:min-h-0 max-lg:flex-none max-lg:overflow-visible',
+                'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
                 tribuneAccentClass,
               )}
               style={
@@ -915,7 +940,13 @@ export function ChannelPage() {
               {isLiveOpen && reactionDensity !== 'chill' ? (
                 <FloatingReactions items={floating} />
               ) : null}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div
+                className={cn(
+                  'flex flex-col',
+                  'max-lg:flex-none max-lg:overflow-visible',
+                  'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
+                )}
+              >
                 <div className="shrink-0 border-b border-tf-grey-pastel/50 px-3 py-1.5 sm:px-3.5 sm:py-2">
                   <h2 className="font-display text-sm font-black text-tf-dark">Chat live</h2>
                   {isLiveOpen ? (
@@ -1017,7 +1048,9 @@ export function ChannelPage() {
                     <div
                       ref={feedRef}
                       className={cn(
-                        'min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] sm:px-4 sm:py-3',
+                        'px-3 py-2 sm:px-4 sm:py-3',
+                        'max-lg:min-h-[12rem] max-lg:flex-none max-lg:overflow-visible',
+                        'lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain lg:[-webkit-overflow-scrolling:touch]',
                       )}
                       role="log"
                       aria-label="Messages en direct"

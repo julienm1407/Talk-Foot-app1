@@ -353,9 +353,6 @@ export function ArticlePage() {
                           <p className="mt-1 font-display text-base font-black leading-tight text-tf-dark sm:text-lg">
                             Salon live
                           </p>
-                          <p className="mt-0.5 max-w-xl text-[10px] font-semibold leading-snug text-tf-grey sm:text-xs">
-                            Ouvre le canal — démo synchronisée avec l’accueil.
-                          </p>
                         </EncartChrome>
                       </div>
                       <div className="min-h-0 flex-1 overflow-hidden px-1 pb-1 pt-1 sm:px-2 sm:pb-2 sm:pt-1.5">
@@ -506,7 +503,7 @@ export function ArticlePage() {
                       >
                         Mode stade
                       </p>
-                      <p className="truncate text-[9px] font-semibold text-tf-app-muted">Courbe tribune · mock</p>
+                      <p className="truncate text-[9px] font-semibold text-tf-app-muted">Vue stade</p>
                     </div>
                     <span className={cn('shrink-0 text-[10px] font-black', isLight ? S.cta : 'text-teal-200')}>
                       →
@@ -623,7 +620,7 @@ export function ArticlePage() {
         </div>
 
         <p className="mt-6 text-center text-[11px] font-semibold text-tf-app-muted">
-          © {new Date().getFullYear()} Talk Foot — données article mock.
+          © {new Date().getFullYear()} Talk Foot
         </p>
       </main>
     </div>

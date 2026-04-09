@@ -1,13 +1,19 @@
 import { useState } from 'react'
 import type { AvatarItem, AvatarSlot, JerseyCustomization, JerseySize, JerseySleeve } from '../../types/profile'
+import { cosmeticTokenPrice } from '../../data/shop'
 import { Button } from '../ui/Button'
+import { TokenGlyph } from '../ui/TokenGlyph'
 import { Input } from '../ui/Input'
 import { JerseyPreviewThumb } from './JerseyPreviewThumb'
 import { cn } from '../../utils/cn'
 
 type Props = {
   item: AvatarItem
+  /** Ex. offre du jour : prix médailles différent du `item.cost` catalogue */
+  medalPrice?: number
+  walletMedals: number
   walletTokens: number
+  spendMedals: (amount: number) => { ok: boolean }
   spendTokens: (amount: number) => { ok: boolean }
   addOwnedItem: (id: string) => void
   setJerseyCustomization: (jerseyId: string, data: JerseyCustomization) => void
@@ -25,7 +31,10 @@ const SLEEVES: { id: JerseySleeve; label: string }[] = [
 
 export function JerseyPurchaseModal({
   item,
+  medalPrice,
+  walletMedals,
   walletTokens,
+  spendMedals,
   spendTokens,
   addOwnedItem,
   setJerseyCustomization,
@@ -39,18 +48,12 @@ export function JerseyPurchaseModal({
   const [size, setSize] = useState<JerseySize>('M')
   const [sleeve, setSleeve] = useState<JerseySleeve>('short')
 
-  const handleBuy = () => {
+  const priceMedals = medalPrice ?? item.cost
+  const priceTokens = cosmeticTokenPrice(priceMedals)
+
+  const finalizePurchase = () => {
     const num = Math.min(99, Math.max(1, parseInt(number.replace(/\D/g, '') || '1', 10)))
     const name = displayName.trim().slice(0, 10).toUpperCase() || 'SUPPORTER'
-    if (item.cost > walletTokens) {
-      onError('Pas assez de jetons.')
-      return
-    }
-    const paid = spendTokens(item.cost)
-    if (!paid.ok) {
-      onError('Paiement jetons impossible.')
-      return
-    }
     const data: JerseyCustomization = {
       displayName: name,
       number: String(num),
@@ -62,6 +65,32 @@ export function JerseyPurchaseModal({
     equipItem(item.id, 'jersey')
     onSuccess(`${item.name} acheté — porté sur ton avatar avec flocage ${num}.`)
     onClose()
+  }
+
+  const handlePayMedals = () => {
+    if (priceMedals > walletMedals) {
+      onError('Pas assez de médailles — achète un pack (€) dans la boutique.')
+      return
+    }
+    const paid = spendMedals(priceMedals)
+    if (!paid.ok) {
+      onError('Paiement médailles impossible.')
+      return
+    }
+    finalizePurchase()
+  }
+
+  const handlePayTokens = () => {
+    if (priceTokens > walletTokens) {
+      onError('Pas assez de jetons — paris gagnés ou bonus quotidien. Les jetons ne s’achètent pas en €.')
+      return
+    }
+    const paid = spendTokens(priceTokens)
+    if (!paid.ok) {
+      onError('Paiement en jetons impossible.')
+      return
+    }
+    finalizePurchase()
   }
 
   return (
@@ -88,7 +117,7 @@ export function JerseyPurchaseModal({
 
         <div className="flex justify-center border-b border-tf-grey-pastel/30 bg-tf-grey-pastel/10 py-4">
           <div className="rounded-2xl border border-white bg-white p-3 shadow-md">
-            <JerseyPreviewThumb item={item} />
+            <JerseyPreviewThumb item={item} size="showcase" />
           </div>
         </div>
 
@@ -148,18 +177,41 @@ export function JerseyPurchaseModal({
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-amber-50/80 px-3 py-2 text-sm font-bold text-amber-950">
-            <span>Prix</span>
-            <span>{item.cost} 🪙</span>
+          <div className="space-y-1.5 rounded-xl bg-amber-50/80 px-3 py-2.5 text-sm font-bold text-amber-950">
+            <div className="flex items-center justify-between">
+              <span>Médailles (tarif normal)</span>
+              <span className="tabular-nums">
+                {priceMedals} <span aria-hidden>🏅</span>
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-t border-amber-200/80 pt-1.5 text-emerald-900">
+              <span>Jetons (plus cher)</span>
+              <span className="inline-flex items-center gap-1 tabular-nums">
+                {priceTokens}
+                <TokenGlyph className="size-[1em]" />
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 border-t border-tf-grey-pastel/50 px-5 py-4">
-          <Button type="button" variant="ghost" className="rounded-2xl" onClick={onClose}>
+        <div className="flex flex-col gap-2 border-t border-tf-grey-pastel/50 px-5 py-4 sm:flex-row sm:flex-wrap">
+          <Button type="button" variant="ghost" className="rounded-2xl sm:order-first" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="button" variant="primary" className="flex-1 rounded-2xl" onClick={handleBuy}>
-            Payer & équiper
+          <Button type="button" variant="primary" className="flex-1 rounded-2xl sm:min-w-[140px]" onClick={handlePayMedals}>
+            Payer {priceMedals} 🏅 & équiper
+          </Button>
+          <Button
+            type="button"
+            variant="soft"
+            className="flex-1 rounded-2xl border border-emerald-500/60 bg-emerald-700 text-white hover:bg-emerald-600 sm:min-w-[140px]"
+            onClick={handlePayTokens}
+          >
+            <span className="inline-flex items-center justify-center gap-1">
+              Payer {priceTokens}
+              <TokenGlyph variant="onDark" className="size-[1em]" />
+              <span>& équiper</span>
+            </span>
           </Button>
         </div>
       </div>

@@ -524,18 +524,15 @@ export function HubStripFinished({ match, className }: { match: Match; className
   )
 }
 
-/** Sélecteur strip pour carrousel / calendrier */
+/** Sélecteur strip pour carrousel / calendrier (à venir « carte dégradé clubs » : voir `MatchSpotlightCard` sur la page Match) */
 export function HubMatchStrip({
   match,
   liveMirror,
   className,
-  /** Page agenda : à venir en dégradé compétition (sans photo terrain) — les lives gardent toujours la DA stade */
-  agendaUpcomingSolid = false,
 }: {
   match: Match
   liveMirror?: LiveMirrorForCard
   className?: string
-  agendaUpcomingSolid?: boolean
 }) {
   if (match.status === 'live')
     return (
@@ -547,13 +544,7 @@ export function HubMatchStrip({
       />
     )
   if (match.status === 'upcoming')
-    return (
-      <HubStripUpcoming
-        match={match}
-        className={className}
-        visualStyle={agendaUpcomingSolid ? 'solid' : 'stadium'}
-      />
-    )
+    return <HubStripUpcoming match={match} className={className} />
   return <HubStripFinished match={match} className={className} />
 }
 

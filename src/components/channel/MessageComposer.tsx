@@ -82,12 +82,12 @@ export function MessageComposer({
         />
       )}
       {showQuickRow ? (
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <div className="-mx-0.5 mb-1.5 flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden py-0.5 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:mb-2 sm:flex-wrap sm:gap-1.5 sm:overflow-visible">
           {quickEmotes?.map((em) => (
             <button
               key={em}
               type="button"
-              className="grid size-9 place-items-center rounded-xl border border-slate-200/80 bg-white/90 text-lg shadow-sm transition hover:border-tf-electric/35 hover:bg-slate-50"
+              className="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200/80 bg-white/90 text-base shadow-sm transition hover:border-tf-electric/35 hover:bg-slate-50 sm:size-9 sm:rounded-xl sm:text-lg"
               onClick={() => onQuickEmote?.(em)}
               aria-label={`Envoyer ${em}`}
             >
@@ -95,7 +95,7 @@ export function MessageComposer({
             </button>
           ))}
           {scarfChoices && scarfChoices.length > 0 && onSendScarf ? (
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 className="rounded-xl border border-violet-200 bg-violet-50/90 px-2.5 py-1.5 text-[11px] font-black text-violet-950 shadow-sm transition hover:bg-violet-100"

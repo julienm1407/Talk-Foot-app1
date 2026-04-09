@@ -138,7 +138,7 @@ export function CreateGroupModal({
 
   return (
     <div
-      className="fixed inset-0 z-[90] overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      className="fixed inset-0 z-[90] flex min-h-0 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       data-no-swipe="true"
       data-tf-modal="true"
       role="dialog"
@@ -152,28 +152,41 @@ export function CreateGroupModal({
         aria-label="Fermer la création de groupe"
       />
 
-      <div className="relative z-10 mx-auto w-full max-w-tf-modal-wide px-4 py-8 pb-[max(2rem,calc(2rem+env(safe-area-inset-bottom)))] sm:py-10">
-        <Card className="relative w-full min-w-0 p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-slate-700/70">
+      <div
+        className={cn(
+          'relative z-10 mx-auto box-border w-full min-w-0 max-w-full flex-1 px-3 py-4 sm:max-w-tf-modal-wide sm:px-4 sm:py-10',
+          'pb-[max(1.5rem,calc(1.5rem+env(safe-area-inset-bottom)))] sm:pb-[max(2rem,calc(2rem+env(safe-area-inset-bottom)))]',
+          'pt-[max(0.5rem,env(safe-area-inset-top))] sm:pt-0',
+        )}
+      >
+        <Card className="relative w-full min-w-0 max-w-full overflow-x-hidden p-3 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
+          <div className="min-w-0 pr-0 sm:min-w-[12rem] sm:flex-1 sm:pr-2">
+            <div className="text-[10px] font-black tracking-[0.16em] text-slate-700/70 sm:text-[11px] sm:tracking-[0.18em]">
               NOUVEAU GROUPE
             </div>
-            <div id="create-group-title" className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+            <div
+              id="create-group-title"
+              className="mt-1 text-xl font-black tracking-tight text-slate-900 sm:text-2xl"
+            >
               Créer un groupe
             </div>
-            <div className="mt-1 text-sm font-semibold text-slate-700/70">
+            <div className="mt-1 text-xs font-semibold leading-snug text-slate-700/70 sm:text-sm">
               Thème, salons, couleurs — sans logos officiels.
             </div>
           </div>
 
-          <Button variant="ghost" className="h-10 rounded-2xl" onClick={onClose}>
+          <Button
+            variant="ghost"
+            className="h-10 w-full shrink-0 rounded-2xl sm:w-auto sm:self-start"
+            onClick={onClose}
+          >
             Fermer
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white/70 p-3 sm:rounded-3xl sm:p-4">
             <div className="text-sm font-black text-slate-900">Identité</div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -234,7 +247,7 @@ export function CreateGroupModal({
                   <Button
                     type="button"
                     variant={groupKind === 'public' ? 'primary' : 'soft'}
-                    className="h-9 rounded-2xl px-4"
+                    className="min-h-11 flex-1 rounded-2xl px-4 sm:h-9 sm:min-h-0 sm:flex-initial"
                     onClick={() => {
                       setGroupKind('public')
                       setTagError(null)
@@ -246,7 +259,7 @@ export function CreateGroupModal({
                   <Button
                     type="button"
                     variant={groupKind === 'private' ? 'primary' : 'soft'}
-                    className="h-9 rounded-2xl px-4"
+                    className="min-h-11 flex-1 rounded-2xl px-4 sm:h-9 sm:min-h-0 sm:flex-initial"
                     onClick={() => {
                       setGroupKind('private')
                       setTagError(null)
@@ -323,17 +336,17 @@ export function CreateGroupModal({
 
             <div className="mt-4">
               <div className="text-sm font-black text-slate-900">Ambiance (démo)</div>
-              <label className="mt-2 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700/70">
-                Intensité du salon
+              <label className="mt-2 flex flex-col gap-2 text-xs font-bold text-slate-700/70 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                <span className="shrink-0">Intensité du salon</span>
                 <input
                   type="range"
                   min={15}
                   max={98}
                   value={intensity}
                   onChange={(e) => setIntensity(Number(e.target.value))}
-                  className="min-w-[140px] flex-1"
+                  className="h-2 w-full min-w-0 sm:min-w-[140px] sm:flex-1"
                 />
-                <span className="tabular-nums text-slate-900">{intensity}%</span>
+                <span className="shrink-0 tabular-nums text-slate-900">{intensity}%</span>
               </label>
             </div>
 
@@ -350,7 +363,7 @@ export function CreateGroupModal({
                       if (p.accent) setAccent(p.accent)
                       else setAccent('')
                     }}
-                    className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-800 shadow-sm transition hover:border-violet-300"
+                    className="min-h-11 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-800 shadow-sm transition hover:border-violet-300 sm:min-h-0 sm:py-1.5"
                   >
                     {p.label}
                   </button>
@@ -358,50 +371,50 @@ export function CreateGroupModal({
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 min-w-0">
               <div className="text-sm font-black text-slate-900">Thème</div>
-              <div className="mt-2 flex flex-nowrap items-center gap-3 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible">
-                <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
-                  <span className="text-xs font-bold text-slate-700/70">
-                    Primaire
-                  </span>
-                  <input
-                    type="color"
-                    value={primary}
-                    onChange={(e) => setPrimary(e.target.value)}
-                    className="h-7 w-10 cursor-pointer rounded-lg border border-slate-200 bg-white"
-                    aria-label="Couleur primaire"
-                  />
+              <div className="mt-2 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible sm:pb-0">
+                  <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-2.5 py-2 sm:px-3">
+                    <span className="whitespace-nowrap text-xs font-bold text-slate-700/70">
+                      Primaire
+                    </span>
+                    <input
+                      type="color"
+                      value={primary}
+                      onChange={(e) => setPrimary(e.target.value)}
+                      className="h-8 w-11 min-w-0 cursor-pointer rounded-lg border border-slate-200 bg-white sm:h-7 sm:w-10"
+                      aria-label="Couleur primaire"
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-2.5 py-2 sm:px-3">
+                    <span className="whitespace-nowrap text-xs font-bold text-slate-700/70">
+                      Secondaire
+                    </span>
+                    <input
+                      type="color"
+                      value={secondary}
+                      onChange={(e) => setSecondary(e.target.value)}
+                      className="h-8 w-11 min-w-0 cursor-pointer rounded-lg border border-slate-200 bg-white sm:h-7 sm:w-10"
+                      aria-label="Couleur secondaire"
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-2.5 py-2 sm:px-3">
+                    <span className="whitespace-nowrap text-xs font-bold text-slate-700/70">Accent</span>
+                    <input
+                      type="color"
+                      value={accent.trim() ? accent : secondary}
+                      onChange={(e) => setAccent(e.target.value)}
+                      className="h-8 w-11 min-w-0 cursor-pointer rounded-lg border border-slate-200 bg-white sm:h-7 sm:w-10"
+                      aria-label="Couleur d’accent (optionnelle)"
+                    />
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
-                  <span className="text-xs font-bold text-slate-700/70">
-                    Secondaire
-                  </span>
-                  <input
-                    type="color"
-                    value={secondary}
-                    onChange={(e) => setSecondary(e.target.value)}
-                    className="h-7 w-10 cursor-pointer rounded-lg border border-slate-200 bg-white"
-                    aria-label="Couleur secondaire"
-                  />
-                </div>
-                <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2">
-                  <span className="text-xs font-bold text-slate-700/70">Accent</span>
-                  <input
-                    type="color"
-                    value={accent.trim() ? accent : secondary}
-                    onChange={(e) => setAccent(e.target.value)}
-                    className="h-7 w-10 cursor-pointer rounded-lg border border-slate-200 bg-white"
-                    aria-label="Couleur d’accent (optionnelle)"
-                  />
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Badge className="border-slate-200 bg-white/80 text-slate-900">
-                    Fond
-                  </Badge>
+                <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-slate-200/60 pt-2 sm:border-t-0 sm:pt-0">
+                  <Badge className="shrink-0 border-slate-200 bg-white/80 text-slate-900">Fond</Badge>
                   <Button
                     variant={background === 'clean' ? 'primary' : 'soft'}
-                    className="h-9 rounded-2xl px-3"
+                    className="h-9 min-h-11 flex-1 rounded-2xl px-3 sm:min-h-0 sm:flex-initial"
                     onClick={() => setBackground('clean')}
                     aria-pressed={background === 'clean'}
                   >
@@ -409,7 +422,7 @@ export function CreateGroupModal({
                   </Button>
                   <Button
                     variant={background === 'smoke' ? 'primary' : 'soft'}
-                    className="h-9 rounded-2xl px-3"
+                    className="h-9 min-h-11 flex-1 rounded-2xl px-3 sm:min-h-0 sm:flex-initial"
                     onClick={() => setBackground('smoke')}
                     aria-pressed={background === 'smoke'}
                   >
@@ -417,7 +430,7 @@ export function CreateGroupModal({
                   </Button>
                   <Button
                     variant={background === 'stripe' ? 'primary' : 'soft'}
-                    className="h-9 rounded-2xl px-3"
+                    className="h-9 min-h-11 flex-1 rounded-2xl px-3 sm:min-h-0 sm:flex-initial"
                     onClick={() => setBackground('stripe')}
                     aria-pressed={background === 'stripe'}
                   >
@@ -450,13 +463,10 @@ export function CreateGroupModal({
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-              <Button variant="soft" className="rounded-3xl" onClick={onClose}>
-                Annuler
-              </Button>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
               <Button
                 variant="primary"
-                className="rounded-3xl"
+                className="min-h-11 w-full rounded-3xl sm:min-h-0 sm:w-auto sm:order-2"
                 onClick={() => {
                   setNameError(null)
                   setTagError(null)
@@ -510,15 +520,24 @@ export function CreateGroupModal({
               >
                 Créer le groupe
               </Button>
+              <Button
+                variant="soft"
+                className="min-h-11 w-full rounded-3xl sm:min-h-0 sm:w-auto sm:order-1"
+                onClick={onClose}
+              >
+                Annuler
+              </Button>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200/80 bg-white/70 p-4">
+          <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white/70 p-3 sm:rounded-3xl sm:p-4">
             <div className="text-sm font-black text-slate-900">Aperçu</div>
-            <div className="mt-3">
-              <GroupCard group={draft} />
+            <div className="mt-3 min-w-0 max-w-full overflow-x-auto">
+              <div className="min-w-0 max-w-full">
+                <GroupCard group={draft} className="max-w-full" />
+              </div>
             </div>
-            <div className="mt-3 text-sm font-semibold text-slate-700/70">
+            <div className="mt-3 text-xs font-semibold leading-snug text-slate-700/70 sm:text-sm">
               Après validation, tu es redirigé vers ton salon. Le groupe est sauvegardé dans ton navigateur (onglet
               Groupes → Mes groupes).
             </div>

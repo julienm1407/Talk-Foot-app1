@@ -4,7 +4,7 @@ import { Card } from '../ui/Card'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../ui/Avatar'
 import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
-import { currentUser, mockUsers } from '../../data/users'
+import { chatPersonasPool, currentUser } from '../../data/users'
 import { useProfile } from '../../hooks/useProfile'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { LIVE_FIL_EQUIPE_COEUR } from '../../data/tribunes'
@@ -12,7 +12,7 @@ import { useSupporterTintMode } from '../../hooks/useSupporterTintMode'
 import { cn } from '../../utils/cn'
 
 const usersById = Object.fromEntries(
-  [currentUser, ...mockUsers].map((u) => [u.id, u]),
+  [currentUser, ...chatPersonasPool].map((u) => [u.id, u]),
 )
 
 export function TopCommentsFeed({

@@ -662,6 +662,21 @@ body::before {
 @media (min-width: 1024px) {
   .tf-pitch2d--live-embed {
     min-height: 0;
+    display: block;
+    height: 100%;
+  }
+  .tf-pitch2d--live-embed > svg {
+    min-height: 0;
+    max-height: none;
+    height: 100%;
+  }
+  .tf-pitch2d--live-embed .tf-pitch2d__score {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    margin: 0;
+    align-self: auto;
+    max-width: none;
   }
 }
 .tf-pitch2d__score {
@@ -682,6 +697,32 @@ body::before {
 .tf-pitch2d--live-embed .tf-pitch2d__score {
   padding: 7px 10px;
   font-size: 11px;
+}
+
+/* Mobile / tablette : score sous le terrain — évite la fusion visuelle avec le bloc Pronos en dessous */
+@media (max-width: 1023px) {
+  .tf-pitch2d--live-embed {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+  }
+  .tf-pitch2d--live-embed > svg {
+    flex: 1 1 auto;
+    min-height: 140px;
+    max-height: min(38vh, 220px);
+    width: 100%;
+  }
+  .tf-pitch2d--live-embed .tf-pitch2d__score {
+    position: relative;
+    left: auto;
+    top: auto;
+    z-index: 1;
+    margin: 8px 10px 10px;
+    align-self: stretch;
+    max-width: none;
+    box-sizing: border-box;
+  }
 }
 
 /* Chat message entrance */
@@ -1090,6 +1131,25 @@ body::before {
 }
 .tf-shop-particle {
   animation: tf-shop-particle-float 3.8s ease-in-out infinite;
+}
+
+/* Boutique — lévitation type vitrine 3D (maillots / accessoires) */
+@keyframes tf-boutique-float {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(4deg);
+  }
+}
+.tf-boutique-float-target {
+  animation: tf-boutique-float 4.2s ease-in-out infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.tf-boutique-3dwrap {
+  perspective: 720px;
 }
 
 /* Micro-interactions — cartes & boutons */

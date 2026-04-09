@@ -1,3 +1,5 @@
+import type { PixelJerseyPresetId } from '../data/pixelJerseyPresets'
+
 export type AvatarSlot = 'scarf' | 'hat' | 'jersey' | 'accessory'
 
 /** Motifs maillot (géométriques — pas de logos officiels) */
@@ -27,6 +29,8 @@ export type AvatarItem = {
     pattern: JerseyPattern
     /** Bandes claires (bordures centre, parements manches) */
     stripeLight?: string
+    /** Grille SVG pixel — silhouette maillot + couleurs (sans sponsor / logo) */
+    pixelPreset?: PixelJerseyPresetId
   }
   /** Texte neutre du type d’inspiration (sans marque) */
   inspirationNote?: string
@@ -39,6 +43,9 @@ export type BeardStyle = 'none' | 'light' | 'full' | 'goatee'
 export type HeadwearBase = 'none' | 'cap' | 'beanie'
 export type GlassesStyle = 'none' | 'round' | 'sport'
 
+/** Ambiance du visage (bouche + sourcils) — rendu SVG */
+export type FaceExpression = 'neutral' | 'happy' | 'hyped' | 'serious'
+
 export type AvatarCharacterLook = {
   hairColor: string
   hairStyle: HairStyle
@@ -46,6 +53,8 @@ export type AvatarCharacterLook = {
   eyeShape: EyeShape
   beard: BeardStyle
   skinTone: string
+  /** Sourire, cran tribune, concentré… */
+  faceExpression: FaceExpression
   headwear: HeadwearBase
   glasses: GlassesStyle
   outfitPrimary: string
@@ -65,16 +74,21 @@ export type JerseyCustomization = {
   sleeve: JerseySleeve
 }
 
-export type TokenPack = {
+/** Pack de médailles — achat carte bancaire (simulation), jamais confondu avec les jetons de pari */
+export type MedalPack = {
   id: string
+  /** Nom marketing type « bundle » */
   name: string
-  tokens: number
-  priceDisplay: string // ex: "Gratuit", "Offre limitée"
-  bonus?: number // tokens bonus
+  tagline: string
+  medals: number
+  bonus?: number
+  /** Prix affiché (démo) */
+  priceEur: string
   popular?: boolean
-  description?: string
-  free?: boolean // true = pas de paiement (ex: pack gratuit)
+  /** Texte ambiance (pas de chiffre jeton seul) */
+  flavor?: string
 }
+
 
 export type LevelTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
 

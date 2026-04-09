@@ -65,7 +65,7 @@ export function LiveSalonPresenceStrip({
       <div className="flex flex-wrap items-center justify-between gap-1.5">
         <span
           className={cn(
-            'font-black uppercase tracking-[0.14em] text-sky-100/90',
+            'font-black uppercase tracking-[0.14em] text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]',
             compact || dense ? 'text-[8px]' : 'text-[9px] sm:text-[10px]',
           )}
         >
@@ -80,8 +80,8 @@ export function LiveSalonPresenceStrip({
         >
           {snap.tier === 'fire' ? <span aria-hidden>🔥</span> : null}
           {snap.tierLabel}
-          <span className="text-sky-200/70">·</span>
-          <span className="text-sky-50/95">{snap.intensity}%</span>
+          <span className="text-white/45">·</span>
+          <span className="text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]">{snap.intensity}%</span>
         </span>
       </div>
 
@@ -124,13 +124,13 @@ export function LiveSalonPresenceStrip({
       >
         <p
           className={cn(
-            'min-w-0 font-black text-sky-50/92',
+            'min-w-0 font-black text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]',
             compact ? 'text-[10px]' : dense ? 'text-[9px]' : 'text-[11px] sm:text-xs',
             !dense && !compact && 'w-full',
           )}
         >
           <span className="whitespace-nowrap">👥 {snap.viewers.toLocaleString('fr-FR')}</span>
-          <span className="text-sky-200/65"> · </span>
+          <span className="text-white/40"> · </span>
           <span className="whitespace-nowrap">💬 {snap.messages.toLocaleString('fr-FR')}</span>
         </p>
         <div
@@ -141,7 +141,7 @@ export function LiveSalonPresenceStrip({
         >
           <span
             className={cn(
-              'font-bold uppercase tracking-wide text-sky-100/80',
+              'font-bold uppercase tracking-wide text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]',
               compact || dense ? 'text-[7px]' : 'text-[9px]',
             )}
           >

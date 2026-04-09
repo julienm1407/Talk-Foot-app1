@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
+import { DirectMessagesProvider } from '../contexts/DirectMessagesContext'
 import { BottomNav } from './BottomNav'
 import { TopBar } from './TopBar'
 import { SkipLink } from './SkipLink'
@@ -24,6 +25,7 @@ export function AppShell() {
   })
 
   return (
+    <DirectMessagesProvider>
     <div className="flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden overflow-x-hidden">
       <SkipLink />
       <FanOnboardingModal />
@@ -38,7 +40,10 @@ export function AppShell() {
         {isChannel ? (
           <div
             className={cn(
-              'mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
+              'mx-auto flex w-full min-w-0 flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
+              /* Mobile : tout le live défile comme une page (doigt haut/bas). Desktop : hauteur cadrée, pas de scroll outer. */
+              'min-h-0 max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
+              'lg:min-h-0 lg:overflow-hidden',
               mainBottomPadChannel,
               isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',
             )}
@@ -77,5 +82,6 @@ export function AppShell() {
 
       <BottomNav />
     </div>
+    </DirectMessagesProvider>
   )
 }

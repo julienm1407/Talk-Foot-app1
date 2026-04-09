@@ -1,6 +1,36 @@
 import { useId, type ReactNode } from 'react'
-import type { AvatarCharacterLook, JerseyPattern } from '../../types/profile'
+import type { AvatarCharacterLook, FaceExpression, JerseyPattern } from '../../types/profile'
+import { PIXEL_JERSEY_PRESETS, type PixelJerseyPresetId } from '../../data/pixelJerseyPresets'
+import { PixelJerseyPixelGroup } from '../kit/PixelJerseySvg'
 import { cn } from '../../utils/cn'
+
+function parseHex(h: string): { r: number; g: number; b: number } | null {
+  const s = h.replace('#', '').trim()
+  if (s.length !== 6) return null
+  const n = parseInt(s, 16)
+  if (Number.isNaN(n)) return null
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }
+}
+
+function mixHex(a: string, colorB: string, t: number): string {
+  const A = parseHex(a)
+  const B = parseHex(colorB)
+  if (!A || !B) return a
+  const r = Math.round(A.r + (B.r - A.r) * t)
+  const gCh = Math.round(A.g + (B.g - A.g) * t)
+  const bCh = Math.round(A.b + (B.b - A.b) * t)
+  return `#${[r, gCh, bCh].map((x) => x.toString(16).padStart(2, '0')).join('')}`
+}
+
+const EXPR: Record<
+  FaceExpression,
+  { browOuterY: number; browInnerY: number; eyeScale: number; cheekBlush: number }
+> = {
+  neutral: { browOuterY: -10, browInnerY: -9.5, eyeScale: 1, cheekBlush: 0.22 },
+  happy: { browOuterY: -10.5, browInnerY: -10.2, eyeScale: 1.02, cheekBlush: 0.35 },
+  hyped: { browOuterY: -11.5, browInnerY: -11, eyeScale: 1.1, cheekBlush: 0.45 },
+  serious: { browOuterY: -9.2, browInnerY: -8.4, eyeScale: 0.98, cheekBlush: 0.12 },
+}
 
 export type TorsoColors = {
   primary: string
@@ -186,6 +216,7 @@ function JerseyKit({
   colors,
   variant,
   flocage,
+  pixelJersey,
 }: {
   uid: string
   x: number
@@ -195,6 +226,7 @@ function JerseyKit({
   colors: TorsoColors
   variant: 'front' | 'back'
   flocage?: { name: string; number: string }
+  pixelJersey?: { preset: PixelJerseyPresetId } | null
 }) {
   const pathD = shirtPathD(x, y, w, h)
   const pad = 6.5
@@ -204,9 +236,21 @@ function JerseyKit({
     x1: x + w + pad * 0.35,
     y1: y + h - 1,
   }
+  const bw = bbox.x1 - bbox.x0
+  const bh = bbox.y1 - bbox.y0
   const light = colors.stripeLight ?? '#f1f5f9'
   const cx = x + w / 2
   const neck = w * 0.2
+  const hasPixel = Boolean(pixelJersey?.preset)
+  const presetDef =
+    pixelJersey?.preset != null ? PIXEL_JERSEY_PRESETS[pixelJersey.preset] : null
+
+  /** Maillot pixel : texture zoomée et remontée pour remplir la silhouette (clip chemise). */
+  const pixelScale = 1.52
+  const pxW = bw * pixelScale
+  const pxH = bh * pixelScale
+  const pxX = bbox.x0 - (pxW - bw) / 2
+  const pxY = bbox.y0 - (pxH - bh) / 2 - 1.6
 
   return (
     <g>
@@ -222,14 +266,31 @@ function JerseyKit({
       </defs>
 
       <g clipPath={`url(#${uid}-shirt)`}>
-        {patternLayerInsideBbox(bbox, colors)}
-        <rect
-          x={bbox.x0}
-          y={bbox.y0}
-          width={bbox.x1 - bbox.x0}
-          height={bbox.y1 - bbox.y0}
-          fill={`url(#${uid}-jer3d)`}
-        />
+        {hasPixel && pixelJersey?.preset && presetDef ? (
+          <svg
+            x={pxX}
+            y={pxY}
+            width={pxW}
+            height={pxH}
+            viewBox={`0 0 ${presetDef.cols} ${presetDef.rows.length}`}
+            preserveAspectRatio="none"
+            shapeRendering="crispEdges"
+          >
+            <PixelJerseyPixelGroup preset={pixelJersey.preset} />
+          </svg>
+        ) : null}
+        {!hasPixel ? (
+          <>
+            {patternLayerInsideBbox(bbox, colors)}
+            <rect
+              x={bbox.x0}
+              y={bbox.y0}
+              width={bw}
+              height={bh}
+              fill={`url(#${uid}-jer3d)`}
+            />
+          </>
+        ) : null}
       </g>
 
       <path d={pathD} fill="none" stroke="rgba(15,23,42,.22)" strokeWidth={0.55} />
@@ -244,12 +305,14 @@ function JerseyKit({
       />
 
       {/* Parements manches (blanc + liseré couleur secondaire) */}
-      <g>
-        <rect x={x - 3} y={y + 17} width={11} height={3.2} rx={0.6} fill={light} opacity={0.98} />
-        <rect x={x - 3} y={y + 19.5} width={11} height={1.4} rx={0.3} fill={colors.secondary} opacity={0.95} />
-        <rect x={x + w - 8} y={y + 17} width={11} height={3.2} rx={0.6} fill={light} opacity={0.98} />
-        <rect x={x + w - 8} y={y + 19.5} width={11} height={1.4} rx={0.3} fill={colors.secondary} opacity={0.95} />
-      </g>
+      {!hasPixel ? (
+        <g>
+          <rect x={x - 3} y={y + 17} width={11} height={3.2} rx={0.6} fill={light} opacity={0.98} />
+          <rect x={x - 3} y={y + 19.5} width={11} height={1.4} rx={0.3} fill={colors.secondary} opacity={0.95} />
+          <rect x={x + w - 8} y={y + 17} width={11} height={3.2} rx={0.6} fill={light} opacity={0.98} />
+          <rect x={x + w - 8} y={y + 19.5} width={11} height={1.4} rx={0.3} fill={colors.secondary} opacity={0.95} />
+        </g>
+      ) : null}
 
       {variant === 'back' && flocage && (
         <g clipPath={`url(#${uid}-shirt)`} pointerEvents="none">
@@ -368,6 +431,160 @@ function BeardPath({
   )
 }
 
+function ExpressiveMouth({ cx, faceY, expr }: { cx: number; faceY: number; expr: FaceExpression }) {
+  const lip = mixHex('#9a3412', '#ea580c', 0.35)
+  switch (expr) {
+    case 'neutral':
+      return (
+        <path
+          d={`M ${cx - 4.5} ${faceY + 13.5} Q ${cx} ${faceY + 15.2} ${cx + 4.5} ${faceY + 13.5}`}
+          fill="none"
+          stroke={lip}
+          strokeWidth={1}
+          strokeLinecap="round"
+        />
+      )
+    case 'happy':
+      return (
+        <path
+          d={`M ${cx - 7.5} ${faceY + 13} Q ${cx} ${faceY + 17.8} ${cx + 7.5} ${faceY + 13}`}
+          fill="none"
+          stroke={lip}
+          strokeWidth={1.15}
+          strokeLinecap="round"
+        />
+      )
+    case 'hyped':
+      return (
+        <g>
+          <path
+            d={`M ${cx - 8.5} ${faceY + 12} Q ${cx} ${faceY + 19} ${cx + 8.5} ${faceY + 12}`}
+            fill="none"
+            stroke={lip}
+            strokeWidth={1.2}
+            strokeLinecap="round"
+          />
+          <path
+            d={`M ${cx - 5} ${faceY + 14.2} h 1.6 l 0.9 1.6 h 1.7 l 0.9 -1.6 h 1.7 l 0.9 1.6 h 1.6`}
+            fill="#fffbeb"
+            stroke="rgba(120,53,15,.28)"
+            strokeWidth={0.18}
+            strokeLinejoin="round"
+          />
+        </g>
+      )
+    case 'serious':
+    default:
+      return (
+        <path
+          d={`M ${cx - 5.2} ${faceY + 14.2} L ${cx + 5.2} ${faceY + 14.2}`}
+          fill="none"
+          stroke={lip}
+          strokeWidth={0.95}
+          strokeLinecap="round"
+          opacity={0.92}
+        />
+      )
+  }
+}
+
+function Eyebrows({
+  cx,
+  faceY,
+  hairColor,
+  expr,
+}: {
+  cx: number
+  faceY: number
+  hairColor: string
+  expr: FaceExpression
+}) {
+  const e = EXPR[expr]
+  const outerL = faceY + e.browOuterY
+  const innerL = faceY + e.browInnerY
+  const outerR = faceY + e.browOuterY
+  const innerR = faceY + e.browInnerY
+  const serious = expr === 'serious'
+  const w = serious ? 1.4 : 1.05
+  return (
+    <g fill="none" stroke={hairColor} strokeLinecap="round" strokeWidth={w} opacity={0.9}>
+      <path
+        d={`M ${cx - 19.5} ${outerL} Q ${cx - 10} ${innerL - 1.4} ${cx - 3.2} ${innerL + (serious ? 1.4 : 0.2)}`}
+      />
+      <path
+        d={`M ${cx + 19.5} ${outerR} Q ${cx + 10} ${innerR - 1.4} ${cx + 3.2} ${innerR + (serious ? 1.4 : 0.2)}`}
+      />
+    </g>
+  )
+}
+
+function EyeGroup({
+  uid,
+  cx,
+  cy,
+  rx,
+  ry,
+  skinTone,
+  scale,
+}: {
+  uid: string
+  cx: number
+  cy: number
+  rx: number
+  ry: number
+  skinTone: string
+  scale: number
+}) {
+  const irisR = Math.min(rx, ry) * 0.55
+  const lid = mixHex(skinTone, '#1c1917', 0.18)
+  return (
+    <g transform={`translate(${cx} ${cy}) scale(${scale})`}>
+      <ellipse rx={rx} ry={ry} fill="#f8fafc" stroke="rgba(15,23,42,.14)" strokeWidth={0.28} />
+      <ellipse rx={rx * 0.9} ry={ry * 0.86} fill={`url(#sclera-${uid})`} opacity={0.42} />
+      <circle r={irisR} fill={`url(#iris-${uid})`} />
+      <circle r={irisR * 0.42} fill="#0a0f1a" />
+      <circle cx={-irisR * 0.38} cy={-irisR * 0.36} r={irisR * 0.24} fill="#ffffff" opacity={0.94} />
+      <circle cx={irisR * 0.12} cy={irisR * 0.22} r={irisR * 0.09} fill="#ffffff" opacity={0.45} />
+      <path
+        d={`M ${-rx * 0.92} ${-ry * 0.28} Q 0 ${-ry * 0.52} ${rx * 0.92} ${-ry * 0.28}`}
+        fill="none"
+        stroke={lid}
+        strokeWidth={0.38}
+        strokeLinecap="round"
+        opacity={0.5}
+      />
+    </g>
+  )
+}
+
+function CheekBlush({ cx, faceY, expr }: { cx: number; faceY: number; expr: FaceExpression }) {
+  const strength = EXPR[expr].cheekBlush * 0.42
+  if (strength < 0.05) return null
+  return (
+    <g opacity={strength} pointerEvents="none">
+      <ellipse cx={cx - 15} cy={faceY + 7} rx={8} ry={5.5} fill="#fb7185" />
+      <ellipse cx={cx + 15} cy={faceY + 7} rx={8} ry={5.5} fill="#fb7185" />
+    </g>
+  )
+}
+
+function NoseHint({ cx, faceY, skinTone }: { cx: number; faceY: number; skinTone: string }) {
+  const shade = mixHex(skinTone, '#0f172a', 0.14)
+  return (
+    <g pointerEvents="none" opacity={0.85}>
+      <ellipse cx={cx + 0.5} cy={faceY + 6.5} rx={3.2} ry={4.8} fill={shade} opacity={0.22} />
+      <path
+        d={`M ${cx} ${faceY + 1.5} L ${cx - 1.2} ${faceY + 8.5}`}
+        fill="none"
+        stroke={mixHex(skinTone, '#1c1917', 0.12)}
+        strokeWidth={0.4}
+        strokeLinecap="round"
+        opacity={0.35}
+      />
+    </g>
+  )
+}
+
 function Glasses({ style, cx, cy }: { style: AvatarCharacterLook['glasses']; cx: number; cy: number }) {
   if (style === 'none') return null
   if (style === 'round') {
@@ -430,6 +647,7 @@ export function CharacterAvatarSvg({
   flocage,
   suppressBaseHeadwear,
   className,
+  pixelJersey,
 }: {
   look: AvatarCharacterLook
   jerseyOverride: TorsoColors | null
@@ -438,6 +656,7 @@ export function CharacterAvatarSvg({
   flocage?: { name: string; number: string }
   suppressBaseHeadwear?: boolean
   className?: string
+  pixelJersey?: { preset: PixelJerseyPresetId } | null
 }) {
   const uid = useId().replace(/:/g, '')
   const torso = resolveTorso(look, jerseyOverride, supporterColors)
@@ -447,6 +666,8 @@ export function CharacterAvatarSvg({
 
   const eyeRx = look.eyeShape === 'almond' ? 5 : 4.5
   const eyeRy = look.eyeShape === 'almond' ? 3.5 : 4.5
+  const expr: FaceExpression = look.faceExpression ?? 'happy'
+  const eyeScale = EXPR[expr].eyeScale
 
   const shortsFill = torso.primary
 
@@ -461,6 +682,27 @@ export function CharacterAvatarSvg({
           <stop offset="0%" stopColor={look.skinTone} />
           <stop offset="100%" stopColor={look.skinTone} stopOpacity={0.85} />
         </linearGradient>
+        <radialGradient id={`faceSkin-${uid}`} cx="36%" cy="30%" r="72%">
+          <stop offset="0%" stopColor={mixHex(look.skinTone, '#ffffff', 0.2)} />
+          <stop offset="38%" stopColor={look.skinTone} />
+          <stop offset="100%" stopColor={mixHex(look.skinTone, '#292524', 0.14)} />
+        </radialGradient>
+        <radialGradient id={`sclera-${uid}`} cx="32%" cy="28%" r="75%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#e2e8f0" />
+        </radialGradient>
+        <radialGradient id={`iris-${uid}`} cx="38%" cy="35%" r="65%">
+          <stop offset="0%" stopColor={mixHex(look.eyeColor, '#f8fafc', 0.28)} />
+          <stop offset="55%" stopColor={look.eyeColor} />
+          <stop offset="100%" stopColor={mixHex(look.eyeColor, '#020617', 0.45)} />
+        </radialGradient>
+        {variant === 'back' ? (
+          <radialGradient id={`hairBack-${uid}`} cx="35%" cy="25%" r="78%">
+            <stop offset="0%" stopColor={mixHex(look.hairColor, '#fef3c7', 0.1)} />
+            <stop offset="62%" stopColor={look.hairColor} />
+            <stop offset="100%" stopColor={mixHex(look.hairColor, '#0f172a', 0.38)} />
+          </radialGradient>
+        ) : null}
       </defs>
 
       <rect x={36} y={118} width={10} height={20} rx={3} fill="#1e293b" />
@@ -475,6 +717,7 @@ export function CharacterAvatarSvg({
         colors={torso}
         variant={variant}
         flocage={variant === 'back' ? flocage : undefined}
+        pixelJersey={pixelJersey}
       />
 
       <rect
@@ -491,27 +734,55 @@ export function CharacterAvatarSvg({
 
       <rect x={42} y={64} width={16} height={14} fill={`url(#neck-${uid})`} />
 
-      <ellipse cx={cx} cy={faceY} rx={24} ry={26} fill={look.skinTone} stroke="rgba(0,0,0,.08)" strokeWidth={0.6} />
+      <ellipse
+        cx={cx}
+        cy={faceY}
+        rx={24}
+        ry={26}
+        fill={`url(#faceSkin-${uid})`}
+        stroke="rgba(0,0,0,.1)"
+        strokeWidth={0.55}
+      />
 
       {variant === 'front' && (
         <>
-          <ellipse cx={cx - 9} cy={faceY - 2} rx={eyeRx} ry={eyeRy} fill="#fff" />
-          <ellipse cx={cx + 9} cy={faceY - 2} rx={eyeRx} ry={eyeRy} fill="#fff" />
-          <circle cx={cx - 9} cy={faceY - 2} r={2.2} fill={look.eyeColor} />
-          <circle cx={cx + 9} cy={faceY - 2} r={2.2} fill={look.eyeColor} />
-          <path
-            d={`M ${cx - 6} ${faceY + 12} Q ${cx} ${faceY + 16} ${cx + 6} ${faceY + 12}`}
-            fill="none"
-            stroke="#9a3412"
-            strokeWidth={1.2}
-            strokeLinecap="round"
+          <CheekBlush cx={cx} faceY={faceY} expr={expr} />
+          <NoseHint cx={cx} faceY={faceY} skinTone={look.skinTone} />
+          <EyeGroup
+            uid={uid}
+            cx={cx - 9}
+            cy={faceY - 2}
+            rx={eyeRx}
+            ry={eyeRy}
+            skinTone={look.skinTone}
+            scale={eyeScale}
           />
+          <EyeGroup
+            uid={uid}
+            cx={cx + 9}
+            cy={faceY - 2}
+            rx={eyeRx}
+            ry={eyeRy}
+            skinTone={look.skinTone}
+            scale={eyeScale}
+          />
+          <Eyebrows cx={cx} faceY={faceY} hairColor={look.hairColor} expr={expr} />
+          <ExpressiveMouth cx={cx} faceY={faceY} expr={expr} />
           <Glasses style={look.glasses} cx={cx} cy={faceY - 2} />
         </>
       )}
 
       {variant === 'back' && (
-        <ellipse cx={cx} cy={faceY - 4} rx={22} ry={24} fill={look.hairColor} opacity={0.95} />
+        <ellipse
+          cx={cx}
+          cy={faceY - 4}
+          rx={22}
+          ry={24}
+          fill={`url(#hairBack-${uid})`}
+          stroke={mixHex(look.hairColor, '#0f172a', 0.2)}
+          strokeWidth={0.35}
+          opacity={0.98}
+        />
       )}
 
       {variant === 'front' && (

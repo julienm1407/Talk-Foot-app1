@@ -3,6 +3,7 @@ import { Card } from '../components/ui/Card'
 import { getAllDebates } from '../data/debates'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
 import { SectionIntro } from '../components/ui/SectionIntro'
+import { cn } from '../utils/cn'
 
 export function DebatesPage() {
   const all = getAllDebates()
@@ -15,7 +16,6 @@ export function DebatesPage() {
         uppercaseTitle={false}
         eyebrow="Débats"
         title="Tribunes & polémiques"
-        description="Ouvre un fil pour lire les avis, puis rejoins le salon pour enchaîner en live."
       />
 
       <ul className="space-y-4" role="list">
@@ -51,8 +51,17 @@ export function DebatesPage() {
                       <h2 className="mt-2 font-display text-xl font-black leading-[1.18] tracking-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.38),0_1px_2px_rgba(0,0,0,0.55)] sm:text-2xl sm:leading-[1.15]">
                         {d.title}
                       </h2>
-                      <p className="mt-2.5 text-sm font-semibold leading-snug text-white/88">{d.excerpt}</p>
-                      <p className="mt-2 text-xs font-bold text-white/78">
+                      <p
+                        className={cn(
+                          'mt-3 max-w-2xl rounded-xl px-3 py-2.5 text-sm font-semibold leading-relaxed text-white',
+                          'bg-black/35 ring-1 ring-white/15 backdrop-blur-[2px]',
+                          '[text-shadow:0_1px_2px_rgba(0,0,0,0.65)]',
+                          'sm:mt-3.5 sm:px-4 sm:py-3 sm:text-[0.9375rem] sm:leading-relaxed',
+                        )}
+                      >
+                        {d.excerpt}
+                      </p>
+                      <p className="mt-2 text-xs font-bold text-white/92 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
                         👥 {d.participantsCount.toLocaleString('fr-FR')} participants · 💬{' '}
                         {d.messagesCount.toLocaleString('fr-FR')} messages
                       </p>

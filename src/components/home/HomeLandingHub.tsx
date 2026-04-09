@@ -47,7 +47,7 @@ export function HomeLandingHub({
                 compact ? 'text-tf-xl sm:text-2xl xl:text-3xl' : 'text-tf-display',
               )}
             >
-              Le foot live, avec ta tribu
+              Le foot live, avec tes potes en tribunes
             </h1>
             <p
               className={cn(

@@ -16,7 +16,7 @@ export function FloatingReactions({
 }) {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-16 top-0 overflow-hidden"
+      className="pointer-events-none absolute inset-x-0 bottom-20 top-0 overflow-hidden sm:bottom-16"
       aria-hidden="true"
     >
       {items.map((r) => (

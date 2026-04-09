@@ -7,6 +7,7 @@ import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { ClubCrest } from '../brand/ClubCrest'
+import { ShareButton } from '../ui/ShareButton'
 
 function patternFor(seed: string): 0 | 1 | 2 | 3 {
   let h = 0
@@ -381,10 +382,10 @@ export function MatchCard({
               <TeamStack team={match.away} align="right" size={compact ? 58 : 64} />
             </div>
           </div>
-          <div className="mt-4 w-full">
+          <div className="mt-4 flex w-full gap-2">
             <Link
               to={channelTo}
-              className="tf-interactive-press inline-flex w-full items-center justify-center rounded-2xl bg-tf-dark px-3 py-2.5 text-center text-xs font-black text-white shadow-sm transition hover:bg-tf-dark-alt"
+              className="tf-interactive-press inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-tf-dark px-3 py-2.5 text-center text-xs font-black text-white shadow-sm transition hover:bg-tf-dark-alt"
             >
               {isLive
                 ? 'Rejoindre le live'
@@ -392,6 +393,15 @@ export function MatchCard({
                   ? "Voir l'avant-match"
                   : 'Salon match'}
             </Link>
+            {(isLive || match.status === 'upcoming') && (
+              <ShareButton
+                compact
+                className="shrink-0"
+                path={channelTo}
+                title={`${match.home.shortName} – ${match.away.shortName}`}
+                text={`Salon Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
+              />
+            )}
           </div>
           </div>
         </Card>

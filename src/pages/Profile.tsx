@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
 import { Card } from '../components/ui/Card'
+import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { mockPredictions } from '../data/predictions'
@@ -416,11 +417,25 @@ export function ProfilePage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2">
-            <span className="text-lg">🪙</span>
-            <span className="font-display text-xl font-black text-tf-dark">
-              {wallet.tokens} jetons
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-200/60 bg-emerald-50/80 px-4 py-2">
+              <span className="flex shrink-0" aria-hidden>
+                <TokenGlyph className="size-8" />
+              </span>
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-wider text-emerald-800/80">Pari</div>
+                <span className="font-display text-lg font-black text-tf-dark">{wallet.tokens} jetons</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-amber-200/60 bg-amber-50/80 px-4 py-2">
+              <span className="text-lg" aria-hidden>
+                🏅
+              </span>
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-wider text-amber-900/80">Boutique</div>
+                <span className="font-display text-lg font-black text-tf-dark">{wallet.medals} médailles</span>
+              </div>
+            </div>
           </div>
         </div>
       </Card>

@@ -1,22 +1,25 @@
-import type { AvatarItem, TokenPack } from '../types/profile'
+import type { AvatarItem, MedalPack } from '../types/profile'
 import { inspiredJerseyItems } from './inspiredJerseys'
 
-/** Écharpes, casquettes, maillots emoji — sans la collection « inspirée » */
+/** Référence boutique : équivalent jetons pour un prix en médailles (hors promos). */
+export const TOKENS_PER_MEDAL = 200
+
+/** Écharpes, casquettes, maillots emoji, accessoires — sans la collection « inspirée » */
 export const baseAvatarItems: AvatarItem[] = [
-  { id: 'scarf-1', name: 'Écharpe bleue', slot: 'scarf', emoji: '🔵', cost: 50, rarity: 'common', description: 'Écharpe aux couleurs du club' },
-  { id: 'scarf-2', name: 'Écharpe rouge', slot: 'scarf', emoji: '🔴', cost: 50, rarity: 'common', description: 'Écharpe passion' },
-  { id: 'scarf-3', name: 'Écharpe rayée', slot: 'scarf', emoji: '🌈', cost: 120, rarity: 'rare', description: 'Écharpe arc-en-ciel légendaire' },
-  { id: 'scarf-4', name: 'Écharpe dorée', slot: 'scarf', emoji: '⭐', cost: 300, rarity: 'epic', description: 'Écharpe champion' },
-  { id: 'hat-1', name: 'Casquette club', slot: 'hat', emoji: '🧢', cost: 80, rarity: 'common', description: 'Casquette officielle' },
-  { id: 'hat-2', name: 'Béret supporteur', slot: 'hat', emoji: '🎩', cost: 100, rarity: 'common', description: 'Style stade' },
-  { id: 'hat-3', name: 'Bonnet hiver', slot: 'hat', emoji: '🧶', cost: 150, rarity: 'rare', description: 'Bonnet pour les matchs soirs de décembre' },
-  { id: 'hat-4', name: 'Couronne buteur', slot: 'hat', emoji: '👑', cost: 400, rarity: 'legendary', description: 'Pour les vrais rois du stade' },
+  { id: 'scarf-1', name: 'Écharpe bleue', slot: 'scarf', emoji: '🔵', cost: 16, rarity: 'common', description: 'Écharpe aux couleurs du club' },
+  { id: 'scarf-2', name: 'Écharpe rouge', slot: 'scarf', emoji: '🔴', cost: 40, rarity: 'rare', description: 'Écharpe passion' },
+  { id: 'scarf-3', name: 'Écharpe rayée', slot: 'scarf', emoji: '🌈', cost: 80, rarity: 'epic', description: 'Écharpe arc-en-ciel tribune' },
+  { id: 'scarf-4', name: 'Écharpe dorée', slot: 'scarf', emoji: '⭐', cost: 150, rarity: 'legendary', description: 'Écharpe prestige' },
+  { id: 'hat-1', name: 'Casquette club', slot: 'hat', emoji: '🧢', cost: 12, rarity: 'common', description: 'Casquette officielle' },
+  { id: 'hat-2', name: 'Béret supporteur', slot: 'hat', emoji: '🎩', cost: 32, rarity: 'rare', description: 'Style stade' },
+  { id: 'hat-3', name: 'Bonnet hiver', slot: 'hat', emoji: '🧶', cost: 60, rarity: 'epic', description: 'Matchs de décembre' },
+  { id: 'hat-4', name: 'Couronne buteur', slot: 'hat', emoji: '👑', cost: 100, rarity: 'legendary', description: 'Prestige tribune' },
   {
     id: 'jersey-1',
     name: 'Maillot domicile',
     slot: 'jersey',
     emoji: '👕',
-    cost: 100,
+    cost: 32,
     rarity: 'common',
     description: 'Marine, bande centrale & parements — rendu type maillot pro.',
     jerseyVisual: {
@@ -32,7 +35,7 @@ export const baseAvatarItems: AvatarItem[] = [
     slot: 'jersey',
     emoji: '💪',
     cost: 100,
-    rarity: 'common',
+    rarity: 'rare',
     description: 'Blanc cassé & bandes horizontales.',
     jerseyVisual: {
       primary: '#f8fafc',
@@ -46,8 +49,8 @@ export const baseAvatarItems: AvatarItem[] = [
     name: 'Maillot third',
     slot: 'jersey',
     emoji: '🦁',
-    cost: 200,
-    rarity: 'rare',
+    cost: 180,
+    rarity: 'epic',
     description: 'Noir mesh technique, accents néon.',
     jerseyVisual: {
       primary: '#0f172a',
@@ -61,7 +64,7 @@ export const baseAvatarItems: AvatarItem[] = [
     name: 'Maillot collector',
     slot: 'jersey',
     emoji: '🏆',
-    cost: 500,
+    cost: 320,
     rarity: 'legendary',
     description: 'Rayures verticales premium or & minuit.',
     jerseyVisual: {
@@ -71,22 +74,94 @@ export const baseAvatarItems: AvatarItem[] = [
       stripeLight: '#fef3c7',
     },
   },
-  { id: 'acc-1', name: 'Sifflet', slot: 'accessory', emoji: '📣', cost: 30, rarity: 'common', description: 'Pour encourager l\'équipe' },
-  { id: 'acc-2', name: 'Drapeau', slot: 'accessory', emoji: '🚩', cost: 60, rarity: 'common', description: 'Petit drapeau de poche' },
-  { id: 'acc-3', name: 'Megaphone', slot: 'accessory', emoji: '📢', cost: 180, rarity: 'rare', description: 'Se faire entendre dans le stade' },
-  { id: 'acc-4', name: 'Fumigène virtuel', slot: 'accessory', emoji: '💨', cost: 350, rarity: 'epic', description: 'Ambiance ultime' },
+  { id: 'acc-1', name: 'Sifflet', slot: 'accessory', emoji: '📣', cost: 8, rarity: 'common', description: 'Mise en avant basique' },
+  { id: 'acc-2', name: 'Drapeau', slot: 'accessory', emoji: '🚩', cost: 8, rarity: 'common', description: 'Petit drapeau de poche' },
+  { id: 'acc-3', name: 'Mégaphone', slot: 'accessory', emoji: '📢', cost: 20, rarity: 'rare', description: 'Mettre un message en avant en live' },
+  { id: 'acc-4', name: 'Fumigène virtuel', slot: 'accessory', emoji: '💨', cost: 40, rarity: 'epic', description: 'Effet tribune premium' },
 ]
 
 /** Équipement classique + maillots inspirés (personnalisables à l’achat) */
 export const avatarItems: AvatarItem[] = [...baseAvatarItems, ...inspiredJerseyItems]
 
-export const tokenPacks: TokenPack[] = [
-  { id: 'pack-starter', name: 'Starter', tokens: 100, priceDisplay: 'Gratuit', description: 'Pour commencer', bonus: 10, free: true },
-  { id: 'pack-50', name: 'Petit boost', tokens: 50, priceDisplay: 'Quotidien', description: 'Récompense de connexion quotidienne', free: true },
-  { id: 'pack-150', name: 'Supporteur', tokens: 150, priceDisplay: 'Offre', bonus: 25, description: '+25 jetons bonus', popular: true },
-  { id: 'pack-500', name: 'Ultra fan', tokens: 500, priceDisplay: 'Meilleure valeur', bonus: 100, description: '+100 jetons bonus' },
-  { id: 'pack-1000', name: 'Légende', tokens: 1000, priceDisplay: 'Prestige', bonus: 250, description: '+250 jetons bonus • Badge exclusif' },
+/**
+ * Packs de médailles — achat en euros (simulation CB).
+ * Grille produit : montants € → médailles (pas de bonus séparé dans la grille actuelle).
+ */
+export const medalPacks: MedalPack[] = [
+  {
+    id: 'medal-pack-199',
+    name: 'Pack Coup d’envoi',
+    tagline: 'Première recharge',
+    medals: 20,
+    priceEur: '1,99 €',
+    flavor: 'Pour tester la boutique ou un accessoire commun.',
+  },
+  {
+    id: 'medal-pack-499',
+    name: 'Pack Tribune',
+    tagline: 'Bon rapport € / 🏅',
+    medals: 55,
+    priceEur: '4,99 €',
+    flavor: 'Idéal pour une écharpe rare ou avancer vers un maillot.',
+  },
+  {
+    id: 'medal-pack-999',
+    name: 'Pack Capitaine',
+    tagline: 'Le plus choisi',
+    medals: 120,
+    priceEur: '9,99 €',
+    popular: true,
+    flavor: 'Équilibre entre budget et progression (maillots, packs rares).',
+  },
+  {
+    id: 'medal-pack-1999',
+    name: 'Pack Virage',
+    tagline: 'Réserve sérieuse',
+    medals: 260,
+    priceEur: '19,99 €',
+    flavor: 'Pour viser épique / plusieurs pièces.',
+  },
+  {
+    id: 'medal-pack-4999',
+    name: 'Pack Ultras',
+    tagline: 'Gros coffre',
+    medals: 700,
+    priceEur: '49,99 €',
+    flavor: 'Collectionneurs et tenues complètes haut de gamme.',
+  },
+  {
+    id: 'medal-pack-9999',
+    name: 'Pack Légende',
+    tagline: 'Maximum médailles',
+    medals: 1600,
+    priceEur: '99,99 €',
+    flavor: 'Top débit : légendaires et personnalisation poussée.',
+  },
 ]
+
+const dailyOfferPool: AvatarItem[] = [
+  ...inspiredJerseyItems,
+  ...baseAvatarItems.filter((i) => i.slot === 'scarf' || i.slot === 'hat' || i.slot === 'accessory'),
+]
+
+/** Rotation quotidienne déterministe (offre du jour). */
+export function pickDailyOfferItem(): AvatarItem {
+  const d = new Date()
+  const seed = d.getFullYear() * 372 + d.getMonth() * 31 + d.getDate()
+  return dailyOfferPool[seed % dailyOfferPool.length]!
+}
+
+/** Prix promo affiché (−12 % environ) — le coût catalogue reste `item.cost`. */
+export function dailyOfferDiscountedCost(item: AvatarItem): number {
+  return Math.max(4, Math.round(item.cost * 0.88))
+}
+
+/**
+ * Prix en jetons pour le même cosmétique (référence : 1 🏅 ≈ 200 jetons).
+ */
+export function cosmeticTokenPrice(medalCost: number): number {
+  return Math.max(1, medalCost * TOKENS_PER_MEDAL)
+}
 
 export const xpPerLevel = (level: number): number => {
   if (level <= 1) return 0

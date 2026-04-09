@@ -62,7 +62,16 @@ export function DebateDetailPage() {
             <h1 className="mt-3 font-display text-2xl font-black leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.55)] sm:text-3xl sm:leading-[1.12]">
               {debate.title}
             </h1>
-            <p className="mt-2.5 text-sm font-semibold leading-snug text-white/88">{debate.excerpt}</p>
+            <p
+              className={cn(
+                'mt-3 max-w-2xl rounded-xl px-3 py-2.5 text-sm font-semibold leading-relaxed text-white',
+                'bg-black/35 ring-1 ring-white/15 backdrop-blur-[2px]',
+                '[text-shadow:0_1px_2px_rgba(0,0,0,0.65)]',
+                'sm:mt-3.5 sm:px-4 sm:py-3 sm:text-[0.9375rem] sm:leading-relaxed',
+              )}
+            >
+              {debate.excerpt}
+            </p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-black sm:text-sm">
               <span className="rounded-xl border border-white/30 bg-white/14 px-3 py-1.5 text-white/95 backdrop-blur-sm sm:px-4 sm:py-2">
                 👥 {debate.participantsCount.toLocaleString('fr-FR')} participants

@@ -53,10 +53,18 @@ export function DressableCharacter({
       }
     : null
 
+  const pixelJersey = jerseyItem?.jerseyVisual?.pixelPreset
+    ? { preset: jerseyItem.jerseyVisual.pixelPreset }
+    : null
+
+  const pixelBoost = Boolean(pixelJersey)
+  const boxW = pixelBoost ? 132 : 100
+  const boxH = pixelBoost ? 185 : 140
+
   return (
     <div
       className={`relative inline-flex flex-col items-center justify-center ${className ?? ''}`}
-      style={{ width: 100, height: 140 }}
+      style={{ width: boxW, height: boxH }}
     >
       <CharacterAvatarSvg
         look={look}
@@ -65,6 +73,8 @@ export function DressableCharacter({
         variant={variant}
         flocage={variant === 'back' ? flocage : undefined}
         suppressBaseHeadwear={!!hatItem}
+        pixelJersey={pixelJersey}
+        className={pixelBoost ? 'max-h-[185px] max-w-[132px]' : undefined}
       />
 
       {jerseyItem && !jerseyItem.jerseyVisual && variant === 'front' && (

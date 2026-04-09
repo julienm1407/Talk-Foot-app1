@@ -75,7 +75,8 @@ export function LiveEffects({
     <div
       className={
         fullScreen
-          ? 'pointer-events-none fixed inset-0 z-[70] overflow-hidden'
+          ? /* Mobile : limité au panneau live (évite chevauchement nav / zones tactiles). Desktop : plein viewport. */
+            'pointer-events-none absolute inset-0 z-[18] overflow-hidden lg:fixed lg:z-[70]'
           : 'pointer-events-none absolute inset-0 overflow-hidden'
       }
       aria-hidden="true"

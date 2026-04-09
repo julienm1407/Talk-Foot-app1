@@ -36,6 +36,12 @@ function InitialFallback({ seed, accent }: { seed: string; accent: User['accent'
   )
 }
 
+function livePresenceRank(u: User) {
+  if (u.id === 'me') return 0
+  if (u.isMockFriend) return 1
+  return 2
+}
+
 function LiveFanFaceRow({
   user,
   stackIndex,
@@ -50,12 +56,16 @@ function LiveFanFaceRow({
   const [imgFailed, setImgFailed] = useState(false)
   const team = user.fanClubId ? findTeamInAnyLeague(user.fanClubId) : null
   const z = totalShown - stackIndex
-  const title = team ? `${user.username} · ${team.shortName}` : user.username
+  const friendNote = user.isMockFriend ? ' · ami' : ''
+  const title = team ? `${user.username} · ${team.shortName}${friendNote}` : `${user.username}${friendNote}`
 
   const shell = (inner: React.ReactNode) => (
     <div
       className={cn(
-        'relative size-[2.75rem] shrink-0 rounded-full bg-white shadow-[0_4px_14px_rgba(1,30,51,0.12)] ring-[3px] ring-white',
+        'relative size-[2.75rem] shrink-0 rounded-full bg-white shadow-[0_4px_14px_rgba(1,30,51,0.12)] ring-[3px]',
+        user.isMockFriend
+          ? 'ring-sky-400 shadow-[0_4px_16px_rgba(14,165,233,0.25)]'
+          : 'ring-white',
         'motion-safe:transition motion-safe:duration-200 motion-safe:ease-out',
         'hover:z-50 motion-safe:hover:scale-[1.08] motion-safe:hover:shadow-[0_8px_22px_rgba(244,63,94,0.18)]',
       )}
@@ -127,8 +137,13 @@ function LiveFanFaceRow({
 
 export function ActiveUsers({ users }: { users: User[] }) {
   const { profile } = useProfile()
-  const shown = users.slice(0, 6)
-  const remaining = Math.max(0, users.length - shown.length)
+  const ordered = useMemo(
+    () => [...users].sort((a, b) => livePresenceRank(a) - livePresenceRank(b)),
+    [users],
+  )
+  const shown = ordered.slice(0, 6)
+  const remaining = Math.max(0, ordered.length - shown.length)
+  const friendsInStrip = useMemo(() => shown.filter((u) => u.isMockFriend).length, [shown])
 
   const clubLine = useMemo(() => {
     const ids = [...new Set(shown.map((u) => u.fanClubId).filter(Boolean) as string[])]
@@ -140,14 +155,14 @@ export function ActiveUsers({ users }: { users: User[] }) {
   }, [shown])
 
   return (
-    <div className="flex min-w-0 shrink-0 items-center gap-3 sm:gap-4">
+    <div className="flex min-w-0 shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
       <div
         className={cn(
-          'relative flex items-center rounded-full border border-rose-200/45 bg-gradient-to-r from-white via-rose-50/35 to-emerald-50/30',
+          'relative flex w-fit max-w-full items-center rounded-full border border-rose-200/45 bg-gradient-to-r from-white via-rose-50/35 to-emerald-50/30',
           'py-1.5 pl-2 pr-1 shadow-[0_6px_24px_rgba(244,63,94,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]',
           'ring-1 ring-rose-500/10',
         )}
-        aria-label={`${users.length} personnes suivent ce live`}
+        aria-label={`${ordered.length} personnes suivent ce live${friendsInStrip ? `, dont ${friendsInStrip} amis` : ''}`}
       >
         <span
           className="absolute left-2 top-1/2 size-2 -translate-y-1/2 rounded-full bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.85)] motion-safe:animate-pulse"
@@ -168,15 +183,20 @@ export function ActiveUsers({ users }: { users: User[] }) {
         </div>
       </div>
 
-      <div className="min-w-0 text-left">
+      <div className="min-w-0 max-w-full text-left sm:pl-0">
         <p className="text-[13px] font-black leading-tight tracking-tight text-slate-900 sm:text-sm">
-          <span className="tabular-nums">{users.length}</span>{' '}
+          <span className="tabular-nums">{ordered.length}</span>{' '}
           <span className="bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">
             en direct
           </span>
         </p>
+        {friendsInStrip > 0 ? (
+          <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700 sm:text-[11px]">
+            Dont <span className="tabular-nums">{friendsInStrip}</span> ami{friendsInStrip > 1 ? 's' : ''} dans la pile
+          </p>
+        ) : null}
         {clubLine ? (
-          <p className="mt-0.5 max-w-[11rem] truncate text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 sm:max-w-[14rem] sm:text-[11px]">
+          <p className="mt-0.5 line-clamp-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500 sm:max-w-[14rem] sm:truncate sm:text-[11px]">
             Tribunes · {clubLine}
           </p>
         ) : (

@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
-import type { TokenPack } from '../../types/profile'
+import type { MedalPack } from '../../types/profile'
 
-export function TokenPaymentModal({
+export function MedalPaymentModal({
   pack,
+  creatorCode,
   onConfirm,
   onCancel,
 }: {
-  pack: TokenPack
+  pack: MedalPack
+  creatorCode: string
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -17,7 +19,8 @@ export function TokenPaymentModal({
   const [cvv, setCvv] = useState('')
   const [name, setName] = useState('')
   const [processing, setProcessing] = useState(false)
-  const total = pack.tokens + (pack.bonus ?? 0)
+  const totalMedals = pack.medals + (pack.bonus ?? 0)
+  const trimmedCode = creatorCode.trim().toUpperCase()
 
   const formatCardNumber = (v: string) => {
     const digits = v.replace(/\D/g, '').slice(0, 16)
@@ -50,7 +53,7 @@ export function TokenPaymentModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" aria-modal="true" role="dialog">
       <Card className="w-full max-w-md p-5 sm:p-6" elevation="soft">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-display text-lg font-black text-tf-dark">Paiement</h3>
+          <h3 className="font-display text-lg font-black text-tf-dark">Paiement sécurisé</h3>
           <button
             type="button"
             onClick={onCancel}
@@ -61,27 +64,45 @@ export function TokenPaymentModal({
           </button>
         </div>
 
-        <div className="mb-4 rounded-xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-tf-dark">{pack.name}</span>
-            <span className="font-display text-xl font-black text-tf-dark">
-              {pack.tokens}
-              {pack.bonus ? <span className="text-emerald-600"> +{pack.bonus}</span> : null} jetons
-            </span>
+        <div className="mb-3 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 to-orange-50/50 p-3">
+          <div className="text-[10px] font-black uppercase tracking-wider text-amber-900/80">Médailles premium</div>
+          <div className="mt-1 flex items-start justify-between gap-2">
+            <div>
+              <div className="font-display text-base font-black text-tf-dark">{pack.name}</div>
+              <div className="text-xs font-semibold text-tf-dark/75">{pack.tagline}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs font-bold text-tf-grey">Prix</div>
+              <div className="font-display text-lg font-black text-tf-dark">{pack.priceEur}</div>
+            </div>
           </div>
+          <div className="mt-2 border-t border-amber-200/60 pt-2 font-display text-xl font-black text-amber-950">
+            {pack.medals}
+            {pack.bonus ? <span className="text-base font-bold text-emerald-700"> +{pack.bonus}</span> : null}{' '}
+            médailles
+          </div>
+          {pack.flavor ? <p className="mt-1 text-[11px] font-medium text-amber-950/85">{pack.flavor}</p> : null}
         </div>
 
-        <p className="mb-4 text-xs font-medium text-tf-grey">
-          Simulation de paiement — aucune donnée n'est enregistrée.
-        </p>
+        <div className="mb-3 rounded-lg border border-violet-200/70 bg-violet-50/60 px-3 py-2 text-[11px] font-semibold text-violet-950">
+          {trimmedCode ? (
+            <>
+              <span className="font-black">Code créateur</span> · {trimmedCode}
+            </>
+          ) : (
+            <>Aucun code créateur (optionnel sur la boutique).</>
+          )}
+        </div>
+
+        <p className="mb-4 text-xs font-medium text-tf-grey">Paiement simulé — aucune carte enregistrée.</p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label htmlFor="card-name" className="mb-1 block text-xs font-bold text-tf-dark">
+            <label htmlFor="medal-card-name" className="mb-1 block text-xs font-bold text-tf-dark">
               Nom sur la carte
             </label>
             <input
-              id="card-name"
+              id="medal-card-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -92,11 +113,11 @@ export function TokenPaymentModal({
           </div>
 
           <div>
-            <label htmlFor="card-number" className="mb-1 block text-xs font-bold text-tf-dark">
+            <label htmlFor="medal-card-number" className="mb-1 block text-xs font-bold text-tf-dark">
               Numéro de carte
             </label>
             <input
-              id="card-number"
+              id="medal-card-number"
               type="text"
               value={cardNumber}
               onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
@@ -109,11 +130,11 @@ export function TokenPaymentModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="card-expiry" className="mb-1 block text-xs font-bold text-tf-dark">
+              <label htmlFor="medal-card-expiry" className="mb-1 block text-xs font-bold text-tf-dark">
                 Expiration
               </label>
               <input
-                id="card-expiry"
+                id="medal-card-expiry"
                 type="text"
                 value={expiry}
                 onChange={(e) => setExpiry(formatExpiry(e.target.value))}
@@ -124,11 +145,11 @@ export function TokenPaymentModal({
               />
             </div>
             <div>
-              <label htmlFor="card-cvv" className="mb-1 block text-xs font-bold text-tf-dark">
+              <label htmlFor="medal-card-cvv" className="mb-1 block text-xs font-bold text-tf-dark">
                 CVV
               </label>
               <input
-                id="card-cvv"
+                id="medal-card-cvv"
                 type="text"
                 value={cvv}
                 onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
@@ -141,21 +162,11 @@ export function TokenPaymentModal({
           </div>
 
           <div className="mt-5 flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex-1 rounded-xl"
-              onClick={onCancel}
-            >
+            <Button type="button" variant="ghost" className="flex-1 rounded-xl" onClick={onCancel}>
               Annuler
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              className="flex-1 rounded-xl"
-              disabled={!isValid || processing}
-            >
-              {processing ? 'Traitement…' : `Payer • +${total} jetons`}
+            <Button type="submit" variant="primary" className="flex-1 rounded-xl" disabled={!isValid || processing}>
+              {processing ? 'Traitement…' : `Payer • +${totalMedals} médailles`}
             </Button>
           </div>
         </form>

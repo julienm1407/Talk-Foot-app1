@@ -18,7 +18,7 @@ function SectionTitle({ children, className }: { children: React.ReactNode; clas
   return (
     <h3
       className={cn(
-        'px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em]',
+        'px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] max-md:py-3',
         className,
       )}
     >
@@ -70,34 +70,53 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
   return (
     <div
       className={cn(
-        'absolute right-0 top-[calc(100%+10px)] z-[100] w-[min(100vw-1.5rem,22rem)] overflow-hidden rounded-2xl',
+        'z-[100] flex max-h-[min(70vh,26rem)] w-[min(100vw-1.5rem,22rem)] flex-col overflow-hidden rounded-2xl',
+        /* Téléphone / tablette : panneau fixe sous le header — évite le débordement à gauche du dropdown */
+        'max-md:fixed max-md:left-[max(0.75rem,env(safe-area-inset-left,0px))] max-md:right-[max(0.75rem,env(safe-area-inset-right,0px))] max-md:top-[calc(3.75rem+env(safe-area-inset-top,0px))] max-md:w-auto max-md:max-h-[min(80dvh,calc(100dvh-4.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
+        /* Desktop : ancré à la cloche */
+        'md:absolute md:right-0 md:top-[calc(100%+10px)] md:max-h-[min(70vh,26rem)]',
         shell,
       )}
       role="dialog"
       aria-label="Notifications"
     >
-      <div className={cn('flex items-center justify-between gap-2 border-b px-3 py-2.5', subtleBorder)}>
-        <span className="text-sm font-black">Notifications</span>
-        {items.length > 0 ? (
+      <div
+        className={cn(
+          'flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2.5 max-md:px-3 max-md:py-3',
+          subtleBorder,
+        )}
+      >
+        <span className="min-w-0 text-sm font-black max-md:text-base">Notifications</span>
+        <div className="flex shrink-0 items-center gap-2">
+          {items.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => markAllRead()}
+              className={cn(
+                'min-h-11 rounded-xl px-2 text-[11px] font-bold underline-offset-2 hover:underline md:min-h-0',
+                L ? 'text-sky-700' : 'text-sky-300',
+              )}
+            >
+              Tout lu
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => markAllRead()}
+            onClick={onClose}
             className={cn(
-              'text-[11px] font-bold underline-offset-2 hover:underline',
-              L ? 'text-sky-700' : 'text-sky-300',
+              'grid min-h-11 min-w-11 place-items-center rounded-xl border text-lg font-black leading-none md:hidden',
+              L ? 'border-tf-dark/15 text-tf-dark hover:bg-tf-dark/[0.05]' : 'border-white/20 text-white hover:bg-white/[0.08]',
             )}
+            aria-label="Fermer les notifications"
           >
-            Tout lu
+            ×
           </button>
-        ) : null}
+        </div>
       </div>
 
-      <div className="max-h-[min(70vh,26rem)] overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
         {items.length === 0 ? (
-          <p className={cn('px-4 py-8 text-center text-sm font-semibold', muted)}>
-            Aucune notification pour l’instant. Les top actus, invitations et demandes d’amis
-            apparaîtront ici.
-          </p>
+          <p className={cn('px-4 py-8 text-center text-sm font-semibold', muted)}>Rien pour l’instant.</p>
         ) : (
           <>
             {byKind.news.length > 0 ? (
@@ -109,7 +128,10 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                       <button
                         type="button"
                         onClick={() => onOpenNews(n)}
-                        className={cn('flex w-full gap-2 px-3 py-2.5 text-left transition', rowHover)}
+                        className={cn(
+                          'flex w-full gap-2 px-3 py-3 text-left transition max-md:min-h-[3.25rem] md:py-2.5',
+                          rowHover,
+                        )}
                       >
                         <UnreadDot show={!isRead(n.id)} />
                         <div className="min-w-0 flex-1">
@@ -133,7 +155,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                 </SectionTitle>
                 <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
                   {byKind.invites.map((inv) => (
-                    <li key={inv.id} className="px-3 py-2.5">
+                    <li key={inv.id} className="px-3 py-3 md:py-2.5">
                       <div className="flex gap-2">
                         <UnreadDot show={!isRead(inv.id)} />
                         <div className="min-w-0 flex-1">
@@ -156,11 +178,11 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                             {inv.subtitle}
                           </p>
                           <p className={cn('mt-1 text-[10px] font-bold', muted)}>{inv.createdAtLabel}</p>
-                          <div className="mt-2 flex flex-wrap gap-2">
+                          <div className="mt-2 flex flex-col gap-2 max-md:w-full md:flex-row md:flex-wrap">
                             <button
                               type="button"
                               onClick={() => onAcceptInvite(inv)}
-                              className="rounded-lg bg-sky-600 px-2.5 py-1 text-[11px] font-black text-white shadow-sm hover:bg-sky-500"
+                              className="min-h-11 w-full rounded-xl bg-sky-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-sky-500 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
                             >
                               Accepter
                             </button>
@@ -168,7 +190,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                               type="button"
                               onClick={() => onDeclineInvite(inv.id)}
                               className={cn(
-                                'rounded-lg border px-2.5 py-1 text-[11px] font-black',
+                                'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
                                 L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',
                               )}
                             >
@@ -188,7 +210,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                 <SectionTitle className={cn('border-t', subtleBorder, muted)}>Demandes d&apos;amis</SectionTitle>
                 <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
                   {byKind.friends.map((f: InboxFriendItem) => (
-                    <li key={f.id} className="px-3 py-2.5">
+                    <li key={f.id} className="px-3 py-3 md:py-2.5">
                       <div className="flex gap-2">
                         <UnreadDot show={!isRead(f.id)} />
                         <div className="min-w-0 flex-1">
@@ -197,11 +219,11 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                             <p className={cn('mt-0.5 text-[11px] font-semibold', muted)}>{f.mutualHint}</p>
                           ) : null}
                           <p className={cn('mt-1 text-[10px] font-bold', muted)}>{f.createdAtLabel}</p>
-                          <div className="mt-2 flex flex-wrap gap-2">
+                          <div className="mt-2 flex flex-col gap-2 max-md:w-full md:flex-row md:flex-wrap">
                             <button
                               type="button"
                               onClick={() => onAcceptFriend(f.id)}
-                              className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-black text-white shadow-sm hover:bg-emerald-500"
+                              className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
                             >
                               Accepter
                             </button>
@@ -209,7 +231,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                               type="button"
                               onClick={() => onDeclineFriend(f.id)}
                               className={cn(
-                                'rounded-lg border px-2.5 py-1 text-[11px] font-black',
+                                'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
                                 L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',
                               )}
                             >
@@ -227,11 +249,14 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
         )}
       </div>
 
-      <div className={cn('border-t px-3 py-2', subtleBorder)}>
+      <div className={cn('shrink-0 border-t px-3 py-2 max-md:py-3', subtleBorder)}>
         <Link
           to="/"
           onClick={onClose}
-          className={cn('block text-center text-[11px] font-bold underline-offset-2 hover:underline', L ? 'text-sky-700' : 'text-sky-300')}
+          className={cn(
+            'flex min-h-11 items-center justify-center text-center text-xs font-bold underline-offset-2 hover:underline max-md:rounded-xl max-md:px-2 md:min-h-0 md:block md:text-[11px]',
+            L ? 'text-sky-700 max-md:hover:bg-tf-dark/[0.04]' : 'text-sky-300 max-md:hover:bg-white/[0.06]',
+          )}
         >
           Accueil & fil d’actus
         </Link>

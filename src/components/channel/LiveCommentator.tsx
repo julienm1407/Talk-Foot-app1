@@ -178,7 +178,7 @@ export function LiveCommentator({
               playsInline
               muted
               style={{ display: 'block' }}
-              className="h-[120px] w-[160px] object-cover sm:h-[140px] sm:w-[186px]"
+              className="h-[92px] w-[122px] object-cover sm:h-[120px] sm:w-[160px] md:h-[140px] md:w-[186px]"
             />
             <div className="absolute bottom-1 left-1 right-1 flex justify-end">
               <span
@@ -211,7 +211,7 @@ export function LiveCommentator({
               playsInline
               muted
               style={{ display: 'block' }}
-              className="h-[120px] w-[160px] object-cover sm:h-[140px] sm:w-[186px]"
+              className="h-[92px] w-[122px] object-cover sm:h-[120px] sm:w-[160px] md:h-[140px] md:w-[186px]"
             />
             <div className="absolute bottom-1 left-1 right-1 flex justify-end">
               <span
@@ -229,7 +229,13 @@ export function LiveCommentator({
       ))}
 
       {/* Options commentateur en bas à gauche — réduit quand stream lancé */}
-      <div className={cn('fixed bottom-16 left-4 z-50 sm:bottom-20 sm:left-6', className)}>
+      <div
+        className={cn(
+          'fixed left-3 z-50 sm:left-4',
+          'bottom-[max(5.75rem,calc(4.75rem+env(safe-area-inset-bottom,0px)))] sm:bottom-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom,0px)))] md:bottom-20 md:left-6',
+          className,
+        )}
+      >
         {!isActive ? (
           <button
             type="button"
@@ -415,7 +421,7 @@ export function LiveCommentator({
       {/* Overlay commentaire (texte uniquement — vidéo dans le PIP en haut à droite) */}
       {liveCommentary && isSpeaking && (
         <div
-          className="fixed bottom-36 left-4 right-4 z-40 max-w-lg sm:bottom-40 sm:left-6"
+          className="fixed left-3 right-3 z-40 mx-auto max-w-lg bottom-[max(10.5rem,calc(9rem+env(safe-area-inset-bottom,0px)))] sm:bottom-40 sm:left-6 sm:right-auto"
           aria-live="polite"
         >
           <div className="animate-[tf-commentary-in_0.3s_ease-out] rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur">

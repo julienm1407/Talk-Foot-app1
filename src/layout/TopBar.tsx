@@ -12,7 +12,11 @@ import {
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { InboxPanel } from '../components/inbox/InboxPanel'
+import { PrivateMessagesPanel } from '../components/messages/PrivateMessagesPanel'
+import { mockDirectThreads } from '../data/directMessagesMock'
 import { useInbox } from '../hooks/useInbox'
+import { useIsBelowXl } from '../hooks/useIsBelowXl'
+import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
 
 export function TopBar() {
   const { profile } = useProfile()
@@ -55,16 +59,27 @@ export function TopBar() {
   const profileActive = location.pathname.startsWith('/profile')
   const inbox = useInbox()
   const [inboxOpen, setInboxOpen] = useState(false)
+  const [dmOpen, setDmOpen] = useState(false)
   const inboxWrapRef = useRef<HTMLDivElement>(null)
+  const dmWrapRef = useRef<HTMLDivElement>(null)
+  const dmUnread = mockDirectThreads.filter((t) => t.unread).length
+  const belowXl = useIsBelowXl()
+  const isHomePath = location.pathname === '/' || location.pathname === ''
+  const monEspace = useMonEspaceDrawerOptional()
 
   useEffect(() => {
-    if (!inboxOpen) return
+    if (!inboxOpen && !dmOpen) return
     const onDoc = (e: MouseEvent) => {
-      if (inboxWrapRef.current?.contains(e.target as Node)) return
+      const t = e.target as Node
+      if (inboxWrapRef.current?.contains(t) || dmWrapRef.current?.contains(t)) return
       setInboxOpen(false)
+      setDmOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setInboxOpen(false)
+      if (e.key === 'Escape') {
+        setInboxOpen(false)
+        setDmOpen(false)
+      }
     }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
@@ -72,7 +87,7 @@ export function TopBar() {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
     }
-  }, [inboxOpen])
+  }, [inboxOpen, dmOpen])
 
   return (
     <header
@@ -93,11 +108,19 @@ export function TopBar() {
         <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1.5 sm:gap-2.5 md:gap-3">
           <Link
             to="/"
+            onClick={(e) => {
+              if (belowXl && isHomePath && monEspace) {
+                e.preventDefault()
+                monEspace.openMonEspaceDrawer()
+              }
+            }}
             className={cn(
               'group shrink-0 outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2 rounded-xl active:opacity-95',
               L ? 'focus-visible:ring-tf-dark/40 focus-visible:ring-offset-[color:var(--tf-page-bg-light)]' : 'focus-visible:ring-sky-400/50 focus-visible:ring-offset-tf-dark',
             )}
-            aria-label="Talk Foot — Accueil"
+            aria-label={
+              belowXl && isHomePath ? 'Talk Foot — ouvrir Mon espace' : 'Talk Foot — Accueil'
+            }
           >
             <div
               className={cn(
@@ -166,10 +189,55 @@ export function TopBar() {
 
         <div className="relative col-start-2 row-start-1 flex min-w-0 items-center justify-end gap-1.5 sm:gap-2 min-[700px]:col-start-3 min-[700px]:gap-3">
           <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
+          <div ref={dmWrapRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setDmOpen((prev) => {
+                  const next = !prev
+                  if (next) setInboxOpen(false)
+                  return next
+                })
+              }}
+              aria-expanded={dmOpen}
+              aria-haspopup="dialog"
+              className={cn(
+                'relative grid size-9 shrink-0 place-items-center rounded-xl border text-[15px] transition sm:size-10 min-[700px]:size-11 sm:text-base',
+                dmOpen && (L ? 'ring-2 ring-violet-500/40' : 'ring-2 ring-violet-400/35'),
+                L
+                  ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
+                  : 'border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.12]',
+              )}
+              aria-label={
+                dmUnread > 0
+                  ? `Messages privés, ${dmUnread} conversation${dmUnread > 1 ? 's' : ''} non lue${dmUnread > 1 ? 's' : ''}`
+                  : 'Messages privés'
+              }
+            >
+              <span aria-hidden>💬</span>
+              {dmUnread > 0 ? (
+                <span
+                  className={cn(
+                    'absolute -right-0.5 -top-0.5 flex min-w-5 justify-center rounded-full bg-violet-600 px-1 text-[10px] font-black tabular-nums text-white ring-2',
+                    L ? 'ring-[color:var(--tf-page-bg-light)]' : 'ring-tf-dark',
+                  )}
+                >
+                  {dmUnread > 9 ? '9+' : dmUnread}
+                </span>
+              ) : null}
+            </button>
+            {dmOpen ? <PrivateMessagesPanel onClose={() => setDmOpen(false)} /> : null}
+          </div>
           <div ref={inboxWrapRef} className="relative shrink-0">
             <button
               type="button"
-              onClick={() => setInboxOpen((o) => !o)}
+              onClick={() => {
+                setInboxOpen((prev) => {
+                  const next = !prev
+                  if (next) setDmOpen(false)
+                  return next
+                })
+              }}
               aria-expanded={inboxOpen}
               aria-haspopup="dialog"
               className={cn(

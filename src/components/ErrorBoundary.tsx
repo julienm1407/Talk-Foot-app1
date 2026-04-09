@@ -10,6 +10,10 @@ export class ErrorBoundary extends Component<Props, State> {
     return { error }
   }
 
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    console.error('[Talk Foot]', error, info.componentStack ?? '')
+  }
+
   render() {
     if (this.state.error) {
       const stack = this.state.error.stack

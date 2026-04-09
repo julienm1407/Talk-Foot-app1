@@ -151,53 +151,62 @@ export function BetWidget({
 
   return (
     <div className={cn('rounded-xl border border-slate-200/60 bg-white/90 shadow-sm', compact ? 'p-2' : 'p-3')}>
-      <button
-        type="button"
+      <div
         className={cn(
-          'flex w-full flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/50 bg-gradient-to-r from-sky-50/80 to-white text-left outline-none transition hover:border-sky-200 hover:from-sky-50 focus-visible:ring-2 focus-visible:ring-sky-500/35',
-          compact ? 'px-2.5 py-2' : 'px-3 py-2.5',
+          'flex flex-col gap-2 rounded-xl border border-slate-200/50 bg-gradient-to-r from-sky-50/80 to-white sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3',
+          compact ? 'p-2.5' : 'p-3',
         )}
-        onClick={openSheet}
-        aria-haspopup="dialog"
-        aria-expanded={sheetOpen}
       >
-        <span className="inline-flex items-center gap-1.5 sm:gap-2">
-          <span className={cn(compact ? 'text-base' : 'text-lg')} aria-hidden="true">
+        <div className="flex min-w-0 items-start gap-2 sm:items-center">
+          <span className={cn('shrink-0', compact ? 'text-base' : 'text-lg')} aria-hidden="true">
             🎯
           </span>
-          <span>
+          <div className="min-w-0">
             <span className="block text-sm font-black text-slate-900">Pronos</span>
             {!compact ? (
-              <span className="block text-[11px] font-semibold text-slate-500">
-                Touche pour choisir ta mise et parier
+              <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-slate-500">
+                Mise rapide ou ouvre le détail des marchés.
               </span>
             ) : (
-              <span className="hidden text-[10px] font-semibold text-slate-500 sm:block">
+              <span className="mt-0.5 hidden text-[10px] font-semibold text-slate-500 sm:block">
                 Mise & marchés
               </span>
             )}
-          </span>
-        </span>
-        <span className="flex flex-wrap items-center justify-end gap-2">
-          <Badge className="border-slate-200/70 bg-white text-slate-800">
-            {wallet.tokens} jetons
-          </Badge>
-          <Badge className="border-slate-200/60 bg-slate-50/80 text-slate-600">
-            {stats.won}/{Math.max(1, stats.total)} ✓
-          </Badge>
-          <span className="rounded-lg bg-sky-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="border-slate-200/70 bg-white text-slate-800">
+              {wallet.tokens} jetons
+            </Badge>
+            <Badge className="border-slate-200/60 bg-slate-50/80 text-slate-600">
+              {stats.won}/{Math.max(1, stats.total)} ✓
+            </Badge>
+          </div>
+          <button
+            type="button"
+            onClick={openSheet}
+            aria-haspopup="dialog"
+            aria-expanded={sheetOpen}
+            className="min-h-11 w-full shrink-0 rounded-xl bg-sky-600 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sky-400/50 sm:min-h-0 sm:w-auto sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
+          >
             Ouvrir
-          </span>
-        </span>
-      </button>
+          </button>
+        </div>
+      </div>
 
-      <div className={cn('space-y-2', compact ? 'mt-2' : 'mt-3')}>
+      <div
+        className={cn(
+          'space-y-2 rounded-xl border border-slate-200/55 bg-slate-50/90 p-2 sm:bg-transparent sm:p-0',
+          compact ? 'mt-2' : 'mt-3',
+        )}
+      >
         <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
           <Button
             variant="soft"
             className={cn(
-              'min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:px-4',
-              compact ? 'h-9' : 'h-10',
+              'min-h-11 min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:min-h-0 sm:px-4',
+              compact ? 'sm:h-9' : 'sm:h-10',
             )}
             onClick={() => pickQuick('home')}
           >
@@ -211,8 +220,8 @@ export function BetWidget({
           <Button
             variant="soft"
             className={cn(
-              'min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:px-4',
-              compact ? 'h-9' : 'h-10',
+              'min-h-11 min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:min-h-0 sm:px-4',
+              compact ? 'sm:h-9' : 'sm:h-10',
             )}
             onClick={() => pickQuick('away')}
           >

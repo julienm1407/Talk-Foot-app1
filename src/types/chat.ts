@@ -8,6 +8,8 @@ export type User = {
   avatarSeed: string
   accent: 'violet' | 'emerald' | 'rose' | 'amber'
   isAdmin?: boolean
+  /** Démo : compte comme « ami » pour présence live / encarts sociaux */
+  isMockFriend?: boolean
   /** Club de cœur simulé (mode Virage / filtrage live) */
   fanClubId?: string
 }

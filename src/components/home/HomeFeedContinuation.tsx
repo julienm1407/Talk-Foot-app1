@@ -3,7 +3,6 @@ import type { Match } from '../../types/match'
 import type { NewsItem } from '../../data/news'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { Card } from '../ui/Card'
-import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { MatchCarousel } from '../match/MatchCarousel'
 import { NewsFeed } from './NewsFeed'
@@ -191,19 +190,78 @@ export function HomeFeedContinuation({
         </section>
       </div>
 
-      <div
+      <nav
+        aria-label="Raccourcis navigation"
         className={cn(
-          'flex flex-wrap justify-center gap-2 rounded-2xl border px-3 py-3 pb-2',
+          'rounded-2xl border px-3 py-3 sm:px-4',
           isLight
             ? 'border-tf-dark/10 bg-white/85 shadow-sm'
             : 'border-tf-dark/12 bg-gradient-to-r from-tf-night/[0.06] via-tf-ice/70 to-tf-night/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]',
         )}
       >
-        <Badge tone="navy">💬 Général</Badge>
-        <Badge tone="navy">🧾 Transferts{supporterFocusUi && clubFocusLabel ? ` ${clubFocusLabel}` : ''}</Badge>
-        <Badge tone="live">🎯 Pronos{supporterFocusUi && clubFocusLabel ? ` ${clubFocusLabel}` : ''}</Badge>
-        <Badge tone="navy">😂 Memes</Badge>
-      </div>
+        <p
+          className={cn(
+            'mb-2.5 text-center text-[10px] font-black uppercase tracking-[0.18em]',
+            isLight ? 'text-tf-grey' : 'text-sky-100/90',
+          )}
+        >
+          Accès rapide
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Link
+            to="/groups"
+            title={supporterFocusUi && clubFocusLabel ? `Salons — focus ${clubFocusLabel}` : 'Groupes et salons'}
+            className={cn(
+              'tf-interactive-press inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-[11px] font-black leading-tight sm:min-h-10 sm:text-xs',
+              isLight
+                ? 'border-tf-dark/14 bg-white text-tf-dark shadow-sm hover:border-tf-electric/30 hover:bg-tf-ice/60'
+                : 'border-white/18 bg-white/[0.1] text-white hover:bg-white/[0.16]',
+            )}
+          >
+            <span aria-hidden>👥</span>
+            <span className="max-w-[10.5rem] truncate sm:max-w-[13rem]">
+              Tribunes
+              {supporterFocusUi && clubFocusLabel ? ` · ${clubFocusLabel}` : ''}
+            </span>
+          </Link>
+          <Link
+            to="/debates"
+            className={cn(
+              'tf-interactive-press inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-[11px] font-black leading-tight sm:min-h-10 sm:text-xs',
+              isLight
+                ? 'border-tf-dark/14 bg-white text-tf-dark shadow-sm hover:border-orange-300/60 hover:bg-orange-50/80'
+                : 'border-white/18 bg-white/[0.1] text-white hover:bg-white/[0.16]',
+            )}
+          >
+            <span aria-hidden>💬</span>
+            Débats
+          </Link>
+          <Link
+            to="/match"
+            className={cn(
+              'tf-interactive-press inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-[11px] font-black leading-tight sm:min-h-10 sm:text-xs',
+              isLight
+                ? 'border-rose-300/45 bg-gradient-to-b from-rose-50/90 to-white text-rose-900 shadow-sm hover:border-rose-400/70'
+                : 'border-rose-400/35 bg-rose-500/15 text-rose-50 hover:bg-rose-500/25',
+            )}
+          >
+            <span aria-hidden>⚽</span>
+            Live & agenda
+          </Link>
+          <Link
+            to="/rankings"
+            className={cn(
+              'tf-interactive-press inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-[11px] font-black leading-tight sm:min-h-10 sm:text-xs',
+              isLight
+                ? 'border-tf-dark/14 bg-white text-tf-dark shadow-sm hover:border-tf-electric/30 hover:bg-tf-ice/60'
+                : 'border-white/18 bg-white/[0.1] text-white hover:bg-white/[0.16]',
+            )}
+          >
+            <span aria-hidden>🎯</span>
+            Classement bets
+          </Link>
+        </div>
+      </nav>
     </div>
   )
 }
