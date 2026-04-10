@@ -5,6 +5,8 @@ import { TopBar } from './TopBar'
 import { SkipLink } from './SkipLink'
 import { useSwipeNavigate } from '../hooks/useSwipeNavigate'
 import { FanOnboardingModal } from '../components/fan/FanOnboardingModal'
+import { OAuthProfileSetupModal } from '../components/auth/OAuthProfileSetupModal'
+import { ActivityRouteLogger } from '../components/sync/ActivityRouteLogger'
 import { FanSetupBanner } from '../components/fan/FanSetupBanner'
 import { PageAdRails } from './PageAdRails'
 import { cn } from '../utils/cn'
@@ -28,6 +30,8 @@ export function AppShell() {
     <DirectMessagesProvider>
     <div className="flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden overflow-x-hidden">
       <SkipLink />
+      <ActivityRouteLogger />
+      <OAuthProfileSetupModal />
       <FanOnboardingModal />
       <TopBar />
       <FanSetupBanner />

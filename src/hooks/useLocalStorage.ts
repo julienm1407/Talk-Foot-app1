@@ -4,12 +4,21 @@ import { useEffect, useState } from 'react'
  * Si le JSON ne correspond pas au type attendu (ex. objet au lieu d’un tableau),
  * on repart sur `initial` pour éviter des crashs au rendu ([...x], .filter, .includes…).
  */
+type LocalStorageOptions = {
+  /** Si `false`, état mémoire uniquement (ex. mode cloud Supabase actif). */
+  persist?: boolean
+}
+
 export function useLocalStorageState<T>(
   key: string,
   initial: T,
   guard?: (parsed: unknown) => boolean,
+  options?: LocalStorageOptions,
 ) {
+  const persist = options?.persist !== false
+
   const [state, setState] = useState<T>(() => {
+    if (!persist) return initial
     try {
       const raw = localStorage.getItem(key)
       if (!raw) return initial
@@ -22,12 +31,13 @@ export function useLocalStorageState<T>(
   })
 
   useEffect(() => {
+    if (!persist) return
     try {
       localStorage.setItem(key, JSON.stringify(state))
     } catch {
       // ignore
     }
-  }, [key, state])
+  }, [key, state, persist])
 
   return [state, setState] as const
 }

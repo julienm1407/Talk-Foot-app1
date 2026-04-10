@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import { TALKFOOT_LOGO_URL } from './LogoMark'
@@ -14,11 +14,14 @@ import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { InboxPanel } from '../components/inbox/InboxPanel'
 import { PrivateMessagesPanel } from '../components/messages/PrivateMessagesPanel'
 import { mockDirectThreads } from '../data/directMessagesMock'
+import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { useInbox } from '../hooks/useInbox'
 import { useIsBelowXl } from '../hooks/useIsBelowXl'
 import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export function TopBar() {
+  const { user: authUser } = useAuth()
   const { profile } = useProfile()
   const { appearance } = useAppearance()
   const location = useLocation()
@@ -62,7 +65,11 @@ export function TopBar() {
   const [dmOpen, setDmOpen] = useState(false)
   const inboxWrapRef = useRef<HTMLDivElement>(null)
   const dmWrapRef = useRef<HTMLDivElement>(null)
-  const dmUnread = mockDirectThreads.filter((t) => t.unread).length
+  const dmOpt = useDirectMessagesOptional()
+  const dmUnread = useMemo(
+    () => mockDirectThreads.filter((t) => t.unread && !dmOpt?.visitedIds.includes(t.id)).length,
+    [dmOpt?.visitedIds],
+  )
   const belowXl = useIsBelowXl()
   const isHomePath = location.pathname === '/' || location.pathname === ''
   const monEspace = useMonEspaceDrawerOptional()
@@ -267,6 +274,20 @@ export function TopBar() {
             </button>
             {inboxOpen ? <InboxPanel onClose={() => setInboxOpen(false)} inbox={inbox} /> : null}
           </div>
+          {authUser?.isAdmin ? (
+            <NavLink
+              to="/admin"
+              title="Administration"
+              className={cn(
+                'tf-nav-pill hidden shrink-0 items-center rounded-2xl border px-2 py-1.5 text-[11px] font-black uppercase tracking-wide outline-none min-[480px]:inline-flex sm:px-2.5 sm:py-2 sm:text-[12px]',
+                L
+                  ? 'border-amber-400/50 bg-amber-50 text-amber-950 hover:bg-amber-100'
+                  : 'border-amber-300/40 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25',
+              )}
+            >
+              Admin
+            </NavLink>
+          ) : null}
           <NavLink
             to="/profile"
             className={cn(

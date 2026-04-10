@@ -1,0 +1,5 @@
+# Fichier servi tel quel. Pour un sitemap avec URL absolues, définis VITE_PUBLIC_SITE_URL au build (voir vite.config).
+User-agent: *
+Allow: /
+
+Disallow: /admin

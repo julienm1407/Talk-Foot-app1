@@ -38,7 +38,7 @@ function InitialFallback({ seed, accent }: { seed: string; accent: User['accent'
 
 function livePresenceRank(u: User) {
   if (u.id === 'me') return 0
-  if (u.isMockFriend) return 1
+  if (u.isMockFriend || u.isTalkFootBot) return 1
   return 2
 }
 
@@ -56,14 +56,14 @@ function LiveFanFaceRow({
   const [imgFailed, setImgFailed] = useState(false)
   const team = user.fanClubId ? findTeamInAnyLeague(user.fanClubId) : null
   const z = totalShown - stackIndex
-  const friendNote = user.isMockFriend ? ' · ami' : ''
+  const friendNote = user.isTalkFootBot ? ' · assistant' : user.isMockFriend ? ' · ami' : ''
   const title = team ? `${user.username} · ${team.shortName}${friendNote}` : `${user.username}${friendNote}`
 
   const shell = (inner: React.ReactNode) => (
     <div
       className={cn(
         'relative size-[2.75rem] shrink-0 rounded-full bg-white shadow-[0_4px_14px_rgba(1,30,51,0.12)] ring-[3px]',
-        user.isMockFriend
+        user.isMockFriend || user.isTalkFootBot
           ? 'ring-sky-400 shadow-[0_4px_16px_rgba(14,165,233,0.25)]'
           : 'ring-white',
         'motion-safe:transition motion-safe:duration-200 motion-safe:ease-out',
@@ -143,7 +143,10 @@ export function ActiveUsers({ users }: { users: User[] }) {
   )
   const shown = ordered.slice(0, 6)
   const remaining = Math.max(0, ordered.length - shown.length)
-  const friendsInStrip = useMemo(() => shown.filter((u) => u.isMockFriend).length, [shown])
+  const friendsInStrip = useMemo(
+    () => shown.filter((u) => u.isMockFriend || u.isTalkFootBot).length,
+    [shown],
+  )
 
   const clubLine = useMemo(() => {
     const ids = [...new Set(shown.map((u) => u.fanClubId).filter(Boolean) as string[])]
@@ -162,7 +165,9 @@ export function ActiveUsers({ users }: { users: User[] }) {
           'py-1.5 pl-2 pr-1 shadow-[0_6px_24px_rgba(244,63,94,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]',
           'ring-1 ring-rose-500/10',
         )}
-        aria-label={`${ordered.length} personnes suivent ce live${friendsInStrip ? `, dont ${friendsInStrip} amis` : ''}`}
+        aria-label={`${ordered.length} personnes suivent ce live${
+          friendsInStrip ? ', dont ton assistant Talk Foot' : ''
+        }`}
       >
         <span
           className="absolute left-2 top-1/2 size-2 -translate-y-1/2 rounded-full bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.85)] motion-safe:animate-pulse"
@@ -192,7 +197,7 @@ export function ActiveUsers({ users }: { users: User[] }) {
         </p>
         {friendsInStrip > 0 ? (
           <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700 sm:text-[11px]">
-            Dont <span className="tabular-nums">{friendsInStrip}</span> ami{friendsInStrip > 1 ? 's' : ''} dans la pile
+            Assistant Talk Foot dans la pile
           </p>
         ) : null}
         {clubLine ? (

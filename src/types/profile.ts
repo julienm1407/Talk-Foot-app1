@@ -107,4 +107,6 @@ export type UserProfile = {
    * sur toute l’app quand elle est définie.
    */
   profilePhotoDataUrl?: string
+  /** Phrase courte « à propos de toi » (optionnel), saisie à la création compte OAuth. */
+  aboutLine?: string
 }

@@ -16,13 +16,17 @@ export type FriendLeaderboardRow = {
   isMe?: boolean
 }
 
-/** Fenêtre « cette semaine » — tri par gains puis ROI */
+/** Démo : toi + l’assistant (pas de faux profils « amis »). */
 export const mockFriendsLeaderboard: FriendLeaderboardRow[] = [
-  { userId: 'me', username: 'Toi', rank: 1, gains: 1240, roiPct: 18, streak: 5, isMe: true },
-  { userId: 'u-f-2', username: 'Nina92', rank: 2, gains: 980, roiPct: 14, streak: 12 },
-  { userId: 'u-f-1', username: 'LucasVirage', rank: 3, gains: 720, roiPct: 9, streak: 3 },
-  { userId: 'u-f-4', username: 'SarahGoal', rank: 4, gains: 510, roiPct: 22, streak: 8 },
-  { userId: 'u-f-3', username: 'TomChant', rank: 5, gains: 340, roiPct: -4, streak: 0 },
+  { userId: 'me', username: 'Toi', rank: 1, gains: 0, roiPct: 0, streak: 0, isMe: true },
+  {
+    userId: 'u-tf-bot',
+    username: 'Coach Talk Foot',
+    rank: 2,
+    gains: 0,
+    roiPct: 0,
+    streak: 0,
+  },
 ]
 
 export type FriendsActivityItem = {

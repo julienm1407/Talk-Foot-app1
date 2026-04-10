@@ -1,5 +1,5 @@
 import type { User } from '../types/chat'
-import { mockFriendUsers } from './users'
+import { talkFootBotUser } from './users'
 
 export type DirectThread = {
   id: string
@@ -9,20 +9,17 @@ export type DirectThread = {
   unread: boolean
 }
 
-export const mockDirectThreads: DirectThread[] = mockFriendUsers.map((u, i) => ({
-  id: `dm-${u.id}`,
-  peer: u,
-  lastPreview:
-    i === 0
-      ? 'T’es sur le live ce soir ?'
-      : i === 1
-        ? 'Je t’ai envoyé un repère sur le salon 👆'
-        : i === 2
-          ? 'But incroyable 😭'
-          : 'On fait un pari tête-à-tête ?',
-  lastAtLabel: i === 0 ? 'À l’instant' : i === 1 ? 'Hier' : `${i + 2} j`,
-  unread: i === 0,
-}))
+export const TALKFOOT_BOT_DM_THREAD_ID = `dm-${talkFootBotUser.id}`
+
+export const mockDirectThreads: DirectThread[] = [
+  {
+    id: TALKFOOT_BOT_DM_THREAD_ID,
+    peer: talkFootBotUser,
+    lastPreview: 'Bienvenue sur Talk Foot — je suis là pour te montrer les fonctions utiles.',
+    lastAtLabel: 'À l’instant',
+    unread: true,
+  },
+]
 
 export type DirectMessageLine = {
   id: string
@@ -32,20 +29,13 @@ export type DirectMessageLine = {
 }
 
 export const mockDirectMessagesByThread: Record<string, DirectMessageLine[]> = {
-  'dm-u-f-1': [
-    { id: 'm1', fromMe: false, body: 'Salut ! Tu viens en tribune ce soir ?', atLabel: '12:40' },
-    { id: 'm2', fromMe: true, body: 'Yes je suis sur le match replay démo', atLabel: '12:42' },
-    { id: 'm3', fromMe: false, body: 'T’es sur le live ce soir ?', atLabel: '12:44' },
-  ],
-  'dm-u-f-2': [
-    { id: 'm1', fromMe: true, body: 'Regarde ce groupe', atLabel: 'Hier' },
-    { id: 'm2', fromMe: false, body: 'Je t’ai envoyé un repère sur le salon 👆', atLabel: 'Hier' },
-  ],
-  'dm-u-f-3': [
-    { id: 'm1', fromMe: false, body: 'But incroyable 😭', atLabel: 'Ven.' },
-  ],
-  'dm-u-f-4': [
-    { id: 'm1', fromMe: true, body: 'Tu paris sur qui ?', atLabel: '4 j' },
-    { id: 'm2', fromMe: false, body: 'On fait un pari tête-à-tête ?', atLabel: '4 j' },
+  [TALKFOOT_BOT_DM_THREAD_ID]: [
+    {
+      id: 'bot-welcome',
+      fromMe: false,
+      body:
+        'Salut ! Je suis ton Coach Talk Foot (assistant intégré). Tu peux m’écrire comme à un ami : paris, live, groupes, profil… Je réponds avec des repères pour explorer l’app. Quand de vrais amis rejoindront Talk Foot, ils apparaîtront ici.',
+      atLabel: 'À l’instant',
+    },
   ],
 }

@@ -5,7 +5,8 @@ export const PENDING_FAN_ONBOARDING_KEY = 'talkfoot.pendingFanOnboarding'
  * Démo / maquette : rouvrir l’onboarding fan à **chaque** reconnexion.
  * En production, passer à `false` pour n’afficher la modal qu’aux nouveaux (prefs incomplètes).
  */
-export const DEMO_FAN_ONBOARDING_EVERY_LOGIN = true
+/** En production (déploiement), laisser à `false` : onboarding seulement si préférences incomplètes. */
+export const DEMO_FAN_ONBOARDING_EVERY_LOGIN = false
 
 export function markPendingFanOnboardingAfterLogin() {
   try {

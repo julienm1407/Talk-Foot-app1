@@ -11,7 +11,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
-    console.error('[Talk Foot]', error, info.componentStack ?? '')
+    if (import.meta.env.DEV) {
+      console.error('[Talk Foot]', error, info.componentStack ?? '')
+    } else {
+      console.error('[Talk Foot] erreur applicative (détails masqués en production)')
+    }
   }
 
   render() {

@@ -1,14 +1,10 @@
 import { useEffect } from 'react'
+import { absolutePageUrl, resolvedSiteOrigin, viteBasePath } from '../seo/basePath'
+import { SITE_DEFAULT_DESCRIPTION, SITE_NAME } from '../seo/siteCopy'
 
 const SEO_ATTR = 'data-tf-article-seo'
-const DEFAULT_TITLE = 'Talk Foot'
-const DEFAULT_DESCRIPTION =
-  'Talk Foot — réseau social foot en direct : salons de match, chat live, réactions et immersion tribune.'
-
-function basePath(): string {
-  const b = import.meta.env.BASE_URL ?? '/'
-  return b.endsWith('/') ? b.slice(0, -1) : b
-}
+const DEFAULT_TITLE = SITE_NAME
+const DEFAULT_DESCRIPTION = SITE_DEFAULT_DESCRIPTION
 
 function upsertLinkRel(rel: string, href: string) {
   let el = document.head.querySelector(`link[rel="${rel}"][${SEO_ATTR}]`) as HTMLLinkElement | null
@@ -67,12 +63,12 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
     if (!opts) return
 
     const rel = opts.canonicalPath.startsWith('/') ? opts.canonicalPath : `/${opts.canonicalPath}`
-    const path = `${basePath()}${rel}`
-    const canonicalUrl =
-      typeof window !== 'undefined' ? `${window.location.origin}${path}` : path
+    const canonicalUrl = absolutePageUrl(rel)
+    const origin = resolvedSiteOrigin()
+    const logoUrl = `${origin}${viteBasePath()}/favicon.svg`
 
     const prevTitle = document.title
-    document.title = `${opts.title} | Talk Foot`
+    document.title = `${opts.title} | ${SITE_NAME}`
 
     const existingDesc = document.head.querySelector(
       'meta[name="description"]:not([data-tf-article-seo])',
@@ -89,7 +85,7 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
     upsertMeta('property', 'og:url', canonicalUrl)
     upsertMeta('property', 'og:image', opts.ogImage)
     upsertMeta('property', 'og:locale', 'fr_FR')
-    upsertMeta('property', 'og:site_name', 'Talk Foot')
+    upsertMeta('property', 'og:site_name', SITE_NAME)
     upsertMeta('name', 'twitter:card', 'summary_large_image')
     upsertMeta('name', 'twitter:title', opts.title)
     upsertMeta('name', 'twitter:description', opts.description)
@@ -105,16 +101,13 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
       image: [opts.ogImage],
       datePublished: opts.publishedAt,
       dateModified: opts.modifiedAt ?? opts.publishedAt,
-      author: { '@type': 'Organization', name: 'Talk Foot' },
+      author: { '@type': 'Organization', name: SITE_NAME },
       publisher: {
         '@type': 'Organization',
-        name: 'Talk Foot',
+        name: SITE_NAME,
         logo: {
           '@type': 'ImageObject',
-          url:
-            typeof window !== 'undefined'
-              ? `${window.location.origin}${basePath()}/logo-talk-foot.png`
-              : `${basePath()}/logo-talk-foot.png`,
+          url: logoUrl || `${viteBasePath()}/favicon.svg`,
         },
       },
       mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },

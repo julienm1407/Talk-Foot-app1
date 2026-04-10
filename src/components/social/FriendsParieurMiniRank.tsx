@@ -6,8 +6,13 @@ export function FriendsParieurMiniRank({ className }: { className?: string }) {
   return (
     <Card className={cn('overflow-hidden p-0', className)} elevation="soft">
       <div className="border-b border-tf-nav-groups/20 bg-violet-50/60 px-4 py-2.5 sm:px-5 sm:py-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-800">Tes amis</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-800">
+          Toi &amp; l&apos;assistant
+        </p>
       </div>
+      <p className="border-b border-tf-nav-groups/15 px-4 py-2 text-[11px] font-semibold leading-snug text-tf-grey">
+        Exemple : avec de vrais amis inscrits, ce tableau se remplira automatiquement.
+      </p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[280px] text-left text-xs sm:text-sm">
           <thead>

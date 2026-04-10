@@ -35,13 +35,7 @@ export function BoutiqueCosmeticGridItem({
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="tf-boutique-3dwrap flex min-h-0 flex-1 items-center justify-center">
           <div className="tf-boutique-float-target">
-            {item.jerseyVisual ? (
-              <JerseyPreviewThumb item={item} size="showcase" />
-            ) : (
-              <span className="text-5xl drop-shadow-[0_4px_14px_rgba(0,0,0,0.5)]" aria-hidden>
-                {item.emoji}
-              </span>
-            )}
+            <JerseyPreviewThumb item={item} size="showcase" />
           </div>
         </div>
         <ShopEncartContentPanel>

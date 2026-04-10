@@ -1,13 +1,10 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
-import { copyFileSync, writeFileSync, existsSync } from 'node:fs'
+import { copyFileSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
-
-/** Build pour GitHub Pages (dossier /docs + base du dépôt) */
-const GITHUB_PAGES = process.env.GITHUB_PAGES === 'true'
 
 /**
  * Nom du dépôt GitHub = segment d’URL du site
@@ -32,14 +29,69 @@ function githubPagesStaticPlugin(outDir: string): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [
-    react(),
-    ...(GITHUB_PAGES ? [githubPagesStaticPlugin('docs')] : []),
-  ],
-  base: GITHUB_PAGES ? GH_PAGES_BASE : '/',
-  build: {
-    outDir: GITHUB_PAGES ? 'docs' : 'dist',
-    emptyOutDir: true,
-  },
+function extractArticleSlugsFromNewsTs(newsPath: string): string[] {
+  if (!existsSync(newsPath)) return []
+  const src = readFileSync(newsPath, 'utf8')
+  const slugs: string[] = []
+  for (const m of src.matchAll(/slug:\s*'([^']+)'/g)) {
+    slugs.push(m[1])
+  }
+  return [...new Set(slugs)]
+}
+
+/** Sitemap + robots avec Sitemap: si VITE_PUBLIC_SITE_URL est défini (URL publique sans slash final). */
+function tfSitemapRobotsPlugin(outDir: string, siteUrl: string): Plugin {
+  const origin = siteUrl.replace(/\/$/, '')
+  const loc = (path: string) => `${origin}${path.startsWith('/') ? path : `/${path}`}`
+  const staticPaths = ['/', '/privacy', '/match', '/groups', '/debates', '/rankings', '/boutique', '/videos']
+  return {
+    name: 'tf-sitemap-robots',
+    closeBundle() {
+      const dir = resolve(__dirname, outDir)
+      if (!existsSync(dir)) return
+      const newsPath = resolve(__dirname, 'src/data/news.ts')
+      const articlePaths = extractArticleSlugsFromNewsTs(newsPath).map((slug) => `/article/${slug}`)
+      const allPaths = [...staticPaths, ...articlePaths]
+      const body = allPaths
+        .map((path) => {
+          const priority = path === '/' ? '1.0' : path.startsWith('/article/') ? '0.9' : '0.75'
+          return `  <url>\n    <loc>${loc(path)}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>${priority}</priority>\n  </url>`
+        })
+        .join('\n')
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>
+`
+      writeFileSync(resolve(dir, 'sitemap.xml'), sitemap, 'utf8')
+      const robots = `User-agent: *
+Allow: /
+
+Disallow: /admin
+
+Sitemap: ${loc('/sitemap.xml')}
+`
+      writeFileSync(resolve(dir, 'robots.txt'), robots, 'utf8')
+    },
+  }
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const siteUrl = env.VITE_PUBLIC_SITE_URL?.trim().replace(/\/$/, '')
+  const GITHUB_PAGES = process.env.GITHUB_PAGES === 'true'
+  const outDir = GITHUB_PAGES ? 'docs' : 'dist'
+
+  const plugins: PluginOption[] = [react()]
+  if (GITHUB_PAGES) plugins.push(githubPagesStaticPlugin('docs'))
+  if (siteUrl) plugins.push(tfSitemapRobotsPlugin(outDir, siteUrl))
+
+  return {
+    plugins,
+    base: GITHUB_PAGES ? GH_PAGES_BASE : '/',
+    build: {
+      outDir,
+      emptyOutDir: true,
+    },
+  }
 })

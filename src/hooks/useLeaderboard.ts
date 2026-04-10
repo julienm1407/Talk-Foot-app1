@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
-import { useLocalStorageState } from './useLocalStorage'
+import { useUserBets } from './useUserBets'
 import { mockPredictions } from '../data/predictions'
 import { mockLeaderboard } from '../data/leaderboard'
 import { currentUser } from '../data/users'
-import type { Bet } from '../types/bet'
 import type { LeaderboardEntry } from '../data/leaderboard'
 
 export function useLeaderboard() {
-  const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [], Array.isArray)
+  const [bets] = useUserBets()
 
   const { myScore, myWins, myTotal } = useMemo(() => {
     const predPoints = mockPredictions

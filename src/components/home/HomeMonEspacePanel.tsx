@@ -148,7 +148,7 @@ export function HomeMonEspacePanel({
             L ? 'border-sky-200/90 bg-gradient-to-br from-sky-50 to-white' : 'border-sky-400/30 bg-sky-950/25',
           )}
         >
-          <p className={cn('text-[10px] font-black uppercase tracking-[0.18em]', hubCaps)}>Tes potes</p>
+          <p className={cn('text-[10px] font-black uppercase tracking-[0.18em]', hubCaps)}>Assistant Talk Foot</p>
           <Link
             to={firstLiveMatch ? `/channel/${firstLiveMatch.id}` : '/match'}
             className={cn(
@@ -166,7 +166,7 @@ export function HomeMonEspacePanel({
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p className={cn('text-xs font-black leading-tight', L ? 'text-tf-dark' : 'text-white')}>
-                <span className="tabular-nums">{mockFriendUsers.length}</span> amis actifs
+                Écris à <span className="font-black">Coach Talk Foot</span> depuis les messages — présent aussi sur le live
                 {firstLiveMatch ? (
                   <>
                     {' '}

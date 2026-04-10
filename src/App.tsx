@@ -14,9 +14,12 @@ import { BoutiquePage } from './pages/Boutique'
 import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
 import { ArticlePage } from './pages/ArticlePage'
+import { AdminPage } from './pages/AdminPage'
+import { PrivacyPage } from './pages/PrivacyPage'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
+import { CloudUserStateGate } from './contexts/CloudUserStateContext'
 import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -35,22 +38,44 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isReady } = useAuth()
+  if (!isReady) {
+    return (
+      <div className="relative flex min-h-dvh items-center justify-center">
+        <div className="tf-page-backdrop" aria-hidden />
+        <div className="relative text-sm font-semibold text-tf-grey">Chargement…</div>
+      </div>
+    )
+  }
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: '/admin' }} />
+  }
+  if (!user.isAdmin) {
+    return <Navigate to="/profile" replace />
+  }
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/article/:slug" element={<ArticlePage />} />
       <Route
         path="/"
         element={
           <ProtectedRoute>
-            <FanPreferencesProvider>
-              <MatchesProvider>
-                <MonEspaceDrawerProvider>
-                  <AppShell />
-                </MonEspaceDrawerProvider>
-              </MatchesProvider>
-            </FanPreferencesProvider>
+            <CloudUserStateGate>
+              <FanPreferencesProvider>
+                <MatchesProvider>
+                  <MonEspaceDrawerProvider>
+                    <AppShell />
+                  </MonEspaceDrawerProvider>
+                </MatchesProvider>
+              </FanPreferencesProvider>
+            </CloudUserStateGate>
           </ProtectedRoute>
         }
       >
@@ -69,6 +94,14 @@ export default function App() {
         <Route path="calendar" element={<Navigate to="/match" replace />} />
         <Route path="boutique" element={<BoutiquePage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route
+          path="admin"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

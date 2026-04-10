@@ -3,6 +3,9 @@ import type { AvatarCharacterLook, AvatarSlot, JerseyCustomization, UserProfile 
 import { useLocalStorageState } from './useLocalStorage'
 import { levelFromXp, getLevelTier, xpPerLevel } from '../data/shop'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../data/characterPresets'
+import { defaultUserProfile } from '../data/userAppStateDefaults'
+import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
 export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
 
@@ -10,11 +13,8 @@ export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
 export const PROFILE_BROADCAST = 'talkfoot-profile-broadcast'
 
 const defaultProfile: UserProfile = {
-  level: 1,
-  xp: 45,
-  equippedItems: { scarf: null, hat: null, jersey: null, accessory: null },
-  ownedItemIds: [],
-  characterLook: DEFAULT_CHARACTER_LOOK,
+  ...defaultUserProfile,
+  characterLook: { ...DEFAULT_CHARACTER_LOOK },
 }
 
 function isUserProfileStored(p: unknown): boolean {
@@ -49,11 +49,16 @@ function isUserProfileStored(p: unknown): boolean {
 }
 
 export function useProfile() {
-  const [profile, setProfileRaw] = useLocalStorageState<UserProfile>(
+  const cloud = useOptionalCloudUserState()
+  const persistLocal = !isSupabaseConfigured()
+  const [localProfile, setLocalProfileRaw] = useLocalStorageState<UserProfile>(
     PROFILE_STORAGE_KEY,
     defaultProfile,
     isUserProfileStored,
+    { persist: persistLocal },
   )
+
+  const profile = cloud !== undefined ? cloud.app.profile : localProfile
 
   const broadcastProfile = useCallback((next: UserProfile) => {
     queueMicrotask(() => {
@@ -63,31 +68,53 @@ export function useProfile() {
 
   const setProfileStore = useCallback(
     (u: React.SetStateAction<UserProfile>) => {
-      setProfileRaw((prev) => {
-        const next = typeof u === 'function' ? (u as (p: UserProfile) => UserProfile)(prev) : u
-        try {
-          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(next))
-        } catch {
-          /* quota — laisser useLocalStorage retenter au prochain render */
-        }
+      if (cloud) {
+        cloud.patchApp((prev) => ({
+          ...prev,
+          profile: typeof u === 'function' ? (u as (p: UserProfile) => UserProfile)(prev.profile) : u,
+        }))
+        const next =
+          typeof u === 'function'
+            ? (u as (p: UserProfile) => UserProfile)(cloud.app.profile)
+            : u
         broadcastProfile(next)
-        return next
-      })
+      } else {
+        setLocalProfileRaw((prev) => {
+          const next = typeof u === 'function' ? u(prev) : u
+          try {
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(next))
+          } catch {
+            /* quota */
+          }
+          broadcastProfile(next)
+          return next
+        })
+      }
     },
-    [setProfileRaw, broadcastProfile],
+    [cloud, setLocalProfileRaw, broadcastProfile],
   )
 
   useEffect(() => {
     const onBroadcast = (e: Event) => {
       const ce = e as CustomEvent<UserProfile>
       const d = ce.detail
-      if (d && isUserProfileStored(d)) setProfileRaw(d as UserProfile)
+      if (!d || !isUserProfileStored(d)) return
+      if (cloud) {
+        cloud.patchApp((prev) => ({ ...prev, profile: d }))
+      } else {
+        setLocalProfileRaw(d)
+      }
     }
     const onStorage = (e: StorageEvent) => {
       if (e.key !== PROFILE_STORAGE_KEY || !e.newValue) return
       try {
         const parsed: unknown = JSON.parse(e.newValue)
-        if (isUserProfileStored(parsed)) setProfileRaw(parsed as UserProfile)
+        if (!isUserProfileStored(parsed)) return
+        if (cloud) {
+          cloud.patchApp((prev) => ({ ...prev, profile: parsed as UserProfile }))
+        } else {
+          setLocalProfileRaw(parsed as UserProfile)
+        }
       } catch {
         /* ignore */
       }
@@ -98,7 +125,7 @@ export function useProfile() {
       window.removeEventListener(PROFILE_BROADCAST, onBroadcast as EventListener)
       window.removeEventListener('storage', onStorage)
     }
-  }, [setProfileRaw])
+  }, [cloud, setLocalProfileRaw])
 
   const computedLevel = useMemo(() => levelFromXp(profile.xp), [profile.xp])
   const tier = useMemo(() => getLevelTier(computedLevel), [computedLevel])

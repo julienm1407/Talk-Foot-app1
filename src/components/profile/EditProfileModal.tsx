@@ -3,6 +3,7 @@ import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { useAuth } from '../../contexts/AuthContext'
+import { isTalkFootOAuthProvider, oauthProviderDisplayName } from '../../config/oauthProviders'
 
 export function EditProfileModal({
   open,
@@ -35,7 +36,7 @@ export function EditProfileModal({
   const isEmailUser = user?.provider === 'email'
   const hasPasswordChange = newPassword.length > 0 || confirmPassword.length > 0
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
@@ -56,7 +57,7 @@ export function EditProfileModal({
         setError('Les mots de passe ne correspondent pas.')
         return
       }
-      const result = changePassword(currentPassword, newPassword)
+      const result = await changePassword(currentPassword, newPassword)
       if (!result.ok) {
         setError(result.error || 'Erreur lors du changement.')
         return
@@ -163,7 +164,12 @@ export function EditProfileModal({
 
           {!isEmailUser && (
             <p className="text-xs font-medium text-tf-grey">
-              Connexion via {user?.provider === 'google' ? 'Google' : 'Apple'} — changement de mot de passe non disponible.
+              Connexion via{' '}
+              {user?.provider && isTalkFootOAuthProvider(user.provider)
+                ? oauthProviderDisplayName(user.provider)
+                : 'un fournisseur OAuth'}
+              {' '}
+              — changement de mot de passe non disponible.
             </p>
           )}
 

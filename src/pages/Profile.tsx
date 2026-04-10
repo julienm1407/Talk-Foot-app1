@@ -16,7 +16,7 @@ import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
 import { CharacterLookEditor } from '../components/profile/CharacterLookEditor'
 import { EditProfileModal } from '../components/profile/EditProfileModal'
 import { UserRankCard } from '../components/profile/UserRankCard'
-import { useLocalStorageState } from '../hooks/useLocalStorage'
+import { useUserBets } from '../hooks/useUserBets'
 import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
 import type { Bet } from '../types/bet'
@@ -26,7 +26,9 @@ import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
+import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
+import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -67,7 +69,7 @@ export function ProfilePage() {
   const [editOpen, setEditOpen] = useState(false)
   const { wallet } = useWallet()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
-  const [bets] = useLocalStorageState<Bet[]>('talkfoot.bets.v1', [], Array.isArray)
+  const [bets] = useUserBets()
 
   useEffect(() => {
     const wonBets = bets.filter((b) => b.status === 'won').map((b) => b.id)
@@ -263,6 +265,23 @@ export function ProfilePage() {
           Déconnexion
         </Button>
       </header>
+
+      {authUser?.isAdmin ? (
+        <Link
+          to="/admin"
+          className={cn(
+            TF_FOCUS_VISIBLE,
+            'flex items-center justify-between gap-3 rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 px-4 py-3 text-sm font-black text-amber-950 shadow-sm transition hover:border-amber-500/70 hover:shadow-md',
+          )}
+        >
+          <span>Administration du site</span>
+          <span aria-hidden className="text-lg">
+            →
+          </span>
+        </Link>
+      ) : null}
+
+      <ProfilePrivacySection />
 
       {/* Mode Virage : réglage principal, visible dès l’ouverture du profil */}
       <Card

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -10,13 +10,52 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
 import { safeInternalNext } from '../utils/safeInternalPath'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { TALKFOOT_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../config/oauthProviders'
+import { OAuthProviderIcon } from '../components/auth/OAuthProviderIcon'
 
 type Mode = 'login' | 'signup'
+
+function oauthButtonShell(variant: (typeof TALKFOOT_OAUTH_PROVIDERS)[number]['variant']) {
+  const base =
+    'flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2'
+  switch (variant) {
+    case 'google':
+      return cn(
+        base,
+        'border-slate-200/80 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-300 focus:ring-tf-grey/30',
+      )
+    case 'apple':
+      return cn(base, 'border-slate-800 bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-500')
+    case 'facebook':
+      return cn(
+        base,
+        'border-[#166fe5] bg-[#1877F2] text-white hover:bg-[#166fe5] focus:ring-blue-400/50',
+      )
+    case 'discord':
+      return cn(
+        base,
+        'border-[#4752c4] bg-[#5865F2] text-white hover:bg-[#4752c4] focus:ring-indigo-400/50',
+      )
+    case 'github':
+      return cn(base, 'border-slate-700 bg-slate-800 text-white hover:bg-slate-700 focus:ring-slate-500')
+    default:
+      return base
+  }
+}
 
 export function LoginPage() {
   const [searchParams] = useSearchParams()
   const nextPath = safeInternalNext(searchParams.get('next'))
-  const { user, isReady, loginWithEmail, signUpWithEmail, loginWithGoogle, loginWithApple } = useAuth()
+  const {
+    user,
+    isReady,
+    loginWithEmail,
+    signUpWithEmail,
+    loginWithOAuthProvider,
+    authNotice,
+    clearAuthNotice,
+  } = useAuth()
   const { appearance } = useAppearance()
   const isLight = appearance === 'light'
   const [mode, setMode] = useState<Mode>('login')
@@ -25,6 +64,9 @@ export function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState<null | TalkFootOauthProviderId>(null)
 
   if (!isReady) {
     return (
@@ -38,10 +80,14 @@ export function LoginPage() {
     return <Navigate to={nextPath ?? '/'} replace />
   }
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     if (mode === 'signup') {
+      if (!acceptedPrivacy) {
+        setError('Tu dois accepter la politique de confidentialité pour créer un compte.')
+        return
+      }
       if (password !== confirmPassword) {
         setError('Les mots de passe ne correspondent pas.')
         return
@@ -50,30 +96,41 @@ export function LoginPage() {
         setError('Le mot de passe doit contenir au moins 6 caractères.')
         return
       }
-      if (!signUpWithEmail(email, password, displayName || undefined)) {
-        setError('Merci de remplir l\'email et le mot de passe.')
-        return
+      setSubmitting(true)
+      try {
+        const ok = await signUpWithEmail(email, password, displayName || undefined)
+        if (!ok) {
+          setError('Cet email est déjà utilisé ou les champs sont invalides.')
+          return
+        }
+        markPendingFanOnboardingAfterLogin()
+      } finally {
+        setSubmitting(false)
       }
-      markPendingFanOnboardingAfterLogin()
     } else {
-      if (!loginWithEmail(email, password)) {
-        setError('Merci de remplir l\'email et le mot de passe.')
-        return
+      setSubmitting(true)
+      try {
+        const ok = await loginWithEmail(email, password)
+        if (!ok) {
+          setError('Email ou mot de passe incorrect.')
+          return
+        }
+        markPendingFanOnboardingAfterLogin()
+      } finally {
+        setSubmitting(false)
       }
-      markPendingFanOnboardingAfterLogin()
     }
   }
 
-  const handleGoogle = () => {
+  const runOAuth = async (which: TalkFootOauthProviderId) => {
     setError(null)
-    markPendingFanOnboardingAfterLogin()
-    loginWithGoogle()
-  }
-
-  const handleApple = () => {
-    setError(null)
-    markPendingFanOnboardingAfterLogin()
-    loginWithApple()
+    setOauthLoading(which)
+    try {
+      const ok = await loginWithOAuthProvider(which)
+      if (ok && !isSupabaseConfigured()) markPendingFanOnboardingAfterLogin()
+    } finally {
+      setOauthLoading(null)
+    }
   }
 
   return (
@@ -106,6 +163,8 @@ export function LoginPage() {
               onClick={() => {
                 setMode('login')
                 setError(null)
+                clearAuthNotice()
+                setAcceptedPrivacy(false)
               }}
               className={cn(
                 'flex-1 rounded-lg px-4 py-2 text-sm font-bold transition',
@@ -121,6 +180,8 @@ export function LoginPage() {
               onClick={() => {
                 setMode('signup')
                 setError(null)
+                clearAuthNotice()
+                setAcceptedPrivacy(false)
               }}
               className={cn(
                 'flex-1 rounded-lg px-4 py-2 text-sm font-bold transition',
@@ -132,6 +193,24 @@ export function LoginPage() {
               Créer un compte
             </button>
           </div>
+
+          {authNotice && (
+            <div
+              role="status"
+              className="mt-6 rounded-xl border border-sky-200/80 bg-sky-50/95 p-3 text-xs font-medium text-sky-950"
+            >
+              <div className="flex gap-2">
+                <p className="min-w-0 flex-1 leading-snug">{authNotice}</p>
+                <button
+                  type="button"
+                  onClick={() => clearAuthNotice()}
+                  className="shrink-0 rounded-lg px-2 py-0.5 text-[11px] font-bold text-sky-800 hover:bg-sky-100"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          )}
 
           <h2 className="mt-6 text-lg font-black text-tf-dark">
             {mode === 'login' ? 'Connexion' : 'Créer un compte'}
@@ -203,6 +282,23 @@ export function LoginPage() {
                 />
               </div>
             )}
+            {mode === 'signup' && (
+              <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-tf-dark">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 rounded border-tf-grey-pastel text-tf-cta focus:ring-tf-cta"
+                />
+                <span>
+                  J&apos;ai lu la{' '}
+                  <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                    politique de confidentialité
+                  </Link>{' '}
+                  et j&apos;accepte le stockage des données nécessaires sur mon appareil.
+                </span>
+              </label>
+            )}
             {error && (
               <p className="text-sm font-semibold text-rose-600">{error}</p>
             )}
@@ -210,10 +306,17 @@ export function LoginPage() {
               type="submit"
               variant="primary"
               className="w-full rounded-xl py-3 font-bold"
+              disabled={submitting}
             >
-              {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+              {submitting ? 'Patience…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
             </Button>
           </form>
+
+          <p className="mt-4 text-center text-[11px] font-medium text-tf-grey">
+            <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              Confidentialité & données
+            </Link>
+          </p>
 
           <div className="mt-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-tf-grey-pastel/60" />
@@ -221,48 +324,46 @@ export function LoginPage() {
             <div className="h-px flex-1 bg-tf-grey-pastel/60" />
           </div>
 
+          <p className="mt-2 text-center text-[11px] font-medium leading-snug text-tf-grey">
+            {isSupabaseConfigured() ? (
+              <>
+                Connexion réelle via Supabase : Google, Apple, Facebook, Discord, GitHub. Active chaque
+                fournisseur dans le tableau Supabase (Authentication → Providers) et ajoute l’URL de retour
+                (Redirect URLs). En continuant, tu reconnais la{' '}
+                <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                  politique de confidentialité
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                Mode local sans Supabase : les boutons ci-dessous simulent une connexion (maquette). Pour une
+                vraie OAuth, renseigne <span className="font-mono text-[10px]">VITE_SUPABASE_URL</span> et{' '}
+                <span className="font-mono text-[10px]">VITE_SUPABASE_ANON_KEY</span>.{' '}
+                <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                  Confidentialité
+                </Link>
+                .
+              </>
+            )}
+          </p>
+
           <div className="mt-6 space-y-3">
-            <button
-              type="button"
-              onClick={handleGoogle}
-              className={cn(
-                'flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200/80 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm',
-                'transition hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
-              )}
-            >
-              <svg className="size-5" viewBox="0 0 24 24" aria-hidden>
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Continuer avec Google
-            </button>
-            <button
-              type="button"
-              onClick={handleApple}
-              className={cn(
-                'flex w-full items-center justify-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-bold text-white',
-                'transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500',
-              )}
-            >
-              <svg className="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-              </svg>
-              Continuer avec Apple
-            </button>
+            {TALKFOOT_OAUTH_PROVIDERS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => runOAuth(p.id)}
+                disabled={oauthLoading !== null}
+                className={cn(
+                  oauthButtonShell(p.variant),
+                  oauthLoading !== null && 'pointer-events-none opacity-60',
+                )}
+              >
+                <OAuthProviderIcon id={p.id} />
+                {oauthLoading === p.id ? 'Redirection…' : p.label}
+              </button>
+            ))}
           </div>
         </Card>
       </div>

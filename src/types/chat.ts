@@ -10,6 +10,8 @@ export type User = {
   isAdmin?: boolean
   /** Démo : compte comme « ami » pour présence live / encarts sociaux */
   isMockFriend?: boolean
+  /** Assistant Talk Foot — premier contact MP, pas un faux profil joueur */
+  isTalkFootBot?: boolean
   /** Club de cœur simulé (mode Virage / filtrage live) */
   fanClubId?: string
 }

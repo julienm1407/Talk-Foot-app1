@@ -7,80 +7,92 @@ import {
   isWalletStored,
   WALLET_STORAGE_KEY,
 } from '../utils/walletNormalize'
+import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
 export function useWallet() {
-  const [raw, setRaw] = useLocalStorageState<Wallet>(
+  const cloud = useOptionalCloudUserState()
+  const persistLocal = !isSupabaseConfigured()
+  const [localRaw, setLocalRaw] = useLocalStorageState<Wallet>(
     WALLET_STORAGE_KEY,
     DEFAULT_WALLET,
     isWalletStored,
+    { persist: persistLocal },
   )
+  const raw = cloud !== undefined ? cloud.app.wallet : localRaw
   const wallet = normalizeWallet(raw)
+
+  const patchWallet = useCallback(
+    (fn: (w: Wallet) => Wallet) => {
+      if (cloud) {
+        cloud.patchApp((prev) => ({
+          ...prev,
+          wallet: fn(normalizeWallet(prev.wallet)),
+        }))
+      } else {
+        setLocalRaw((prev) => fn(normalizeWallet(prev)))
+      }
+    },
+    [cloud, setLocalRaw],
+  )
 
   const addTokens = useCallback(
     (amount: number) => {
-      setRaw((prev) => {
-        const w = normalizeWallet(prev)
-        return { ...w, tokens: w.tokens + amount }
-      })
+      patchWallet((w) => ({ ...w, tokens: w.tokens + amount }))
     },
-    [setRaw],
+    [patchWallet],
   )
 
   const spendTokens = useCallback(
     (amount: number): { ok: boolean } => {
       let ok = false
-      setRaw((prev) => {
-        const w = normalizeWallet(prev)
-        if (w.tokens < amount) return prev as Wallet
+      patchWallet((w) => {
+        if (w.tokens < amount) return w
         ok = true
         return { ...w, tokens: w.tokens - amount }
       })
       return { ok }
     },
-    [setRaw],
+    [patchWallet],
   )
 
   const addMedals = useCallback(
     (amount: number) => {
-      setRaw((prev) => {
-        const w = normalizeWallet(prev)
-        return { ...w, medals: w.medals + amount }
-      })
+      patchWallet((w) => ({ ...w, medals: w.medals + amount }))
     },
-    [setRaw],
+    [patchWallet],
   )
 
   const spendMedals = useCallback(
     (amount: number): { ok: boolean } => {
       let ok = false
-      setRaw((prev) => {
-        const w = normalizeWallet(prev)
-        if (w.medals < amount) return prev as Wallet
+      patchWallet((w) => {
+        if (w.medals < amount) return w
         ok = true
         return { ...w, medals: w.medals - amount }
       })
       return { ok }
     },
-    [setRaw],
+    [patchWallet],
   )
 
   const claimDailyTokenBonus = useCallback((): { ok: boolean; amount?: number; reason?: string } => {
     const today = new Date().toISOString().slice(0, 10)
     let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
-    setRaw((prev) => {
-      const w = normalizeWallet(prev)
+    patchWallet((w) => {
       if (w.lastDailyTokenGrant === today) {
         out = { ok: false, reason: 'already_claimed' }
-        return prev as Wallet
+        return w
       }
       out = { ok: true, amount: 35 }
       return { ...w, tokens: w.tokens + 35, lastDailyTokenGrant: today }
     })
     return out
-  }, [setRaw])
+  }, [patchWallet])
 
   return {
     wallet,
+    patchWallet,
     addTokens,
     spendTokens,
     addMedals,

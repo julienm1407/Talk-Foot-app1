@@ -232,17 +232,9 @@ export function BoutiquePage() {
                 <span className="absolute left-2 top-2 rounded-lg bg-rose-600 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md">
                   Offre flash · −12&nbsp;%
                 </span>
-                {dailyItem.jerseyVisual ? (
-                  <div className="flex h-36 w-full items-center justify-center pt-7 sm:h-full sm:min-h-[10rem] sm:pt-0">
-                    <div className="origin-center scale-[0.42] sm:scale-[0.5]">
-                      <JerseyPreviewThumb item={dailyItem} size="showcase" />
-                    </div>
-                  </div>
-                ) : (
-                  <span className="py-8 text-7xl drop-shadow-md sm:py-10" aria-hidden>
-                    {dailyItem.emoji}
-                  </span>
-                )}
+                <div className="flex w-full items-center justify-center py-6 sm:min-h-[12rem] sm:py-4">
+                  <JerseyPreviewThumb item={dailyItem} size="showcase" />
+                </div>
               </div>
               <div className="flex min-w-0 flex-1 flex-col justify-center">
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-rose-700/90">Cosmétique du jour</p>
@@ -289,12 +281,8 @@ export function BoutiquePage() {
                       </Button>
                       <Button
                         type="button"
-                        variant="soft"
-                        className={cn(
-                          'min-h-12 rounded-xl border-2 border-emerald-800/50 px-4 text-sm font-black shadow-sm',
-                          '!bg-emerald-600 !text-white hover:!bg-emerald-500 hover:!text-white',
-                          '[text-shadow:0_1px_2px_rgba(0,0,0,0.35)]',
-                        )}
+                        variant="success"
+                        className="min-h-12 rounded-xl px-4 text-sm font-black"
                         disabled={ownsItem(dailyItem.id)}
                         onClick={() => {
                           if (ownsItem(dailyItem.id)) return
@@ -339,8 +327,8 @@ export function BoutiquePage() {
               </p>
               <Button
                 type="button"
-                variant="soft"
-                className="min-h-11 w-full rounded-xl border-2 border-emerald-500/50 bg-emerald-600 px-6 text-sm font-black text-white hover:bg-emerald-500 sm:w-auto"
+                variant="success"
+                className="min-h-11 w-full rounded-xl px-6 text-sm font-black sm:w-auto"
                 onClick={() => {
                   const r = claimDailyTokenBonus()
                   if (!r.ok && r.reason === 'already_claimed') showNotice('err', 'Déjà récupéré aujourd’hui.')

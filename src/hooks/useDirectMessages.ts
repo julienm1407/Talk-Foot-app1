@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
-import { mockDirectMessagesByThread } from '../data/directMessagesMock'
+import { mockDirectMessagesByThread, TALKFOOT_BOT_DM_THREAD_ID } from '../data/directMessagesMock'
 import type { DirectMessageLine } from '../data/directMessagesMock'
+import { pickTalkFootBotReply } from '../lib/talkFootBotReplies'
 import { useLocalStorageState } from './useLocalStorage'
 
 const KEY_MESSAGES = 'talkfoot.dm.userMessages.v1'
@@ -54,6 +55,22 @@ export function useDirectMessages() {
         ...prev,
         [threadId]: [...(prev[threadId] ?? []), line],
       }))
+
+      if (threadId === TALKFOOT_BOT_DM_THREAD_ID) {
+        const delayMs = 650 + Math.floor(Math.random() * 450)
+        window.setTimeout(() => {
+          const reply: DirectMessageLine = {
+            id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            fromMe: false,
+            body: pickTalkFootBotReply(trimmed),
+            atLabel: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          }
+          setUserByThread((prev) => ({
+            ...prev,
+            [threadId]: [...(prev[threadId] ?? []), reply],
+          }))
+        }, delayMs)
+      }
     },
     [setUserByThread],
   )

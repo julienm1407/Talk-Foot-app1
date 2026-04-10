@@ -12,18 +12,16 @@ import {
   DEMO_FAN_ONBOARDING_EVERY_LOGIN,
   PENDING_FAN_ONBOARDING_KEY,
 } from '../constants/fanSession'
+import type { FanPreferencesStoredShape } from '../types/fanPreferences'
+import { useOptionalCloudUserState } from './CloudUserStateContext'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+
+export type { FanPreferencesStoredShape }
 
 const STORAGE_KEY = 'talkfoot.fanPreferences.v1'
 const MAX_FAVORITE_CLUBS = 3
 
-type StoredShape = {
-  favoriteLeagueId?: string | null
-  favoriteClubId?: string | null
-  favoriteClubIds?: string[]
-  preferencesComplete?: boolean
-  hideRivalSalons?: boolean
-  virageMode?: boolean
-}
+type StoredShape = FanPreferencesStoredShape
 
 function normalizeClubIds(stored: StoredShape): string[] {
   const fromArray = stored.favoriteClubIds
@@ -62,11 +60,15 @@ type FanPreferencesContextValue = FanPreferencesState & {
 const FanPreferencesContext = createContext<FanPreferencesContextValue | null>(null)
 
 export function FanPreferencesProvider({ children }: { children: React.ReactNode }) {
-  const [stored, setStored] = useLocalStorageState<StoredShape>(
+  const cloud = useOptionalCloudUserState()
+  const persistLocal = !isSupabaseConfigured()
+  const [localStored, setLocalStored] = useLocalStorageState<StoredShape>(
     STORAGE_KEY,
     {},
     (p) => p !== null && typeof p === 'object' && !Array.isArray(p),
+    { persist: persistLocal },
   )
+  const stored = cloud !== undefined ? cloud.app.fanPreferences : localStored
   const [onboardingOpen, setOnboardingOpen] = useState(false)
   const consumedPostLoginFlag = useRef(false)
 
@@ -101,7 +103,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
 
   const patch = useCallback(
     (p: Partial<StoredShape>) => {
-      setStored((prev) => {
+      const mergeInto = (prev: StoredShape): StoredShape => {
         const next = { ...prev, ...p }
         if (next.favoriteClubIds !== undefined) {
           const ids = [...new Set((next.favoriteClubIds ?? []).filter(Boolean))].slice(
@@ -115,9 +117,14 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
           next.favoriteClubIds = id ? [id] : []
         }
         return next
-      })
+      }
+      if (cloud) {
+        cloud.patchFanPreferences(mergeInto(cloud.app.fanPreferences))
+      } else {
+        setLocalStored((prev) => mergeInto(prev))
+      }
     },
-    [setStored],
+    [cloud, setLocalStored],
   )
 
   const setFavoriteLeagueId = useCallback(
@@ -156,9 +163,14 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
   )
 
   const resetPreferences = useCallback(() => {
-    setStored({})
+    if (cloud) {
+      cloud.patchApp((prev) => ({ ...prev, fanPreferences: {} }))
+      cloud.setOnboardingComplete(false)
+    } else {
+      setLocalStored({})
+    }
     setOnboardingOpen(true)
-  }, [setStored])
+  }, [cloud, setLocalStored])
 
   const openOnboarding = useCallback(() => setOnboardingOpen(true), [])
   const closeOnboarding = useCallback(() => {

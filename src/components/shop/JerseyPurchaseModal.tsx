@@ -203,8 +203,8 @@ export function JerseyPurchaseModal({
           </Button>
           <Button
             type="button"
-            variant="soft"
-            className="flex-1 rounded-2xl border border-emerald-500/60 bg-emerald-700 text-white hover:bg-emerald-600 sm:min-w-[140px]"
+            variant="success"
+            className="flex-1 rounded-2xl font-semibold sm:min-w-[140px]"
             onClick={handlePayTokens}
           >
             <span className="inline-flex items-center justify-center gap-1">

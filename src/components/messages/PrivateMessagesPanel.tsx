@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
 import { cn } from '../../utils/cn'
-import { mockDirectThreads, type DirectMessageLine, type DirectThread } from '../../data/directMessagesMock'
+import {
+  mockDirectThreads,
+  type DirectMessageLine,
+  type DirectThread,
+} from '../../data/directMessagesMock'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
 
@@ -56,7 +60,18 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
             </button>
           ) : null}
           <span className="block text-sm font-black max-md:text-base">
-            {active ? active.peer.username : 'Messages privés'}
+            {active ? (
+              <>
+                {active.peer.username}
+                {active.peer.isTalkFootBot ? (
+                  <span className={cn('ml-2 text-xs font-bold', L ? 'text-violet-700' : 'text-violet-300')}>
+                    · Assistant
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              'Messages privés'
+            )}
           </span>
         </div>
         <button
@@ -94,7 +109,19 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
                   <Avatar seed={t.peer.avatarSeed} accent={t.peer.accent} className="!size-10 shrink-0" alt="" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-xs font-black">{t.peer.username}</span>
+                      <span className="min-w-0 text-xs font-black">
+                        {t.peer.username}
+                        {t.peer.isTalkFootBot ? (
+                          <span
+                            className={cn(
+                              'ml-1.5 align-middle text-[9px] font-black uppercase tracking-wide',
+                              L ? 'text-violet-700' : 'text-violet-300',
+                            )}
+                          >
+                            Assistant
+                          </span>
+                        ) : null}
+                      </span>
                       <span className={cn('shrink-0 text-[10px] font-bold', muted)}>{atLabel}</span>
                     </div>
                     <p className={cn('mt-0.5 line-clamp-2 text-[11px] font-semibold leading-snug', muted)}>

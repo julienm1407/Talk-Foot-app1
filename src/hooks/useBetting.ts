@@ -1,14 +1,12 @@
 import { useCallback, useMemo } from 'react'
-import type { Bet, BetMarket, BetSelection, Wallet } from '../types/bet'
-import { useLocalStorageState } from './useLocalStorage'
+import type { Bet, BetMarket, BetSelection } from '../types/bet'
 import {
-  DEFAULT_WALLET,
   normalizeWallet,
-  isWalletStored,
-  WALLET_STORAGE_KEY,
 } from '../utils/walletNormalize'
-
-const BETS_KEY = 'talkfoot.bets.v1'
+import { useWallet } from './useWallet'
+import { useUserBets } from './useUserBets'
+import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
 function clampStake(n: number) {
   if (!Number.isFinite(n)) return 0
@@ -16,13 +14,9 @@ function clampStake(n: number) {
 }
 
 export function useBetting(matchId: string) {
-  const [stored, setWallet] = useLocalStorageState<Wallet>(
-    WALLET_STORAGE_KEY,
-    DEFAULT_WALLET,
-    isWalletStored,
-  )
-  const wallet = normalizeWallet(stored)
-  const [bets, setBets] = useLocalStorageState<Bet[]>(BETS_KEY, [], Array.isArray)
+  const cloud = useOptionalCloudUserState()
+  const { wallet, patchWallet } = useWallet()
+  const [bets, setBets] = useUserBets()
 
   const matchBets = useMemo(() => bets.filter((b) => b.matchId === matchId), [bets, matchId])
   const openBets = useMemo(() => matchBets.filter((b) => b.status === 'open'), [matchBets])
@@ -44,25 +38,48 @@ export function useBetting(matchId: string) {
         placedAt: new Date().toISOString(),
       }
 
-      setWallet((w) => {
-        const n = normalizeWallet(w)
-        return { ...n, tokens: n.tokens - stake }
-      })
-      setBets((prev) => [bet, ...prev].slice(0, 200))
+      if (isSupabaseConfigured() && cloud) {
+        cloud.patchApp((prev) => {
+          const w = normalizeWallet(prev.wallet)
+          if (w.tokens < stake) return prev
+          return {
+            ...prev,
+            wallet: { ...w, tokens: w.tokens - stake },
+            bets: [bet, ...prev.bets].slice(0, 200),
+          }
+        })
+      } else {
+        patchWallet((w) => ({ ...w, tokens: w.tokens - stake }))
+        setBets((prev) => [bet, ...prev].slice(0, 200))
+      }
       return { ok: true as const, bet }
     },
-    [matchId, setBets, setWallet, wallet.tokens],
+    [matchId, setBets, patchWallet, wallet.tokens, cloud],
   )
 
   const cancelBet = useCallback(
     (betId: string) => {
+      if (isSupabaseConfigured() && cloud) {
+        cloud.patchApp((prev) => {
+          const b = prev.bets.find((x) => x.id === betId)
+          if (!b || b.status !== 'open') return prev
+          const w = normalizeWallet(prev.wallet)
+          return {
+            ...prev,
+            wallet: { ...w, tokens: w.tokens + b.stake },
+            bets: prev.bets.map((x) =>
+              x.id === betId
+                ? { ...x, status: 'cancelled' as const, settledAt: new Date().toISOString() }
+                : x,
+            ),
+          }
+        })
+        return
+      }
       setBets((prev) => {
         const b = prev.find((x) => x.id === betId)
         if (!b || b.status !== 'open') return prev
-        setWallet((w) => {
-          const n = normalizeWallet(w)
-          return { ...n, tokens: n.tokens + b.stake }
-        })
+        patchWallet((w) => ({ ...w, tokens: w.tokens + b.stake }))
         return prev.map((x) =>
           x.id === betId
             ? {
@@ -74,19 +91,17 @@ export function useBetting(matchId: string) {
         )
       })
     },
-    [setBets, setWallet],
+    [setBets, patchWallet, cloud],
   )
 
   const settleNextGoal = useCallback(
     (scoringSide: 'home' | 'away') => {
-      setBets((prev) => {
-        const now = new Date().toISOString()
+      const run = (bets: Bet[], now: string) => {
         let delta = 0
-        const next = prev.map((b) => {
+        const next = bets.map((b) => {
           if (b.matchId !== matchId) return b
           if (b.status !== 'open') return b
           if (b.market !== 'next_goal') return b
-
           const won =
             (scoringSide === 'home' && b.selection === 'home') ||
             (scoringSide === 'away' && b.selection === 'away')
@@ -97,27 +112,39 @@ export function useBetting(matchId: string) {
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
         })
-        if (delta)
-          setWallet((w) => {
-            const n = normalizeWallet(w)
-            return { ...n, tokens: n.tokens + delta }
-          })
+        return { next, delta }
+      }
+      if (isSupabaseConfigured() && cloud) {
+        cloud.patchApp((prev) => {
+          const now = new Date().toISOString()
+          const { next, delta } = run(prev.bets, now)
+          const w = normalizeWallet(prev.wallet)
+          return {
+            ...prev,
+            bets: next,
+            wallet: delta ? { ...w, tokens: w.tokens + delta } : w,
+          }
+        })
+        return
+      }
+      setBets((prev) => {
+        const now = new Date().toISOString()
+        const { next, delta } = run(prev, now)
+        if (delta) patchWallet((w) => ({ ...w, tokens: w.tokens + delta }))
         return next
       })
     },
-    [matchId, setBets, setWallet],
+    [matchId, setBets, patchWallet, cloud],
   )
 
   const settleFirstGoal = useCallback(
     (scoringSide: 'home' | 'away') => {
-      setBets((prev) => {
-        const now = new Date().toISOString()
+      const run = (bets: Bet[], now: string) => {
         let delta = 0
-        const next = prev.map((b) => {
+        const next = bets.map((b) => {
           if (b.matchId !== matchId) return b
           if (b.status !== 'open') return b
           if (b.market !== 'first_goal') return b
-
           const won =
             (scoringSide === 'home' && b.selection === 'home') ||
             (scoringSide === 'away' && b.selection === 'away')
@@ -128,32 +155,43 @@ export function useBetting(matchId: string) {
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
         })
-        if (delta)
-          setWallet((w) => {
-            const n = normalizeWallet(w)
-            return { ...n, tokens: n.tokens + delta }
-          })
+        return { next, delta }
+      }
+      if (isSupabaseConfigured() && cloud) {
+        cloud.patchApp((prev) => {
+          const now = new Date().toISOString()
+          const { next, delta } = run(prev.bets, now)
+          const w = normalizeWallet(prev.wallet)
+          return {
+            ...prev,
+            bets: next,
+            wallet: delta ? { ...w, tokens: w.tokens + delta } : w,
+          }
+        })
+        return
+      }
+      setBets((prev) => {
+        const now = new Date().toISOString()
+        const { next, delta } = run(prev, now)
+        if (delta) patchWallet((w) => ({ ...w, tokens: w.tokens + delta }))
         return next
       })
     },
-    [matchId, setBets, setWallet],
+    [matchId, setBets, patchWallet, cloud],
   )
 
   const settleMatchResult = useCallback(
     (finalScore: { home: number; away: number }) => {
-      setBets((prev) => {
-        const now = new Date().toISOString()
+      const run = (bets: Bet[], now: string) => {
         let delta = 0
         const { home, away } = finalScore
         const totalGoals = home + away
         const homeWins = home > away
         const awayWins = away > home
         const isDraw = home === away
-
-        const next = prev.map((b) => {
+        const next = bets.map((b) => {
           if (b.matchId !== matchId) return b
           if (b.status !== 'open') return b
-
           if (b.market === 'result_1x2') {
             const won =
               (b.selection === 'home' && homeWins) ||
@@ -166,7 +204,6 @@ export function useBetting(matchId: string) {
             }
             return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
           }
-
           if (b.market === 'over25') {
             const won =
               (b.selection === 'over' && totalGoals > 2) ||
@@ -178,30 +215,48 @@ export function useBetting(matchId: string) {
             }
             return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
           }
-
           return b
         })
-        if (delta)
-          setWallet((w) => {
-            const n = normalizeWallet(w)
-            return { ...n, tokens: n.tokens + delta }
-          })
+        return { next, delta }
+      }
+      if (isSupabaseConfigured() && cloud) {
+        cloud.patchApp((prev) => {
+          const now = new Date().toISOString()
+          const { next, delta } = run(prev.bets, now)
+          const w = normalizeWallet(prev.wallet)
+          return {
+            ...prev,
+            bets: next,
+            wallet: delta ? { ...w, tokens: w.tokens + delta } : w,
+          }
+        })
+        return
+      }
+      setBets((prev) => {
+        const now = new Date().toISOString()
+        const { next, delta } = run(prev, now)
+        if (delta) patchWallet((w) => ({ ...w, tokens: w.tokens + delta }))
         return next
       })
     },
-    [matchId, setBets, setWallet],
+    [matchId, setBets, patchWallet, cloud],
   )
 
   const spendTokens = useCallback(
     (amount: number, _reason: string) => {
       if (wallet.tokens < amount) return { ok: false as const, reason: 'not_enough_tokens' as const }
-      setWallet((w) => {
-        const n = normalizeWallet(w)
-        return { ...n, tokens: n.tokens - amount }
-      })
+      if (isSupabaseConfigured() && cloud) {
+        cloud.patchApp((prev) => {
+          const w = normalizeWallet(prev.wallet)
+          if (w.tokens < amount) return prev
+          return { ...prev, wallet: { ...w, tokens: w.tokens - amount } }
+        })
+      } else {
+        patchWallet((w) => ({ ...w, tokens: w.tokens - amount }))
+      }
       return { ok: true as const }
     },
-    [setWallet, wallet.tokens],
+    [patchWallet, wallet.tokens, cloud],
   )
 
   const stats = useMemo(() => {

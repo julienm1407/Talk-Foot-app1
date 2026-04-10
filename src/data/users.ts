@@ -1,44 +1,22 @@
 import type { User } from '../types/chat'
 
 /**
- * Amis simulés (démo) — affichés en priorité dans « en direct » sur le live.
+ * Assistant intégré : premier contact de tout le monde (MP + présence live).
+ * Pas de fausses demandes d’amis — uniquement ce bot pour montrer les MP.
  */
-export const mockFriendUsers: User[] = [
-  {
-    id: 'u-f-1',
-    username: 'LucasVirage',
-    avatarSeed: 'lucas',
-    accent: 'violet',
-    fanClubId: 'om',
-    isMockFriend: true,
-  },
-  {
-    id: 'u-f-2',
-    username: 'Nina92',
-    avatarSeed: 'nina',
-    accent: 'rose',
-    fanClubId: 'psg',
-    isMockFriend: true,
-  },
-  {
-    id: 'u-f-3',
-    username: 'TomChant',
-    avatarSeed: 'tom',
-    accent: 'emerald',
-    fanClubId: 'nantes',
-    isMockFriend: true,
-  },
-  {
-    id: 'u-f-4',
-    username: 'SarahGoal',
-    avatarSeed: 'sarah',
-    accent: 'amber',
-    fanClubId: 'liv',
-    isMockFriend: true,
-  },
-]
+export const talkFootBotUser: User = {
+  id: 'u-tf-bot',
+  username: 'Coach Talk Foot',
+  avatarSeed: 'talkfoot-coach',
+  accent: 'violet',
+  isMockFriend: true,
+  isTalkFootBot: true,
+}
 
-/** Autres spectateurs fictifs (pas dans ta liste d’amis démo). */
+/** Liste « amis » côté UI live / partage : pour l’instant uniquement l’assistant. */
+export const mockFriendUsers: User[] = [talkFootBotUser]
+
+/** Autres spectateurs fictifs (pas dans ta liste d’amis). */
 export const mockUsers: User[] = [
   { id: 'u-1', username: 'UltraNuit', avatarSeed: 'ultra', accent: 'violet', fanClubId: 'psg' },
   { id: 'u-2', username: 'GoalMachine', avatarSeed: 'goal', accent: 'emerald', fanClubId: 'om' },
@@ -47,7 +25,7 @@ export const mockUsers: User[] = [
   { id: 'u-5', username: 'CôtéVirage', avatarSeed: 'virage', accent: 'violet', fanClubId: 'mci' },
 ]
 
-/** Pool pour messages bots / résolution de pseudo (amis + foule). */
+/** Pool pour messages bots / résolution de pseudo (assistant + foule). */
 export const chatPersonasPool: User[] = [...mockFriendUsers, ...mockUsers]
 
 export const currentUser: User = {
