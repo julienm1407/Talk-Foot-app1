@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
@@ -34,8 +34,10 @@ export function useLiveMatchReactionsSync(options: {
   const { matchId, enabled, onHydrate, onLiveInsert } = options
   const onHydrateRef = useRef(onHydrate)
   const onLiveInsertRef = useRef(onLiveInsert)
-  onHydrateRef.current = onHydrate
-  onLiveInsertRef.current = onLiveInsert
+  useLayoutEffect(() => {
+    onHydrateRef.current = onHydrate
+    onLiveInsertRef.current = onLiveInsert
+  }, [onHydrate, onLiveInsert])
 
   const publishReaction = useCallback(
     async (reactionType: ReactionType) => {

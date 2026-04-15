@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
@@ -73,7 +73,9 @@ export function useLiveMatchChatSync(options: {
 }) {
   const { matchId, enabled, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
-  onRemoteMessagesRef.current = onRemoteMessages
+  useLayoutEffect(() => {
+    onRemoteMessagesRef.current = onRemoteMessages
+  }, [onRemoteMessages])
 
   const publishMessage = useCallback(
     async (msg: Pick<Message, 'matchId' | 'text'> & Partial<Message>) => {
