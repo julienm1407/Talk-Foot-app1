@@ -59,16 +59,21 @@ export function useSupporterGroupChannelSync(options: {
   groupId: string
   channelId: string
   enabled: boolean
+  /** Visiteur sur débat public (général) : pas d’upsert membre, le serveur filtre via metadata.tf_public_debate. */
+  skipMembershipUpsert?: boolean
   onRemoteMessages: (msgs: Message[]) => void
 }) {
-  const { groupId, channelId, enabled, onRemoteMessages } = options
+  const { groupId, channelId, enabled, skipMembershipUpsert, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
 
   const publishMessage = useCallback(
-    async (msg: Pick<Message, 'matchId' | 'text'> & Partial<Message> & { groupId: string; channelId: string }) => {
+    async (
+      msg: Pick<Message, 'matchId' | 'text'> &
+        Partial<Message> & { groupId: string; channelId: string; tfPublicDebate?: boolean },
+    ) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
@@ -83,6 +88,7 @@ export function useSupporterGroupChannelSync(options: {
       if (msg.gifUrl) metadata.gifUrl = msg.gifUrl
       if (msg.emoteId) metadata.emoteId = msg.emoteId
       if (msg.groupScarf) metadata.groupScarf = msg.groupScarf
+      if (msg.tfPublicDebate) metadata.tf_public_debate = 'true'
 
       const displayName = displayNameFromSession(session.user)
 
@@ -121,8 +127,12 @@ export function useSupporterGroupChannelSync(options: {
       const session = await ensureSupabaseAuthenticatedSession(sb)
       if (!session || cancelled) return
 
-      const memberOk = await upsertCloudGroupMembership(sb, groupId)
-      if (!memberOk.ok || cancelled) return
+      if (!skipMembershipUpsert) {
+        const memberOk = await upsertCloudGroupMembership(sb, groupId)
+        if (!memberOk.ok || cancelled) return
+      } else if (cancelled) {
+        return
+      }
 
       const { data: rows, error: fetchErr } = await sb
         .from('supporter_group_channel_messages')
@@ -181,7 +191,7 @@ export function useSupporterGroupChannelSync(options: {
         channelRef.current = null
       }
     }
-  }, [groupId, channelId, enabled])
+  }, [groupId, channelId, enabled, skipMembershipUpsert])
 
   return { publishMessage, isCloudChatConfigured: isSupabaseConfigured() }
 }

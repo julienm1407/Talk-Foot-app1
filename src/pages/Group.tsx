@@ -161,16 +161,31 @@ export function GroupPage() {
     [threadKey],
   )
 
+  const isOpenPublicDebateSalon = Boolean(
+    group &&
+      channel &&
+      channel.id === 'general' &&
+      debate &&
+      (debate.salonAccess ?? 'public') === 'public',
+  )
+
+  const skipCloudMemberUpsert = Boolean(
+    isOpenPublicDebateSalon && group && group.createdBy !== 'me' && !isJoined(group.id),
+  )
+
   const groupCloudChatEnabled =
     Boolean(group && channel) &&
     isSupabaseConfigured() &&
     Boolean(authUser && !authUser.isAnonymous) &&
-    Boolean(group && (group.createdBy === 'me' || isJoined(group.id)))
+    Boolean(
+      group && (group.createdBy === 'me' || isJoined(group.id) || isOpenPublicDebateSalon),
+    )
 
   const { publishMessage: publishGroupChannelMessage } = useSupporterGroupChannelSync({
     groupId: group?.id ?? '',
     channelId: channel?.id ?? '',
     enabled: groupCloudChatEnabled,
+    skipMembershipUpsert: skipCloudMemberUpsert,
     onRemoteMessages: mergeRemoteGroupMessages,
   })
 
@@ -270,6 +285,7 @@ export function GroupPage() {
           groupId: group.id,
           channelId: channel.id,
           groupScarf: msg.groupScarf,
+          tfPublicDebate: isOpenPublicDebateSalon,
         })
         if (r.ok) {
           setMessagesByThread((prev) => {
@@ -289,7 +305,7 @@ export function GroupPage() {
         [threadKey]: [...(prev[threadKey] ?? []), msg],
       }))
     },
-    [group, channel, threadKey, groupCloudChatEnabled, publishGroupChannelMessage],
+    [group, channel, threadKey, groupCloudChatEnabled, publishGroupChannelMessage, isOpenPublicDebateSalon],
   )
 
   const onSend = useCallback(
