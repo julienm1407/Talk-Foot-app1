@@ -1,18 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ensureSupabaseAuthenticatedSession } from './ensureSession'
 
+function isUniqueViolation(err: { code?: string; message?: string; details?: string }): boolean {
+  const c = err.code ?? ''
+  const m = `${err.message ?? ''} ${err.details ?? ''}`
+  return c === '23505' || /duplicate key|unique constraint|already exists/i.test(m)
+}
+
 export async function upsertCloudGroupMembership(
   sb: SupabaseClient,
   groupId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const session = await ensureSupabaseAuthenticatedSession(sb)
   if (!session) return { ok: false, error: 'no_authenticated_session' }
-  const { error } = await sb.from('supporter_group_members').upsert(
-    { group_id: groupId, user_id: session.user.id },
-    { onConflict: 'group_id,user_id' },
-  )
-  if (error) return { ok: false, error: error.message }
-  return { ok: true }
+  const { error } = await sb.from('supporter_group_members').insert({
+    group_id: groupId,
+    user_id: session.user.id,
+  })
+  if (!error) return { ok: true }
+  if (isUniqueViolation(error)) return { ok: true }
+  return { ok: false, error: error.message }
 }
 
 export async function deleteCloudGroupMembership(

@@ -17,6 +17,8 @@ import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
 import { chatPersonasPool, currentUser } from '../data/users'
 import { useSupporterGroupChannelSync } from '../hooks/useSupporterGroupChannelSync'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { Message, User } from '../types/chat'
 import { useMessageLikes } from '../hooks/useMessageLikes'
@@ -59,7 +61,7 @@ export function GroupPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const debateFromQuery = searchParams.get('debate')
 
-  const { byId, joinGroup, leaveGroup, isJoined, updateGroup } = useSupporterGroups()
+  const { byId, joinGroup, leaveGroup, isJoined, updateGroup, joinedGroupIds } = useSupporterGroups()
   const { matches } = useMatches()
   const group = groupId ? byId(groupId) : null
   const groupRef = useRef<SupporterGroup | null>(null)
@@ -140,26 +142,27 @@ export function GroupPage() {
   }, [channelId, group])
 
   const threadKey = group && channel ? `${group.id}:${channel.id}` : ''
+  const threadKeyRef = useRef(threadKey)
+  threadKeyRef.current = threadKey
 
   const [messagesByThread, setMessagesByThread] = useState<Record<string, Message[]>>({})
-  const mergeRemoteGroupMessages = useCallback(
-    (incoming: Message[]) => {
-      if (!threadKey || !incoming.length) return
-      setMessagesByThread((prev) => {
-        const seen = new Set((prev[threadKey] ?? []).map((m) => m.id))
-        const next = [...(prev[threadKey] ?? [])]
-        for (const m of incoming) {
-          if (!seen.has(m.id)) {
-            next.push(m)
-            seen.add(m.id)
-          }
+  const mergeRemoteGroupMessages = useCallback((incoming: Message[]) => {
+    if (!incoming.length) return
+    setMessagesByThread((prev) => {
+      const key = threadKeyRef.current
+      if (!key) return prev
+      const seen = new Set((prev[key] ?? []).map((m) => m.id))
+      const next = [...(prev[key] ?? [])]
+      for (const m of incoming) {
+        if (!seen.has(m.id)) {
+          next.push(m)
+          seen.add(m.id)
         }
-        next.sort((a, b) => a.createdAt - b.createdAt)
-        return { ...prev, [threadKey]: next.slice(-280) }
-      })
-    },
-    [threadKey],
-  )
+      }
+      next.sort((a, b) => a.createdAt - b.createdAt)
+      return { ...prev, [key]: next.slice(-280) }
+    })
+  }, [])
 
   const isOpenPublicDebateSalon = Boolean(
     group &&
@@ -188,6 +191,22 @@ export function GroupPage() {
     skipMembershipUpsert: skipCloudMemberUpsert,
     onRemoteMessages: mergeRemoteGroupMessages,
   })
+
+  /** Ré-enregistre l’adhésion côté Supabase à l’ouverture du salon (répare un « Rejoindre » raté ou hors-ligne). */
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !group || !authUser?.id || authUser.isAnonymous) return
+    if (!groupCloudChatEnabled || skipCloudMemberUpsert) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    void upsertCloudGroupMembership(sb, group.id)
+  }, [
+    group?.id,
+    groupCloudChatEnabled,
+    skipCloudMemberUpsert,
+    authUser?.id,
+    authUser?.isAnonymous,
+    joinedGroupIds,
+  ])
 
   /** Dernier débat lié au salon « général » — pour re-seeder si ?debate= change. */
   const prevGeneralDebateRef = useRef<string | null | undefined>(undefined)

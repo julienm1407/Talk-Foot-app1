@@ -131,10 +131,11 @@ export function useSupporterGroupChannelSync(options: {
 
       if (!skipMembershipUpsert) {
         const memberOk = await upsertCloudGroupMembership(sb, groupId)
-        if (!memberOk.ok || cancelled) return
-      } else if (cancelled) {
-        return
+        if (!memberOk.ok && import.meta.env.DEV) {
+          console.warn('[Talk Foot] Adhésion groupe (sync continue):', memberOk.error)
+        }
       }
+      if (cancelled) return
 
       const { data: rows, error: fetchErr } = await sb
         .from('supporter_group_channel_messages')
@@ -145,6 +146,10 @@ export function useSupporterGroupChannelSync(options: {
         .limit(200)
 
       if (cancelled) return
+
+      if (fetchErr) {
+        console.warn('[Talk Foot] Fetch messages groupe:', fetchErr.message)
+      }
 
       if (!fetchErr && rows?.length) {
         onRemoteMessagesRef.current((rows as GroupMsgRow[]).map(rowToMessage))
@@ -167,7 +172,7 @@ export function useSupporterGroupChannelSync(options: {
             const row = payload.new
             if (!row || typeof row !== 'object') return
             const r = row as GroupMsgRow
-            if (r.channel_id !== channelId) return
+            if (r.group_id !== groupId || r.channel_id !== channelId) return
             onRemoteMessagesRef.current([rowToMessage(r)])
           },
         )
