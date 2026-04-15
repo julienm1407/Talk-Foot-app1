@@ -219,6 +219,7 @@ export function ChannelPage() {
     if (virageMode && favoriteClubIds.length > 0) {
       list = messages.filter((m) => {
         if (m.userId === selfChatUserId) return true
+        if (m.authorDisplayName) return true
         const u = usersById[m.userId]
         const fid = u?.fanClubId
         return Boolean(fid && favoriteClubIds.includes(fid))
@@ -912,9 +913,7 @@ export function ChannelPage() {
             }}
           />
         )}
-        {reactionDensity !== 'chill' ? (
-          <LiveEffects events={recentReactions} fullScreen />
-        ) : null}
+        {isLiveOpen ? <LiveEffects events={recentReactions} fullScreen /> : null}
         {isLiveOpen && (
           <div
             className="absolute top-0 left-0 right-0 z-20 h-1 overflow-hidden rounded-t-2xl"
@@ -1098,9 +1097,7 @@ export function ChannelPage() {
                   : undefined
               }
             >
-              {isLiveOpen && reactionDensity !== 'chill' ? (
-                <FloatingReactions items={floating} />
-              ) : null}
+              {isLiveOpen ? <FloatingReactions items={floating} /> : null}
               <div
                 className={cn(
                   'flex flex-col',

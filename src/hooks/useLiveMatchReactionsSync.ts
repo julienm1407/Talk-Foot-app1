@@ -4,6 +4,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
+import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import type { ReactionEvent, ReactionType } from '../types/chat'
 
 type ReactionRow = {
@@ -78,6 +79,7 @@ export function useLiveMatchReactionsSync(options: {
     const run = async () => {
       const session = await ensureSupabaseChatSession(sb)
       if (!session || cancelled) return
+      await syncRealtimeAuth(sb)
 
       const { data: rows, error: fetchErr } = await sb
         .from('live_match_reactions')

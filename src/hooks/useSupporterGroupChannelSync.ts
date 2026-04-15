@@ -5,6 +5,7 @@ import { ensureSupabaseAuthenticatedSession } from '../lib/supabase/ensureSessio
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
+import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
 import { groupThreadMatchId } from '../utils/groupThreadMessages'
@@ -126,6 +127,7 @@ export function useSupporterGroupChannelSync(options: {
     const run = async () => {
       const session = await ensureSupabaseAuthenticatedSession(sb)
       if (!session || cancelled) return
+      await syncRealtimeAuth(sb)
 
       if (!skipMembershipUpsert) {
         const memberOk = await upsertCloudGroupMembership(sb, groupId)

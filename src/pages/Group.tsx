@@ -265,6 +265,8 @@ export function GroupPage() {
     if (!virageMode || favoriteClubIds.length === 0) return messages
     return messages.filter((m) => {
       if (m.userId === selfChatUserId) return true
+      // Messages cloud : auteur UUID sans carte locale — ne pas les masquer en mode Virage
+      if (m.authorDisplayName) return true
       const u = usersById[m.userId]
       const fid = u?.fanClubId
       return Boolean(fid && favoriteClubIds.includes(fid))

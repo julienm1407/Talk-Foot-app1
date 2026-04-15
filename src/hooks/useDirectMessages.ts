@@ -4,6 +4,7 @@ import type { DirectMessageLine } from '../data/directMessagesMock'
 import { pickTalkFootBotReply } from '../lib/talkFootBotReplies'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
+import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { cloudPrivateThreadKey } from '../utils/cloudDmThread'
 import { useAuth } from '../contexts/AuthContext'
@@ -69,6 +70,7 @@ export function useDirectMessages(activeUiThreadId: string | null) {
     const run = async () => {
       const session = await ensureSupabaseChatSession(sb)
       if (!session || cancelled) return
+      await syncRealtimeAuth(sb)
       const myId = session.user.id
 
       const { data: rows, error: fetchErr } = await sb
