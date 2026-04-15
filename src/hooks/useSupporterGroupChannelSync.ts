@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
-import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
+import { ensureSupabaseAuthenticatedSession } from '../lib/supabase/ensureSession'
+import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
@@ -71,7 +72,7 @@ export function useSupporterGroupChannelSync(options: {
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
 
-      const session = await ensureSupabaseChatSession(sb)
+      const session = await ensureSupabaseAuthenticatedSession(sb)
       if (!session) return { ok: false as const, error: 'no_session' }
 
       const body = msg.text ?? ''
@@ -116,8 +117,11 @@ export function useSupporterGroupChannelSync(options: {
     let ch: ReturnType<typeof sb.channel> | null = null
 
     const run = async () => {
-      const session = await ensureSupabaseChatSession(sb)
+      const session = await ensureSupabaseAuthenticatedSession(sb)
       if (!session || cancelled) return
+
+      const memberOk = await upsertCloudGroupMembership(sb, groupId)
+      if (!memberOk.ok || cancelled) return
 
       const { data: rows, error: fetchErr } = await sb
         .from('supporter_group_channel_messages')

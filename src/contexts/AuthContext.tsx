@@ -22,6 +22,8 @@ export type AuthUser = {
   provider: 'email' | TalkFootOauthProviderId | 'oauth'
   avatarUrl?: string
   isAdmin?: boolean
+  /** Session Supabase « invité » (sans email / OAuth) — pas d’accès salons membres synchronisés. */
+  isAnonymous?: boolean
 }
 
 export type StoredEmailUser = {
@@ -83,6 +85,7 @@ function mapSupabaseUser(u: SupabaseUser): AuthUser {
     email: u.email ?? undefined,
     displayName: dn.trim(),
     provider,
+    isAnonymous: Boolean(u.is_anonymous),
     avatarUrl:
       typeof meta?.avatar_url === 'string'
         ? meta.avatar_url

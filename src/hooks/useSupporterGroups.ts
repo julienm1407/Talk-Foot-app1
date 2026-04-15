@@ -1,5 +1,9 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { starterGroups } from '../data/groups'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { deleteCloudGroupMembership, upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
 import { useLocalStorageState } from './useLocalStorage'
@@ -10,6 +14,8 @@ const JOINED_KEY = 'talkfoot.joinedGroupIds.v1'
 const isStringArray = (p: unknown): p is string[] => Array.isArray(p) && p.every((x) => typeof x === 'string')
 
 export function useSupporterGroups() {
+  const { user: authUser } = useAuth()
+
   const [custom, setCustom] = useLocalStorageState<SupporterGroup[]>(
     KEY,
     [],
@@ -27,9 +33,40 @@ export function useSupporterGroups() {
     return merged.sort((a, b) => b.intensity - a.intensity)
   }, [custom])
 
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    if (!authUser?.id || authUser.isAnonymous) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    let cancelled = false
+    void (async () => {
+      const { data, error } = await sb
+        .from('supporter_group_members')
+        .select('group_id')
+        .eq('user_id', authUser.id)
+      if (cancelled || error || !data?.length) return
+      setJoinedGroupIds((prev) => {
+        const next = new Set(prev)
+        for (const row of data) {
+          if (row && typeof row.group_id === 'string') next.add(row.group_id)
+        }
+        const arr = Array.from(next)
+        if (arr.length === prev.length && arr.every((id) => prev.includes(id))) return prev
+        return arr
+      })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [authUser?.id, authUser?.isAnonymous, setJoinedGroupIds])
+
   const joinGroup = useCallback(
     (id: string) => {
       setJoinedGroupIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+      const sb = getSupabaseBrowserClient()
+      if (sb && isSupabaseConfigured()) {
+        void upsertCloudGroupMembership(sb, id)
+      }
     },
     [setJoinedGroupIds],
   )
@@ -37,6 +74,10 @@ export function useSupporterGroups() {
   const leaveGroup = useCallback(
     (id: string) => {
       setJoinedGroupIds((prev) => prev.filter((x) => x !== id))
+      const sb = getSupabaseBrowserClient()
+      if (sb && isSupabaseConfigured()) {
+        void deleteCloudGroupMembership(sb, id)
+      }
     },
     [setJoinedGroupIds],
   )
@@ -80,6 +121,10 @@ export function useSupporterGroups() {
         }
         return joined
       })
+      const sb = getSupabaseBrowserClient()
+      if (sb && isSupabaseConfigured()) {
+        void upsertCloudGroupMembership(sb, id)
+      }
       return next
     },
     [setCustom, setJoinedGroupIds],

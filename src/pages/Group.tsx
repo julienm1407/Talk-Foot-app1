@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -52,6 +52,7 @@ function newChannelIdFromName(name: string) {
 
 export function GroupPage() {
   const { groupId } = useParams()
+  const location = useLocation()
   const { user: authUser } = useAuth()
   const selfChatUserId = authUser?.id ?? 'me'
   const navigate = useNavigate()
@@ -160,13 +161,18 @@ export function GroupPage() {
     [threadKey],
   )
 
-  const { publishMessage: publishGroupChannelMessage, isCloudChatConfigured } = useSupporterGroupChannelSync({
+  const groupCloudChatEnabled =
+    Boolean(group && channel) &&
+    isSupabaseConfigured() &&
+    Boolean(authUser && !authUser.isAnonymous) &&
+    Boolean(group && (group.createdBy === 'me' || isJoined(group.id)))
+
+  const { publishMessage: publishGroupChannelMessage } = useSupporterGroupChannelSync({
     groupId: group?.id ?? '',
     channelId: channel?.id ?? '',
-    enabled: Boolean(group && channel && isSupabaseConfigured()),
+    enabled: groupCloudChatEnabled,
     onRemoteMessages: mergeRemoteGroupMessages,
   })
-  const groupCloudChatEnabled = isCloudChatConfigured && Boolean(group && channel)
 
   /** Dernier débat lié au salon « général » — pour re-seeder si ?debate= change. */
   const prevGeneralDebateRef = useRef<string | null | undefined>(undefined)
@@ -373,6 +379,18 @@ export function GroupPage() {
             ni le <strong className="font-bold">{LIVE_FIL_EQUIPE_COEUR.label.toLowerCase()}</strong> du profil.
           </p>
         )}
+        {isSupabaseConfigured() && (!authUser || authUser.isAnonymous) ? (
+          <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-[13px] font-semibold text-amber-950">
+            Fil synchronisé : connecte-toi avec un compte (email ou réseau) pour rejoindre le salon côté serveur —
+            même expérience sur tous tes appareils.{' '}
+            <Link
+              className="font-black text-violet-700 underline underline-offset-2 hover:text-violet-900"
+              to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+            >
+              Connexion
+            </Link>
+          </p>
+        ) : null}
       </div>
       <Card className="order-3 overflow-hidden p-0 lg:order-2" elevation="soft">
         <div
