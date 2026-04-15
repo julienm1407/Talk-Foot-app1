@@ -46,6 +46,7 @@ import { aggregateTribuneStats, useTribuneLiveStats } from '../hooks/useTribuneL
 import { randomTribuneForBot } from '../data/tribunes'
 import { useAuth } from '../contexts/AuthContext'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
+import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 
 const MS_PER_MATCH_MINUTE = 3000
 
@@ -319,6 +320,79 @@ export function ChannelPage() {
     onRemoteMessages: mergeRemoteMessages,
   })
   const cloudChatEnabled = isCloudChatConfigured && isLiveOpen
+
+  const pushReactionEffects = useCallback((event: ReactionEvent, withFloating: boolean) => {
+    setReactions((prev) => {
+      if (prev.some((r) => r.id === event.id)) return prev
+      return [...prev, event].slice(-80)
+    })
+    if (!withFloating) return
+    setFloating((prev) => {
+      if (prev.some((f) => f.id === event.id)) return prev
+      const side = Math.random() < 0.5 ? 'left' : 'right'
+      const sideJitter = 4 + Math.random() * 6
+      const xPct = side === 'left' ? 2 + sideJitter : 98 - sideJitter
+      const bottomPx = 18 + Math.random() * 92
+      const float: FloatingReaction = {
+        id: event.id,
+        type: event.type,
+        createdAt: event.createdAt,
+        xPct,
+        bottomPx,
+      }
+      window.setTimeout(() => {
+        setFloating((p) => p.filter((f) => f.id !== event.id))
+      }, 950)
+      return [...prev, float].slice(-16)
+    })
+  }, [])
+
+  const mergeHydrateReactions = useCallback((events: ReactionEvent[]) => {
+    if (!events.length) return
+    setReactions((prev) => {
+      const seen = new Set(prev.map((r) => r.id))
+      const next = [...prev]
+      for (const e of events) {
+        if (!seen.has(e.id)) {
+          next.push(e)
+          seen.add(e.id)
+        }
+      }
+      next.sort((a, b) => a.createdAt - b.createdAt)
+      return next.slice(-80)
+    })
+  }, [])
+
+  const emitReaction = useCallback(
+    (type: ReactionType, userId: string, preset?: { id: string; createdAt: number }) => {
+      const id = preset?.id ?? `rx-${Date.now()}-${idRef.current++}`
+      const createdAt = preset?.createdAt ?? Date.now()
+      const event: ReactionEvent = {
+        id,
+        matchId: channelMatchId,
+        userId,
+        type,
+        createdAt,
+      }
+      pushReactionEffects(event, true)
+    },
+    [channelMatchId, pushReactionEffects],
+  )
+
+  const onLiveInsertReaction = useCallback(
+    (event: ReactionEvent) => {
+      emitReaction(event.type, event.userId, { id: event.id, createdAt: event.createdAt })
+    },
+    [emitReaction],
+  )
+
+  const { publishReaction: publishLiveReaction, isCloudReactionsConfigured } = useLiveMatchReactionsSync({
+    matchId: channelMatchId,
+    enabled: isLiveOpen,
+    onHydrate: mergeHydrateReactions,
+    onLiveInsert: onLiveInsertReaction,
+  })
+  const cloudReactionsEnabled = isCloudReactionsConfigured && isLiveOpen
 
   // Tick pour faire décroître la barre d'ambiance au fil du temps
   const [ambianceTick, setAmbianceTick] = useState(0)
@@ -684,35 +758,20 @@ export function ChannelPage() {
     return true
   }
 
-  const emitReaction = (type: ReactionType, userId: string) => {
-    const id = `rx-${Date.now()}-${idRef.current++}`
-    const createdAt = Date.now()
-    const event: ReactionEvent = {
-      id,
-      matchId: channelMatchId,
-      userId,
-      type,
-      createdAt,
-    }
-    setReactions((prev) => [...prev, event].slice(-80))
-    // Les réactions (goal, confetti, etc.) sont décoratives : elles n'affectent pas le match.
-    // Buts, cartons, arrêts viennent uniquement de la simu du match en temps réel.
-    const side = Math.random() < 0.5 ? 'left' : 'right'
-    const sideJitter = 4 + Math.random() * 6
-    const xPct = side === 'left' ? 2 + sideJitter : 98 - sideJitter
-    const bottomPx = 18 + Math.random() * 92
-    const float: FloatingReaction = { id, type, createdAt, xPct, bottomPx }
-    setFloating((prev) => [...prev, float].slice(-16))
-    window.setTimeout(() => {
-      setFloating((prev) => prev.filter((f) => f.id !== id))
-    }, 950)
-  }
-
   const onReact = (type: ReactionType) => {
     const cost = reactionMeta[type].cost
     const result = betting.spendTokens(cost, 'reaction')
     if (!result.ok) return
-    emitReaction(type, selfChatUserId)
+    void (async () => {
+      if (cloudReactionsEnabled) {
+        const r = await publishLiveReaction(type)
+        if (r.ok) {
+          emitReaction(type, selfChatUserId, { id: r.event.id, createdAt: r.event.createdAt })
+          return
+        }
+      }
+      emitReaction(type, selfChatUserId)
+    })()
   }
 
   useEffect(() => {
@@ -765,7 +824,7 @@ export function ChannelPage() {
 
     timeout = window.setTimeout(tick, 900)
     return () => window.clearTimeout(timeout)
-  }, [match?.status, matchId, stadiumGroupId, salonPoolGroupIds, channelMatchId])
+  }, [match?.status, matchId, stadiumGroupId, salonPoolGroupIds, channelMatchId, emitReaction])
 
   if (!match || !matchId || !matchView) {
     return (
