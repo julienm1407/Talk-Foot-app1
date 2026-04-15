@@ -378,7 +378,11 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await sb.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { display_name: name } },
+        options: {
+          data: { display_name: name },
+          // Même logique que OAuth : le mail de confirmation doit renvoyer vers l’URL réelle (Vercel, etc.)
+          emailRedirectTo: getSupabaseOAuthRedirectTo(),
+        },
       })
       if (error) {
         setAuthNotice(error.message)
