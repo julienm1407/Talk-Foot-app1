@@ -47,6 +47,7 @@ import { randomTribuneForBot } from '../data/tribunes'
 import { useAuth } from '../contexts/AuthContext'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
+import { shouldSimulateLiveCrowd } from '../config/liveSimulation'
 
 const MS_PER_MATCH_MINUTE = 3000
 
@@ -775,6 +776,7 @@ export function ChannelPage() {
   }
 
   useEffect(() => {
+    if (!shouldSimulateLiveCrowd()) return
     if (!match || match.status !== 'live') return
     const phrases = [
       'Ça presse très haut là.',
