@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -15,6 +16,8 @@ import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
 import { chatPersonasPool, currentUser } from '../data/users'
+import { useSupporterGroupChannelSync } from '../hooks/useSupporterGroupChannelSync'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { Message, User } from '../types/chat'
 import { useMessageLikes } from '../hooks/useMessageLikes'
 import { useAutoScroll } from '../hooks/useAutoScroll'
@@ -28,6 +31,7 @@ import { ShareButton } from '../components/ui/ShareButton'
 import type { SupporterChannel, SupporterGroup } from '../types/group'
 import { useMatches } from '../contexts/MatchesContext'
 import { getGroupQuickEmotes, getGroupSalonChatSurfaceStyles } from '../utils/groupSalonStyles'
+import { isUuidMessageId } from '../utils/isUuidMessageId'
 
 const MAX_GROUP_CHANNELS = 14
 
@@ -48,6 +52,8 @@ function newChannelIdFromName(name: string) {
 
 export function GroupPage() {
   const { groupId } = useParams()
+  const { user: authUser } = useAuth()
+  const selfChatUserId = authUser?.id ?? 'me'
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const debateFromQuery = searchParams.get('debate')
@@ -135,6 +141,33 @@ export function GroupPage() {
   const threadKey = group && channel ? `${group.id}:${channel.id}` : ''
 
   const [messagesByThread, setMessagesByThread] = useState<Record<string, Message[]>>({})
+  const mergeRemoteGroupMessages = useCallback(
+    (incoming: Message[]) => {
+      if (!threadKey || !incoming.length) return
+      setMessagesByThread((prev) => {
+        const seen = new Set((prev[threadKey] ?? []).map((m) => m.id))
+        const next = [...(prev[threadKey] ?? [])]
+        for (const m of incoming) {
+          if (!seen.has(m.id)) {
+            next.push(m)
+            seen.add(m.id)
+          }
+        }
+        next.sort((a, b) => a.createdAt - b.createdAt)
+        return { ...prev, [threadKey]: next.slice(-280) }
+      })
+    },
+    [threadKey],
+  )
+
+  const { publishMessage: publishGroupChannelMessage, isCloudChatConfigured } = useSupporterGroupChannelSync({
+    groupId: group?.id ?? '',
+    channelId: channel?.id ?? '',
+    enabled: Boolean(group && channel && isSupabaseConfigured()),
+    onRemoteMessages: mergeRemoteGroupMessages,
+  })
+  const groupCloudChatEnabled = isCloudChatConfigured && Boolean(group && channel)
+
   /** Dernier débat lié au salon « général » — pour re-seeder si ?debate= change. */
   const prevGeneralDebateRef = useRef<string | null | undefined>(undefined)
 
@@ -163,13 +196,16 @@ export function GroupPage() {
 
       if (!shouldReseed) return prev
 
+      const prevList = prev[threadKey] ?? []
+      const cloudOnly = prevList.filter((m) => isUuidMessageId(m.id))
       const seed = buildGroupThreadSeed(
         group.id,
         channel.id,
         channel.name,
         debate && channel.id === 'general' ? debate : null,
       )
-      return { ...prev, [threadKey]: seed }
+      const merged = [...seed, ...cloudOnly].sort((a, b) => a.createdAt - b.createdAt).slice(-280)
+      return { ...prev, [threadKey]: merged }
     })
   }, [group, channel, threadKey, debate, channel?.id])
 
@@ -190,21 +226,65 @@ export function GroupPage() {
     if (meClub && base.me && !base.me.fanClubId) {
       base.me = { ...base.me, fanClubId: meClub }
     }
+    if (authUser) {
+      const seed =
+        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      base[authUser.id] = {
+        id: authUser.id,
+        username: authUser.displayName,
+        avatarSeed: seed,
+        accent: 'emerald',
+        ...(meClub ? { fanClubId: meClub } : {}),
+      }
+    }
     return base
-  }, [debateUsers, favoriteClubIds])
+  }, [debateUsers, favoriteClubIds, authUser])
 
   const visibleMessages = useMemo(() => {
     if (!virageMode || favoriteClubIds.length === 0) return messages
     return messages.filter((m) => {
-      if (m.userId === currentUser.id) return true
+      if (m.userId === selfChatUserId) return true
       const u = usersById[m.userId]
       const fid = u?.fanClubId
       return Boolean(fid && favoriteClubIds.includes(fid))
     })
-  }, [messages, virageMode, favoriteClubIds, usersById])
+  }, [messages, virageMode, favoriteClubIds, usersById, selfChatUserId])
 
   const messageLikes = useMessageLikes()
   const feedRef = useAutoScroll<HTMLDivElement>([visibleMessages.length])
+
+  const tryCloudGroupThenLocal = useCallback(
+    async (msg: Message) => {
+      if (!group || !channel || !threadKey) return
+      if (groupCloudChatEnabled) {
+        const r = await publishGroupChannelMessage({
+          matchId: msg.matchId,
+          text: msg.text,
+          userId: msg.userId,
+          groupId: group.id,
+          channelId: channel.id,
+          groupScarf: msg.groupScarf,
+        })
+        if (r.ok) {
+          setMessagesByThread((prev) => {
+            if ((prev[threadKey] ?? []).some((m) => m.id === r.message.id)) return prev
+            return {
+              ...prev,
+              [threadKey]: [...(prev[threadKey] ?? []), r.message]
+                .sort((a, b) => a.createdAt - b.createdAt)
+                .slice(-280),
+            }
+          })
+          return
+        }
+      }
+      setMessagesByThread((prev) => ({
+        ...prev,
+        [threadKey]: [...(prev[threadKey] ?? []), msg],
+      }))
+    },
+    [group, channel, threadKey, groupCloudChatEnabled, publishGroupChannelMessage],
+  )
 
   const onSend = useCallback(
     (text: string) => {
@@ -218,16 +298,13 @@ export function GroupPage() {
       const msg: Message = {
         id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         matchId: groupThreadMatchId(group.id, channel.id),
-        userId: currentUser.id,
+        userId: selfChatUserId,
         text,
         createdAt: Date.now(),
       }
-      setMessagesByThread((prev) => ({
-        ...prev,
-        [threadKey]: [...(prev[threadKey] ?? []), msg],
-      }))
+      void tryCloudGroupThenLocal(msg)
     },
-    [group, channel, threadKey, isJoined, accessLevel, debate],
+    [group, channel, threadKey, isJoined, accessLevel, debate, tryCloudGroupThenLocal, selfChatUserId],
   )
 
   const onSendScarf = useCallback(
@@ -242,17 +319,14 @@ export function GroupPage() {
       const msg: Message = {
         id: `msg-scarf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         matchId: groupThreadMatchId(group.id, channel.id),
-        userId: currentUser.id,
+        userId: selfChatUserId,
         text: '',
         createdAt: Date.now(),
         groupScarf: payload,
       }
-      setMessagesByThread((prev) => ({
-        ...prev,
-        [threadKey]: [...(prev[threadKey] ?? []), msg],
-      }))
+      void tryCloudGroupThenLocal(msg)
     },
-    [group, channel, threadKey, isJoined, accessLevel, debate],
+    [group, channel, threadKey, isJoined, accessLevel, debate, tryCloudGroupThenLocal, selfChatUserId],
   )
 
   if (!group) {
@@ -878,8 +952,9 @@ export function GroupPage() {
             <MessageList
               messages={visibleMessages}
               usersById={usersById}
+              selfUserId={selfChatUserId}
               getLikes={messageLikes.getLikes}
-              hasLiked={(id) => messageLikes.hasLiked(id, 'me')}
+              hasLiked={(id) => messageLikes.hasLiked(id, selfChatUserId)}
               onToggleLike={(m) => {
                 if (messageLikes.hasLiked(m.id, 'me')) {
                   messageLikes.unlike(m.id)

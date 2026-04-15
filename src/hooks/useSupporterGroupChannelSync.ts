@@ -5,10 +5,13 @@ import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
+import { groupThreadMatchId } from '../utils/groupThreadMessages'
+import { displayNameFromSession } from './useLiveMatchChatSync'
 
-type LiveMsgRow = {
+type GroupMsgRow = {
   id: string
-  match_id: string
+  group_id: string
+  channel_id: string
   user_id: string
   display_name: string
   body: string
@@ -21,7 +24,7 @@ function pickTribune(v: unknown): TribuneId | undefined {
   return undefined
 }
 
-function rowToMessage(row: LiveMsgRow): Message {
+function rowToMessage(row: GroupMsgRow): Message {
   const meta = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {}
   const groupScarf = meta.groupScarf
   const scarfOk =
@@ -37,7 +40,7 @@ function rowToMessage(row: LiveMsgRow): Message {
 
   return {
     id: row.id,
-    matchId: row.match_id,
+    matchId: groupThreadMatchId(row.group_id, row.channel_id),
     userId: row.user_id,
     text: row.body,
     createdAt: new Date(row.created_at).getTime(),
@@ -50,33 +53,18 @@ function rowToMessage(row: LiveMsgRow): Message {
   }
 }
 
-export function displayNameFromSession(user: {
-  user_metadata?: Record<string, unknown>
-  email?: string | null
-}): string {
-  const meta = user.user_metadata
-  const fromMeta =
-    meta && typeof meta.display_name === 'string' ? meta.display_name.trim() : ''
-  if (fromMeta) return fromMeta
-  const email = user.email
-  if (email && typeof email === 'string') {
-    const part = email.split('@')[0]
-    if (part) return part
-  }
-  return 'Supporteur'
-}
-
-export function useLiveMatchChatSync(options: {
-  matchId: string
+export function useSupporterGroupChannelSync(options: {
+  groupId: string
+  channelId: string
   enabled: boolean
   onRemoteMessages: (msgs: Message[]) => void
 }) {
-  const { matchId, enabled, onRemoteMessages } = options
+  const { groupId, channelId, enabled, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
   onRemoteMessagesRef.current = onRemoteMessages
 
   const publishMessage = useCallback(
-    async (msg: Pick<Message, 'matchId' | 'text'> & Partial<Message>) => {
+    async (msg: Pick<Message, 'matchId' | 'text'> & Partial<Message> & { groupId: string; channelId: string }) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
@@ -95,28 +83,29 @@ export function useLiveMatchChatSync(options: {
       const displayName = displayNameFromSession(session.user)
 
       const { data, error } = await sb
-        .from('live_match_messages')
+        .from('supporter_group_channel_messages')
         .insert({
-          match_id: msg.matchId,
+          group_id: msg.groupId,
+          channel_id: msg.channelId,
           user_id: session.user.id,
           display_name: displayName,
           body,
           metadata,
         })
-        .select('id, match_id, user_id, display_name, body, metadata, created_at')
+        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
         .single()
 
       if (error || !data) {
         return { ok: false as const, error: error?.message ?? 'insert_failed' }
       }
 
-      return { ok: true as const, message: rowToMessage(data as LiveMsgRow) }
+      return { ok: true as const, message: rowToMessage(data as GroupMsgRow) }
     },
     [],
   )
 
   useEffect(() => {
-    if (!enabled || !matchId || !isSupabaseConfigured()) return
+    if (!enabled || !groupId || !channelId || !isSupabaseConfigured()) return
 
     const sb = getSupabaseBrowserClient()
     if (!sb) return
@@ -129,32 +118,35 @@ export function useLiveMatchChatSync(options: {
       if (!session || cancelled) return
 
       const { data: rows, error: fetchErr } = await sb
-        .from('live_match_messages')
-        .select('id, match_id, user_id, display_name, body, metadata, created_at')
-        .eq('match_id', matchId)
+        .from('supporter_group_channel_messages')
+        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
+        .eq('group_id', groupId)
+        .eq('channel_id', channelId)
         .order('created_at', { ascending: true })
         .limit(200)
 
       if (!cancelled && !fetchErr && rows?.length) {
-        onRemoteMessagesRef.current((rows as LiveMsgRow[]).map(rowToMessage))
+        onRemoteMessagesRef.current((rows as GroupMsgRow[]).map(rowToMessage))
       }
 
       if (cancelled) return
 
       ch = sb
-        .channel(`live_match_chat:${matchId}`)
+        .channel(`group_ch:${groupId}:${channelId}`)
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
-            table: 'live_match_messages',
-            filter: `match_id=eq.${matchId}`,
+            table: 'supporter_group_channel_messages',
+            filter: `group_id=eq.${groupId}`,
           },
-          (payload: RealtimePostgresChangesPayload<LiveMsgRow>) => {
+          (payload: RealtimePostgresChangesPayload<GroupMsgRow>) => {
             const row = payload.new
             if (!row || typeof row !== 'object') return
-            onRemoteMessagesRef.current([rowToMessage(row as LiveMsgRow)])
+            const r = row as GroupMsgRow
+            if (r.channel_id !== channelId) return
+            onRemoteMessagesRef.current([rowToMessage(r)])
           },
         )
         .subscribe()
@@ -166,7 +158,7 @@ export function useLiveMatchChatSync(options: {
       cancelled = true
       if (ch) void sb.removeChannel(ch)
     }
-  }, [matchId, enabled])
+  }, [groupId, channelId, enabled])
 
   return { publishMessage, isCloudChatConfigured: isSupabaseConfigured() }
 }

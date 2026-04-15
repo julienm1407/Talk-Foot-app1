@@ -1,12 +1,22 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useDirectMessages } from '../hooks/useDirectMessages'
 
-type DirectMessagesApi = ReturnType<typeof useDirectMessages>
+type DirectMessagesApi = ReturnType<typeof useDirectMessages> & {
+  setActiveDmUiThreadId: (id: string | null) => void
+}
 
 const DirectMessagesContext = createContext<DirectMessagesApi | null>(null)
 
 export function DirectMessagesProvider({ children }: { children: ReactNode }) {
-  const value = useDirectMessages()
+  const [activeDmUiThreadId, setActiveDmUiThreadId] = useState<string | null>(null)
+  const dm = useDirectMessages(activeDmUiThreadId)
+  const value = useMemo(
+    () => ({
+      ...dm,
+      setActiveDmUiThreadId,
+    }),
+    [dm],
+  )
   return <DirectMessagesContext.Provider value={value}>{children}</DirectMessagesContext.Provider>
 }
 

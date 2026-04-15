@@ -14,7 +14,12 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const [active, setActive] = useState<DirectThread | null>(null)
-  const { mergedFor, send, visitedIds, markVisited } = useDirectMessagesContext()
+  const { mergedFor, send, visitedIds, markVisited, setActiveDmUiThreadId } = useDirectMessagesContext()
+
+  useEffect(() => {
+    setActiveDmUiThreadId(active?.id ?? null)
+    return () => setActiveDmUiThreadId(null)
+  }, [active, setActiveDmUiThreadId])
 
   useEffect(() => {
     if (active) markVisited(active.id)
