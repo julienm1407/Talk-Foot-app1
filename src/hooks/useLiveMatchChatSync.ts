@@ -3,6 +3,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
 
@@ -124,7 +125,7 @@ export function useLiveMatchChatSync(options: {
     if (!sb) return
 
     let cancelled = false
-    let ch: ReturnType<typeof sb.channel> | null = null
+    const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const run = async () => {
       const session = await ensureSupabaseChatSession(sb)
@@ -137,13 +138,16 @@ export function useLiveMatchChatSync(options: {
         .order('created_at', { ascending: true })
         .limit(200)
 
-      if (!cancelled && !fetchErr && rows?.length) {
+      if (cancelled) return
+
+      if (!fetchErr && rows?.length) {
         onRemoteMessagesRef.current((rows as LiveMsgRow[]).map(rowToMessage))
       }
 
       if (cancelled) return
 
-      ch = sb
+      const matchFilter = postgresChangesEqFilter('match_id', matchId)
+      const channel = sb
         .channel(`live_match_chat:${matchId}`)
         .on(
           'postgres_changes',
@@ -151,7 +155,7 @@ export function useLiveMatchChatSync(options: {
             event: 'INSERT',
             schema: 'public',
             table: 'live_match_messages',
-            filter: `match_id=eq.${matchId}`,
+            filter: matchFilter,
           },
           (payload: RealtimePostgresChangesPayload<LiveMsgRow>) => {
             const row = payload.new
@@ -159,14 +163,27 @@ export function useLiveMatchChatSync(options: {
             onRemoteMessagesRef.current([rowToMessage(row as LiveMsgRow)])
           },
         )
-        .subscribe()
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] live_match_messages realtime:', status)
+          }
+        })
+
+      if (cancelled) {
+        void sb.removeChannel(channel)
+        return
+      }
+      channelRef.current = channel
     }
 
     void run()
 
     return () => {
       cancelled = true
-      if (ch) void sb.removeChannel(ch)
+      if (channelRef.current) {
+        void sb.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [matchId, enabled])
 

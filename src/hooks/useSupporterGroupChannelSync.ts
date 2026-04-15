@@ -4,6 +4,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseAuthenticatedSession } from '../lib/supabase/ensureSession'
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
 import { groupThreadMatchId } from '../utils/groupThreadMessages'
@@ -114,7 +115,7 @@ export function useSupporterGroupChannelSync(options: {
     if (!sb) return
 
     let cancelled = false
-    let ch: ReturnType<typeof sb.channel> | null = null
+    const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const run = async () => {
       const session = await ensureSupabaseAuthenticatedSession(sb)
@@ -131,13 +132,16 @@ export function useSupporterGroupChannelSync(options: {
         .order('created_at', { ascending: true })
         .limit(200)
 
-      if (!cancelled && !fetchErr && rows?.length) {
+      if (cancelled) return
+
+      if (!fetchErr && rows?.length) {
         onRemoteMessagesRef.current((rows as GroupMsgRow[]).map(rowToMessage))
       }
 
       if (cancelled) return
 
-      ch = sb
+      const groupFilter = postgresChangesEqFilter('group_id', groupId)
+      const channel = sb
         .channel(`group_ch:${groupId}:${channelId}`)
         .on(
           'postgres_changes',
@@ -145,7 +149,7 @@ export function useSupporterGroupChannelSync(options: {
             event: 'INSERT',
             schema: 'public',
             table: 'supporter_group_channel_messages',
-            filter: `group_id=eq.${groupId}`,
+            filter: groupFilter,
           },
           (payload: RealtimePostgresChangesPayload<GroupMsgRow>) => {
             const row = payload.new
@@ -155,14 +159,27 @@ export function useSupporterGroupChannelSync(options: {
             onRemoteMessagesRef.current([rowToMessage(r)])
           },
         )
-        .subscribe()
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] supporter_group_channel_messages realtime:', status)
+          }
+        })
+
+      if (cancelled) {
+        void sb.removeChannel(channel)
+        return
+      }
+      channelRef.current = channel
     }
 
     void run()
 
     return () => {
       cancelled = true
-      if (ch) void sb.removeChannel(ch)
+      if (channelRef.current) {
+        void sb.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [groupId, channelId, enabled])
 

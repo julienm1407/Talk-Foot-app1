@@ -69,6 +69,45 @@ export function LiveEffects({
       }, 1200)
       return () => window.clearTimeout(timeout)
     }
+
+    if (last.type === 'rage') {
+      setAmbience('flare')
+      const smoke = Array.from({ length: 14 }).map((_, i) => ({
+        id: `${last.id}-rage-${i}`,
+        type: 'flare' as const,
+        createdAt: last.createdAt,
+        side: Math.random() < 0.5 ? ('left' as const) : ('right' as const),
+        x: (Math.random() - 0.5) * 240,
+        delay: Math.random() * 160,
+        color: i % 2 === 0 ? '#7c3aed' : '#dc2626',
+      }))
+      setFx((prev) => [...prev, ...smoke].slice(-200))
+      const timeout = window.setTimeout(() => {
+        setFx((prev) => prev.filter((p) => p.createdAt !== last.createdAt))
+        setAmbience(null)
+      }, 1100)
+      return () => window.clearTimeout(timeout)
+    }
+
+    if (last.type === 'goal') {
+      setAmbience('confetti')
+      const make = (side: Fx['side']) =>
+        Array.from({ length: 18 }).map((_, i) => ({
+          id: `${last.id}-goal-${side}-${i}`,
+          type: 'confetti' as const,
+          createdAt: last.createdAt,
+          side,
+          x: (Math.random() - 0.5) * 300,
+          delay: Math.random() * 140,
+          color: confettiColors[(Math.random() * confettiColors.length) | 0],
+        }))
+      setFx((prev) => [...prev, ...make('left'), ...make('right')].slice(-200))
+      const timeout = window.setTimeout(() => {
+        setFx((prev) => prev.filter((p) => p.createdAt !== last.createdAt))
+        setAmbience(null)
+      }, 1300)
+      return () => window.clearTimeout(timeout)
+    }
   }, [latest])
 
   return (

@@ -3,6 +3,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import type { ReactionEvent, ReactionType } from '../types/chat'
 
 type ReactionRow = {
@@ -72,7 +73,7 @@ export function useLiveMatchReactionsSync(options: {
     if (!sb) return
 
     let cancelled = false
-    let ch: ReturnType<typeof sb.channel> | null = null
+    const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const run = async () => {
       const session = await ensureSupabaseChatSession(sb)
@@ -85,7 +86,9 @@ export function useLiveMatchReactionsSync(options: {
         .order('created_at', { ascending: true })
         .limit(120)
 
-      if (!cancelled && !fetchErr && rows?.length) {
+      if (cancelled) return
+
+      if (!fetchErr && rows?.length) {
         const events = (rows as ReactionRow[])
           .map((r) => rowToReactionEvent(r, matchId))
           .filter((e): e is ReactionEvent => e != null)
@@ -94,7 +97,8 @@ export function useLiveMatchReactionsSync(options: {
 
       if (cancelled) return
 
-      ch = sb
+      const matchFilter = postgresChangesEqFilter('match_id', matchId)
+      const channel = sb
         .channel(`live_match_rx:${matchId}`)
         .on(
           'postgres_changes',
@@ -102,7 +106,7 @@ export function useLiveMatchReactionsSync(options: {
             event: 'INSERT',
             schema: 'public',
             table: 'live_match_reactions',
-            filter: `match_id=eq.${matchId}`,
+            filter: matchFilter,
           },
           (payload: RealtimePostgresChangesPayload<ReactionRow>) => {
             const row = payload.new
@@ -111,14 +115,27 @@ export function useLiveMatchReactionsSync(options: {
             if (ev) onLiveInsertRef.current(ev)
           },
         )
-        .subscribe()
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] live_match_reactions realtime:', status)
+          }
+        })
+
+      if (cancelled) {
+        void sb.removeChannel(channel)
+        return
+      }
+      channelRef.current = channel
     }
 
     void run()
 
     return () => {
       cancelled = true
-      if (ch) void sb.removeChannel(ch)
+      if (channelRef.current) {
+        void sb.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [matchId, enabled])
 

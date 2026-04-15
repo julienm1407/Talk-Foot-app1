@@ -348,24 +348,38 @@ export function ChannelPage() {
     })
   }, [])
 
-  const mergeHydrateReactions = useCallback((events: ReactionEvent[]) => {
-    if (!events.length) return
-    setReactions((prev) => {
-      const seen = new Set(prev.map((r) => r.id))
-      const next = [...prev]
-      for (const e of events) {
-        if (!seen.has(e.id)) {
-          next.push(e)
-          seen.add(e.id)
+  const mergeHydrateReactions = useCallback(
+    (events: ReactionEvent[]) => {
+      if (!events.length) return
+      setReactions((prev) => {
+        const seen = new Set(prev.map((r) => r.id))
+        const next = [...prev]
+        for (const e of events) {
+          if (!seen.has(e.id)) {
+            next.push(e)
+            seen.add(e.id)
+          }
         }
-      }
-      next.sort((a, b) => a.createdAt - b.createdAt)
-      return next.slice(-80)
-    })
-  }, [])
+        next.sort((a, b) => a.createdAt - b.createdAt)
+        return next.slice(-80)
+      })
+      /* Après hydratation : rejouer léger effet visuel pour les toutes dernières (fumigène / confettis / emojis). */
+      window.setTimeout(() => {
+        for (const e of events.slice(-6)) {
+          pushReactionEffects(e, true)
+        }
+      }, 0)
+    },
+    [pushReactionEffects],
+  )
 
   const emitReaction = useCallback(
-    (type: ReactionType, userId: string, preset?: { id: string; createdAt: number }) => {
+    (
+      type: ReactionType,
+      userId: string,
+      preset?: { id: string; createdAt: number },
+      withFloating = true,
+    ) => {
       const id = preset?.id ?? `rx-${Date.now()}-${idRef.current++}`
       const createdAt = preset?.createdAt ?? Date.now()
       const event: ReactionEvent = {
@@ -375,14 +389,14 @@ export function ChannelPage() {
         type,
         createdAt,
       }
-      pushReactionEffects(event, true)
+      pushReactionEffects(event, withFloating)
     },
     [channelMatchId, pushReactionEffects],
   )
 
   const onLiveInsertReaction = useCallback(
     (event: ReactionEvent) => {
-      emitReaction(event.type, event.userId, { id: event.id, createdAt: event.createdAt })
+      emitReaction(event.type, event.userId, { id: event.id, createdAt: event.createdAt }, true)
     },
     [emitReaction],
   )
