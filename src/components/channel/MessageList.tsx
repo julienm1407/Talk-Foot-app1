@@ -11,9 +11,10 @@ function clamp01(v: number) {
   return Math.max(0, Math.min(1, v))
 }
 
-function importance(u?: User, userId?: string) {
-  if (!u || !userId) return 'normal' as const
-  if (userId === 'me') return 'me' as const
+function importance(u?: User, userId?: string, selfUserId = 'me') {
+  if (!userId) return 'normal' as const
+  if (userId === selfUserId) return 'me' as const
+  if (!u) return 'normal' as const
   if (userId === 'u-1') return 'vip' as const
   if (userId === 'u-2') return 'mod' as const
   return 'normal' as const
@@ -38,12 +39,15 @@ function bubbleClass(kind: ReturnType<typeof importance>) {
 export function MessageList({
   messages,
   usersById,
+  selfUserId = 'me',
   getLikes,
   hasLiked,
   onToggleLike,
 }: {
   messages: Message[]
   usersById: Record<string, User>
+  /** Identifiant auth (ou `me` en mode démo local) pour bulle « Toi ». */
+  selfUserId?: string
   getLikes?: (messageId: string) => number
   hasLiked?: (messageId: string) => boolean
   onToggleLike?: (message: Message) => void
@@ -62,7 +66,7 @@ export function MessageList({
         const translate = -t * 10
 
         const u = usersById[m.userId]
-        const kind = importance(u, m.userId)
+        const kind = importance(u, m.userId, selfUserId)
         const time = new Date(m.createdAt).toLocaleTimeString('fr-FR', {
           hour: '2-digit',
           minute: '2-digit',
@@ -81,7 +85,7 @@ export function MessageList({
               filter: t > 0.7 ? `blur(${(t - 0.7) * 2}px)` : undefined,
             }}
           >
-            {m.userId === 'me' ? (
+            {m.userId === selfUserId ? (
               <ProfileCharacterThumb
                 profile={profile}
                 size="sm"
@@ -90,9 +94,9 @@ export function MessageList({
               />
             ) : (
               <Avatar
-                seed={u?.avatarSeed ?? 'fan'}
+                seed={u?.avatarSeed ?? (m.userId.replace(/-/g, '').slice(0, 12) || 'fan')}
                 accent={u?.accent ?? 'violet'}
-                alt={u?.username ?? 'Utilisateur'}
+                alt={u?.username ?? m.authorDisplayName ?? 'Utilisateur'}
                 className="mt-0.5 shrink-0"
               />
             )}
@@ -104,7 +108,7 @@ export function MessageList({
                     nameClass(kind, u?.accent),
                   )}
                 >
-                  {u?.username ?? 'Inconnu'}
+                  {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
                 </span>
                 {u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
                   <span className="inline-flex max-w-[28%] shrink-0 truncate rounded border border-slate-200/90 bg-slate-50 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide text-slate-600 sm:max-w-[120px]">

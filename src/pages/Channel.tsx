@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { initialMessages } from '../data/messages'
 import { useMatches, REPLAY_LIVE_ID } from '../contexts/MatchesContext'
@@ -44,11 +44,19 @@ import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { salonsForMatch } from '../utils/matchSalons'
 import { aggregateTribuneStats, useTribuneLiveStats } from '../hooks/useTribuneLiveStats'
 import { randomTribuneForBot } from '../data/tribunes'
+import { useAuth } from '../contexts/AuthContext'
+import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 
 const MS_PER_MATCH_MINUTE = 3000
 
 export function ChannelPage() {
   const { matchId } = useParams()
+  const { user: authUser } = useAuth()
+  const selfChatUserId = authUser?.id ?? 'me'
+  const livePersonaSelf = useMemo(() => {
+    if (!authUser) return currentUser
+    return { ...currentUser, id: authUser.id, username: authUser.displayName }
+  }, [authUser])
   const channelMatchId = matchId ?? ''
   const { matches } = useMatches()
   const match = useMemo(
@@ -96,8 +104,19 @@ export function ChannelPage() {
     if (meClub && base.me && !base.me.fanClubId) {
       base.me = { ...base.me, fanClubId: meClub }
     }
+    if (authUser) {
+      const seed =
+        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      base[authUser.id] = {
+        id: authUser.id,
+        username: authUser.displayName,
+        avatarSeed: seed,
+        accent: 'emerald',
+        ...(meClub ? { fanClubId: meClub } : {}),
+      }
+    }
     return base
-  }, [users, favoriteClubIds])
+  }, [users, favoriteClubIds, authUser])
 
   const [messages, setMessages] = useState<Message[]>(() => {
     const seeded = initialMessages.filter((m) => m.matchId === matchId)
@@ -113,6 +132,40 @@ export function ChannelPage() {
           },
         ]
   })
+
+  useEffect(() => {
+    if (!matchId) return
+    const seeded = initialMessages.filter((m) => m.matchId === matchId)
+    setMessages(
+      seeded.length
+        ? seeded
+        : [
+            {
+              id: 'msg-welcome',
+              matchId,
+              userId: 'u-1',
+              text: 'Bienvenue dans le live. Balance ton premier avis.',
+              createdAt: Date.now() - 25_000,
+            },
+          ],
+    )
+  }, [matchId])
+
+  const mergeRemoteMessages = useCallback((incoming: Message[]) => {
+    if (!incoming.length) return
+    setMessages((prev) => {
+      const seen = new Set(prev.map((m) => m.id))
+      const next = [...prev]
+      for (const m of incoming) {
+        if (!seen.has(m.id)) {
+          next.push(m)
+          seen.add(m.id)
+        }
+      }
+      next.sort((a, b) => a.createdAt - b.createdAt)
+      return next.slice(-280)
+    })
+  }, [])
 
   const [reactions, setReactions] = useState<ReactionEvent[]>([])
   const [floating, setFloating] = useState<FloatingReaction[]>([])
@@ -163,7 +216,7 @@ export function ChannelPage() {
     let list = messages
     if (virageMode && favoriteClubIds.length > 0) {
       list = messages.filter((m) => {
-        if (m.userId === currentUser.id) return true
+        if (m.userId === selfChatUserId) return true
         const u = usersById[m.userId]
         const fid = u?.fanClubId
         return Boolean(fid && favoriteClubIds.includes(fid))
@@ -171,7 +224,7 @@ export function ChannelPage() {
     }
     if (stadiumGroupId) {
       list = list.filter(
-        (m) => m.userId === currentUser.id || m.supporterGroupId === stadiumGroupId,
+        (m) => m.userId === selfChatUserId || m.supporterGroupId === stadiumGroupId,
       )
     } else if (chatFeedScope === 'tribune') {
       list = list.filter((m) => !m.tribune || m.tribune === activeTribune)
@@ -185,6 +238,7 @@ export function ChannelPage() {
     activeTribune,
     chatFeedScope,
     stadiumGroupId,
+    selfChatUserId,
   ])
 
   const crowdMetrics = useMemo(() => {
@@ -258,6 +312,13 @@ export function ChannelPage() {
   const isLiveOpen = match
     ? match.status === 'live' || (match.status === 'upcoming' && msUntilKickoff <= 60_000)
     : false
+
+  const { publishMessage, isCloudChatConfigured } = useLiveMatchChatSync({
+    matchId: channelMatchId,
+    enabled: isLiveOpen,
+    onRemoteMessages: mergeRemoteMessages,
+  })
+  const cloudChatEnabled = isCloudChatConfigured && isLiveOpen
 
   // Tick pour faire décroître la barre d'ambiance au fil du temps
   const [ambianceTick, setAmbianceTick] = useState(0)
@@ -540,55 +601,80 @@ export function ChannelPage() {
       ? { tribune: activeTribune, supporterGroupId: stadiumGroupId }
       : { tribune: activeTribune }
 
+  const tryCloudThenLocal = useCallback(
+    async (msg: Message) => {
+      if (cloudChatEnabled) {
+        const r = await publishMessage({
+          matchId: msg.matchId,
+          text: msg.text,
+          tribune: msg.tribune,
+          supporterGroupId: msg.supporterGroupId,
+          gifUrl: msg.gifUrl,
+          emoteId: msg.emoteId,
+          groupScarf: msg.groupScarf,
+        })
+        if (r.ok) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === r.message.id)) return prev
+            return [...prev, r.message].sort((a, b) => a.createdAt - b.createdAt).slice(-280)
+          })
+          return
+        }
+      }
+      setMessages((prev) => [...prev, msg])
+    },
+    [cloudChatEnabled, publishMessage],
+  )
+
   const onSend = (text: string) => {
     const msg: Message = {
       id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       matchId: channelMatchId,
-      userId: currentUser.id,
+      userId: selfChatUserId,
       text,
       createdAt: Date.now(),
       ...messageExtras(),
     }
-    setMessages((prev) => [...prev, msg])
+    void tryCloudThenLocal(msg)
   }
 
   const onSendGif = (gifUrl: string) => {
     const msg: Message = {
       id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       matchId: channelMatchId,
-      userId: currentUser.id,
+      userId: selfChatUserId,
       text: '[GIF]',
       createdAt: Date.now(),
       gifUrl,
       ...messageExtras(),
     }
-    setMessages((prev) => [...prev, msg])
+    void tryCloudThenLocal(msg)
   }
 
   const onSendEmote = (emoteId: string) => {
     const msg: Message = {
       id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       matchId: channelMatchId,
-      userId: currentUser.id,
+      userId: selfChatUserId,
       text: '[Emote]',
       createdAt: Date.now(),
       emoteId,
       ...messageExtras(),
     }
-    setMessages((prev) => [...prev, msg])
+    void tryCloudThenLocal(msg)
   }
 
   const onSendScarf = (payload: NonNullable<Message['groupScarf']>) => {
     const msg: Message = {
       id: `msg-scarf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       matchId: channelMatchId,
-      userId: currentUser.id,
+      userId: selfChatUserId,
       text: '',
       createdAt: Date.now(),
       groupScarf: payload,
       ...messageExtras(),
     }
-    setMessages((prev) => [...prev, msg])
+    void tryCloudThenLocal(msg)
   }
 
   const handleUnlockEmote = (emoteId: string, cost: number): boolean => {
@@ -626,7 +712,7 @@ export function ChannelPage() {
     const cost = reactionMeta[type].cost
     const result = betting.spendTokens(cost, 'reaction')
     if (!result.ok) return
-    emitReaction(type, currentUser.id)
+    emitReaction(type, selfChatUserId)
   }
 
   useEffect(() => {
@@ -737,17 +823,17 @@ export function ChannelPage() {
         {isLiveOpen && match.status === 'live' && (
           <LiveCommentator
             pipTargetRef={pipContainerRef}
-            user={currentUser}
+            user={livePersonaSelf}
             onCommentary={(text) => {
               const msg: Message = {
                 id: `msg-com-${Date.now()}`,
                 matchId: channelMatchId,
-                userId: currentUser.id,
+                userId: selfChatUserId,
                 text: `🎙️ ${text}`,
                 createdAt: Date.now(),
                 ...messageExtras(),
               }
-              setMessages((prev) => [...prev, msg])
+              void tryCloudThenLocal(msg)
             }}
           />
         )}
@@ -1059,8 +1145,9 @@ export function ChannelPage() {
                       <MessageList
                         messages={visibleMessages}
                         usersById={usersById}
+                        selfUserId={selfChatUserId}
                         getLikes={messageLikes.getLikes}
-                        hasLiked={(id) => messageLikes.hasLiked(id, 'me')}
+                        hasLiked={(id) => messageLikes.hasLiked(id, selfChatUserId)}
                         onToggleLike={(m) => {
                           if (messageLikes.hasLiked(m.id, 'me')) {
                             messageLikes.unlike(m.id)

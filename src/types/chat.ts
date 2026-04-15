@@ -20,6 +20,8 @@ export type Message = {
   id: string
   matchId: string
   userId: string
+  /** Pseudo affiché pour les messages synchronisés (hors usersById local). */
+  authorDisplayName?: string
   text: string
   createdAt: number
   gifUrl?: string

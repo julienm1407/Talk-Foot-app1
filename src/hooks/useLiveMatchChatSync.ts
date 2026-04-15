@@ -1,0 +1,182 @@
+import { useCallback, useEffect, useRef } from 'react'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import type { Message } from '../types/chat'
+import type { TribuneId } from '../types/tribune'
+
+type LiveMsgRow = {
+  id: string
+  match_id: string
+  user_id: string
+  display_name: string
+  body: string
+  metadata: Record<string, unknown> | null
+  created_at: string
+}
+
+function pickTribune(v: unknown): TribuneId | undefined {
+  if (v === 'virage' || v === 'analyse' || v === 'chill') return v
+  return undefined
+}
+
+function rowToMessage(row: LiveMsgRow): Message {
+  const meta = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {}
+  const groupScarf = meta.groupScarf
+  const scarfOk =
+    groupScarf &&
+    typeof groupScarf === 'object' &&
+    !Array.isArray(groupScarf) &&
+    typeof (groupScarf as { groupId?: unknown }).groupId === 'string' &&
+    typeof (groupScarf as { groupName?: unknown }).groupName === 'string' &&
+    typeof (groupScarf as { text?: unknown }).text === 'string' &&
+    typeof (groupScarf as { colorA?: unknown }).colorA === 'string' &&
+    typeof (groupScarf as { colorB?: unknown }).colorB === 'string' &&
+    typeof (groupScarf as { colorC?: unknown }).colorC === 'string'
+
+  return {
+    id: row.id,
+    matchId: row.match_id,
+    userId: row.user_id,
+    text: row.body,
+    createdAt: new Date(row.created_at).getTime(),
+    authorDisplayName: row.display_name,
+    tribune: pickTribune(meta.tribune),
+    supporterGroupId: typeof meta.supporterGroupId === 'string' ? meta.supporterGroupId : undefined,
+    gifUrl: typeof meta.gifUrl === 'string' ? meta.gifUrl : undefined,
+    emoteId: typeof meta.emoteId === 'string' ? meta.emoteId : undefined,
+    groupScarf: scarfOk ? (groupScarf as NonNullable<Message['groupScarf']>) : undefined,
+  }
+}
+
+function displayNameFromSession(user: {
+  user_metadata?: Record<string, unknown>
+  email?: string | null
+}): string {
+  const meta = user.user_metadata
+  const fromMeta =
+    meta && typeof meta.display_name === 'string' ? meta.display_name.trim() : ''
+  if (fromMeta) return fromMeta
+  const email = user.email
+  if (email && typeof email === 'string') {
+    const part = email.split('@')[0]
+    if (part) return part
+  }
+  return 'Supporteur'
+}
+
+export function useLiveMatchChatSync(options: {
+  matchId: string
+  enabled: boolean
+  onRemoteMessages: (msgs: Message[]) => void
+}) {
+  const { matchId, enabled, onRemoteMessages } = options
+  const onRemoteMessagesRef = useRef(onRemoteMessages)
+  onRemoteMessagesRef.current = onRemoteMessages
+
+  const publishMessage = useCallback(
+    async (msg: Pick<Message, 'matchId' | 'text'> & Partial<Message>) => {
+      if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false as const, error: 'no_client' }
+
+      let { data: sessionData } = await sb.auth.getSession()
+      let session = sessionData.session
+      if (!session) {
+        const { data: anonData, error: anonErr } = await sb.auth.signInAnonymously()
+        if (anonErr || !anonData.session) {
+          return { ok: false as const, error: anonErr?.message ?? 'no_session' }
+        }
+        session = anonData.session
+      }
+
+      const body = msg.text ?? ''
+      const metadata: Record<string, unknown> = {}
+      if (msg.tribune) metadata.tribune = msg.tribune
+      if (msg.supporterGroupId) metadata.supporterGroupId = msg.supporterGroupId
+      if (msg.gifUrl) metadata.gifUrl = msg.gifUrl
+      if (msg.emoteId) metadata.emoteId = msg.emoteId
+      if (msg.groupScarf) metadata.groupScarf = msg.groupScarf
+
+      const displayName = displayNameFromSession(session.user)
+
+      const { data, error } = await sb
+        .from('live_match_messages')
+        .insert({
+          match_id: msg.matchId,
+          user_id: session.user.id,
+          display_name: displayName,
+          body,
+          metadata,
+        })
+        .select('id, match_id, user_id, display_name, body, metadata, created_at')
+        .single()
+
+      if (error || !data) {
+        return { ok: false as const, error: error?.message ?? 'insert_failed' }
+      }
+
+      return { ok: true as const, message: rowToMessage(data as LiveMsgRow) }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (!enabled || !matchId || !isSupabaseConfigured()) return
+
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+
+    let cancelled = false
+    let ch: ReturnType<typeof sb.channel> | null = null
+
+    const run = async () => {
+      let session = (await sb.auth.getSession()).data.session
+      if (!session) {
+        const { data: anonData } = await sb.auth.signInAnonymously()
+        session = anonData.session ?? null
+      }
+      if (!session || cancelled) return
+
+      const { data: rows, error: fetchErr } = await sb
+        .from('live_match_messages')
+        .select('id, match_id, user_id, display_name, body, metadata, created_at')
+        .eq('match_id', matchId)
+        .order('created_at', { ascending: true })
+        .limit(200)
+
+      if (!cancelled && !fetchErr && rows?.length) {
+        onRemoteMessagesRef.current((rows as LiveMsgRow[]).map(rowToMessage))
+      }
+
+      if (cancelled) return
+
+      ch = sb
+        .channel(`live_match_chat:${matchId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'live_match_messages',
+            filter: `match_id=eq.${matchId}`,
+          },
+          (payload: RealtimePostgresChangesPayload<LiveMsgRow>) => {
+            const row = payload.new
+            if (!row || typeof row !== 'object') return
+            onRemoteMessagesRef.current([rowToMessage(row as LiveMsgRow)])
+          },
+        )
+        .subscribe()
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+      if (ch) void sb.removeChannel(ch)
+    }
+  }, [matchId, enabled])
+
+  return { publishMessage, isCloudChatConfigured: isSupabaseConfigured() }
+}
