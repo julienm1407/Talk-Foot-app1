@@ -59,13 +59,16 @@ function rowToMessage(row: GroupMsgRow): Message {
   }
 }
 
+export type SupporterGroupRemoteOrigin = 'history' | 'live'
+
 export function useSupporterGroupChannelSync(options: {
   groupId: string
   channelId: string
   enabled: boolean
   /** Visiteur sur débat public (général) : pas d’upsert membre, le serveur filtre via metadata.tf_public_debate. */
   skipMembershipUpsert?: boolean
-  onRemoteMessages: (msgs: Message[]) => void
+  /** `history` = lot initial depuis Postgres (y compris tableau vide) ; `live` = insert temps réel. */
+  onRemoteMessages: (msgs: Message[], origin: SupporterGroupRemoteOrigin) => void
 }) {
   const { groupId, channelId, enabled, skipMembershipUpsert, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
@@ -154,7 +157,7 @@ export function useSupporterGroupChannelSync(options: {
         .eq('group_id', groupId)
         .eq('channel_id', channelId)
         .order('created_at', { ascending: true })
-        .limit(200)
+        .limit(400)
 
       if (cancelled) return
 
@@ -162,8 +165,11 @@ export function useSupporterGroupChannelSync(options: {
         console.warn('[Talk Foot] Fetch messages groupe:', fetchErr.message)
       }
 
-      if (!fetchErr && rows?.length) {
-        onRemoteMessagesRef.current((rows as GroupMsgRow[]).map(rowToMessage))
+      if (!fetchErr) {
+        onRemoteMessagesRef.current(
+          (rows ?? []).map((row) => rowToMessage(row as GroupMsgRow)),
+          'history',
+        )
       }
 
       if (cancelled) return
@@ -184,7 +190,7 @@ export function useSupporterGroupChannelSync(options: {
             if (!row || typeof row !== 'object') return
             const r = row as GroupMsgRow
             if (r.group_id !== groupId || r.channel_id !== channelId) return
-            onRemoteMessagesRef.current([rowToMessage(r)])
+            onRemoteMessagesRef.current([rowToMessage(r)], 'live')
           },
         )
         .subscribe((status) => {

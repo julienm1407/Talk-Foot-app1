@@ -16,7 +16,10 @@ import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
 import { chatPersonasPool, currentUser } from '../data/users'
-import { useSupporterGroupChannelSync } from '../hooks/useSupporterGroupChannelSync'
+import {
+  useSupporterGroupChannelSync,
+  type SupporterGroupRemoteOrigin,
+} from '../hooks/useSupporterGroupChannelSync'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -36,6 +39,8 @@ import { getGroupQuickEmotes, getGroupSalonChatSurfaceStyles } from '../utils/gr
 import { isUuidMessageId } from '../utils/isUuidMessageId'
 
 const MAX_GROUP_CHANNELS = 14
+/** Messages affichés par salon (seed démo + historique Supabase). */
+const MAX_GROUP_CHANNEL_MESSAGES = 400
 
 /** Démo : après enregistrement d’un média, passage automatique en « validé » pour montrer le flux. */
 const DEMO_MODERATION_APPROVE_MS = 5200
@@ -141,28 +146,63 @@ export function GroupPage() {
     return group.channels.find((c) => c.id === channelId) ?? group.channels[0]
   }, [channelId, group])
 
+  const channelRef = useRef(channel)
+  channelRef.current = channel
+  const debateRef = useRef(debate)
+  debateRef.current = debate
+
   const threadKey = group && channel ? `${group.id}:${channel.id}` : ''
   const threadKeyRef = useRef(threadKey)
   threadKeyRef.current = threadKey
 
   const [messagesByThread, setMessagesByThread] = useState<Record<string, Message[]>>({})
-  const mergeRemoteGroupMessages = useCallback((incoming: Message[]) => {
-    if (!incoming.length) return
-    setMessagesByThread((prev) => {
-      const key = threadKeyRef.current
-      if (!key) return prev
-      const seen = new Set((prev[key] ?? []).map((m) => m.id))
-      const next = [...(prev[key] ?? [])]
-      for (const m of incoming) {
-        if (!seen.has(m.id)) {
-          next.push(m)
-          seen.add(m.id)
+  const mergeRemoteGroupMessages = useCallback(
+    (incoming: Message[], origin: SupporterGroupRemoteOrigin) => {
+      setMessagesByThread((prev) => {
+        const key = threadKeyRef.current
+        if (!key) return prev
+
+        if (origin === 'history') {
+          const g = groupRef.current
+          const ch = channelRef.current
+          if (!g || !ch) return prev
+          const d = debateRef.current
+          const seed = buildGroupThreadSeed(
+            g.id,
+            ch.id,
+            ch.name,
+            d && ch.id === 'general' ? d : null,
+          )
+          const seenCloud = new Set<string>()
+          const cloud = incoming
+            .filter((m) => {
+              if (!isUuidMessageId(m.id)) return false
+              if (seenCloud.has(m.id)) return false
+              seenCloud.add(m.id)
+              return true
+            })
+            .sort((a, b) => a.createdAt - b.createdAt)
+          const merged = [...seed, ...cloud]
+            .sort((a, b) => a.createdAt - b.createdAt)
+            .slice(-MAX_GROUP_CHANNEL_MESSAGES)
+          return { ...prev, [key]: merged }
         }
-      }
-      next.sort((a, b) => a.createdAt - b.createdAt)
-      return { ...prev, [key]: next.slice(-280) }
-    })
-  }, [])
+
+        if (!incoming.length) return prev
+        const seen = new Set((prev[key] ?? []).map((m) => m.id))
+        const next = [...(prev[key] ?? [])]
+        for (const m of incoming) {
+          if (!seen.has(m.id)) {
+            next.push(m)
+            seen.add(m.id)
+          }
+        }
+        next.sort((a, b) => a.createdAt - b.createdAt)
+        return { ...prev, [key]: next.slice(-MAX_GROUP_CHANNEL_MESSAGES) }
+      })
+    },
+    [],
+  )
 
   const isOpenPublicDebateSalon = Boolean(
     group &&
@@ -244,7 +284,9 @@ export function GroupPage() {
         channel.name,
         debate && channel.id === 'general' ? debate : null,
       )
-      const merged = [...seed, ...cloudOnly].sort((a, b) => a.createdAt - b.createdAt).slice(-280)
+      const merged = [...seed, ...cloudOnly]
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .slice(-MAX_GROUP_CHANNEL_MESSAGES)
       return { ...prev, [threadKey]: merged }
     })
   }, [group, channel, threadKey, debate, channel?.id])
@@ -317,7 +359,7 @@ export function GroupPage() {
               ...prev,
               [threadKey]: [...(prev[threadKey] ?? []), r.message]
                 .sort((a, b) => a.createdAt - b.createdAt)
-                .slice(-280),
+                .slice(-MAX_GROUP_CHANNEL_MESSAGES),
             }
           })
           return
