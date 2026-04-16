@@ -1,4 +1,6 @@
 import { Card } from './Card'
+import { AdsenseDisplayUnit } from '../ads/AdsenseDisplayUnit'
+import { getLiveAdsenseUnit } from '../../config/ads'
 import { cn } from '../../utils/cn'
 
 export function AdSlot({
@@ -21,12 +23,45 @@ export function AdSlot({
   variant?: 'default' | 'rail'
   className?: string
 }) {
+  const placementKey = imageSeed
+  const live = getLiveAdsenseUnit(placementKey)
+
   const gradient =
     tone === 'navy'
       ? 'from-[#0b1b3a]/12 via-white/70 to-white/80'
       : tone === 'sky'
         ? 'from-sky-400/18 via-white/70 to-white/80'
         : 'from-blue-600/14 via-white/70 to-white/80'
+
+  if (live && variant === 'rail') {
+    return (
+      <div
+        role="complementary"
+        className={cn('overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm', className)}
+        aria-label="Publicité"
+      >
+        <AdsenseDisplayUnit
+          client={live.client}
+          slot={live.slot}
+          format="vertical"
+          className="min-h-[280px] w-full max-w-full"
+        />
+      </div>
+    )
+  }
+
+  if (live) {
+    return (
+      <Card elevation="none" className={cn('overflow-hidden', className)}>
+        <AdsenseDisplayUnit
+          client={live.client}
+          slot={live.slot}
+          format={compact ? 'horizontal' : 'rectangle'}
+          className={cn('w-full max-w-full', compact ? 'min-h-[72px]' : 'min-h-[100px]')}
+        />
+      </Card>
+    )
+  }
 
   if (variant === 'rail') {
     return (

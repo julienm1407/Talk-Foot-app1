@@ -7,6 +7,22 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string
   readonly VITE_ADMIN_EMAILS?: string
   readonly VITE_API_SPORTS_KEY?: string
+  /** Google AdSense — ID éditeur `ca-pub-…` ; sans ceci, encarts mock. */
+  readonly VITE_ADSENSE_CLIENT?: string
+  /** Slot unique pour tous les emplacements si les slots nommés sont vides. */
+  readonly VITE_ADSENSE_SLOT_DEFAULT?: string
+  readonly VITE_ADSENSE_SLOT_RAIL_LEFT_A?: string
+  readonly VITE_ADSENSE_SLOT_RAIL_LEFT_B?: string
+  readonly VITE_ADSENSE_SLOT_RAIL_RIGHT_A?: string
+  readonly VITE_ADSENSE_SLOT_RAIL_RIGHT_B?: string
+  readonly VITE_ADSENSE_SLOT_HOME_UNDER_HERO_DESKTOP?: string
+  readonly VITE_ADSENSE_SLOT_HOME_UNDER_HERO?: string
+  readonly VITE_ADSENSE_SLOT_HOME_CAROUSEL?: string
+  readonly VITE_ADSENSE_SLOT_HOME_BET?: string
+  readonly VITE_ADSENSE_SLOT_HOME_WEAR?: string
+  readonly VITE_ADSENSE_SLOT_HOME_STREAM?: string
+  readonly VITE_ADSENSE_SLOT_HOME_LEFT?: string
+  readonly VITE_ADSENSE_SLOT_HOME_RIGHT?: string
 }
 
 interface ImportMeta {
