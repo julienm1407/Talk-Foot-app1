@@ -59,7 +59,17 @@ function rowToMessage(row: GroupMsgRow): Message {
   }
 }
 
-export type SupporterGroupRemoteOrigin = 'history' | 'live'
+export type SupporterGroupRemoteOrigin = 'history' | 'live' | 'older'
+
+export type SupporterGroupRemoteMeta = {
+  /** Lot initial plein → il peut exister des messages plus anciens sur le serveur. */
+  hasMoreOlder?: boolean
+}
+
+/** Derniers messages au chargement (ordre desc côté requête, puis chronologique côté app). */
+export const GROUP_CLOUD_HISTORY_INITIAL = 400
+/** Taille d’un lot « plus ancien ». */
+export const GROUP_CLOUD_HISTORY_OLDER = 150
 
 export function useSupporterGroupChannelSync(options: {
   groupId: string
@@ -67,8 +77,8 @@ export function useSupporterGroupChannelSync(options: {
   enabled: boolean
   /** Visiteur sur débat public (général) : pas d’upsert membre, le serveur filtre via metadata.tf_public_debate. */
   skipMembershipUpsert?: boolean
-  /** `history` = lot initial depuis Postgres (y compris tableau vide) ; `live` = insert temps réel. */
-  onRemoteMessages: (msgs: Message[], origin: SupporterGroupRemoteOrigin) => void
+  /** `history` = lot initial ; `live` = temps réel ; `older` = pagination passée (voir merge côté page). */
+  onRemoteMessages: (msgs: Message[], origin: SupporterGroupRemoteOrigin, meta?: SupporterGroupRemoteMeta) => void
 }) {
   const { groupId, channelId, enabled, skipMembershipUpsert, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
@@ -156,8 +166,8 @@ export function useSupporterGroupChannelSync(options: {
         .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
         .eq('group_id', groupId)
         .eq('channel_id', channelId)
-        .order('created_at', { ascending: true })
-        .limit(400)
+        .order('created_at', { ascending: false })
+        .limit(GROUP_CLOUD_HISTORY_INITIAL)
 
       if (cancelled) return
 
@@ -166,9 +176,11 @@ export function useSupporterGroupChannelSync(options: {
       }
 
       if (!fetchErr) {
+        const chronological = (rows ?? []).slice().reverse()
         onRemoteMessagesRef.current(
-          (rows ?? []).map((row) => rowToMessage(row as GroupMsgRow)),
+          chronological.map((row) => rowToMessage(row as GroupMsgRow)),
           'history',
+          { hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_INITIAL },
         )
       }
 
@@ -190,7 +202,7 @@ export function useSupporterGroupChannelSync(options: {
             if (!row || typeof row !== 'object') return
             const r = row as GroupMsgRow
             if (r.group_id !== groupId || r.channel_id !== channelId) return
-            onRemoteMessagesRef.current([rowToMessage(r)], 'live')
+            onRemoteMessagesRef.current([rowToMessage(r)], 'live', undefined)
           },
         )
         .subscribe((status) => {
@@ -217,5 +229,39 @@ export function useSupporterGroupChannelSync(options: {
     }
   }, [groupId, channelId, enabled, skipMembershipUpsert])
 
-  return { publishMessage, isCloudChatConfigured: isSupabaseConfigured() }
+  const loadOlderMessages = useCallback(
+    async (
+      beforeCreatedAtIso: string,
+    ): Promise<{ ok: true; messages: Message[]; hasMoreOlder: boolean } | { ok: false; error: string }> => {
+      if (!isSupabaseConfigured() || !groupId || !channelId) return { ok: false, error: 'no_config' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false, error: 'no_client' }
+      const session = await ensureSupabaseAuthenticatedSession(sb)
+      if (!session) return { ok: false, error: 'no_session' }
+
+      const { data, error } = await sb
+        .from('supporter_group_channel_messages')
+        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
+        .eq('group_id', groupId)
+        .eq('channel_id', channelId)
+        .lt('created_at', beforeCreatedAtIso)
+        .order('created_at', { ascending: false })
+        .limit(GROUP_CLOUD_HISTORY_OLDER)
+
+      if (error) {
+        if (import.meta.env.DEV) console.warn('[Talk Foot] Fetch messages groupe (older):', error.message)
+        return { ok: false, error: error.message }
+      }
+      const chronological = (data ?? []).slice().reverse()
+      const messages = chronological.map((row) => rowToMessage(row as GroupMsgRow))
+      return {
+        ok: true,
+        messages,
+        hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_OLDER,
+      }
+    },
+    [groupId, channelId],
+  )
+
+  return { publishMessage, loadOlderMessages, isCloudChatConfigured: isSupabaseConfigured() }
 }

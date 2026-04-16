@@ -18,6 +18,7 @@ import { MessageComposer } from '../components/channel/MessageComposer'
 import { chatPersonasPool, currentUser } from '../data/users'
 import {
   useSupporterGroupChannelSync,
+  type SupporterGroupRemoteMeta,
   type SupporterGroupRemoteOrigin,
 } from '../hooks/useSupporterGroupChannelSync'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
@@ -39,8 +40,8 @@ import { getGroupQuickEmotes, getGroupSalonChatSurfaceStyles } from '../utils/gr
 import { isUuidMessageId } from '../utils/isUuidMessageId'
 
 const MAX_GROUP_CHANNELS = 14
-/** Messages affichés par salon (seed démo + historique Supabase). */
-const MAX_GROUP_CHANNEL_MESSAGES = 400
+/** Plafond messages par salon (seed + cloud, après chargements « plus anciens »). */
+const MAX_GROUP_CHANNEL_MESSAGES = 2000
 
 /** Démo : après enregistrement d’un média, passage automatique en « validé » pour montrer le flux. */
 const DEMO_MODERATION_APPROVE_MS = 5200
@@ -156,8 +157,15 @@ export function GroupPage() {
   threadKeyRef.current = threadKey
 
   const [messagesByThread, setMessagesByThread] = useState<Record<string, Message[]>>({})
+  const [salonSearchQuery, setSalonSearchQuery] = useState('')
+  const [hasOlderOnServer, setHasOlderOnServer] = useState(false)
+  const [olderLoading, setOlderLoading] = useState(false)
+
   const mergeRemoteGroupMessages = useCallback(
-    (incoming: Message[], origin: SupporterGroupRemoteOrigin) => {
+    (incoming: Message[], origin: SupporterGroupRemoteOrigin, meta?: SupporterGroupRemoteMeta) => {
+      if (origin === 'history' && meta?.hasMoreOlder !== undefined) {
+        setHasOlderOnServer(meta.hasMoreOlder)
+      }
       setMessagesByThread((prev) => {
         const key = threadKeyRef.current
         if (!key) return prev
@@ -183,6 +191,23 @@ export function GroupPage() {
             })
             .sort((a, b) => a.createdAt - b.createdAt)
           const merged = [...seed, ...cloud]
+            .sort((a, b) => a.createdAt - b.createdAt)
+            .slice(-MAX_GROUP_CHANNEL_MESSAGES)
+          return { ...prev, [key]: merged }
+        }
+
+        if (origin === 'older') {
+          if (!incoming.length) return prev
+          const g = groupRef.current
+          const ch = channelRef.current
+          if (!g || !ch) return prev
+          const cur = prev[key] ?? []
+          const seedPart = cur.filter((m) => !isUuidMessageId(m.id))
+          const cloudPart = cur.filter((m) => isUuidMessageId(m.id))
+          const seen = new Set(cloudPart.map((m) => m.id))
+          const added = incoming.filter((m) => !seen.has(m.id))
+          const newCloud = [...added, ...cloudPart].sort((a, b) => a.createdAt - b.createdAt)
+          const merged = [...seedPart, ...newCloud]
             .sort((a, b) => a.createdAt - b.createdAt)
             .slice(-MAX_GROUP_CHANNEL_MESSAGES)
           return { ...prev, [key]: merged }
@@ -224,13 +249,14 @@ export function GroupPage() {
       group && (group.createdBy === 'me' || isJoined(group.id) || isOpenPublicDebateSalon),
     )
 
-  const { publishMessage: publishGroupChannelMessage } = useSupporterGroupChannelSync({
-    groupId: group?.id ?? '',
-    channelId: channel?.id ?? '',
-    enabled: groupCloudChatEnabled,
-    skipMembershipUpsert: skipCloudMemberUpsert,
-    onRemoteMessages: mergeRemoteGroupMessages,
-  })
+  const { publishMessage: publishGroupChannelMessage, loadOlderMessages: loadOlderCloudMessages } =
+    useSupporterGroupChannelSync({
+      groupId: group?.id ?? '',
+      channelId: channel?.id ?? '',
+      enabled: groupCloudChatEnabled,
+      skipMembershipUpsert: skipCloudMemberUpsert,
+      onRemoteMessages: mergeRemoteGroupMessages,
+    })
 
   /** Ré-enregistre l’adhésion côté Supabase à l’ouverture du salon (répare un « Rejoindre » raté ou hors-ligne). */
   useEffect(() => {
@@ -293,6 +319,11 @@ export function GroupPage() {
 
   const messages = threadKey ? messagesByThread[threadKey] ?? [] : []
 
+  useEffect(() => {
+    setSalonSearchQuery('')
+    setHasOlderOnServer(false)
+  }, [threadKey])
+
   const debateUsers = useMemo(
     () => (debate ? debatePreviewUsersById(debate) : {}),
     [debate],
@@ -336,8 +367,47 @@ export function GroupPage() {
     })
   }, [messages, virageMode, favoriteClubIds, usersById, selfChatUserId])
 
+  const displayMessages = useMemo(() => {
+    const q = salonSearchQuery.trim().toLowerCase()
+    if (!q) return visibleMessages
+    return visibleMessages.filter((m) => {
+      const text = (m.text ?? '').toLowerCase()
+      const author = (m.authorDisplayName ?? usersById[m.userId]?.username ?? '').toLowerCase()
+      return text.includes(q) || author.includes(q)
+    })
+  }, [visibleMessages, salonSearchQuery, usersById])
+
+  const oldestCloudIso = useMemo(() => {
+    const cloud = messages.filter((m) => isUuidMessageId(m.id))
+    if (!cloud.length) return null
+    const minTs = Math.min(...cloud.map((m) => m.createdAt))
+    return new Date(minTs).toISOString()
+  }, [messages])
+
+  const onLoadOlderCloudMessages = useCallback(async () => {
+    if (!oldestCloudIso || olderLoading || !groupCloudChatEnabled) return
+    setOlderLoading(true)
+    try {
+      const r = await loadOlderCloudMessages(oldestCloudIso)
+      if (r.ok) {
+        if (r.messages.length) mergeRemoteGroupMessages(r.messages, 'older')
+        setHasOlderOnServer(r.hasMoreOlder)
+      } else {
+        setHasOlderOnServer(false)
+      }
+    } finally {
+      setOlderLoading(false)
+    }
+  }, [
+    oldestCloudIso,
+    olderLoading,
+    groupCloudChatEnabled,
+    loadOlderCloudMessages,
+    mergeRemoteGroupMessages,
+  ])
+
   const messageLikes = useMessageLikes()
-  const feedRef = useAutoScroll<HTMLDivElement>([visibleMessages.length])
+  const feedRef = useAutoScroll<HTMLDivElement>([displayMessages.length])
 
   const tryCloudGroupThenLocal = useCallback(
     async (msg: Message) => {
@@ -1033,6 +1103,35 @@ export function GroupPage() {
             </div>
           ) : null}
 
+          <div className="mx-4 mt-3 shrink-0 space-y-2 sm:mx-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <Input
+                type="search"
+                value={salonSearchQuery}
+                onChange={(e) => setSalonSearchQuery(e.target.value)}
+                placeholder="Rechercher dans ce salon…"
+                className="h-10 flex-1 rounded-xl border-tf-grey-pastel/80 text-sm font-semibold"
+                aria-label="Rechercher dans les messages du salon"
+              />
+              {salonSearchQuery.trim() ? (
+                <p className="text-center text-[11px] font-bold text-tf-grey sm:min-w-[7rem] sm:text-left">
+                  {displayMessages.length} résultat{displayMessages.length !== 1 ? 's' : ''}
+                </p>
+              ) : null}
+            </div>
+            {groupCloudChatEnabled && hasOlderOnServer && oldestCloudIso ? (
+              <Button
+                type="button"
+                variant="soft"
+                className="h-9 w-full rounded-xl text-xs font-black sm:w-auto"
+                disabled={olderLoading}
+                onClick={() => void onLoadOlderCloudMessages()}
+              >
+                {olderLoading ? 'Chargement…' : 'Messages plus anciens'}
+              </Button>
+            ) : null}
+          </div>
+
           <div
             ref={feedRef}
             className={cn(
@@ -1049,7 +1148,7 @@ export function GroupPage() {
             aria-live="polite"
           >
             <MessageList
-              messages={visibleMessages}
+              messages={displayMessages}
               usersById={usersById}
               selfUserId={selfChatUserId}
               getLikes={messageLikes.getLikes}
