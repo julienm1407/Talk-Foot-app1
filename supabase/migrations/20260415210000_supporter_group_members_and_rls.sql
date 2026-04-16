@@ -22,17 +22,14 @@ create index if not exists supporter_group_members_user_idx
 
 alter table public.supporter_group_members enable row level security;
 
+-- Select : uniquement ses propres lignes (évite la récursion RLS si on relit la même table dans EXISTS).
 drop policy if exists "supporter_group_members_select" on public.supporter_group_members;
 create policy "supporter_group_members_select"
   on public.supporter_group_members for select
   to authenticated
   using (
     (auth.jwt() ->> 'is_anonymous') is distinct from 'true'
-    and exists (
-      select 1 from public.supporter_group_members m
-      where m.group_id = supporter_group_members.group_id
-        and m.user_id = auth.uid()
-    )
+    and user_id = auth.uid()
   );
 
 drop policy if exists "supporter_group_members_insert_self" on public.supporter_group_members;
