@@ -43,7 +43,7 @@ export function AdSlot({
         <AdsenseDisplayUnit
           client={live.client}
           slot={live.slot}
-          format="vertical"
+          format="auto"
           className="min-h-[280px] w-full max-w-full"
         />
       </div>
@@ -56,7 +56,7 @@ export function AdSlot({
         <AdsenseDisplayUnit
           client={live.client}
           slot={live.slot}
-          format={compact ? 'horizontal' : 'rectangle'}
+          format="auto"
           className={cn('w-full max-w-full', compact ? 'min-h-[72px]' : 'min-h-[100px]')}
         />
       </Card>
