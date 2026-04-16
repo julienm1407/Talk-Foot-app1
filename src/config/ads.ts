@@ -15,7 +15,16 @@ function env(name: string): string | undefined {
 
 /** Ex. `ca-pub-xxxxxxxxxxxxxxxx` (Adsense → Comptes → ID éditeur). */
 export function getAdsenseClient(): string | undefined {
-  return env('VITE_ADSENSE_CLIENT')
+  const fromEnv = env('VITE_ADSENSE_CLIENT')
+  if (fromEnv) return fromEnv
+  if (typeof document === 'undefined') return undefined
+  const el = document.querySelector(
+    'script[src*="pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]',
+  ) as HTMLScriptElement | null
+  const src = el?.src
+  if (!src) return undefined
+  const m = src.match(/[?&]client=(ca-pub-[0-9]+)/)
+  return m?.[1]
 }
 
 /**
