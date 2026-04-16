@@ -41,13 +41,16 @@ function rowToMessage(row: GroupMsgRow): Message {
     typeof (groupScarf as { colorB?: unknown }).colorB === 'string' &&
     typeof (groupScarf as { colorC?: unknown }).colorC === 'string'
 
+  const displayName =
+    typeof row.display_name === 'string' && row.display_name.trim() ? row.display_name.trim() : 'Supporteur'
+
   return {
     id: row.id,
     matchId: groupThreadMatchId(row.group_id, row.channel_id),
     userId: row.user_id,
     text: row.body,
     createdAt: new Date(row.created_at).getTime(),
-    authorDisplayName: row.display_name,
+    authorDisplayName: displayName,
     tribune: pickTribune(meta.tribune),
     supporterGroupId: typeof meta.supporterGroupId === 'string' ? meta.supporterGroupId : undefined,
     gifUrl: typeof meta.gifUrl === 'string' ? meta.gifUrl : undefined,
@@ -130,9 +133,17 @@ export function useSupporterGroupChannelSync(options: {
       await syncRealtimeAuth(sb)
 
       if (!skipMembershipUpsert) {
-        const memberOk = await upsertCloudGroupMembership(sb, groupId)
-        if (!memberOk.ok && import.meta.env.DEV) {
-          console.warn('[Talk Foot] Adhésion groupe (sync continue):', memberOk.error)
+        let memberOk = await upsertCloudGroupMembership(sb, groupId)
+        for (let attempt = 0; !memberOk.ok && attempt < 4 && !cancelled; attempt++) {
+          await new Promise((r) => setTimeout(r, 200 * (attempt + 1)))
+          if (cancelled) return
+          memberOk = await upsertCloudGroupMembership(sb, groupId)
+        }
+        if (!memberOk.ok) {
+          console.warn(
+            '[Talk Foot] Adhésion salon Supabase impossible — sans ligne dans supporter_group_members, la RLS cache les messages des autres. Détail:',
+            memberOk.error,
+          )
         }
       }
       if (cancelled) return

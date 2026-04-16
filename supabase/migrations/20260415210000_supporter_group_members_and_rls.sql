@@ -1,4 +1,14 @@
 -- Membres des salons (style Discord) : seuls les membres voient / écrivent dans supporter_group_channel_messages.
+-- Prérequis : 20260415180000_group_and_private_messages.sql (table supporter_group_channel_messages).
+-- Idempotent : relançable sans erreur « policy already exists ».
+
+do $$
+begin
+  if to_regclass('public.supporter_group_channel_messages') is null then
+    raise exception
+      'Exécute d''abord la migration 20260415180000_group_and_private_messages.sql (table public.supporter_group_channel_messages manquante).';
+  end if;
+end$$;
 
 create table if not exists public.supporter_group_members (
   group_id text not null,
@@ -47,6 +57,9 @@ create policy "supporter_group_members_delete_self"
 
 drop policy if exists "supporter_group_channel_messages_select" on public.supporter_group_channel_messages;
 drop policy if exists "supporter_group_channel_messages_insert_own" on public.supporter_group_channel_messages;
+drop policy if exists "supporter_group_channel_messages_insert" on public.supporter_group_channel_messages;
+drop policy if exists "supporter_group_channel_messages_select_member" on public.supporter_group_channel_messages;
+drop policy if exists "supporter_group_channel_messages_insert_member" on public.supporter_group_channel_messages;
 
 create policy "supporter_group_channel_messages_select_member"
   on public.supporter_group_channel_messages for select
