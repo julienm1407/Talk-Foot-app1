@@ -32,13 +32,22 @@ export class ErrorBoundary extends Component<Props, State> {
               {stack}
             </pre>
           ) : null}
-          <button
-            type="button"
-            className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700"
-            onClick={() => window.location.reload()}
-          >
-            Recharger la page
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              className="rounded-xl border-2 border-slate-600 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50"
+              onClick={() => this.setState({ error: null })}
+            >
+              Réessayer sans fermer l&apos;onglet
+            </button>
+            <button
+              type="button"
+              className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700"
+              onClick={() => window.location.reload()}
+            >
+              Recharger la page
+            </button>
+          </div>
         </div>
       )
     }

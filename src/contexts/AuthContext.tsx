@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -322,20 +322,23 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       setState({ user: null, isReady: true })
       return
     }
-    void sb.auth.getSession().then(({ data: { session } }) => {
+
+    let cancelled = false
+    const hydratedRef = { current: false }
+
+    const applySession = (session: Session | null) => {
+      if (cancelled) return
+      hydratedRef.current = true
       setState({
         user: session?.user ? mapSupabaseUser(session.user) : null,
         isReady: true,
       })
-    })
+    }
+
     const {
       data: { subscription },
     } = sb.auth.onAuthStateChange((event, session) => {
-      setState((prev) => ({
-        ...prev,
-        user: session?.user ? mapSupabaseUser(session.user) : null,
-        isReady: true,
-      }))
+      applySession(session)
       if (event === 'SIGNED_IN' && session?.user) {
         void logSiteActivity('auth_sign_in', { metadata: { provider: session.user.app_metadata?.provider } })
       }
@@ -343,7 +346,22 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         void logSiteActivity('auth_sign_out')
       }
     })
-    return () => subscription.unsubscribe()
+
+    // Évite la course refresh : getSession() peut répondre null avant que le stockage PKCE soit prêt,
+    // alors que onAuthStateChange (INITIAL_SESSION) fournit la session. Filet si l’écouteur tarde.
+    const fallbackTimer = window.setTimeout(() => {
+      if (cancelled || hydratedRef.current) return
+      void sb.auth.getSession().then(({ data: { session } }) => {
+        if (cancelled || hydratedRef.current) return
+        applySession(session)
+      })
+    }, 200)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(fallbackTimer)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const refreshAuthUser = useCallback(async () => {

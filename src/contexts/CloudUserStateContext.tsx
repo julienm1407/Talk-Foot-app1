@@ -104,7 +104,13 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         return
       }
       setLoadError(null)
-      const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle()
+      let { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle()
+      if (cancelled) return
+      if (error) {
+        await new Promise((r) => setTimeout(r, 400))
+        if (cancelled) return
+        ;({ data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle())
+      }
       if (cancelled) return
       if (error) {
         setApp(defaultUserAppState())
