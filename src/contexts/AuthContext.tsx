@@ -10,6 +10,7 @@ import {
   isTalkFootOAuthProvider,
   type TalkFootOauthProviderId,
 } from '../config/oauthProviders'
+import { containsBannedWord } from '../utils/bannedWords'
 
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
@@ -215,6 +216,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
       const registry = loadRegistry()
       if (registry[key]) return false
       const name = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
+      if (containsBannedWord(name)) return false
       const { salt, passwordHash } = await hashPasswordForStorage(password)
       registry[key] = { id: `email-${Date.now()}`, displayName: name, salt, passwordHash }
       saveRegistry(registry)
@@ -250,6 +252,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback((displayName: string) => {
     const name = displayName.trim() || 'Supporteur'
+    if (containsBannedWord(name)) return
     setState((s) => {
       if (!s.user) return s
       const updated = withAdminFlag({ ...s.user, displayName: name })
@@ -396,6 +399,10 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       if (!sb) return false
       setAuthNotice(null)
       const name = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
+      if (containsBannedWord(name)) {
+        setAuthNotice('Pseudo ou nom d’affichage non autorisé.')
+        return false
+      }
       const { data, error } = await sb.auth.signUp({
         email: email.trim(),
         password,
@@ -449,6 +456,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback((displayName: string) => {
     const name = displayName.trim() || 'Supporteur'
+    if (containsBannedWord(name)) return
     void (async () => {
       const sb = getSupabaseBrowserClient()
       if (!sb) return

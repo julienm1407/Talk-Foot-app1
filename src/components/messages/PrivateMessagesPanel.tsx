@@ -1,20 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
+import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
 import { cn } from '../../utils/cn'
-import {
-  mockDirectThreads,
-  type DirectMessageLine,
-  type DirectThread,
-} from '../../data/directMessagesMock'
+import { type DirectMessageLine, type DirectThread } from '../../data/directMessagesMock'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
+import { MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
-export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
+export function PrivateMessagesPanel({
+  onClose,
+  visible = true,
+}: {
+  onClose: () => void
+  /** Faux quand le panneau est replié mais reste monté (préserve la conversation + synchro ouverture fil). */
+  visible?: boolean
+}) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+  const { pendingThreadId, clearPendingThread } = usePrivateMessagesUi()
   const [active, setActive] = useState<DirectThread | null>(null)
-  const { mergedFor, send, visitedIds, markVisited, setActiveDmUiThreadId } = useDirectMessagesContext()
+  const { mergedFor, send, visitedIds, markVisited, setActiveDmUiThreadId, directThreads } =
+    useDirectMessagesContext()
 
   useEffect(() => {
     setActiveDmUiThreadId(active?.id ?? null)
@@ -24,6 +32,13 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (active) markVisited(active.id)
   }, [active, markVisited])
+
+  useEffect(() => {
+    if (!pendingThreadId) return
+    const t = directThreads.find((x) => x.id === pendingThreadId)
+    if (t) setActive(t)
+    clearPendingThread()
+  }, [pendingThreadId, clearPendingThread, directThreads])
 
   const shell = L
     ? 'border border-tf-dark/12 bg-white text-tf-dark shadow-xl'
@@ -39,9 +54,11 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
         'z-[100] flex max-h-[min(70vh,28rem)] w-[min(100vw-1.5rem,22rem)] flex-col overflow-hidden rounded-2xl',
         'max-md:fixed max-md:left-[max(0.75rem,env(safe-area-inset-left,0px))] max-md:right-[max(0.75rem,env(safe-area-inset-right,0px))] max-md:top-[calc(3.75rem+env(safe-area-inset-top,0px))] max-md:w-auto max-md:max-h-[min(80dvh,calc(100dvh-4.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
         'md:absolute md:right-0 md:top-[calc(100%+10px)] md:max-h-[min(75vh,30rem)]',
+        !visible && 'pointer-events-none invisible',
         shell,
       )}
       role="dialog"
+      aria-hidden={!visible}
       aria-label="Messages privés"
     >
       <div
@@ -64,20 +81,33 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
               ← Conversations
             </button>
           ) : null}
-          <span className="block text-sm font-black max-md:text-base">
-            {active ? (
-              <>
+          {active ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <Link
+                to={`/user/${active.peer.id}`}
+                className={cn('shrink-0 rounded-full outline-none', TF_FOCUS_VISIBLE)}
+                aria-label={`Profil ${active.peer.username}`}
+              >
+                <Avatar seed={active.peer.avatarSeed} accent={active.peer.accent} className="!size-9" alt="" />
+              </Link>
+              <Link
+                to={`/user/${active.peer.id}`}
+                className={cn(
+                  'min-w-0 truncate text-sm font-black max-md:text-base outline-none rounded-sm',
+                  TF_FOCUS_VISIBLE,
+                )}
+              >
                 {active.peer.username}
                 {active.peer.isTalkFootBot ? (
                   <span className={cn('ml-2 text-xs font-bold', L ? 'text-violet-700' : 'text-violet-300')}>
                     · Assistant
                   </span>
                 ) : null}
-              </>
-            ) : (
-              'Messages privés'
-            )}
-          </span>
+              </Link>
+            </div>
+          ) : (
+            <span className="block text-sm font-black max-md:text-base">Messages privés</span>
+          )}
         </div>
         <button
           type="button"
@@ -95,44 +125,52 @@ export function PrivateMessagesPanel({ onClose }: { onClose: () => void }) {
       {!active ? (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
           <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
-            {mockDirectThreads.map((t) => {
+            {directThreads.map((t) => {
               const lines = mergedFor(t.id)
               const last = lines[lines.length - 1]
               const preview = last?.body ?? t.lastPreview
               const atLabel = last?.atLabel ?? t.lastAtLabel
               const showUnread = t.unread && !visitedIds.includes(t.id)
               return (
-              <li key={t.id}>
+              <li key={t.id} className="flex w-full items-stretch">
+                <Link
+                  to={`/user/${t.peer.id}`}
+                  className={cn(
+                    'flex min-w-0 max-w-[min(72%,14rem)] shrink-0 items-center gap-2 px-3 py-3 md:max-w-[15rem] md:py-2.5',
+                    rowHover,
+                    TF_FOCUS_VISIBLE,
+                  )}
+                  aria-label={`Profil ${t.peer.username}`}
+                >
+                  <Avatar seed={t.peer.avatarSeed} accent={t.peer.accent} className="!size-10 shrink-0" alt="" />
+                  <span className="min-w-0 truncate text-xs font-black">
+                    {t.peer.username}
+                    {t.peer.isTalkFootBot ? (
+                      <span
+                        className={cn(
+                          'ml-1.5 align-middle text-[9px] font-black uppercase tracking-wide',
+                          L ? 'text-violet-700' : 'text-violet-300',
+                        )}
+                      >
+                        Assistant
+                      </span>
+                    ) : null}
+                  </span>
+                </Link>
                 <button
                   type="button"
                   onClick={() => setActive(t)}
                   className={cn(
-                    'flex w-full gap-2 px-3 py-3 text-left transition max-md:min-h-[3.25rem] md:py-2.5',
+                    'flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-3 pr-3 text-left transition max-md:min-h-[3.25rem] md:py-2.5',
                     rowHover,
+                    TF_FOCUS_VISIBLE,
                   )}
+                  aria-label={`Ouvrir la conversation avec ${t.peer.username}`}
                 >
-                  <Avatar seed={t.peer.avatarSeed} accent={t.peer.accent} className="!size-10 shrink-0" alt="" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="min-w-0 text-xs font-black">
-                        {t.peer.username}
-                        {t.peer.isTalkFootBot ? (
-                          <span
-                            className={cn(
-                              'ml-1.5 align-middle text-[9px] font-black uppercase tracking-wide',
-                              L ? 'text-violet-700' : 'text-violet-300',
-                            )}
-                          >
-                            Assistant
-                          </span>
-                        ) : null}
-                      </span>
-                      <span className={cn('shrink-0 text-[10px] font-bold', muted)}>{atLabel}</span>
-                    </div>
-                    <p className={cn('mt-0.5 line-clamp-2 text-[11px] font-semibold leading-snug', muted)}>
-                      {preview}
-                    </p>
+                  <div className="flex justify-end">
+                    <span className={cn('text-[10px] font-bold', muted)}>{atLabel}</span>
                   </div>
+                  <p className={cn('line-clamp-2 text-[11px] font-semibold leading-snug', muted)}>{preview}</p>
                   {showUnread ? (
                     <span
                       className="mt-1 size-2 shrink-0 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.7)]"
@@ -163,11 +201,12 @@ function ThreadView({
   L,
 }: {
   messages: DirectMessageLine[]
-  onSend: (body: string) => void
+  onSend: (body: string) => boolean
   subtleBorder: string
   L: boolean
 }) {
   const [draft, setDraft] = useState('')
+  const [moderationHint, setModerationHint] = useState<string | null>(null)
   const lines = messages
   const endRef = useRef<HTMLDivElement>(null)
 
@@ -178,7 +217,12 @@ function ThreadView({
   const submit = () => {
     const t = draft.trim()
     if (!t) return
-    onSend(t)
+    setModerationHint(null)
+    const ok = onSend(t)
+    if (!ok) {
+      setModerationHint(MODERATION_REFUSED_MESSAGE_FR)
+      return
+    }
     setDraft('')
   }
 
@@ -212,11 +256,17 @@ function ThreadView({
         <div ref={endRef} aria-hidden className="h-px shrink-0" />
       </div>
       <div className={cn('shrink-0 border-t p-3', subtleBorder)}>
+        {moderationHint ? (
+          <p className="mb-2 text-[11px] font-semibold text-rose-600">{moderationHint}</p>
+        ) : null}
         <div className="flex gap-2">
           <input
             type="text"
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value)
+              setModerationHint(null)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                 e.preventDefault()

@@ -19,6 +19,7 @@ import {
 import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 
 type CloudUserStateValue = {
   ready: true
@@ -202,6 +203,9 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       if (!sb || !user?.id) return
       const name = displayName.trim() || 'Supporteur'
       const about = aboutLine?.trim().slice(0, 160) ?? ''
+      if (containsBannedWord(name) || (about && containsBannedWord(about))) {
+        throw new Error(MODERATION_REFUSED_MESSAGE_FR)
+      }
       const { error: authErr } = await sb.auth.updateUser({ data: { display_name: name } })
       if (authErr) {
         console.error('[Talk Foot] Auth metadata:', authErr.message)

@@ -12,9 +12,11 @@ type HomeSiteSearchProps = {
   className?: string
   /** id du champ (accessibilité) */
   inputId?: string
+  /** `hub` : champ discret (icône, fond léger) pour ne pas doubler visuellement un gros CTA à côté. */
+  variant?: 'default' | 'hub'
 }
 
-export function HomeSiteSearch({ className, inputId: inputIdProp }: HomeSiteSearchProps) {
+export function HomeSiteSearch({ className, inputId: inputIdProp, variant = 'default' }: HomeSiteSearchProps) {
   const reactId = useId()
   const inputId = inputIdProp ?? `home-site-search-${reactId}`
   const listId = `${inputId}-list`
@@ -89,38 +91,62 @@ export function HomeSiteSearch({ className, inputId: inputIdProp }: HomeSiteSear
   }
 
   const showPanel = open && query.trim().length >= 2
+  const hub = variant === 'hub'
 
   return (
     <div ref={wrapRef} className={cn('relative w-full min-w-0', className)}>
       <label htmlFor={inputId} className="sr-only">
         Rechercher sur Talk Foot (matchs, groupes, débats, actus)
       </label>
-      <input
-        ref={inputRef}
-        id={inputId}
-        type="search"
-        role="combobox"
-        aria-expanded={showPanel}
-        aria-controls={showPanel ? listId : undefined}
-        aria-autocomplete="list"
-        autoComplete="off"
-        placeholder="Rechercher match, club, groupe, débat, actu…"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          setOpen(true)
-        }}
-        onFocus={() => {
-          if (query.trim().length >= 2) setOpen(true)
-        }}
-        onKeyDown={onKeyDown}
-        className={cn(
-          'w-full rounded-tf-xl border py-2.5 pl-3 pr-3 text-sm font-semibold backdrop-blur-md focus:border-sky-400/50 focus:outline-none focus:ring-2 focus:ring-sky-500/30',
-          L
-            ? 'border-tf-dark/15 bg-white text-tf-dark placeholder:text-tf-dark/50'
-            : 'border-white/12 bg-black/30 text-white placeholder:text-sky-200/70',
-        )}
-      />
+      <div className={cn('relative', hub && 'flex items-center')}>
+        {hub ? (
+          <span
+            className={cn(
+              'pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-[15px] opacity-55',
+              L ? 'text-tf-dark' : 'text-sky-100',
+            )}
+            aria-hidden
+          >
+            🔍
+          </span>
+        ) : null}
+        <input
+          ref={inputRef}
+          id={inputId}
+          type="search"
+          role="combobox"
+          aria-expanded={showPanel}
+          aria-controls={showPanel ? listId : undefined}
+          aria-autocomplete="list"
+          autoComplete="off"
+          placeholder="Rechercher match, club, groupe, débat, actu…"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+          onFocus={() => {
+            if (query.trim().length >= 2) setOpen(true)
+          }}
+          onKeyDown={onKeyDown}
+          className={cn(
+            'w-full border text-sm font-semibold backdrop-blur-md focus:outline-none focus:ring-2',
+            hub
+              ? cn(
+                  'rounded-lg py-2 pl-9 pr-3 shadow-none ring-0 focus:border-sky-500/40 focus:ring-sky-500/25',
+                  L
+                    ? 'border-tf-dark/10 bg-tf-dark/[0.04] text-tf-dark placeholder:text-tf-dark/45'
+                    : 'border-white/[0.09] bg-black/25 text-white placeholder:text-sky-200/55',
+                )
+              : cn(
+                  'rounded-tf-xl py-2.5 pl-3 pr-3 focus:border-sky-400/50 focus:ring-sky-500/30',
+                  L
+                    ? 'border-tf-dark/15 bg-white text-tf-dark placeholder:text-tf-dark/50'
+                    : 'border-white/12 bg-black/30 text-white placeholder:text-sky-200/70',
+                ),
+          )}
+        />
+      </div>
       {showPanel ? (
         <div
           id={listId}

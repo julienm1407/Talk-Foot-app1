@@ -19,6 +19,7 @@ import { useInbox } from '../hooks/useInbox'
 import { useIsBelowXl } from '../hooks/useIsBelowXl'
 import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
 import { useAuth } from '../contexts/AuthContext'
+import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -62,30 +63,31 @@ export function TopBar() {
   const profileActive = location.pathname.startsWith('/profile')
   const inbox = useInbox()
   const [inboxOpen, setInboxOpen] = useState(false)
-  const [dmOpen, setDmOpen] = useState(false)
+  const pm = usePrivateMessagesUi()
   const inboxWrapRef = useRef<HTMLDivElement>(null)
   const dmWrapRef = useRef<HTMLDivElement>(null)
   const dmOpt = useDirectMessagesOptional()
+  const dmThreads = dmOpt?.directThreads ?? mockDirectThreads
   const dmUnread = useMemo(
-    () => mockDirectThreads.filter((t) => t.unread && !dmOpt?.visitedIds.includes(t.id)).length,
-    [dmOpt?.visitedIds],
+    () => dmThreads.filter((t) => t.unread && !dmOpt?.visitedIds.includes(t.id)).length,
+    [dmOpt?.visitedIds, dmThreads],
   )
   const belowXl = useIsBelowXl()
   const isHomePath = location.pathname === '/' || location.pathname === ''
   const monEspace = useMonEspaceDrawerOptional()
 
   useEffect(() => {
-    if (!inboxOpen && !dmOpen) return
+    if (!inboxOpen && !pm.isOpen) return
     const onDoc = (e: MouseEvent) => {
       const t = e.target as Node
       if (inboxWrapRef.current?.contains(t) || dmWrapRef.current?.contains(t)) return
       setInboxOpen(false)
-      setDmOpen(false)
+      pm.close()
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setInboxOpen(false)
-        setDmOpen(false)
+        pm.close()
       }
     }
     document.addEventListener('mousedown', onDoc)
@@ -94,7 +96,7 @@ export function TopBar() {
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
     }
-  }, [inboxOpen, dmOpen])
+  }, [inboxOpen, pm])
 
   return (
     <header
@@ -107,12 +109,12 @@ export function TopBar() {
     >
       <div
         className={cn(
-          'relative mx-auto grid w-full max-w-tf-content items-center gap-x-2 gap-y-1.5 px-3 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3',
-          /* <700px : 2 colonnes (logo + baseline | actions) — évite une colonne centrale vide quand la nav est masquée */
-          'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
+          'relative mx-auto grid w-full min-w-0 max-w-tf-content items-center gap-x-2 gap-y-1.5 px-2 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
+          /* <700px : logo + actions ; ≥700px : logo | nav (prend l’espace flexible, scroll si besoin) | actions */
+          'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto]',
         )}
       >
-        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1.5 sm:gap-2.5 md:gap-3">
+        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
           <Link
             to="/"
             onClick={(e) => {
@@ -158,12 +160,12 @@ export function TopBar() {
         </div>
 
         <nav
-          className="hidden min-w-0 justify-self-center min-[700px]:col-start-2 min-[700px]:row-start-1 min-[700px]:block"
+          className="hidden min-w-0 justify-self-stretch min-[700px]:col-start-2 min-[700px]:row-start-1 min-[700px]:block min-[700px]:justify-self-center"
           aria-label="Primary"
         >
           <div
             className={cn(
-              'max-w-[min(100%,32rem)] rounded-[22px] border p-1 backdrop-blur-md sm:max-w-none',
+              'mx-auto w-full max-w-full rounded-[22px] border p-1 backdrop-blur-md min-[700px]:max-w-[min(100%,32rem)]',
               L
                 ? 'border-tf-dark/12 bg-tf-white shadow-sm ring-1 ring-tf-dark/[0.04]'
                 : 'border-white/12 bg-black/25 shadow-sm ring-1 ring-white/10',
@@ -194,23 +196,28 @@ export function TopBar() {
           </div>
         </nav>
 
-        <div className="relative col-start-2 row-start-1 flex min-w-0 items-center justify-end gap-1.5 sm:gap-2 min-[700px]:col-start-3 min-[700px]:gap-3">
+        <div
+          className={cn(
+            'relative col-start-2 row-start-1 flex min-w-0 max-w-full flex-wrap items-center justify-end gap-x-1 gap-y-1 sm:gap-x-2 sm:gap-y-1.5',
+            'min-[700px]:col-start-3 min-[700px]:flex-nowrap min-[700px]:justify-end min-[700px]:gap-x-2 min-[700px]:gap-y-0 md:gap-x-3',
+          )}
+        >
           <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
               type="button"
               onClick={() => {
-                setDmOpen((prev) => {
-                  const next = !prev
-                  if (next) setInboxOpen(false)
-                  return next
-                })
+                if (pm.isOpen) pm.close()
+                else {
+                  pm.open()
+                  setInboxOpen(false)
+                }
               }}
-              aria-expanded={dmOpen}
+              aria-expanded={pm.isOpen}
               aria-haspopup="dialog"
               className={cn(
-                'relative grid size-9 shrink-0 place-items-center rounded-xl border text-[15px] transition sm:size-10 min-[700px]:size-11 sm:text-base',
-                dmOpen && (L ? 'ring-2 ring-violet-500/40' : 'ring-2 ring-violet-400/35'),
+                'relative grid size-8 shrink-0 place-items-center rounded-xl border text-[14px] transition max-[380px]:size-[1.875rem] sm:size-10 min-[700px]:size-11 sm:text-base',
+                pm.isOpen && (L ? 'ring-2 ring-violet-500/40' : 'ring-2 ring-violet-400/35'),
                 L
                   ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
                   : 'border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.12]',
@@ -233,7 +240,7 @@ export function TopBar() {
                 </span>
               ) : null}
             </button>
-            {dmOpen ? <PrivateMessagesPanel onClose={() => setDmOpen(false)} /> : null}
+            <PrivateMessagesPanel visible={pm.isOpen} onClose={() => pm.close()} />
           </div>
           <div ref={inboxWrapRef} className="relative shrink-0">
             <button
@@ -241,14 +248,14 @@ export function TopBar() {
               onClick={() => {
                 setInboxOpen((prev) => {
                   const next = !prev
-                  if (next) setDmOpen(false)
+                  if (next) pm.close()
                   return next
                 })
               }}
               aria-expanded={inboxOpen}
               aria-haspopup="dialog"
               className={cn(
-                'relative grid size-9 shrink-0 place-items-center rounded-xl border text-[15px] transition sm:size-10 min-[700px]:size-11 sm:text-base',
+                'relative grid size-8 shrink-0 place-items-center rounded-xl border text-[14px] transition max-[380px]:size-[1.875rem] sm:size-10 min-[700px]:size-11 sm:text-base',
                 inboxOpen && (L ? 'ring-2 ring-sky-500/40' : 'ring-2 ring-sky-400/35'),
                 L
                   ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
@@ -291,7 +298,8 @@ export function TopBar() {
           <NavLink
             to="/profile"
             className={cn(
-              'tf-nav-pill inline-flex max-w-[100%] shrink-0 items-center gap-1.5 overflow-hidden rounded-2xl border px-2 py-1.5 text-sm font-semibold outline-none min-[700px]:gap-2 min-[700px]:px-2.5 min-[700px]:py-2 sm:gap-2 sm:px-2.5 sm:py-2 md:px-3',
+              'tf-nav-pill inline-flex max-w-full min-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-2xl border px-1.5 py-1 text-xs font-semibold outline-none',
+              'min-[420px]:gap-1.5 min-[420px]:px-2 min-[420px]:py-1.5 min-[420px]:text-sm sm:gap-2 sm:px-2.5 sm:py-2 md:px-3 min-[700px]:gap-2 min-[700px]:px-2.5 min-[700px]:py-2',
               profileTheme.nav.focus,
               profileActive
                 ? cn(
@@ -311,22 +319,22 @@ export function TopBar() {
               <img
                 src={profile.profilePhotoDataUrl}
                 alt=""
-                className="size-7 shrink-0 rounded-full object-cover ring-2 ring-white/25 sm:size-8"
+                className="size-6 shrink-0 rounded-full object-cover ring-2 ring-white/25 min-[420px]:size-7 sm:size-8"
                 loading="lazy"
                 decoding="async"
               />
             ) : (
-              <span className="text-[15px] leading-none sm:text-base" aria-hidden="true">
+              <span className="text-sm leading-none min-[420px]:text-[15px] sm:text-base" aria-hidden="true">
                 🧢
               </span>
             )}
             <span
-              className="hidden shrink-0 rounded-lg bg-tf-cta px-1.5 py-0.5 text-[10px] font-black tabular-nums text-white shadow-tf-cta min-[400px]:inline-flex sm:px-2 sm:py-1 sm:text-[11px] md:text-xs"
+              className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[420px]:inline-flex min-[420px]:px-1.5 min-[420px]:text-[10px] sm:px-2 sm:py-1 sm:text-[11px] md:text-xs"
               title={`Niveau ${profile.level}`}
             >
               Niv. {profile.level}
             </span>
-            <span className="hidden max-w-[4.25rem] truncate sm:inline-block md:max-w-[7rem] lg:max-w-none">
+            <span className="hidden max-w-[3.5rem] truncate min-[480px]:inline-block min-[480px]:max-w-[4.25rem] md:max-w-[7rem] lg:max-w-none">
               {profileTheme.label}
             </span>
           </NavLink>

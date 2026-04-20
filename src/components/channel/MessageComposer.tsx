@@ -147,7 +147,7 @@ export function MessageComposer({
         </div>
       ) : null}
       <form
-        className="flex items-center gap-2"
+        className="flex items-center gap-1.5 sm:gap-2"
         onSubmit={(e) => {
           e.preventDefault()
           if (!canSend) return
@@ -165,7 +165,7 @@ export function MessageComposer({
                   setShowGif((v) => !v)
                 }}
                 className={cn(
-                  'tf-interactive-press rounded-xl border px-2.5 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
+                  'tf-interactive-press rounded-lg border px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-tf-grey/30 sm:rounded-xl sm:px-2.5 sm:py-2 sm:text-lg',
                   showGif
                     ? 'border-tf-grey/50 bg-tf-grey-pastel/30'
                     : 'border-slate-200/70 bg-white/80 hover:bg-slate-50',
@@ -184,7 +184,7 @@ export function MessageComposer({
                   setShowEmote((v) => !v)
                 }}
                 className={cn(
-                  'tf-interactive-press rounded-xl border px-2.5 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-tf-grey/30',
+                  'tf-interactive-press rounded-lg border px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-tf-grey/30 sm:rounded-xl sm:px-2.5 sm:py-2 sm:text-lg',
                   showEmote
                     ? 'border-tf-grey/50 bg-tf-grey-pastel/30'
                     : 'border-slate-200/70 bg-white/80 hover:bg-slate-50',
@@ -206,14 +206,14 @@ export function MessageComposer({
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
           autoComplete="off"
-          className="flex-1 rounded-xl border-slate-200/80 bg-white/90 py-2.5"
+          className="flex-1 rounded-lg border-slate-200/80 bg-white/90 py-2 text-sm sm:rounded-xl sm:py-2.5 sm:text-base"
           aria-label="Nouveau message"
         />
         <Button
           type="submit"
           variant="primary"
           disabled={!canSend}
-          className="shrink-0 rounded-xl px-5 py-2.5 font-bold"
+          className="shrink-0 rounded-lg px-3 py-2 text-sm font-bold sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-base"
           aria-label="Envoyer"
         >
           Envoyer

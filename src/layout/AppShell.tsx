@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { DirectMessagesProvider } from '../contexts/DirectMessagesContext'
+import { PrivateMessagesUiProvider } from '../contexts/PrivateMessagesUiContext'
 import { BottomNav } from './BottomNav'
 import { TopBar } from './TopBar'
 import { SkipLink } from './SkipLink'
@@ -13,7 +14,8 @@ import { cn } from '../utils/cn'
 
 const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
 const mainBottomPadChannel = 'pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))]'
-const mainBottomPadHomeXl = 'xl:pb-[max(2.5rem,calc(2.5rem+env(safe-area-inset-bottom,0px)))]'
+/** Accueil desktop : pas de bottom nav — éviter le grand vide gris sous le hub. */
+const mainBottomPadHomeDesktop = 'md:pb-2 lg:pb-3'
 
 export function AppShell() {
   const location = useLocation()
@@ -28,6 +30,7 @@ export function AppShell() {
 
   return (
     <DirectMessagesProvider>
+    <PrivateMessagesUiProvider>
     <div className="flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden overflow-x-hidden">
       <SkipLink />
       <ActivityRouteLogger />
@@ -58,9 +61,11 @@ export function AppShell() {
           <div
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
+              /* Desktop : une seule zone scrollable (colonne centrale du hub), pas le conteneur page — sinon la grille ne borne pas la hauteur et le centre reste « coupé ». */
+              'md:flex md:min-h-0 md:flex-col md:overflow-hidden md:overscroll-none',
               'w-full min-w-0 px-[var(--tf-page-gutter)] pt-4 sm:pt-6',
-              mainBottomPadMobile,
-              mainBottomPadHomeXl,
+              'max-md:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
+              mainBottomPadHomeDesktop,
             )}
           >
             <PageAdRails variant="centerOnly" centerMax="ultra">
@@ -86,6 +91,7 @@ export function AppShell() {
 
       <BottomNav />
     </div>
+    </PrivateMessagesUiProvider>
     </DirectMessagesProvider>
   )
 }

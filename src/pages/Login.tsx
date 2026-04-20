@@ -13,6 +13,7 @@ import { safeInternalNext } from '../utils/safeInternalPath'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { TALKFOOT_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../config/oauthProviders'
 import { OAuthProviderIcon } from '../components/auth/OAuthProviderIcon'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 
 type Mode = 'login' | 'signup'
 
@@ -94,6 +95,11 @@ export function LoginPage() {
       }
       if (password.length < 6) {
         setError('Le mot de passe doit contenir au moins 6 caractères.')
+        return
+      }
+      const signupName = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
+      if (containsBannedWord(signupName)) {
+        setError(MODERATION_REFUSED_MESSAGE_FR)
         return
       }
       setSubmitting(true)

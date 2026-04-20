@@ -126,61 +126,81 @@ export function HomePage() {
 
   const trendsShell = hubTrendsShell(appearance)
 
-  /** Maquette : 3 colonnes fluides (minmax + fr) ; mobile = 1 colonne empilée. */
+  /** Bento « téléphone » : sous md, une colonne ; md+ utilise le hub large écran. */
   const bentoCols =
-    'lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_minmax(0,15rem)] xl:grid-cols-[minmax(0,13.5rem)_minmax(0,1fr)_minmax(0,17rem)]'
+    'md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,14rem)] lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_minmax(0,15rem)] xl:grid-cols-[minmax(0,13.5rem)_minmax(0,1fr)_minmax(0,17rem)]'
   const bentoGrid = cn(
-    'grid grid-cols-1 gap-4 sm:gap-5 lg:grid-rows-[auto_auto] lg:items-start lg:gap-x-5',
+    'grid grid-cols-1 gap-4 sm:gap-5 md:grid-rows-[auto_auto] md:items-start md:gap-x-5',
     bentoCols,
   )
-  const spanTwoCenter =
-    'min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1'
+  const spanTwoCenter = 'min-w-0 md:col-span-2 md:col-start-1 md:row-start-1'
+
+  const wideHomeBelowFold = (
+    <>
+      <section className={cn('w-full', trendsShell)} aria-label="Débats tendances">
+        <TrendingDebatesSection debates={trendingDebates} variant="band" />
+      </section>
+      <FavoritesEncart className="w-full" />
+      <div className="w-full space-y-6 sm:space-y-8">
+        <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
+          <AdSlot
+            compact
+            tone="navy"
+            brand="Matchday sponsor"
+            body="Sous le hub — fil d’actualité et conversations."
+            imageSeed="home-under-hero-desktop"
+          />
+        </div>
+        <HomeFeedContinuation
+          idPrefix="d-"
+          fullWidth
+          displayMatches={displayMatches}
+          heroLiveMatch={heroLiveMatch}
+          heroLiveSim={heroLiveSim}
+          personalizedNews={personalizedNews}
+          feedTab={feedTab}
+          setFeedTab={setFeedTab}
+          supporterFocusUi={supporterFocusUi}
+          clubFocusLabel={clubFocusLabel}
+          team={team}
+        />
+      </div>
+    </>
+  )
 
   return (
-    <div className="w-full min-w-0 space-y-6 sm:space-y-8">
-      <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
-      {/* Hub desktop (≥xl) — maquette TalkFoot sombre 3 colonnes */}
-      <div className="hidden xl:block xl:space-y-10">
-        <HomeDesktopExperience
-          liveMatches={hubLiveMatches}
-          upcomingMatches={displayMatchesFull}
-          tribuneGroups={visibleGroups.slice(0, 4)}
-          supporterGroupsPool={visibleGroups}
-          myCreatedGroups={myCreatedGroups}
-          trendingDebates={trendingDebates}
-          debateOfTheDay={debateOfTheDay}
-          onCreateTribune={() => setCreateOpen(true)}
-        />
-        <section className={cn('mx-auto w-full max-w-tf-content', trendsShell)} aria-label="Débats tendances">
-          <TrendingDebatesSection debates={trendingDebates} variant="band" />
-        </section>
-        <FavoritesEncart className="mx-auto max-w-tf-content" />
-        <div className="mx-auto w-full max-w-tf-content space-y-6 sm:space-y-8">
-          <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
-            <AdSlot
-              compact
-              tone="navy"
-              brand="Matchday sponsor"
-              body="Sous le hub desktop — suite du fil d’actualité."
-              imageSeed="home-under-hero-desktop"
-            />
-          </div>
-          <HomeFeedContinuation
-            idPrefix="d-"
-            displayMatches={displayMatches}
-            heroLiveMatch={heroLiveMatch}
-            heroLiveSim={heroLiveSim}
-            personalizedNews={personalizedNews}
-            feedTab={feedTab}
-            setFeedTab={setFeedTab}
-            supporterFocusUi={supporterFocusUi}
-            clubFocusLabel={clubFocusLabel}
-            team={team}
+    <div
+      className={cn(
+        'w-full min-w-0 space-y-6 sm:space-y-8',
+        'md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-0',
+      )}
+    >
+      {/*
+        Vue ≥ md : une seule colonne logique « page » — bandeau thème + hub 3 colonnes + suite (tendances, favoris, fil)
+        dans le même cadre visuel que le hub (continuation dans la colonne centrale).
+      */}
+      {/*
+        Hauteur = viewport − header : le hub 3 colonnes remplit l’espace restant ; seule la colonne centrale défile.
+      */}
+      <div className="mx-auto hidden h-full min-h-0 w-full max-w-[min(100vw,1820px)] md:flex md:flex-1 md:flex-col md:gap-3 md:px-4 md:pb-0 lg:gap-4 lg:px-6">
+        <ThemeArrivalHint className="w-full max-w-none shrink-0" />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <HomeDesktopExperience
+            liveMatches={hubLiveMatches}
+            upcomingMatches={displayMatchesFull}
+            tribuneGroups={visibleGroups.slice(0, 4)}
+            supporterGroupsPool={visibleGroups}
+            myCreatedGroups={myCreatedGroups}
+            trendingDebates={trendingDebates}
+            debateOfTheDay={debateOfTheDay}
+            onCreateTribune={() => setCreateOpen(true)}
+            centerContinuation={wideHomeBelowFold}
           />
         </div>
       </div>
 
-      <div className="xl:hidden space-y-6 sm:space-y-8">
+      <div className="md:hidden space-y-6 sm:space-y-8">
+      <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
       <HomeLandingHub
         appearance={appearance}
         className={cn('mx-auto w-full max-w-tf-content', hubGlassPanel(appearance))}
@@ -204,7 +224,7 @@ export function HomePage() {
 
         {/* Bloc supérieur : même verre que le hub desktop */}
         <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:mb-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <label
               className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"
               title="Ex. masquer le salon OM si ton club de cœur est le PSG"
@@ -267,9 +287,9 @@ export function HomePage() {
                         Voir tout
                       </Link>
                     </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+                    <div className="flex flex-col gap-2">
                       {upcomingUnderLiveStrip.map((m) => (
-                        <HubStripUpcoming key={m.id} match={m} visualSize="compact" className="min-w-0" />
+                        <HubStripUpcoming key={m.id} match={m} visualSize="minimal" className="min-w-0" />
                       ))}
                     </div>
                   </div>
@@ -292,8 +312,8 @@ export function HomePage() {
             </div>
           </div>
 
-          <aside className="order-5 flex justify-center lg:order-none lg:col-start-3 lg:row-start-1 lg:row-span-2 lg:block lg:justify-start">
-            <div className="w-full max-w-tf-hub-rail min-w-0 lg:max-w-none">
+          <aside className="order-5 flex justify-center md:order-none md:col-start-3 md:row-start-1 md:row-span-2 md:block md:justify-start">
+            <div className="w-full max-w-tf-hub-rail min-w-0 md:max-w-none">
               <HomeRightColumn
                 debates={[]}
                 groups={activeGroupsRail}
@@ -303,8 +323,8 @@ export function HomePage() {
             </div>
           </aside>
 
-          <aside className="order-4 flex justify-center lg:order-none lg:col-start-1 lg:row-start-2 lg:block lg:justify-start">
-            <div className="w-full max-w-tf-hub-rail min-w-0 lg:max-w-none">
+          <aside className="order-4 flex justify-center md:order-none md:col-start-1 md:row-start-2 md:block md:justify-start">
+            <div className="w-full max-w-tf-hub-rail min-w-0 md:max-w-none">
               <HomeLeftColumn
                 upcomingPool={displayMatchesFull}
                 resultsPool={displayMatchesFull}
@@ -313,7 +333,7 @@ export function HomePage() {
             </div>
           </aside>
 
-          <div className="order-2 flex min-w-0 flex-col gap-5 sm:gap-6 lg:order-none lg:col-start-2 lg:row-start-2">
+          <div className="order-2 flex min-w-0 flex-col gap-5 sm:gap-6 md:order-none md:col-start-2 md:row-start-2">
             <AdSlot
               compact
               tone="navy"

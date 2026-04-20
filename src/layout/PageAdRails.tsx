@@ -21,7 +21,17 @@ export function PageAdRails({
   const centerClass = centerMax === 'ultra' ? 'max-w-tf-ultra' : 'max-w-tf-content'
 
   if (variant === 'centerOnly') {
-    return <div className={cn('mx-auto w-full min-w-0', centerClass)}>{children}</div>
+    return (
+      <div
+        className={cn(
+          'mx-auto flex w-full min-w-0 flex-col',
+          centerClass,
+          'md:h-full md:min-h-0 md:flex-1 md:overflow-hidden',
+        )}
+      >
+        {children}
+      </div>
+    )
   }
 
   return (

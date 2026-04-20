@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Message, User } from '../../types/chat'
 import { Avatar } from '../ui/Avatar'
 import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
@@ -6,6 +7,7 @@ import { useProfile } from '../../hooks/useProfile'
 import { cn } from '../../utils/cn'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { tribuneById } from '../../data/tribunes'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
 function clamp01(v: number) {
   return Math.max(0, Math.min(1, v))
@@ -71,6 +73,7 @@ export function MessageList({
           hour: '2-digit',
           minute: '2-digit',
         })
+        const profileTo = m.userId === selfUserId ? '/profile' : `/user/${m.userId}`
 
         return (
           <li
@@ -86,30 +89,40 @@ export function MessageList({
             }}
           >
             {m.userId === selfUserId ? (
-              <ProfileCharacterThumb
-                profile={profile}
-                size="sm"
-                className="mt-0.5"
-                aria-label={u?.username ?? 'Moi'}
-              />
+              <Link
+                to={profileTo}
+                className={cn('mt-0.5 shrink-0 rounded-lg outline-none', TF_FOCUS_VISIBLE)}
+                aria-label={u?.username ?? 'Moi — profil'}
+              >
+                <ProfileCharacterThumb profile={profile} size="sm" />
+              </Link>
             ) : (
-              <Avatar
-                seed={u?.avatarSeed ?? (m.userId.replace(/-/g, '').slice(0, 12) || 'fan')}
-                accent={u?.accent ?? 'violet'}
-                alt={u?.username ?? m.authorDisplayName ?? 'Utilisateur'}
-                className="mt-0.5 shrink-0"
-              />
+              <Link
+                to={profileTo}
+                className={cn('mt-0.5 shrink-0 rounded-full outline-none', TF_FOCUS_VISIBLE)}
+                aria-label={`Profil ${u?.username ?? m.authorDisplayName ?? 'Utilisateur'}`}
+              >
+                <Avatar
+                  seed={u?.avatarSeed ?? (m.userId.replace(/-/g, '').slice(0, 12) || 'fan')}
+                  accent={u?.accent ?? 'violet'}
+                  alt=""
+                  className="pointer-events-none"
+                />
+              </Link>
             )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                <span
+                <Link
+                  to={profileTo}
                   className={cn(
                     'max-w-[42%] truncate text-sm font-bold sm:max-w-none',
                     nameClass(kind, u?.accent),
+                    TF_FOCUS_VISIBLE,
+                    'rounded-sm',
                   )}
                 >
                   {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
-                </span>
+                </Link>
                 {u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
                   <span className="inline-flex max-w-[28%] shrink-0 truncate rounded border border-slate-200/90 bg-slate-50 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide text-slate-600 sm:max-w-[120px]">
                     {ALL_CLUBS_BY_ID[u.fanClubId].shortName}

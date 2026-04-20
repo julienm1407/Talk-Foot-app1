@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { User } from '../../types/chat'
 import { ClubCrest } from '../brand/ClubCrest'
 import { useProfile } from '../../hooks/useProfile'
@@ -95,7 +96,7 @@ function LiveFanFaceRow({
   )
 
   if (user.id === 'me') {
-    return shell(
+    const inner = shell(
       profilePhotoDataUrl ? (
         <img
           src={profilePhotoDataUrl}
@@ -117,9 +118,18 @@ function LiveFanFaceRow({
         />
       ),
     )
+    return (
+      <Link
+        to="/profile"
+        className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+        aria-label="Mon profil"
+      >
+        {inner}
+      </Link>
+    )
   }
 
-  return shell(
+  const inner = shell(
     imgFailed ? (
       <InitialFallback seed={user.avatarSeed} accent={user.accent} />
     ) : (
@@ -132,6 +142,16 @@ function LiveFanFaceRow({
         onError={() => setImgFailed(true)}
       />
     ),
+  )
+  return (
+    <Link
+      to={`/user/${user.id}`}
+      className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+      title={title}
+      aria-label={`Profil ${user.username}`}
+    >
+      {inner}
+    </Link>
   )
 }
 

@@ -64,7 +64,7 @@ export function LiveMatchHero({
   simulation,
   carousel,
   compact = false,
-  /** Hub desktop ≥xl : blasons + score plus grands, zone visuelle plus haute */
+  /** Hub desktop : blasons + score plus grands, zone visuelle plus haute */
   variant = 'default',
   fillColumnHeight = false,
   className,
@@ -91,7 +91,7 @@ export function LiveMatchHero({
   const minHero = compact
     ? 'min-h-[108px] sm:min-h-[118px]'
     : spotlight
-      ? 'min-h-[128px] sm:min-h-[144px] xl:min-h-[min(168px,22vh)]'
+      ? 'min-h-[128px] sm:min-h-[144px] lg:min-h-[min(168px,22vh)] xl:min-h-[min(180px,22vh)]'
       : 'min-h-[200px] sm:min-h-[220px]'
 
   const rimClass =
@@ -123,7 +123,7 @@ export function LiveMatchHero({
         className={cn(
           'relative isolate min-h-0 overflow-hidden rounded-t-3xl',
           minHero,
-          fillColumnHeight && !spotlight && 'min-h-[240px] flex-1 xl:min-h-[280px]',
+          fillColumnHeight && !spotlight && 'min-h-[240px] flex-1 lg:min-h-[280px]',
         )}
       >
         <img
@@ -310,7 +310,7 @@ export function LiveMatchHero({
                     compact
                       ? 'text-xl sm:text-2xl'
                       : spotlight
-                        ? 'text-3xl sm:text-4xl xl:text-[2.65rem]'
+                        ? 'text-3xl sm:text-4xl lg:text-[2.65rem] xl:text-[2.75rem]'
                         : 'text-3xl sm:text-4xl',
                   )}
                 >
@@ -370,7 +370,7 @@ export function LiveMatchHero({
         )}
       >
         {spotlight ? (
-          <div className="flex flex-col gap-2 sm:gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+          <div className="flex flex-col gap-2 sm:gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div className="min-w-0 flex-1">
               <LiveSalonPresenceStrip
                 match={match}
@@ -378,12 +378,13 @@ export function LiveMatchHero({
                 variant="dense"
               />
             </div>
-            <div className="flex shrink-0 justify-end xl:items-center">
+            <div className="flex shrink-0 justify-end lg:items-center">
               <Link
                 to={`/channel/${match.id}`}
-                className="rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-1.5 text-[11px] font-black text-white shadow-[0_4px_14px_rgba(14,165,233,0.38)] transition hover:from-sky-400 hover:to-blue-500 sm:rounded-xl sm:px-5 sm:py-2 sm:text-xs"
+                className="rounded-lg bg-gradient-to-b from-emerald-500 to-teal-700 px-4 py-1.5 text-[11px] font-black uppercase tracking-wide text-white shadow-[0_4px_18px_rgba(16,185,129,0.45)] ring-1 ring-white/15 transition hover:from-emerald-400 hover:to-teal-600 sm:rounded-xl sm:px-5 sm:py-2 sm:text-xs sm:normal-case sm:tracking-normal"
               >
-                Rejoindre
+                <span className="hidden sm:inline">Rejoindre le salon</span>
+                <span className="sm:hidden">Rejoindre</span>
               </Link>
             </div>
           </div>

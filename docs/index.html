@@ -14,13 +14,45 @@
     <meta name="theme-color" content="#061222" />
     <meta
       name="description"
-      content="Talk Foot — real-time social network for football fans: match channels, live chat, instant reactions."
+      content="Talk Foot — réseau social football en direct : salons de match, chat live, débats, tribunes virtuelles et actus L1, Premier League, Liga, Serie A, Bundesliga."
     />
-    <title>Talk Foot</title>
-    <script type="module" crossorigin src="/Talk-Foot-app1/assets/index-BbZ7nRco.js"></script>
-    <link rel="stylesheet" crossorigin href="/Talk-Foot-app1/assets/index-D1MCJPgL.css">
+    <meta name="keywords" content="football, live, supporters, Ligue 1, Premier League, Liga, chat match, salon foot, débats foot" />
+    <title>Talk Foot — live foot, débats et tribunes</title>
+    <!-- AdSense : chargement tôt dans le head (recommandation Google). Les unités ins sont rendues par l’app si VITE_ADSENSE_SLOT_* est défini. -->
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2366855551945752"
+      crossorigin="anonymous"
+    ></script>
+    <script type="module" crossorigin src="/Talk-Foot-app1/assets/index-CKu_EGZz.js"></script>
+    <link rel="stylesheet" crossorigin href="/Talk-Foot-app1/assets/index-KWqjEO1-.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        id="tf-boot-fallback"
+        style="
+          min-height: 100dvh;
+          margin: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+          text-align: center;
+          font-family: ui-sans-serif, system-ui, sans-serif;
+          font-size: 0.9375rem;
+          font-weight: 600;
+          color: #c8d8e8;
+          background: linear-gradient(180deg, #041424 0%, #051a2d 42%, #061a2e 100%);
+        "
+      >
+        <p style="max-width: 22rem; line-height: 1.45">
+          Chargement de Talk Foot…<br />
+          <span style="font-size: 0.8rem; font-weight: 500; opacity: 0.85"
+            >Si cet écran reste figé, ouvre la console (F12) ou réessaie en navigation privée.</span
+          >
+        </p>
+      </div>
+    </div>
   </body>
 </html>

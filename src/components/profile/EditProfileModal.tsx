@@ -4,6 +4,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { useAuth } from '../../contexts/AuthContext'
 import { isTalkFootOAuthProvider, oauthProviderDisplayName } from '../../config/oauthProviders'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
 export function EditProfileModal({
   open,
@@ -44,6 +45,10 @@ export function EditProfileModal({
     let saved = false
 
     if (name !== (user?.displayName || '')) {
+      if (containsBannedWord(name)) {
+        setError(MODERATION_REFUSED_MESSAGE_FR)
+        return
+      }
       updateProfile(name)
       saved = true
     }

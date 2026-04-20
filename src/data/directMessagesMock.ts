@@ -1,5 +1,6 @@
 import type { User } from '../types/chat'
-import { talkFootBotUser } from './users'
+import { friendDmThreadId, TALKFOOT_BOT_DM_THREAD_ID } from './directMessageConstants'
+import { mockFriendUsers, talkFootBotUser } from './users'
 
 export type DirectThread = {
   id: string
@@ -9,7 +10,17 @@ export type DirectThread = {
   unread: boolean
 }
 
-export const TALKFOOT_BOT_DM_THREAD_ID = `dm-${talkFootBotUser.id}`
+export { TALKFOOT_BOT_DM_THREAD_ID }
+
+const friendDmThreads: DirectThread[] = mockFriendUsers
+  .filter((u) => !u.isTalkFootBot)
+  .map((u) => ({
+    id: friendDmThreadId(u.id),
+    peer: u,
+    lastPreview: 'Appuie pour ouvrir la conversation privée.',
+    lastAtLabel: '—',
+    unread: false,
+  }))
 
 export const mockDirectThreads: DirectThread[] = [
   {
@@ -19,6 +30,7 @@ export const mockDirectThreads: DirectThread[] = [
     lastAtLabel: 'À l’instant',
     unread: true,
   },
+  ...friendDmThreads,
 ]
 
 export type DirectMessageLine = {

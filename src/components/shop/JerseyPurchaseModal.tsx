@@ -6,6 +6,7 @@ import { TokenGlyph } from '../ui/TokenGlyph'
 import { Input } from '../ui/Input'
 import { JerseyPreviewThumb } from './JerseyPreviewThumb'
 import { cn } from '../../utils/cn'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
 type Props = {
   item: AvatarItem
@@ -54,6 +55,10 @@ export function JerseyPurchaseModal({
   const finalizePurchase = () => {
     const num = Math.min(99, Math.max(1, parseInt(number.replace(/\D/g, '') || '1', 10)))
     const name = displayName.trim().slice(0, 10).toUpperCase() || 'SUPPORTER'
+    if (containsBannedWord(name)) {
+      onError(MODERATION_REFUSED_MESSAGE_FR)
+      return
+    }
     const data: JerseyCustomization = {
       displayName: name,
       number: String(num),

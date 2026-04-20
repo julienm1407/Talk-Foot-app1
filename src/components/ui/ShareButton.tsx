@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { mockDirectThreads } from '../../data/directMessagesMock'
 import { useDirectMessagesOptional } from '../../contexts/DirectMessagesContext'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { absoluteAppUrl, formatInternalShareBody, shareOrCopyLink } from '../../utils/shareContent'
 import { Avatar } from './Avatar'
+import { MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
 function ShareGlyph({ className }: { className?: string }) {
   return (
@@ -100,7 +102,12 @@ export function ShareButton({
   const sendToFriend = useCallback(
     (threadId: string, username: string) => {
       if (!dm) return
-      dm.send(threadId, formatInternalShareBody(title))
+      const ok = dm.send(threadId, formatInternalShareBody(title))
+      if (!ok) {
+        setHint(MODERATION_REFUSED_MESSAGE_FR)
+        window.setTimeout(() => setHint(null), 3200)
+        return
+      }
       setOpen(false)
       setHint(`Envoyé à ${username}`)
       onDone?.(true)
@@ -152,12 +159,23 @@ export function ShareButton({
             Repère dans la conversation, sans lien brut.
           </p>
           <ul className="max-h-44 space-y-0.5 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-            {mockDirectThreads.map((t) => (
-              <li key={t.id}>
+            {(dm?.directThreads ?? mockDirectThreads).map((t) => (
+              <li key={t.id} className="flex items-stretch gap-1 rounded-xl border border-transparent hover:border-tf-dark/8 hover:bg-tf-electric-soft/60">
+                <Link
+                  to={`/user/${t.peer.id}`}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center gap-2 rounded-l-xl px-2 py-2 text-left text-xs font-bold text-tf-dark',
+                    TF_FOCUS_VISIBLE,
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Avatar seed={t.peer.avatarSeed} accent={t.peer.accent} className="!size-8 shrink-0" alt="" />
+                  <span className="min-w-0 truncate">{t.peer.username}</span>
+                </Link>
                 <button
                   type="button"
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-xs font-bold text-tf-dark transition hover:bg-tf-electric-soft',
+                    'shrink-0 rounded-r-xl px-2.5 py-2 text-[10px] font-black uppercase tracking-wide text-tf-dark transition hover:bg-tf-electric-soft',
                     TF_FOCUS_VISIBLE,
                   )}
                   onClick={(e) => {
@@ -165,8 +183,7 @@ export function ShareButton({
                     sendToFriend(t.id, t.peer.username)
                   }}
                 >
-                  <Avatar seed={t.peer.avatarSeed} accent={t.peer.accent} className="!size-8 shrink-0" alt="" />
-                  <span className="min-w-0 truncate">{t.peer.username}</span>
+                  Envoyer
                 </button>
               </li>
             ))}

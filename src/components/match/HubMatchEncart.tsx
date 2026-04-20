@@ -305,13 +305,115 @@ export function HubStripUpcoming({
 }: {
   match: Match
   className?: string
-  visualSize?: 'default' | 'compact' | 'sidebar'
+  /** `minimal` : ligne compacte · `subtle` : sous le live pleine largeur (encore plus léger) */
+  visualSize?: 'default' | 'compact' | 'sidebar' | 'minimal' | 'subtle'
   visualStyle?: 'stadium' | 'solid'
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const compTh = themeForCompetition(match.competition.id)
   const solid = visualStyle === 'solid'
+
+  if (visualSize === 'minimal') {
+    return (
+      <Link
+        to={`/channel/${match.id}`}
+        className={cn(
+          'group flex w-full min-w-0 items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left outline-none transition',
+          L
+            ? 'border-tf-dark/12 bg-white/95 shadow-sm hover:border-tf-dark/22 hover:bg-white'
+            : 'border-white/11 bg-[#050b14]/92 hover:border-white/22 hover:bg-[#071422]',
+          className,
+        )}
+        aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+      >
+        <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
+          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={22} />
+          <span className={cn('mx-0.5 text-[9px] font-black opacity-35', L ? 'text-tf-dark' : 'text-white')}>
+            –
+          </span>
+          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={22} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={cn('truncate text-[11px] font-black leading-tight', L ? 'text-tf-dark' : 'text-white')}>
+            {match.home.shortName}
+            <span className="mx-1 font-semibold opacity-45">·</span>
+            {match.away.shortName}
+          </p>
+          <p className={cn('truncate text-[9px] font-bold', L ? 'text-tf-dark/55' : 'text-sky-200/72')}>
+            {match.competition.shortName}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p
+            className={cn(
+              'font-display text-sm font-black tabular-nums leading-none tracking-tight',
+              L ? 'text-tf-dark' : 'text-white',
+            )}
+          >
+            {formatKickoff(match.kickoffAt)}
+          </p>
+          <p
+            className={cn(
+              'mt-0.5 text-[8px] font-bold uppercase tracking-[0.12em]',
+              L ? 'text-tf-dark/48' : 'text-sky-200/60',
+            )}
+          >
+            {formatHubDayLabel(match.kickoffAt)}
+          </p>
+        </div>
+      </Link>
+    )
+  }
+
+  if (visualSize === 'subtle') {
+    return (
+      <Link
+        to={`/channel/${match.id}`}
+        className={cn(
+          'group flex w-full min-w-0 items-center gap-2 rounded-lg px-1.5 py-1.5 text-left outline-none transition',
+          L
+            ? 'border border-transparent hover:border-tf-dark/10 hover:bg-tf-dark/[0.04]'
+            : 'border border-transparent hover:border-white/10 hover:bg-white/[0.05]',
+          className,
+        )}
+        aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+      >
+        <div className="flex shrink-0 items-center gap-1" aria-hidden>
+          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={18} />
+          <span className={cn('mx-px text-[8px] font-black opacity-30', L ? 'text-tf-dark' : 'text-white')}>
+            –
+          </span>
+          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'truncate text-[10px] font-bold leading-tight',
+              L ? 'text-tf-dark/88' : 'text-sky-100/92',
+            )}
+          >
+            {match.home.shortName}
+            <span className="mx-0.5 font-semibold opacity-40">·</span>
+            {match.away.shortName}
+          </p>
+          <p className={cn('truncate text-[8px] font-semibold', L ? 'text-tf-dark/45' : 'text-sky-200/55')}>
+            {match.competition.shortName}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p
+            className={cn(
+              'font-display text-xs font-black tabular-nums leading-none',
+              L ? 'text-tf-dark/80' : 'text-sky-100/88',
+            )}
+          >
+            {formatKickoff(match.kickoffAt)}
+          </p>
+        </div>
+      </Link>
+    )
+  }
 
   const imgBand =
     visualSize === 'sidebar'

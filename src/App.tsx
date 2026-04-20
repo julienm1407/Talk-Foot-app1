@@ -13,6 +13,7 @@ import { RankingsPage } from './pages/Rankings'
 import { BoutiquePage } from './pages/Boutique'
 import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
+import { UserProfilePage } from './pages/UserProfile'
 import { ArticlePage } from './pages/ArticlePage'
 import { AdminPage } from './pages/AdminPage'
 import { PrivacyPage } from './pages/PrivacyPage'
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="calendar" element={<Navigate to="/match" replace />} />
         <Route path="boutique" element={<BoutiquePage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="user/:userId" element={<UserProfilePage />} />
         <Route
           path="admin"
           element={

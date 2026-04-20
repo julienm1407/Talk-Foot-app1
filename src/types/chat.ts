@@ -14,6 +14,8 @@ export type User = {
   isTalkFootBot?: boolean
   /** Club de cœur simulé (mode Virage / filtrage live) */
   fanClubId?: string
+  /** Phrase courte sur la page profil vitrine */
+  tagline?: string
 }
 
 export type Message = {

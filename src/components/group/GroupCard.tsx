@@ -76,7 +76,7 @@ export function GroupCard({
 
   const shell = cn(
     'relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 transition-shadow duration-200 group-hover:shadow-md',
-    railDense ? 'rounded-2xl px-2.5 py-2' : rail ? 'px-3 py-3' : encart ? 'flex h-full min-h-0 flex-col px-4 py-4' : 'px-5 py-4',
+    railDense ? 'rounded-2xl px-2.5 py-2.5 shadow-sm' : rail ? 'px-3 py-3' : encart ? 'flex h-full min-h-0 flex-col px-4 py-4' : 'px-5 py-4',
     className,
   )
 
@@ -99,7 +99,7 @@ export function GroupCard({
     return (
       <div className={shell} style={themeStyle}>
         <ThemeBackdrop group={group} subtle={rail} />
-        <div className={cn('relative', railDense ? 'space-y-1.5' : 'space-y-2')}>
+        <div className={cn('relative', railDense ? 'space-y-2' : 'space-y-2')}>
           <div className="flex items-start gap-2">
             {emojiBox('sm')}
             <div className="min-w-0 flex-1">

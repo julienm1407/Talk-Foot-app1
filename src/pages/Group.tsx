@@ -38,6 +38,7 @@ import type { SupporterChannel, SupporterGroup } from '../types/group'
 import { useMatches } from '../contexts/MatchesContext'
 import { getGroupQuickEmotes, getGroupSalonChatSurfaceStyles } from '../utils/groupSalonStyles'
 import { isUuidMessageId } from '../utils/isUuidMessageId'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../utils/bannedWords'
 
 const MAX_GROUP_CHANNELS = 14
 /** Plafond messages par salon (seed + cloud, après chargements « plus anciens »). */
@@ -284,6 +285,7 @@ export function GroupPage() {
   const [newSalonDesc, setNewSalonDesc] = useState('')
   const [newSalonEmoji, setNewSalonEmoji] = useState('🔊')
   const [newSalonError, setNewSalonError] = useState<string | null>(null)
+  const [groupChatModerationHint, setGroupChatModerationHint] = useState<string | null>(null)
 
   useEffect(() => {
     if (!group || !channel || !threadKey) return
@@ -412,6 +414,11 @@ export function GroupPage() {
   const tryCloudGroupThenLocal = useCallback(
     async (msg: Message) => {
       if (!group || !channel || !threadKey) return
+      setGroupChatModerationHint(null)
+      if (!validateOutgoingChatPayload({ text: msg.text, groupScarf: msg.groupScarf }).ok) {
+        setGroupChatModerationHint(MODERATION_REFUSED_MESSAGE_FR)
+        return
+      }
       if (groupCloudChatEnabled) {
         const r = await publishGroupChannelMessage({
           matchId: msg.matchId,
@@ -432,6 +439,10 @@ export function GroupPage() {
                 .slice(-MAX_GROUP_CHANNEL_MESSAGES),
             }
           })
+          return
+        }
+        if (r.error === 'moderation') {
+          setGroupChatModerationHint(MODERATION_REFUSED_MESSAGE_FR)
           return
         }
       }
@@ -866,6 +877,11 @@ export function GroupPage() {
                       setNewSalonError('Nom d’au moins 2 caractères.')
                       return
                     }
+                    const desc = newSalonDesc.trim() || 'Discussion'
+                    if (containsBannedWord(name) || containsBannedWord(desc)) {
+                      setNewSalonError(MODERATION_REFUSED_MESSAGE_FR)
+                      return
+                    }
                     if (group.channels.length >= MAX_GROUP_CHANNELS) {
                       setNewSalonError(`Limite de ${MAX_GROUP_CHANNELS} salons atteinte.`)
                       return
@@ -878,7 +894,7 @@ export function GroupPage() {
                     const ch: SupporterChannel = {
                       id,
                       name: name.slice(0, 48),
-                      description: (newSalonDesc.trim() || 'Discussion').slice(0, 120),
+                      description: desc.slice(0, 120),
                       emoji: (newSalonEmoji.trim() || '🔊').slice(0, 8),
                     }
                     updateGroup(group.id, { channels: [...group.channels, ch] })
@@ -1189,6 +1205,11 @@ export function GroupPage() {
               className="shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3"
               style={salonSurface?.backdrop}
             >
+              {groupChatModerationHint ? (
+                <p className="mb-2 rounded-xl border border-rose-200/80 bg-rose-50/95 px-3 py-2 text-xs font-semibold text-rose-800">
+                  {groupChatModerationHint}
+                </p>
+              ) : null}
               <MessageComposer
                 onSend={onSend}
                 placeholder={`Message dans ${channel?.name ?? 'le salon'}…`}

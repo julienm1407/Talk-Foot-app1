@@ -7,6 +7,7 @@ import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
+import { validateOutgoingChatPayload } from '../utils/bannedWords'
 
 type LiveMsgRow = {
   id: string
@@ -89,6 +90,9 @@ export function useLiveMatchChatSync(options: {
       if (!session) return { ok: false as const, error: 'no_session' }
 
       const body = msg.text ?? ''
+      if (!validateOutgoingChatPayload({ text: body, groupScarf: msg.groupScarf }).ok) {
+        return { ok: false as const, error: 'moderation' as const }
+      }
       const metadata: Record<string, unknown> = {}
       if (msg.tribune) metadata.tribune = msg.tribune
       if (msg.supporterGroupId) metadata.supporterGroupId = msg.supporterGroupId

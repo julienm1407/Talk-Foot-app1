@@ -7,6 +7,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { cn } from '../../utils/cn'
 import { LogoMark } from '../../layout/LogoMark'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
 /**
  * Première connexion Google / Apple (Supabase) : pseudo + ligne perso avant le reste de l’app.
@@ -41,6 +42,10 @@ export function OAuthProfileSetupModal() {
       setError('Choisis un pseudo d’au moins 2 caractères.')
       return
     }
+    if (containsBannedWord(name) || (aboutLine.trim() && containsBannedWord(aboutLine))) {
+      setError(MODERATION_REFUSED_MESSAGE_FR)
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -48,8 +53,8 @@ export function OAuthProfileSetupModal() {
       queueMicrotask(() => {
         if (!preferencesComplete) openOnboarding()
       })
-    } catch {
-      setError('Enregistrement impossible. Réessaie.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Enregistrement impossible. Réessaie.')
     } finally {
       setBusy(false)
     }

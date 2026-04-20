@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { mockDirectMessagesByThread, TALKFOOT_BOT_DM_THREAD_ID } from '../data/directMessagesMock'
+import { TALKFOOT_BOT_DM_THREAD_ID } from '../data/directMessageConstants'
+import { mockDirectMessagesByThread } from '../data/directMessagesMock'
 import type { DirectMessageLine } from '../data/directMessagesMock'
 import { pickTalkFootBotReply } from '../lib/talkFootBotReplies'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
@@ -9,6 +10,7 @@ import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { cloudPrivateThreadKey } from '../utils/cloudDmThread'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocalStorageState } from './useLocalStorage'
+import { containsBannedWord } from '../utils/bannedWords'
 
 const KEY_MESSAGES = 'talkfoot.dm.userMessages.v1'
 const KEY_VISITED = 'talkfoot.dm.visitedThreads.v1'
@@ -41,7 +43,7 @@ function rowToDmLine(row: { id: string; sender_id: string; body: string; created
   }
 }
 
-export function useDirectMessages(activeUiThreadId: string | null) {
+export function useDirectMessages(activeUiThreadId: string | null, syncP2pThreadKeys: string[] = []) {
   const { user: authUser } = useAuth()
   const myAuthId = authUser?.id
   const [userByThread, setUserByThread] = useLocalStorageState<Record<string, DirectMessageLine[]>>(
@@ -58,8 +60,11 @@ export function useDirectMessages(activeUiThreadId: string | null) {
     [activeUiThreadId, myAuthId],
   )
 
+  const p2pBundleSig = useMemo(() => [...syncP2pThreadKeys].sort().join('|'), [syncP2pThreadKeys])
+
+  /** Fil Coach uniquement (clé `coach:<uuid>`) — les fils p2p amis passent par le bundle ci-dessous. */
   useEffect(() => {
-    if (!cloudKeyForActive || !isSupabaseConfigured()) return
+    if (!cloudKeyForActive || !cloudKeyForActive.startsWith('coach:') || !isSupabaseConfigured()) return
 
     const sb = getSupabaseBrowserClient()
     if (!sb) return
@@ -123,6 +128,89 @@ export function useDirectMessages(activeUiThreadId: string | null) {
     }
   }, [cloudKeyForActive])
 
+  /** Tous les fils MP entre amis (p2p) — chargement + temps réel pour chaque clé. */
+  useEffect(() => {
+    if (!myAuthId || !p2pBundleSig || !isSupabaseConfigured()) return
+
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+
+    const keys = syncP2pThreadKeys
+    if (keys.length === 0) return
+
+    let cancelled = false
+    let ch: ReturnType<typeof sb.channel> | null = null
+
+    const run = async () => {
+      const session = await ensureSupabaseChatSession(sb)
+      if (!session || cancelled) return
+      await syncRealtimeAuth(sb)
+      const myId = session.user.id
+
+      await Promise.all(
+        keys.map(async (threadKey) => {
+          const { data: rows, error: fetchErr } = await sb
+            .from('private_messages')
+            .select('id, sender_id, body, created_at')
+            .eq('thread_key', threadKey)
+            .order('created_at', { ascending: true })
+            .limit(200)
+          if (cancelled || fetchErr || !rows?.length) return
+          setCloudByKey((prev) => ({
+            ...prev,
+            [threadKey]: (rows as { id: string; sender_id: string; body: string; created_at: string }[]).map((r) =>
+              rowToDmLine(r, myId),
+            ),
+          }))
+        }),
+      )
+
+      if (cancelled) return
+
+      let bundleCh = sb.channel(`private_dm_p2p_bundle:${myId}`)
+      for (const threadKey of keys) {
+        bundleCh = bundleCh.on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'private_messages',
+            filter: `thread_key=eq.${threadKey}`,
+          },
+          (payload) => {
+            const row = payload.new as {
+              thread_key?: string
+              id?: string
+              sender_id?: string
+              body?: string
+              created_at?: string
+            }
+            const tk = row.thread_key
+            if (!tk || !row.id || !row.sender_id || row.body == null || !row.created_at) return
+            const line = rowToDmLine(
+              { id: row.id, sender_id: row.sender_id, body: row.body, created_at: row.created_at },
+              myId,
+            )
+            setCloudByKey((prev) => {
+              const cur = prev[tk] ?? []
+              if (cur.some((x) => x.id === line.id)) return prev
+              return { ...prev, [tk]: [...cur, line] }
+            })
+          },
+        )
+      }
+      ch = bundleCh
+      bundleCh.subscribe()
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+      if (ch) void sb.removeChannel(ch)
+    }
+  }, [myAuthId, p2pBundleSig, syncP2pThreadKeys])
+
   const mergedFor = useCallback(
     (threadId: string) => {
       const seed = mockDirectMessagesByThread[threadId] ?? []
@@ -130,8 +218,11 @@ export function useDirectMessages(activeUiThreadId: string | null) {
       const ck = cloudPrivateThreadKey(threadId, myAuthId)
       if (ck) {
         const cloud = cloudByKey[ck] ?? []
-        const botLocal = local.filter((m) => !m.fromMe)
-        return [...seed, ...cloud, ...botLocal]
+        if (threadId === TALKFOOT_BOT_DM_THREAD_ID) {
+          const botLocal = local.filter((m) => !m.fromMe)
+          return [...seed, ...cloud, ...botLocal]
+        }
+        return [...seed, ...cloud, ...local]
       }
       return [...seed, ...local]
     },
@@ -139,9 +230,10 @@ export function useDirectMessages(activeUiThreadId: string | null) {
   )
 
   const send = useCallback(
-    (threadId: string, body: string) => {
+    (threadId: string, body: string): boolean => {
       const trimmed = body.trim()
-      if (!trimmed) return
+      if (!trimmed) return false
+      if (containsBannedWord(trimmed)) return false
 
       const ck = cloudPrivateThreadKey(threadId, myAuthId)
       const pushBotReply = () => {
@@ -198,7 +290,7 @@ export function useDirectMessages(activeUiThreadId: string | null) {
           })
           pushBotReply()
         })()
-        return
+        return true
       }
 
       const line: DirectMessageLine = {
@@ -212,6 +304,7 @@ export function useDirectMessages(activeUiThreadId: string | null) {
         [threadId]: [...(prev[threadId] ?? []), line],
       }))
       pushBotReply()
+      return true
     },
     [setUserByThread, myAuthId],
   )

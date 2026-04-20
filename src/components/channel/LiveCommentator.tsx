@@ -1,9 +1,12 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
 import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
 import { cn } from '../../utils/cn'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import type { User } from '../../types/chat'
 import { useProfile } from '../../hooks/useProfile'
+import { MODERATION_REFUSED_MESSAGE_FR, containsBannedWord } from '../../utils/bannedWords'
 
 const SPEAK_DURATION_MS = 8000
 
@@ -24,6 +27,7 @@ export function LiveCommentator({
   const [commentText, setCommentText] = useState('')
   const [cameraOn, setCameraOn] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [moderationError, setModerationError] = useState<string | null>(null)
   const [liveCommentary, setLiveCommentary] = useState<{
     text: string
     expiresAt: number
@@ -46,6 +50,11 @@ export function LiveCommentator({
   const sendCommentary = useCallback(() => {
     const trimmed = commentText.trim()
     if (!trimmed) return
+    if (containsBannedWord(trimmed)) {
+      setModerationError(MODERATION_REFUSED_MESSAGE_FR)
+      return
+    }
+    setModerationError(null)
     if (speakTimeoutRef.current) clearTimeout(speakTimeoutRef.current)
     setLiveCommentary({
       text: trimmed,
@@ -142,6 +151,7 @@ export function LiveCommentator({
   }, [liveCommentary])
 
   const { profile } = useProfile()
+  const commentatorProfileHref = user.id === 'me' ? '/profile' : `/user/${user.id}`
 
   if (!user.isAdmin) return null
 
@@ -228,44 +238,99 @@ export function LiveCommentator({
         </div>
       ))}
 
-      {/* Options commentateur en bas à gauche — réduit quand stream lancé */}
+      {/* Bandeau dans la colonne « Chat live », au-dessus du composer — flux document, pas de superposition */}
       <div
         className={cn(
-          'fixed left-3 z-50 sm:left-4',
-          'bottom-[max(5.75rem,calc(4.75rem+env(safe-area-inset-bottom,0px)))] sm:bottom-[max(5.5rem,calc(4.25rem+env(safe-area-inset-bottom,0px)))] md:bottom-20 md:left-6',
+          'w-full shrink-0 border-t border-rose-200/45 bg-gradient-to-b from-rose-50/70 via-white/92 to-tf-white/98',
+          'px-2 py-1.5 sm:px-4 sm:py-2',
           className,
         )}
       >
+        <p className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-rose-800/70 sm:mb-1.5 sm:text-[10px]">
+          Commentaire live
+        </p>
+
+        {liveCommentary && isSpeaking && (
+          <div
+            className="mb-1.5 animate-[tf-commentary-in_0.3s_ease-out] rounded-lg border border-rose-200/80 bg-white px-2.5 py-2 shadow-sm sm:mb-2 sm:rounded-xl sm:px-3 sm:py-2.5"
+            aria-live="polite"
+          >
+            <div className="flex items-start gap-2.5">
+              <Link
+                to={commentatorProfileHref}
+                className={cn('relative shrink-0 rounded-full outline-none', TF_FOCUS_VISIBLE)}
+                aria-label={`Profil ${user.username}`}
+              >
+                <Face />
+                <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-600" />
+                </span>
+              </Link>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    to={commentatorProfileHref}
+                    className={cn('text-xs font-black text-slate-800 outline-none rounded-sm', TF_FOCUS_VISIBLE)}
+                  >
+                    {user.username}
+                  </Link>
+                  <span className="text-[10px] font-bold text-rose-600">LIVE</span>
+                </div>
+                <p className="mt-0.5 text-sm font-medium leading-relaxed text-slate-700">{liveCommentary.text}</p>
+              </div>
+              <div className="tf-sound-bars shrink-0 scale-90" aria-hidden>
+                <span /><span /><span /><span /><span />
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isActive ? (
           <button
             type="button"
             onClick={() => setIsActive(true)}
-            className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/95 px-4 py-2.5 text-sm font-bold text-rose-800 shadow-lg backdrop-blur transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400"
+            className={cn(
+              'flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/95 px-4 py-2.5 text-sm font-bold text-rose-800 shadow-sm transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400 sm:justify-start',
+            )}
             aria-label="Activer le mode commentaire"
           >
             <span className="text-lg">🎙️</span>
-            <span>Commentaire live</span>
+            <span>Ouvrir le panneau commentateur</span>
           </button>
         ) : cameraOn ? (
           /* Mode réduit quand le stream est lancé */
-          <div className={cn(
-            'rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 shadow-xl backdrop-blur transition-all',
-            isMinimized ? 'p-1.5' : 'p-2',
-          )}>
-            <div className="flex items-center gap-1.5">
+          <div
+            className={cn(
+              'rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 shadow-sm backdrop-blur transition-all',
+              isMinimized ? 'p-1.5' : 'p-2',
+              'max-h-[min(52vh,360px)] overflow-y-auto',
+            )}
+          >
+            <div className="flex min-w-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIsMinimized((m) => !m)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-xl font-bold text-tf-dark hover:bg-tf-grey-pastel/30',
+                  'flex shrink-0 items-center gap-1.5 rounded-xl font-bold text-tf-dark hover:bg-tf-grey-pastel/30',
                   isMinimized ? 'px-2 py-1 text-[11px]' : 'px-2 py-1.5 text-xs',
                 )}
                 aria-label={isMinimized ? 'Ouvrir les options' : 'Réduire'}
               >
                 <span className="text-sm">🎙️</span>
-                {!isMinimized && <span>{user.username}</span>}
                 <span className="text-tf-grey">{isMinimized ? '▶' : '▼'}</span>
               </button>
+              {!isMinimized ? (
+                <Link
+                  to={commentatorProfileHref}
+                  className={cn(
+                    'min-w-0 truncate font-bold text-tf-dark outline-none rounded-sm text-xs',
+                    TF_FOCUS_VISIBLE,
+                  )}
+                >
+                  {user.username}
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
@@ -285,7 +350,10 @@ export function LiveCommentator({
                   <input
                     type="text"
                     value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
+                    onChange={(e) => {
+                      setCommentText(e.target.value)
+                      setModerationError(null)
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && sendCommentary()}
                     placeholder="Commentaire…"
                     className="flex-1 rounded-lg border border-tf-grey-pastel/50 bg-white px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rose-400/50"
@@ -299,6 +367,9 @@ export function LiveCommentator({
                     Dire
                   </button>
                 </div>
+                {moderationError ? (
+                  <p className="text-[10px] font-semibold text-rose-600">{moderationError}</p>
+                ) : null}
                 <div className="flex gap-1">
                   <button
                     type="button"
@@ -324,12 +395,23 @@ export function LiveCommentator({
             )}
           </div>
         ) : (
-          <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 p-3 shadow-xl backdrop-blur">
+          <div className="max-h-[min(58vh,420px)] overflow-y-auto rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/95 p-3 shadow-sm backdrop-blur">
             <div className="flex items-center gap-2 pb-2">
-              <Face size="sm" />
+              <Link
+                to={commentatorProfileHref}
+                className={cn('shrink-0 rounded-full outline-none', TF_FOCUS_VISIBLE)}
+                aria-label={`Profil ${user.username}`}
+              >
+                <Face size="sm" />
+              </Link>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-slate-800">{user.username}</span>
+                  <Link
+                    to={commentatorProfileHref}
+                    className={cn('text-xs font-black text-slate-800 outline-none rounded-sm', TF_FOCUS_VISIBLE)}
+                  >
+                    {user.username}
+                  </Link>
                   {isSpeaking && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
                       <span className="relative flex h-1.5 w-1.5">
@@ -360,7 +442,10 @@ export function LiveCommentator({
                 <input
                   type="text"
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
+                  onChange={(e) => {
+                    setCommentText(e.target.value)
+                    setModerationError(null)
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && sendCommentary()}
                   placeholder="Ton commentaire en direct…"
                   className="flex-1 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-400/50"
@@ -374,6 +459,9 @@ export function LiveCommentator({
                   Dire
                 </button>
               </div>
+              {moderationError ? (
+                <p className="text-xs font-semibold text-rose-600">{moderationError}</p>
+              ) : null}
               <button
                 type="button"
                 onClick={startSpeaking}
@@ -417,38 +505,6 @@ export function LiveCommentator({
           </div>
         )}
       </div>
-
-      {/* Overlay commentaire (texte uniquement — vidéo dans le PIP en haut à droite) */}
-      {liveCommentary && isSpeaking && (
-        <div
-          className="fixed left-3 right-3 z-40 mx-auto max-w-lg bottom-[max(10.5rem,calc(9rem+env(safe-area-inset-bottom,0px)))] sm:bottom-40 sm:left-6 sm:right-auto"
-          aria-live="polite"
-        >
-          <div className="animate-[tf-commentary-in_0.3s_ease-out] rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-3 shadow-2xl backdrop-blur">
-            <div className="flex items-start gap-3">
-              <div className="relative shrink-0">
-                <Face />
-                <span className="absolute -bottom-1 -right-1 flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-600" />
-                </span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-slate-800">{user.username}</span>
-                  <span className="text-[10px] font-bold text-rose-600">LIVE</span>
-                </div>
-                <p className="mt-0.5 text-sm font-medium leading-relaxed text-slate-700">
-                  {liveCommentary.text}
-                </p>
-              </div>
-              <div className="tf-sound-bars shrink-0" aria-hidden>
-                <span /><span /><span /><span /><span />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }

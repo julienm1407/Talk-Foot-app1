@@ -67,6 +67,12 @@ const PROFILE: RouteSeoConfig = {
   robots: 'noindex, nofollow',
 }
 
+const USER_VITRINE: RouteSeoConfig = {
+  title: `Profil supporter — ${SITE_NAME}`,
+  description: 'Profil public supporter sur Talk Foot : pseudo, club de cœur et contact.',
+  robots: 'noindex, nofollow',
+}
+
 const ADMIN: RouteSeoConfig = {
   title: `Administration — ${SITE_NAME}`,
   description: 'Espace administration Talk Foot.',
@@ -116,6 +122,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/boutique') return BOUTIQUE
   if (pathname === '/videos') return VIDEOS
   if (pathname === '/profile') return PROFILE
+  if (pathname.startsWith('/user/')) return USER_VITRINE
   if (pathname === '/admin') return ADMIN
   if (pathname.startsWith('/channel/')) {
     if (pathname.endsWith('/stade')) return STADIUM

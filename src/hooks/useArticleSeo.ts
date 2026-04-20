@@ -79,6 +79,7 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
     } else {
       upsertMeta('name', 'description', opts.description)
     }
+    upsertMeta('name', 'robots', 'index, follow')
     upsertMeta('property', 'og:type', 'article')
     upsertMeta('property', 'og:title', opts.title)
     upsertMeta('property', 'og:description', opts.description)
@@ -86,6 +87,11 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
     upsertMeta('property', 'og:image', opts.ogImage)
     upsertMeta('property', 'og:locale', 'fr_FR')
     upsertMeta('property', 'og:site_name', SITE_NAME)
+    upsertMeta('property', 'article:published_time', opts.publishedAt)
+    upsertMeta('property', 'article:modified_time', opts.modifiedAt ?? opts.publishedAt)
+    if (opts.section?.trim()) {
+      upsertMeta('property', 'article:section', opts.section.trim())
+    }
     upsertMeta('name', 'twitter:card', 'summary_large_image')
     upsertMeta('name', 'twitter:title', opts.title)
     upsertMeta('name', 'twitter:description', opts.description)

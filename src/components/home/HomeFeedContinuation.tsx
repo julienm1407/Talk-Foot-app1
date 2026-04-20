@@ -29,6 +29,8 @@ export function HomeFeedContinuation({
   clubFocusLabel,
   team,
   wrapClassName,
+  /** Hub 3 colonnes : le fil occupe toute la largeur utile de la colonne centrale (sans `max-w-tf-content`). */
+  fullWidth = false,
 }: {
   idPrefix: string
   displayMatches: Match[]
@@ -41,13 +43,20 @@ export function HomeFeedContinuation({
   clubFocusLabel: string
   team: HomeFeedTeamHint
   wrapClassName?: string
+  fullWidth?: boolean
 }) {
   const { appearance } = useAppearance()
   const isLight = appearance === 'light'
   const pid = (s: string) => `${idPrefix}${s}`
 
   return (
-    <div className={cn('mx-auto w-full min-w-0 max-w-tf-content space-y-6 sm:space-y-8', wrapClassName)}>
+    <div
+      className={cn(
+        'mx-auto w-full min-w-0 space-y-6 sm:space-y-8',
+        !fullWidth && 'max-w-tf-content',
+        wrapClassName,
+      )}
+    >
       <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
         <section className="min-w-0" aria-labelledby={pid('home-carousel-heading')}>
           <Card

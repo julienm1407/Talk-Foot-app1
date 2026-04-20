@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/cn'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
+import { hubPillLink } from '../../utils/hubSurface'
 
 /**
  * Bloc d’accueil : promesse + CTA visibles sans scroll inutile + accès profil / page Match / etc.
@@ -13,6 +14,8 @@ export function HomeLandingHub({
   onCreateGroup,
   desktopToolbar,
   compact = false,
+  /** `contextRail` : bandeau court sous le live (desktop), sans titre marketing */
+  variant = 'full',
 }: {
   appearance: 'light' | 'dark'
   className?: string
@@ -21,8 +24,48 @@ export function HomeLandingHub({
   desktopToolbar?: React.ReactNode
   /** Moins de padding / hauteurs : laisser les lives visibles au-dessus de la ligne de flottaison */
   compact?: boolean
+  variant?: 'full' | 'contextRail'
 }) {
   const L = appearance === 'light'
+
+  if (variant === 'contextRail') {
+    return (
+      <section
+        className={cn(
+          'overflow-hidden rounded-2xl border',
+          L ? 'border-tf-dark/12 bg-white/92' : 'border-white/[0.09] bg-white/[0.05]',
+          className,
+        )}
+        aria-label="Actions rapides"
+      >
+        <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-3.5">
+          <Button
+            type="button"
+            variant="primary"
+            className={cn(
+              'w-full rounded-xl text-sm font-black shadow-[0_6px_20px_rgba(255,59,59,0.22)] sm:w-auto sm:min-w-[13.5rem]',
+              !L &&
+                'border-tf-cta-hover/35 bg-tf-cta hover:border-orange-400/45 hover:bg-tf-cta-hover hover:shadow-[0_8px_28px_rgba(255,59,59,0.32)]',
+            )}
+            onClick={onCreateGroup}
+          >
+            ➕ Créer une tribune
+          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+            <Link to="/profile" className={hubPillLink(appearance, 'sm')}>
+              Profil
+            </Link>
+            <Link to="/boutique" className={hubPillLink(appearance, 'sm')}>
+              Boutique
+            </Link>
+            <Link to="/videos" className={hubPillLink(appearance, 'sm')}>
+              Vidéos
+            </Link>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section
@@ -45,14 +88,15 @@ export function HomeLandingHub({
                 'font-display font-black tracking-tight text-balance',
                 L ? 'text-tf-dark' : 'text-tf-app-fg',
                 compact ? 'text-tf-xl sm:text-2xl xl:text-3xl' : 'text-tf-display',
+                'leading-[1.12]',
               )}
             >
               Le foot live, avec tes potes en tribunes
             </h1>
             <p
               className={cn(
-                'mt-tf-2 w-full max-w-prose text-left text-pretty text-tf-base font-semibold leading-snug sm:text-tf-md xl:leading-relaxed',
-                L ? 'text-tf-dark/70' : 'text-tf-app-muted',
+                'mt-tf-2 w-full max-w-[48ch] text-left text-pretty text-tf-base font-semibold leading-relaxed sm:text-tf-md xl:leading-relaxed',
+                L ? 'text-tf-dark/72' : 'text-tf-app-muted',
               )}
             >
               {compact
@@ -61,7 +105,7 @@ export function HomeLandingHub({
             </p>
             <p
               className={cn(
-                'mt-tf-2 text-tf-xs font-bold leading-snug',
+                'mt-tf-2 max-w-[52ch] text-tf-xs font-bold leading-snug',
                 L ? 'text-tf-grey' : 'text-sky-100/75',
               )}
             >
@@ -85,6 +129,14 @@ export function HomeLandingHub({
             </div>
           ) : null}
         </div>
+
+        <div
+          className={cn(
+            'h-px w-full shrink-0 bg-gradient-to-r from-transparent to-transparent',
+            L ? 'via-tf-dark/14' : 'via-white/14',
+          )}
+          aria-hidden
+        />
 
         <nav
           aria-label="Entrées principales"
