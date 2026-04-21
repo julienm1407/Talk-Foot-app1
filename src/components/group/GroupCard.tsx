@@ -76,7 +76,13 @@ export function GroupCard({
 
   const shell = cn(
     'relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/70 transition-shadow duration-200 group-hover:shadow-md',
-    railDense ? 'rounded-2xl px-2.5 py-2.5 shadow-sm' : rail ? 'px-3 py-3' : encart ? 'flex h-full min-h-0 flex-col px-4 py-4' : 'px-5 py-4',
+    railDense
+      ? 'rounded-2xl border-[color:color-mix(in_srgb,var(--p)_26%,rgb(226_232_240))] bg-gradient-to-b from-white/95 to-white/[0.88] px-2.5 pb-2.5 pl-2.5 pr-2.5 pt-3 shadow-sm ring-1 ring-[color:color-mix(in_srgb,var(--p)_14%,transparent)]'
+      : rail
+        ? 'px-3 py-3'
+        : encart
+          ? 'flex h-full min-h-0 flex-col px-4 py-4'
+          : 'px-5 py-4',
     className,
   )
 
@@ -99,28 +105,73 @@ export function GroupCard({
     return (
       <div className={shell} style={themeStyle}>
         <ThemeBackdrop group={group} subtle={rail} />
-        <div className={cn('relative', railDense ? 'space-y-2' : 'space-y-2')}>
+        {railDense ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 z-[3] h-[3px] rounded-t-[0.65rem]"
+            style={{
+              background: `linear-gradient(90deg, ${group.theme.primary}, ${group.theme.secondary})`,
+            }}
+            aria-hidden
+          />
+        ) : null}
+        <div className={cn('relative z-[2]', railDense ? 'space-y-2' : 'space-y-2')}>
           <div className="flex items-start gap-2">
-            {emojiBox('sm')}
+            <div
+              className={cn(
+                'shrink-0',
+                railDense ? 'rounded-2xl ring-2 ring-white/90 shadow-md' : '',
+              )}
+            >
+              {emojiBox('sm')}
+            </div>
             <div className="min-w-0 flex-1">
-              <div className={cn('truncate font-black text-slate-900', railDense ? 'text-xs' : 'text-sm')}>
-                {group.name}
+              <div
+                className={cn(
+                  'font-black leading-tight text-slate-900',
+                  railDense ? 'font-display text-[13px] tracking-tight' : 'truncate text-sm',
+                )}
+              >
+                {railDense ? (
+                  <span className="line-clamp-2 text-balance">{group.name}</span>
+                ) : (
+                  group.name
+                )}
               </div>
-              <div className="mt-0.5 truncate text-[10px] font-semibold text-slate-600">
-                {group.location ? `${group.location} · ` : ''}
-                {group.members} membres
-                {railDense ? ` · +${msgs}` : null}
+              <div className="mt-0.5 text-[10px] font-semibold leading-snug text-slate-600">
+                {railDense ? (
+                  <span className="line-clamp-2">
+                    {group.location ? `${group.location} · ` : ''}
+                    {group.members.toLocaleString('fr-FR')} membres
+                  </span>
+                ) : (
+                  <>
+                    {group.location ? `${group.location} · ` : ''}
+                    {group.members} membres
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           {railDense ? (
-            <div className="flex flex-wrap items-center gap-1">
-              <Badge className="border-amber-200/80 bg-amber-50/90 px-1.5 py-0.5 text-[9px] text-amber-950">
-                🔥 {online}
-              </Badge>
-              <span className="text-[9px] font-bold text-slate-500">{kindLabel[kind]}</span>
-            </div>
+            <>
+              <div className="flex flex-wrap items-center gap-1">
+                <Badge className="border-amber-200/85 bg-amber-50/95 px-1.5 py-0.5 text-[9px] font-bold text-amber-950">
+                  🔥 {online.toLocaleString('fr-FR')} en ligne
+                </Badge>
+                <Badge className="border-emerald-200/80 bg-emerald-50/90 px-1.5 py-0.5 text-[9px] font-bold text-emerald-950">
+                  📈 +{msgs}
+                </Badge>
+                <Badge className="border-slate-200/90 bg-[color:color-mix(in_srgb,var(--p)_12%,white)] px-1.5 py-0.5 text-[9px] font-bold text-slate-800">
+                  {kindLabel[kind]}
+                </Badge>
+              </div>
+              {group.motto ? (
+                <p className="line-clamp-1 text-[9px] font-semibold italic leading-tight text-slate-600">
+                  « {group.motto} »
+                </p>
+              ) : null}
+            </>
           ) : (
             <>
               <div className="flex flex-wrap gap-1.5">
@@ -158,8 +209,17 @@ export function GroupCard({
               railDense ? 'rounded-xl px-2 py-1.5 text-[10px]' : 'rounded-2xl px-3 py-2 text-[11px]',
               member
                 ? 'border-2 border-emerald-500/40 bg-emerald-50 text-emerald-900'
-                : 'bg-tf-dark text-white',
+                : railDense
+                  ? 'text-white shadow-[0_6px_14px_-3px_rgba(0,0,0,0.3)]'
+                  : 'bg-tf-dark text-white',
             )}
+            style={
+              !member && railDense
+                ? {
+                    background: `linear-gradient(135deg, ${group.theme.primary}, ${group.theme.secondary})`,
+                  }
+                : undefined
+            }
           >
             {member ? 'Membre ✓' : 'Rejoindre'}
           </span>

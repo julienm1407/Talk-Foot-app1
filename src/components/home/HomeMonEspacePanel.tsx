@@ -101,7 +101,7 @@ export function HomeMonEspacePanel({
         className={cn(
           'flex flex-col p-4',
           slim ? 'gap-3.5' : 'gap-5',
-          railScrollBody && 'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+          railScrollBody && 'min-h-0 flex-1 overflow-hidden',
         )}
       >
         {showTopHeading && !slim ? (

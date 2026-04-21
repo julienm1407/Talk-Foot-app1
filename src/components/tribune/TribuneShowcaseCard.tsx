@@ -37,7 +37,11 @@ export function TribuneShowcaseCard({
     <Link
       to={`/group/${group.id}`}
       className={cn(
-        'group block h-full min-h-0 tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20',
+        'group block h-full min-h-0 rounded-3xl outline-none transition-shadow duration-200 focus-visible:ring-2 focus-visible:ring-blue-600/20',
+        /* Rail : pas de scale (.tf-card-hover) — rogné par overflow des encarts colonne */
+        variant === 'rail'
+          ? 'hover:shadow-[0_10px_28px_rgba(0,0,0,0.18)] dark:hover:shadow-[0_12px_36px_rgba(0,0,0,0.45)]'
+          : 'tf-card-hover',
         className,
       )}
       aria-label={`Ouvrir le salon ${group.name}`}

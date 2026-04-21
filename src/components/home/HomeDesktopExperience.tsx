@@ -98,7 +98,7 @@ export function HomeDesktopExperience({
   /** Sous le live : plusieurs prochains matchs en grille serrée (cartes plus étroites) */
   const headerUpcomingPrimary = upcomingSorted.slice(0, 4)
   const featuredLiveMatch = liveMatches[deskLiveIndex] ?? liveMatches[0]
-  const topDebates = trendingDebates.slice(0, 6)
+  const topDebates = trendingDebates.slice(0, 4)
   const tribunes = tribuneGroups.slice(0, 4)
 
   const railSpotlightMax = 4
@@ -403,65 +403,58 @@ export function HomeDesktopExperience({
       <aside className="flex min-h-0 h-full min-w-0 flex-col gap-3 overflow-hidden lg:gap-4">
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', card, 'p-0')}>
           <HubEncartTopAccent appearance={appearance} preset="tribune" />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-3.5">
-            <h3 className={cn('shrink-0 pb-1.5 font-display text-xs font-black uppercase tracking-[0.18em] text-tf-app-fg', railHeadBorder)}>
-              Salons à découvrir
-            </h3>
-            <nav
-              aria-label="Raccourcis salons et rubriques"
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-3.5">
+            <div
               className={cn(
-                'mb-3 flex flex-wrap gap-2 border-b pb-2.5',
-                L ? 'border-tf-dark/10' : 'border-white/10',
+                'mb-3 flex shrink-0 flex-wrap items-end justify-between gap-2 pb-1.5',
+                railHeadBorder,
               )}
             >
-              <Link to="/match" className={hubPillLink(appearance, 'xs')}>
-                Matchs
+              <h3 className="min-w-0 font-display text-xs font-black uppercase tracking-[0.18em] text-tf-app-fg">
+                Salons à découvrir
+              </h3>
+              <Link to="/groups" className={cn(hubPillLink(appearance, 'xs'), 'shrink-0')}>
+                Tous les groupes
               </Link>
-              <Link to="/groups" className={hubPillLink(appearance, 'xs')}>
-                Groupes
-              </Link>
-              <Link to="/rankings" className={hubPillLink(appearance, 'xs')}>
-                Classement
-              </Link>
-              <Link to="/debates" className={hubPillLink(appearance, 'xs')}>
-                Débats
-              </Link>
-              <Link to="/videos" className={hubPillLink(appearance, 'xs')}>
-                Vidéos
-              </Link>
-              <Link to="/profile" className={hubPillLink(appearance, 'xs')}>
-                Profil
-              </Link>
-            </nav>
-            <ul className="min-h-0 flex-1 space-y-4" role="list">
-              {railSpotlightGroups.length === 0 ? (
-                <li className={cn('text-xs font-semibold', hubSecondary)}>Aucun groupe pour l’instant.</li>
-              ) : (
-                railSpotlightGroups.map((g) => (
-                  <li key={g.id} className="min-w-0 shrink-0 py-0.5">
-                    <TribuneShowcaseCard group={g} variant="rail" dense />
-                  </li>
-                ))
+            </div>
+            <div
+              className={cn(
+                'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5 [scrollbar-width:thin]',
+                '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full',
+                L
+                  ? '[&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent'
+                  : '[&::-webkit-scrollbar-thumb]:bg-white/22 [&::-webkit-scrollbar-track]:bg-transparent',
               )}
-            </ul>
-            <Link
-              to="/groups"
-              className={cn(hubPillLink(appearance, 'sm'), 'mt-3 w-full shrink-0 justify-center text-center')}
             >
-              Tous les groupes
-            </Link>
+              <ul className="space-y-3 pb-0.5 pt-0.5" role="list">
+                {railSpotlightGroups.length === 0 ? (
+                  <li className={cn('text-xs font-semibold', hubSecondary)}>Aucun groupe pour l’instant.</li>
+                ) : (
+                  railSpotlightGroups.map((g) => (
+                    <li key={g.id} className="min-w-0">
+                      <TribuneShowcaseCard group={g} variant="rail" dense />
+                    </li>
+                  ))
+                )}
+              </ul>
+            </div>
           </div>
         </div>
 
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', card, 'p-0')}>
           <HubEncartTopAccent appearance={appearance} preset="debate" />
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-3.5">
-            <h3 className={cn('shrink-0 pb-2 font-display text-xs font-black uppercase tracking-[0.18em] text-tf-app-fg', railHeadBorder)}>
+          <div className="flex min-h-0 flex-1 flex-col justify-start overflow-hidden overflow-x-hidden p-3 sm:p-3.5">
+            <h3
+              className={cn(
+                'shrink-0 pb-2 font-display text-xs font-black uppercase tracking-[0.18em] text-tf-app-fg',
+                railHeadBorder,
+              )}
+            >
               Top débats
             </h3>
-            <ol className="min-h-0 flex-1 space-y-2.5" role="list">
+            <ol className="min-h-0 space-y-2.5" role="list">
               {topDebates.map((d, i) => (
-                <li key={d.id} className="min-w-0 shrink-0">
+                <li key={d.id} className="min-w-0">
                   <Link to={`/debate/${d.id}`} className={debateRow}>
                     <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 text-xs font-black text-white sm:size-8 sm:text-sm">
                       {i + 1}
@@ -481,13 +474,13 @@ export function HomeDesktopExperience({
               to="/debates"
               className={cn(
                 hubPillLink(appearance, 'sm'),
-                'mt-2 w-full shrink-0 justify-center text-center',
+                'mt-3 w-full shrink-0 justify-center text-center',
                 L
                   ? 'border-orange-200/90 bg-orange-50/95 text-orange-900 hover:border-orange-300 hover:bg-orange-50'
                   : 'border-orange-400/35 bg-orange-500/12 text-orange-100 hover:border-orange-400/50 hover:bg-orange-500/20',
               )}
             >
-              Tous les débats
+              Voir plus
             </Link>
           </div>
         </div>
