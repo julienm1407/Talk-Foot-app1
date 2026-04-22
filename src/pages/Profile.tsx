@@ -1,7 +1,6 @@
 import { currentUser } from '../data/users'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
 import { Card } from '../components/ui/Card'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { Badge } from '../components/ui/Badge'
@@ -29,6 +28,8 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
+import { useAppearance } from '../contexts/AppearanceContext'
+import type { Appearance } from '../contexts/AppearanceContext'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -38,8 +39,46 @@ const TIER_COLORS: Record<string, string> = {
   diamond: 'from-cyan-400 to-cyan-600',
 }
 
+/** Encart interne à une Card — lisible en clair et en sombre */
+function profileIncard(appearance: Appearance) {
+  const L = appearance === 'light'
+  return cn(
+    'border',
+    L
+      ? 'border-tf-dark/10 bg-white/88 shadow-[0_1px_0_rgba(1,30,51,0.05)]'
+      : 'border-white/10 bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]',
+  )
+}
+
+const PROFILE_SOMMAIRE: { id: string; label: string }[] = [
+  { id: 'compte', label: 'Compte' },
+  { id: 'mode-virage', label: 'Chat' },
+  { id: 'boutique', label: 'Boutique' },
+  { id: 'monnaie', label: 'Niveau' },
+  { id: 'supporter', label: 'Club' },
+  { id: 'classement', label: 'Rang' },
+  { id: 'apparence', label: 'Apparence' },
+  { id: 'stats-pronos', label: 'Stats' },
+  { id: 'paris', label: 'Paris' },
+  { id: 'badges-pronos', label: 'Badges' },
+  { id: 'progression', label: 'Paliers' },
+  { id: 'historique-pronos', label: 'Historique' },
+]
+
+function profileNavLink(appearance: Appearance) {
+  const L = appearance === 'light'
+  return cn(
+    'inline-flex shrink-0 items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-tight transition',
+    L
+      ? 'border-tf-dark/10 bg-tf-white/60 text-tf-app-fg hover:border-tf-dark/18 hover:bg-white'
+      : 'border-white/12 bg-white/5 text-sky-200 hover:border-white/18 hover:bg-white/10',
+  )
+}
+
 export function ProfilePage() {
   const navigate = useNavigate()
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   const { user: authUser, logout } = useAuth()
   const { matches } = useMatches()
   const {
@@ -185,7 +224,9 @@ export function ProfilePage() {
         kind: 'predictor',
         label: 'Pronostiqueur',
         hint: '5 pronos enregistrés',
-        className: 'border-blue-200 bg-blue-50 text-blue-700',
+        className: L
+          ? 'border-blue-200 bg-blue-50 text-blue-700'
+          : 'border-blue-400/30 bg-blue-950/50 text-sky-200',
       })
 
     if (stats.accuracy >= 60)
@@ -193,7 +234,9 @@ export function ProfilePage() {
         kind: 'accuracy',
         label: `Précision ${stats.accuracy}%`,
         hint: 'Bon taux de réussite',
-        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        className: L
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-emerald-400/30 bg-emerald-950/45 text-emerald-200',
       })
 
     if (stats.streak >= 2)
@@ -201,7 +244,9 @@ export function ProfilePage() {
         kind: 'streak',
         label: `Série x${stats.streak}`,
         hint: 'Victoires consécutives',
-        className: 'border-amber-200 bg-amber-50 text-amber-800',
+        className: L
+          ? 'border-amber-200 bg-amber-50 text-amber-800'
+          : 'border-amber-400/30 bg-amber-950/45 text-amber-200',
       })
 
     if (stats.fav)
@@ -209,11 +254,13 @@ export function ProfilePage() {
         kind: 'league',
         label: `Fan de ${stats.fav.name}`,
         hint: 'Compétition la plus pronostiquée',
-        className: 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey',
+        className: L
+          ? 'border-slate-200/80 bg-slate-50 text-slate-800'
+          : 'border-white/10 bg-white/[0.06] text-sky-200/95',
       })
 
     return b
-  }, [stats])
+  }, [stats, L])
 
   const progress = useMemo(() => {
     const nextPredictor = 10
@@ -235,62 +282,90 @@ export function ProfilePage() {
   const pr = getAppSectionTheme('profile')
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-5 sm:space-y-6 lg:space-y-7">
       <header
         className={cn(
           'flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
           pr.page.borderBottomClass,
         )}
       >
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-1.5">
           <div className={cn('text-[11px] font-black tracking-[0.18em]', pr.page.eyebrowClass)}>
             Profil
           </div>
-          <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">
+          <h1 className="font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-3xl">
             {authUser?.displayName ?? currentUser.username}
           </h1>
-          <p className="text-sm font-semibold text-tf-grey">
-            {authUser?.email ? (
-              <span className="text-tf-grey">{authUser.email} • </span>
-            ) : null}
-            Badges + historique de tes prédictions
+          <p className="text-sm font-semibold text-tf-app-muted">
+            {authUser?.email ? <span className="break-all">{authUser.email} • </span> : null}
+            Badges, paris, progression et paramètres
           </p>
         </div>
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="shrink-0 self-start rounded-2xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 sm:self-center"
+          className={cn(
+            'shrink-0 self-start rounded-2xl sm:self-center',
+            L
+              ? 'text-rose-600 hover:bg-rose-50 hover:text-rose-700'
+              : 'text-rose-300 hover:bg-rose-950/45 hover:text-rose-200',
+          )}
           aria-label="Se déconnecter"
         >
           Déconnexion
         </Button>
       </header>
 
-      {authUser?.isAdmin ? (
-        <Link
-          to="/admin"
-          className={cn(
-            TF_FOCUS_VISIBLE,
-            'flex items-center justify-between gap-3 rounded-2xl border border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 px-4 py-3 text-sm font-black text-amber-950 shadow-sm transition hover:border-amber-500/70 hover:shadow-md',
-          )}
-        >
-          <span>Administration du site</span>
-          <span aria-hidden className="text-lg">
-            →
-          </span>
-        </Link>
-      ) : null}
+      <nav
+        className={cn(
+          '-mx-1 flex snap-x snap-mandatory items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1',
+          '[scrollbar-width:thin] sm:mx-0 sm:flex-wrap sm:overflow-x-visible',
+        )}
+        aria-label="Aller à une section"
+      >
+        {PROFILE_SOMMAIRE.map(({ id, label }) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className={cn('snap-start', profileNavLink(appearance), TF_FOCUS_VISIBLE)}
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
 
-      <ProfilePrivacySection />
+      <div id="compte" className="scroll-mt-4 space-y-3 sm:space-y-4">
+        {authUser?.isAdmin ? (
+          <Link
+            to="/admin"
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
+              L
+                ? 'border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-950 hover:border-amber-500/70 hover:shadow-md'
+                : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:border-amber-400/55 hover:shadow-md',
+            )}
+          >
+            <span>Administration du site</span>
+            <span aria-hidden className="text-lg">
+              →
+            </span>
+          </Link>
+        ) : null}
+
+        <ProfilePrivacySection />
+      </div>
 
       {/* Mode Virage : réglage principal, visible dès l’ouverture du profil */}
       <Card
         id="mode-virage"
         className={cn(
-          'scroll-mt-4 overflow-hidden p-0 shadow-[0_12px_40px_rgba(1,30,51,0.08)] transition-shadow',
+          'scroll-mt-4 overflow-hidden p-0 transition-shadow',
+          L && 'shadow-[0_12px_40px_rgba(1,30,51,0.08)]',
+          !L && 'shadow-[0_8px_32px_rgba(0,0,0,0.2)]',
           virageMode
             ? 'border-2 border-rose-500/50 ring-2 ring-rose-400/25'
-            : 'border border-tf-grey-pastel/60',
+            : 'border border-[color:var(--tf-c30-border)]',
         )}
         elevation="soft"
       >
@@ -298,35 +373,51 @@ export function ProfilePage() {
           className={cn(
             'px-5 py-5 sm:px-6 sm:py-6',
             virageMode
-              ? 'bg-gradient-to-br from-rose-50/95 via-white to-tf-ice/80'
-              : 'bg-gradient-to-br from-tf-white to-tf-grey-pastel/15',
+              ? L
+                ? 'bg-gradient-to-br from-rose-50/95 via-white to-tf-ice/80'
+                : 'bg-gradient-to-br from-rose-900/30 via-slate-900/40 to-slate-900/20'
+              : L
+                ? 'bg-gradient-to-br from-tf-white to-tf-grey-pastel/15'
+                : 'bg-gradient-to-br from-white/[0.06] to-transparent',
           )}
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="text-[11px] font-black tracking-[0.22em] text-rose-600">
+              <p
+                className={cn(
+                  'text-[11px] font-black tracking-[0.22em]',
+                  L ? 'text-rose-600' : 'text-rose-300/95',
+                )}
+              >
                 CHAT LIVE & SALONS
               </p>
-              <h2 className="font-display text-xl font-black tracking-tight text-tf-dark sm:text-2xl">
+              <h2 className="font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
                 {LIVE_FIL_EQUIPE_COEUR.label}
               </h2>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-tf-grey">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-tf-app-muted">
                 À ne pas confondre avec la zone stade « Virage » sur un live, ni avec un salon de groupe privé.
               </p>
-              <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-dark/80">
-                Quand il est <strong className="text-tf-dark">activé</strong>, tu ne vois (en plus de toi) que les
+              <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-app-fg/90">
+                Quand il est <strong className="text-tf-app-fg">activé</strong>, tu ne vois (en plus de toi) que les
                 messages des personnes qui ont renseigné{' '}
-                <strong className="text-tf-dark">un de tes clubs favoris</strong> — sur le live public, dans les salons
+                <strong className="text-tf-app-fg">un de tes clubs favoris</strong> — sur le live public, dans les salons
                 groupe et dans le top commentaires. Le mode supporter (teinte maillot) ne fait pas ce filtrage : c’est
                 uniquement ce réglage.
               </p>
               {!preferencesComplete || favoriteClubIds.length === 0 ? (
-                <p className="rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-bold text-amber-950">
+                <p
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-xs font-bold',
+                    L
+                      ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
+                      : 'border-amber-400/35 bg-amber-950/50 text-amber-100',
+                  )}
+                >
                   Choisis au moins une ligue et un club avec « Modifier ligue / clubs » pour que le filtrage ait du
                   sens.
                 </p>
               ) : (
-                <p className="text-xs font-bold text-tf-grey">
+                <p className="text-xs font-bold text-tf-app-muted">
                   Clubs pris en compte : {clubsLabel}
                 </p>
               )}
@@ -344,15 +435,22 @@ export function ProfilePage() {
                 }
                 onClick={() => setVirageMode(!virageMode)}
                 className={cn(
-                  'relative h-16 min-w-[200px] rounded-2xl border-2 px-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/40 focus-visible:ring-offset-2',
+                  'relative h-16 min-w-[200px] rounded-2xl border-2 px-2 transition',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/40',
+                  L ? 'focus-visible:ring-offset-2' : 'focus-visible:ring-offset-0',
                   virageMode
-                    ? 'border-tf-dark bg-tf-dark text-white shadow-lg'
-                    : 'border-tf-dark/15 bg-white text-tf-dark shadow-sm hover:border-rose-300/60 hover:bg-rose-50/50',
+                    ? L
+                      ? 'border-rose-600/90 bg-rose-700 text-white shadow-lg'
+                      : 'border-rose-500/60 bg-rose-600/90 text-white shadow-lg'
+                    : L
+                      ? 'border-tf-dark/15 bg-white text-tf-app-fg shadow-sm hover:border-rose-300/60 hover:bg-rose-50/50'
+                      : 'border-white/15 bg-white/10 text-tf-app-fg shadow-sm hover:border-rose-400/35 hover:bg-rose-950/30',
                 )}
               >
                 <span
                   className={cn(
-                    'pointer-events-none absolute top-1.5 size-[3.25rem] rounded-xl bg-white shadow-md transition-all duration-300 ease-out',
+                    'pointer-events-none absolute top-1.5 size-[3.25rem] rounded-xl shadow-md transition-all duration-300 ease-out',
+                    L ? 'bg-white' : 'bg-slate-900/90',
                     virageMode ? 'left-[calc(100%-3.65rem)]' : 'left-1.5',
                   )}
                   aria-hidden
@@ -361,6 +459,7 @@ export function ProfilePage() {
                   className={cn(
                     'relative z-[1] flex h-full w-full items-center gap-2 text-sm font-black',
                     virageMode ? 'justify-end pr-3.5' : 'justify-start pl-[3.75rem]',
+                    !L && !virageMode && 'text-sky-100',
                   )}
                 >
                   {virageMode ? (
@@ -380,7 +479,7 @@ export function ProfilePage() {
                   )}
                 </span>
               </button>
-              <p className="text-center text-[11px] font-bold text-tf-grey lg:max-w-[11rem] lg:text-left">
+              <p className="text-center text-[11px] font-bold text-tf-app-muted lg:max-w-[11rem] lg:text-left">
                 {virageMode
                   ? 'Raccourci aussi sur le live (bouton à côté du chat).'
                   : 'Un clic : tu vois tout le monde (sauf filtres zone stade sur le live).'}
@@ -392,112 +491,169 @@ export function ProfilePage() {
 
       <Link
         to="/boutique"
-        className="block outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 rounded-3xl"
+        className="block scroll-mt-4 outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 rounded-3xl"
+        id="boutique"
         aria-label="Ouvrir la boutique Talk Foot"
       >
         <Card
-          className="tf-card-hover border-tf-electric/25 bg-gradient-to-br from-tf-electric-soft/90 to-white/95 p-5 sm:p-6"
+          className={cn(
+            'tf-card-hover p-5 sm:p-6',
+            L
+              ? 'border-tf-electric/25 bg-gradient-to-br from-tf-electric-soft/90 to-white/95'
+              : 'border-cyan-500/20 bg-gradient-to-br from-slate-900/50 via-slate-900/35 to-cyan-950/25',
+          )}
           elevation="soft"
         >
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-black tracking-[0.18em] text-tf-electric-deep">
+            <div className="min-w-0">
+              <p
+                className={cn(
+                  'text-[11px] font-black tracking-[0.18em]',
+                  L ? 'text-tf-electric-deep' : 'text-cyan-200/90',
+                )}
+              >
                 BOUTIQUE
               </p>
-              <h2 className="mt-1 font-display text-xl font-black text-tf-dark">
+              <h2 className="mt-1 font-display text-xl font-black text-tf-app-fg">
                 Maillots, emotes & cosmétiques
               </h2>
-              <p className="mt-1 text-sm font-semibold text-tf-grey">
-                La boutique n’est plus dans la barre principale — tout passe par ton profil.
+              <p className="mt-1 text-sm font-semibold text-tf-app-muted">
+                Accès ici (plus dans le menu) — mets ton équipe.
               </p>
             </div>
-            <span className="inline-flex rounded-2xl bg-tf-dark px-5 py-2.5 text-sm font-black text-white shadow-sm">
+            <span
+              className={cn(
+                'inline-flex rounded-2xl px-5 py-2.5 text-sm font-black text-white shadow-sm',
+                L ? 'bg-tf-dark' : 'bg-gradient-to-r from-rose-600 to-rose-500',
+              )}
+            >
               Ouvrir →
             </span>
           </div>
         </Card>
       </Link>
 
-      {/* Niveau & jetons */}
-      <Card className="p-5 sm:p-6" elevation="soft">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className={`flex items-center gap-2 rounded-2xl bg-gradient-to-br px-4 py-2 ${TIER_COLORS[tier.tier] ?? TIER_COLORS.bronze}`}
-            >
-              <span className="text-2xl font-black text-white">Niv. {profile.level}</span>
-              <span className="text-xs font-bold text-white/90">{tier.label}</span>
-            </div>
-            <div>
-              <div className="text-xs font-bold text-tf-grey">Progression</div>
-              <ProgressBar value={xpProgress} tone="blue" className="mt-1 max-w-[140px]" />
-              <div className="mt-0.5 text-[10px] font-medium text-tf-grey">
-                {xpProgress}% vers le niveau {profile.level + 1} • XP : paris gagnés, pronos
+      <Card id="monnaie" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="flex flex-col gap-4 sm:gap-5">
+          <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">NIVEAU & JETONS</div>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div
+                className={cn(
+                  'flex items-center gap-2 rounded-2xl bg-gradient-to-br px-4 py-2',
+                  TIER_COLORS[tier.tier] ?? TIER_COLORS.bronze,
+                )}
+              >
+                <span className="text-2xl font-black text-white">Niv. {profile.level}</span>
+                <span className="text-xs font-bold text-white/90">{tier.label}</span>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-tf-app-muted">Progression</div>
+                <ProgressBar value={xpProgress} tone="blue" className="mt-1 max-w-[min(200px,80vw)]" />
+                <div className="mt-0.5 text-[10px] font-medium text-tf-app-muted">
+                  {xpProgress}% vers le niveau {profile.level + 1} • XP : paris gagnés, pronos
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-2xl border border-emerald-200/60 bg-emerald-50/80 px-4 py-2">
-              <span className="flex shrink-0" aria-hidden>
-                <TokenGlyph className="size-8" />
-              </span>
-              <div>
-                <div className="text-[9px] font-black uppercase tracking-wider text-emerald-800/80">Pari</div>
-                <span className="font-display text-lg font-black text-tf-dark">{wallet.tokens} jetons</span>
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:max-w-md sm:justify-end">
+              <div
+                className={cn(
+                  'flex min-w-0 flex-1 items-center gap-2 rounded-2xl border px-4 py-2 sm:min-w-[10rem] sm:flex-initial',
+                  L
+                    ? 'border-emerald-200/60 bg-emerald-50/80'
+                    : 'border-emerald-500/30 bg-emerald-950/45',
+                )}
+              >
+                <span className="flex shrink-0" aria-hidden>
+                  <TokenGlyph className="size-8" />
+                </span>
+                <div className="min-w-0">
+                  <div
+                    className={cn(
+                      'text-[9px] font-black uppercase tracking-wider',
+                      L ? 'text-emerald-800/80' : 'text-emerald-200/80',
+                    )}
+                  >
+                    Pari
+                  </div>
+                  <span className="font-display text-lg font-black text-tf-app-fg">
+                    {wallet.tokens} jetons
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-amber-200/60 bg-amber-50/80 px-4 py-2">
-              <span className="text-lg" aria-hidden>
-                🏅
-              </span>
-              <div>
-                <div className="text-[9px] font-black uppercase tracking-wider text-amber-900/80">Boutique</div>
-                <span className="font-display text-lg font-black text-tf-dark">{wallet.medals} médailles</span>
+              <div
+                className={cn(
+                  'flex min-w-0 flex-1 items-center gap-2 rounded-2xl border px-4 py-2 sm:min-w-[10rem] sm:flex-initial',
+                  L
+                    ? 'border-amber-200/60 bg-amber-50/80'
+                    : 'border-amber-500/30 bg-amber-950/40',
+                )}
+              >
+                <span className="text-lg" aria-hidden>
+                  🏅
+                </span>
+                <div className="min-w-0">
+                  <div
+                    className={cn(
+                      'text-[9px] font-black uppercase tracking-wider',
+                      L ? 'text-amber-900/80' : 'text-amber-200/85',
+                    )}
+                  >
+                    Boutique
+                  </div>
+                  <span className="font-display text-lg font-black text-tf-app-fg">
+                    {wallet.medals} médailles
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </Card>
 
-      <Card className="p-5 sm:p-6" elevation="soft">
-        <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
-          SUPPORTER
-        </div>
-        <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+      <Card id="supporter" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">SUPPORTER</div>
+        <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-app-fg">
           Club & ligue
         </div>
-        <p className="mt-1 text-sm font-semibold text-tf-grey">
+        <p className="mt-1 text-sm font-semibold text-tf-app-muted">
           Ta ligue et tes clubs (jusqu’à 3) servent aux titres, couleurs et repères — tu gardes accès à tous les
           salons compatibles (ex. ultras du même club). Seul le{' '}
-          <strong className="text-tf-dark">{LIVE_FIL_EQUIPE_COEUR.label}</strong> filtre les messages (live, salons,
+          <strong className="text-tf-app-fg">{LIVE_FIL_EQUIPE_COEUR.label}</strong> filtre les messages (live, salons,
           top com.).
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
-            <div className="text-xs font-bold text-tf-grey">Ligue favorite</div>
-            <div className="mt-1 text-base font-black text-tf-dark">{leagueName}</div>
+          <div className={cn('rounded-2xl border px-4 py-3', profileIncard(appearance))}>
+            <div className="text-xs font-bold text-tf-app-muted">Ligue favorite</div>
+            <div className="mt-1 text-base font-black text-tf-app-fg break-words">{leagueName}</div>
           </div>
-          <div className="rounded-2xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-4 py-3">
-            <div className="text-xs font-bold text-tf-grey">Clubs favoris (max. 3)</div>
-            <div className="mt-1 text-base font-black text-tf-dark">{clubsLabel}</div>
+          <div className={cn('rounded-2xl border px-4 py-3', profileIncard(appearance))}>
+            <div className="text-xs font-bold text-tf-app-muted">Clubs favoris (max. 3)</div>
+            <div className="mt-1 break-words text-base font-black text-tf-app-fg">{clubsLabel}</div>
           </div>
         </div>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Button variant="primary" className="rounded-2xl" onClick={openOnboarding}>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <Button variant="primary" className="w-full rounded-2xl sm:w-auto" onClick={openOnboarding}>
             Modifier ligue / clubs
           </Button>
           <a
             href="#mode-virage"
-            className="self-center text-xs font-black text-tf-electric-deep underline decoration-2 underline-offset-2 sm:px-2"
+            className="self-center text-center text-xs font-black text-tf-cta underline decoration-2 underline-offset-2 sm:px-2"
           >
             ↑ {LIVE_FIL_EQUIPE_COEUR.label} (réglage rapide)
           </a>
-          <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tf-grey-pastel/50 bg-tf-white/90 px-4 py-2 text-sm font-bold text-tf-dark">
+          <label
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-bold sm:w-auto',
+              profileIncard(appearance),
+              'text-tf-app-fg',
+            )}
+          >
             <input
               type="checkbox"
               checked={hideRivalSalons}
               onChange={(e) => setHideRivalSalons(e.target.checked)}
-              className="size-4 rounded"
+              className="size-4 rounded border-[color:var(--tf-c30-border)]"
             />
             Masquer salons rivaux
           </label>
@@ -507,75 +663,77 @@ export function ProfilePage() {
       {/* Classement parieur */}
       <UserRankCard />
 
-      <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
+      <div id="apparence" className="scroll-mt-4 space-y-4 sm:space-y-5">
+        <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
 
-      {/* Avatar personnalisable */}
-      <CharacterLookEditor />
-      <AvatarEditor />
+        <CharacterLookEditor />
+        <AvatarEditor />
+      </div>
 
-      <Card className="p-5 sm:p-6">
+      <Card id="stats-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="mb-1 text-[11px] font-black tracking-[0.18em] text-tf-app-muted">PRÉDICTIONS</div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3">
-            <ProfileCharacterThumb
-              profile={profile}
-              size="md"
-              aria-label={`Personnage de ${currentUser.username}`}
-            />
-            <div>
-              <div className="text-base font-black text-tf-dark">
-                @{currentUser.username}
-              </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {badges.slice(0, 2).map((b) => (
-                  <Badge
-                    key={b.label}
-                    tone={b.tone ?? 'neutral'}
-                    className={b.className}
-                    title={b.hint}
-                  >
-                    {b.label}
-                  </Badge>
-                ))}
-              </div>
+          <div className="min-w-0">
+            <div className="text-base font-black text-tf-app-fg">@{currentUser.username}</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {badges.slice(0, 2).map((b) => (
+                <Badge
+                  key={b.label}
+                  tone={b.tone ?? 'neutral'}
+                  className={b.className}
+                  title={b.hint}
+                >
+                  {b.label}
+                </Badge>
+              ))}
             </div>
           </div>
 
-          <Button variant="soft" onClick={() => setEditOpen(true)} aria-label="Modifier le profil">
+          <Button
+            variant="soft"
+            className="w-full rounded-2xl sm:w-auto"
+            onClick={() => setEditOpen(true)}
+            aria-label="Modifier le profil"
+          >
             Modifier
           </Button>
         </div>
 
-        <div className="mt-5 grid gap-3 grid-cols-2 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
           <Stat label="Pronos" value={`${stats.total}`} hint="Au total" />
           <Stat
             label="Précision"
             value={`${stats.accuracy}%`}
             hint={`${stats.won}/${stats.decided} validés`}
           />
-          <Stat
-            label="Série"
-            value={`x${stats.streak}`}
-            hint="Victoires d’affilée"
-          />
+          <Stat label="Série" value={`x${stats.streak}`} hint="Victoires d’affilée" />
           <Stat label="Points" value={`${stats.points}`} hint="Score pronos" />
         </div>
       </Card>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-end justify-between gap-3">
+      <Card id="paris" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
-              MES PARIS
-            </div>
-            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">MES PARIS</div>
+            <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
               En cours & validés
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-tf-grey">
-            <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-tf-app-muted">
+            <Badge
+              className={cn(
+                'text-tf-app-fg',
+                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+              )}
+            >
               En cours: {betsView.open.length}
             </Badge>
-            <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey">
+            <Badge
+              className={cn(
+                'text-tf-app-fg',
+                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+              )}
+            >
               Validés: {betsView.settled.length}
             </Badge>
           </div>
@@ -583,36 +741,52 @@ export function ProfilePage() {
 
         {bets.length ? (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
+            <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-black text-tf-dark">En cours</div>
-                <Badge className="border-blue-200 bg-blue-50 text-blue-700">
+                <div className="text-sm font-black text-tf-app-fg">En cours</div>
+                <Badge
+                  className={
+                    L
+                      ? 'border-blue-200 bg-blue-50 text-blue-700'
+                      : 'border-blue-400/35 bg-blue-950/50 text-sky-200'
+                  }
+                >
                   {betsView.open.length}
                 </Badge>
               </div>
               {betsView.lastOpen.length ? (
-                <div className="mt-3 divide-y divide-tf-grey-pastel/50 rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90">
+                <div
+                  className={cn(
+                    'mt-3 divide-y overflow-hidden rounded-2xl border',
+                    profileIncard(appearance),
+                    L ? 'divide-slate-200/60' : 'divide-white/10',
+                  )}
+                >
                   {betsView.lastOpen.map((b) => {
                     const m = betsView.matchLine(b.matchId)
                     return (
                       <div key={b.id} className="p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-tf-dark">
-                              {m.title}
-                            </div>
+                            <div className="truncate text-xs font-black text-tf-app-fg">{m.title}</div>
                             {m.sub ? (
-                              <div className="mt-0.5 text-[11px] font-semibold text-tf-grey">
+                              <div className="mt-0.5 text-[11px] font-semibold text-tf-app-muted">
                                 {m.sub}
                               </div>
                             ) : null}
-                            <div className="mt-2 text-xs font-bold text-tf-dark">
+                            <div className="mt-2 text-xs font-bold text-tf-app-fg">
                               {betsView.marketLabel(b.market)} •{' '}
                               {betsView.selectionLabel(b, b.matchId)} • {b.stake}j • x
                               {b.odds.toFixed(2).replace('.', ',')}
                             </div>
                           </div>
-                          <Badge className="border-blue-200 bg-blue-50 text-blue-700">
+                          <Badge
+                            className={
+                              L
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-blue-400/35 bg-blue-950/50 text-sky-200'
+                            }
+                          >
                             En cours
                           </Badge>
                         </div>
@@ -621,51 +795,65 @@ export function ProfilePage() {
                   })}
                 </div>
               ) : (
-                <div className="mt-3 text-sm font-semibold text-tf-grey">
-                  Aucun pari en cours.
-                </div>
+                <div className="mt-3 text-sm font-semibold text-tf-app-muted">Aucun pari en cours.</div>
               )}
             </div>
 
-            <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
+            <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-black text-tf-dark">Validés</div>
-                <Badge className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey">
+                <div className="text-sm font-black text-tf-app-fg">Validés</div>
+                <Badge
+                  className={cn(
+                    'text-tf-app-fg',
+                    L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+                  )}
+                >
                   {betsView.settled.length}
                 </Badge>
               </div>
               {betsView.lastSettled.length ? (
-                <div className="mt-3 divide-y divide-tf-grey-pastel/50 rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90">
+                <div
+                  className={cn(
+                    'mt-3 divide-y overflow-hidden rounded-2xl border',
+                    profileIncard(appearance),
+                    L ? 'divide-slate-200/60' : 'divide-white/10',
+                  )}
+                >
                   {betsView.lastSettled.map((b) => {
                     const m = betsView.matchLine(b.matchId)
                     const statusBadge =
                       b.status === 'won'
                         ? {
-                            cls: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+                            cls: L
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                              : 'border-emerald-500/30 bg-emerald-950/45 text-emerald-200',
                             label: `Gagné +${b.payout ?? 0}`,
                           }
                         : b.status === 'lost'
                           ? {
-                              cls: 'border-rose-200 bg-rose-50 text-rose-800',
+                              cls: L
+                                ? 'border-rose-200 bg-rose-50 text-rose-800'
+                                : 'border-rose-500/30 bg-rose-950/45 text-rose-200',
                               label: 'Perdu',
                             }
                           : {
-                              cls: 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey',
+                              cls: cn(
+                                'text-tf-app-fg',
+                                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+                              ),
                               label: 'Annulé',
                             }
                     return (
                       <div key={b.id} className="p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-tf-dark">
-                              {m.title}
-                            </div>
+                            <div className="truncate text-xs font-black text-tf-app-fg">{m.title}</div>
                             {m.sub ? (
-                              <div className="mt-0.5 text-[11px] font-semibold text-tf-grey">
+                              <div className="mt-0.5 text-[11px] font-semibold text-tf-app-muted">
                                 {m.sub}
                               </div>
                             ) : null}
-                            <div className="mt-2 text-xs font-bold text-tf-dark">
+                            <div className="mt-2 text-xs font-bold text-tf-app-fg">
                               {betsView.marketLabel(b.market)} •{' '}
                               {betsView.selectionLabel(b, b.matchId)} • {b.stake}j
                             </div>
@@ -677,55 +865,44 @@ export function ProfilePage() {
                   })}
                 </div>
               ) : (
-                <div className="mt-3 text-sm font-semibold text-tf-grey">
+                <div className="mt-3 text-sm font-semibold text-tf-app-muted">
                   Aucun pari validé pour le moment.
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="mt-3 text-sm font-semibold text-tf-grey">
+          <div className="mt-3 text-sm font-semibold text-tf-app-muted">
             Pas encore de paris. Lance un match live et tente un prono.
           </div>
         )}
       </Card>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-end justify-between gap-3">
+      <Card id="badges-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
-              BADGES PRONOS
-            </div>
-            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">BADGES PRONOS</div>
+            <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
               Tes badges
             </div>
           </div>
-          <div className="text-xs font-semibold text-tf-grey">
-            {badges.length} badges
-          </div>
+          <div className="text-xs font-semibold text-tf-app-muted">{badges.length} badges</div>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {badges.map((b) => (
             <div
               key={b.label}
-              className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4"
+              className={cn('rounded-3xl p-4', profileIncard(appearance))}
               title={b.hint}
             >
               <div className="flex items-start gap-3">
                 <BadgeIllustration kind={b.kind} />
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-tf-dark">
-                    {b.label}
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-tf-grey">
-                    {b.hint}
-                  </div>
+                  <div className="text-sm font-black text-tf-app-fg">{b.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-tf-app-muted">{b.hint}</div>
                   <div className="mt-2">
-                    <Badge
-                      tone={b.tone ?? 'neutral'}
-                      className={b.className}
-                    >
+                    <Badge tone={b.tone ?? 'neutral'} className={b.className}>
                       Débloqué
                     </Badge>
                   </div>
@@ -736,28 +913,22 @@ export function ProfilePage() {
         </div>
       </Card>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-end justify-between gap-3">
+      <Card id="progression" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
-              PROGRESSION
-            </div>
-            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">PROGRESSION</div>
+            <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
               Prochains paliers
             </div>
           </div>
-          <div className="text-xs font-semibold text-tf-grey">
-            Gagne des badges en jouant
-          </div>
+          <div className="text-xs font-semibold text-tf-app-muted">Gagne des badges en jouant</div>
         </div>
 
-        <div className="mt-4 space-y-3">
-          <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
+        <div className="mt-4 space-y-2 sm:space-y-3">
+          <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-sm font-black text-tf-dark">
-                {progress.predictor.label}
-              </div>
-              <div className="text-xs font-bold text-tf-grey">
+              <div className="text-sm font-black text-tf-app-fg">{progress.predictor.label}</div>
+              <div className="text-xs font-bold text-tf-app-muted">
                 {progress.predictor.cur}/{progress.predictor.next}
               </div>
             </div>
@@ -766,12 +937,10 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
+          <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-sm font-black text-tf-dark">
-                {progress.accuracy.label}
-              </div>
-              <div className="text-xs font-bold text-tf-grey">
+              <div className="text-sm font-black text-tf-app-fg">{progress.accuracy.label}</div>
+              <div className="text-xs font-bold text-tf-app-muted">
                 {progress.accuracy.cur}/{progress.accuracy.next}%
               </div>
             </div>
@@ -780,12 +949,10 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
+          <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
             <div className="flex items-baseline justify-between gap-3">
-              <div className="text-sm font-black text-tf-dark">
-                {progress.streak.label}
-              </div>
-              <div className="text-xs font-bold text-tf-grey">
+              <div className="text-sm font-black text-tf-app-fg">{progress.streak.label}</div>
+              <div className="text-xs font-bold text-tf-app-muted">
                 {progress.streak.cur}/{progress.streak.next}
               </div>
             </div>
@@ -796,19 +963,17 @@ export function ProfilePage() {
         </div>
       </Card>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-end justify-between gap-3">
+      <Card id="historique-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">
-              HISTORIQUE
-            </div>
-            <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-dark">
+            <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">HISTORIQUE</div>
+            <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
               Prédictions récentes
             </div>
           </div>
           <Button
             variant="ghost"
-            className="h-10 rounded-2xl"
+            className="h-10 w-full rounded-2xl sm:w-auto"
             aria-label="Voir plus (placeholder)"
           >
             Voir plus
@@ -817,61 +982,69 @@ export function ProfilePage() {
 
         <div className="mt-4 space-y-2">
           {predictions.map((p) => (
-            <div
-              key={p.id}
-              className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4"
-            >
+            <div key={p.id} className={cn('rounded-3xl p-4', profileIncard(appearance))}>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-black text-tf-dark">
+                    <div className="text-sm font-black text-tf-app-fg">
                       {p.match.home.shortName} – {p.match.away.shortName}
                     </div>
                     <Badge
                       className={
                         p.outcome === 'won'
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          ? L
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-emerald-500/30 bg-emerald-950/50 text-emerald-200'
                           : p.outcome === 'lost'
-                            ? 'border-rose-200 bg-rose-50 text-rose-700'
-                            : 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey'
+                            ? L
+                              ? 'border-rose-200 bg-rose-50 text-rose-700'
+                              : 'border-rose-500/30 bg-rose-950/50 text-rose-200'
+                            : cn(
+                                'text-tf-app-fg',
+                                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+                              )
                       }
                     >
-                      {p.outcome === 'won'
-                        ? 'Gagné'
-                        : p.outcome === 'lost'
-                          ? 'Perdu'
-                          : 'En attente'}
+                      {p.outcome === 'won' ? 'Gagné' : p.outcome === 'lost' ? 'Perdu' : 'En attente'}
                     </Badge>
                     <Badge tone="upcoming" title={p.match.competition.name}>
                       {p.match.competition.shortName}
                     </Badge>
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-tf-grey">
+                  <div className="mt-1 text-sm font-semibold text-tf-app-muted">
                     Coup d’envoi {formatKickoff(p.match.kickoffAt)}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
                   <Badge
-                    className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-dark"
+                    className={cn(
+                      'text-tf-app-fg',
+                      L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+                    )}
                     title="Score prédit"
                   >
                     Prono {p.predictedScore.home}-{p.predictedScore.away}
                   </Badge>
                   <Badge
-                    className="border-tf-grey-pastel/50 bg-tf-white/90 text-tf-dark"
+                    className={cn(
+                      'text-tf-app-fg',
+                      L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+                    )}
                     title="Score réel (si dispo)"
                   >
-                    Réel{' '}
-                    {p.actualScore
-                      ? `${p.actualScore.home}-${p.actualScore.away}`
-                      : '—'}
+                    Réel {p.actualScore ? `${p.actualScore.home}-${p.actualScore.away}` : '—'}
                   </Badge>
                   <Badge
                     className={
                       p.points > 0
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                        : 'border-tf-grey-pastel/50 bg-tf-white/90 text-tf-grey'
+                        ? L
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                          : 'border-emerald-500/30 bg-emerald-950/45 text-emerald-200'
+                        : cn(
+                            'text-tf-app-fg',
+                            L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
+                          )
                     }
                     title="Points gagnés"
                   >
@@ -889,24 +1062,13 @@ export function ProfilePage() {
   )
 }
 
-function Stat({
-  label,
-  value,
-  hint,
-}: {
-  label: string
-  value: string
-  hint: string
-}) {
+function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  const { appearance } = useAppearance()
   return (
-    <div className="rounded-3xl border border-tf-grey-pastel/50 bg-tf-white/90 p-4">
-      <div className="text-xs font-semibold tracking-wide text-tf-grey">
-        {label}
-      </div>
-      <div className="mt-1 font-display text-2xl font-black tracking-tight text-tf-dark">
-        {value}
-      </div>
-      <div className="mt-1 text-xs font-semibold text-tf-grey">{hint}</div>
+    <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
+      <div className="text-xs font-semibold tracking-wide text-tf-app-muted">{label}</div>
+      <div className="mt-1 font-display text-2xl font-black tracking-tight text-tf-app-fg">{value}</div>
+      <div className="mt-1 text-xs font-semibold text-tf-app-muted">{hint}</div>
     </div>
   )
 }

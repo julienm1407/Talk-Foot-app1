@@ -7,8 +7,8 @@ export function Card({
   style,
   id,
   /**
-   * `light` : carte fond blanc cassé (défaut) — corrige le contraste des `text-tf-app-*` quand l’app est en mode nuit.
-   * `dark` : carte « verre » sombre (ex. rail hub) — garder texte clair, ne pas appliquer la correction.
+   * `light` (défaut) : carte standard — le fond suit `--tf-card-bg-light` (blanc le jour, verre 30 % la nuit).
+   * `dark` : carte verre explicite (même look nuit) — ne pose pas `data-tf-card-surface`.
    */
   surface = 'light',
 }: {
@@ -25,7 +25,7 @@ export function Card({
       style={style}
       data-tf-card-surface={surface === 'light' ? 'light' : undefined}
       className={cn(
-        'rounded-tf-3xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-card-bg-light)_96%,transparent)] text-tf-dark backdrop-blur-sm',
+        'rounded-tf-3xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-card-bg-light)_96%,transparent)] text-tf-app-fg backdrop-blur-sm',
         elevation === 'soft' && 'shadow-tf-elev-3',
         className,
       )}

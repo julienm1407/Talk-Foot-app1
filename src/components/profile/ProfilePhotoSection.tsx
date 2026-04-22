@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
-import { ProfileCharacterThumb } from './ProfileCharacterThumb'
 import { useProfile } from '../../hooks/useProfile'
 import { fileToProfilePhotoDataUrl } from '../../utils/profilePhoto'
 import { cn } from '../../utils/cn'
@@ -33,18 +32,42 @@ export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }
     }
   }
 
+  const hasPhoto = Boolean(profile.profilePhotoDataUrl)
+
   return (
     <Card className="p-5 sm:p-6" elevation="soft">
       <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">PHOTO DE PROFIL</div>
       <p className="mt-1 text-sm font-semibold text-tf-grey">
-        Visible dans le menu, les chats, les classements et les commentaires — à jour partout tout de suite.
+        Optionnelle : une <strong>photo perso</strong> (portrait, selfie…), stockée ici, distincte de ton{' '}
+        <strong>personnage 3D</strong> in-app. Les avatars, menus et listes affichent ton look Talk Foot, pas
+        ce fichier, sauf dans cet aperçu.
       </p>
       <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-        <ProfileCharacterThumb
-          profile={profile}
-          size="lg"
-          aria-label={`Aperçu — ${usernameLabel}`}
-        />
+        <div
+          className={cn(
+            'relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 sm:h-28 sm:w-28',
+            hasPhoto
+              ? 'border-tf-grey-pastel/50 bg-tf-white'
+              : 'border-dashed border-tf-grey-pastel/80 bg-tf-grey-pastel/10',
+          )}
+          role="img"
+          aria-label={hasPhoto ? `Aperçu de ta photo — ${usernameLabel}` : 'Aucune photo personnelle'}
+        >
+          {hasPhoto && profile.profilePhotoDataUrl ? (
+            <img
+              src={profile.profilePhotoDataUrl}
+              alt=""
+              className="size-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className="px-2 text-center text-[10px] font-bold leading-snug text-tf-grey/90">
+              Aperçu photo
+              <span className="mt-0.5 block text-[9px] font-medium opacity-80">(facultatif)</span>
+            </span>
+          )}
+        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <input
             ref={inputRef}
@@ -61,9 +84,9 @@ export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }
               disabled={busy}
               onClick={pick}
             >
-              {busy ? 'Traitement…' : profile.profilePhotoDataUrl ? 'Changer la photo' : 'Ajouter une photo'}
+              {busy ? 'Traitement…' : hasPhoto ? 'Changer la photo' : 'Ajouter une photo'}
             </Button>
-            {profile.profilePhotoDataUrl ? (
+            {hasPhoto ? (
               <Button
                 type="button"
                 variant="soft"
@@ -74,7 +97,7 @@ export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }
                   setProfilePhotoDataUrl(null)
                 }}
               >
-                Revenir au personnage
+                Retirer la photo
               </Button>
             ) : null}
           </div>
@@ -84,7 +107,8 @@ export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }
             </p>
           ) : (
             <p className="text-xs font-medium text-tf-grey">
-              JPG / PNG / WebP — redimensionnée automatiquement. Ton avatar 3D reste disponible si tu supprimes la photo.
+              JPG / PNG / WebP — redimensionnée automatiquement. L’apparence du personnage 3D (encart Apparence
+              ci-dessous) reste inchangée.
             </p>
           )}
         </div>

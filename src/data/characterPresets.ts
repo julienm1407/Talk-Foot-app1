@@ -46,7 +46,28 @@ export const DEFAULT_CHARACTER_LOOK: AvatarCharacterLook = {
   supporterTint: false,
 }
 
+const HAIR_STYLES: ReadonlySet<AvatarCharacterLook['hairStyle']> = new Set([
+  'buzz',
+  'short',
+  'wavy',
+  'long',
+  'curly',
+])
+
+const BEARD_STYLES: ReadonlySet<AvatarCharacterLook['beard']> = new Set(['none', 'light', 'full', 'goatee'])
+
+function sanitizeLook(p: Partial<AvatarCharacterLook>): Partial<AvatarCharacterLook> {
+  const out = { ...p }
+  if (p.hairStyle != null && !HAIR_STYLES.has(p.hairStyle as AvatarCharacterLook['hairStyle'])) {
+    delete (out as { hairStyle?: unknown }).hairStyle
+  }
+  if (p.beard != null && !BEARD_STYLES.has(p.beard as AvatarCharacterLook['beard'])) {
+    delete (out as { beard?: unknown }).beard
+  }
+  return out
+}
+
 export function mergeCharacterLook(raw: unknown): AvatarCharacterLook {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ...DEFAULT_CHARACTER_LOOK }
-  return { ...DEFAULT_CHARACTER_LOOK, ...(raw as Partial<AvatarCharacterLook>) }
+  return { ...DEFAULT_CHARACTER_LOOK, ...sanitizeLook(raw as Partial<AvatarCharacterLook>) }
 }

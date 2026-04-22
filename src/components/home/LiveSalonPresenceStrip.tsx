@@ -57,7 +57,7 @@ export function LiveSalonPresenceStrip({
   return (
     <div
       className={cn(
-        'w-full',
+        'w-full min-w-0 max-w-full',
         compact ? 'space-y-1.5' : dense ? 'space-y-1' : 'space-y-2.5',
       )}
       aria-label="Activité du salon live"
@@ -124,7 +124,7 @@ export function LiveSalonPresenceStrip({
       >
         <p
           className={cn(
-            'min-w-0 font-black text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]',
+            'min-w-0 max-w-full font-black text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]',
             compact ? 'text-[10px]' : dense ? 'text-[9px]' : 'text-[11px] sm:text-xs',
             !dense && !compact && 'w-full',
           )}
@@ -135,7 +135,7 @@ export function LiveSalonPresenceStrip({
         </p>
         <div
           className={cn(
-            'flex flex-wrap items-center gap-1.5',
+            'flex min-w-0 max-w-full flex-wrap items-center gap-1.5',
             dense || compact ? '' : 'justify-end',
           )}
         >
@@ -147,7 +147,12 @@ export function LiveSalonPresenceStrip({
           >
             Actifs
           </span>
-          <div className={cn('flex', dense ? '-space-x-1' : '-space-x-1.5 sm:-space-x-2')}>
+          <div
+            className={cn(
+              'flex min-w-0 max-w-full flex-nowrap justify-end overflow-x-auto overflow-y-hidden py-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]',
+              dense ? '-space-x-1' : '-space-x-1.5 sm:-space-x-2',
+            )}
+          >
             {actifs.map((a, i) => (
               <Avatar
                 key={`${match.id}-live-act-${a.seed}-${i}`}

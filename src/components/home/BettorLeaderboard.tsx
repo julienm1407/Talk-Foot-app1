@@ -1,7 +1,7 @@
 import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useProfile } from '../../hooks/useProfile'
 import { Avatar } from '../ui/Avatar'
-import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 
@@ -80,12 +80,11 @@ export function BettorLeaderboard({
               {e.rank}
             </span>
             {e.userId === 'me' ? (
-              <ProfilePhotoAvatar
-                photoDataUrl={profile.profilePhotoDataUrl}
-                seed={e.avatarSeed}
-                accent={e.accent}
-                alt={e.username}
-                className="size-7 shrink-0 rounded-lg"
+              <ProfileCharacterThumb
+                profile={profile}
+                size="sm"
+                className="!h-7 !w-7 !min-h-7 !min-w-7 shrink-0 self-start rounded-lg border-0 p-0"
+                aria-label={e.username}
               />
             ) : (
               <Avatar

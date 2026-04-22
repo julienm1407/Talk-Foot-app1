@@ -4,7 +4,8 @@ import { cn } from '../../utils/cn'
 type Accent = 'violet' | 'emerald' | 'rose' | 'amber'
 
 /**
- * Affiche la photo de profil si fournie, sinon l’avatar génératif (initiale).
+ * Affichage ciblé d’une **image** (data URL) ou d’un `Avatar` à initiale.
+ * L’identité in-app (personnage 3D) passe par `ProfileCharacterThumb`, pas par ce composant.
  */
 export function ProfilePhotoAvatar({
   photoDataUrl,

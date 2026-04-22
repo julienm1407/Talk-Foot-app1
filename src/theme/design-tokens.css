@@ -100,7 +100,7 @@
   --tf-rails-shell: min(100%, 107.5rem);
   --tf-rail-ad-width: min(8.25rem, 11vw);
   --tf-rail-ad-width-2xl: min(9.5rem, 12vw);
-  --tf-carousel-slide: min(calc(100vw - 2rem), 22.5rem);
+  --tf-carousel-slide: min(calc(100vw - 2.5rem), 22.5rem);
   --tf-article-body: min(100%, 75rem);
   --tf-article-inner: min(100%, 68.75rem);
   --tf-modal-wide: min(calc(100% - 2rem), 61.25rem);
@@ -146,6 +146,19 @@
   }
 }
 
+/* Très petits écrans : gouttière un peu plus serrée */
+@media (max-width: 23.5rem) {
+  :root {
+    --tf-page-gutter: var(--tf-page-gutter-sm);
+  }
+}
+
+@supports (width: 1dvw) {
+  :root {
+    --tf-carousel-slide: min(calc(100dvw - 2.5rem), 22.5rem);
+  }
+}
+
 html[data-tf-appearance='light'] {
   --tf-focus-ring: 2px solid color-mix(in srgb, var(--tf-brand-primary) 92%, black);
   --tf-focus-ring-bg: var(--tf-page-bg-light);
@@ -174,4 +187,9 @@ html:not([data-tf-appearance='light']) {
   --tf-focus-ring-offset: 2px;
   --tf-focus-ring: 2px solid color-mix(in srgb, var(--tf-ui-blue-light) 55%, var(--tf-brand-primary));
   --tf-focus-ring-bg: var(--tf-page-bg-dark);
+  /**
+   * En nuit, le token historique « card light » sert surtout à `Card` + mélanges Tailwind.
+   * Sans override, il reste #fff (voir :root) → gros pavés blancs. On aligne sur le verre 30 %.
+   */
+  --tf-card-bg-light: var(--tf-c30-surface);
 }

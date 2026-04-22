@@ -2,8 +2,10 @@ import type { Match } from '../types/match'
 import type { SupporterGroup } from '../types/group'
 import type { Debate } from '../data/debates'
 import type { NewsItem } from '../data/news'
+import { ALL_CLUBS_CATALOG } from '../data/allClubsCatalog'
+import { clubPathForId } from './clubRoute'
 
-export type SiteSearchResultKind = 'match' | 'group' | 'debate' | 'article' | 'page'
+export type SiteSearchResultKind = 'match' | 'group' | 'debate' | 'article' | 'page' | 'club'
 
 export type SiteSearchResult = {
   kind: SiteSearchResultKind
@@ -76,6 +78,21 @@ export function runSiteSearch(
         subtitle: p.subtitle,
         href: p.href,
         score: sc,
+      })
+    }
+  }
+
+  for (const c of ALL_CLUBS_CATALOG) {
+    const blob = normalize([c.name, c.shortName, c.id, c.leagueName, 'club hub tribune supporters'].join(' '))
+    const sc = scoreBlob(blob, queryNorm, words)
+    if (sc > 0) {
+      out.push({
+        kind: 'club',
+        id: c.id,
+        title: c.name,
+        subtitle: `${c.shortName} · ${c.leagueName}`,
+        href: clubPathForId(c.id),
+        score: sc + 1,
       })
     }
   }
@@ -174,6 +191,8 @@ export function kindLabel(kind: SiteSearchResultKind): string {
       return 'Actu'
     case 'page':
       return 'Page'
+    case 'club':
+      return 'Club'
     default:
       return ''
   }

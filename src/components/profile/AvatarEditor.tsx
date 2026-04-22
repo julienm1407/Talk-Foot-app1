@@ -1,12 +1,9 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../ui/Card'
-import { ProfileCharacterThumb } from './ProfileCharacterThumb'
 import { Button } from '../ui/Button'
-import { RotatableAvatarPreview } from './RotatableAvatarPreview'
 import { useProfile } from '../../hooks/useProfile'
 import { avatarItems } from '../../data/shop'
 import type { AvatarSlot } from '../../types/profile'
-import { currentUser } from '../../data/users'
 
 const SLOT_ORDER: AvatarSlot[] = ['hat', 'scarf', 'jersey', 'accessory']
 const SLOT_LABELS: Record<AvatarSlot, string> = {
@@ -30,7 +27,8 @@ export function AvatarEditor() {
             Équipement (dessus du personnage)
           </div>
           <p className="mt-0.5 text-sm font-medium text-tf-grey">
-            Écharpes, casquettes, maillots boutique, accessoires — visibles sur ton personnage 3D ci-dessus
+            Écharpes, casquettes, maillots boutique, accessoires — le rendu 3D unique est dans l’encart «
+            Apparence » au-dessus
           </p>
         </div>
         <Link to="/boutique">
@@ -40,26 +38,8 @@ export function AvatarEditor() {
         </Link>
       </div>
 
-      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start">
-        {/* Photo de profil + avatar rotatable */}
-        <div className="flex shrink-0 flex-col items-center gap-5">
-          <div className="flex flex-col items-center">
-            <div className="rounded-2xl border-2 border-tf-grey-pastel/50 bg-tf-grey-pastel/10 p-3">
-              <ProfileCharacterThumb
-                profile={profile}
-                size="lg"
-                aria-label={`Personnage de ${currentUser.username}`}
-              />
-            </div>
-            <p className="mt-2 max-w-[200px] text-center text-xs font-medium text-tf-grey">
-              Photo de profil = ton personnage (même rendu qu’ici et sur la carte profil)
-            </p>
-          </div>
-          <RotatableAvatarPreview profile={profile} />
-        </div>
-
-        {/* Slots d'équipement */}
-        <div className="min-w-0 flex-1 space-y-3">
+      <div className="mt-6">
+        <div className="space-y-3">
           {SLOT_ORDER.map((slot) => {
             const equippedId = profile.equippedItems[slot]
             const equippedItem = equippedId

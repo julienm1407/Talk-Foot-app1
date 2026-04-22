@@ -76,7 +76,7 @@ function StripScore({
 
 /** `overflow-visible` sur la racine : ombres, ring live et scale hover ne sont plus rognés par le parent scroll */
 const stripLinkBase =
-  'group tf-card-hover relative flex w-full min-w-0 shrink-0 snap-start flex-col overflow-visible rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.45)] outline-none transition-[box-shadow,transform] focus-visible:ring-2 focus-visible:ring-sky-400/50'
+  'group tf-card-hover relative flex w-full min-w-0 max-w-full shrink-0 snap-start flex-col overflow-visible rounded-2xl border border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.45)] outline-none transition-[box-shadow,transform] focus-visible:ring-2 focus-visible:ring-sky-400/50'
 
 const imageAreaH = 'h-[132px]'
 const imageAreaHCompact = 'h-[104px]'

@@ -35,7 +35,7 @@ export function PageAdRails({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-tf-rails min-w-0 justify-center gap-2 sm:gap-3 xl:gap-4 2xl:gap-6">
+    <div className="mx-auto flex w-full min-w-0 max-w-tf-rails justify-center gap-2 sm:gap-3 xl:gap-4 2xl:gap-6">
       <aside
         className="hidden w-[var(--tf-rail-ad-width)] shrink-0 2xl:w-[var(--tf-rail-ad-width-2xl)] xl:block"
         aria-label="Espace publicitaire gauche"

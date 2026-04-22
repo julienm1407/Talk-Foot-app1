@@ -12,7 +12,7 @@ import {
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
 import type { AvatarCharacterLook, JerseyPattern } from '../../types/profile'
 import { cn } from '../../utils/cn'
-import { ProfileCharacterThumb } from './ProfileCharacterThumb'
+import { RotatableAvatarPreview } from './RotatableAvatarPreview'
 
 const HAIR_STYLES: { id: AvatarCharacterLook['hairStyle']; label: string }[] = [
   { id: 'buzz', label: 'Très court' },
@@ -24,7 +24,7 @@ const HAIR_STYLES: { id: AvatarCharacterLook['hairStyle']; label: string }[] = [
 
 const BEARDS: { id: AvatarCharacterLook['beard']; label: string }[] = [
   { id: 'none', label: 'Sans' },
-  { id: 'light', label: 'Léger' },
+  { id: 'light', label: 'Courte' },
   { id: 'full', label: 'Complète' },
   { id: 'goatee', label: 'Bouc' },
 ]
@@ -120,42 +120,49 @@ export function CharacterLookEditor() {
   const panelId = 'character-look-panel'
 
   return (
-    <Card className="overflow-hidden p-0" elevation="soft">
-      <button
-        type="button"
-        className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-tf-grey-pastel/15 sm:gap-4 sm:p-5"
-        aria-expanded={open}
-        aria-controls={panelId}
-        id="character-look-trigger"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <ProfileCharacterThumb
-          profile={profile}
-          size="sm"
-          className="ring-2 ring-tf-grey-pastel/40"
-          aria-hidden
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-black tracking-[0.2em] text-tf-grey">APPARENCE</p>
-          <h3 className="font-display text-lg font-black tracking-tight text-tf-dark">
-            Personnage & tenue de base
-          </h3>
-          <p className="mt-0.5 text-xs font-medium text-tf-grey">
-            {open
-              ? 'Les changements sont visibles tout de suite dans l’aperçu 3D en dessous.'
-              : 'Ouvre pour modifier visage, couleurs du maillot de base et mode supporter.'}
-          </p>
+    <Card className="overflow-hidden p-0" elevation="soft" id="encart-avatar-3d">
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
+          <div className="shrink-0">
+            <RotatableAvatarPreview profile={profile} />
+          </div>
+          <div className="flex min-w-0 w-full flex-1 flex-col gap-3 sm:w-auto sm:pr-1">
+            <div>
+              <p className="text-[11px] font-black tracking-[0.2em] text-tf-grey">APPARENCE</p>
+              <h3
+                id="character-look-title"
+                className="font-display text-lg font-black tracking-tight text-tf-dark"
+              >
+                Personnage & tenue de base
+              </h3>
+              <p className="mt-0.5 text-xs font-medium text-tf-grey">
+                {open
+                  ? 'Ajuste visage, couleurs et mode supporter — l’aperçu 3D à côté se met à jour en direct.'
+                  : 'Un seul aperçu 3D sur la page. Touche « Personnalité » pour afficher les réglages.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                id="character-look-trigger"
+                variant="primary"
+                className="rounded-2xl"
+                aria-expanded={open}
+                aria-controls={panelId}
+                onClick={() => setOpen((v) => !v)}
+              >
+                {open ? 'Fermer les réglages' : 'Personnalité'}
+              </Button>
+            </div>
+          </div>
         </div>
-        <span className="shrink-0 text-lg font-bold text-tf-grey" aria-hidden>
-          {open ? '▲' : '▼'}
-        </span>
-      </button>
+      </div>
 
       {open ? (
         <div
           id={panelId}
           role="region"
-          aria-labelledby="character-look-trigger"
+          aria-labelledby="character-look-title"
           className="border-t border-tf-grey-pastel/50 px-4 pb-5 pt-1 sm:px-6 sm:pb-6"
         >
           <p className="mb-4 text-sm font-medium text-tf-grey">

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import type { User } from '../../types/chat'
 import { ClubCrest } from '../brand/ClubCrest'
 import { useProfile } from '../../hooks/useProfile'
+import type { UserProfile } from '../../types/profile'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
 import { cn } from '../../utils/cn'
 
@@ -47,12 +49,12 @@ function LiveFanFaceRow({
   user,
   stackIndex,
   totalShown,
-  profilePhotoDataUrl,
+  meProfile,
 }: {
   user: User
   stackIndex: number
   totalShown: number
-  profilePhotoDataUrl?: string
+  meProfile?: UserProfile
 }) {
   const [imgFailed, setImgFailed] = useState(false)
   const team = user.fanClubId ? findTeamInAnyLeague(user.fanClubId) : null
@@ -97,25 +99,17 @@ function LiveFanFaceRow({
 
   if (user.id === 'me') {
     const inner = shell(
-      profilePhotoDataUrl ? (
-        <img
-          src={profilePhotoDataUrl}
-          alt=""
-          className="size-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      ) : imgFailed ? (
-        <InitialFallback seed={user.avatarSeed} accent={user.accent} />
+      meProfile ? (
+        <div className="relative size-full">
+          <ProfileCharacterThumb
+            profile={meProfile}
+            size="sm"
+            className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-0 p-0"
+            aria-label="Mon avatar in-app"
+          />
+        </div>
       ) : (
-        <img
-          src={dicebearSrc(`${user.id}-${user.username}`, stackIndex)}
-          alt=""
-          className="size-full object-cover object-top"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setImgFailed(true)}
-        />
+        <InitialFallback seed={user.avatarSeed} accent={user.accent} />
       ),
     )
     return (
@@ -201,7 +195,7 @@ export function ActiveUsers({ users }: { users: User[] }) {
                 user={u}
                 stackIndex={i}
                 totalShown={shown.length}
-                profilePhotoDataUrl={u.id === 'me' ? profile.profilePhotoDataUrl : undefined}
+                meProfile={u.id === 'me' ? profile : undefined}
               />
             ))}
           </div>

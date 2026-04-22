@@ -31,7 +31,7 @@ export function AppShell() {
   return (
     <DirectMessagesProvider>
     <PrivateMessagesUiProvider>
-    <div className="flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden overflow-x-hidden">
+    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden [scrollbar-gutter:stable]">
       <SkipLink />
       <ActivityRouteLogger />
       <OAuthProfileSetupModal />
@@ -47,7 +47,7 @@ export function AppShell() {
         {isChannel ? (
           <div
             className={cn(
-              'mx-auto flex w-full min-w-0 flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
+              'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
               /* Mobile : tout le live défile comme une page (doigt haut/bas). Desktop : hauteur cadrée, pas de scroll outer. */
               'min-h-0 max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
               'lg:min-h-0 lg:overflow-hidden',
@@ -63,7 +63,7 @@ export function AppShell() {
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
               /* Desktop : une seule zone scrollable (colonne centrale du hub), pas le conteneur page — sinon la grille ne borne pas la hauteur et le centre reste « coupé ». */
               'md:flex md:min-h-0 md:flex-col md:overflow-hidden md:overscroll-none',
-              'w-full min-w-0 px-[var(--tf-page-gutter)] pt-4 sm:pt-6',
+              'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-4 sm:pt-6',
               'max-md:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
               mainBottomPadHomeDesktop,
             )}
@@ -76,7 +76,7 @@ export function AppShell() {
           <div
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
-              'w-full min-w-0 px-[var(--tf-page-gutter)] pt-5 sm:pt-7',
+              'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-5 sm:pt-7',
               mainBottomPadMobile,
             )}
           >

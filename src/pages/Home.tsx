@@ -182,7 +182,7 @@ export function HomePage() {
       {/*
         Hauteur = viewport − header : le hub 3 colonnes remplit l’espace restant ; seule la colonne centrale défile.
       */}
-      <div className="mx-auto hidden h-full min-h-0 w-full max-w-[min(100vw,1820px)] md:flex md:flex-1 md:flex-col md:gap-3 md:px-4 md:pb-0 lg:gap-4 lg:px-6">
+      <div className="mx-auto hidden h-full min-h-0 w-full max-w-[min(100%,112.5rem)] md:flex md:flex-1 md:flex-col md:gap-3 md:px-4 md:pb-0 lg:gap-4 lg:px-6">
         <ThemeArrivalHint className="w-full max-w-none shrink-0" />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <HomeDesktopExperience
@@ -223,7 +223,12 @@ export function HomePage() {
         ) : null}
 
         {/* Bloc supérieur : même verre que le hub desktop */}
-        <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
+        <div
+          className={cn(
+            'min-w-0 max-w-full overflow-x-clip rounded-[20px] p-3 sm:p-4 lg:rounded-2xl',
+            hubGlassPanel(appearance),
+          )}
+        >
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <label
               className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"

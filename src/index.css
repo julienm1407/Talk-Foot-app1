@@ -19,6 +19,13 @@
   .font-display:is(.font-black, .font-bold, .font-extrabold) {
     letter-spacing: 0.02em;
   }
+
+  /* Médias : jamais plus larges que le conteneur (icônes SVG gérées par classes w/h) */
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 /* Charte TalkFoot — DA : bleu #023458 structure, fond #F4F8FB jour, accent #FF3B3B actions & live */
@@ -79,15 +86,30 @@
   --tf-match-surface-alt: rgba(1, 30, 51, 0.04);
 }
 
-html,
-body {
+html {
   height: 100%;
+  -webkit-text-size-adjust: 100%;
+  /* Évite le défilement horizontal “fantôme” (100vw, enfants trop larges) */
+  overflow-x: clip;
+}
+
+body {
+  min-height: 100dvh;
+  min-height: 100svh;
+  height: auto;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 #root {
   position: relative;
   z-index: 1;
-  min-height: 100%;
+  min-height: 100dvh;
+  min-height: 100svh;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* AppShell impose h-dvh ; pas de flex ici (RouteSeo, App, bannière = frères) */
 }
 
 /* Safe area pour iPhone notch / barre d'accueil */
@@ -194,26 +216,6 @@ html[data-tf-appearance='light'] .tf-panel textarea::placeholder {
   color: rgba(2, 52, 88, 0.52);
 }
 
-/*
- * Mode nuit app : --tf-app-* vise les fonds bleu nuit. Les cartes blanches (Card) gardent un fond clair :
- * sans ça, text-tf-app-fg / muted restent presque blancs → titres illisibles (ex. « À l’affiche »).
- */
-html[data-tf-appearance='dark'] [data-tf-card-surface='light'] {
-  color: var(--tf-text);
-}
-
-html[data-tf-appearance='dark'] [data-tf-card-surface='light'] .text-tf-app-fg {
-  color: var(--tf-text) !important;
-}
-
-html[data-tf-appearance='dark'] [data-tf-card-surface='light'] .text-tf-app-muted {
-  color: var(--tf-muted) !important;
-}
-
-html[data-tf-appearance='dark'] [data-tf-card-surface='light'] .text-tf-app-subtle {
-  color: var(--tf-faint) !important;
-}
-
 h1,
 h2,
 h3,
@@ -318,8 +320,31 @@ body::before {
     transform: scale(1);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(0.9);
+    opacity: 0.88;
+    transform: scale(0.95);
+  }
+}
+
+/* Page club : atmosphère & mode match */
+@keyframes tf-club-smoke {
+  0% {
+    transform: scale(1.01);
+    opacity: 0.32;
+  }
+  100% {
+    transform: scale(1.04);
+    opacity: 0.48;
+  }
+}
+@keyframes tf-club-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4);
+  }
+  50% {
+    opacity: 0.95;
+    box-shadow: 0 0 12px 0 rgba(244, 63, 94, 0.35);
   }
 }
 
@@ -375,16 +400,20 @@ body::before {
   }
 }
 
+/* Chrono : léger “flash” à la mise à jour, pas de pulse permanent (meilleure lisibilité) */
 @keyframes tf-live-bar {
   0% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 1;
+    opacity: 0.88;
+    transform: scale(0.985);
   }
   100% {
-    opacity: 0.7;
+    opacity: 1;
+    transform: scale(1);
   }
+}
+
+.tf-live-minute-tick {
+  animation: tf-live-bar 0.5s ease-out;
 }
 
 /* Match page: ambient gradient shift */
@@ -531,14 +560,14 @@ body::before {
 @keyframes tf-live-encart-halo-pulse {
   0%,
   100% {
-    opacity: 0.45;
-    transform: scale(0.98);
-    filter: blur(0.5px);
+    opacity: 0.5;
+    transform: scale(1);
+    filter: blur(0.4px);
   }
   50% {
-    opacity: 0.95;
-    transform: scale(1.02);
-    filter: blur(1px);
+    opacity: 0.9;
+    transform: scale(1.01);
+    filter: blur(0.7px);
   }
 }
 
@@ -546,21 +575,20 @@ body::before {
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(251, 113, 133, 0.25),
-      0 0 28px rgba(225, 29, 72, 0.28),
-      0 0 52px rgba(255, 59, 59, 0.12);
+      0 0 0 1px rgba(251, 113, 133, 0.2),
+      inset 0 0 24px rgba(225, 29, 72, 0.1);
   }
   50% {
     box-shadow:
-      0 0 0 2px rgba(253, 164, 175, 0.55),
-      0 0 40px rgba(244, 63, 94, 0.48),
-      0 0 72px rgba(255, 59, 59, 0.22);
+      0 0 0 1px rgba(253, 164, 175, 0.45),
+      inset 0 0 32px rgba(244, 63, 94, 0.12);
   }
 }
 
+/* Contenu bord-à-bord (pas d’inset négatif / pas de lueur 72px) → évite scroll horizontal sur mobile */
 .tf-live-encart-halo {
   position: absolute;
-  inset: -6px;
+  inset: 0;
   z-index: 0;
   border-radius: 1.65rem;
   pointer-events: none;
@@ -575,9 +603,9 @@ body::before {
 
 .tf-live-encart-halo-ring {
   position: absolute;
-  inset: -4px;
+  inset: 0;
   z-index: 0;
-  border-radius: 1.55rem;
+  border-radius: 1.5rem;
   pointer-events: none;
   animation: tf-live-encart-halo-ring 2.75s ease-in-out infinite;
 }
@@ -596,8 +624,8 @@ body::before {
 
   .tf-live-encart-halo-ring {
     box-shadow:
-      0 0 0 1px rgba(251, 113, 133, 0.35),
-      0 0 24px rgba(225, 29, 72, 0.3);
+      0 0 0 1px rgba(251, 113, 133, 0.3),
+      inset 0 0 20px rgba(225, 29, 72, 0.1);
   }
 }
 
@@ -1228,8 +1256,12 @@ body::before {
 .tf-card-hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.tf-card-hover:hover {
-  transform: scale(1.02);
+/* Léger lift sans scale 2 % (évite débordement dans carrousels / scroll horizontal) */
+@media (hover: hover) and (pointer: fine) {
+  .tf-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1254,6 +1286,7 @@ body::before {
   .tf-firework,
   .tf-arena-glow,
   .tf-score-pop,
+  .tf-live-minute-tick,
   .tf-timeline-in,
   .tf-hype-glow,
   .tf-pip-speak {

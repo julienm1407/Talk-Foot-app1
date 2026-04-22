@@ -1,13 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAppearance } from '../../contexts/AppearanceContext'
 import { downloadPersonalDataExport, purgeAllTalkFootBrowserStorage } from '../../utils/privacyLocal'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
 export function ProfilePrivacySection() {
+  const { appearance } = useAppearance()
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const L = appearance === 'light'
 
   const handleDelete = () => {
     if (
@@ -23,9 +26,26 @@ export function ProfilePrivacySection() {
   }
 
   return (
-    <section className="rounded-2xl border border-sky-200/70 bg-sky-50/50 p-4 sm:p-5">
-      <h2 className="font-display text-lg font-black text-tf-dark">Données personnelles</h2>
-      <p className="mt-1 text-sm font-medium text-tf-grey">
+    <section
+      className={cn(
+        'rounded-2xl border p-4 sm:p-5',
+        L ? 'border-sky-200/70 bg-sky-50/50' : 'border-sky-400/20 bg-sky-950/35',
+      )}
+    >
+      <h2
+        className={cn(
+          'font-display text-lg font-black',
+          L ? 'text-tf-app-fg' : 'text-sky-100',
+        )}
+      >
+        Données personnelles
+      </h2>
+      <p
+        className={cn(
+          'mt-1 text-sm font-medium',
+          L ? 'text-tf-app-muted' : 'text-sky-200/90',
+        )}
+      >
         Export ou suppression des données enregistrées localement dans ton navigateur.{' '}
         <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
           Politique de confidentialité

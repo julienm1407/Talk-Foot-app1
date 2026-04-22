@@ -15,6 +15,7 @@ import { LoginPage } from './pages/Login'
 import { ProfilePage } from './pages/Profile'
 import { UserProfilePage } from './pages/UserProfile'
 import { ArticlePage } from './pages/ArticlePage'
+import { ClubPage } from './pages/ClubPage'
 import { AdminPage } from './pages/AdminPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { useAuth } from './contexts/AuthContext'
@@ -96,6 +97,7 @@ export default function App() {
         <Route path="boutique" element={<BoutiquePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="user/:userId" element={<UserProfilePage />} />
+        <Route path="club/:clubSlug" element={<ClubPage />} />
         <Route
           path="admin"
           element={

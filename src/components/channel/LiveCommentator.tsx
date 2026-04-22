@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import type { User } from '../../types/chat'
@@ -155,15 +155,15 @@ export function LiveCommentator({
 
   if (!user.isAdmin) return null
 
-  const Face = (
-    props: { className?: string; size?: 'sm' | 'md' },
-  ) => (
-    <ProfilePhotoAvatar
-      photoDataUrl={profile.profilePhotoDataUrl}
-      seed={user.avatarSeed}
-      accent={user.accent}
-      alt={user.username}
-      className={props.className ?? (props.size === 'sm' ? 'size-8' : 'size-10')}
+  const Face = (props: { className?: string; size?: 'sm' | 'md' }) => (
+    <ProfileCharacterThumb
+      profile={profile}
+      size="sm"
+      className={cn(
+        'rounded-2xl border-0 p-0',
+        props.className ?? (props.size === 'sm' ? '!h-8 !w-8 !min-h-8 !min-w-8' : '!h-10 !w-10 !min-h-10 !min-w-10'),
+      )}
+      aria-label={user.username}
     />
   )
 

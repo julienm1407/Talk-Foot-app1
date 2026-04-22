@@ -20,6 +20,7 @@ import { useIsBelowXl } from '../hooks/useIsBelowXl'
 import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
+import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -315,19 +316,12 @@ export function TopBar() {
             )}
             aria-label={`Profil — niveau ${profile.level}`}
           >
-            {profile.profilePhotoDataUrl ? (
-              <img
-                src={profile.profilePhotoDataUrl}
-                alt=""
-                className="size-6 shrink-0 rounded-full object-cover ring-2 ring-white/25 min-[420px]:size-7 sm:size-8"
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <span className="text-sm leading-none min-[420px]:text-[15px] sm:text-base" aria-hidden="true">
-                🧢
-              </span>
-            )}
+            <ProfileCharacterThumb
+              profile={profile}
+              size="sm"
+              className="!h-6 !w-6 !min-h-6 !min-w-6 shrink-0 rounded-full border-0 p-0 ring-2 ring-white/25 min-[420px]:!h-7 min-[420px]:!w-7 min-[420px]:!min-h-7 min-[420px]:!min-w-7 sm:!h-8 sm:!w-8 sm:!min-h-8 sm:!min-w-8"
+              aria-label="Mon avatar in-app"
+            />
             <span
               className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[420px]:inline-flex min-[420px]:px-1.5 min-[420px]:text-[10px] sm:px-2 sm:py-1 sm:text-[11px] md:text-xs"
               title={`Niveau ${profile.level}`}

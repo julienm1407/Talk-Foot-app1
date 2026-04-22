@@ -103,8 +103,8 @@ export type UserProfile = {
   /** Flocage / taille par maillot inspiré possédé */
   jerseyCustomizations?: Record<string, JerseyCustomization>
   /**
-   * Photo de profil (data URL JPEG), affichée à la place du pictogramme / miniature
-   * sur toute l’app quand elle est définie.
+   * Photo personnelle optionnelle (data URL), gérée dans l’onglet profil.
+   * Distincte de l’avatar 3D : n’alimente pas `ProfileCharacterThumb` ni l’identité in-app.
    */
   profilePhotoDataUrl?: string
   /** Phrase courte « à propos de toi » (optionnel), saisie à la création compte OAuth. */

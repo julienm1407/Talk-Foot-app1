@@ -29,7 +29,8 @@ export function PageContainer({
   return (
     <Comp
       className={cn(
-        'mx-auto w-full min-w-0 px-[var(--tf-page-gutter)] sm:px-[var(--tf-page-gutter)]',
+        'box-border max-w-full min-w-0',
+        'mx-auto w-full px-[var(--tf-page-gutter)]',
         maxW[maxWidth],
         className,
       )}

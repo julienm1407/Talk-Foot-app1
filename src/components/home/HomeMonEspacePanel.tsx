@@ -1,4 +1,4 @@
-import { useMemo, useState, type ElementType } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { currentUser } from '../../data/users'
@@ -12,10 +12,12 @@ import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { teams } from '../../data/teams'
 import type { Team } from '../../types/match'
 import type { SupporterGroup } from '../../types/group'
+import { clubPathForId } from '../../utils/clubRoute'
 import { ClubCrest } from '../brand/ClubCrest'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { HomeBoutiqueEncart } from './HomeBoutiqueEncart'
 import { Avatar } from '../ui/Avatar'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { cn } from '../../utils/cn'
 
@@ -33,7 +35,7 @@ export function HomeMonEspacePanel({
   myCreatedGroups,
   onCreateTribune,
   className,
-  as = 'aside',
+  as: ShellTag = 'aside',
   /** Faux quand un titre « Mon espace » existe déjà au-dessus (ex. tiroir logo mobile). */
   showTopHeading = true,
   /** Hub desktop : colonne étroite, infos utiles seulement. */
@@ -82,10 +84,8 @@ export function HomeMonEspacePanel({
       .filter((t): t is Team => Boolean(t))
   }, [favoriteClubIds])
 
-  const Shell = as as ElementType
-
   return (
-    <Shell
+    <ShellTag
       className={cn(
         'flex flex-col overflow-hidden',
         slim ? 'gap-3' : 'gap-5',
@@ -119,24 +119,15 @@ export function HomeMonEspacePanel({
               : 'border-white/12 bg-white/[0.06] hover:border-white/20 hover:bg-white/[0.09]',
           )}
         >
-          {profile.profilePhotoDataUrl ? (
-            <img
-              src={profile.profilePhotoDataUrl}
-              alt=""
-              className={cn('shrink-0 rounded-full object-cover ring-2 ring-white/25', slim ? 'size-9' : 'size-10')}
-              loading="lazy"
-            />
-          ) : (
-            <span
-              className={cn(
-                'grid shrink-0 place-items-center rounded-full bg-tf-grey-pastel/40 text-lg',
-                slim ? 'size-9' : 'size-10',
-              )}
-              aria-hidden
-            >
-              🧢
-            </span>
-          )}
+          <ProfileCharacterThumb
+            profile={profile}
+            size="sm"
+            className={cn(
+              '!shrink-0 !rounded-full !border-0 p-0 ring-2 ring-white/25',
+              slim ? '!h-9 !w-9 !min-h-9 !min-w-9' : '!h-10 !w-10 !min-h-10 !min-w-10',
+            )}
+            aria-label="Mon avatar in-app"
+          />
           <div className="min-w-0 flex-1 text-left">
             {!slim ? (
               <p className={cn('text-[9px] font-black uppercase tracking-[0.16em]', hubCaps)}>Mon profil</p>
@@ -161,7 +152,7 @@ export function HomeMonEspacePanel({
             ) : (
               favoriteClubs.slice(0, slim ? 4 : 6).map((club) => (
                 <li key={club.id}>
-                  <Link to="/match" className={favRow}>
+                  <Link to={clubPathForId(club.id)} className={favRow} title={`Hub ${club.name}`}>
                     <ClubCrest id={club.id} shortName={club.shortName} colors={club.colors} size={slim ? 24 : 28} />
                     <span className="truncate">{club.shortName}</span>
                   </Link>
@@ -378,6 +369,6 @@ export function HomeMonEspacePanel({
           </Link>
         </div>
       )}
-    </Shell>
+    </ShellTag>
   )
 }

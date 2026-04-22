@@ -258,28 +258,36 @@ export function MatchCarousel({
                 aria-selected={i === index}
                 onClick={() => setIndex(i)}
                 className={cn(
-                  'h-2.5 w-2.5 rounded-full border transition',
-                  i === index
-                    ? m.status === 'live'
-                      ? 'border-rose-400/90 ring-2 ring-rose-300/50'
-                      : L
-                        ? 'border-slate-400'
-                        : 'border-slate-500'
-                    : L
-                      ? 'border-slate-300 bg-white'
-                      : 'border-slate-600 bg-slate-800/90',
+                  /* Cible ≥ 44px (WCAG) : pastille au centre, zone cliquable large */
+                  'grid min-h-tf-touch min-w-tf-touch place-items-center rounded-full border-0 bg-transparent p-0 transition',
                 )}
-                style={
-                  i === index && m.status === 'live'
-                    ? { background: '#e11d48' }
-                    : i === index && activeTheme
-                      ? { background: activeTheme.accent }
-                      : i === index
-                        ? { background: '#0ea5e9' }
-                        : undefined
-                }
                 aria-label={`Match ${i + 1} : ${m.home.shortName} contre ${m.away.shortName}`}
-              />
+              >
+                <span
+                  className={cn(
+                    'block h-2.5 w-2.5 rounded-full border transition',
+                    i === index
+                      ? m.status === 'live'
+                        ? 'border-rose-400/90 ring-2 ring-rose-300/50'
+                        : L
+                          ? 'border-slate-400'
+                          : 'border-slate-500'
+                      : L
+                        ? 'border-slate-300 bg-white'
+                        : 'border-slate-600 bg-slate-800/90',
+                  )}
+                  style={
+                    i === index && m.status === 'live'
+                      ? { background: '#e11d48' }
+                      : i === index && activeTheme
+                        ? { background: activeTheme.accent }
+                        : i === index
+                          ? { background: '#0ea5e9' }
+                          : undefined
+                  }
+                  aria-hidden
+                />
+              </button>
             ))}
           </div>
         </div>

@@ -17,7 +17,8 @@ import { HomeLandingHub } from './HomeLandingHub'
 import { HomeMonEspacePanel } from './HomeMonEspacePanel'
 import { DebateOfTheDayCard } from './DebateOfTheDayCard'
 import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
-import { HomeSiteSearch } from '../search/HomeSiteSearch'
+import { HomeSiteSearch, type HomeSiteSearchHandle } from '../search/HomeSiteSearch'
+import { SearchTrends12h } from '../search/SearchTrends12h'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 
 function DesktopHubLiveStrip({
@@ -110,6 +111,7 @@ export function HomeDesktopExperience({
   }, [tribuneGroups, supporterGroupsPool])
 
   const centerScrollRef = useRef<HTMLDivElement>(null)
+  const homeSearchRef = useRef<HomeSiteSearchHandle>(null)
   const [centerScrollFadeBottom, setCenterScrollFadeBottom] = useState(true)
 
   const syncCenterScrollFade = useCallback(() => {
@@ -168,24 +170,22 @@ export function HomeDesktopExperience({
         <div
           className={cn(
             card,
-            'flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4',
+            /* z-30 : le panneau de suggestions (sibling absolu) reste au-dessus de l’encart matchs suivant (même colonne scroll) */
+            'relative z-30 p-3 sm:p-4',
           )}
         >
-          <HomeSiteSearch className="min-w-0 flex-1" inputId="home-desktop-search" variant="hub" />
-          <nav
-            aria-label="Navigation rapide"
-            className="flex shrink-0 flex-wrap items-center gap-2"
-          >
-            <Link to="/match" className={hubPillLink(appearance, 'md')}>
-              Matchs
-            </Link>
-            <Link to="/groups" className={hubPillLink(appearance, 'md')}>
-              Groupes
-            </Link>
-            <Link to="/rankings" className={hubPillLink(appearance, 'md')}>
-              Classement
-            </Link>
-          </nav>
+          <div className="flex min-w-0 flex-col gap-3">
+            <HomeSiteSearch
+              ref={homeSearchRef}
+              className="min-w-0 w-full"
+              inputId="home-desktop-search"
+              variant="hub"
+            />
+            <SearchTrends12h
+              className="w-full min-w-0"
+              onSelect={(term) => homeSearchRef.current?.applyQuery(term)}
+            />
+          </div>
         </div>
 
         <section
@@ -403,23 +403,29 @@ export function HomeDesktopExperience({
       <aside className="flex min-h-0 h-full min-w-0 flex-col gap-3 overflow-hidden lg:gap-4">
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', card, 'p-0')}>
           <HubEncartTopAccent appearance={appearance} preset="tribune" />
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-3.5">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3 sm:p-3.5">
             <div
               className={cn(
-                'mb-3 flex shrink-0 flex-wrap items-end justify-between gap-2 pb-1.5',
+                'mb-3 flex min-w-0 shrink-0 flex-wrap items-end justify-between gap-2 pb-1.5',
                 railHeadBorder,
               )}
             >
-              <h3 className="min-w-0 font-display text-xs font-black uppercase tracking-[0.18em] text-tf-app-fg">
-                Salons à découvrir
+              <h3 className="line-clamp-2 min-w-0 flex-1 pr-2 font-display text-xs font-black uppercase leading-tight tracking-[0.18em] text-tf-app-fg">
+                <span className="2xl:hidden">Salons</span>
+                <span className="hidden 2xl:inline">Salons à découvrir</span>
               </h3>
-              <Link to="/groups" className={cn(hubPillLink(appearance, 'xs'), 'shrink-0')}>
-                Tous les groupes
+              <Link
+                to="/groups"
+                className={cn(hubPillLink(appearance, 'xs'), 'shrink-0 max-w-[min(8.5rem,50%)] truncate xl:max-w-none')}
+                title="Tous les groupes"
+              >
+                <span className="xl:hidden">Tous</span>
+                <span className="hidden xl:inline">Tous les groupes</span>
               </Link>
             </div>
             <div
               className={cn(
-                'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain pr-0.5 [scrollbar-width:thin]',
+                'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 [scrollbar-width:thin]',
                 '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full',
                 L
                   ? '[&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent'
@@ -430,8 +436,14 @@ export function HomeDesktopExperience({
                 {railSpotlightGroups.length === 0 ? (
                   <li className={cn('text-xs font-semibold', hubSecondary)}>Aucun groupe pour l’instant.</li>
                 ) : (
-                  railSpotlightGroups.map((g) => (
-                    <li key={g.id} className="min-w-0">
+                  railSpotlightGroups.map((g, i) => (
+                    <li
+                      key={g.id}
+                      className={cn(
+                        'min-w-0',
+                        i === 3 && 'hidden 2xl:block',
+                      )}
+                    >
                       <TribuneShowcaseCard group={g} variant="rail" dense />
                     </li>
                   ))
@@ -443,45 +455,71 @@ export function HomeDesktopExperience({
 
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', card, 'p-0')}>
           <HubEncartTopAccent appearance={appearance} preset="debate" />
-          <div className="flex min-h-0 flex-1 flex-col justify-start overflow-hidden overflow-x-hidden p-3 sm:p-3.5">
-            <h3
-              className={cn(
-                'shrink-0 pb-2 font-display text-xs font-black uppercase tracking-[0.18em] text-tf-app-fg',
-                railHeadBorder,
-              )}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3 sm:p-3.5">
+            <div
+              className={cn('mb-0 shrink-0', railHeadBorder, 'pb-2.5')}
             >
-              Top débats
-            </h3>
-            <ol className="min-h-0 space-y-2.5" role="list">
-              {topDebates.map((d, i) => (
-                <li key={d.id} className="min-w-0">
-                  <Link to={`/debate/${d.id}`} className={debateRow}>
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 text-xs font-black text-white sm:size-8 sm:text-sm">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-[11px] font-bold leading-snug text-tf-app-fg sm:text-xs">{d.title}</p>
-                      <p className={cn('mt-0.5 flex items-center gap-1 text-[9px] font-bold sm:text-[10px]', hubSecondary)}>
-                        <span aria-hidden>🔥</span>
-                        {d.messagesCount.toLocaleString('fr-FR')} réponses
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ol>
-            <Link
-              to="/debates"
+              <h3 className="font-display text-xs font-black uppercase leading-snug tracking-[0.18em] text-tf-app-fg">
+                Top débats
+              </h3>
+            </div>
+            <div
               className={cn(
-                hubPillLink(appearance, 'sm'),
-                'mt-3 w-full shrink-0 justify-center text-center',
+                'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 [scrollbar-width:thin]',
+                '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full',
+                'pt-2.5',
                 L
-                  ? 'border-orange-200/90 bg-orange-50/95 text-orange-900 hover:border-orange-300 hover:bg-orange-50'
-                  : 'border-orange-400/35 bg-orange-500/12 text-orange-100 hover:border-orange-400/50 hover:bg-orange-500/20',
+                  ? '[&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent'
+                  : '[&::-webkit-scrollbar-thumb]:bg-white/22 [&::-webkit-scrollbar-track]:bg-transparent',
               )}
             >
-              Voir plus
-            </Link>
+              <ol className="space-y-3 pb-1" role="list">
+                {topDebates.map((d, i) => (
+                  <li
+                    key={d.id}
+                    className={cn(
+                      'min-w-0',
+                      // 3ᵉ toujours visible dès le rail (≥md) — 4ᵉ seulement très grands écrans
+                      i === 3 && 'hidden 2xl:block',
+                    )}
+                  >
+                    <Link to={`/debate/${d.id}`} className={debateRow}>
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 text-xs font-black text-white sm:size-8 sm:text-sm">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-[11px] font-bold leading-snug text-tf-app-fg sm:text-xs">{d.title}</p>
+                        <p className={cn('mt-0.5 flex min-w-0 items-center gap-1 text-[9px] font-bold sm:text-[10px]', hubSecondary)}>
+                          <span aria-hidden>🔥</span>
+                          {d.messagesCount.toLocaleString('fr-FR')} réponses
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div
+              className={cn(
+                'relative z-[1] mt-2 shrink-0 border-t pt-2.5',
+                L
+                  ? 'border-tf-dark/10 bg-[color:color-mix(in_srgb,var(--tf-ice)_92%,white)]'
+                  : 'border-white/10 bg-[color:var(--tf-card-bg-dark)]',
+              )}
+            >
+              <Link
+                to="/debates"
+                className={cn(
+                  hubPillLink(appearance, 'sm'),
+                  'w-full justify-center text-center',
+                  L
+                    ? 'border-orange-200/90 bg-orange-50/95 text-orange-900 hover:border-orange-300 hover:bg-orange-50'
+                    : 'border-orange-400/35 bg-orange-500/12 text-orange-100 hover:border-orange-400/50 hover:bg-orange-500/20',
+                )}
+              >
+                Voir plus
+              </Link>
+            </div>
           </div>
         </div>
       </aside>

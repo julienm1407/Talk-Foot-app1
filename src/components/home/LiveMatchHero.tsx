@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { clubPathForId } from '../../utils/clubRoute'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { ClubCrest } from '../brand/ClubCrest'
@@ -96,17 +97,23 @@ export function LiveMatchHero({
 
   const rimClass =
     rim === 'yellow'
-      ? 'ring-4 ring-amber-400/75 ring-offset-2 ring-offset-[#030b18] tf-live-rim-pulse'
+      ? 'ring-2 ring-amber-400/75 ring-offset-1 ring-offset-[#030b18] sm:ring-4 sm:ring-offset-2 tf-live-rim-pulse'
       : rim === 'red'
-        ? 'ring-4 ring-red-500/80 ring-offset-2 ring-offset-[#030b18] tf-live-rim-pulse'
+        ? 'ring-2 ring-red-500/80 ring-offset-1 ring-offset-[#030b18] sm:ring-4 sm:ring-offset-2 tf-live-rim-pulse'
         : rim === 'goal'
-          ? 'ring-4 ring-amber-200/70 shadow-[0_0_48px_rgba(250,204,21,0.28)] ring-offset-2 ring-offset-[#030b18]'
-          : rim === 'var'
-            ? 'ring-4 ring-violet-400/65 ring-offset-2 ring-offset-[#030b18]'
-            : ''
+          ? 'ring-2 ring-amber-200/70 shadow-[0_0_32px_rgba(250,204,21,0.22)] ring-offset-1 ring-offset-[#030b18] sm:ring-4 sm:ring-offset-2 sm:shadow-[0_0_48px_rgba(250,204,21,0.28)]'
+        : rim === 'var'
+          ? 'ring-2 ring-violet-400/65 ring-offset-1 ring-offset-[#030b18] sm:ring-4 sm:ring-offset-2'
+          : ''
 
   return (
-    <div className={cn('relative isolate', fillColumnHeight && 'flex h-full min-h-0 flex-col', className)}>
+    <div
+      className={cn(
+        'relative isolate w-full min-w-0 max-w-full overflow-x-clip',
+        fillColumnHeight && 'flex h-full min-h-0 flex-col',
+        className,
+      )}
+    >
       <div className="tf-live-encart-halo" aria-hidden />
       <div className="tf-live-encart-halo-ring" aria-hidden />
       <section
@@ -234,15 +241,9 @@ export function LiveMatchHero({
           </div>
         ) : null}
 
+        {/* Bande d’état (LIVE + compétition) : jamais atténuée pendant but / toasts, sinon illisible */}
         <div
-          className={cn(
-            'relative z-10 flex h-full flex-col transition-[opacity] duration-300 ease-out',
-            minHero,
-            heroAnimBackdrop && 'pointer-events-none',
-            goalFullTakeover
-              ? 'opacity-[0.14] grayscale sm:opacity-[0.1]'
-              : heroAnimBackdrop && 'opacity-[0.32] grayscale sm:opacity-[0.26]',
-          )}
+          className={cn('relative z-20 flex h-full min-h-0 min-w-0 flex-col', minHero)}
         >
           <div
             className={cn(
@@ -252,7 +253,7 @@ export function LiveMatchHero({
           >
             <span
               className={cn(
-                'inline-flex items-center gap-1 rounded-md bg-rose-600 font-black uppercase tracking-wide text-white shadow-[0_0_20px_rgba(244,63,94,0.55),0_4px_14px_rgba(225,29,72,0.45)] ring-2 ring-rose-300/70 ring-offset-2 ring-offset-[#030b18]/90',
+                'inline-flex items-center gap-1 rounded-md bg-rose-600 font-black uppercase tracking-wide text-white shadow-[0_0_20px_rgba(244,63,94,0.55),0_4px_14px_rgba(225,29,72,0.45),0_1px_0_rgba(0,0,0,0.4)] ring-2 ring-rose-300/70 ring-offset-2 ring-offset-[#030b18]/90',
                 compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px]',
               )}
             >
@@ -264,7 +265,7 @@ export function LiveMatchHero({
             </span>
             <span
               className={cn(
-                'max-w-[min(100%,14rem)] truncate rounded-md border border-white/15 bg-black/25 font-bold text-white/90 backdrop-blur-sm sm:max-w-none',
+                'max-w-[min(100%,14rem)] truncate rounded-md border border-white/20 bg-black/45 font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.7)] backdrop-blur-sm sm:max-w-none',
                 compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-1 text-[10px] sm:text-xs',
               )}
             >
@@ -272,6 +273,15 @@ export function LiveMatchHero({
             </span>
           </div>
 
+          <div
+            className={cn(
+              'relative z-10 flex min-h-0 min-w-0 flex-1 flex-col transition-[opacity,filter] duration-300 ease-out',
+              heroAnimBackdrop && 'pointer-events-none',
+              goalFullTakeover
+                ? 'opacity-[0.14] grayscale sm:opacity-[0.1]'
+                : heroAnimBackdrop && 'opacity-[0.32] grayscale sm:opacity-[0.26]',
+            )}
+          >
           <div className="flex flex-1 flex-col justify-end">
             <div
               className={cn(
@@ -279,7 +289,11 @@ export function LiveMatchHero({
                 compact ? 'pt-1' : spotlight ? 'px-3 pb-0 pt-2 sm:px-4 sm:pt-2' : 'px-4 pb-2 pt-4',
               )}
             >
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+              <Link
+                to={clubPathForId(match.home.id)}
+                className="group/home flex min-w-0 flex-1 flex-col items-center gap-1 text-center outline-none"
+                title={`Hub ${match.home.name}`}
+              >
                 <ClubCrest
                   id={match.home.id}
                   shortName={match.home.shortName}
@@ -287,12 +301,14 @@ export function LiveMatchHero({
                   size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
+                    'group-focus-visible/home:ring-2 group-focus-visible/home:ring-sky-400/70 group-focus-visible/home:ring-offset-2 group-focus-visible/home:ring-offset-[#030b18]/90',
+                    'group-hover/home:scale-[1.03]',
                     bumpSide === 'home' && 'scale-110 drop-shadow-[0_0_20px_rgba(250,204,21,0.45)]',
                   )}
                 />
                 <span
                   className={cn(
-                    'truncate font-black text-white',
+                    'truncate font-black text-white underline-offset-2 group-hover/home:underline',
                     compact
                       ? 'max-w-[4.5rem] text-[10px]'
                       : spotlight
@@ -302,7 +318,7 @@ export function LiveMatchHero({
                 >
                   {match.home.shortName}
                 </span>
-              </div>
+              </Link>
               <div className="flex shrink-0 flex-col items-center gap-0.5 px-0.5">
                 <span
                   className={cn(
@@ -319,14 +335,18 @@ export function LiveMatchHero({
                 <span
                   key={minute}
                   className={cn(
-                    'rounded-md bg-emerald-500/95 font-black text-white shadow animate-[tf-live-bar_0.85s_ease-out]',
+                    'tf-live-minute-tick rounded-md bg-emerald-500/95 font-black text-white shadow',
                     compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[11px] sm:text-xs',
                   )}
                 >
                   {formatRelativeMinute(minute) ?? `${minute}′`}
                 </span>
               </div>
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+              <Link
+                to={clubPathForId(match.away.id)}
+                className="group/away flex min-w-0 flex-1 flex-col items-center gap-1 text-center outline-none"
+                title={`Hub ${match.away.name}`}
+              >
                 <ClubCrest
                   id={match.away.id}
                   shortName={match.away.shortName}
@@ -334,12 +354,14 @@ export function LiveMatchHero({
                   size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
+                    'group-focus-visible/away:ring-2 group-focus-visible/away:ring-sky-400/70 group-focus-visible/away:ring-offset-2 group-focus-visible/away:ring-offset-[#030b18]/90',
+                    'group-hover/away:scale-[1.03]',
                     bumpSide === 'away' && 'scale-110 drop-shadow-[0_0_20px_rgba(250,204,21,0.45)]',
                   )}
                 />
                 <span
                   className={cn(
-                    'truncate font-black text-white',
+                    'truncate font-black text-white underline-offset-2 group-hover/away:underline',
                     compact
                       ? 'max-w-[4.5rem] text-[10px]'
                       : spotlight
@@ -349,7 +371,7 @@ export function LiveMatchHero({
                 >
                   {match.away.shortName}
                 </span>
-              </div>
+              </Link>
             </div>
             <div className={cn(compact ? 'px-3 pb-1.5 pt-0' : spotlight ? 'px-3 pb-2 pt-0 sm:px-4' : 'px-4 pb-3 pt-1')}>
               <HubMatchProgressBar
@@ -361,6 +383,7 @@ export function LiveMatchHero({
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       <div
@@ -370,20 +393,20 @@ export function LiveMatchHero({
         )}
       >
         {spotlight ? (
-          <div className="flex flex-col gap-2 sm:gap-2.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-            <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-col gap-2 sm:gap-2.5 lg:flex-row lg:items-stretch lg:justify-between lg:gap-3">
+            <div className="min-w-0 w-full flex-1">
               <LiveSalonPresenceStrip
                 match={match}
                 simulation={simulation}
                 variant="dense"
               />
             </div>
-            <div className="flex shrink-0 justify-end lg:items-center">
+            <div className="flex w-full min-w-0 justify-stretch sm:justify-end lg:w-auto lg:shrink-0">
               <Link
                 to={`/channel/${match.id}`}
-                className="rounded-lg bg-gradient-to-b from-emerald-500 to-teal-700 px-4 py-1.5 text-[11px] font-black uppercase tracking-wide text-white shadow-[0_4px_18px_rgba(16,185,129,0.45)] ring-1 ring-white/15 transition hover:from-emerald-400 hover:to-teal-600 sm:rounded-xl sm:px-5 sm:py-2 sm:text-xs sm:normal-case sm:tracking-normal"
+                className="inline-flex min-h-tf-touch w-full min-w-0 max-w-full items-center justify-center rounded-lg bg-gradient-to-b from-emerald-500 to-teal-700 px-3 py-2 text-center text-[11px] font-black uppercase tracking-wide text-white shadow-[0_4px_18px_rgba(16,185,129,0.45)] ring-1 ring-white/15 transition hover:from-emerald-400 hover:to-teal-600 sm:w-auto sm:max-w-min sm:rounded-xl sm:px-5 sm:py-2 sm:text-xs sm:leading-tight sm:normal-case sm:tracking-normal"
               >
-                <span className="hidden sm:inline">Rejoindre le salon</span>
+                <span className="hidden sm:inline sm:whitespace-nowrap">Rejoindre le salon</span>
                 <span className="sm:hidden">Rejoindre</span>
               </Link>
             </div>
@@ -391,12 +414,12 @@ export function LiveMatchHero({
         ) : (
           <div className={cn('flex flex-col gap-3', compact && 'gap-2')}>
             <LiveSalonPresenceStrip match={match} simulation={simulation} compact={compact} />
-            <div className="flex flex-wrap items-center justify-end border-t border-white/5 pt-2.5 sm:pt-3">
+            <div className="flex min-w-0 flex-wrap items-stretch justify-end border-t border-white/5 pt-2.5 sm:pt-3">
               <Link
                 to={`/channel/${match.id}`}
                 className={cn(
-                  'rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition hover:from-sky-400 hover:to-blue-500',
-                  compact ? 'px-3 py-1.5 text-[10px]' : 'rounded-xl px-5 py-2 text-xs sm:px-6 sm:py-2.5 sm:text-sm',
+                  'inline-flex min-h-tf-touch w-full min-w-0 max-w-full items-center justify-center rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 text-center font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition hover:from-sky-400 hover:to-blue-500 sm:w-auto',
+                  compact ? 'px-3 py-1.5 text-[10px]' : 'text-xs sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm',
                 )}
               >
                 Rejoindre

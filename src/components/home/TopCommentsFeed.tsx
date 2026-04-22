@@ -3,7 +3,7 @@ import { useMessageLikes } from '../../hooks/useMessageLikes'
 import { Card } from '../ui/Card'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../ui/Avatar'
-import { ProfilePhotoAvatar } from '../profile/ProfilePhotoAvatar'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { chatPersonasPool, currentUser } from '../../data/users'
 import { useProfile } from '../../hooks/useProfile'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
@@ -75,12 +75,11 @@ export function TopCommentsFeed({
             )}
           >
             {c.userId === currentUser.id ? (
-              <ProfilePhotoAvatar
-                photoDataUrl={profile.profilePhotoDataUrl}
-                seed={u?.avatarSeed ?? 'fan'}
-                accent={u?.accent ?? 'violet'}
-                alt={u?.username ?? ''}
-                className="mt-0.5 size-9 shrink-0 sm:size-10"
+              <ProfileCharacterThumb
+                profile={profile}
+                size="sm"
+                className="mt-0.5 !h-9 !w-9 !min-h-9 !min-w-9 shrink-0 self-start rounded-[20px] border-0 p-0 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10"
+                aria-label={u?.username ?? 'Moi'}
               />
             ) : (
               <Avatar

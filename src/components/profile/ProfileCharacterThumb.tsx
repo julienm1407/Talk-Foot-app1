@@ -1,18 +1,22 @@
-import { DressableCharacter } from './DressableCharacter'
+import { Suspense, useMemo } from 'react'
+import { Canvas } from '@react-three/fiber'
+import * as THREE from 'three'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import type { UserProfile } from '../../types/profile'
 import { cn } from '../../utils/cn'
+import { PopAvatarStudioRig, BustCamera, R3FInvalidateOn } from './avatar3d/pop/PopAvatarStudioRig'
+import { mergeCharacterLook } from '../../data/characterPresets'
+import { resolvePopAvatarConfig } from './avatar3d/pop/resolvePopAvatarConfig'
 
 const PRESETS = {
-  /** Compact (lignes stats, listes) */
-  sm: { box: 'h-12 w-12 min-h-12 min-w-12', scale: 0.44 },
-  /** Carte profil, en-têtes */
-  md: { box: 'h-16 w-16 min-h-16 min-w-16', scale: 0.56 },
-  /** Bloc éditeur à côté de la vue 3D */
-  lg: { box: 'h-24 w-24 min-h-24 min-w-24 sm:h-28 sm:w-28', scale: 0.72 },
+  sm: { box: 'h-12 w-12 min-h-12 min-w-12', dpr: 1 as const, shadows: false as const },
+  md: { box: 'h-16 w-16 min-h-16 min-w-16', dpr: 1.5 as const, shadows: true as const },
+  lg: { box: 'h-24 w-24 min-h-24 min-w-24 sm:h-28 sm:w-28', dpr: 2 as const, shadows: true as const },
 } as const
 
 /**
- * Miniature du personnage SVG (même rendu que la preview 3D / live) — remplace la photo DiceBear.
+ * Miniature d’**identité in-app** : le personnage 3D (POP) uniquement.
+ * Indépendant de `profilePhotoDataUrl` (photo personnelle — gérée dans `ProfilePhotoSection`).
  */
 export function ProfileCharacterThumb({
   profile,
@@ -26,49 +30,63 @@ export function ProfileCharacterThumb({
   'aria-label'?: string
 }) {
   const p = PRESETS[size]
-  const photo = profile.profilePhotoDataUrl
-
-  if (photo) {
-    return (
-      <div
-        className={cn(
-          'relative shrink-0 overflow-hidden rounded-[22px] border-2 border-tf-grey-pastel/50 bg-tf-white shadow-[inset_0_1px_0_rgba(255,255,255,.6)]',
-          p.box,
-          className,
-        )}
-        role="img"
-        aria-label={ariaLabel ?? 'Ma photo de profil'}
-      >
-        <img
-          src={photo}
-          alt=""
-          className="absolute inset-0 size-full object-cover"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-    )
-  }
+  const { favoriteClubId } = useFanPreferences()
+  const lookKey = useMemo(
+    () => JSON.stringify(mergeCharacterLook(profile.characterLook)),
+    [profile.characterLook],
+  )
+  const config = useMemo(
+    () => resolvePopAvatarConfig(profile, favoriteClubId ?? null),
+    [profile, favoriteClubId, lookKey],
+  )
+  const rev = useMemo(
+    () =>
+      JSON.stringify({
+        c: config,
+        s: size,
+      }),
+    [config, size],
+  )
 
   return (
     <div
       className={cn(
-        'relative shrink-0 overflow-hidden rounded-[22px] border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-tf-grey-pastel/25 to-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,.6)]',
+        'relative shrink-0 overflow-hidden rounded-[22px] border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
         p.box,
         className,
       )}
       role="img"
-      aria-label={ariaLabel ?? 'Mon personnage Talk Foot'}
+      aria-label={ariaLabel ?? 'Mon personnage Talk Foot (avatar)'}
     >
-      <div
-        className="pointer-events-none absolute left-1/2 top-0"
-        style={{
-          transform: `translateX(-50%) scale(${p.scale})`,
-          transformOrigin: 'top center',
+      <Canvas
+        className="!absolute inset-0 size-full"
+        frameloop="demand"
+        dpr={p.dpr}
+        shadows={p.shadows}
+        gl={{ antialias: true, alpha: false, powerPreference: 'default' }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping
+          gl.toneMappingExposure = 1.12
+          gl.outputColorSpace = THREE.SRGBColorSpace
+          gl.shadowMap.enabled = p.shadows
+          if (p.shadows) {
+            gl.shadowMap.type = THREE.PCFSoftShadowMap
+          }
+          gl.setClearColor('#0a0b10', 1)
         }}
       >
-        <DressableCharacter profile={profile} variant="front" />
-      </div>
+        <color attach="background" args={['#0a0b10']} />
+        <BustCamera mode="portrait" />
+        <R3FInvalidateOn rev={rev} />
+        <Suspense fallback={null}>
+          <PopAvatarStudioRig
+            config={config}
+            showGround={false}
+            enableKeyShadows={p.shadows}
+            groupRotationY={-0.14}
+          />
+        </Suspense>
+      </Canvas>
     </div>
   )
 }

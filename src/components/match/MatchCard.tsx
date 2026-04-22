@@ -339,7 +339,7 @@ export function MatchCard({
                 }
                 className={cn(
                   'w-full text-center text-xs font-black leading-tight text-tf-dark',
-                  isLive && 'animate-[tf-live-bar_0.75s_ease-out]',
+                  isLive && 'tf-live-minute-tick',
                 )}
               >
                 {isLive

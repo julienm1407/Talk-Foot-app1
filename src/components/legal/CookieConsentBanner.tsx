@@ -30,7 +30,7 @@ export function CookieConsentBanner() {
   return (
     <div
       className={cn(
-        'fixed inset-x-0 bottom-0 z-[300] border-t p-4 shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:p-5',
+        'fixed inset-x-0 bottom-0 z-[300] border-t p-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:p-5',
         L ? 'border-tf-dark/10 bg-white/98 backdrop-blur-md' : 'border-white/10 bg-tf-dark/95 backdrop-blur-md',
       )}
       role="dialog"

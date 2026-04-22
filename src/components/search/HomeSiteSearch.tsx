@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMatches } from '../../contexts/MatchesContext'
 import { useSupporterGroups } from '../../hooks/useSupporterGroups'
@@ -16,7 +25,13 @@ type HomeSiteSearchProps = {
   variant?: 'default' | 'hub'
 }
 
-export function HomeSiteSearch({ className, inputId: inputIdProp, variant = 'default' }: HomeSiteSearchProps) {
+export type HomeSiteSearchHandle = {
+  /** Remplit la requête, ouvre le panneau de résultats et focus le champ (ex. tendances 12h). */
+  applyQuery: (q: string) => void
+}
+
+export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchProps>(
+  function HomeSiteSearch({ className, inputId: inputIdProp, variant = 'default' }, ref) {
   const reactId = useId()
   const inputId = inputIdProp ?? `home-site-search-${reactId}`
   const listId = `${inputId}-list`
@@ -30,6 +45,21 @@ export function HomeSiteSearch({ className, inputId: inputIdProp, variant = 'def
   const [highlight, setHighlight] = useState(0)
   const wrapRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      applyQuery: (q: string) => {
+        const t = q.trim()
+        if (t.length < 2) return
+        setQuery(t)
+        setOpen(true)
+        setHighlight(0)
+        requestAnimationFrame(() => inputRef.current?.focus())
+      },
+    }),
+    [],
+  )
 
   const debates = useMemo(() => getAllDebates(), [])
 
@@ -152,7 +182,8 @@ export function HomeSiteSearch({ className, inputId: inputIdProp, variant = 'def
           id={listId}
           role="listbox"
           className={cn(
-            'absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-[min(70vh,22rem)] overflow-auto rounded-tf-xl border py-1 shadow-xl',
+            /* z élevé : rester au-dessus des encarts / cartes (hub, isolate, ombres) */
+            'absolute left-0 right-0 top-[calc(100%+6px)] z-[200] max-h-[min(70vh,22rem)] overflow-auto rounded-tf-xl border py-1 shadow-xl',
             L ? 'border-tf-dark/12 bg-white text-tf-dark' : 'border-white/12 bg-[#0a1628] text-white',
           )}
         >
@@ -208,4 +239,7 @@ export function HomeSiteSearch({ className, inputId: inputIdProp, variant = 'def
       ) : null}
     </div>
   )
-}
+  },
+)
+
+HomeSiteSearch.displayName = 'HomeSiteSearch'
