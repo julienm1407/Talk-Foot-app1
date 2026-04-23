@@ -48,6 +48,30 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
     labelBg: 'bg-rose-100',
     labelText: 'text-rose-900',
   },
+  ucl: {
+    id: 'ucl',
+    name: 'Ligue des champions',
+    accent: '#0c1929',
+    accent2: '#eab308',
+    labelBg: 'bg-amber-100',
+    labelText: 'text-amber-950',
+  },
+  uel: {
+    id: 'uel',
+    name: 'Ligue Europa',
+    accent: '#1e1b4b',
+    accent2: '#f97316',
+    labelBg: 'bg-orange-100',
+    labelText: 'text-orange-950',
+  },
+  uecl: {
+    id: 'uecl',
+    name: 'Europa Conf.',
+    accent: '#0f172a',
+    accent2: '#38bdf8',
+    labelBg: 'bg-sky-100',
+    labelText: 'text-sky-950',
+  },
 }
 
 export function themeForCompetition(id: string | undefined) {

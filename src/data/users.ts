@@ -11,6 +11,12 @@ export const talkFootBotUser: User = {
   accent: 'violet',
   isMockFriend: true,
   isTalkFootBot: true,
+  characterLook: {
+    hairStyle: 'short',
+    faceExpression: 'happy',
+    glasses: 'round',
+    headwear: 'cap',
+  },
 }
 
 /** Liste « amis » côté UI live / partage (UUID = MP cloud p2p possible avec Supabase). */
@@ -24,6 +30,7 @@ export const mockFriendUsers: User[] = [
     fanClubId: 'psg',
     isMockFriend: true,
     tagline: 'Tribune Auteuil · Paris',
+    characterLook: { hairStyle: 'buzz', beard: 'light', faceExpression: 'serious', headwear: 'none' },
   },
   {
     id: 'b2000000-0002-4000-8000-000000000002',
@@ -33,15 +40,44 @@ export const mockFriendUsers: User[] = [
     fanClubId: 'om',
     isMockFriend: true,
     tagline: 'Virage Nord · Marseille',
+    characterLook: { hairStyle: 'long', faceExpression: 'hyped', glasses: 'sport', headwear: 'beanie' },
   },
 ]
 
 /** Autres spectateurs fictifs (pas dans ta liste d’amis). */
 export const mockUsers: User[] = [
-  { id: 'u-1', username: 'UltraNuit', avatarSeed: 'ultra', accent: 'violet', fanClubId: 'psg' },
-  { id: 'u-2', username: 'GoalMachine', avatarSeed: 'goal', accent: 'emerald', fanClubId: 'om' },
-  { id: 'u-3', username: 'TifoKing', avatarSeed: 'tifo', accent: 'amber', fanClubId: 'psg' },
-  { id: 'u-4', username: 'RagePress', avatarSeed: 'rage', accent: 'rose', fanClubId: 'liv' },
+  {
+    id: 'u-1',
+    username: 'UltraNuit',
+    avatarSeed: 'ultra',
+    accent: 'violet',
+    fanClubId: 'psg',
+    characterLook: { hairStyle: 'curly', beard: 'full', eyeShape: 'almond', faceExpression: 'neutral' },
+  },
+  {
+    id: 'u-2',
+    username: 'GoalMachine',
+    avatarSeed: 'goal',
+    accent: 'emerald',
+    fanClubId: 'om',
+    characterLook: { hairStyle: 'wavy', glasses: 'none', headwear: 'cap' },
+  },
+  {
+    id: 'u-3',
+    username: 'TifoKing',
+    avatarSeed: 'tifo',
+    accent: 'amber',
+    fanClubId: 'psg',
+    characterLook: { hairStyle: 'short', faceExpression: 'hyped', headwear: 'none' },
+  },
+  {
+    id: 'u-4',
+    username: 'RagePress',
+    avatarSeed: 'rage',
+    accent: 'rose',
+    fanClubId: 'liv',
+    characterLook: { hairStyle: 'long', beard: 'goatee', glasses: 'round' },
+  },
   { id: 'u-5', username: 'CôtéVirage', avatarSeed: 'virage', accent: 'violet', fanClubId: 'mci' },
 ]
 

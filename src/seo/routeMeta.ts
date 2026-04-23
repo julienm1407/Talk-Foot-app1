@@ -67,6 +67,12 @@ const PROFILE: RouteSeoConfig = {
   robots: 'noindex, nofollow',
 }
 
+const DATA_SOURCES: RouteSeoConfig = {
+  title: `SportMonks — clé API — ${SITE_NAME}`,
+  description: 'Configurer SportMonks pour les matchs en direct et le calendrier.',
+  robots: 'noindex, nofollow',
+}
+
 const USER_VITRINE: RouteSeoConfig = {
   title: `Profil supporter — ${SITE_NAME}`,
   description: 'Profil public supporter sur Talk Foot : pseudo, club de cœur et contact.',
@@ -122,6 +128,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/boutique') return BOUTIQUE
   if (pathname === '/videos') return VIDEOS
   if (pathname === '/profile') return PROFILE
+  if (pathname === '/settings/donnees') return DATA_SOURCES
   if (pathname.startsWith('/user/')) return USER_VITRINE
   if (pathname === '/admin') return ADMIN
   if (pathname.startsWith('/channel/')) {

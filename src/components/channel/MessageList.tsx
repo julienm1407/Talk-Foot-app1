@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Message, User } from '../../types/chat'
-import { Avatar } from '../ui/Avatar'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
+import { ChatCharacterThumb } from './ChatCharacterThumb'
 import { getEmoteById } from '../../data/emotes'
 import { useProfile } from '../../hooks/useProfile'
 import { cn } from '../../utils/cn'
@@ -79,7 +78,7 @@ export function MessageList({
           <li
             key={m.id}
             className={cn(
-              'flex items-start gap-3',
+              'flex items-start gap-2.5 sm:gap-3',
               idxFromEnd <= 8 && 'tf-chat-in',
             )}
             style={{
@@ -88,30 +87,20 @@ export function MessageList({
               filter: t > 0.7 ? `blur(${(t - 0.7) * 2}px)` : undefined,
             }}
           >
-            {m.userId === selfUserId ? (
-              <Link
-                to={profileTo}
-                className={cn('mt-0.5 shrink-0 rounded-lg outline-none', TF_FOCUS_VISIBLE)}
-                aria-label={u?.username ?? 'Moi — profil'}
-              >
-                <ProfileCharacterThumb profile={profile} size="sm" />
-              </Link>
-            ) : (
-              <Link
-                to={profileTo}
-                className={cn('mt-0.5 shrink-0 rounded-full outline-none', TF_FOCUS_VISIBLE)}
-                aria-label={`Profil ${u?.username ?? m.authorDisplayName ?? 'Utilisateur'}`}
-              >
-                <Avatar
-                  seed={u?.avatarSeed ?? (m.userId.replace(/-/g, '').slice(0, 12) || 'fan')}
-                  accent={u?.accent ?? 'violet'}
-                  alt=""
-                  className="pointer-events-none"
-                />
-              </Link>
-            )}
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            <ChatCharacterThumb
+              to={profileTo}
+              user={u}
+              selfProfile={profile}
+              isSelf={m.userId === selfUserId}
+              className={TF_FOCUS_VISIBLE}
+              aria-label={
+                m.userId === selfUserId
+                  ? (u?.username ?? 'Moi — profil')
+                  : `Profil ${u?.username ?? m.authorDisplayName ?? 'Utilisateur'}`
+              }
+            />
+            <div className="min-w-0 flex-1 pt-px">
+              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                 <Link
                   to={profileTo}
                   className={cn(

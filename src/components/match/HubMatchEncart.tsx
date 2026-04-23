@@ -4,24 +4,15 @@ import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSi
 import { LiveSalonPresenceStrip } from '../home/LiveSalonPresenceStrip'
 import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
-import { formatKickoff, formatRelativeMinute } from '../../utils/time'
+import { formatHubDayLabel, formatKickoff, formatRelativeMinute } from '../../utils/time'
+
+export { formatHubDayLabel }
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { themeForCompetition } from '../../data/competitionThemes'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=75&auto=format&fit=crop'
-
-export function formatHubDayLabel(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
-  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const t1 = t0 + 86400000
-  const t = d.getTime()
-  if (t >= t0 && t < t1) return "Aujourd'hui"
-  if (t >= t1 && t < t1 + 86400000) return 'Demain'
-  return new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }).format(d)
-}
 
 export function hubFansK(m: Match) {
   return 8 + (m.home.shortName.length + m.away.shortName.length) * 0.42

@@ -62,6 +62,8 @@ export type ClubPageMock = {
   }
   /** 5 dernières (V/N/D) */
   formStrip: Array<'V' | 'N' | 'D'>
+  /** Renseigné quand `formStrip` provient du schedule SportMonks (pas le mock). */
+  formStripFromApi?: boolean
   /** Mini classement (mock) */
   tableSnapshot: { position: string; points: string; line: string }
   /** Monnaie & déco (boutique) */

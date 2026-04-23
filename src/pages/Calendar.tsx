@@ -7,6 +7,11 @@ import { Card } from '../components/ui/Card'
 import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
 import { themeForCompetition } from '../data/competitionThemes'
 import { cn } from '../utils/cn'
+import {
+  MATCH_DISPLAY_TIME_ZONE,
+  matchCalendarDayKeyParis,
+  parisCalendarDayAfter,
+} from '../utils/time'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
 
@@ -16,7 +21,12 @@ export function CalendarPage() {
   const L = appearance === 'light'
   const { supporterTintActive, team } = useSupporterTintMode()
 
-  const { matches, loading } = useMatches()
+  const { matches, loading, error: matchesError } = useMatches()
+
+  const hasSportMonksMatches = useMemo(
+    () => matches.some((m) => m.provider === 'sportmonks'),
+    [matches],
+  )
 
   const filterBtn = (selected: boolean) =>
     cn(
@@ -47,10 +57,9 @@ export function CalendarPage() {
     L ? 'text-tf-electric-deep' : 'text-sky-100',
   )
 
+  /** Tous les matchs de la fenêtre API (y compris terminés) : même jour que les résultats du matin. */
   const sorted = useMemo(() => {
-    return [...matches]
-      .filter((m) => m.status !== 'finished')
-      .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
+    return [...matches].sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
   }, [matches])
 
   const competitions = useMemo(() => {
@@ -75,10 +84,9 @@ export function CalendarPage() {
 
   const upcomingSpotlight = useMemo(() => {
     if (liveFeatured.length > 0) return null
+    const upcomingOnly = poolFiltered.filter((m) => m.status === 'upcoming')
     return (
-      poolFiltered.find((m) => m.status === 'upcoming' && +new Date(m.kickoffAt) >= now - 60_000) ??
-      poolFiltered.filter((m) => m.status === 'upcoming')[0] ??
-      null
+      upcomingOnly.find((m) => +new Date(m.kickoffAt) >= now - 60_000) ?? upcomingOnly[0] ?? null
     )
   }, [liveFeatured.length, poolFiltered, now])
 
@@ -99,6 +107,7 @@ export function CalendarPage() {
 
   const grouped = useMemo(() => {
     const fmt = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: MATCH_DISPLAY_TIME_ZONE,
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -107,7 +116,7 @@ export function CalendarPage() {
 
     for (const m of filtered) {
       const d = new Date(m.kickoffAt)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const key = matchCalendarDayKeyParis(m.kickoffAt)
 
       const existing = groups.get(key)
       if (existing) {
@@ -128,23 +137,23 @@ export function CalendarPage() {
   }, [dayKey, grouped])
 
   const dayChips = useMemo(() => {
-    const today = new Date()
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowKey = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+    const todayKey = matchCalendarDayKeyParis(new Date())
+    const tomorrowKey = parisCalendarDayAfter(todayKey)
     const shortFmt = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: MATCH_DISPLAY_TIME_ZONE,
       weekday: 'short',
       day: 'numeric',
     })
 
     return grouped.slice(0, 10).map((g) => {
+      const [gy, gm, gd] = g.key.split('-').map(Number)
+      const labelAnchor = new Date(Date.UTC(gy, gm - 1, gd, 12, 0, 0))
       const label =
         g.key === todayKey
           ? "Aujourd'hui"
           : g.key === tomorrowKey
             ? 'Demain'
-            : shortFmt.format(new Date(g.key))
+            : shortFmt.format(labelAnchor)
       return { key: g.key, label, count: g.matches.length }
     })
   }, [grouped])
@@ -163,6 +172,35 @@ export function CalendarPage() {
       </div>
     )
   }
+
+  const dataSourceBanner =
+    matches.length > 0 && !hasSportMonksMatches ? (
+      <div
+        className={cn(
+          'rounded-2xl border px-4 py-3 text-sm font-bold',
+          L
+            ? 'border-amber-500/50 bg-amber-50 text-amber-950'
+            : 'border-amber-400/40 bg-amber-950/35 text-amber-50',
+        )}
+        role="status"
+      >
+        Les matchs affichés viennent du <strong>mode démo</strong> (pas de réponse SportMonks avec ta clé). Pour le
+        vrai calendrier : <Link to="/settings/donnees#tf-sportmonks-cle">coller la clé SportMonks</Link> puis redémarrer
+        le serveur si tu utilises <code className="font-mono text-xs">.env</code>.
+      </div>
+    ) : null
+
+  const apiErrorBanner = matchesError ? (
+    <p
+      className={cn(
+        'rounded-2xl border px-4 py-3 text-sm font-bold',
+        L ? 'border-rose-400/60 bg-rose-50 text-rose-950' : 'border-rose-400/45 bg-rose-950/40 text-rose-50',
+      )}
+      role="alert"
+    >
+      {matchesError}
+    </p>
+  ) : null
 
   const leagueButtons = (
     <>
@@ -358,6 +396,10 @@ export function CalendarPage() {
         <h1 className="font-display text-tf-2xl font-black tracking-tight text-tf-app-fg sm:text-tf-display">
           {supporterTintActive && team ? `Match ${team.shortName}` : 'Match'}
         </h1>
+        <div className="space-y-tf-3">
+          {dataSourceBanner}
+          {apiErrorBanner}
+        </div>
         <p className="text-tf-sm font-medium text-tf-app-muted sm:text-tf-base">
           {supporterTintActive && team ? (
             <>

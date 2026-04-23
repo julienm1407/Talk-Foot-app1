@@ -1,6 +1,7 @@
-const API_BASE = 'https://v3.football.api-sports.io'
-
-// IDs des 5 grands championnats (API-FOOTBALL)
+/**
+ * Référentiel Big 5 + mapping noms d’équipes (SportMonks, etc.) → ids internes Talk Foot.
+ * L’ancienne intégration API-Football a été retirée : uniquement SportMonks pour les matchs.
+ */
 export const LEAGUE_IDS: Record<string, number> = {
   'ligue-1': 61,
   laliga: 140,
@@ -15,28 +16,64 @@ export const COMP_NAMES: Record<string, { name: string; shortName: string }> = {
   epl: { name: 'Premier League', shortName: 'EPL' },
   'serie-a': { name: 'Serie A', shortName: 'SA' },
   bund: { name: 'Bundesliga', shortName: 'BUN' },
+  ucl: { name: 'Ligue des champions', shortName: 'C1' },
+  uel: { name: 'Ligue Europa', shortName: 'EL' },
+  uecl: { name: 'Ligue Europa Conf.', shortName: 'ECL' },
 }
 
-export type ApiFixture = {
-  fixture: {
-    id: number
-    date: string
-    timestamp: number
-    status: { short: string; elapsed?: number; extra?: number }
-  }
-  league: { id: number; name: string }
-  teams: {
-    home: { id: number; name: string }
-    away: { id: number; name: string }
-  }
-  goals: { home: number | null; away: number | null }
-  score?: {
-    halftime?: { home: number | null; away: number | null }
-    fulltime?: { home: number | null; away: number | null }
-  }
+/**
+ * `league_id` renvoyé sur les fixtures SportMonks v3 (doc / réponses réelles).
+ * Les anciennes valeurs `LEAGUE_IDS` ci-dessus restent un référentiel interne, pas des ids SM.
+ */
+export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
+  301: 'ligue-1',
+  8: 'epl',
+  564: 'laliga',
+  384: 'serie-a',
+  82: 'bund',
+  2: 'ucl',
+  2286: 'uel',
+  1371: 'uecl',
+  271: 'uecl',
 }
 
-// Mapping noms API -> id interne (normalisation approximative)
+const LEAGUE_NAME_TO_COMP: [RegExp, string][] = [
+  [/ligue\s*1/i, 'ligue-1'],
+  [/premier\s*league|premiership\s*\(?\s*eng/i, 'epl'],
+  [/la\s*liga/i, 'laliga'],
+  [/serie\s*a\b/i, 'serie-a'],
+  [/bundesliga/i, 'bund'],
+  [/champions\s*league|uefa\s*champions|ligue\s*des\s*champions/i, 'ucl'],
+  [/europa\s*league|ligue\s*europa(?!\s*conf)/i, 'uel'],
+  [/conference\s*league|europa\s*conf/i, 'uecl'],
+]
+
+/** Mappe la ligue SportMonks → id compétition Talk Foot (thèmes, filtres calendrier). */
+export function inferTalkFootCompIdFromSmLeague(
+  league: { id?: number; name?: string; short_code?: string } | null | undefined,
+): string {
+  const lid = league?.id
+  if (typeof lid === 'number') {
+    const byId = SM_LEAGUE_ID_TO_COMP[lid]
+    if (byId) return byId
+  }
+
+  const blob = `${league?.name ?? ''} ${league?.short_code ?? ''}`
+  for (const [re, id] of LEAGUE_NAME_TO_COMP) {
+    if (re.test(blob)) return id
+  }
+
+  const sc = (league?.short_code ?? '').toUpperCase().replace(/\s+/g, ' ').trim()
+  if (/^UK\s*PL$|^PL$|PREM/i.test(sc) || /\bEPL\b/.test(sc)) return 'epl'
+  if (/^ESP\s*PD$|^PD$|^LL$/.test(sc) || /PRIMERA|LALIGA/i.test(blob)) return 'laliga'
+  if (/^BL1$|BUND/i.test(sc + blob)) return 'bund'
+  if (/^SA$|SERIE\s*A|CALCIO/i.test(sc + blob)) return 'serie-a'
+  if (/^L1$|LIGUE\s*1|DIVISION\s*1.*FRANCE/i.test(sc + blob)) return 'ligue-1'
+
+  if (typeof lid === 'number') return `ext-${lid}`
+  return 'ligue-1'
+}
+
 function normalize(s: string): string {
   return s
     .toLowerCase()
@@ -46,7 +83,6 @@ function normalize(s: string): string {
 }
 
 const NAME_TO_ID: Record<string, string> = {
-  // Ligue 1
   parissaintgermain: 'psg',
   paris: 'psg',
   olympiquedemarseille: 'om',
@@ -88,8 +124,6 @@ const NAME_TO_ID: Record<string, string> = {
   saintsaintetienne: 'stetienne',
   stetienne: 'stetienne',
   parisfc: 'parisfc',
-
-  // La Liga
   realmadrid: 'rma',
   rma: 'rma',
   fcbarcelona: 'fcb',
@@ -123,8 +157,6 @@ const NAME_TO_ID: Record<string, string> = {
   celtavigo: 'celta',
   rayovallecano: 'rayo',
   rayo: 'rayo',
-
-  // EPL
   manchestercity: 'mci',
   mancity: 'mci',
   liverpool: 'liv',
@@ -155,8 +187,6 @@ const NAME_TO_ID: Record<string, string> = {
   everton: 'everton',
   ipswichtown: 'ipswich',
   ipswich: 'ipswich',
-
-  // Serie A
   inter: 'inter',
   intermilan: 'inter',
   juventus: 'juve',
@@ -182,8 +212,6 @@ const NAME_TO_ID: Record<string, string> = {
   salernitana: 'salernitana',
   verona: 'verona',
   hellasverona: 'verona',
-
-  // Bundesliga
   bayernmunich: 'bayern',
   bayern: 'bayern',
   borussiadortmund: 'bvb',
@@ -223,88 +251,4 @@ const NAME_TO_ID: Record<string, string> = {
 export function apiNameToOurId(name: string): string {
   const key = normalize(name)
   return NAME_TO_ID[key] ?? key.slice(0, 8)
-}
-
-// Inversion : league API id → compId interne
-const LEAGUE_ID_TO_COMP: Record<number, string> = Object.fromEntries(
-  Object.entries(LEAGUE_IDS).map(([k, v]) => [v, k]),
-)
-
-/**
- * Plan gratuit : saisons 2022–2024 uniquement.
- * On force la saison 2024 (2024-25) pour avoir des matchs réels.
- * Plage : fév–mai 2025 (fin de saison 2024-25).
- */
-const FREE_PLAN_SEASON = 2024
-const FREE_PLAN_FROM = '2025-02-01'
-const FREE_PLAN_TO = '2025-05-15'
-
-export async function fetchFixtures(
-  apiKey: string,
-  from?: string,
-  to?: string,
-): Promise<Array<ApiFixture & { compId: string }>> {
-  const fromDate = from ?? FREE_PLAN_FROM
-  const toDate = to ?? FREE_PLAN_TO
-  const all: Array<ApiFixture & { compId: string }> = []
-  for (const [compId, leagueId] of Object.entries(LEAGUE_IDS)) {
-    const url = `${API_BASE}/fixtures?league=${leagueId}&season=${FREE_PLAN_SEASON}&from=${fromDate}&to=${toDate}`
-    const res = await fetch(url, {
-      headers: { 'x-apisports-key': apiKey },
-    })
-    const data = await res.json()
-    if (data.errors?.length) continue
-    const items = data.response ?? []
-    for (const f of items) {
-      all.push({ ...f, compId } as ApiFixture & { compId: string })
-    }
-  }
-  return all.sort((a, b) => a.fixture.timestamp - b.fixture.timestamp)
-}
-
-/**
- * Matchs en direct (paramètre live=all).
- * Filtre sur les 5 grands championnats uniquement.
- */
-/** Rennes–PSG 8 mars 2025 17h — match en direct (replay) */
-export const REPLAY_MATCH_FIXTURE_ID = 1213970
-
-/**
- * Récupère le match Rennes–PSG du 8 mars 2025 17h pour le replay live.
- */
-export async function fetchRennesPsgReplay(
-  apiKey: string,
-): Promise<(ApiFixture & { compId: string }) | null> {
-  const res = await fetch(
-    `${API_BASE}/fixtures?league=61&season=2024&from=2025-03-07&to=2025-03-09`,
-    { headers: { 'x-apisports-key': apiKey } },
-  )
-  const data = await res.json()
-  if (data.errors?.length) return null
-  const items: ApiFixture[] = data.response ?? []
-  const f = items.find(
-    (x) =>
-      (x.teams.home.name === 'Rennes' && x.teams.away.name === 'Paris Saint Germain') ||
-      (x.teams.home.name === 'Paris Saint Germain' && x.teams.away.name === 'Rennes'),
-  )
-  if (!f || !f.goals) return null
-  return { ...f, compId: 'ligue-1' }
-}
-
-export async function fetchLiveFixtures(
-  apiKey: string,
-): Promise<Array<ApiFixture & { compId: string }>> {
-  const res = await fetch(`${API_BASE}/fixtures?live=all`, {
-    headers: { 'x-apisports-key': apiKey },
-  })
-  const data = await res.json()
-  if (data.errors?.length) return []
-  const items = data.response ?? []
-  const ourLeagueIds = new Set(Object.values(LEAGUE_IDS))
-  return items
-    .filter((f: ApiFixture) => ourLeagueIds.has(f.league.id))
-    .map((f: ApiFixture) => ({
-      ...f,
-      compId: LEAGUE_ID_TO_COMP[f.league.id] ?? 'ligue-1',
-    }))
 }

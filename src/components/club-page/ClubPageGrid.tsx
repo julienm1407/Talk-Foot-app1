@@ -328,12 +328,14 @@ function ClubSeasonSnapshotBlock({
   data,
   team,
   matchMode,
+  scheduleHint,
 }: {
   data: ClubPageMock
   team: Team
   matchMode: boolean
+  scheduleHint?: string | null
 }) {
-  const { upcoming, formStrip, tableSnapshot, trophies } = data
+  const { upcoming, formStrip, formStripFromApi, tableSnapshot, trophies } = data
   return (
     <Card
       className={cn('p-0 shadow-tf-elev-2', encartClass('season'), matchMode && 'ring-1 ring-rose-500/15')}
@@ -379,7 +381,14 @@ function ClubSeasonSnapshotBlock({
         </div>
         <div>
           <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Forme (5 j.)</p>
-          <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label="Cinq derniers matchs, démo">
+          <ul
+            className="mt-1.5 flex flex-wrap gap-1.5"
+            aria-label={
+              formStripFromApi
+                ? 'Cinq derniers matchs terminés (SportMonks)'
+                : 'Cinq derniers matchs, démo'
+            }
+          >
             {formStrip.map((r, i) => (
               <li
                 key={`${r}-${i}`}
@@ -389,9 +398,24 @@ function ClubSeasonSnapshotBlock({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[10px] font-bold text-sky-200/80">Données génériques · hub Talk Foot</p>
+          <p className="mt-2 text-[10px] font-bold text-sky-200/80">
+            {formStripFromApi
+              ? 'Résultats issus du calendrier équipe (SportMonks).'
+              : 'Données génériques · hub Talk Foot'}
+          </p>
         </div>
       </div>
+      {scheduleHint ? (
+        <p className="mt-2 text-[10px] font-semibold leading-snug text-amber-200/95 [text-wrap:pretty]">
+          {scheduleHint}{' '}
+          <Link
+            to="/settings/donnees"
+            className={cn('font-black text-amber-100 underline underline-offset-2', TF_FOCUS_VISIBLE)}
+          >
+            Réglages → Données
+          </Link>
+        </p>
+      ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
         {trophies.map((t) => (
           <div
@@ -420,11 +444,13 @@ export function ClubPageGrid({
   data,
   matchMode,
   clubGroups,
+  clubScheduleHint,
 }: {
   team: Team
   data: ClubPageMock
   matchMode: boolean
   clubGroups: SupporterGroup[]
+  clubScheduleHint?: string | null
 }) {
   const [selId, setSelId] = useState(data.hotPlayerId)
   const [shopPreview, setShopPreview] = useState<string | null>(null)
@@ -535,7 +561,12 @@ export function ClubPageGrid({
           previewId={shopPreview}
           wallet={data.shopWallet}
         />
-        <ClubSeasonSnapshotBlock data={data} team={team} matchMode={matchMode} />
+        <ClubSeasonSnapshotBlock
+          data={data}
+          team={team}
+          matchMode={matchMode}
+          scheduleHint={clubScheduleHint}
+        />
       </div>
 
       <div className="min-w-0 space-y-4 lg:col-span-3">

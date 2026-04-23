@@ -18,6 +18,7 @@ import { ArticlePage } from './pages/ArticlePage'
 import { ClubPage } from './pages/ClubPage'
 import { AdminPage } from './pages/AdminPage'
 import { PrivacyPage } from './pages/PrivacyPage'
+import { DataSourcesSettingsPage } from './pages/DataSourcesSettings'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
@@ -96,6 +97,7 @@ export default function App() {
         <Route path="calendar" element={<Navigate to="/match" replace />} />
         <Route path="boutique" element={<BoutiquePage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="settings/donnees" element={<DataSourcesSettingsPage />} />
         <Route path="user/:userId" element={<UserProfilePage />} />
         <Route path="club/:clubSlug" element={<ClubPage />} />
         <Route

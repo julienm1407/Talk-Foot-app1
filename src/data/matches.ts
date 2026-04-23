@@ -1,6 +1,7 @@
 import type { Match } from '../types/match'
 import { generateFixtures, SIM_NOW } from './fixtures'
 import { teams } from './teams'
+import { getFootballCalendarWindow } from '../utils/footballCalendarWindow'
 
 // Match fictif toujours en direct pour tester live + paris en conditions réelles
 const DEMO_LIVE_MATCH: Match = {
@@ -14,11 +15,10 @@ const DEMO_LIVE_MATCH: Match = {
   score: { home: 1, away: 0 },
 }
 
-// Seuil : pas de matchs avant le 18 mars (éviter surcharge)
-const CUTOFF_DATE = new Date('2026-03-18T00:00:00').getTime()
-
 const allMatches = [DEMO_LIVE_MATCH, ...generateFixtures()].filter(
-  (m) => m.id === DEMO_LIVE_MATCH.id || new Date(m.kickoffAt).getTime() >= CUTOFF_DATE
+  (m) =>
+    m.id === DEMO_LIVE_MATCH.id ||
+    new Date(m.kickoffAt).getTime() >= getFootballCalendarWindow().cutoffMs
 )
 
 // Fin mars uniquement

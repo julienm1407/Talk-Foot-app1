@@ -1,6 +1,6 @@
 # Talk-Foot-app1
 
-Application de football en direct : live match, chat, paris, réactions. Replay Rennes-PSG avec simulation temps réel, API Football (5 grands championnats européens).
+Application de football en direct : live match, chat, paris, réactions. Calendrier et scores via **SportMonks** (Big 5 + coupes) ; clé optionnelle en `.env.local` ou **Profil → Données**.
 
 ### UX — Gestalt & lisibilité
 - **Logo** : wordmark officiel `public/logo-talk-foot.png`, composant `LogoMark` (`src/layout/LogoMark.tsx`) — barre du haut, menus, connexion, onboarding. Favicon / Apple touch : même fichier dans `index.html`.
@@ -34,10 +34,13 @@ npm run dev
 
 ## Variables d'environnement
 
-Copie `.env.example` en `.env` et ajoute ta clé API (optionnel pour le mode démo) :
+Copie `.env.example` en `.env` / `.env.local` et ajoute ton jeton **SportMonks** (optionnel : sans clé, mode démo) :
 ```
-VITE_API_SPORTS_KEY=ta_cle_api
+VITE_SPORTMONKS_TOKEN=ton_jeton_sportmonks
 ```
+Ou colle la clé dans l’app : **Profil → Données live (SportMonks)** (`/settings/donnees`).
+
+**Développement local** : avec `npm run dev`, les requêtes vers SportMonks passent par le **proxy Vite** (`/sm-api` → `api.sportmonks.com`) pour éviter les blocages **CORS** du navigateur. En production / **GitHub Pages**, les appels vont directement vers l’API : utilise la page **Données** (localStorage) ou injecte `VITE_SPORTMONKS_TOKEN` **au moment du** `npm run build:pages`.
 
 ## Structure du projet (Vite + React)
 

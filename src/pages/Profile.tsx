@@ -354,6 +354,22 @@ export function ProfilePage() {
         ) : null}
 
         <ProfilePrivacySection />
+
+        <Link
+          to="/settings/donnees#tf-sportmonks-cle"
+          className={cn(
+            TF_FOCUS_VISIBLE,
+            'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
+            L
+              ? 'border-tf-electric/35 bg-sky-50/90 text-tf-dark hover:border-tf-electric/50 hover:shadow-md'
+              : 'border-sky-400/30 bg-sky-950/35 text-sky-100 hover:border-sky-300/45 hover:shadow-md',
+          )}
+        >
+          <span>Données live (clé SportMonks)</span>
+          <span aria-hidden className="text-lg">
+            →
+          </span>
+        </Link>
       </div>
 
       {/* Mode Virage : réglage principal, visible dès l’ouverture du profil */}

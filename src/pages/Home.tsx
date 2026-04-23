@@ -31,6 +31,8 @@ import { HomeLandingHub } from '../components/home/HomeLandingHub'
 import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { ThemeArrivalHint } from '../components/ui/ThemeArrivalHint'
+import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
+import { getSportMonksTokenSource } from '../utils/apiTokens'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -168,6 +170,25 @@ export function HomePage() {
     </>
   )
 
+  const smKeyBanner =
+    getSportMonksTokenSource() === 'none' ? (
+      <div className="mx-auto w-full max-w-[min(100%,112.5rem)] px-4 pt-2 lg:px-6">
+        <Link
+          to="/settings/donnees#tf-sportmonks-cle"
+          className={cn(
+            TF_FOCUS_VISIBLE,
+            'flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-center text-sm font-black shadow-sm transition',
+            appearance === 'light'
+              ? 'border-tf-electric/40 bg-sky-50 text-tf-dark hover:border-tf-electric/60 hover:shadow-md'
+              : 'border-sky-400/35 bg-sky-950/40 text-sky-100 hover:border-sky-300/50 hover:shadow-md',
+          )}
+        >
+          Cliquer ici pour coller la clé SportMonks
+          <span aria-hidden>→</span>
+        </Link>
+      </div>
+    ) : null
+
   return (
     <div
       className={cn(
@@ -175,6 +196,7 @@ export function HomePage() {
         'md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-0',
       )}
     >
+      {smKeyBanner}
       {/*
         Vue ≥ md : une seule colonne logique « page » — bandeau thème + hub 3 colonnes + suite (tendances, favoris, fil)
         dans le même cadre visuel que le hub (continuation dans la colonne centrale).

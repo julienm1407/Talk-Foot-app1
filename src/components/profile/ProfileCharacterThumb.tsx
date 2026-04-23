@@ -11,6 +11,12 @@ import { resolvePopAvatarConfig } from './avatar3d/pop/resolvePopAvatarConfig'
 const PRESETS = {
   sm: { box: 'h-12 w-12 min-h-12 min-w-12', dpr: 1 as const, shadows: false as const },
   md: { box: 'h-16 w-16 min-h-16 min-w-16', dpr: 1.5 as const, shadows: true as const },
+  /** Salon / fil de messages : même buste qu’en profil, un peu plus grand pour la lisibilité. */
+  chat: {
+    box: 'h-[4.75rem] w-[4.75rem] min-h-[4.75rem] min-w-[4.75rem] sm:h-[5.25rem] sm:w-[5.25rem] sm:min-h-[5.25rem] sm:min-w-[5.25rem]',
+    dpr: 1.5 as const,
+    shadows: true as const,
+  },
   lg: { box: 'h-24 w-24 min-h-24 min-w-24 sm:h-28 sm:w-28', dpr: 2 as const, shadows: true as const },
 } as const
 
@@ -21,23 +27,28 @@ const PRESETS = {
 export function ProfileCharacterThumb({
   profile,
   size = 'md',
+  /** Club pour le dégradé « supporter » quand ce n’est pas le viewer (ex. autre user du chat). */
+  peerFanClubId,
   className,
   'aria-label': ariaLabel,
 }: {
   profile: UserProfile
   size?: keyof typeof PRESETS
+  peerFanClubId?: string | null
   className?: string
   'aria-label'?: string
 }) {
   const p = PRESETS[size]
   const { favoriteClubId } = useFanPreferences()
+  const fanClubIdForResolve =
+    peerFanClubId === undefined ? (favoriteClubId ?? null) : peerFanClubId || null
   const lookKey = useMemo(
     () => JSON.stringify(mergeCharacterLook(profile.characterLook)),
     [profile.characterLook],
   )
   const config = useMemo(
-    () => resolvePopAvatarConfig(profile, favoriteClubId ?? null),
-    [profile, favoriteClubId, lookKey],
+    () => resolvePopAvatarConfig(profile, fanClubIdForResolve),
+    [profile, fanClubIdForResolve, lookKey],
   )
   const rev = useMemo(
     () =>

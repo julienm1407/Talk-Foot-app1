@@ -6,7 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL?: string
   readonly VITE_SUPABASE_ANON_KEY?: string
   readonly VITE_ADMIN_EMAILS?: string
-  readonly VITE_API_SPORTS_KEY?: string
+  /** SportMonks v3 — header `Authorization` = valeur du token (ne pas committer). */
+  readonly VITE_SPORTMONKS_TOKEN?: string
   /** Google AdSense — ID éditeur `ca-pub-…` ; sans ceci, encarts mock. */
   readonly VITE_ADSENSE_CLIENT?: string
   /** Slot unique pour tous les emplacements si les slots nommés sont vides. */

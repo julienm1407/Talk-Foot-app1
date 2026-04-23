@@ -1,4 +1,5 @@
 import type { TribuneId } from './tribune'
+import type { AvatarCharacterLook } from './profile'
 
 export type ReactionType = 'flare' | 'confetti' | 'goal' | 'rage'
 
@@ -16,6 +17,8 @@ export type User = {
   fanClubId?: string
   /** Phrase courte sur la page profil vitrine */
   tagline?: string
+  /** Même schéma que l’éditeur profil — sinon couleurs dérivées du seed (buste 3D chat). */
+  characterLook?: Partial<AvatarCharacterLook>
 }
 
 export type Message = {

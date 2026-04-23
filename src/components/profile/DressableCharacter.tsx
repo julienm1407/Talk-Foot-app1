@@ -15,13 +15,18 @@ export function DressableCharacter({
   profile,
   variant = 'front',
   className,
+  /** Chat / autre user : teinte supporter basée sur ce club ; omis = préférences du viewer. */
+  supporterFanClubId,
 }: {
   profile: UserProfile
   variant: 'front' | 'back'
   className?: string
+  supporterFanClubId?: string | null
 }) {
   const { favoriteClubId } = useFanPreferences()
   const look = mergeCharacterLook(profile.characterLook)
+  const clubKey =
+    supporterFanClubId === undefined ? favoriteClubId : supporterFanClubId || undefined
 
   const eq = profile.equippedItems ?? {}
   const hatItem = eq.hat ? avatarItems.find((i) => i.id === eq.hat) : null
@@ -40,8 +45,8 @@ export function DressableCharacter({
     : { name: flocageName, number: String(flocageNum) }
 
   const supporterColors: [string, string] | null =
-    look.supporterTint && favoriteClubId && teamColors[favoriteClubId]
-      ? (teamColors[favoriteClubId] as [string, string])
+    look.supporterTint && clubKey && teamColors[clubKey]
+      ? (teamColors[clubKey] as [string, string])
       : null
 
   const jerseyOverride = jerseyItem?.jerseyVisual

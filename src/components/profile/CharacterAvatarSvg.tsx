@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { useId } from 'react'
 import type { AvatarCharacterLook, FaceExpression, JerseyPattern } from '../../types/profile'
 import { PIXEL_JERSEY_PRESETS, type PixelJerseyPresetId } from '../../data/pixelJerseyPresets'
 import { PixelJerseyPixelGroup } from '../kit/PixelJerseySvg'
@@ -61,18 +61,70 @@ function resolveTorso(
   }
 }
 
-/** Silhouette maillot Manches courtes + encolure (style pro, sans logo) */
+/** Bras courts (peau) — silhouette fine type manche courte, courbes légères. */
+function ShortSleeveArms({
+  skin,
+  x,
+  y,
+  w,
+}: {
+  skin: string
+  x: number
+  y: number
+  w: number
+}) {
+  const stroke = { stroke: 'rgba(15,23,42,0.16)', strokeWidth: 0.32 as const, strokeLinejoin: 'round' as const }
+  return (
+    <g aria-hidden>
+      <path
+        d={`M ${x + 5} ${y + 7}
+          C ${x + 1} ${y + 9}, ${x - 4} ${y + 15}, ${x - 6.5} ${y + 24}
+          C ${x - 8} ${y + 30}, ${x - 7.5} ${y + 36}, ${x - 4} ${y + 38.5}
+          C ${x - 1} ${y + 40}, ${x + 2} ${y + 37}, ${x + 4} ${y + 31}
+          C ${x + 5.5} ${y + 22}, ${x + 6} ${y + 13}, ${x + 5} ${y + 7}
+          Z`}
+        fill={skin}
+        {...stroke}
+      />
+      <path
+        d={`M ${x + w - 5} ${y + 7}
+          C ${x + w - 1} ${y + 9}, ${x + w + 4} ${y + 15}, ${x + w + 6.5} ${y + 24}
+          C ${x + w + 8} ${y + 30}, ${x + w + 7.5} ${y + 36}, ${x + w + 4} ${y + 38.5}
+          C ${x + w + 1} ${y + 40}, ${x + w - 2} ${y + 37}, ${x + w - 4} ${y + 31}
+          C ${x + w - 5.5} ${y + 22}, ${x + w - 6} ${y + 13}, ${x + w - 5} ${y + 7}
+          Z`}
+        fill={skin}
+        {...stroke}
+      />
+    </g>
+  )
+}
+
+/**
+ * Silhouette maillot — épaules couvertes ; base plus étroite (trapèze) calée sur
+ * `TorsoBlock` 0.44 vs `LegsBlock` 0.38 en 3D : hém ≈ w×0.38/0.44 pour ne pas « flotter » au-dessus du short.
+ */
 function shirtPathD(x: number, y: number, w: number, h: number, pad = 6.5) {
   const cx = x + w / 2
   const neck = w * 0.2
-  return `M ${x - pad} ${y + 15}
-    L ${cx - neck / 2} ${y + 5}
-    L ${cx + neck / 2} ${y + 5}
-    L ${x + w + pad} ${y + 15}
-    L ${x + w + pad * 0.4} ${y + h - 0.5}
-    L ${x - pad * 0.4} ${y + h - 0.5}
+  const neckY = y + 4
+  const hemY = y + h - 0.5
+  /** Demi-largeur bas maillot : même ratio que jambes / torse POP (0.38 / 0.44). */
+  const hemHalf = (w * 0.38) / (2 * 0.44)
+  return `M ${x - pad - 1.5} ${y + 12}
+    L ${x - pad * 0.35} ${y + 3}
+    L ${cx - neck / 2 - 0.5} ${neckY}
+    L ${cx + neck / 2 + 0.5} ${neckY}
+    L ${x + w + pad * 0.35} ${y + 3}
+    L ${x + w + pad + 1.5} ${y + 12}
+    L ${cx + hemHalf} ${hemY}
+    L ${cx - hemHalf} ${hemY}
     Z`
 }
+
+/** Réf. torse 3D `PopCharacter` `TorsoBlock` (RoundedBox) — aligner les bandes SVG boutique / chat. */
+const TORSO_W_REF = 0.44
+const TORSO_H_REF = 0.36
 
 function patternLayerInsideBbox(
   bbox: { x0: number; y0: number; x1: number; y1: number },
@@ -84,91 +136,108 @@ function patternLayerInsideBbox(
   const bh = bbox.y1 - bbox.y0
   const x0 = bbox.x0
   const y0 = bbox.y0
+  const fw = (u: number) => (u / TORSO_W_REF) * bw
+  const fh = (u: number) => (u / TORSO_H_REF) * bh
+  /** Coordonnée Y locale torse [-0.18 haut, +0.18 bas] → SVG */
+  const yFromLocal = (yl: number) => y0 + ((yl + TORSO_H_REF / 2) / TORSO_H_REF) * bh
+  /** Coordonnée X locale [-0.22 gauche, +0.22 droite] → SVG */
+  const xFromLocal = (xl: number) => x0 + ((xl + TORSO_W_REF / 2) / TORSO_W_REF) * bw
 
   if (pattern === 'solid') {
     return <rect x={x0} y={y0} width={bw} height={bh} fill={primary} />
   }
 
   if (pattern === 'kit_mesh') {
-    const lines: ReactNode[] = []
-    for (let i = 1; i < 10; i++) {
-      const yy = y0 + (i / 10) * bh
-      lines.push(
-        <line
-          key={`h${i}`}
-          x1={x0}
-          y1={yy}
-          x2={x0 + bw}
-          y2={yy}
-          stroke="rgba(0,0,0,.07)"
-          strokeWidth={0.35}
-        />,
-      )
-    }
-    for (let i = 1; i < 12; i++) {
-      const xx = x0 + (i / 12) * bw
-      lines.push(
-        <line
-          key={`v${i}`}
-          x1={xx}
-          y1={y0}
-          x2={xx}
-          y2={y0 + bh}
-          stroke="rgba(0,0,0,.05)"
-          strokeWidth={0.35}
-        />,
-      )
-    }
+    const hb = fh(0.02)
+    const vb = fw(0.02)
+    const hYs = [0.1, 0.02, -0.08]
+    const vXs = [-0.1, 0, 0.1]
+    const vHeights = [0.22, 0.24, 0.22]
+    const xBarKm = x0 + (bw - fw(0.32)) / 2
     return (
       <g>
         <rect x={x0} y={y0} width={bw} height={bh} fill={primary} />
-        {lines}
-      </g>
-    )
-  }
-
-  if (pattern === 'hechter') {
-    return (
-      <g>
-        <rect x={x0} y={y0} width={bw * 0.36} height={bh} fill={primary} />
-        <rect x={x0 + bw * 0.36} y={y0} width={bw * 0.045} height={bh} fill={light} />
-        <rect x={x0 + bw * 0.405} y={y0} width={bw * 0.19} height={bh} fill={secondary} />
-        <rect x={x0 + bw * 0.595} y={y0} width={bw * 0.045} height={bh} fill={light} />
-        <rect x={x0 + bw * 0.64} y={y0} width={bw * 0.36} height={bh} fill={primary} />
-      </g>
-    )
-  }
-
-  if (pattern === 'vertical') {
-    const n = 7
-    return (
-      <g>
-        {Array.from({ length: n }).map((_, i) => (
+        {hYs.map((yl, i) => (
           <rect
-            key={i}
-            x={x0 + (bw / n) * i}
-            y={y0}
-            width={bw / n + 0.3}
-            height={bh}
-            fill={i % 2 === 0 ? primary : secondary}
+            key={`h${i}`}
+            x={xBarKm}
+            y={yFromLocal(yl) - hb / 2}
+            width={fw(0.32)}
+            height={hb}
+            fill={secondary}
+            opacity={0.88}
+          />
+        ))}
+        {vXs.map((xl, i) => (
+          <rect
+            key={`v${i}`}
+            x={xFromLocal(xl) - vb / 2}
+            y={yFromLocal(0) - fh(vHeights[i]) / 2}
+            width={vb}
+            height={fh(vHeights[i])}
+            fill={secondary}
+            opacity={0.88}
           />
         ))}
       </g>
     )
   }
 
-  if (pattern === 'horizontal') {
-    const n = 5
+  if (pattern === 'hechter') {
+    const parts: { wu: number; fill: string }[] = [
+      { wu: 0.109, fill: primary },
+      { wu: 0.022, fill: light },
+      { wu: 0.044, fill: primary },
+      { wu: 0.09, fill: secondary },
+      { wu: 0.044, fill: primary },
+      { wu: 0.022, fill: light },
+      { wu: 0.109, fill: primary },
+    ]
+    let cx = x0
     return (
       <g>
-        {Array.from({ length: n }).map((_, i) => (
+        {parts.map((p, i) => {
+          const w = fw(p.wu)
+          const el = <rect key={i} x={cx} y={y0} width={w} height={bh} fill={p.fill} />
+          cx += w
+          return el
+        })}
+      </g>
+    )
+  }
+
+  if (pattern === 'vertical') {
+    const vw = fw(0.1)
+    const vh = fh(0.28)
+    return (
+      <g>
+        <rect x={x0} y={y0} width={bw} height={bh} fill={primary} />
+        <rect
+          x={x0 + (bw - vw) / 2}
+          y={y0 + (bh - vh) / 2}
+          width={vw}
+          height={vh}
+          fill={secondary}
+        />
+      </g>
+    )
+  }
+
+  if (pattern === 'horizontal') {
+    const hb = fh(0.042)
+    const bwBar = fw(0.32)
+    const xBar = x0 + (bw - bwBar) / 2
+    return (
+      <g>
+        <rect x={x0} y={y0} width={bw} height={bh} fill={primary} />
+        {[0.1, 0, -0.1].map((yl, i) => (
           <rect
             key={i}
-            x={x0}
-            y={y0 + (bh / n) * i}
-            width={bw}
-            height={bh / n + 0.2}
-            fill={i % 2 === 0 ? primary : secondary}
+            x={xBar}
+            y={yFromLocal(yl) - hb / 2}
+            width={bwBar}
+            height={hb}
+            fill={secondary}
           />
         ))}
       </g>
@@ -176,31 +245,44 @@ function patternLayerInsideBbox(
   }
 
   if (pattern === 'sash') {
+    const cxm = x0 + bw / 2
+    const cym = y0 + bh / 2
+    const deg = (0.52 * 180) / Math.PI
+    const rw = fw(0.12) * 2.2
+    const rh = fh(0.35) * 1.08
     return (
       <g>
         <rect x={x0} y={y0} width={bw} height={bh} fill={primary} />
-        <polygon
-          points={`${x0},${y0 + bh} ${x0 + bw * 0.12},${y0} ${x0 + bw * 0.52},${y0} ${x0 + bw * 0.02},${y0 + bh}`}
+        <rect
+          x={cxm - rw / 2}
+          y={cym - rh / 2}
+          width={rw}
+          height={rh}
           fill={secondary}
-          opacity={0.94}
+          opacity={0.93}
+          transform={`rotate(${deg.toFixed(2)} ${cxm} ${cym})`}
         />
       </g>
     )
   }
 
-  /* hoops */
+  /* hoops — bandes secondaires sur base primaire (comme 3D) */
+  const hb = fh(0.03)
+  const bwBar = fw(0.34)
+  const xBar = x0 + (bw - bwBar) / 2
+  const centers = [0.11, 0.04, -0.04, -0.11]
   return (
     <g>
-      <rect x={x0} y={y0} width={bw} height={bh} fill={secondary} />
-      {[0, 1, 2, 3].map((i) => (
+      <rect x={x0} y={y0} width={bw} height={bh} fill={primary} />
+      {centers.map((yl, i) => (
         <rect
           key={i}
-          x={x0}
-          y={y0 + (i * bh) / 4 + bh * 0.04}
-          width={bw}
-          height={bh / 5.5}
-          fill={primary}
-          opacity={0.92}
+          x={xBar}
+          y={yFromLocal(yl) - hb / 2}
+          width={bwBar}
+          height={hb}
+          fill={secondary}
+          opacity={0.95}
         />
       ))}
     </g>
@@ -230,10 +312,12 @@ function JerseyKit({
 }) {
   const pathD = shirtPathD(x, y, w, h)
   const pad = 6.5
+  const cxBox = x + w / 2
+  const hemHalf = (w * 0.38) / (2 * 0.44)
   const bbox = {
-    x0: x - pad * 0.35,
-    y0: y + 6,
-    x1: x + w + pad * 0.35,
+    x0: Math.min(x - pad - 1.5, cxBox - hemHalf) - 0.35,
+    y0: y + 2,
+    x1: Math.max(x + w + pad + 1.5, cxBox + hemHalf) + 0.35,
     y1: y + h - 1,
   }
   const bw = bbox.x1 - bbox.x0
@@ -295,24 +379,22 @@ function JerseyKit({
 
       <path d={pathD} fill="none" stroke="rgba(15,23,42,.22)" strokeWidth={0.55} />
 
-      {/* Encolure côtelée */}
+      {/* Encolure côtelée (alignée sur le haut du maillot) */}
       <path
-        d={`M ${cx - neck / 2} ${y + 5} Q ${cx} ${y + 3.2} ${cx + neck / 2} ${y + 5}`}
+        d={`M ${cx - neck / 2 - 0.5} ${y + 4} Q ${cx} ${y + 2.2} ${cx + neck / 2 + 0.5} ${y + 4}`}
         fill="none"
         stroke="rgba(15,23,42,.35)"
         strokeWidth={0.65}
         strokeLinecap="round"
       />
 
-      {/* Parements manches (blanc + liseré couleur secondaire) */}
-      {!hasPixel ? (
-        <g>
-          <rect x={x - 3} y={y + 17} width={11} height={3.2} rx={0.6} fill={light} opacity={0.98} />
-          <rect x={x - 3} y={y + 19.5} width={11} height={1.4} rx={0.3} fill={colors.secondary} opacity={0.95} />
-          <rect x={x + w - 8} y={y + 17} width={11} height={3.2} rx={0.6} fill={light} opacity={0.98} />
-          <rect x={x + w - 8} y={y + 19.5} width={11} height={1.4} rx={0.3} fill={colors.secondary} opacity={0.95} />
-        </g>
-      ) : null}
+      {/* Parements manches (blanc + liseré) — visibles aussi en maillot pixel + zoom chat */}
+      <g>
+        <rect x={x - 5} y={y + 15} width={13} height={4} rx={0.7} fill={light} opacity={0.98} />
+        <rect x={x - 5} y={y + 18} width={13} height={1.6} rx={0.35} fill={colors.secondary} opacity={0.96} />
+        <rect x={x + w - 8} y={y + 15} width={13} height={4} rx={0.7} fill={light} opacity={0.98} />
+        <rect x={x + w - 8} y={y + 18} width={13} height={1.6} rx={0.35} fill={colors.secondary} opacity={0.96} />
+      </g>
 
       {variant === 'back' && flocage && (
         <g clipPath={`url(#${uid}-shirt)`} pointerEvents="none">
@@ -361,9 +443,18 @@ function HairPath({
     case 'buzz':
       return <ellipse cx={cx} cy={cy - 18} rx={22} ry={10} {...common} />
     case 'short':
+      /* Volume latéral + calotte plus haute au centre, proche du « HairShort » 3D (côtés marqués). */
       return (
         <path
-          d={`M ${cx - 24} ${cy - 8} Q ${cx} ${cy - 38} ${cx + 24} ${cy - 8} Q ${cx + 26} ${cy - 22} ${cx + 22} ${cy - 18} Q ${cx} ${cy - 28} ${cx - 22} ${cy - 18} Z`}
+          d={`M ${cx - 24} ${cy - 4}
+            Q ${cx - 22} ${cy - 30} ${cx - 16} ${cy - 36}
+            Q ${cx - 6} ${cy - 40} ${cx} ${cy - 34}
+            Q ${cx + 6} ${cy - 40} ${cx + 16} ${cy - 36}
+            Q ${cx + 22} ${cy - 30} ${cx + 24} ${cy - 4}
+            Q ${cx + 23} ${cy - 16} ${cx + 19} ${cy - 18}
+            Q ${cx} ${cy - 26} ${cx - 19} ${cy - 18}
+            Q ${cx - 23} ${cy - 16} ${cx - 24} ${cy - 4}
+            Z`}
           {...common}
         />
       )
@@ -590,8 +681,8 @@ function Glasses({ style, cx, cy }: { style: AvatarCharacterLook['glasses']; cx:
   if (style === 'round') {
     return (
       <g fill="none" stroke="#1e293b" strokeWidth={1.4}>
-        <circle cx={cx - 9} cy={cy} r={7} />
-        <circle cx={cx + 9} cy={cy} r={7} />
+        <circle cx={cx - 8.5} cy={cy} r={7} />
+        <circle cx={cx + 8.5} cy={cy} r={7} />
         <path d={`M ${cx - 2} ${cy} L ${cx + 2} ${cy}`} />
       </g>
     )
@@ -705,8 +796,12 @@ export function CharacterAvatarSvg({
         ) : null}
       </defs>
 
-      <rect x={36} y={118} width={10} height={20} rx={3} fill="#1e293b" />
-      <rect x={54} y={118} width={10} height={20} rx={3} fill="#1e293b" />
+      {/* Jambes : espacement cohérent avec short élargi (ref. jambes 3D 0.38 vs torse 0.44). */}
+      <rect x={33} y={118} width={11} height={20} rx={3} fill="#1e293b" />
+      <rect x={56} y={118} width={11} height={20} rx={3} fill="#1e293b" />
+
+      {/* Bras sous le maillot : le torse + clip recouvrent la peau au centre, seuls les côtés restent visibles */}
+      {variant === 'front' ? <ShortSleeveArms skin={look.skinTone} x={28} y={72} w={44} /> : null}
 
       <JerseyKit
         uid={uid}
@@ -721,9 +816,9 @@ export function CharacterAvatarSvg({
       />
 
       <rect
-        x={38}
+        x={31}
         y={115}
-        width={24}
+        width={38}
         height={7}
         rx={2.5}
         fill={shortsFill}
@@ -734,11 +829,12 @@ export function CharacterAvatarSvg({
 
       <rect x={42} y={64} width={16} height={14} fill={`url(#neck-${uid})`} />
 
+      {/* Tête : un peu plus large que haute, comme la sphère tête 3D (scale ~1.15×1.2). */}
       <ellipse
         cx={cx}
         cy={faceY}
-        rx={24}
-        ry={26}
+        rx={26}
+        ry={24}
         fill={`url(#faceSkin-${uid})`}
         stroke="rgba(0,0,0,.1)"
         strokeWidth={0.55}
@@ -750,7 +846,7 @@ export function CharacterAvatarSvg({
           <NoseHint cx={cx} faceY={faceY} skinTone={look.skinTone} />
           <EyeGroup
             uid={uid}
-            cx={cx - 9}
+            cx={cx - 8.5}
             cy={faceY - 2}
             rx={eyeRx}
             ry={eyeRy}
@@ -759,7 +855,7 @@ export function CharacterAvatarSvg({
           />
           <EyeGroup
             uid={uid}
-            cx={cx + 9}
+            cx={cx + 8.5}
             cy={faceY - 2}
             rx={eyeRx}
             ry={eyeRy}
@@ -768,7 +864,7 @@ export function CharacterAvatarSvg({
           />
           <Eyebrows cx={cx} faceY={faceY} hairColor={look.hairColor} expr={expr} />
           <ExpressiveMouth cx={cx} faceY={faceY} expr={expr} />
-          <Glasses style={look.glasses} cx={cx} cy={faceY - 2} />
+          <Glasses style={look.glasses} cx={cx} cy={faceY - 2.2} />
         </>
       )}
 
@@ -776,8 +872,8 @@ export function CharacterAvatarSvg({
         <ellipse
           cx={cx}
           cy={faceY - 4}
-          rx={22}
-          ry={24}
+          rx={24}
+          ry={22}
           fill={`url(#hairBack-${uid})`}
           stroke={mixHex(look.hairColor, '#0f172a', 0.2)}
           strokeWidth={0.35}

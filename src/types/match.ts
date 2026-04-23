@@ -3,6 +3,8 @@ export type Team = {
   name: string
   shortName: string
   colors: { primary: string; secondary: string }
+  /** Renseigné quand le club apparaît dans une fixture SportMonks (calendrier / club). */
+  sportMonksTeamId?: number
 }
 
 export type Competition = {
@@ -22,5 +24,9 @@ export type Match = {
   status: MatchStatus
   minute?: number
   score?: { home: number; away: number }
+  /** Origine des données (agrégation multi-fournisseurs). */
+  provider?: 'sportmonks' | 'demo'
+  /** Identifiant fixture SportMonks (détail xG, compos, etc.). */
+  sportMonksFixtureId?: number
 }
 

@@ -132,5 +132,15 @@ export default defineConfig(({ mode }) => {
       outDir,
       emptyOutDir: true,
     },
+    /** En dev, les appels passent par `/sm-api` → même origine (évite CORS navigateur → SportMonks). */
+    server: {
+      proxy: {
+        '/sm-api': {
+          target: 'https://api.sportmonks.com',
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/sm-api/, '/v3/football'),
+        },
+      },
+    },
   }
 })
