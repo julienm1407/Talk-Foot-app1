@@ -121,10 +121,17 @@ export function DataSourcesSettingsPage() {
           <p className={cn('max-w-2xl text-sm leading-relaxed', label)}>
             Les matchs (live + calendrier) viennent uniquement de{' '}
             <strong className="text-tf-app-fg">SportMonks</strong>. Colle ton jeton puis{' '}
-            <strong className="text-tf-app-fg">Enregistrer</strong> : tout reste dans ton navigateur (localStorage), ou
-            utilise <code className="rounded bg-black/10 px-1 py-0.5 text-xs">VITE_SPORTMONKS_TOKEN</code> dans{' '}
-            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">.env.local</code> (prioritaire sur le champ
-            ci-dessous).
+            <strong className="text-tf-app-fg">Enregistrer</strong> : tout reste dans{' '}
+            <strong className="text-tf-app-fg">ce navigateur</strong> (localStorage) — pratique en dev, mais les autres
+            visiteurs de talk-foot.com ne la voient pas.
+          </p>
+          <p className={cn('max-w-2xl text-sm leading-relaxed', label)}>
+            Pour que <strong className="text-tf-app-fg">tout le monde</strong> sur le site ait les vrais matchs : définis{' '}
+            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">VITE_SPORTMONKS_TOKEN</code> sur ton hébergeur
+            (ex. <strong className="text-tf-app-fg">Vercel</strong> → Projet → Settings → Environment Variables →
+            Production), puis <strong className="text-tf-app-fg">Redeploy</strong>. En local, le même nom dans{' '}
+            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">.env.local</code> ; cette variable{' '}
+            <strong className="text-tf-app-fg">prime</strong> sur le champ ci-dessous.
           </p>
           <p className={cn('max-w-2xl text-sm leading-relaxed', label)}>
             Les requêtes HTTP partent <strong className="text-tf-app-fg">directement de ton navigateur</strong> vers{' '}
@@ -162,10 +169,11 @@ export function DataSourcesSettingsPage() {
             {tokenSource === 'none' && (
               <>
                 <strong className="text-tf-app-fg">Aucun jeton détecté</strong> — l’app n’envoie aucune requête à
-                SportMonks et affiche des matchs de démo. Ajoute{' '}
+                SportMonks et affiche des matchs de démo. En local :{' '}
                 <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code> dans{' '}
-                <code className="font-mono text-xs">talk-foot-appli/.env.local</code> (puis redémarre le serveur) ou
-                colle ta clé dans le champ ci-dessous puis Enregistrer.{' '}
+                <code className="font-mono text-xs">.env.local</code> puis redémarrer le serveur. Sur le site déployé :
+                la même variable sur <strong className="text-tf-app-fg">Vercel</strong> puis un redeploy. Pour toi seul
+                sur cette machine : colle la clé ci-dessous puis Enregistrer.{' '}
                 <a
                   href={SM_KEY_HASH}
                   className={cn('font-black underline underline-offset-2', L ? 'text-tf-electric-deep' : 'text-sky-200')}

@@ -177,14 +177,22 @@ export function HomePage() {
           to="/settings/donnees#tf-sportmonks-cle"
           className={cn(
             TF_FOCUS_VISIBLE,
-            'flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-center text-sm font-black shadow-sm transition',
+            'flex w-full flex-col items-center justify-center gap-1 rounded-2xl border px-4 py-3 text-center shadow-sm transition',
             appearance === 'light'
               ? 'border-tf-electric/40 bg-sky-50 text-tf-dark hover:border-tf-electric/60 hover:shadow-md'
               : 'border-sky-400/35 bg-sky-950/40 text-sky-100 hover:border-sky-300/50 hover:shadow-md',
           )}
         >
-          Cliquer ici pour coller la clé SportMonks
-          <span aria-hidden>→</span>
+          <span className="flex items-center gap-2 text-sm font-black">
+            Ajouter la clé SportMonks (ce navigateur)
+            <span aria-hidden>→</span>
+          </span>
+          {import.meta.env.PROD ? (
+            <span className="max-w-xl text-[11px] font-semibold leading-snug opacity-90">
+              Pour tous les visiteurs du site : variable <span className="font-mono">VITE_SPORTMONKS_TOKEN</span> sur
+              Vercel + redeploy — voir Profil → Données.
+            </span>
+          ) : null}
         </Link>
       </div>
     ) : null
