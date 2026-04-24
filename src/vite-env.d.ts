@@ -2,6 +2,8 @@
 
 /** Défini dans `vite.config.ts` — indique si `VITE_SPORTMONKS_TOKEN` était présent au moment du `vite build`. */
 declare const __TF_BUILD_HAS_SM_TOKEN__: boolean
+/** Build sur Vercel — le client peut utiliser le relais `/api/sm` + variables serveur. */
+declare const __TF_VERCEL_DEPLOY__: boolean
 
 interface ImportMetaEnv {
   /** URL publique du site sans slash final (sitemap, robots, canonicals). Production : https://talk-foot.com */

@@ -1,3 +1,5 @@
+import { TF_SM_SERVER_RELAY_PLACEHOLDER } from '../../utils/apiTokens'
+
 const SM_BASE_REMOTE = 'https://api.sportmonks.com/v3/football'
 
 /** URL absolue d’appel : en `vite dev`, proxy same-origin `/sm-api` → `api.sportmonks.com/v3/football`. */
@@ -7,6 +9,34 @@ function sportMonksRequestHref(pathWithLeadingSlash: string): string {
     if (o) return `${o}/sm-api${pathWithLeadingSlash}`
   }
   return `${SM_BASE_REMOTE}${pathWithLeadingSlash}`
+}
+
+function buildSmRequestUrl(
+  pathWithLeadingSlash: string,
+  search: Record<string, string | number | boolean | undefined> | undefined,
+  viaServerRelay: boolean,
+): URL {
+  let u: URL
+  if (viaServerRelay) {
+    const o =
+      typeof globalThis !== 'undefined' && 'location' in globalThis
+        ? (globalThis as { location?: { origin?: string } }).location?.origin
+        : undefined
+    if (!o) throw new Error('Relais SportMonks : origine du site indisponible')
+    u = new URL(`${o}/api/sm`)
+    u.searchParams.set('__sm_path', pathWithLeadingSlash)
+  } else {
+    u = new URL(sportMonksRequestHref(pathWithLeadingSlash))
+  }
+  if (search) {
+    for (const [k, v] of Object.entries(search)) {
+      if (v !== undefined) u.searchParams.set(k, String(v))
+    }
+  }
+  if (!u.searchParams.has('timezone')) {
+    u.searchParams.set('timezone', 'Europe/Paris')
+  }
+  return u
 }
 
 export type SportMonksListEnvelope<T> = {
@@ -22,8 +52,9 @@ export type SportMonksListEnvelope<T> = {
 }
 
 /**
- * Appels SportMonks v3. Jeton : `VITE_SPORTMONKS_TOKEN` au build ou page `/settings/donnees` (localStorage).
- * Header `Authorization` = valeur brute du token (sans « Bearer »).
+ * Appels SportMonks v3.
+ * Jeton : `VITE_SPORTMONKS_TOKEN` (build), localStorage, ou sur Vercel relais `/api/sm` + `SPORTMONKS_TOKEN` / `VITE_SPORTMONKS_TOKEN` côté serveur.
+ * Header `Authorization` = valeur brute du token (sans « Bearer »), sauf relais où le serveur signe la requête.
  * @see https://docs.sportmonks.com/football/welcome/authentication
  */
 export async function sportMonksFetchJson<T>(
@@ -31,18 +62,10 @@ export async function sportMonksFetchJson<T>(
   token: string,
   search?: Record<string, string | number | boolean | undefined>,
 ): Promise<T> {
-  const url = new URL(sportMonksRequestHref(pathWithLeadingSlash))
-  if (search) {
-    for (const [k, v] of Object.entries(search)) {
-      if (v !== undefined) url.searchParams.set(k, String(v))
-    }
-  }
-  // Dates / `starting_at` cohérents avec le calendrier français (fixtures/between, etc.)
-  if (!url.searchParams.has('timezone')) {
-    url.searchParams.set('timezone', 'Europe/Paris')
-  }
+  const viaServerRelay = token === TF_SM_SERVER_RELAY_PLACEHOLDER
+  const url = buildSmRequestUrl(pathWithLeadingSlash, search, viaServerRelay)
   const res = await fetch(url.toString(), {
-    headers: { Authorization: token },
+    headers: viaServerRelay ? {} : { Authorization: token },
     /** Évite un snapshot « figé » si le navigateur réutilise une réponse GET en cache. */
     cache: 'no-store',
   })

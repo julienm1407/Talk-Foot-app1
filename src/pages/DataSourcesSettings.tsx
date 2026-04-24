@@ -128,18 +128,22 @@ export function DataSourcesSettingsPage() {
             visiteurs de talk-foot.com ne la voient pas.
           </p>
           <p className={cn('max-w-2xl text-sm leading-relaxed', label)}>
-            Pour que <strong className="text-tf-app-fg">tout le monde</strong> sur le site ait les vrais matchs : définis{' '}
-            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">VITE_SPORTMONKS_TOKEN</code> sur ton hébergeur
-            (ex. <strong className="text-tf-app-fg">Vercel</strong> → Projet → Settings → Environment Variables →
-            Production), puis <strong className="text-tf-app-fg">Redeploy</strong>. En local, le même nom dans{' '}
-            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">.env.local</code> ; cette variable{' '}
-            <strong className="text-tf-app-fg">prime</strong> sur le champ ci-dessous.
+            Pour que <strong className="text-tf-app-fg">tout le monde</strong> sur le site ait les vrais matchs : sur{' '}
+            <strong className="text-tf-app-fg">Vercel</strong>, ajoute surtout{' '}
+            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">SPORTMONKS_TOKEN</code> (relais{' '}
+            <code className="font-mono text-xs">/api/sm</code>, lu au runtime — recommandé) ou{' '}
+            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">VITE_SPORTMONKS_TOKEN</code> (embarqué au build si
+            l’outil le voit). <strong className="text-tf-app-fg">Environment Variables → Production</strong>, puis{' '}
+            <strong className="text-tf-app-fg">Redeploy</strong>. En local : <code className="font-mono text-xs">.env.local</code> ;{' '}
+            <code className="font-mono text-xs">VITE_*</code> <strong className="text-tf-app-fg">prime</strong> sur le champ ci-dessous.
           </p>
           <p className={cn('max-w-2xl text-sm leading-relaxed', label)}>
-            Les requêtes HTTP partent <strong className="text-tf-app-fg">directement de ton navigateur</strong> vers{' '}
-            <code className="rounded bg-black/10 px-1 py-0.5 text-xs">api.sportmonks.com</code> — elles ne passent pas
-            par ton hébergement. Le compteur d’usage se trouve sur le{' '}
-            <strong className="text-tf-app-fg">tableau de bord SportMonks</strong> (MySportmonks), pas sur ton site.
+            Les appels vont vers <code className="rounded bg-black/10 px-1 py-0.5 text-xs">api.sportmonks.com</code> : en
+            local ou avec <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code>, souvent{' '}
+            <strong className="text-tf-app-fg">depuis le navigateur</strong> ; sur{' '}
+            <strong className="text-tf-app-fg">Vercel</strong>, le site peut passer par le relais{' '}
+            <code className="font-mono text-xs">/api/sm</code> (clé lue côté serveur au runtime). Le quota reste sur ton
+            compte <strong className="text-tf-app-fg">SportMonks</strong>.
           </p>
           <div
             className={cn(
@@ -154,12 +158,24 @@ export function DataSourcesSettingsPage() {
             )}
             role="status"
           >
-            {tokenSource === 'env' && (
+            {tokenSource === 'env' && Boolean(import.meta.env.VITE_SPORTMONKS_TOKEN?.trim()) && (
               <>
                 Jeton actif : <span className="text-tf-app-fg">fichier .env / build Vite</span> (
                 <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code>). Pense à redémarrer{' '}
                 <code className="font-mono text-xs">npm run dev</code> après modification ; en prod, refais un build
                 déploiement.
+              </>
+            )}
+            {tokenSource === 'env' && !import.meta.env.VITE_SPORTMONKS_TOKEN?.trim() && typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__ && (
+              <>
+                Jeton actif via <span className="text-tf-app-fg">relais serveur Vercel</span> (
+                <code className="font-mono text-xs">GET /api/sm</code>). Ajoute{' '}
+                <code className="font-mono text-xs">SPORTMONKS_TOKEN</code> (recommandé, invisible du bundle) ou{' '}
+                <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code> dans{' '}
+                <strong className="text-tf-app-fg">Vercel → Environment Variables → Production</strong>, puis{' '}
+                <strong className="text-tf-app-fg">Redeploy</strong> — la valeur est lue au <strong>runtime</strong> par
+                la fonction <code className="font-mono text-xs">api/sm.js</code>, même si le build Vite n’avait pas la
+                variable.
               </>
             )}
             {tokenSource === 'browser' && (
@@ -172,7 +188,7 @@ export function DataSourcesSettingsPage() {
               <>
                 <strong className="text-tf-app-fg">Aucun jeton détecté</strong> — l’app n’envoie aucune requête à
                 SportMonks et affiche des matchs de démo.{' '}
-                {!smTokenBakedAtBuild && import.meta.env.PROD ? (
+                {!smTokenBakedAtBuild && import.meta.env.PROD && !(typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) ? (
                   <>
                     <span className="block pt-2 font-black text-tf-app-fg">
                       Diagnostic : ce déploiement a été construit sans <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code> dans l’environnement du build.

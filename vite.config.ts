@@ -131,6 +131,8 @@ export default defineConfig(({ mode }) => {
     define: {
       /** Exposé au client pour diagnostiquer « clé absente » après déploiement (sans révéler le jeton). */
       __TF_BUILD_HAS_SM_TOKEN__: JSON.stringify(buildHasSmToken),
+      /** Build exécuté sur les machines Vercel → relais `/api/sm` possible sans jeton dans le bundle. */
+      __TF_VERCEL_DEPLOY__: JSON.stringify(process.env.VERCEL === '1'),
     },
     plugins,
     base: GITHUB_PAGES ? GH_PAGES_BASE : '/',

@@ -1,5 +1,8 @@
 import { API_TOKENS_CHANGED_EVENT, LS_KEY_SPORTMONKS_TOKEN } from '../constants/apiKeysStorage'
 
+/** Valeur sentinelle : `sportMonksFetchJson` appelle `/api/sm` (Vercel) qui ajoute la clé côté serveur. */
+export const TF_SM_SERVER_RELAY_PLACEHOLDER = '\0tf-sm-server-relay\0'
+
 function trimOrUndef(s: string | undefined | null): string | undefined {
   const t = s?.trim()
   return t || undefined
@@ -20,18 +23,24 @@ export function getSportMonksTokenSource(): SportMonksTokenSource {
   } catch {
     /* private mode */
   }
+  if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) return 'env'
   return 'none'
 }
 
-/** Priorité : variable d’environnement Vite, puis navigateur. */
+/** Priorité : variable d’environnement Vite, puis navigateur, puis relais Vercel `/api/sm`. */
 export function getSportMonksToken(): string | undefined {
   const env = trimOrUndef(import.meta.env.VITE_SPORTMONKS_TOKEN)
   if (env) return env
   try {
-    return trimOrUndef(localStorage.getItem(LS_KEY_SPORTMONKS_TOKEN))
+    const ls = trimOrUndef(localStorage.getItem(LS_KEY_SPORTMONKS_TOKEN))
+    if (ls) return ls
   } catch {
-    return undefined
+    /* private mode */
   }
+  if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) {
+    return TF_SM_SERVER_RELAY_PLACEHOLDER
+  }
+  return undefined
 }
 
 export function hasBrowserSportMonksToken(): boolean {
