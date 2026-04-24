@@ -28,3 +28,16 @@ export const SPORTMONKS_TEAM_ID_BY_CLUB_ID: Readonly<Record<string, number>> = {
   /** Participant SM « Paris » en L1 — Paris FC. */
   parisfc: 4508,
 }
+
+/**
+ * Id **saison** SportMonks (`season_id`) par club — optionnel : la page club résout sinon la saison via
+ * `GET /teams/{teamId}?include=activeSeasons`, puis charge les stats avec `teamstatisticSeasons:{season_id}`.
+ * Sert de forçage si `activeSeasons` est vide ou pour cibler une saison précise.
+ */
+export const SPORTMONKS_TEAM_SEASON_ID_BY_CLUB_ID: Readonly<Partial<Record<string, number>>> = {}
+
+/**
+ * Filtre `playerstatisticSeasons` pour `GET /squads/teams/{team_id}` (stats joueurs par saison SM).
+ * Ex. `25583` — distinct du `team_season_id`.
+ */
+export const SPORTMONKS_SQUAD_PLAYER_STAT_SEASON_BY_CLUB_ID: Readonly<Partial<Record<string, number>>> = {}

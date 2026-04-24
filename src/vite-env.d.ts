@@ -8,6 +8,16 @@ interface ImportMetaEnv {
   readonly VITE_ADMIN_EMAILS?: string
   /** SportMonks v3 — header `Authorization` = valeur du token (ne pas committer). */
   readonly VITE_SPORTMONKS_TOKEN?: string
+  /** Journée SM pour charger les cotes 1N2 (`/rounds/{id}`) quand le match n’expose pas `sportMonksRoundId`. */
+  readonly VITE_SPORTMONKS_PREMATCH_ODDS_ROUND_ID?: string
+  /** Bookmaker SportMonks unique pour les cotes 1N2 (domicile / nul / extérieur). Défaut : `2`. */
+  readonly VITE_SPORTMONKS_ODDS_BOOKMAKER_ID?: string
+  /** Id **saison** SM (`season_id`) — force le filtre stats sur la page club si `activeSeasons` ne suffit pas. */
+  readonly VITE_SPORTMONKS_TEAM_SEASON_ID?: string
+  /** Filtre `playerstatisticSeasons` pour `/squads/teams/{id}` — repli si absent de `SPORTMONKS_SQUAD_PLAYER_STAT_SEASON_BY_CLUB_ID`. */
+  readonly VITE_SPORTMONKS_SQUAD_STATISTIC_SEASON_ID?: string
+  /** Id saison SM pour `/standings/seasons/{id}` si le classement live est vide (repli global ; par ligue : `sportMonksStandingSeasons.ts`). */
+  readonly VITE_SPORTMONKS_STANDING_SEASON_ID?: string
   /** Google AdSense — ID éditeur `ca-pub-…` ; sans ceci, encarts mock. */
   readonly VITE_ADSENSE_CLIENT?: string
   /** Slot unique pour tous les emplacements si les slots nommés sont vides. */

@@ -39,6 +39,19 @@ export function addParisCalendarDays(ymd: string, delta: number): string {
   return k
 }
 
+/** Toutes les clés `YYYY-MM-DD` Paris de `fromYmd` à `toYmd` incluses (`fromYmd` ≤ `toYmd`). */
+export function parisCalendarDayKeysInclusive(fromYmd: string, toYmd: string): string[] {
+  if (fromYmd > toYmd) return []
+  const out: string[] = []
+  let k = fromYmd
+  while (true) {
+    out.push(k)
+    if (k >= toYmd) break
+    k = parisCalendarDayAfter(k)
+  }
+  return out
+}
+
 /** Premier instant (ms UTC) du jour civil `ymd` à Paris. */
 export function startOfParisCalendarDayMs(ymd: string): number {
   const [y, m, d] = ymd.split('-').map(Number)

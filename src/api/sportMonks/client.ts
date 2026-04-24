@@ -43,6 +43,8 @@ export async function sportMonksFetchJson<T>(
   }
   const res = await fetch(url.toString(), {
     headers: { Authorization: token },
+    /** Évite un snapshot « figé » si le navigateur réutilise une réponse GET en cache. */
+    cache: 'no-store',
   })
   const text = await res.text()
   let body: unknown

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
 import { HubMatchStrip } from '../components/match/HubMatchEncart'
@@ -6,14 +6,52 @@ import { MatchSpotlightCard } from '../components/match/MatchSpotlightCard'
 import { Card } from '../components/ui/Card'
 import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
 import { themeForCompetition } from '../data/competitionThemes'
+import type { Match } from '../types/match'
 import { cn } from '../utils/cn'
+import {
+  getFootballCalendarWindow,
+  PARIS_SM_WINDOW_DAYS_FUTURE,
+  PARIS_SM_WINDOW_DAYS_PAST,
+} from '../utils/footballCalendarWindow'
 import {
   MATCH_DISPLAY_TIME_ZONE,
   matchCalendarDayKeyParis,
   parisCalendarDayAfter,
+  startOfParisCalendarDayMs,
 } from '../utils/time'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
+import { useSportMonksLeaguesDateSummary } from '../hooks/useSportMonksLeaguesDateSummary'
+
+/** Matchs mis en avant sous « À la une » (hors live) — prochains coup d’envoi. */
+const CALENDAR_ALAUNE_MAX = 8
+
+type ParisDayGroup = { key: string; label: string; ts: number; matches: Match[] }
+
+function groupMatchesByParisDay(matches: Match[], order: 'asc' | 'desc'): ParisDayGroup[] {
+  const fmt = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: MATCH_DISPLAY_TIME_ZONE,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+  const groups = new Map<string, { ts: number; label: string; matches: Match[] }>()
+  for (const m of matches) {
+    const d = new Date(m.kickoffAt)
+    const key = matchCalendarDayKeyParis(m.kickoffAt)
+    const existing = groups.get(key)
+    if (existing) existing.matches.push(m)
+    else groups.set(key, { ts: d.getTime(), label: fmt.format(d), matches: [m] })
+  }
+  const rows = Array.from(groups.entries()).map(([key, v]) => ({
+    key,
+    label: v.label,
+    ts: v.ts,
+    matches: v.matches,
+  }))
+  rows.sort((a, b) => (order === 'asc' ? a.ts - b.ts : b.ts - a.ts))
+  return rows
+}
 
 export function CalendarPage() {
   const now = Date.now()
@@ -28,21 +66,12 @@ export function CalendarPage() {
     [matches],
   )
 
-  const filterBtn = (selected: boolean) =>
-    cn(
-      'min-h-tf-touch w-full rounded-tf-xl px-tf-4 py-tf-2.5 text-left text-tf-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-      L
-        ? selected
-          ? 'bg-tf-dark text-white shadow-tf-elev-1 focus-visible:ring-tf-electric/40 focus-visible:ring-offset-[color:var(--tf-page-bg-light)]'
-          : 'border border-tf-grey-pastel/60 bg-tf-white text-tf-dark hover:bg-tf-grey-pastel/30 focus-visible:ring-tf-electric/40 focus-visible:ring-offset-white'
-        : selected
-          ? 'bg-white/18 text-white shadow-md ring-1 ring-white/25 focus-visible:ring-sky-400/50 focus-visible:ring-offset-[#071422]'
-          : 'border border-white/22 bg-white/[0.07] text-tf-app-fg hover:border-white/30 hover:bg-white/12 focus-visible:ring-sky-400/45 focus-visible:ring-offset-[#071422]',
-    )
+  /** Une seule évaluation par chargement `matches` : bornes API + affichage bandeau. */
+  const calendarWindow = useMemo(() => getFootballCalendarWindow(new Date()), [matches])
 
   const filterChip = (selected: boolean) =>
     cn(
-      'shrink-0 rounded-tf-xl px-tf-4 py-tf-2.5 text-tf-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+      'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:px-3.5 sm:py-2 sm:text-sm',
       L
         ? selected
           ? 'bg-tf-dark text-white focus-visible:ring-tf-electric/40 focus-visible:ring-offset-white'
@@ -57,10 +86,17 @@ export function CalendarPage() {
     L ? 'text-tf-electric-deep' : 'text-sky-100',
   )
 
-  /** Tous les matchs de la fenêtre API (y compris terminés) : même jour que les résultats du matin. */
+  /** Fenêtre glissante Paris (quota API) : lives toujours inclus, le reste borné comme `fixtures/between`. */
   const sorted = useMemo(() => {
-    return [...matches].sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
-  }, [matches])
+    const w = calendarWindow
+    return [...matches]
+      .filter((m) => {
+        if (m.status === 'live') return true
+        const t = new Date(m.kickoffAt).getTime()
+        return t >= w.cutoffMs && t <= w.endMs
+      })
+      .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
+  }, [calendarWindow, matches])
 
   const competitions = useMemo(() => {
     const map = new Map<string, { id: string; name: string; shortName: string }>()
@@ -70,6 +106,10 @@ export function CalendarPage() {
 
   const [competitionId, setCompetitionId] = useState<string>('all')
   const [dayKey, setDayKey] = useState<string>('all')
+  /** Vue principale : accès direct aux résultats sans défiler les à venir. */
+  const [primaryTab, setPrimaryTab] = useState<'upcoming' | 'past'>('upcoming')
+  const { leaguesDateSummary, leaguesDateLoading } = useSportMonksLeaguesDateSummary(dayKey)
+  const resultsSectionRef = useRef<HTMLDivElement>(null)
 
   const poolFiltered = useMemo(() => {
     return competitionId === 'all'
@@ -82,20 +122,23 @@ export function CalendarPage() {
   /** Jusqu’à 4 lives en tête de page ; le reste reste dans la liste par jour */
   const liveAgendaFeatured = useMemo(() => liveFeatured.slice(0, 4), [liveFeatured])
 
-  const upcomingSpotlight = useMemo(() => {
-    if (liveFeatured.length > 0) return null
-    const upcomingOnly = poolFiltered.filter((m) => m.status === 'upcoming')
-    return (
-      upcomingOnly.find((m) => +new Date(m.kickoffAt) >= now - 60_000) ?? upcomingOnly[0] ?? null
-    )
+  const upcomingSpotlightMatches = useMemo(() => {
+    if (liveFeatured.length > 0) return [] as Match[]
+    const upcomingOnly = poolFiltered
+      .filter((m) => m.status === 'upcoming')
+      .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
+    if (!upcomingOnly.length) return []
+    const anchorIdx = upcomingOnly.findIndex((m) => +new Date(m.kickoffAt) >= now - 60_000)
+    const start = anchorIdx >= 0 ? anchorIdx : 0
+    return upcomingOnly.slice(start, start + CALENDAR_ALAUNE_MAX)
   }, [liveFeatured.length, poolFiltered, now])
 
   const excludedIds = useMemo(() => {
     const s = new Set<string>()
     liveAgendaFeatured.forEach((m) => s.add(m.id))
-    if (upcomingSpotlight) s.add(upcomingSpotlight.id)
+    upcomingSpotlightMatches.forEach((m) => s.add(m.id))
     return s
-  }, [liveAgendaFeatured, upcomingSpotlight])
+  }, [liveAgendaFeatured, upcomingSpotlightMatches])
 
   const filtered = useMemo(() => {
     const base =
@@ -105,36 +148,30 @@ export function CalendarPage() {
     return base.filter((m) => !excludedIds.has(m.id))
   }, [competitionId, sorted, excludedIds])
 
-  const grouped = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat('fr-FR', {
-      timeZone: MATCH_DISPLAY_TIME_ZONE,
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    })
-    const groups = new Map<string, { ts: number; label: string; matches: typeof filtered }>()
-
-    for (const m of filtered) {
-      const d = new Date(m.kickoffAt)
-      const key = matchCalendarDayKeyParis(m.kickoffAt)
-
-      const existing = groups.get(key)
-      if (existing) {
-        existing.matches.push(m)
-      } else {
-        groups.set(key, { ts: d.getTime(), label: fmt.format(d), matches: [m] })
-      }
-    }
-
-    return Array.from(groups.entries())
-      .sort((a, b) => a[1].ts - b[1].ts)
-      .map(([key, v]) => ({ key, label: v.label, matches: v.matches }))
+  /** Prochains matchs (à venir, coup d’envoi ≥ début du jour Paris). */
+  const groupedUpcoming = useMemo(() => {
+    const startTodayParisMs = startOfParisCalendarDayMs(matchCalendarDayKeyParis(new Date()))
+    const upcomingOnly = filtered.filter(
+      (m) => m.status === 'upcoming' && +new Date(m.kickoffAt) >= startTodayParisMs - 60_000,
+    )
+    return groupMatchesByParisDay(upcomingOnly, 'asc')
   }, [filtered])
 
-  const visible = useMemo(() => {
-    if (dayKey === 'all') return grouped
-    return grouped.filter((g) => g.key === dayKey)
-  }, [dayKey, grouped])
+  /** Résultats terminés dans la fenêtre (hors lives / encarts déjà sortis). */
+  const groupedPast = useMemo(() => {
+    const pastOnly = filtered.filter((m) => m.status === 'finished')
+    return groupMatchesByParisDay(pastOnly, 'desc')
+  }, [filtered])
+
+  const visibleUpcoming = useMemo(() => {
+    if (dayKey === 'all') return groupedUpcoming
+    return groupedUpcoming.filter((g) => g.key === dayKey)
+  }, [dayKey, groupedUpcoming])
+
+  const visiblePast = useMemo(() => {
+    if (dayKey === 'all') return groupedPast
+    return groupedPast.filter((g) => g.key === dayKey)
+  }, [dayKey, groupedPast])
 
   const dayChips = useMemo(() => {
     const todayKey = matchCalendarDayKeyParis(new Date())
@@ -144,24 +181,49 @@ export function CalendarPage() {
       weekday: 'short',
       day: 'numeric',
     })
-
-    return grouped.slice(0, 10).map((g) => {
-      const [gy, gm, gd] = g.key.split('-').map(Number)
+    const merged = new Map<string, { key: string; label: string; ts: number; count: number }>()
+    for (const g of groupedUpcoming) {
+      merged.set(g.key, { key: g.key, label: g.label, ts: g.ts, count: g.matches.length })
+    }
+    for (const g of groupedPast) {
+      const ex = merged.get(g.key)
+      if (ex) ex.count += g.matches.length
+      else merged.set(g.key, { key: g.key, label: g.label, ts: g.ts, count: g.matches.length })
+    }
+    const sortedKeys = [...merged.values()]
+      .sort((a, b) => (primaryTab === 'past' ? b.ts - a.ts : a.ts - b.ts))
+      .slice(0, 14)
+    return sortedKeys.map((row) => {
+      const [gy, gm, gd] = row.key.split('-').map(Number)
       const labelAnchor = new Date(Date.UTC(gy, gm - 1, gd, 12, 0, 0))
       const label =
-        g.key === todayKey
+        row.key === todayKey
           ? "Aujourd'hui"
-          : g.key === tomorrowKey
+          : row.key === tomorrowKey
             ? 'Demain'
             : shortFmt.format(labelAnchor)
-      return { key: g.key, label, count: g.matches.length }
+      return { key: row.key, label, count: row.count }
     })
-  }, [grouped])
+  }, [groupedPast, groupedUpcoming, primaryTab])
 
-  const totalCount = useMemo(() => {
-    const listed = visible.reduce((acc, g) => acc + g.matches.length, 0)
-    return listed + liveAgendaFeatured.length + (upcomingSpotlight ? 1 : 0)
-  }, [visible, liveAgendaFeatured.length, upcomingSpotlight])
+  const upcomingTotal = useMemo(
+    () => groupedUpcoming.reduce((acc, g) => acc + g.matches.length, 0),
+    [groupedUpcoming],
+  )
+  const pastTotal = useMemo(
+    () => groupedPast.reduce((acc, g) => acc + g.matches.length, 0),
+    [groupedPast],
+  )
+
+  const prevTab = useRef(primaryTab)
+  useEffect(() => {
+    if (primaryTab === 'past' && prevTab.current !== 'past') {
+      queueMicrotask(() =>
+        resultsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      )
+    }
+    prevTab.current = primaryTab
+  }, [primaryTab])
 
   if (loading) {
     return (
@@ -202,91 +264,6 @@ export function CalendarPage() {
     </p>
   ) : null
 
-  const leagueButtons = (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          setCompetitionId('all')
-          setDayKey('all')
-        }}
-        className={filterBtn(competitionId === 'all')}
-        aria-pressed={competitionId === 'all'}
-      >
-        Toutes les ligues
-      </button>
-      {competitions.map((c) => {
-        const th = themeForCompetition(c.id)
-        const selected = competitionId === c.id
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => {
-              setCompetitionId(c.id)
-              setDayKey('all')
-            }}
-            className={cn(
-              'min-h-tf-touch w-full rounded-tf-xl px-tf-4 py-tf-2.5 text-left text-tf-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-              L
-                ? selected
-                  ? 'text-white shadow-md ring-2 ring-white/50 ring-offset-2 ring-offset-tf-grey-pastel/30'
-                  : 'border border-tf-grey-pastel/50 opacity-90 hover:opacity-100'
-                : selected
-                  ? 'text-white shadow-lg ring-2 ring-white/40 ring-offset-2 ring-offset-[#071422]'
-                  : 'border border-white/25 bg-white/[0.05] text-white/95 hover:border-white/40 hover:bg-white/10',
-              !th && filterBtn(selected),
-            )}
-            style={
-              th
-                ? {
-                    background: selected
-                      ? `linear-gradient(135deg, ${th.accent}, ${th.accent2})`
-                      : L
-                        ? `linear-gradient(135deg, ${th.accent}33, ${th.accent2}22)`
-                        : `linear-gradient(135deg, ${th.accent}66, ${th.accent2}44)`,
-                  }
-                : undefined
-            }
-            aria-pressed={selected}
-          >
-            {c.shortName}
-          </button>
-        )
-      })}
-    </>
-  )
-
-  const dayButtons = (
-    <>
-      <button
-        type="button"
-        onClick={() => setDayKey('all')}
-        className={filterBtn(dayKey === 'all')}
-        aria-pressed={dayKey === 'all'}
-      >
-        Tous les jours
-      </button>
-      {dayChips.map((d) => {
-        const selected = dayKey === d.key
-        return (
-          <button
-            key={d.key}
-            type="button"
-            onClick={() => setDayKey(d.key)}
-            className={filterBtn(selected)}
-            aria-pressed={selected}
-          >
-            {d.label}
-            <span className={cn('ml-1.5 font-normal', L ? 'opacity-80' : 'text-sky-100/82')}>
-              ({d.count})
-            </span>
-          </button>
-        )
-      })}
-    </>
-  )
-
   const leagueChipRow = (
     <>
       <button
@@ -312,7 +289,7 @@ export function CalendarPage() {
               setDayKey('all')
             }}
             className={cn(
-              'shrink-0 rounded-tf-xl px-tf-4 py-tf-2.5 text-tf-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+              'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:py-2 sm:text-sm',
               L
                 ? selected
                   ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-tf-grey-pastel/40 shadow-lg'
@@ -372,17 +349,17 @@ export function CalendarPage() {
     </>
   )
 
-  const asideHeading = (id: string, label: string) => (
-    <h2
-      id={id}
-      className={cn(
-        'mb-tf-2 border-b pb-tf-2 text-tf-sm font-black uppercase tracking-wider lg:mb-tf-3 lg:pb-tf-2',
-        L ? 'border-tf-grey-pastel/55 text-tf-dark' : 'border-white/20 text-sky-100',
-      )}
-    >
-      {label}
-    </h2>
-  )
+  const tabBtn = (active: boolean) =>
+    cn(
+      'min-h-10 flex-1 rounded-xl px-2 py-2 text-center text-xs font-black uppercase tracking-wide transition sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm',
+      L
+        ? active
+          ? 'bg-white text-tf-dark shadow-sm'
+          : 'text-tf-grey hover:bg-black/[0.03] hover:text-tf-dark'
+        : active
+          ? 'bg-white/20 text-white shadow-inner'
+          : 'text-tf-app-muted hover:bg-white/[0.06] hover:text-tf-app-fg',
+    )
 
   return (
     <div className="mx-auto w-full max-w-tf-wide space-y-tf-6 pb-tf-10 sm:space-y-tf-8">
@@ -396,30 +373,105 @@ export function CalendarPage() {
         <h1 className="font-display text-tf-2xl font-black tracking-tight text-tf-app-fg sm:text-tf-display">
           {supporterTintActive && team ? `Match ${team.shortName}` : 'Match'}
         </h1>
-        <div className="space-y-tf-3">
+        <div className="space-y-tf-2">
           {dataSourceBanner}
           {apiErrorBanner}
+          <p className="text-sm font-medium leading-snug text-tf-app-muted sm:text-base">
+            <span className="font-black text-tf-app-fg">{upcomingTotal}</span> à venir
+            <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
+            <span className="font-black text-tf-app-fg">{pastTotal}</span> résultats
+            {competitionId !== 'all' ? (
+              <>
+                <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
+                <span className="font-bold text-tf-app-fg">
+                  {competitions.find((c) => c.id === competitionId)?.shortName ?? ''}
+                </span>
+              </>
+            ) : null}
+            {supporterTintActive && team ? (
+              <span className="mt-1 block text-xs font-bold sm:mt-0 sm:ml-2 sm:inline">
+                ({team.shortName})
+              </span>
+            ) : null}
+          </p>
+          {hasSportMonksMatches ? (
+            <details
+              className={cn(
+                'rounded-xl border text-xs font-medium leading-relaxed',
+                L ? 'border-violet-200/70 bg-violet-50/50 text-violet-950' : 'border-violet-400/25 bg-violet-950/25 text-violet-50/95',
+              )}
+            >
+              <summary className="cursor-pointer list-none px-3 py-2 font-black uppercase tracking-wider [&::-webkit-details-marker]:hidden">
+                Fenêtre API ·{' '}
+                <span className="font-mono text-[10px] font-bold">
+                  {calendarWindow.from} → {calendarWindow.to}
+                </span>
+              </summary>
+              <div
+                className={cn(
+                  'border-t px-3 pb-2 pt-2',
+                  L ? 'border-violet-200/50' : 'border-violet-400/25',
+                )}
+              >
+                {PARIS_SM_WINDOW_DAYS_PAST} jours de résultats et {PARIS_SM_WINDOW_DAYS_FUTURE} jours à venir (fuseau
+                Paris), durée fixe pour limiter les appels SportMonks.
+              </div>
+            </details>
+          ) : null}
+          {dayKey !== 'all' && (leaguesDateLoading || (leaguesDateSummary && leaguesDateSummary.leagueCount > 0)) ? (
+            <details
+              className={cn(
+                'rounded-xl border text-xs font-semibold leading-snug',
+                L ? 'border-sky-200/70 bg-sky-50/80 text-sky-950' : 'border-sky-400/25 bg-sky-950/30 text-sky-100/95',
+              )}
+            >
+              <summary className="cursor-pointer list-none px-3 py-2 font-black uppercase tracking-wider [&::-webkit-details-marker]:hidden">
+                {leaguesDateLoading ? (
+                  <>Détail jour · chargement…</>
+                ) : (
+                  <>
+                    Détail jour · <span className="font-mono">{dayKey}</span>
+                  </>
+                )}
+              </summary>
+              <div
+                className={cn('border-t px-3 pb-2 pt-2', L ? 'border-sky-200/50' : 'border-sky-400/20')}
+                role="status"
+              >
+                {leaguesDateLoading ? (
+                  <>SportMonks · bilan ligues pour <span className="font-mono">{dayKey}</span>…</>
+                ) : leaguesDateSummary ? (
+                  <>
+                    <span className="font-mono">{dayKey}</span> (Paris) :{' '}
+                    <strong className="font-black">{leaguesDateSummary.leagueCount}</strong> compétition
+                    {leaguesDateSummary.leagueCount > 1 ? 's' : ''},{' '}
+                    <strong className="font-black">{leaguesDateSummary.scheduledSlots}</strong> ligne
+                    {leaguesDateSummary.scheduledSlots > 1 ? 's' : ''} dans{' '}
+                    <code className="font-mono text-[10px]">today</code>
+                    {leaguesDateSummary.sampleLeagueNames.length ? (
+                      <>
+                        {' '}
+                        — {leaguesDateSummary.sampleLeagueNames.slice(0, 4).join(' · ')}
+                        {leaguesDateSummary.sampleLeagueNames.length > 4 ? '…' : ''}
+                      </>
+                    ) : null}
+                    {leaguesDateSummary.frenchTvStations.length ? (
+                      <>
+                        <br />
+                        <span className={cn('font-black', L ? 'text-sky-900' : 'text-sky-50')}>TV (France)</span>
+                        {' : '}
+                        {leaguesDateSummary.frenchTvStations.slice(0, 12).join(' · ')}
+                        {leaguesDateSummary.frenchTvStations.length > 12
+                          ? ` · +${leaguesDateSummary.frenchTvStations.length - 12}`
+                          : ''}
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            </details>
+          ) : null}
         </div>
-        <p className="text-tf-sm font-medium text-tf-app-muted sm:text-tf-base">
-          {supporterTintActive && team ? (
-            <>
-              Calendrier complet — {team.shortName} mis en avant.
-              {totalCount > 0 && (
-                <>
-                  {' '}
-                  {totalCount} rencontre{totalCount > 1 ? 's' : ''} affichée{totalCount > 1 ? 's' : ''}.
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {totalCount} match{totalCount > 1 ? 's' : ''} à l’affiche
-              {competitionId !== 'all' && (
-                <> · {competitions.find((c) => c.id === competitionId)?.shortName ?? ''}</>
-              )}
-            </>
-          )}
-        </p>
       </header>
 
       {liveFeatured.length > 0 ? (
@@ -451,154 +503,282 @@ export function CalendarPage() {
           {liveFeatured.length > liveAgendaFeatured.length ? (
             <p className={cn('text-tf-xs font-semibold', L ? 'text-tf-grey' : 'text-tf-app-muted')}>
               +{liveFeatured.length - liveAgendaFeatured.length} autre
-              {liveFeatured.length - liveAgendaFeatured.length > 1 ? 's' : ''} en direct dans la liste par jour
-              ci-dessous.
+              {liveFeatured.length - liveAgendaFeatured.length > 1 ? 's' : ''} en direct — onglet « À venir », même
+              jour sélectionné.
             </p>
           ) : null}
         </section>
-      ) : upcomingSpotlight ? (
-        <section aria-labelledby="cal-featured-heading" className="space-y-tf-2">
-          <h2 id="cal-featured-heading" className={sectionHeading}>
-            À la une
-          </h2>
+      ) : upcomingSpotlightMatches.length > 0 ? (
+        <section aria-labelledby="cal-featured-heading" className="space-y-tf-3">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h2 id="cal-featured-heading" className={sectionHeading}>
+              À la une
+            </h2>
+            <span
+              className={cn(
+                'rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
+                L ? 'bg-tf-grey-pastel/40 text-tf-dark' : 'bg-white/[0.1] text-sky-100/90 ring-1 ring-white/15',
+              )}
+            >
+              {upcomingSpotlightMatches.length} match{upcomingSpotlightMatches.length > 1 ? 's' : ''}
+            </span>
+          </div>
           <HubEncartTopAccent appearance={L ? 'light' : 'dark'} preset="upcoming" />
-          <MatchSpotlightCard match={upcomingSpotlight} className="w-full max-w-full sm:max-w-md" />
+          <div className="grid grid-cols-1 gap-tf-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {upcomingSpotlightMatches.map((m) => (
+              <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+            ))}
+          </div>
         </section>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-tf-8 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:items-start">
-        <aside
-          className="min-w-0 space-y-tf-5 lg:sticky lg:top-24 lg:self-start"
-          aria-label="Filtres"
+      <div className="sticky top-0 z-10 -mx-1 mb-tf-4 sm:-mx-0" aria-label="Filtres et vue calendrier">
+        <div
+          className={cn(
+            'overflow-hidden rounded-tf-2xl border shadow-tf-elev-2 backdrop-blur-md',
+            L ? 'border-tf-grey-pastel/50' : 'border-white/12',
+          )}
         >
-          <div className="lg:hidden">
-            {asideHeading('cal-league-mob', 'Ligue')}
+          <div
+            className={cn(
+              'space-y-tf-3 p-tf-3 sm:p-tf-4',
+              L ? 'bg-[color:color-mix(in_srgb,var(--tf-c60-base)_94%,white)]' : 'bg-[#071e33]/92',
+            )}
+          >
             <div
-              className="flex gap-tf-2 overflow-x-auto pb-1 pt-1 [scrollbar-width:thin]"
-              role="group"
-              aria-labelledby="cal-league-mob"
+              role="tablist"
+              aria-label="Affichage"
+              className={cn('flex rounded-2xl p-1', L ? 'bg-black/[0.04]' : 'bg-white/[0.07]')}
             >
-              {leagueChipRow}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={primaryTab === 'upcoming'}
+                onClick={() => setPrimaryTab('upcoming')}
+                className={tabBtn(primaryTab === 'upcoming')}
+              >
+                À venir{upcomingTotal > 0 ? ` · ${upcomingTotal}` : ''}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={primaryTab === 'past'}
+                onClick={() => setPrimaryTab('past')}
+                className={tabBtn(primaryTab === 'past')}
+              >
+                Résultats{pastTotal > 0 ? ` · ${pastTotal}` : ''}
+              </button>
             </div>
-          </div>
-
-          <div className="lg:hidden">
-            <div
-              className={cn(
-                'mb-tf-2 flex items-center justify-between border-b pb-tf-2',
-                L ? 'border-tf-grey-pastel/55' : 'border-white/20',
-              )}
-            >
-              <h2
-                id="cal-day-mob"
+            <div className="space-y-tf-2">
+              <p
                 className={cn(
-                  'text-tf-sm font-black uppercase tracking-wider',
-                  L ? 'text-tf-dark' : 'text-sky-100',
+                  'text-[10px] font-black uppercase tracking-[0.16em]',
+                  L ? 'text-tf-grey' : 'text-tf-app-muted',
                 )}
               >
-                Jour
-              </h2>
-              <span className={cn('text-tf-xs font-medium', L ? 'text-tf-grey' : 'text-sky-200/90')}>
-                {dayKey === 'all' ? 'Tous' : dayChips.find((d) => d.key === dayKey)?.label}
-              </span>
-            </div>
-            <div
-              className="flex gap-tf-2 overflow-x-auto pb-1 [scrollbar-width:thin]"
-              role="group"
-              aria-labelledby="cal-day-mob"
-            >
-              {dayChipRow}
-            </div>
-          </div>
-
-          <div className="hidden lg:block">
-            {asideHeading('cal-league-aside', 'Ligue')}
-            <div className="flex flex-col gap-tf-2" role="group" aria-labelledby="cal-league-aside">
-              {leagueButtons}
-            </div>
-          </div>
-
-          <div className="hidden lg:block">
-            <div
-              className={cn(
-                'mb-tf-3 flex items-center justify-between gap-tf-2 border-b pb-tf-2',
-                L ? 'border-tf-grey-pastel/55' : 'border-white/20',
-              )}
-            >
-              <h2
-                id="cal-day-aside"
-                className={cn(
-                  'text-tf-sm font-black uppercase tracking-wider',
-                  L ? 'text-tf-dark' : 'text-sky-100',
-                )}
+                Ligue
+              </p>
+              <div
+                className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]"
+                role="group"
+                aria-label="Filtrer par ligue"
               >
-                Jour
-              </h2>
-              <span className={cn('text-tf-xs', L ? 'text-tf-grey' : 'text-sky-200/90')}>
-                {dayKey === 'all' ? 'Tous' : dayChips.find((d) => d.key === dayKey)?.label}
-              </span>
+                {leagueChipRow}
+              </div>
             </div>
-            <div
-              className="flex max-h-[min(50vh,28rem)] flex-col gap-tf-2 overflow-y-auto pr-1"
-              role="group"
-              aria-labelledby="cal-day-aside"
-            >
-              {dayButtons}
-            </div>
-          </div>
-        </aside>
-
-        <div className="min-w-0">
-          <section aria-label="Liste des matchs par jour">
-            {visible.length === 0 ? (
-              <Card
-                className={cn('p-tf-8 text-center', !L && 'border-white/12 bg-white/[0.04]')}
-                elevation="soft"
-              >
-                <p className="text-tf-md font-bold text-tf-app-fg">Aucun match à afficher</p>
-                <p className="mt-tf-2 text-tf-sm font-medium text-tf-app-muted">
-                  {liveFeatured.length > 0 || upcomingSpotlight
-                    ? 'Les matchs mis en avant sont au-dessus ; ajuste ligue ou jour.'
-                    : 'Change de ligue ou de jour.'}
-                </p>
-                <Link
-                  to="/"
+            <div className="space-y-tf-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <p
                   className={cn(
-                    'mt-tf-4 inline-block text-tf-sm font-black underline',
-                    L ? 'text-tf-electric-deep' : 'text-sky-300',
+                    'text-[10px] font-black uppercase tracking-[0.16em]',
+                    L ? 'text-tf-grey' : 'text-tf-app-muted',
                   )}
                 >
-                  Retour à l’accueil
-                </Link>
-              </Card>
-            ) : (
-              <div className="space-y-tf-8">
-                {visible.map((g) => (
-                  <div key={g.key}>
-                    <h3
-                      className={cn(
-                        'mb-tf-4 border-b pb-tf-2 font-display text-tf-lg font-black uppercase tracking-wide',
-                        L ? 'border-tf-grey-pastel/45 text-tf-dark' : 'border-white/15 text-tf-app-fg',
-                      )}
-                    >
-                      {g.label}
-                    </h3>
-                    <div className="grid grid-cols-1 gap-tf-4 md:grid-cols-2 md:gap-tf-6">
-                      {g.matches.map((m) =>
-                        m.status === 'upcoming' ? (
-                          <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
-                        ) : (
-                          <HubMatchStrip key={m.id} match={m} />
-                        ),
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  Jour
+                </p>
+                <span className={cn('text-[10px] font-bold', L ? 'text-tf-grey' : 'text-sky-200/90')}>
+                  {dayKey === 'all' ? 'Tous' : dayChips.find((d) => d.key === dayKey)?.label}
+                </span>
               </div>
+              <div
+                className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]"
+                role="group"
+                aria-label="Filtrer par jour"
+              >
+                {dayChipRow}
+              </div>
+            </div>
+          </div>
+          {/* Fondu : le contenu qui remonte sous les filtres semble s’estomper vers le haut */}
+          <div
+            aria-hidden
+            className={cn(
+              'pointer-events-none h-14 w-full bg-gradient-to-b sm:h-16',
+              L
+                ? 'from-[color:color-mix(in_srgb,var(--tf-c60-base)_94%,white)] via-[color:color-mix(in_srgb,var(--tf-c60-base)_88%,white)]/55 to-transparent'
+                : 'from-[#071e33]/92 via-[#071e33]/55 to-transparent',
             )}
-          </section>
+          />
         </div>
       </div>
+
+      <section aria-label="Liste des matchs par jour" className="min-w-0">
+        {primaryTab === 'upcoming' &&
+        visibleUpcoming.length === 0 &&
+        visiblePast.length === 0 &&
+        liveFeatured.length === 0 &&
+        upcomingSpotlightMatches.length === 0 ? (
+          <Card
+            className={cn('p-tf-8 text-center', !L && 'border-white/12 bg-white/[0.04]')}
+            elevation="soft"
+          >
+            <p className="text-tf-md font-bold text-tf-app-fg">Aucun match à venir</p>
+            <p className="mt-tf-2 text-tf-sm font-medium text-tf-app-muted">
+              Change de ligue ou de jour{pastTotal > 0 ? ', ou passe à l’onglet Résultats.' : '.'}
+            </p>
+            {pastTotal > 0 ? (
+              <button
+                type="button"
+                onClick={() => setPrimaryTab('past')}
+                className={cn(
+                  'mt-tf-4 text-sm font-black underline underline-offset-2',
+                  L ? 'text-tf-electric-deep' : 'text-sky-300',
+                )}
+              >
+                Voir {pastTotal} résultat{pastTotal > 1 ? 's' : ''}
+              </button>
+            ) : null}
+            <Link
+              to="/"
+              className={cn(
+                'mt-tf-3 block text-tf-sm font-bold',
+                L ? 'text-tf-grey' : 'text-tf-app-muted',
+              )}
+            >
+              ← Accueil
+            </Link>
+          </Card>
+        ) : null}
+
+        {primaryTab === 'past' && visiblePast.length === 0 ? (
+          <Card
+            className={cn('p-tf-8 text-center', !L && 'border-white/12 bg-white/[0.04]')}
+            elevation="soft"
+          >
+            <p className="text-tf-md font-bold text-tf-app-fg">Aucun résultat sur ce filtre</p>
+            <p className="mt-tf-2 text-tf-sm font-medium text-tf-app-muted">
+              Essaie « Tous » pour les jours, ou une autre ligue.
+            </p>
+            {upcomingTotal > 0 ? (
+              <button
+                type="button"
+                onClick={() => setPrimaryTab('upcoming')}
+                className={cn(
+                  'mt-tf-4 text-sm font-black underline underline-offset-2',
+                  L ? 'text-tf-electric-deep' : 'text-sky-300',
+                )}
+              >
+                Voir les matchs à venir
+              </button>
+            ) : null}
+          </Card>
+        ) : null}
+
+        {primaryTab === 'upcoming' &&
+        !(
+          visibleUpcoming.length === 0 &&
+          visiblePast.length === 0 &&
+          liveFeatured.length === 0 &&
+          upcomingSpotlightMatches.length === 0
+        ) ? (
+          <div className="space-y-tf-6">
+            {pastTotal > 0 ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPrimaryTab('past')}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wide transition',
+                    L
+                      ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-dark/30'
+                      : 'border-white/20 bg-white/[0.08] text-tf-app-fg hover:bg-white/[0.12]',
+                  )}
+                >
+                  Résultats{pastTotal > 0 ? ` (${pastTotal})` : ''} →
+                </button>
+              </div>
+            ) : null}
+            {visibleUpcoming.length > 0 ? (
+              <div className="space-y-tf-6" aria-labelledby="cal-upcoming-heading">
+                <h2 id="cal-upcoming-heading" className={cn(sectionHeading, 'border-b pb-tf-2', L ? 'border-tf-grey-pastel/40' : 'border-white/15')}>
+                  À venir
+                </h2>
+                <div className="space-y-tf-6">
+                  {visibleUpcoming.map((g) => (
+                    <div key={`up-${g.key}`}>
+                      <h3
+                        className={cn(
+                          'mb-tf-3 text-sm font-black uppercase tracking-wide text-tf-app-fg',
+                        )}
+                      >
+                        {g.label}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-tf-4 md:grid-cols-2 md:gap-tf-5">
+                        {g.matches.map((m) => (
+                          <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : liveFeatured.length > 0 || upcomingSpotlightMatches.length > 0 ? (
+              <p className={cn('text-center text-sm font-medium', L ? 'text-tf-grey' : 'text-tf-app-muted')}>
+                Prochains matchs : voir les encarts live ou à la une ci-dessus.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {primaryTab === 'past' && visiblePast.length > 0 ? (
+          <div ref={resultsSectionRef} className="space-y-tf-6 scroll-mt-24" aria-labelledby="cal-past-heading">
+            {upcomingTotal > 0 ? (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPrimaryTab('upcoming')}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-wide transition',
+                    L
+                      ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-dark/30'
+                      : 'border-white/20 bg-white/[0.08] text-tf-app-fg hover:bg-white/[0.12]',
+                  )}
+                >
+                  ← À venir{upcomingTotal > 0 ? ` (${upcomingTotal})` : ''}
+                </button>
+              </div>
+            ) : null}
+            <h2
+              id="cal-past-heading"
+              className={cn(sectionHeading, 'border-b pb-tf-2', L ? 'border-tf-grey-pastel/40' : 'border-white/15')}
+            >
+              Résultats
+            </h2>
+            <div className="w-full min-w-0 space-y-tf-6">
+              {visiblePast.map((g) => (
+                <div key={`past-${g.key}`}>
+                  <h3 className="mb-tf-3 text-sm font-black uppercase tracking-wide text-tf-app-fg">{g.label}</h3>
+                  <div className="grid grid-cols-1 gap-tf-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                    {g.matches.map((m) => (
+                      <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
     </div>
   )
 }

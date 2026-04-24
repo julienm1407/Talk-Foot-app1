@@ -9,32 +9,45 @@ import {
 import type { Match } from '../types/match'
 import {
   fetchSportMonksFixturesBetween,
-  fetchSportMonksFixturesByDate,
   fetchSportMonksInplay,
+  fetchSportMonksLeaguesByDate,
   mergeSportMonksFixtureLists,
   smFixtureToMatch,
+  smFixturesFromLeaguesDateEnvelope,
+  type SmFixture,
 } from '../api/sportMonks'
-import { DEMO_EXTRA_LIVE_MATCHES } from '../data/demoLiveMatches'
-import { generateRealFixtures } from '../data/realFixtures'
-import { teams } from '../data/teams'
 import { API_TOKENS_CHANGED_EVENT } from '../constants/apiKeysStorage'
 import { getSportMonksToken, getSportMonksTokenSource } from '../utils/apiTokens'
 import { getFootballCalendarWindow } from '../utils/footballCalendarWindow'
-import { matchCalendarDayKeyParis, parisCalendarDayAfter } from '../utils/time'
+import {
+  addParisCalendarDays,
+  matchCalendarDayKeyParis,
+  parisCalendarDayKeysInclusive,
+} from '../utils/time'
+import { useKickoffScheduledRefetch } from '../hooks/useKickoffScheduledRefetch'
 
-// Rennes–PSG 8 mars 2025 17h — utilisé comme match live (replay accéléré)
-export const REPLAY_LIVE_ID = 'm-api-1213970'
+/** Appels `leagues/date` par vague pour compléter le calendrier (surtout matchs à venir). */
+const LEAGUES_DATE_BATCH = 10
+/** Aligné sur `getFootballCalendarWindow` : même étendue que `fixtures/between`. */
+const LEAGUES_DATE_FULL_BACK = 7
+const LEAGUES_DATE_FULL_FORWARD = 10
+/** Poll silencieux : mini fenêtre pour limiter le quota API. */
+const LEAGUES_DATE_SILENT_BACK = 2
+const LEAGUES_DATE_SILENT_FORWARD = 3
 
-const FALLBACK_LIVE_MATCH: Match = {
-  id: REPLAY_LIVE_ID,
-  provider: 'demo',
-  competition: { id: 'ligue-1', name: 'Ligue 1', shortName: 'L1' },
-  home: teams['ligue-1'].find((t) => t.id === 'rennes') ?? teams['ligue-1'][0],
-  away: teams['ligue-1'].find((t) => t.id === 'psg') ?? teams['ligue-1'][0],
-  kickoffAt: '2025-03-08T17:00:00+01:00',
-  status: 'live',
-  minute: 0,
-  score: { home: 0, away: 0 },
+const NO_SM_TOKEN_MESSAGE_FR =
+  'Aucune clé SportMonks : ajoute-la dans Profil → Données (ou VITE_SPORTMONKS_TOKEN dans .env.local), puis recharge la page. Les matchs démo ne sont plus affichés.'
+
+async function smFixturesFromLeaguesDateKeys(token: string, keys: string[]): Promise<SmFixture[]> {
+  const acc: SmFixture[] = []
+  for (let i = 0; i < keys.length; i += LEAGUES_DATE_BATCH) {
+    const slice = keys.slice(i, i + LEAGUES_DATE_BATCH)
+    const settled = await Promise.allSettled(slice.map((d) => fetchSportMonksLeaguesByDate(token, d)))
+    for (const r of settled) {
+      if (r.status === 'fulfilled') acc.push(...smFixturesFromLeaguesDateEnvelope(r.value))
+    }
+  }
+  return acc
 }
 
 /** `silent` : pas d’écran chargement ; en cas d’erreur API on garde les matchs déjà affichés (poll / onglet). */
@@ -69,7 +82,6 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     const silent = Boolean(opts?.silent)
     const sportmonksToken = getSportMonksToken()
     if (import.meta.env.DEV && !sportmonksToken) {
-      // Aide au debug : sans VITE_SPORTMONKS_TOKEN ni clé navigateur, aucun hit sur le compte SportMonks.
       console.info(
         '[TalkFoot] Pas de jeton SportMonks — pas de requête vers api.sportmonks.com. Profil → Données / .env.local → VITE_SPORTMONKS_TOKEN',
       )
@@ -82,16 +94,37 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       try {
         const range = getFootballCalendarWindow()
         const todayParis = matchCalendarDayKeyParis(new Date())
-        const tomorrowParis = parisCalendarDayAfter(todayParis)
-        const [inplay, between, byToday, byTomorrow] = await Promise.all([
+        const [inplaySettled, betweenSettled] = await Promise.allSettled([
           fetchSportMonksInplay(sportmonksToken),
           fetchSportMonksFixturesBetween(sportmonksToken, range.from, range.to),
-          fetchSportMonksFixturesByDate(sportmonksToken, todayParis),
-          fetchSportMonksFixturesByDate(sportmonksToken, tomorrowParis),
         ])
+        const inplay =
+          inplaySettled.status === 'fulfilled' ? inplaySettled.value : ([] as SmFixture[])
+        const between =
+          betweenSettled.status === 'fulfilled' ? betweenSettled.value : ([] as SmFixture[])
+
+        const leaguesDateKeys = parisCalendarDayKeysInclusive(
+          addParisCalendarDays(
+            todayParis,
+            silent ? -LEAGUES_DATE_SILENT_BACK : -LEAGUES_DATE_FULL_BACK,
+          ),
+          addParisCalendarDays(
+            todayParis,
+            silent ? LEAGUES_DATE_SILENT_FORWARD : LEAGUES_DATE_FULL_FORWARD,
+          ),
+        )
+        let fromLeaguesDate: SmFixture[] = []
+        try {
+          fromLeaguesDate = await smFixturesFromLeaguesDateKeys(sportmonksToken, leaguesDateKeys)
+        } catch {
+          fromLeaguesDate = []
+        }
+
         const mergedSm = new Map<number, (typeof between)[number]>()
         for (const f of mergeSportMonksFixtureLists(between, inplay)) mergedSm.set(f.id, f)
-        for (const f of [...byToday, ...byTomorrow]) mergedSm.set(f.id, f)
+        for (const f of fromLeaguesDate) {
+          if (!mergedSm.has(f.id)) mergedSm.set(f.id, f)
+        }
         const merged = Array.from(mergedSm.values())
 
         const baseList = merged
@@ -104,25 +137,41 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         } else if (silent) {
           /* poll silencieux : ne pas vider une liste déjà correcte */
         } else {
-          setMatches([])
-          setError(
-            'SportMonks n’a renvoyé aucun match pour cette période. Vérifie ton plan (ligues / pays inclus) ou la clé dans Profil → Données.',
-          )
+          setMatches((prev) => {
+            if (prev.length > 0) {
+              queueMicrotask(() =>
+                setError(
+                  'SportMonks a renvoyé une liste vide (quota, filtre ou coupure). La dernière version du calendrier reste affichée.',
+                ),
+              )
+              return prev
+            }
+            queueMicrotask(() =>
+              setError(
+                'SportMonks n’a renvoyé aucun match pour cette période. Vérifie ton plan (ligues / pays inclus) ou la clé dans Profil → Données.',
+              ),
+            )
+            return []
+          })
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erreur SportMonks')
+        const msg = e instanceof Error ? e.message : 'Erreur SportMonks'
+        const rateLimited =
+          /rate\s*limit|429|too\s*many\s*requests/i.test(msg) ||
+          /you have reached your rate limit/i.test(msg)
         if (!silent) {
-          const demoIds = new Set(DEMO_EXTRA_LIVE_MATCHES.map((m) => m.id))
-          const fallback = [
-            FALLBACK_LIVE_MATCH,
-            ...DEMO_EXTRA_LIVE_MATCHES,
-            ...generateRealFixtures().filter((m) => !demoIds.has(m.id)),
-          ].filter(
-            (m) =>
-              m.id === REPLAY_LIVE_ID ||
-              new Date(m.kickoffAt).getTime() >= getFootballCalendarWindow().cutoffMs,
+          setError(
+            rateLimited
+              ? `${msg} — les matchs affichés sont la dernière mise à jour reçue ; rafraîchissement autour des coups d’envoi et en filet de sécurité.`
+              : msg,
           )
-          setMatches(fallback)
+          setMatches((prev) => (prev.length > 0 ? prev : []))
+        } else if (rateLimited) {
+          setError(
+            'SportMonks (quota) : les matchs affichés sont conservés. Nouvelle tentative au prochain créneau planifié ou filet de rafraîchissement.',
+          )
+        } else if (import.meta.env.DEV) {
+          console.warn('[TalkFoot] fetchMatches silent:', msg)
         }
       } finally {
         if (!silent) setLoading(false)
@@ -130,20 +179,9 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    /** Sans clé SportMonks : replay démo + matchs simulés (pas d’API-Football). */
-    const demoIds = new Set(DEMO_EXTRA_LIVE_MATCHES.map((m) => m.id))
-    const fallback = [
-      FALLBACK_LIVE_MATCH,
-      ...DEMO_EXTRA_LIVE_MATCHES,
-      ...generateRealFixtures().filter((m) => !demoIds.has(m.id)),
-    ].filter(
-      (m) =>
-        m.id === REPLAY_LIVE_ID ||
-        new Date(m.kickoffAt).getTime() >= getFootballCalendarWindow().cutoffMs,
-    )
-    setMatches(fallback)
+    setMatches([])
+    setError(NO_SM_TOKEN_MESSAGE_FR)
     setLoading(false)
-    setError(null)
   }, [])
 
   useEffect(() => {
@@ -160,20 +198,29 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     void fetchMatches()
   }, [fetchMatches, tokenRev])
 
-  /** Rafraîchissement SportMonks : scores live + calendrier (inplay + fixtures/between). */
+  const silentRefetch = useCallback(() => void fetchMatches({ silent: true }), [fetchMatches])
+
+  /** Rafraîchissements ciblés : 1 min avant le coup d’envoi, au coup d’envoi, puis +2 min (live SM). */
+  useKickoffScheduledRefetch(
+    matches,
+    silentRefetch,
+    getSportMonksTokenSource() !== 'none',
+  )
+
+  /** Filet de sécurité : beaucoup moins d’appels que l’ancien poll à la minute (quota API). */
   useEffect(() => {
     if (getSportMonksTokenSource() === 'none') return
-    const id = window.setInterval(() => void fetchMatches({ silent: true }), 45_000)
-    return () => clearInterval(id)
-  }, [fetchMatches, tokenRev])
+    const id = window.setInterval(silentRefetch, 20 * 60_000)
+    return () => window.clearInterval(id)
+  }, [silentRefetch, tokenRev])
 
-  /** Au retour sur l’onglet / la fenêtre : mise à jour sans bloquer l’UI. */
+  /** Au retour sur l’onglet / la fenêtre : mise à jour sans bloquer l’UI (débounce un peu plus long pour éviter les rafales). */
   useEffect(() => {
     if (getSportMonksTokenSource() === 'none') return
     let debounce: number
     const schedule = () => {
       window.clearTimeout(debounce)
-      debounce = window.setTimeout(() => void fetchMatches({ silent: true }), 1200)
+      debounce = window.setTimeout(() => void fetchMatches({ silent: true }), 3500)
     }
     const onVis = () => {
       if (document.visibilityState === 'visible') schedule()
@@ -200,10 +247,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
 
   const carouselMatches = useMemo(() => {
     const lives = matches.filter((m) => m.status === 'live')
-    const replayFirst = lives.find((m) => m.id === REPLAY_LIVE_ID)
-    const otherLives = lives.filter((m) => m.id !== REPLAY_LIVE_ID)
-    const livesOrdered = replayFirst ? [replayFirst, ...otherLives] : lives
-    const liveIds = new Set(livesOrdered.map((m) => m.id))
+    const liveIds = new Set(lives.map((m) => m.id))
     const win = getFootballCalendarWindow()
     const rest = matches
       .filter((m) => !liveIds.has(m.id))
@@ -213,7 +257,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       })
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
       .slice(0, 14)
-    return [...livesOrdered, ...rest]
+    return [...lives, ...rest]
   }, [matches, tick])
 
   const value: MatchesContextValue = {

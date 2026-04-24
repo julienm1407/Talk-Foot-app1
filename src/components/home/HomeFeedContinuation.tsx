@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { NewsItem } from '../../data/news'
@@ -10,11 +11,67 @@ import { TopCommentsFeed } from './TopCommentsFeed'
 import { BettorLeaderboard } from './BettorLeaderboard'
 import { AdSlot } from '../ui/AdSlot'
 import { SectionIntro } from '../ui/SectionIntro'
+import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { hubGlassPanel } from '../../utils/hubSurface'
 /** Infos club pour sous-titres (évite d’imposer tout le type Team depuis les hooks). */
 export type HomeFeedTeamHint = { name: string; shortName: string } | null
+
+function HomeResultPreviewCard({ match }: { match: Match }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+  const sc = match.score ?? { home: 0, away: 0 }
+  return (
+    <Link
+      to={`/channel/${match.id}`}
+      className={cn(
+        'group flex min-w-0 flex-col gap-2.5 rounded-tf-xl border p-3 outline-none transition sm:p-3.5',
+        L
+          ? 'border-tf-dark/12 bg-white/95 shadow-sm hover:border-tf-dark/22 hover:shadow-md'
+          : 'border-white/12 bg-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-sky-400/25 hover:bg-white/[0.08]',
+      )}
+      aria-label={`${match.home.shortName} ${sc.home} à ${sc.away} ${match.away.shortName}, terminé`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            'rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide',
+            L ? 'bg-tf-dark/[0.07] text-tf-dark/80' : 'bg-white/12 text-sky-100/90',
+          )}
+        >
+          Terminé
+        </span>
+        <span className="min-w-0 truncate text-[10px] font-bold text-tf-app-muted">
+          {match.competition.shortName}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={28} />
+          <span className="truncate text-xs font-black text-tf-app-fg">{match.home.shortName}</span>
+        </div>
+        <p className="shrink-0 font-display text-lg font-black tabular-nums text-tf-app-fg sm:text-xl">
+          {sc.home}
+          <span className="mx-0.5 font-semibold opacity-40">–</span>
+          {sc.away}
+        </p>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+          <span className="truncate text-right text-xs font-black text-tf-app-fg">{match.away.shortName}</span>
+          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={28} />
+        </div>
+      </div>
+      <span
+        className={cn(
+          'text-[11px] font-black transition',
+          L ? 'text-sky-700 group-hover:text-sky-900' : 'text-sky-300/95 group-hover:text-white',
+        )}
+      >
+        Salon →
+      </span>
+    </Link>
+  )
+}
 
 /** Carrousel matchs + fil actus / top com. + badges — réutilisé mobile & desktop. */
 export function HomeFeedContinuation({
@@ -49,6 +106,20 @@ export function HomeFeedContinuation({
   const isLight = appearance === 'light'
   const pid = (s: string) => `${idPrefix}${s}`
 
+  const { spotlightMatches, recentFinishedMatches } = useMemo(() => {
+    const liveUp = displayMatches.filter((m) => m.status === 'live' || m.status === 'upcoming')
+    liveUp.sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
+    liveUp.sort((a, b) => (a.status === 'live' ? -1 : 0) - (b.status === 'live' ? -1 : 0))
+    const done = displayMatches
+      .filter((m) => m.status === 'finished')
+      .sort((a, b) => +new Date(b.kickoffAt) - +new Date(a.kickoffAt))
+      .slice(0, 6)
+    return { spotlightMatches: liveUp, recentFinishedMatches: done }
+  }, [displayMatches])
+
+  const onlyResults = spotlightMatches.length === 0 && recentFinishedMatches.length > 0
+  const noMatchesBlock = spotlightMatches.length === 0 && recentFinishedMatches.length === 0
+
   return (
     <div
       className={cn(
@@ -58,25 +129,102 @@ export function HomeFeedContinuation({
       )}
     >
       <div className={cn('rounded-[20px] p-3 sm:p-4 lg:rounded-2xl', hubGlassPanel(appearance))}>
-        <section className="min-w-0" aria-labelledby={pid('home-carousel-heading')}>
+        <section
+          className="min-w-0"
+          aria-labelledby={
+            onlyResults ? pid('home-results-heading') : pid('home-carousel-heading')
+          }
+        >
           <Card
             className="flex flex-col overflow-visible border-2 border-sky-400/45 p-4 shadow-[0_12px_40px_rgba(14,165,233,0.12)] ring-1 ring-sky-300/30 sm:p-5"
             elevation="soft"
           >
-            <MatchCarousel
-              matches={displayMatches}
-              eyebrow={supporterFocusUi && clubFocusLabel ? `FOCUS ${clubFocusLabel}` : 'LIVE & À VENIR'}
-              title={supporterFocusUi && clubFocusLabel ? `À l’affiche — ${clubFocusLabel}` : 'À l’affiche'}
-              titleId={pid('home-carousel-heading')}
-              subtitle={
-                supporterFocusUi && team
-                  ? `Autres rencontres autour de ${clubFocusLabel || team.name}.`
-                  : 'Matchs en direct et à venir — ouvre un salon pour suivre le live.'
-              }
-              liveMirror={
-                heroLiveMatch ? { matchId: heroLiveMatch.id, ...heroLiveSim } : undefined
-              }
-            />
+            {spotlightMatches.length > 0 ? (
+              <MatchCarousel
+                matches={spotlightMatches}
+                eyebrow={supporterFocusUi && clubFocusLabel ? `Focus ${clubFocusLabel}` : 'Matchs'}
+                title={supporterFocusUi && clubFocusLabel ? `À suivre · ${clubFocusLabel}` : 'À suivre'}
+                titleId={pid('home-carousel-heading')}
+                subtitle={
+                  supporterFocusUi && team
+                    ? `Autour de ${clubFocusLabel || team.shortName}.`
+                    : 'Live et prochains coups d’envoi — chaque carte ouvre le salon.'
+                }
+                liveMirror={
+                  heroLiveMatch ? { matchId: heroLiveMatch.id, ...heroLiveSim } : undefined
+                }
+              />
+            ) : noMatchesBlock ? (
+              <div className="space-y-2 pb-0.5">
+                <h2
+                  id={pid('home-carousel-heading')}
+                  className="font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl"
+                >
+                  {supporterFocusUi && clubFocusLabel
+                    ? `Aucun match · ${clubFocusLabel}`
+                    : 'Aucun match dans la fenêtre'}
+                </h2>
+                <p className="text-sm text-tf-app-muted">
+                  {supporterFocusUi && team
+                    ? `Élargis le calendrier ou reviens plus tard.`
+                    : 'Consulte le calendrier pour voir d’autres dates et ligues.'}
+                </p>
+                <Link
+                  to="/match"
+                  className="inline-flex text-sm font-black text-tf-electric-deep underline underline-offset-2"
+                >
+                  Ouvrir le calendrier
+                </Link>
+              </div>
+            ) : null}
+
+            {recentFinishedMatches.length > 0 ? (
+              <div
+                className={cn(
+                  'min-w-0 space-y-3',
+                  spotlightMatches.length > 0 && 'mt-6 border-t border-tf-dark/10 pt-6 dark:border-white/10',
+                )}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {onlyResults ? (
+                    <h2
+                      id={pid('home-results-heading')}
+                      className="font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl"
+                    >
+                      Résultats
+                    </h2>
+                  ) : (
+                    <h3
+                      id={pid('home-results-heading')}
+                      className="font-display text-lg font-black tracking-tight text-tf-app-fg sm:text-xl"
+                    >
+                      Résultats
+                    </h3>
+                  )}
+                  <Link
+                    to="/match"
+                    className={cn(
+                      'shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition sm:text-xs',
+                      isLight
+                        ? 'border-tf-dark/14 bg-white text-tf-dark hover:border-tf-electric/35'
+                        : 'border-white/18 bg-white/[0.08] text-white hover:border-sky-400/40',
+                    )}
+                  >
+                    Calendrier
+                  </Link>
+                </div>
+                <ul
+                  className="grid list-none grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+                  role="list"
+                >
+                  {recentFinishedMatches.map((m) => (
+                    <li key={m.id} className="min-w-0">
+                      <HomeResultPreviewCard match={m} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </Card>
         </section>
 

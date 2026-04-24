@@ -9,7 +9,6 @@ import {
   getGroupDiscussPreviewsForArticle,
 } from '../data/articleEncartsPreview'
 import { footballImageUrl, getArticleBySlug } from '../data/news'
-import { REPLAY_LIVE_ID } from '../contexts/MatchesContext'
 import { useArticleSeo } from '../hooks/useArticleSeo'
 import { LogoMark } from '../layout/LogoMark'
 import {
@@ -100,8 +99,9 @@ export function ArticlePage() {
 
   useArticleSeo(seoPayload)
 
-  const livePath = `/channel/${REPLAY_LIVE_ID}`
-  const stadePath = `/channel/${REPLAY_LIVE_ID}/stade`
+  /** Page publique hors `MatchesProvider` : renvoie vers l’agenda (matchs réels après connexion). */
+  const livePath = '/match'
+  const stadePath = '/match'
   const debatesPath = '/debates'
   const groupsPath = '/groups'
 

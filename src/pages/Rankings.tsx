@@ -8,12 +8,16 @@ import {
   type BigFiveLeagueId,
 } from '../data/leagueStandings'
 import { LeagueStandingsTable } from '../components/rankings/LeagueStandingsTable'
-import { PointsBarChart } from '../components/rankings/PointsBarChart'
-import { GoalsBalanceChart } from '../components/rankings/GoalsBalanceChart'
-import { TeamIndicesRadar } from '../components/rankings/TeamIndicesRadar'
+import { StandingsInsightsStrip } from '../components/rankings/StandingsInsightsStrip'
+import { RankingsScatterQuadrant } from '../components/rankings/RankingsScatterQuadrant'
+import { PointsVsRecentFormChart } from '../components/rankings/PointsVsRecentFormChart'
+import { RankingsCrossMatrix } from '../components/rankings/RankingsCrossMatrix'
 import { cn } from '../utils/cn'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniRank'
+import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
+import { getSportMonksToken } from '../utils/apiTokens'
+import { Link } from 'react-router-dom'
 
 type MainTab = 'parieurs' | 'ligues' | 'forme'
 
@@ -21,7 +25,25 @@ export function RankingsPage() {
   const [mainTab, setMainTab] = useState<MainTab>('parieurs')
   const [leagueId, setLeagueId] = useState<BigFiveLeagueId>('ligue-1')
 
-  const standings = useMemo(() => getStandingsForLeague(leagueId), [leagueId])
+  const { standingsRows, standingsSource, standingsLoading, standingsError } =
+    useSportMonksLeagueStandings(leagueId)
+
+  const mockStandings = useMemo(() => getStandingsForLeague(leagueId), [leagueId])
+  const hasToken = Boolean(getSportMonksToken())
+  const standings = standingsRows.length ? standingsRows : mockStandings
+  const dataSourceLabel =
+    standingsRows.length && standingsSource === 'live'
+      ? 'SportMonks · classement live'
+      : standingsRows.length && standingsSource === 'season'
+        ? 'SportMonks · classement saison'
+        : standingsRows.length && standingsSource === 'teamsSeason'
+          ? 'SportMonks · stats équipes (saison, tri points)'
+          : standingsRows.length
+            ? 'SportMonks'
+            : hasToken
+              ? 'Données de secours (maquette)'
+              : 'Maquette (clé SportMonks requise pour les vrais classements)'
+
   const theme = competitionThemes[leagueId]
 
   const tabClass = (t: MainTab) =>
@@ -31,6 +53,10 @@ export function RankingsPage() {
         ? 'bg-tf-dark text-white shadow-sm'
         : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
     )
+
+  const matrixCaption = standingsRows.length
+    ? `${dataSourceLabel} — indicateurs dérivés des mêmes lignes.`
+    : 'Données d’illustration — avec une clé SportMonks, la matrice reflète le championnat réel.'
 
   return (
     <div className="space-y-6">
@@ -92,16 +118,43 @@ export function RankingsPage() {
               )
             })}
           </div>
-          <Card className="overflow-hidden p-4 sm:p-5" elevation="soft">
+
+          {!hasToken ? (
+            <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-950">
+              Pour afficher les vrais classements SportMonks :{' '}
+              <Link to="/settings/donnees#tf-sportmonks-cle" className="underline underline-offset-2">
+                ajoute ta clé
+              </Link>
+              . En attendant, le tableau ci-dessous reste une illustration.
+            </p>
+          ) : null}
+
+          {standingsError ? (
+            <p className="rounded-2xl border border-amber-400/50 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+              API classements : {standingsError}. Vérifie ton abonnement SM ou configure un id saison (
+              <code className="rounded bg-black/10 px-1 font-mono text-xs">VITE_SPORTMONKS_STANDING_SEASON_ID</code>
+              ).
+            </p>
+          ) : null}
+
+          {standingsLoading ? (
+            <p className="text-sm font-semibold text-tf-grey">Chargement du classement…</p>
+          ) : null}
+
+          {standings.length ? (
+            <StandingsInsightsStrip leagueId={leagueId} rows={standings} />
+          ) : null}
+
+          <Card className="overflow-hidden p-4 sm:p-5" elevation="soft" tone="solid">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h2 className="font-display text-lg font-black text-tf-dark sm:text-xl">
+                <h2 className="font-display text-lg font-black text-tf-app-fg sm:text-xl">
                   {theme?.name ?? leagueId}
                 </h2>
-                <p className="text-xs font-semibold text-tf-grey">Saison en cours (mock) · top 10</p>
+                <p className="text-xs font-semibold text-tf-app-muted">{dataSourceLabel}</p>
               </div>
             </div>
-            <LeagueStandingsTable leagueId={leagueId} rows={standings} />
+            <LeagueStandingsTable leagueId={leagueId} rows={standings} dataSourceLabel={dataSourceLabel} />
           </Card>
         </div>
       ) : null}
@@ -130,19 +183,37 @@ export function RankingsPage() {
               )
             })}
           </div>
-          <p className="text-sm font-semibold text-tf-grey">
-            Vue synthèse pour <strong className="text-tf-dark">{theme?.name}</strong> : points, buts, profils
-            attaque/défense/dynamique (indices fictifs).
+
+          {standings.length ? (
+            <StandingsInsightsStrip leagueId={leagueId} rows={standings} />
+          ) : null}
+
+          {standingsError ? (
+            <p className="rounded-2xl border border-amber-400/50 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+              API classements : {standingsError}
+            </p>
+          ) : null}
+          {standingsLoading ? (
+            <p className="text-sm font-semibold text-tf-grey">Chargement du classement…</p>
+          ) : null}
+
+          <p className="text-xs font-semibold leading-relaxed text-tf-grey">
+            <strong className="text-tf-dark">{theme?.name}</strong> — une matrice (tous les croisements utiles) et deux
+            vues graphiques : profil buts et tension saison / forme récente. Le détail match par match reste dans l’onglet
+            « 5 grands championnats ».
           </p>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PointsBarChart
+
+          <RankingsCrossMatrix rows={standings} leagueId={leagueId} caption={matrixCaption} />
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <RankingsScatterQuadrant
               rows={standings}
               leagueId={leagueId}
-              title={`Points — ${theme?.name ?? leagueId}`}
+              subtitle={standingsRows.length ? 'Relatif à cette ligue' : 'Illustration'}
+              accent={theme?.accent2}
             />
-            <GoalsBalanceChart rows={standings} leagueId={leagueId} />
+            <PointsVsRecentFormChart rows={standings} leagueId={leagueId} accent={theme?.accent2} />
           </div>
-          <TeamIndicesRadar rows={standings} leagueId={leagueId} />
         </div>
       ) : null}
     </div>

@@ -146,7 +146,7 @@ export function DebateOfTheDayCard({
 
       {previews.length > 0 ? (
         <div className="border-t border-tf-grey-pastel/45 bg-gradient-to-b from-tf-electric-soft/35 to-white px-4 py-4 sm:px-6 sm:py-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-tf-grey">Aperçu du fil</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Aperçu du fil</p>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
             {previews.map((m, i) => (
               <DebateMessagePreview key={`${debate.id}-p-${i}`} message={m} compact />

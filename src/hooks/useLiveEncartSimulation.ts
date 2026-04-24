@@ -1,12 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  encartPulseFromSmEvent,
+  smEventDedupeKey,
+} from '../api/sportMonks/mapSmEventToLiveEncart'
+import {
+  extractCurrentGoalsFromSmFixture,
+  extractLiveMinuteFromSmFixture,
+  fetchSportMonksFixtureEventsTimeline,
+} from '../api/sportMonks'
 import type { Match } from '../types/match'
 import type { LiveEncartBurst, LiveEncartRim, LiveEncartToast } from '../types/liveSimulation'
 import { createMatchRng, initialScoreFromMatch } from '../types/liveSimulation'
+import { getSportMonksToken } from '../utils/apiTokens'
 
 /** Avance douce du chrono entre les actions (réalisme vs score). */
 const MINUTE_MS = 9000
 const EVENT_MIN_MS = 10_000
 const EVENT_MAX_MS = 22_000
+/** Rafraîchissement timeline événements SM (cartons, buts…) pour caler les animations. */
+const SM_TIMELINE_POLL_MS = 12_000
 
 function randomBetween(rng: () => number, a: number, b: number) {
   return a + rng() * (b - a)
@@ -53,8 +65,12 @@ export function useLiveEncartSimulation(match: Match | null) {
   const bumpClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rimClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const toastId = useRef(0)
+  const smSeenKeysRef = useRef<Set<string>>(new Set())
+  const smPrimedRef = useRef(false)
 
   const active = Boolean(match && match.status === 'live')
+  const smTimelineDriving =
+    active && Boolean(match?.sportMonksFixtureId) && Boolean(getSportMonksToken())
 
   const clearBumpSoon = useCallback(() => {
     if (bumpClearRef.current) clearTimeout(bumpClearRef.current)
@@ -104,7 +120,25 @@ export function useLiveEncartSimulation(match: Match | null) {
   }, [match?.id, match?.status])
 
   useEffect(() => {
+    smSeenKeysRef.current = new Set()
+    smPrimedRef.current = false
+  }, [match?.id])
+
+  /** À chaque refetch `MatchesContext` (~45 s) : réaligner score + minute SM sans réinitialiser tout l’encart. */
+  useEffect(() => {
+    if (!match || match.status !== 'live') return
+    if (smTimelineDriving) return
+    const s = initialScoreFromMatch(match)
+    const rawMin = Math.min(89, match.minute ?? 12)
+    const m = coherentMinuteWithScore(rawMin, s.home + s.away)
+    setScore(s)
+    scoreRef.current = s
+    setMinute(m)
+  }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, smTimelineDriving])
+
+  useEffect(() => {
     if (!active) return
+    if (smTimelineDriving) return
     const id = window.setInterval(() => {
       setMinute((mm) => {
         if (mm < 90) return Math.min(90, mm + 1)
@@ -112,10 +146,95 @@ export function useLiveEncartSimulation(match: Match | null) {
       })
     }, MINUTE_MS)
     return () => clearInterval(id)
-  }, [active])
+  }, [active, smTimelineDriving])
+
+  /** Timeline événements fixture SM : score, minute, animations (remplace la simulation aléatoire). */
+  useEffect(() => {
+    if (!active || !match?.sportMonksFixtureId) return
+
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const poll = async () => {
+      if (cancelled) return
+      const token = getSportMonksToken()
+      const fid = matchRef.current?.sportMonksFixtureId
+      if (!token || !fid) return
+
+      try {
+        const fx = await fetchSportMonksFixtureEventsTimeline(token, fid)
+        if (cancelled || !fx) return
+
+        const goals = extractCurrentGoalsFromSmFixture(fx)
+        if (goals) {
+          setScore(goals)
+          scoreRef.current = goals
+        }
+        const liveMin = extractLiveMinuteFromSmFixture(fx)
+        if (Number.isFinite(liveMin) && liveMin >= 0) {
+          setMinute(Math.min(99, Math.max(1, liveMin)))
+        }
+
+        const raw = Array.isArray(fx.events) ? fx.events : []
+        const sorted = [...raw].sort((a, b) => {
+          const ma = (typeof a.minute === 'number' ? a.minute : 0) + (typeof a.extra_minute === 'number' ? a.extra_minute : 0)
+          const mb = (typeof b.minute === 'number' ? b.minute : 0) + (typeof b.extra_minute === 'number' ? b.extra_minute : 0)
+          if (ma !== mb) return ma - mb
+          return (a.id ?? 0) - (b.id ?? 0)
+        })
+
+        if (!smPrimedRef.current) {
+          for (const e of sorted) smSeenKeysRef.current.add(smEventDedupeKey(e))
+          smPrimedRef.current = true
+          return
+        }
+
+        const m = matchRef.current
+        if (!m || m.status !== 'live') return
+
+        const newcomers = sorted.filter((e) => !smSeenKeysRef.current.has(smEventDedupeKey(e)))
+        newcomers.forEach((ev, i) => {
+          const key = smEventDedupeKey(ev)
+          smSeenKeysRef.current.add(key)
+          const pulse = encartPulseFromSmEvent(ev, m)
+          if (!pulse) return
+          window.setTimeout(() => {
+            if (cancelled) return
+            const cur = matchRef.current
+            if (!cur || cur.status !== 'live') return
+            if (pulse.rim) flashRim(pulse.rim.tone, pulse.rim.ms)
+            if (pulse.bumpSide) {
+              setBumpSide(pulse.bumpSide)
+              clearBumpSoon()
+            }
+            if (pulse.burst) {
+              setBurst(pulse.burst)
+              window.setTimeout(() => setBurst(null), 2600)
+            }
+            if (pulse.toast) showToast(pulse.toast)
+            if (pulse.varFollowUp) {
+              window.setTimeout(() => {
+                if (!cancelled) showToast(pulse.varFollowUp!.toast)
+              }, pulse.varFollowUp.afterMs)
+            }
+          }, i * 420)
+        })
+      } catch {
+        /* réseau / quota : prochain poll */
+      }
+    }
+
+    void poll()
+    intervalId = window.setInterval(poll, SM_TIMELINE_POLL_MS)
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [active, match?.sportMonksFixtureId, match?.id, clearBumpSoon, flashRim, showToast])
 
   useEffect(() => {
     if (!active) return
+    if (match?.sportMonksFixtureId && getSportMonksToken()) return
 
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -224,7 +343,7 @@ export function useLiveEncartSimulation(match: Match | null) {
       cancelled = true
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [active, match?.id, clearBumpSoon, flashRim, showToast])
+  }, [active, match?.id, match?.sportMonksFixtureId, clearBumpSoon, flashRim, showToast])
 
   useEffect(() => {
     return () => {

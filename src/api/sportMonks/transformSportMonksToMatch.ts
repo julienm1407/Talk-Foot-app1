@@ -171,6 +171,11 @@ function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away
   return sawSide ? { home: 0, away: 0 } : undefined
 }
 
+/** Score courant (lignes `CURRENT` / live SM) — rafraîchissement encart sans repasser par `smFixtureToMatch`. */
+export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; away: number } | undefined {
+  return goalsFromScores(f.scores)
+}
+
 function minuteFromFixture(f: SmFixture): number {
   if (typeof f.minute === 'number' && f.minute >= 0) return f.minute
   const periods = f.periods
@@ -187,6 +192,11 @@ function minuteFromFixture(f: SmFixture): number {
   if (sid === 2) return 25
   if (sid === 22) return 68
   return 0
+}
+
+/** Minute affichée (période / `fixture.minute`) pour caler l’encart sur le live SM. */
+export function extractLiveMinuteFromSmFixture(f: SmFixture): number {
+  return minuteFromFixture(f)
 }
 
 function getTeam(
@@ -238,6 +248,8 @@ export function smFixtureToMatch(f: SmFixture): Match {
   const kickoffAt = startingAtIso(f)
   const score = goalsFromScores(f.scores)
 
+  const roundId = typeof f.round?.id === 'number' ? f.round.id : undefined
+
   const base: Match = {
     id,
     competition: { id: compId, name: comp.name, shortName: comp.shortName },
@@ -247,6 +259,7 @@ export function smFixtureToMatch(f: SmFixture): Match {
     status,
     provider: 'sportmonks',
     sportMonksFixtureId: f.id,
+    ...(roundId != null ? { sportMonksRoundId: roundId } : {}),
   }
 
   if (status === 'live') {

@@ -12,6 +12,7 @@ import type { Debate } from '../../data/debates'
 import { useLiveEncartSimulation } from '../../hooks/useLiveEncartSimulation'
 import { cn } from '../../utils/cn'
 import { HubStripUpcoming } from '../match/HubMatchEncart'
+import { MatchSpotlightCard } from '../match/MatchSpotlightCard'
 import { LiveMatchHero } from './LiveMatchHero'
 import { HomeLandingHub } from './HomeLandingHub'
 import { HomeMonEspacePanel } from './HomeMonEspacePanel'
@@ -96,8 +97,8 @@ export function HomeDesktopExperience({
   const hasLive = liveMatches.length > 0
   const showUpcomingInHeader = !hasLive && upcomingSorted.length > 0
   const showMixedHeader = hasLive && upcomingSorted.length > 0
-  /** Sous le live : plusieurs prochains matchs en grille serrée (cartes plus étroites) */
-  const headerUpcomingPrimary = upcomingSorted.slice(0, 4)
+  /** Sous le live / encart « Prochains matchs » : 1 mise en avant + 2 bandeaux (comme le hero live + 2 à venir). */
+  const headerUpcomingPrimary = upcomingSorted.slice(0, 3)
   const featuredLiveMatch = liveMatches[deskLiveIndex] ?? liveMatches[0]
   const topDebates = trendingDebates.slice(0, 4)
   const tribunes = tribuneGroups.slice(0, 4)
@@ -235,8 +236,10 @@ export function HomeDesktopExperience({
                   </div>
                   <aside
                     className={cn(
-                      'w-full min-w-0 rounded-xl border border-dashed px-3 py-2.5',
-                      L ? 'border-tf-dark/18 bg-tf-dark/[0.025]' : 'border-white/12 bg-white/[0.03]',
+                      'w-full min-w-0 rounded-tf-xl border px-3 py-3 shadow-sm sm:px-4 sm:py-3.5',
+                      L
+                        ? 'border-tf-dark/12 bg-gradient-to-br from-sky-50/50 to-white/80'
+                        : 'border-white/[0.09] bg-gradient-to-br from-white/[0.07] to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]',
                     )}
                     aria-labelledby="desk-upcoming-secondary-heading"
                   >
@@ -255,12 +258,12 @@ export function HomeDesktopExperience({
                       </Link>
                     </div>
                     <ul
-                      className="mt-2.5 grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4"
+                      className="mt-3 grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5"
                       role="list"
                     >
-                      {headerUpcomingPrimary.map((m) => (
+                      {headerUpcomingPrimary.slice(0, 2).map((m) => (
                         <li key={m.id} className="min-w-0">
-                          <HubStripUpcoming match={m} visualSize="subtle" className="w-full" />
+                          <HubStripUpcoming match={m} visualSize="hubCard" className="w-full" />
                         </li>
                       ))}
                     </ul>
@@ -302,11 +305,19 @@ export function HomeDesktopExperience({
                   Voir tout
                 </Link>
               </div>
-              <div className="grid min-w-0 auto-rows-auto grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {headerUpcomingPrimary.map((m) => (
-                  <HubStripUpcoming key={m.id} match={m} className="h-auto self-start" />
-                ))}
-              </div>
+              {headerUpcomingPrimary[0] ? (
+                <MatchSpotlightCard
+                  match={headerUpcomingPrimary[0]}
+                  className="min-h-0 w-full min-w-0 max-w-3xl"
+                />
+              ) : null}
+              {headerUpcomingPrimary.length > 1 ? (
+                <div className="mx-auto grid w-full min-w-0 max-w-3xl auto-rows-auto grid-cols-1 items-start gap-4 sm:grid-cols-2 sm:gap-4">
+                  {headerUpcomingPrimary.slice(1).map((m) => (
+                    <HubStripUpcoming key={m.id} match={m} visualSize="hubCard" className="h-auto self-start" />
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="p-2 text-center sm:p-3">

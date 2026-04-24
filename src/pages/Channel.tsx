@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { initialMessages } from '../data/messages'
-import { useMatches, REPLAY_LIVE_ID } from '../contexts/MatchesContext'
+import { useMatches } from '../contexts/MatchesContext'
 import { chatPersonasPool, currentUser, mockFriendUsers, mockUsers } from '../data/users'
 import type { Message, ReactionEvent, ReactionType } from '../types/chat'
 import { Card } from '../components/ui/Card'
 import { ChannelHeader } from '../components/channel/ChannelHeader'
+import { MatchXGStrip } from '../components/channel/MatchXGStrip'
+import { MatchLiveStatsStrip } from '../components/channel/MatchLiveStatsStrip'
+import { MatchTrendsStrip } from '../components/channel/MatchTrendsStrip'
 import { LivePitch } from '../components/channel/LivePitch'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { MatchPreview } from '../components/channel/MatchPreview'
@@ -18,8 +21,6 @@ import {
   type FloatingReaction,
 } from '../components/reaction/FloatingReactions'
 import { LiveEffects } from '../components/reaction/LiveEffects'
-import { GoalOverlay } from '../components/reaction/GoalOverlay'
-import { EventOverlay } from '../components/reaction/EventOverlay'
 import { ReactionSummary } from '../components/reaction/ReactionSummary'
 import { HypeMeter } from '../components/reaction/HypeMeter'
 import { ActiveUsers } from '../components/channel/ActiveUsers'
@@ -27,13 +28,15 @@ import { ShareButton } from '../components/ui/ShareButton'
 import { LiveCommentator } from '../components/channel/LiveCommentator'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { mockHighlights } from '../data/highlights'
-import type { Highlight } from '../data/highlights'
 import { BetWidget } from '../components/bet/BetWidget'
 import { useBetting } from '../hooks/useBetting'
+import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
+import { useSportMonksFixtureXG } from '../hooks/useSportMonksFixtureXG'
+import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
+import { useSportMonksFixtureTrends } from '../hooks/useSportMonksFixtureTrends'
 import { useUnlockedEmotes } from '../hooks/useUnlockedEmotes'
 import { useMessageLikes } from '../hooks/useMessageLikes'
 import { themeForCompetition } from '../data/competitionThemes'
-import { RENNES_PSG_REPLAY } from '../data/rennesPsgReplay'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { StadiumModeEncart, TribuneQuickSwitch } from '../components/channel/StadiumTribunes'
 import { Button } from '../components/ui/Button'
@@ -50,8 +53,6 @@ import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import { shouldSimulateLiveCrowd } from '../config/liveSimulation'
 import { MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../utils/bannedWords'
-
-const MS_PER_MATCH_MINUTE = 3000
 
 const TF_MOBILE_MENU_SUMMARY =
   'flex w-full cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-tf-grey-pastel/60 bg-white/95 px-3 py-2.5 text-left text-xs font-black uppercase tracking-wide text-tf-dark shadow-sm outline-none transition hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/35 [&::-webkit-details-marker]:hidden'
@@ -177,40 +178,50 @@ export function ChannelPage() {
   const [reactions, setReactions] = useState<ReactionEvent[]>([])
   const [floating, setFloating] = useState<FloatingReaction[]>([])
   const idRef = useRef(0)
-  const hiRef = useRef(0)
-  const [showGoal, setShowGoal] = useState(false)
-  const [goalScorer, setGoalScorer] = useState<string | undefined>(undefined)
-  const [goalMinute, setGoalMinute] = useState<number | undefined>(undefined)
-  const [goalColors, setGoalColors] = useState<
-    { primary: string; secondary: string } | undefined
-  >(undefined)
-
-  const [eventOverlay, setEventOverlay] = useState<{
-    show: boolean
-    kind: 'yellow' | 'red' | 'save'
-    line1?: string
-    line2?: string
-  }>({ show: false, kind: 'yellow' })
-
-  const [highlights, setHighlights] = useState<Highlight[]>(() =>
-    mockHighlights.filter((h) => h.matchId === matchId),
-  )
-  const [lastMoment, setLastMoment] = useState<Highlight | null>(null)
-
   const [simMinute, setSimMinute] = useState<number>(() => match?.minute ?? 0)
   const [simScore, setSimScore] = useState<{ home: number; away: number } | undefined>(
     () => match?.score,
   )
   const simMinuteRef = useRef<number>(match?.minute ?? 0)
   const simScoreRef = useRef<{ home: number; away: number } | undefined>(match?.score)
-  const overlayCooldownRef = useRef(0)
-  const lastGoalShownAtRef = useRef(0)
-  const eventQueueRef = useRef<Array<{ kind: 'yellow' | 'red' | 'save'; line1: string; line2: string }>>([])
-  const matchEndSettledRef = useRef(false)
 
   const pipContainerRef = useRef<HTMLDivElement | null>(null)
   const chatColumnRef = useRef<HTMLDivElement | null>(null)
   const betting = useBetting(matchId ?? 'unknown')
+  const { odds1x2: bookOdds1x2, oddsLoading: bookOddsLoading } = useSportMonksRound1x2Odds(
+    match?.sportMonksFixtureId,
+    match?.sportMonksRoundId,
+    match?.status,
+  )
+  const { xgTotals, xgLoading } = useSportMonksFixtureXG(
+    match?.sportMonksFixtureId,
+    match?.status ?? 'upcoming',
+  )
+  const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
+    match?.sportMonksFixtureId,
+    match?.status ?? 'upcoming',
+    channelMatchId || undefined,
+  )
+
+  const highlights = useMemo(() => {
+    if (smTimelineHighlights.length > 0) return smTimelineHighlights
+    return mockHighlights.filter((h) => h.matchId === matchId)
+  }, [smTimelineHighlights, matchId])
+
+  const lastMoment = useMemo(() => {
+    if (match?.status !== 'live' || highlights.length === 0) return null
+    const sorted = [...highlights].sort((a, b) => {
+      if (b.minute !== a.minute) return b.minute - a.minute
+      const ord = (b.order ?? 0) - (a.order ?? 0)
+      if (ord !== 0) return ord
+      return b.id.localeCompare(a.id)
+    })
+    return sorted[0] ?? null
+  }, [match?.status, highlights])
+  const { trendRows, trendsLoading, trendRecentForm } = useSportMonksFixtureTrends(
+    match?.sportMonksFixtureId,
+    match?.status ?? 'upcoming',
+  )
   const { unlockedIds: unlockedEmoteIds, unlock: unlockEmote } = useUnlockedEmotes()
   const messageLikes = useMessageLikes()
 
@@ -439,7 +450,6 @@ export function ChannelPage() {
   }, [recentReactions, ambianceTick])
 
   const compTheme = match ? themeForCompetition(match.competition.id) : null
-  const isReplay = matchId === REPLAY_LIVE_ID
 
   const matchView = useMemo(() => {
     if (!match) return null
@@ -447,180 +457,19 @@ export function ChannelPage() {
     return { ...match, minute: simMinute, score: simScore }
   }, [match, simMinute, simScore])
 
-  const processedEventsRef = useRef<Set<number>>(new Set())
-
-  // Simulated match clock + events
+  // Minute / score live : uniquement les valeurs renvoyées par SportMonks (via `MatchesContext`, poll ~45 s).
   useEffect(() => {
     if (!match || match.status !== 'live') return
     setSimMinute(match.minute ?? 0)
     setSimScore(match.score ?? { home: 0, away: 0 })
     simMinuteRef.current = match.minute ?? 0
     simScoreRef.current = match.score ?? { home: 0, away: 0 }
-    processedEventsRef.current = new Set()
-    eventQueueRef.current = []
-    lastGoalShownAtRef.current = 0
-    matchEndSettledRef.current = false
-
-    if (isReplay) {
-      const startMs = Date.now()
-      const id = window.setInterval(() => {
-        const elapsed = Date.now() - startMs
-        const currentMinute = Math.min(99, Math.floor(elapsed / MS_PER_MATCH_MINUTE))
-        setSimMinute(currentMinute)
-        simMinuteRef.current = currentMinute
-
-        RENNES_PSG_REPLAY.forEach((ev, idx) => {
-          if (processedEventsRef.current.has(idx)) return
-          if (ev.minute > currentMinute) return
-          processedEventsRef.current.add(idx)
-
-          if (ev.type === 'goal' && 'scorer' in ev) {
-            const cur = simScoreRef.current ?? { home: 0, away: 0 }
-            const isFirstGoal = cur.home + cur.away === 0
-            const next = {
-              home: cur.home + (ev.side === 'home' ? 1 : 0),
-              away: cur.away + (ev.side === 'away' ? 1 : 0),
-            }
-            simScoreRef.current = next
-            setSimScore(next)
-            lastGoalShownAtRef.current = Date.now()
-            betting.settleNextGoal(ev.side)
-            if (isFirstGoal) betting.settleFirstGoal(ev.side)
-            setGoalScorer(`${ev.side === 'home' ? match.home.shortName : match.away.shortName} — ${ev.scorer}`)
-            setGoalMinute(ev.minute)
-            setGoalColors(ev.side === 'home' ? match.home.colors : match.away.colors)
-            setShowGoal(true)
-            pushHighlight({
-              matchId: channelMatchId,
-              minute: ev.minute,
-              type: 'But',
-              title: 'BUT !',
-              detail: `${ev.scorer} • ${next.home}-${next.away}`,
-            })
-          } else if (ev.type === 'yellow' && 'player' in ev) {
-            const line1 = `${ev.side === 'home' ? match.home.shortName : match.away.shortName} — ${ev.player}`
-            const line2 = `Minute ${ev.minute}'`
-            const sinceGoal = Date.now() - lastGoalShownAtRef.current
-            if (sinceGoal < 6000) {
-              eventQueueRef.current.push({ kind: 'yellow', line1, line2 })
-              window.setTimeout(() => flushEventQueue(), 6000 - sinceGoal)
-            } else {
-              setEventOverlay({ show: true, kind: 'yellow', line1, line2 })
-            }
-            pushHighlight({
-              matchId: channelMatchId,
-              minute: ev.minute,
-              type: 'Carton',
-              title: 'Carton jaune',
-              detail: `${ev.player} — Avertissement`,
-            })
-          } else if (ev.type === 'red' && 'player' in ev) {
-            const line1 = `${ev.side === 'home' ? match.home.shortName : match.away.shortName} — ${ev.player}`
-            const line2 = `Minute ${ev.minute}'`
-            const sinceGoal = Date.now() - lastGoalShownAtRef.current
-            if (sinceGoal < 6000) {
-              eventQueueRef.current.push({ kind: 'red', line1, line2 })
-              window.setTimeout(() => flushEventQueue(), 6000 - sinceGoal)
-            } else {
-              setEventOverlay({ show: true, kind: 'red', line1, line2 })
-            }
-            pushHighlight({
-              matchId: channelMatchId,
-              minute: ev.minute,
-              type: 'Carton',
-              title: 'Carton rouge',
-              detail: `${ev.player} — Expulsion`,
-            })
-          } else if (ev.type === 'save') {
-            const line1 = `${match.home.shortName} – ${match.away.shortName}`
-            const line2 = `Minute ${ev.minute}'`
-            const sinceGoal = Date.now() - lastGoalShownAtRef.current
-            if (sinceGoal < 6000) {
-              eventQueueRef.current.push({ kind: 'save', line1, line2 })
-              window.setTimeout(() => flushEventQueue(), 6000 - sinceGoal)
-            } else {
-              setEventOverlay({ show: true, kind: 'save', line1, line2 })
-            }
-            pushHighlight({
-              matchId: channelMatchId,
-              minute: ev.minute,
-              type: 'Arrêt',
-              title: 'Gros arrêt',
-              detail: 'Réflexe du gardien — le stade retient son souffle',
-            })
-          }
-        })
-
-        if (currentMinute >= 97 && !matchEndSettledRef.current) {
-          matchEndSettledRef.current = true
-          window.clearInterval(id)
-          const finalScore = simScoreRef.current ?? { home: 0, away: 0 }
-          betting.settleMatchResult(finalScore)
-        }
-      }, 80)
-      return () => window.clearInterval(id)
-    }
-
-    const id = window.setInterval(() => {
-      setSimMinute((m) => {
-        const next = Math.min(99, (m || 1) + 1)
-        simMinuteRef.current = next
-        return next
-      })
-      const now = Date.now()
-      const canOverlay = now - overlayCooldownRef.current > 12_000
-
-      if (canOverlay && Math.random() < 0.02) {
-        const side = Math.random() < 0.5 ? 'home' : 'away'
-        overlayCooldownRef.current = now
-        triggerGoal(side, 'sim')
-      }
-
-      if (canOverlay && Math.random() < 0.025) {
-        const minute = simMinuteRef.current || (match.minute ?? 0)
-        const isRed = Math.random() < 0.22
-        setEventOverlay({
-          show: true,
-          kind: isRed ? 'red' : 'yellow',
-          line1: `${match.home.shortName} – ${match.away.shortName}`,
-          line2: `Minute ${minute}'`,
-        })
-        overlayCooldownRef.current = now
-        pushHighlight({
-          matchId: channelMatchId,
-          minute,
-          type: 'Carton',
-          title: isRed ? 'Carton rouge' : 'Carton jaune',
-          detail: isRed
-            ? 'Geste dangereux — le match peut basculer.'
-            : 'Avertissement pour calmer le jeu.',
-        })
-      } else if (canOverlay && Math.random() < 0.03) {
-        const minute = simMinuteRef.current || (match.minute ?? 0)
-        setEventOverlay({
-          show: true,
-          kind: 'save',
-          line1: `${match.home.shortName} – ${match.away.shortName}`,
-          line2: `Minute ${minute}'`,
-        })
-        overlayCooldownRef.current = now
-        pushHighlight({
-          matchId: channelMatchId,
-          minute,
-          type: 'Arrêt',
-          title: 'Gros arrêt',
-          detail: 'Réflexe incroyable — le stade explose.',
-        })
-      }
-    }, 20_000)
-    return () => window.clearInterval(id)
   }, [
     match?.id,
-    match?.minute,
-    match?.score,
     match?.status,
-    channelMatchId,
-    isReplay,
+    match?.minute,
+    match?.score?.home,
+    match?.score?.away,
   ])
 
   useEffect(() => {
@@ -633,65 +482,6 @@ export function ChannelPage() {
       document.body.style.overflow = prevBody
     }
   }, [])
-
-  useEffect(() => {
-    setHighlights(mockHighlights.filter((h) => h.matchId === matchId))
-    setLastMoment(null)
-  }, [matchId])
-
-  const pushHighlight = (h: Omit<Highlight, 'id'>) => {
-    const id = `h-live-${Date.now()}-${hiRef.current++}`
-    const next: Highlight = { ...h, id }
-    setHighlights((prev) => [...prev, next].slice(-40))
-    setLastMoment(next)
-  }
-
-  const flushEventQueue = () => {
-    const next = eventQueueRef.current.shift()
-    if (next) {
-      setEventOverlay({ show: true, kind: next.kind, line1: next.line1, line2: next.line2 })
-    } else {
-      setEventOverlay((s) => ({ ...s, show: false }))
-    }
-  }
-
-  const triggerGoal = (side: 'home' | 'away', source: 'sim' | 'reaction') => {
-    if (!match) return
-    const minute = simMinuteRef.current || (match.minute ?? 0)
-    const scorer =
-      side === 'home'
-        ? `${match.home.shortName} #9`
-        : `${match.away.shortName} #11`
-
-    const cur = simScoreRef.current ?? match.score ?? { home: 0, away: 0 }
-    const isFirstGoal = (cur.home ?? 0) + (cur.away ?? 0) === 0
-    const next = { ...cur, [side]: (cur as any)[side] + 1 } as {
-      home: number
-      away: number
-    }
-    simScoreRef.current = next
-    setSimScore(next)
-
-    setGoalScorer(scorer)
-    setGoalMinute(minute)
-    setGoalColors(side === 'home' ? match.home.colors : match.away.colors)
-    setShowGoal(true)
-
-    if (match.status === 'live') {
-      betting.settleNextGoal(side)
-    }
-    if (isFirstGoal) {
-      betting.settleFirstGoal(side)
-    }
-
-    pushHighlight({
-      matchId: channelMatchId,
-      minute,
-      type: 'But',
-      title: 'BUT !',
-      detail: `${scorer} • Score ${next.home}-${next.away} • ${source === 'reaction' ? 'réaction' : 'action'}`,
-    })
-  }
 
   const messageExtras = () =>
     stadiumGroupId
@@ -866,7 +656,7 @@ export function ChannelPage() {
           Canal introuvable
         </div>
         <div className="mt-2 text-sm font-medium text-tf-grey">
-          Ce canal n'existe pas encore dans les données de test.
+          Ce match n’est pas dans le calendrier chargé (SportMonks). Ouvre l’agenda pour en choisir un autre.
         </div>
       </Card>
     )
@@ -887,24 +677,6 @@ export function ChannelPage() {
         } as React.CSSProperties
       }
     >
-      <GoalOverlay
-        key={showGoal ? `${goalScorer}-${goalMinute}` : 'hidden'}
-        show={showGoal}
-        scorer={goalScorer}
-        minute={goalMinute}
-        colors={goalColors}
-        onDone={() => setShowGoal(false)}
-      />
-      <EventOverlay
-        key={eventOverlay.show ? `${eventOverlay.kind}-${eventOverlay.line1}` : 'hidden'}
-        show={eventOverlay.show}
-        kind={eventOverlay.kind}
-        line1={eventOverlay.line1}
-        line2={eventOverlay.line2}
-        ms={5500}
-        onDone={flushEventQueue}
-      />
-
       <div
         className={cn(
           'relative isolate flex flex-col rounded-2xl border border-tf-grey-pastel/50 bg-tf-white shadow-[0_8px_40px_rgba(1,30,51,0.08)]',
@@ -942,9 +714,35 @@ export function ChannelPage() {
               isLiveOpen && 'pt-2 sm:pt-2.5 sm:pt-3',
             )}
           >
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-              <ChannelHeader match={matchView} />
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:justify-start">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-between sm:gap-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <ChannelHeader match={matchView} />
+                {match?.sportMonksFixtureId ? (
+                  <div className="flex max-w-xl flex-col gap-2 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-stretch">
+                    <MatchXGStrip
+                      match={matchView}
+                      xg={xgTotals}
+                      loading={xgLoading}
+                      className="min-w-0 sm:max-w-[15rem]"
+                    />
+                    {(match.status === 'live' || match.status === 'finished') && (
+                      <MatchLiveStatsStrip
+                        match={matchView}
+                        rows={liveStatRows}
+                        loading={liveStatsLoading}
+                        className="min-w-0 flex-1 sm:min-w-[12rem] sm:max-w-md"
+                      />
+                    )}
+                    <MatchTrendsStrip
+                      match={matchView}
+                      rows={trendRows}
+                      loading={trendsLoading}
+                      className="min-w-0 sm:max-w-[15rem]"
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-start sm:justify-start">
                 <ShareButton
                   compact
                   path={`/channel/${channelMatchId}`}
@@ -1028,7 +826,8 @@ export function ChannelPage() {
                   {lastMoment.minute > 0 ? `${lastMoment.minute}'` : '—'}
                 </span>
                 <span className="text-sm font-black text-tf-dark">
-                  {lastMoment.title}
+                  {lastMoment.title.trim() ||
+                    (lastMoment.type === 'Info' ? 'Commentaire' : lastMoment.type)}
                 </span>
                 <span className="min-w-0 truncate text-sm font-medium text-tf-grey">
                   {lastMoment.detail}
@@ -1098,11 +897,23 @@ export function ChannelPage() {
                       </span>
                     </summary>
                     <div className="border-t border-tf-grey-pastel/40 p-2.5 sm:p-3">
-                      <BetWidget match={matchView} betting={betting} compact />
+                      <BetWidget
+                        match={matchView}
+                        betting={betting}
+                        bookOdds1x2={bookOdds1x2}
+                        bookOddsLoading={bookOddsLoading}
+                        compact
+                      />
                     </div>
                   </details>
                   <div className="hidden p-2.5 sm:p-3 lg:block">
-                    <BetWidget match={matchView} betting={betting} compact />
+                    <BetWidget
+                      match={matchView}
+                      betting={betting}
+                      bookOdds1x2={bookOdds1x2}
+                      bookOddsLoading={bookOddsLoading}
+                      compact
+                    />
                   </div>
                 </div>
                 <div className="order-1 min-h-0 flex-1 p-2.5 sm:p-3 lg:order-2">
@@ -1155,7 +966,11 @@ export function ChannelPage() {
                         {match.status === 'live' ? (
                           <MatchHighlights items={highlights} activeId={lastMoment?.id} />
                         ) : (
-                          <MatchPreview match={match} />
+                          <MatchPreview
+                            match={match}
+                            trendRecentForm={trendRecentForm}
+                            trendsLoading={trendsLoading}
+                          />
                         )}
                         <div className="h-4" />
                       </div>
@@ -1183,7 +998,11 @@ export function ChannelPage() {
                             activeId={lastMoment?.id}
                           />
                         ) : (
-                          <MatchPreview match={match} />
+                          <MatchPreview
+                            match={match}
+                            trendRecentForm={trendRecentForm}
+                            trendsLoading={trendsLoading}
+                          />
                         )}
                         <div className="h-4" />
                       </div>

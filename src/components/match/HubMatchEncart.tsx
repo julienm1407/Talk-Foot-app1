@@ -9,6 +9,7 @@ import { formatHubDayLabel, formatKickoff, formatRelativeMinute } from '../../ut
 export { formatHubDayLabel }
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { themeForCompetition } from '../../data/competitionThemes'
+import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
@@ -296,8 +297,11 @@ export function HubStripUpcoming({
 }: {
   match: Match
   className?: string
-  /** `minimal` : ligne compacte · `subtle` : sous le live pleine largeur (encore plus léger) */
-  visualSize?: 'default' | 'compact' | 'sidebar' | 'minimal' | 'subtle'
+  /**
+   * `minimal` : ligne compacte · `subtle` : sous le live (léger) ·
+   * `hubCard` : accueil desktop colonne centrale — lisible sans bandeau photo étroit.
+   */
+  visualSize?: 'default' | 'compact' | 'sidebar' | 'minimal' | 'subtle' | 'hubCard'
   visualStyle?: 'stadium' | 'solid'
 }) {
   const { appearance } = useAppearance()
@@ -362,7 +366,7 @@ export function HubStripUpcoming({
       <Link
         to={`/channel/${match.id}`}
         className={cn(
-          'group flex w-full min-w-0 items-center gap-2 rounded-lg px-1.5 py-1.5 text-left outline-none transition',
+          'group flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-none transition',
           L
             ? 'border border-transparent hover:border-tf-dark/10 hover:bg-tf-dark/[0.04]'
             : 'border border-transparent hover:border-white/10 hover:bg-white/[0.05]',
@@ -370,37 +374,164 @@ export function HubStripUpcoming({
         )}
         aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
       >
-        <div className="flex shrink-0 items-center gap-1" aria-hidden>
-          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={18} />
-          <span className={cn('mx-px text-[8px] font-black opacity-30', L ? 'text-tf-dark' : 'text-white')}>
+        <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
+          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={22} />
+          <span className={cn('mx-px text-[9px] font-black opacity-35', L ? 'text-tf-dark' : 'text-white')}>
             –
           </span>
-          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={18} />
+          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={22} />
         </div>
         <div className="min-w-0 flex-1">
           <p
             className={cn(
-              'truncate text-[10px] font-bold leading-tight',
-              L ? 'text-tf-dark/88' : 'text-sky-100/92',
+              'truncate text-[11px] font-black leading-snug',
+              L ? 'text-tf-dark/92' : 'text-sky-100/95',
             )}
           >
             {match.home.shortName}
             <span className="mx-0.5 font-semibold opacity-40">·</span>
             {match.away.shortName}
           </p>
-          <p className={cn('truncate text-[8px] font-semibold', L ? 'text-tf-dark/45' : 'text-sky-200/55')}>
+          <p className={cn('truncate text-[10px] font-semibold', L ? 'text-tf-dark/55' : 'text-sky-200/70')}>
             {match.competition.shortName}
           </p>
         </div>
         <div className="shrink-0 text-right">
           <p
             className={cn(
-              'font-display text-xs font-black tabular-nums leading-none',
-              L ? 'text-tf-dark/80' : 'text-sky-100/88',
+              'font-display text-sm font-black tabular-nums leading-none',
+              L ? 'text-tf-dark' : 'text-white',
             )}
           >
             {formatKickoff(match.kickoffAt)}
           </p>
+        </div>
+      </Link>
+    )
+  }
+
+  if (visualSize === 'hubCard') {
+    return (
+      <Link
+        to={`/channel/${match.id}`}
+        className={cn(
+          'group relative isolate flex w-full min-w-0 flex-col overflow-hidden rounded-tf-xl border text-left shadow-sm outline-none transition duration-300 focus-visible:ring-2 focus-visible:ring-sky-400/45',
+          L
+            ? 'border-tf-dark/12 bg-white/[0.98] hover:-translate-y-0.5 hover:border-tf-dark/[0.18] hover:shadow-lg'
+            : cn(
+                'border-white/[0.09] bg-[#050d18]/95 shadow-[0_12px_44px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/[0.05]',
+                'hover:-translate-y-0.5 hover:border-sky-300/25 hover:shadow-[0_16px_52px_rgba(0,0,0,0.48)] hover:ring-white/[0.09]',
+              ),
+          className,
+        )}
+        aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+      >
+        <HubEncartTopAccent appearance={appearance} competitionId={match.competition.id} preset="upcoming" />
+        {!L && compTh ? (
+          <>
+            <div
+              className="pointer-events-none absolute -right-8 -top-4 size-[11rem] rounded-full opacity-[0.18] blur-3xl"
+              style={{ background: compTh.accent2 }}
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute -bottom-14 -left-10 size-[9rem] rounded-full opacity-[0.11] blur-3xl"
+              style={{ background: compTh.accent }}
+              aria-hidden
+            />
+          </>
+        ) : L && compTh ? (
+          <div
+            className="pointer-events-none absolute -right-4 top-10 size-36 rounded-full opacity-[0.2] blur-2xl"
+            style={{ background: compTh.accent2 }}
+            aria-hidden
+          />
+        ) : !L ? (
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_50%_-5%,rgba(56,189,248,0.11),transparent_58%)]"
+            aria-hidden
+          />
+        ) : (
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_55%_at_80%_0%,rgba(14,165,233,0.08),transparent_50%)]"
+            aria-hidden
+          />
+        )}
+        <span
+          className={cn(
+            'absolute right-3 top-[14px] z-[2] rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] shadow-sm ring-1 backdrop-blur-md',
+            L && compTh
+              ? cn(compTh.labelBg, compTh.labelText, 'ring-black/[0.06]')
+              : L
+                ? 'bg-sky-100/95 text-sky-950 ring-sky-300/60'
+                : compTh
+                  ? 'bg-black/40 text-white/95 ring-white/18'
+                  : 'bg-sky-600/90 text-white ring-sky-400/40',
+          )}
+        >
+          À venir
+        </span>
+        <div className="relative z-[1] flex flex-col gap-3 px-3.5 pb-3 pt-3.5 sm:gap-3.5 sm:px-4 sm:pb-3.5 sm:pt-4">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={34} />
+              <span className="truncate text-sm font-black leading-tight text-tf-app-fg sm:text-[0.9375rem]">
+                {match.home.shortName}
+              </span>
+            </div>
+            <div
+              className="mx-0.5 hidden h-11 w-px shrink-0 bg-gradient-to-b from-transparent via-tf-dark/15 to-transparent sm:block dark:from-transparent dark:via-white/18 dark:to-transparent"
+              aria-hidden
+            />
+            <div
+              className={cn(
+                'flex shrink-0 flex-col items-center rounded-xl border px-2 py-1.5 shadow-inner sm:px-2.5 sm:py-2',
+                L
+                  ? 'border-tf-dark/10 bg-tf-dark/[0.035]'
+                  : 'border-white/12 bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+              )}
+            >
+              <p className="font-display text-base font-black tabular-nums leading-none text-tf-app-fg sm:text-lg">
+                {formatKickoff(match.kickoffAt)}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-tf-app-muted">
+                {formatHubDayLabel(match.kickoffAt)}
+              </p>
+            </div>
+            <div
+              className="mx-0.5 hidden h-11 w-px shrink-0 bg-gradient-to-b from-transparent via-tf-dark/15 to-transparent sm:block dark:from-transparent dark:via-white/18 dark:to-transparent"
+              aria-hidden
+            />
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <span className="truncate text-right text-sm font-black leading-tight text-tf-app-fg sm:text-[0.9375rem]">
+                {match.away.shortName}
+              </span>
+              <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={34} />
+            </div>
+          </div>
+          <div
+            className={cn(
+              'flex flex-wrap items-center justify-between gap-2 border-t pt-2.5 sm:pt-3',
+              L ? 'border-tf-dark/10' : 'border-white/10',
+            )}
+          >
+            <span className="flex min-w-0 items-center gap-2 truncate text-xs font-semibold text-tf-app-muted">
+              {compTh ? (
+                <span
+                  className={cn(
+                    'size-1.5 shrink-0 rounded-full ring-2',
+                    L ? 'ring-tf-dark/12' : 'ring-white/20',
+                  )}
+                  style={{ backgroundColor: compTh.accent2 }}
+                  aria-hidden
+                />
+              ) : null}
+              {match.competition.shortName}
+            </span>
+            <span className="shrink-0 rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 px-3 py-1.5 text-xs font-black text-white shadow-[0_4px_18px_rgba(14,165,233,0.38)] transition group-hover:from-sky-400 group-hover:to-blue-500 group-hover:shadow-[0_6px_22px_rgba(14,165,233,0.45)]">
+              Voir le salon
+            </span>
+          </div>
         </div>
       </Link>
     )

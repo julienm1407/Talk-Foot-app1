@@ -2,17 +2,32 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation, useParams } from 'react-router-dom'
 import { API_TOKENS_CHANGED_EVENT, LS_KEY_SPORTMONKS_TOKEN } from '../constants/apiKeysStorage'
 import {
+  extractSquadPlayersFromSmEnvelope,
+  extractTeamSeasonStatisticsFromSmPayload,
+  fetchSportMonksTeamActiveSeasons,
   fetchSportMonksTeamSchedule,
+  fetchSportMonksTeamStatisticsForSeason,
+  fetchSportMonksTeamSquad,
+  pickActiveSeasonIdFromSmTeamPayload,
+  fetchSportMonksTeamUpcoming,
+  findLastFinishedClubMatchFromTeamLatest,
   findNextClubMatchFromSchedule,
+  findNextClubMatchFromTeamUpcoming,
   lastFiveFormFromTeamSchedule,
+  overlayClubSquadWithSmPlayers,
 } from '../api/sportMonks'
 import { getClubPageMock } from '../data/clubPageMock'
 import type { ClubPageMock } from '../data/clubPageMock'
+import type { SmSquadPlayerRow, TeamSeasonStatRow } from '../api/sportMonks'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { usePageSeo } from '../hooks/usePageSeo'
 import { SITE_NAME } from '../seo/siteCopy'
-import { SPORTMONKS_TEAM_ID_BY_CLUB_ID } from '../data/sportMonksKnownTeamIds'
+import {
+  SPORTMONKS_SQUAD_PLAYER_STAT_SEASON_BY_CLUB_ID,
+  SPORTMONKS_TEAM_ID_BY_CLUB_ID,
+  SPORTMONKS_TEAM_SEASON_ID_BY_CLUB_ID,
+} from '../data/sportMonksKnownTeamIds'
 import { findTeamById, resolveClubIdFromSlug } from '../utils/clubRoute'
 import { countSalonChannelsForClub, getGroupsForClubPage } from '../utils/groupsForClubPage'
 import { cn } from '../utils/cn'
@@ -31,10 +46,22 @@ export function ClubPage() {
   const [smScheduleUi, setSmScheduleUi] = useState<{
     upcoming: ClubPageMock['upcoming'] | null
     formStrip: Array<'V' | 'N' | 'D'> | null
+    lastMatch: {
+      opponent: string
+      league: string
+      kickoff: string
+      venue: 'dom' | 'ext'
+      scoreLine: string
+    } | null
   } | null>(null)
   /** Pourquoi l’encart reste en démo (token, CORS, 401, etc.). */
   const [clubScheduleHint, setClubScheduleHint] = useState<string | null>(null)
+  const [clubSeasonStats, setClubSeasonStats] = useState<TeamSeasonStatRow[] | null>(null)
+  const [clubSeasonStatsHint, setClubSeasonStatsHint] = useState<string | null>(null)
   const scheduleFetchSeq = useRef(0)
+  const seasonStatsFetchSeq = useRef(0)
+  const squadFetchSeq = useRef(0)
+  const [smSquadPlayers, setSmSquadPlayers] = useState<SmSquadPlayerRow[] | null>(null)
   /** Incrémenté quand la clé SportMonks change (localStorage / autre onglet) pour relancer le schedule. */
   const [smTokenTick, setSmTokenTick] = useState(0)
 
@@ -73,6 +100,60 @@ export function ClubPage() {
     ? sportMonksTeamIdByClubId[team.id] ?? SPORTMONKS_TEAM_ID_BY_CLUB_ID[team.id]
     : undefined
 
+  /** Id **saison** SM optionnel — sinon déduit via `activeSeasons` sur `/teams/{id}`. */
+  const smSeasonIdOverride = useMemo(() => {
+    if (!team) return undefined
+    const fromMap = SPORTMONKS_TEAM_SEASON_ID_BY_CLUB_ID[team.id]
+    if (fromMap != null) return fromMap
+    const env = import.meta.env.VITE_SPORTMONKS_TEAM_SEASON_ID
+    if (env && String(env).trim()) {
+      const n = Number(String(env).trim())
+      if (Number.isFinite(n) && n > 0) return n
+    }
+    return undefined
+  }, [team])
+
+  const smSquadStatSeasonId = useMemo(() => {
+    if (!team) return undefined
+    const fromMap = SPORTMONKS_SQUAD_PLAYER_STAT_SEASON_BY_CLUB_ID[team.id]
+    if (fromMap != null) return fromMap
+    const env = import.meta.env.VITE_SPORTMONKS_SQUAD_STATISTIC_SEASON_ID
+    if (env && String(env).trim()) {
+      const n = Number(String(env).trim())
+      if (Number.isFinite(n) && n > 0) return n
+    }
+    return undefined
+  }, [team])
+
+  useEffect(() => {
+    if (!team || smTeamId == null) {
+      setSmSquadPlayers(null)
+      return
+    }
+    const token = getSportMonksToken()
+    if (!token) {
+      setSmSquadPlayers(null)
+      return
+    }
+    const seq = ++squadFetchSeq.current
+    setSmSquadPlayers(null)
+    let cancelled = false
+    const seasonFilter =
+      smSquadStatSeasonId != null ? String(smSquadStatSeasonId) : undefined
+    void fetchSportMonksTeamSquad(token, smTeamId, seasonFilter)
+      .then((json) => {
+        if (cancelled || seq !== squadFetchSeq.current) return
+        const rows = extractSquadPlayersFromSmEnvelope(json)
+        setSmSquadPlayers(rows.length ? rows : null)
+      })
+      .catch(() => {
+        if (!cancelled && seq === squadFetchSeq.current) setSmSquadPlayers(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [team, smTeamId, smSquadStatSeasonId, smTokenTick])
+
   useEffect(() => {
     if (!team || smTeamId == null) {
       setSmScheduleUi(null)
@@ -91,12 +172,24 @@ export function ClubPage() {
     setClubScheduleHint(null)
     setSmScheduleUi(null)
     let cancelled = false
-    void fetchSportMonksTeamSchedule(token, smTeamId)
-      .then((json) => {
+    void Promise.all([
+      fetchSportMonksTeamSchedule(token, smTeamId),
+      fetchSportMonksTeamUpcoming(token, smTeamId).catch((): null => null),
+    ])
+      .then(([scheduleJson, upcomingJson]) => {
         if (cancelled || seq !== scheduleFetchSeq.current) return
         const smOpts = { sportMonksTeamId: smTeamId }
-        const next = findNextClubMatchFromSchedule(json, team.id, smOpts)
-        const formStrip = lastFiveFormFromTeamSchedule(json, team.id, smOpts)
+        const fromUpcoming =
+          upcomingJson && typeof upcomingJson === 'object'
+            ? findNextClubMatchFromTeamUpcoming(upcomingJson, team.id, smOpts)
+            : null
+        const fromSchedule = findNextClubMatchFromSchedule(scheduleJson, team.id, smOpts)
+        const next = fromUpcoming ?? fromSchedule
+        const formStrip = lastFiveFormFromTeamSchedule(scheduleJson, team.id, smOpts)
+        const lastFinished =
+          upcomingJson && typeof upcomingJson === 'object'
+            ? findLastFinishedClubMatchFromTeamLatest(upcomingJson, team.id, smOpts)
+            : null
         setClubScheduleHint(null)
         setSmScheduleUi({
           upcoming: next
@@ -109,6 +202,15 @@ export function ClubPage() {
               }
             : null,
           formStrip,
+          lastMatch: lastFinished
+            ? {
+                opponent: lastFinished.opponent,
+                league: lastFinished.league,
+                kickoff: formatKickoff(lastFinished.kickoffIso),
+                venue: lastFinished.venue,
+                scoreLine: lastFinished.scoreLine,
+              }
+            : null,
         })
       })
       .catch((err: unknown) => {
@@ -124,16 +226,79 @@ export function ClubPage() {
     }
   }, [team, smTeamId, smTokenTick])
 
+  useEffect(() => {
+    if (!team || smTeamId == null) {
+      setClubSeasonStats(null)
+      setClubSeasonStatsHint(null)
+      return
+    }
+    const token = getSportMonksToken()
+    if (!token) {
+      setClubSeasonStats(null)
+      setClubSeasonStatsHint(null)
+      return
+    }
+    const seq = ++seasonStatsFetchSeq.current
+    setClubSeasonStats(null)
+    setClubSeasonStatsHint(null)
+    let cancelled = false
+
+    void (async () => {
+      try {
+        let seasonId = smSeasonIdOverride
+        if (seasonId == null) {
+          const seasonsJson = await fetchSportMonksTeamActiveSeasons(token, smTeamId)
+          if (cancelled || seq !== seasonStatsFetchSeq.current) return
+          seasonId = pickActiveSeasonIdFromSmTeamPayload(seasonsJson)
+        }
+        if (seasonId == null) {
+          if (!cancelled && seq === seasonStatsFetchSeq.current) {
+            setClubSeasonStats(null)
+            setClubSeasonStatsHint(
+              'Saison SM introuvable pour cette équipe (réponse activeSeasons vide). Tu peux forcer un id saison avec `VITE_SPORTMONKS_TEAM_SEASON_ID` ou `SPORTMONKS_TEAM_SEASON_ID_BY_CLUB_ID`.',
+            )
+          }
+          return
+        }
+
+        const statsJson = await fetchSportMonksTeamStatisticsForSeason(token, smTeamId, seasonId)
+        if (cancelled || seq !== seasonStatsFetchSeq.current) return
+        const rows = extractTeamSeasonStatisticsFromSmPayload(statsJson)
+        setClubSeasonStats(rows.length ? rows : null)
+        setClubSeasonStatsHint(
+          rows.length ? null : 'Statistiques saison SM vides pour ce filtre (plan API ou saison).',
+        )
+      } catch (err: unknown) {
+        if (cancelled || seq !== seasonStatsFetchSeq.current) return
+        const msg = err instanceof Error ? err.message : String(err)
+        setClubSeasonStats(null)
+        setClubSeasonStatsHint(`Stats saison SM indisponibles (${msg}).`)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [team, smTeamId, smSeasonIdOverride, smTokenTick])
+
   const data = useMemo(() => {
     if (!dataBase) return null
-    if (!smScheduleUi) return dataBase
     let out: ClubPageMock = { ...dataBase }
-    if (smScheduleUi.upcoming) out = { ...out, upcoming: smScheduleUi.upcoming }
-    if (smScheduleUi.formStrip?.length) {
-      out = { ...out, formStrip: smScheduleUi.formStrip, formStripFromApi: true }
+    if (smScheduleUi) {
+      if (smScheduleUi.upcoming) out = { ...out, upcoming: smScheduleUi.upcoming }
+      if (smScheduleUi.formStrip?.length) {
+        out = { ...out, formStrip: smScheduleUi.formStrip, formStripFromApi: true }
+      }
+    }
+    if (smSquadPlayers?.length) {
+      out = {
+        ...out,
+        squad: overlayClubSquadWithSmPlayers(out.squad, smSquadPlayers),
+        squadFromSportMonks: true,
+      }
     }
     return out
-  }, [dataBase, smScheduleUi])
+  }, [dataBase, smScheduleUi, smSquadPlayers])
   const { groups } = useSupporterGroups()
   const clubGroups = useMemo(
     () => (team ? getGroupsForClubPage(team.id, groups, 6) : []),
@@ -183,6 +348,10 @@ export function ClubPage() {
         matchMode={data.matchMode}
         clubGroups={clubGroups}
         clubScheduleHint={clubScheduleHint}
+        clubLastMatch={smScheduleUi?.lastMatch ?? null}
+        squadFromSportMonks={Boolean(data.squadFromSportMonks)}
+        clubSeasonStats={clubSeasonStats}
+        clubSeasonStatsHint={clubSeasonStatsHint}
       />
       <ClubInfoDrawer
         open={infoOpen}

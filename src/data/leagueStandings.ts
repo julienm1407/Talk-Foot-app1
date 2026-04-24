@@ -12,10 +12,15 @@ export type LeagueStandingRow = {
   points: number
   /** 5 derniers, du plus ancien au plus récent (affichage gauche → droite) */
   form: FormResult[]
-  /** Indices mock 0–100 pour radar / dashboard */
+  /** Indices 0–100 (dérivés des stats / forme, ou mock historique) */
   attackIndex: number
   defenseIndex: number
   momentumIndex: number
+  /** Libellé court SM si `teamId` hors catalogue (`sm-{id}`). */
+  displayName?: string
+  /** Tendance position (SportMonks `result`). */
+  trend?: 'up' | 'down' | 'same'
+  sportMonksParticipantId?: number
 }
 
 function row(

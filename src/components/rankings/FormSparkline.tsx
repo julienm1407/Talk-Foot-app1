@@ -50,13 +50,13 @@ export function FormSparkline({ form, className }: { form: FormResult[]; classNa
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-tf-electric-deep"
+          className="text-sky-500"
         />
       ) : null}
       {cumulative.map((v, i) => {
         const x = pad + i * step
         const y = h - pad - (v / max) * (h - pad * 2)
-        return <circle key={i} cx={x} cy={y} r={2.5} className="fill-tf-dark" />
+        return <circle key={i} cx={x} cy={y} r={2.5} className="fill-sky-600" />
       })}
     </svg>
   )

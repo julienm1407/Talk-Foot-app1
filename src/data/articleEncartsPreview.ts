@@ -3,11 +3,13 @@ import type { NewsItem } from './news'
 import type { SupporterGroup } from '../types/group'
 import { starterGroups } from './groups'
 import { teams } from './teams'
-import { REPLAY_LIVE_ID } from '../contexts/MatchesContext'
 
-/** Même match démo que le salon live de l’app. */
+/** Id fictif réservé aux encarts article (pas un salon réel — les CTA pointent vers un vrai live si dispo). */
+export const ARTICLE_PREVIEW_MATCH_ID = 'article-encart-preview'
+
+/** Données visuelles pour la démo d’encart dans les articles (hors calendrier live). */
 export const articlePreviewLiveMatch: Match = {
-  id: REPLAY_LIVE_ID,
+  id: ARTICLE_PREVIEW_MATCH_ID,
   competition: { id: 'ligue-1', name: 'Ligue 1', shortName: 'L1' },
   home: teams['ligue-1'].find((t) => t.id === 'rennes') ?? teams['ligue-1'][0],
   away: teams['ligue-1'].find((t) => t.id === 'psg') ?? teams['ligue-1'][0],

@@ -1,4 +1,4 @@
-import { useMatches, REPLAY_LIVE_ID } from '../contexts/MatchesContext'
+import { useMatches } from '../contexts/MatchesContext'
 import { mockNews } from '../data/news'
 import { debateOfTheDay, trendingDebates } from '../data/debates'
 import { Card } from '../components/ui/Card'
@@ -83,9 +83,9 @@ export function HomePage() {
   const [feedTab, setFeedTab] = useState<'actu' | 'comments'>('comments')
   const [heroSlide, setHeroSlide] = useState(0)
 
-  /** Hub (desktop + bento mobile) : seul le live replay principal PSG ; les autres lives restent sur /match */
+  /** Hub : tous les matchs en direct renvoyés par SportMonks (ordre du carrousel). */
   const hubLiveMatches = useMemo(
-    () => displayMatches.filter((m) => m.status === 'live' && m.id === REPLAY_LIVE_ID),
+    () => displayMatches.filter((m) => m.status === 'live'),
     [displayMatches],
   )
 
@@ -108,15 +108,15 @@ export function HomePage() {
 
   const supporterFocusUi = Boolean(supporterTintActive && team && favoriteClubIds.length > 0)
 
-  const upcomingHeaderPool = useMemo(() => {
+  /** Prochains matchs (même logique que le hub desktop) : encart d’accueil tant qu’il n’y a pas de live. */
+  const upcomingSortedForHome = useMemo(() => {
     return [...displayMatchesFull]
       .filter((m) => m.status === 'upcoming')
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-      .slice(0, 4)
   }, [displayMatchesFull])
 
   /** Sous le live : 2 lignes compactes rail, sans scroll horizontal */
-  const upcomingUnderLiveStrip = useMemo(() => upcomingHeaderPool.slice(0, 2), [upcomingHeaderPool])
+  const upcomingUnderLiveStrip = useMemo(() => upcomingSortedForHome.slice(0, 2), [upcomingSortedForHome])
 
   if (loading) {
     return (
@@ -322,12 +322,12 @@ export function HomePage() {
                   </div>
                 ) : null}
               </div>
-            ) : upcomingHeaderPool.length > 0 ? (
-              <HomeUpcomingHero matches={upcomingHeaderPool} />
+            ) : upcomingSortedForHome.length > 0 ? (
+              <HomeUpcomingHero matches={upcomingSortedForHome} />
             ) : (
               <Card className="border-dashed border-tf-grey-pastel/60 p-6 text-center sm:p-8" elevation="soft">
                 <p className="text-sm font-bold text-tf-grey">
-                  Aucun match en direct pour l’instant — vois les encarts matchs ou le carrousel ci-dessous.
+                  Aucun match à venir dans la fenêtre — ouvre le calendrier ou le carrousel ci-dessous.
                 </p>
                 <Link to="/match" className="mt-4 inline-block text-sm font-black text-tf-electric-deep underline">
                   Voir les matchs

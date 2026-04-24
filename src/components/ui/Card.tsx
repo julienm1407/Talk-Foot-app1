@@ -11,6 +11,11 @@ export function Card({
    * `dark` : carte verre explicite (même look nuit) — ne pose pas `data-tf-card-surface`.
    */
   surface = 'light',
+  /**
+   * `solid` : fond `--tf-c30-surface-soft` opaque (pas de mix transparent) — tableaux / données denses,
+   * pour éviter le « bleu sur bleu » sur panneau nuit ou le fond qui tire le dégradé page en jour.
+   */
+  tone = 'default',
 }: {
   className?: string
   children: React.ReactNode
@@ -18,14 +23,19 @@ export function Card({
   style?: React.CSSProperties
   id?: string
   surface?: 'light' | 'dark'
+  tone?: 'default' | 'solid'
 }) {
   return (
     <div
       id={id}
       style={style}
       data-tf-card-surface={surface === 'light' ? 'light' : undefined}
+      data-tf-card-tone={tone === 'solid' ? 'solid' : undefined}
       className={cn(
-        'rounded-tf-3xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-card-bg-light)_96%,transparent)] text-tf-app-fg backdrop-blur-sm',
+        'rounded-tf-3xl border border-[color:var(--tf-c30-border)] text-tf-app-fg backdrop-blur-sm',
+        tone === 'solid'
+          ? 'bg-[color:var(--tf-c30-surface-soft)]'
+          : 'bg-[color:color-mix(in_srgb,var(--tf-card-bg-light)_96%,transparent)]',
         elevation === 'soft' && 'shadow-tf-elev-3',
         className,
       )}

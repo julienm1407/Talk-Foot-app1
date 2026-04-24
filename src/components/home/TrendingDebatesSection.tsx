@@ -143,11 +143,11 @@ export function TrendingDebatesSection({
                     <DebateMessagePreview
                       message={snippet}
                       compact
-                      className="border-orange-100/70 bg-white/95 shadow-[0_1px_0_rgba(234,88,12,0.06)]"
+                      className="border-orange-200/75 bg-white shadow-[0_1px_0_rgba(234,88,12,0.06)]"
                     />
                   </div>
                 ) : (
-                  <p className="border-t border-orange-100/80 bg-orange-50/25 px-3 py-2.5 text-xs font-semibold leading-snug text-tf-dark/80 sm:px-4">
+                  <p className="border-t border-orange-100/80 bg-orange-50/40 px-3 py-2.5 text-xs font-semibold leading-snug text-slate-800 sm:px-4">
                     {d.excerpt}
                   </p>
                 )}

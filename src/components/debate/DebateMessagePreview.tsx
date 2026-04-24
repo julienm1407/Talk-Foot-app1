@@ -13,15 +13,16 @@ export function DebateMessagePreview({
   return (
     <div
       className={cn(
-        'rounded-xl border border-orange-100/80 bg-white px-2.5 py-2 shadow-sm sm:rounded-2xl sm:px-3 sm:py-2.5',
+        /* Fond clair : couleurs slate fixes (pas `text-tf-app-fg` / `tf-dark` hérités du thème → illisible nuit). */
+        'isolate rounded-xl border border-slate-200/90 bg-white px-2.5 py-2 text-slate-900 shadow-sm sm:rounded-2xl sm:px-3 sm:py-2.5',
         compact && 'py-1.5 sm:py-2',
         className,
       )}
     >
-      <span className="text-xs font-black text-tf-dark sm:text-sm">{message.username}</span>
+      <span className="block text-xs font-black text-slate-900 sm:text-sm">{message.username}</span>
       <p
         className={cn(
-          'mt-1 text-xs font-semibold leading-snug text-tf-dark/88 sm:mt-1.5 sm:text-sm',
+          'mt-1 text-xs font-semibold leading-snug text-slate-700 sm:mt-1.5 sm:text-sm',
           compact ? 'line-clamp-2' : 'line-clamp-3',
         )}
       >

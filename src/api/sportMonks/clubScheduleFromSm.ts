@@ -94,6 +94,121 @@ export function smFixturesFromTeamScheduleEnvelope(envelope: { data?: unknown })
   return teamScheduleFixtureRows(envelope).map((r) => r.fixture)
 }
 
+/** Fixtures listées dans `data.upcoming` (réponse `GET /teams/{id}` + include upcoming). */
+export function smFixturesFromTeamUpcomingEnvelope(envelope: { data?: unknown }): SmFixture[] {
+  const data = envelope.data
+  if (!data || typeof data !== 'object') return []
+  const up = (data as { upcoming?: unknown }).upcoming
+  if (Array.isArray(up)) {
+    return up.filter(
+      (x): x is SmFixture =>
+        Boolean(x && typeof x === 'object' && typeof (x as SmFixture).id === 'number'),
+    )
+  }
+  if (up && typeof up === 'object' && typeof (up as SmFixture).id === 'number') {
+    return [up as SmFixture]
+  }
+  return []
+}
+
+/** Fixtures dans `data.latest` (réponse team + include latest). */
+export function smFixturesFromTeamLatestEnvelope(envelope: { data?: unknown }): SmFixture[] {
+  const data = envelope.data
+  if (!data || typeof data !== 'object') return []
+  const lat = (data as { latest?: unknown }).latest
+  if (Array.isArray(lat)) {
+    return lat.filter(
+      (x): x is SmFixture =>
+        Boolean(x && typeof x === 'object' && typeof (x as SmFixture).id === 'number'),
+    )
+  }
+  if (lat && typeof lat === 'object' && typeof (lat as SmFixture).id === 'number') {
+    return [lat as SmFixture]
+  }
+  return []
+}
+
+export type ClubLastMatchFromApi = {
+  opponent: string
+  kickoffIso: string
+  league: string
+  venue: 'dom' | 'ext'
+  /** Score brut domicile–extérieur (terrain). */
+  scoreLine: string
+}
+
+/** Dernier match terminé du club via `latest` (plus récent). */
+export function findLastFinishedClubMatchFromTeamLatest(
+  envelope: { data?: unknown },
+  clubOurId: string,
+  opts?: { sportMonksTeamId?: number },
+): ClubLastMatchFromApi | null {
+  const smTeamId = opts?.sportMonksTeamId
+  const matches: Match[] = []
+  for (const fx of smFixturesFromTeamLatestEnvelope(envelope)) {
+    try {
+      matches.push(smFixtureToMatch(fx))
+    } catch {
+      /* fixture incomplète */
+    }
+  }
+  const finished = matches
+    .filter((m) => m.status === 'finished' && m.score != null)
+    .filter((m) => weInMatch(m, clubOurId, smTeamId))
+  finished.sort((a, b) => +new Date(b.kickoffAt) - +new Date(a.kickoffAt))
+  const m = finished[0]
+  if (!m?.score) return null
+  const atHome = weAreHome(m, clubOurId, smTeamId)
+  return {
+    opponent: atHome ? m.away.name : m.home.name,
+    kickoffIso: m.kickoffAt,
+    league: m.competition.shortName,
+    venue: atHome ? 'dom' : 'ext',
+    scoreLine: `${m.score.home}-${m.score.away}`,
+  }
+}
+
+/** Prochain match à venir via `upcoming` (prioritaire sur le planning si renseigné). */
+export function findNextClubMatchFromTeamUpcoming(
+  envelope: { data?: unknown },
+  clubOurId: string,
+  opts?: { sportMonksTeamId?: number },
+): {
+  opponent: string
+  kickoffIso: string
+  league: string
+  venue: 'dom' | 'ext'
+  matchday: string
+} | null {
+  const smTeamId = opts?.sportMonksTeamId
+  const rows: { match: Match; roundName?: string }[] = []
+  for (const fx of smFixturesFromTeamUpcomingEnvelope(envelope)) {
+    try {
+      const roundName =
+        fx.round && typeof fx.round === 'object' && typeof (fx.round as { name?: string }).name === 'string'
+          ? String((fx.round as { name: string }).name).trim() || undefined
+          : undefined
+      rows.push({ match: smFixtureToMatch(fx), roundName })
+    } catch {
+      /* fixture incomplète */
+    }
+  }
+  const ours = rows
+    .filter((x) => x.match.status === 'upcoming' && weInMatch(x.match, clubOurId, smTeamId))
+    .sort((a, b) => +new Date(a.match.kickoffAt) - +new Date(b.match.kickoffAt))
+  const first = ours[0]
+  if (!first) return null
+  const m = first.match
+  const atHome = weAreHome(m, clubOurId, smTeamId)
+  return {
+    opponent: atHome ? m.away.name : m.home.name,
+    kickoffIso: m.kickoffAt,
+    league: m.competition.shortName,
+    venue: atHome ? 'dom' : 'ext',
+    matchday: formatScheduleRoundLabel(first.roundName),
+  }
+}
+
 /** Prochain match à venir d’un club (id interne ex. `psg`) à partir de `/schedules/teams/{id}`. */
 export function findNextClubMatchFromSchedule(
   envelope: { data?: unknown },
@@ -129,6 +244,36 @@ export function findNextClubMatchFromSchedule(
  * Cinq derniers matchs terminés du club, du plus ancien au plus récent (gauche → droite dans l’UI),
  * à partir de `/schedules/teams/{id}`.
  */
+/**
+ * Cinq derniers matchs terminés via `GET /teams/{id}` + include `latest.*` (même logique que le planning club).
+ */
+export function lastFiveFormFromTeamLatestEnvelope(
+  envelope: { data?: unknown },
+  clubOurId: string,
+  opts?: { sportMonksTeamId?: number },
+): Array<'V' | 'N' | 'D'> | null {
+  const smTeamId = opts?.sportMonksTeamId
+  const matches: Match[] = []
+  for (const fx of smFixturesFromTeamLatestEnvelope(envelope)) {
+    try {
+      matches.push(smFixtureToMatch(fx))
+    } catch {
+      /* fixture incomplète */
+    }
+  }
+  const finished = matches
+    .filter((m) => m.status === 'finished' && m.score != null)
+    .filter((m) => weInMatch(m, clubOurId, smTeamId))
+  finished.sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))
+  const last5 = finished.slice(-5)
+  const strip: Array<'V' | 'N' | 'D'> = []
+  for (const m of last5) {
+    const r = resultLetterForClub(m, clubOurId, smTeamId)
+    if (r) strip.push(r)
+  }
+  return strip.length ? strip : null
+}
+
 export function lastFiveFormFromTeamSchedule(
   envelope: { data?: unknown },
   clubOurId: string,

@@ -45,7 +45,12 @@ export function MatchHighlights({
     )
   }
 
-  const sorted = [...items].sort((a, b) => b.minute - a.minute)
+  const sorted = [...items].sort((a, b) => {
+    if (b.minute !== a.minute) return b.minute - a.minute
+    const ord = (b.order ?? 0) - (a.order ?? 0)
+    if (ord !== 0) return ord
+    return b.id.localeCompare(a.id)
+  })
 
   return (
     <ul className="space-y-2" role="list">

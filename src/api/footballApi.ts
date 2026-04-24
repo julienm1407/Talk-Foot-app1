@@ -37,6 +37,15 @@ export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
   271: 'uecl',
 }
 
+/** Ids ligue SportMonks pour `standings/live/leagues/{id}` (inverse de `SM_LEAGUE_ID_TO_COMP` Big 5). */
+export const SM_LEAGUE_ID_BY_TALKFOOT_COMP: Record<string, number> = {
+  'ligue-1': 301,
+  epl: 8,
+  laliga: 564,
+  'serie-a': 384,
+  bund: 82,
+}
+
 const LEAGUE_NAME_TO_COMP: [RegExp, string][] = [
   [/ligue\s*1/i, 'ligue-1'],
   [/premier\s*league|premiership\s*\(?\s*eng/i, 'epl'],

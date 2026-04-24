@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { formatKickoff } from '../../utils/time'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { cn } from '../../utils/cn'
+import { useSportMonksFixtureLineups } from '../../hooks/useSportMonksFixtureLineups'
+import { useSportMonksTeamLatestFormPair } from '../../hooks/useSportMonksTeamLatestFormPair'
+import type { SmLineupSource } from '../../api/sportMonks'
+import type { FormResult } from '../../types/standings'
 
 function useCountdown(kickoffAt: string) {
   const [diff, setDiff] = useState(() => {
@@ -62,15 +66,116 @@ const STADIUMS: Record<string, string> = {
   rennes: 'Roazhon Park',
 }
 
-export function MatchPreview({ match }: { match: Match }) {
+function lineupSourceLabel(source: SmLineupSource): string {
+  switch (source) {
+    case 'confirmed':
+      return 'Compos officielles'
+    case 'probable':
+      return 'Compos probables'
+    case 'estimated':
+      return 'Projection (données partielles)'
+    default:
+      return 'Composition'
+  }
+}
+
+export function MatchPreview({
+  match,
+  trendRecentForm: trendRecentFormProp,
+  trendsLoading: trendsHookLoading,
+}: {
+  match: Match
+  /** Même source que le bandeau « Tendances » du salon (`extractSmRecentFormFromFixture` sur trends fixture). */
+  trendRecentForm?: { home: FormResult[]; away: FormResult[] } | null
+  trendsLoading?: boolean
+}) {
   const countdown = useCountdown(match.kickoffAt)
   const theme = themeForCompetition(match.competition.id)
   const homeForm = formFor(match.home.id ?? match.home.shortName)
   const awayForm = formFor(match.away.id ?? match.away.shortName)
-  const homeLineup = lineupFor(match.home.id ?? match.home.shortName)
-  const awayLineup = lineupFor(match.away.id ?? match.away.shortName)
+  const smId = match.sportMonksFixtureId
+  const { starters: smStarters, formations, lineupSource, recentForm: lineupRecentForm, lineupsLoading } =
+    useSportMonksFixtureLineups(smId)
 
-  const formColor = (r: string) =>
+  const useSmApi = Boolean(smId)
+  const trendsWaiting = Boolean(trendsHookLoading)
+
+  const trendRecent = trendRecentFormProp ?? null
+
+  const hasPrimaryForm = Boolean(
+    (trendRecent?.home?.length || trendRecent?.away?.length) ||
+      (lineupRecentForm?.home?.length || lineupRecentForm?.away?.length),
+  )
+
+  const useTeamFormFallback = Boolean(
+    useSmApi &&
+      match.home.sportMonksTeamId != null &&
+      match.away.sportMonksTeamId != null &&
+      !lineupsLoading &&
+      !trendsWaiting &&
+      !hasPrimaryForm,
+  )
+
+  const { teamPairForm, teamPairFormLoading } = useSportMonksTeamLatestFormPair(match, useTeamFormFallback)
+
+  const resolvedRecent = useMemo(() => {
+    if (trendRecent?.home?.length || trendRecent?.away?.length) return trendRecent
+    if (lineupRecentForm?.home?.length || lineupRecentForm?.away?.length) return lineupRecentForm
+    if (teamPairForm?.home?.length || teamPairForm?.away?.length) return teamPairForm
+    return null
+  }, [trendRecent, lineupRecentForm, teamPairForm])
+
+  const formSource = useMemo(() => {
+    if (trendRecent?.home?.length || trendRecent?.away?.length) return 'trends' as const
+    if (lineupRecentForm?.home?.length || lineupRecentForm?.away?.length) return 'lineups' as const
+    if (teamPairForm?.home?.length || teamPairForm?.away?.length) return 'teams' as const
+    return null
+  }, [trendRecent, lineupRecentForm, teamPairForm])
+
+  const homeFormChips = useMemo((): FormResult[] => {
+    if (resolvedRecent?.home?.length) return resolvedRecent.home
+    if (!useSmApi) return homeForm as FormResult[]
+    return []
+  }, [resolvedRecent, useSmApi, homeForm])
+
+  const awayFormChips = useMemo((): FormResult[] => {
+    if (resolvedRecent?.away?.length) return resolvedRecent.away
+    if (!useSmApi) return awayForm as FormResult[]
+    return []
+  }, [resolvedRecent, useSmApi, awayForm])
+
+  const hasSmForm = Boolean(resolvedRecent?.home?.length || resolvedRecent?.away?.length)
+
+  const formBlockLoading = lineupsLoading || trendsWaiting || teamPairFormLoading
+
+  const homeLineup = useMemo(() => {
+    if (smStarters?.home?.length) return smStarters.home
+    return null
+  }, [smStarters])
+
+  const awayLineup = useMemo(() => {
+    if (smStarters?.away?.length) return smStarters.away
+    return null
+  }, [smStarters])
+
+  const hasLineups = Boolean(homeLineup?.length || awayLineup?.length)
+  const hasFormations = Boolean(formations.home || formations.away)
+
+  const homeFallbackNames = lineupFor(match.home.id ?? match.home.shortName)
+  const awayFallbackNames = lineupFor(match.away.id ?? match.away.shortName)
+
+  const homeDisplay = hasLineups
+    ? homeLineup!
+    : useSmApi
+      ? []
+      : homeFallbackNames.slice(0, 4)
+  const awayDisplay = hasLineups
+    ? awayLineup!
+    : useSmApi
+      ? []
+      : awayFallbackNames.slice(0, 4)
+
+  const formColor = (r: FormResult) =>
     r === 'W' ? 'bg-emerald-500' : r === 'D' ? 'bg-amber-500' : 'bg-rose-500'
 
   return (
@@ -104,80 +209,182 @@ export function MatchPreview({ match }: { match: Match }) {
       </section>
 
       <section className="rounded-xl border border-slate-200/60 bg-white/80 p-4">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          Forme (5 derniers)
-        </h3>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+            Forme (récente)
+          </h3>
+          {formBlockLoading ? (
+            <span className="text-[10px] font-semibold text-slate-400">Chargement…</span>
+          ) : hasSmForm ? (
+            <span className="text-[10px] font-bold text-emerald-600">
+              SportMonks
+              {formSource === 'trends' ? ' · tendances' : formSource === 'lineups' ? ' · compos' : ' · derniers matchs'}
+            </span>
+          ) : useSmApi ? (
+            <span className="text-[10px] font-medium text-slate-400">Pas de forme disponible</span>
+          ) : null}
+        </div>
+        <p className="mt-1 text-[10px] font-medium text-slate-400">
+          {hasSmForm
+            ? formSource === 'teams'
+              ? 'Séquence comme sur la fiche club (derniers matchs terminés via API équipe).'
+              : formSource === 'trends'
+                ? 'Séquence issue des tendances fixture (même flux que le bandeau Tendances du salon).'
+                : 'Séquence issue des tendances embarquées avec les compos SportMonks.'
+            : useSmApi
+              ? 'Aucune donnée « forme » sur ce match pour l’instant — le bandeau Tendances du salon peut quand même afficher d’autres signaux.'
+              : 'Illustration locale — branche SportMonks pour la vraie forme.'}
+        </p>
         <div className="mt-3 flex justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="text-xs font-bold text-slate-800">
               {match.home.shortName}
             </div>
-            <div className="mt-1.5 flex gap-1">
-              {homeForm.map((r, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    'inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white',
-                    formColor(r),
-                  )}
-                  title={r === 'W' ? 'Victoire' : r === 'D' ? 'Nul' : 'Défaite'}
-                >
-                  {r}
+            <div className="mt-1.5 flex min-h-[1.5rem] flex-wrap gap-1">
+              {formBlockLoading ? (
+                <span className="inline-flex gap-1" aria-hidden>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <span key={i} className="h-6 w-6 animate-pulse rounded-full bg-slate-200" />
+                  ))}
                 </span>
-              ))}
+              ) : homeFormChips.length ? (
+                homeFormChips.map((r, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white',
+                      formColor(r),
+                    )}
+                    title={r === 'W' ? 'Victoire' : r === 'D' ? 'Nul' : 'Défaite'}
+                  >
+                    {r}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs font-semibold text-slate-400">—</span>
+              )}
             </div>
           </div>
           <div className="min-w-0 flex-1 text-right">
             <div className="text-xs font-bold text-slate-800">
               {match.away.shortName}
             </div>
-            <div className="mt-1.5 flex justify-end gap-1">
-              {awayForm.map((r, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    'inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white',
-                    formColor(r),
-                  )}
-                  title={r === 'W' ? 'Victoire' : r === 'D' ? 'Nul' : 'Défaite'}
-                >
-                  {r}
+            <div className="mt-1.5 flex min-h-[1.5rem] justify-end gap-1">
+              {formBlockLoading ? (
+                <span className="inline-flex gap-1" aria-hidden>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <span key={i} className="h-6 w-6 animate-pulse rounded-full bg-slate-200" />
+                  ))}
                 </span>
-              ))}
+              ) : awayFormChips.length ? (
+                awayFormChips.map((r, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black text-white',
+                      formColor(r),
+                    )}
+                    title={r === 'W' ? 'Victoire' : r === 'D' ? 'Nul' : 'Défaite'}
+                  >
+                    {r}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs font-semibold text-slate-400">—</span>
+              )}
             </div>
           </div>
         </div>
       </section>
 
+      {hasFormations ? (
+        <section className="rounded-xl border border-slate-200/60 bg-white/80 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Systèmes (SportMonks)
+            </h3>
+            {lineupsLoading ? (
+              <span className="text-[10px] font-semibold text-slate-400">Mise à jour…</span>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                {match.home.shortName}
+              </div>
+              <p className="mt-1 font-display text-xl font-black tabular-nums text-slate-900">
+                {formations.home ?? '—'}
+              </p>
+            </div>
+            <div className="min-w-0 text-right">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                {match.away.shortName}
+              </div>
+              <p className="mt-1 font-display text-xl font-black tabular-nums text-slate-900">
+                {formations.away ?? '—'}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-xl border border-slate-200/60 bg-white/80 p-4">
-        <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          Compos probables
-        </h3>
-        <div className="mt-3 space-y-2">
-          {homeLineup.slice(0, 4).map((name, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div
-                className="h-5 w-5 shrink-0 rounded-full"
-                style={{ backgroundColor: `${match.home.colors.primary}50` }}
-              />
-              <span className="text-sm font-semibold text-slate-800">
-                {name}
-              </span>
-            </div>
-          ))}
-          <div className="my-2 border-t border-dashed border-slate-200/70" />
-          {awayLineup.slice(0, 4).map((name, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div
-                className="h-5 w-5 shrink-0 rounded-full"
-                style={{ backgroundColor: `${match.away.colors.primary}50` }}
-              />
-              <span className="text-sm font-semibold text-slate-800">
-                {name}
-              </span>
-            </div>
-          ))}
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+            {useSmApi ? lineupSourceLabel(lineupSource) : 'Compos probables'}
+          </h3>
+          {lineupsLoading ? (
+            <span className="text-[10px] font-semibold text-slate-400">Chargement…</span>
+          ) : useSmApi && (hasLineups || hasFormations) ? (
+            <span className="text-[10px] font-bold text-emerald-600">SportMonks</span>
+          ) : null}
         </div>
+        {useSmApi && !lineupsLoading && !hasLineups ? (
+          <p className="mt-2 text-xs font-medium leading-relaxed text-slate-500">
+            Aucune ligne de compos publiée pour ce match pour l’instant (officiel ~1 h avant le coup d’envoi, ou
+            option « expected lineups » selon ton plan SportMonks).
+          </p>
+        ) : null}
+        {homeDisplay.length > 0 || awayDisplay.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {homeDisplay.map((item, i) => {
+              const label = typeof item === 'string' ? item : item.label
+              const num = typeof item === 'string' ? undefined : item.number
+              return (
+                <div key={`h-${i}`} className="flex items-center gap-2">
+                  <div
+                    className="h-5 w-5 shrink-0 rounded-full"
+                    style={{ backgroundColor: `${match.home.colors.primary}50` }}
+                  />
+                  {num ? (
+                    <span className="w-6 shrink-0 text-xs font-black tabular-nums text-slate-500">{num}</span>
+                  ) : null}
+                  <span className="text-sm font-semibold text-slate-800">{label}</span>
+                </div>
+              )
+            })}
+            <div className="my-2 border-t border-dashed border-slate-200/70" />
+            {awayDisplay.map((item, i) => {
+              const label = typeof item === 'string' ? item : item.label
+              const num = typeof item === 'string' ? undefined : item.number
+              return (
+                <div key={`a-${i}`} className="flex items-center gap-2">
+                  <div
+                    className="h-5 w-5 shrink-0 rounded-full"
+                    style={{ backgroundColor: `${match.away.colors.primary}50` }}
+                  />
+                  {num ? (
+                    <span className="w-6 shrink-0 text-xs font-black tabular-nums text-slate-500">{num}</span>
+                  ) : null}
+                  <span className="text-sm font-semibold text-slate-800">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
+        {!useSmApi ? (
+          <p className="mt-2 text-[10px] font-medium text-slate-400">Démo locale — branche une clé SportMonks pour les vrais effectifs.</p>
+        ) : null}
       </section>
 
       <section className="rounded-xl border border-slate-200/60 bg-white/80 p-4">

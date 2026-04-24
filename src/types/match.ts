@@ -28,5 +28,7 @@ export type Match = {
   provider?: 'sportmonks' | 'demo'
   /** Identifiant fixture SportMonks (détail xG, compos, etc.). */
   sportMonksFixtureId?: number
+  /** Journée SM — pour charger les cotes `/rounds/{id}` (prématch). */
+  sportMonksRoundId?: number
 }
 

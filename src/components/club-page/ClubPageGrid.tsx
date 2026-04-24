@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn'
 import type { Team } from '../../types/match'
 import type { SupporterGroup } from '../../types/group'
 import type { ClubDebateItem, ClubPageMock, ClubSquadNode, ClubShopItem } from '../../data/clubPageMock'
+import type { TeamSeasonStatRow } from '../../api/sportMonks'
 import { Card } from '../ui/Card'
 import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
 
@@ -324,16 +325,33 @@ function formColor(r: 'V' | 'N' | 'D') {
   return 'bg-rose-500/30 text-rose-100 ring-1 ring-rose-400/30'
 }
 
+function fmtSeasonStat(n: number) {
+  if (Number.isInteger(n)) return String(n)
+  return n.toFixed(1).replace('.', ',')
+}
+
 function ClubSeasonSnapshotBlock({
   data,
   team,
   matchMode,
   scheduleHint,
+  clubLastMatch,
+  seasonStatsRows,
+  seasonStatsHint,
 }: {
   data: ClubPageMock
   team: Team
   matchMode: boolean
   scheduleHint?: string | null
+  clubLastMatch?: {
+    opponent: string
+    league: string
+    kickoff: string
+    venue: 'dom' | 'ext'
+    scoreLine: string
+  } | null
+  seasonStatsRows?: TeamSeasonStatRow[] | null
+  seasonStatsHint?: string | null
 }) {
   const { upcoming, formStrip, formStripFromApi, tableSnapshot, trophies } = data
   return (
@@ -405,6 +423,28 @@ function ClubSeasonSnapshotBlock({
           </p>
         </div>
       </div>
+      {clubLastMatch ? (
+        <div className="mt-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 p-3 ring-1 ring-violet-500/10">
+          <p className="text-[9px] font-black uppercase tracking-wider text-violet-200/95">
+            Dernier match (SportMonks)
+          </p>
+          <p className="mt-0.5 text-sm font-black text-tf-app-fg">
+            {clubLastMatch.league}
+          </p>
+          <p className="mt-0.5 text-xs font-bold text-violet-100/90">
+            {clubLastMatch.venue === 'dom' ? (
+              <span>
+                {team.shortName} {clubLastMatch.scoreLine} {clubLastMatch.opponent}
+              </span>
+            ) : (
+              <span>
+                {clubLastMatch.opponent} {clubLastMatch.scoreLine} {team.shortName}
+              </span>
+            )}
+          </p>
+          <p className="mt-1.5 text-[11px] font-bold text-amber-200/90">{clubLastMatch.kickoff}</p>
+        </div>
+      ) : null}
       {scheduleHint ? (
         <p className="mt-2 text-[10px] font-semibold leading-snug text-amber-200/95 [text-wrap:pretty]">
           {scheduleHint}{' '}
@@ -434,6 +474,29 @@ function ClubSeasonSnapshotBlock({
           <p className="text-[10px] font-semibold text-sky-200/80">{tableSnapshot.line}</p>
         </div>
       </div>
+      {seasonStatsRows?.length ? (
+        <div className="mt-3 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3 ring-1 ring-sky-500/10">
+          <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/95">
+            Stats saison (SportMonks)
+          </p>
+          <ul className="mt-2 max-h-[min(200px,38vh)] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
+            {seasonStatsRows.slice(0, 14).map((r) => (
+              <li
+                key={r.key}
+                className="flex items-baseline justify-between gap-2 border-b border-white/5 pb-1.5 text-[11px] last:border-0 last:pb-0"
+              >
+                <span className="min-w-0 font-semibold leading-snug text-sky-100/90">{r.label}</span>
+                <span className="shrink-0 font-black tabular-nums text-white">{fmtSeasonStat(r.value)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {seasonStatsHint ? (
+        <p className="mt-2 text-[10px] font-semibold leading-snug text-amber-200/90 [text-wrap:pretty]">
+          {seasonStatsHint}
+        </p>
+      ) : null}
       </div>
     </Card>
   )
@@ -445,12 +508,27 @@ export function ClubPageGrid({
   matchMode,
   clubGroups,
   clubScheduleHint,
+  clubLastMatch,
+  squadFromSportMonks,
+  clubSeasonStats,
+  clubSeasonStatsHint,
 }: {
   team: Team
   data: ClubPageMock
   matchMode: boolean
   clubGroups: SupporterGroup[]
   clubScheduleHint?: string | null
+  clubLastMatch?: {
+    opponent: string
+    league: string
+    kickoff: string
+    venue: 'dom' | 'ext'
+    scoreLine: string
+  } | null
+  /** Noms sur le terrain alignés sur `squads/teams` (filtre stats saison optionnel). */
+  squadFromSportMonks?: boolean
+  clubSeasonStats?: TeamSeasonStatRow[] | null
+  clubSeasonStatsHint?: string | null
 }) {
   const [selId, setSelId] = useState(data.hotPlayerId)
   const [shopPreview, setShopPreview] = useState<string | null>(null)
@@ -473,9 +551,13 @@ export function ClubPageGrid({
         >
           <div className="border-b border-emerald-500/20 bg-black/20 p-3 sm:p-4">
             <ClubEncartTitle
-              kicker="11 titulaires (démo)"
+              kicker={squadFromSportMonks ? '11 titulaires (SportMonks)' : '11 titulaires (démo)'}
               kickerClass="text-emerald-200/90"
-              subtitle="Formation 4-3-3 + gardien : onze joueurs — tape un nœud sur le terrain."
+              subtitle={
+                squadFromSportMonks
+                  ? 'Noms et numéros depuis l’effectif API (ordre maillot sur la formation 4-3-3) — tape un nœud.'
+                  : 'Formation 4-3-3 + gardien : onze joueurs — tape un nœud sur le terrain.'
+              }
             >
               Effectif (interactif)
             </ClubEncartTitle>
@@ -566,6 +648,9 @@ export function ClubPageGrid({
           team={team}
           matchMode={matchMode}
           scheduleHint={clubScheduleHint}
+          clubLastMatch={clubLastMatch}
+          seasonStatsRows={clubSeasonStats}
+          seasonStatsHint={clubSeasonStatsHint}
         />
       </div>
 
