@@ -38,6 +38,11 @@ const LEAGUES_DATE_SILENT_FORWARD = 3
 const NO_SM_TOKEN_MESSAGE_FR =
   'Aucune clé SportMonks : ajoute-la dans Profil → Données (ou VITE_SPORTMONKS_TOKEN dans .env.local), puis recharge la page. Les matchs démo ne sont plus affichés.'
 
+function reasonFromSettled(r: PromiseRejectedResult): string {
+  const x = r.reason
+  return x instanceof Error ? x.message : String(x)
+}
+
 async function smFixturesFromLeaguesDateKeys(token: string, keys: string[]): Promise<SmFixture[]> {
   const acc: SmFixture[] = []
   for (let i = 0; i < keys.length; i += LEAGUES_DATE_BATCH) {
@@ -102,6 +107,9 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
           inplaySettled.status === 'fulfilled' ? inplaySettled.value : ([] as SmFixture[])
         const between =
           betweenSettled.status === 'fulfilled' ? betweenSettled.value : ([] as SmFixture[])
+        const primaryFetchFailures: string[] = []
+        if (inplaySettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(inplaySettled))
+        if (betweenSettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(betweenSettled))
 
         const leaguesDateKeys = parisCalendarDayKeysInclusive(
           addParisCalendarDays(
@@ -141,14 +149,18 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
             if (prev.length > 0) {
               queueMicrotask(() =>
                 setError(
-                  'SportMonks a renvoyé une liste vide (quota, filtre ou coupure). La dernière version du calendrier reste affichée.',
+                  primaryFetchFailures.length
+                    ? primaryFetchFailures.join(' — ')
+                    : 'SportMonks a renvoyé une liste vide (quota, filtre ou coupure). La dernière version du calendrier reste affichée.',
                 ),
               )
               return prev
             }
             queueMicrotask(() =>
               setError(
-                'SportMonks n’a renvoyé aucun match pour cette période. Vérifie ton plan (ligues / pays inclus) ou la clé dans Profil → Données.',
+                primaryFetchFailures.length
+                  ? `Échec des appels SportMonks : ${primaryFetchFailures.join(' — ')}. Si tu es sur Vercel avec le relais /api/sm, vérifie que la route n’est pas renvoyée vers index.html (onglet Réseau) et que SPORTMONKS_TOKEN est bien défini.`
+                  : 'SportMonks n’a renvoyé aucun match pour cette période (~7 jours passés + ~10 jours à venir, fuseau Paris). Vérifie ton plan SportMonks (ligues / pays inclus) ou un créneau sans matchs du Big 5.',
               ),
             )
             return []
