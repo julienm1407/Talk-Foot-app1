@@ -8,6 +8,7 @@ import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { API_TOKENS_CHANGED_EVENT } from '../constants/apiKeysStorage'
 import {
+  buildEmbedSportMonksTokenAtViteBuild,
   getSportMonksToken,
   getSportMonksTokenSource,
   hasBrowserSportMonksToken,
@@ -32,6 +33,7 @@ export function DataSourcesSettingsPage() {
 
   const envSm = Boolean(import.meta.env.VITE_SPORTMONKS_TOKEN?.trim())
   const tokenSource = getSportMonksTokenSource()
+  const smTokenBakedAtBuild = buildEmbedSportMonksTokenAtViteBuild()
 
   useEffect(() => {
     const bump = () => setStorageTick((n) => n + 1)
@@ -169,17 +171,33 @@ export function DataSourcesSettingsPage() {
             {tokenSource === 'none' && (
               <>
                 <strong className="text-tf-app-fg">Aucun jeton détecté</strong> — l’app n’envoie aucune requête à
-                SportMonks et affiche des matchs de démo. En local :{' '}
-                <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code> dans{' '}
-                <code className="font-mono text-xs">.env.local</code> puis redémarrer le serveur. Sur le site déployé :
-                la même variable sur <strong className="text-tf-app-fg">Vercel</strong> puis un redeploy. Pour toi seul
-                sur cette machine : colle la clé ci-dessous puis Enregistrer.{' '}
-                <a
-                  href={SM_KEY_HASH}
-                  className={cn('font-black underline underline-offset-2', L ? 'text-tf-electric-deep' : 'text-sky-200')}
-                >
-                  Aller au champ pour coller la clé
-                </a>
+                SportMonks et affiche des matchs de démo.{' '}
+                {!smTokenBakedAtBuild && import.meta.env.PROD ? (
+                  <>
+                    <span className="block pt-2 font-black text-tf-app-fg">
+                      Diagnostic : ce déploiement a été construit sans <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code> dans l’environnement du build.
+                    </span>
+                    <span className="block pt-1 text-xs font-semibold leading-snug">
+                      Sur Vercel : nom exact <code className="font-mono">VITE_SPORTMONKS_TOKEN</code>, cocher{' '}
+                      <strong>Production</strong>, enregistrer, puis <strong>Deployments → … → Redeploy</strong> (sans cache
+                      si besoin). Vérifie aussi que le <strong>Root Directory</strong> du projet pointe bien vers le dossier
+                      qui contient <code className="font-mono">package.json</code> (ex. racine du repo).
+                    </span>
+                  </>
+                ) : null}
+                <span className="block pt-2">
+                  En local : <code className="font-mono text-xs">VITE_SPORTMONKS_TOKEN</code> dans{' '}
+                  <code className="font-mono text-xs">.env.local</code> puis redémarrer <code className="font-mono text-xs">npm run dev</code>.
+                  Sur le site déployé : la même variable sur <strong className="text-tf-app-fg">Vercel</strong> puis un{' '}
+                  <strong>nouveau</strong> déploiement. Pour toi seul sur ce navigateur : colle la clé ci-dessous puis
+                  Enregistrer.{' '}
+                  <a
+                    href={SM_KEY_HASH}
+                    className={cn('font-black underline underline-offset-2', L ? 'text-tf-electric-deep' : 'text-sky-200')}
+                  >
+                    Aller au champ pour coller la clé
+                  </a>
+                </span>
               </>
             )}
           </div>

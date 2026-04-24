@@ -40,7 +40,7 @@ function extractArticleSitemapEntries(
 ): { path: string; lastmod: string }[] {
   if (!existsSync(newsPath)) return []
   const src = readFileSync(newsPath, 'utf8')
-  const chunks = src.split(/\n  \{/g)
+  const chunks = src.split(/\n {2}\{/g)
   const seen = new Set<string>()
   const out: { path: string; lastmod: string }[] = []
   for (let i = 1; i < chunks.length; i++) {
@@ -115,6 +115,8 @@ Sitemap: ${origin}${prefix}/sitemap.xml
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  /** Aligné sur ce que Vite injecte dans `import.meta.env` au build (inclut `process.env` Vercel, etc.). */
+  const buildHasSmToken = Boolean(String(env.VITE_SPORTMONKS_TOKEN ?? '').trim())
   const siteUrl = env.VITE_PUBLIC_SITE_URL?.trim().replace(/\/$/, '')
   const GITHUB_PAGES = process.env.GITHUB_PAGES === 'true'
   const outDir = GITHUB_PAGES ? 'docs' : 'dist'
@@ -126,6 +128,10 @@ export default defineConfig(({ mode }) => {
   if (siteUrl) plugins.push(tfSitemapRobotsPlugin(outDir, siteUrl, publicPathPrefix))
 
   return {
+    define: {
+      /** Exposé au client pour diagnostiquer « clé absente » après déploiement (sans révéler le jeton). */
+      __TF_BUILD_HAS_SM_TOKEN__: JSON.stringify(buildHasSmToken),
+    },
     plugins,
     base: GITHUB_PAGES ? GH_PAGES_BASE : '/',
     build: {

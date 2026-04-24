@@ -8,6 +8,11 @@ function trimOrUndef(s: string | undefined | null): string | undefined {
 /** D’où vient le jeton utilisé pour les `fetch` vers api.sportmonks.com. */
 export type SportMonksTokenSource = 'env' | 'browser' | 'none'
 
+/** `true` si le dernier `vite build` a vu une valeur non vide pour `VITE_SPORTMONKS_TOKEN` (diagnostic déploiement). */
+export function buildEmbedSportMonksTokenAtViteBuild(): boolean {
+  return typeof __TF_BUILD_HAS_SM_TOKEN__ !== 'undefined' && __TF_BUILD_HAS_SM_TOKEN__
+}
+
 export function getSportMonksTokenSource(): SportMonksTokenSource {
   if (trimOrUndef(import.meta.env.VITE_SPORTMONKS_TOKEN)) return 'env'
   try {

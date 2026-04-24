@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+/** Défini dans `vite.config.ts` — indique si `VITE_SPORTMONKS_TOKEN` était présent au moment du `vite build`. */
+declare const __TF_BUILD_HAS_SM_TOKEN__: boolean
+
 interface ImportMetaEnv {
   /** URL publique du site sans slash final (sitemap, robots, canonicals). Production : https://talk-foot.com */
   readonly VITE_PUBLIC_SITE_URL?: string
