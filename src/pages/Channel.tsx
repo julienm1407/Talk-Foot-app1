@@ -53,9 +53,60 @@ import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import { shouldSimulateLiveCrowd } from '../config/liveSimulation'
 import { MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../utils/bannedWords'
+import type { Match } from '../types/match'
+import type {
+  FixtureTrendDisplayRow,
+  LiveFixtureStatRow,
+  SmMatchXGTotals,
+} from '../api/sportMonks'
 
 const TF_MOBILE_MENU_SUMMARY =
   'flex w-full cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-tf-grey-pastel/60 bg-white/95 px-3 py-2.5 text-left text-xs font-black uppercase tracking-wide text-tf-dark shadow-sm outline-none transition hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/35 [&::-webkit-details-marker]:hidden'
+
+function ChannelMatchStatsBlocks({
+  match,
+  matchView,
+  xgTotals,
+  xgLoading,
+  liveStatRows,
+  liveStatsLoading,
+  trendRows,
+  trendsLoading,
+}: {
+  match: Match
+  matchView: Match
+  xgTotals: SmMatchXGTotals | null
+  xgLoading: boolean
+  liveStatRows: LiveFixtureStatRow[]
+  liveStatsLoading: boolean
+  trendRows: FixtureTrendDisplayRow[]
+  trendsLoading: boolean
+}) {
+  return (
+    <>
+      <MatchXGStrip
+        match={matchView}
+        xg={xgTotals}
+        loading={xgLoading}
+        className="min-w-0 sm:max-w-[15rem]"
+      />
+      {(match.status === 'live' || match.status === 'finished') && (
+        <MatchLiveStatsStrip
+          match={matchView}
+          rows={liveStatRows}
+          loading={liveStatsLoading}
+          className="min-w-0 flex-1 sm:min-w-[12rem] sm:max-w-md"
+        />
+      )}
+      <MatchTrendsStrip
+        match={matchView}
+        rows={trendRows}
+        loading={trendsLoading}
+        className="min-w-0 sm:max-w-[15rem]"
+      />
+    </>
+  )
+}
 
 export function ChannelPage() {
   const { matchId } = useParams()
@@ -178,11 +229,19 @@ export function ChannelPage() {
   const [reactions, setReactions] = useState<ReactionEvent[]>([])
   const [floating, setFloating] = useState<FloatingReaction[]>([])
   const idRef = useRef(0)
-  const [simMinute, setSimMinute] = useState<number>(() => match?.minute ?? 0)
+  /** Ancre API + horloge locale : le poll SM du calendrier est rare (~20 min) ; on fait avancer l’affichage entre deux syncs. */
+  const [liveMinuteAnchor, setLiveMinuteAnchor] = useState<{ minute: number; atMs: number }>(() => ({
+    minute: match?.minute ?? 0,
+    atMs: Date.now(),
+  }))
+  const [liveMinuteClock, setLiveMinuteClock] = useState(0)
+  const liveMinuteSyncRef = useRef<{ matchId: string; lastApiMinute: number | undefined }>({
+    matchId: '',
+    lastApiMinute: undefined,
+  })
   const [simScore, setSimScore] = useState<{ home: number; away: number } | undefined>(
     () => match?.score,
   )
-  const simMinuteRef = useRef<number>(match?.minute ?? 0)
   const simScoreRef = useRef<{ home: number; away: number } | undefined>(match?.score)
 
   const pipContainerRef = useRef<HTMLDivElement | null>(null)
@@ -451,37 +510,45 @@ export function ChannelPage() {
 
   const compTheme = match ? themeForCompetition(match.competition.id) : null
 
+  const liveDisplayMinute = useMemo(() => {
+    if (!match || match.status !== 'live') return match?.minute ?? 0
+    const driftMin = Math.floor((Date.now() - liveMinuteAnchor.atMs) / 60_000)
+    return Math.min(130, Math.max(0, liveMinuteAnchor.minute + driftMin))
+  }, [match, match?.status, liveMinuteAnchor, liveMinuteClock])
+
   const matchView = useMemo(() => {
     if (!match) return null
     if (match.status !== 'live') return match
-    return { ...match, minute: simMinute, score: simScore }
-  }, [match, simMinute, simScore])
+    return { ...match, minute: liveDisplayMinute, score: simScore }
+  }, [match, liveDisplayMinute, simScore])
 
-  // Minute / score live : uniquement les valeurs renvoyées par SportMonks (via `MatchesContext`, poll ~45 s).
+  // Score live : valeurs SportMonks ; la minute affichée combine ancre API + dérive locale (`liveMinuteClock`).
   useEffect(() => {
     if (!match || match.status !== 'live') return
-    setSimMinute(match.minute ?? 0)
     setSimScore(match.score ?? { home: 0, away: 0 })
-    simMinuteRef.current = match.minute ?? 0
     simScoreRef.current = match.score ?? { home: 0, away: 0 }
-  }, [
-    match?.id,
-    match?.status,
-    match?.minute,
-    match?.score?.home,
-    match?.score?.away,
-  ])
+  }, [match?.id, match?.status, match?.score?.home, match?.score?.away])
 
   useEffect(() => {
-    const prevHtml = document.documentElement.style.overflow
-    const prevBody = document.body.style.overflow
-    document.documentElement.style.overflow = 'hidden'
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.documentElement.style.overflow = prevHtml
-      document.body.style.overflow = prevBody
+    if (!match || match.status !== 'live') return
+    const apiM = match.minute ?? 0
+    const r = liveMinuteSyncRef.current
+    if (r.matchId !== match.id) {
+      liveMinuteSyncRef.current = { matchId: match.id, lastApiMinute: apiM }
+      setLiveMinuteAnchor({ minute: apiM, atMs: Date.now() })
+      return
     }
-  }, [])
+    if (r.lastApiMinute !== apiM) {
+      liveMinuteSyncRef.current = { ...r, lastApiMinute: apiM }
+      setLiveMinuteAnchor({ minute: apiM, atMs: Date.now() })
+    }
+  }, [match?.id, match?.status, match?.minute])
+
+  useEffect(() => {
+    if (!match || match.status !== 'live') return
+    const id = window.setInterval(() => setLiveMinuteClock((n) => n + 1), 5000)
+    return () => window.clearInterval(id)
+  }, [match?.id, match?.status])
 
   const messageExtras = () =>
     stadiumGroupId
@@ -717,29 +784,76 @@ export function ChannelPage() {
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-between sm:gap-3">
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <ChannelHeader match={matchView} />
-                {match?.sportMonksFixtureId ? (
-                  <div className="flex max-w-xl flex-col gap-2 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-stretch">
-                    <MatchXGStrip
-                      match={matchView}
-                      xg={xgTotals}
-                      loading={xgLoading}
-                      className="min-w-0 sm:max-w-[15rem]"
-                    />
-                    {(match.status === 'live' || match.status === 'finished') && (
-                      <MatchLiveStatsStrip
-                        match={matchView}
-                        rows={liveStatRows}
-                        loading={liveStatsLoading}
-                        className="min-w-0 flex-1 sm:min-w-[12rem] sm:max-w-md"
-                      />
+                <div className="mt-1 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:flex-wrap">
+                  <Button
+                    variant="primary"
+                    type="button"
+                    className="min-h-11 w-full shrink-0 sm:min-h-0 sm:w-auto"
+                    onClick={() =>
+                      chatColumnRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      })
+                    }
+                  >
+                    {match.status === 'live'
+                      ? 'Rejoindre le live'
+                      : match.status === 'upcoming'
+                        ? 'Avant-match'
+                        : 'Salon match'}
+                  </Button>
+                  <Link
+                    to={`/channel/${match.id}/stade?salons=1`}
+                    className={cn(
+                      'tf-btn-fluid inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
+                      'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40',
+                      'sm:min-h-0 sm:w-auto',
                     )}
-                    <MatchTrendsStrip
-                      match={matchView}
-                      rows={trendRows}
-                      loading={trendsLoading}
-                      className="min-w-0 sm:max-w-[15rem]"
-                    />
-                  </div>
+                  >
+                    Rejoindre un salon
+                  </Link>
+                </div>
+                {match?.sportMonksFixtureId ? (
+                  <>
+                    <details className="group xl:hidden">
+                      <summary className={TF_MOBILE_MENU_SUMMARY}>
+                        <span className="flex items-center gap-2">
+                          <span aria-hidden>📊</span>
+                          Stats & tendances (SportMonks)
+                        </span>
+                        <span
+                          className="text-[10px] text-tf-grey transition group-open:rotate-180"
+                          aria-hidden
+                        >
+                          ▼
+                        </span>
+                      </summary>
+                      <div className="mt-2 flex max-w-full flex-col gap-2 rounded-xl border border-tf-grey-pastel/40 bg-tf-grey-pastel/10 p-2 sm:flex-row sm:flex-wrap sm:items-stretch">
+                        <ChannelMatchStatsBlocks
+                          match={match}
+                          matchView={matchView}
+                          xgTotals={xgTotals}
+                          xgLoading={xgLoading}
+                          liveStatRows={liveStatRows}
+                          liveStatsLoading={liveStatsLoading}
+                          trendRows={trendRows}
+                          trendsLoading={trendsLoading}
+                        />
+                      </div>
+                    </details>
+                    <div className="hidden max-w-xl flex-col gap-2 xl:flex xl:max-w-none xl:flex-row xl:flex-wrap xl:items-stretch">
+                      <ChannelMatchStatsBlocks
+                        match={match}
+                        matchView={matchView}
+                        xgTotals={xgTotals}
+                        xgLoading={xgLoading}
+                        liveStatRows={liveStatRows}
+                        liveStatsLoading={liveStatsLoading}
+                        trendRows={trendRows}
+                        trendsLoading={trendsLoading}
+                      />
+                    </div>
+                  </>
                 ) : null}
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-start sm:justify-start">
@@ -752,74 +866,6 @@ export function ChannelPage() {
                 <ActiveUsers users={users} />
               </div>
             </div>
-            <div className="mt-3 hidden flex-col gap-2 sm:mt-2 sm:flex sm:flex-row sm:flex-wrap">
-              <Button
-                variant="primary"
-                type="button"
-                className="min-h-11 w-full shrink-0 sm:min-h-0 sm:w-auto"
-                onClick={() =>
-                  chatColumnRef.current?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest',
-                  })
-                }
-              >
-                {match.status === 'live'
-                  ? 'Rejoindre le live'
-                  : match.status === 'upcoming'
-                    ? 'Avant-match'
-                    : 'Salon match'}
-              </Button>
-              <Link
-                to={`/channel/${match.id}/stade?salons=1`}
-                className={cn(
-                  'tf-btn-fluid inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
-                  'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40',
-                  'sm:min-h-0 sm:w-auto',
-                )}
-              >
-                Rejoindre un salon
-              </Link>
-            </div>
-            <details className="group mt-2 sm:hidden">
-              <summary className={TF_MOBILE_MENU_SUMMARY}>
-                <span className="flex items-center gap-2">
-                  <span aria-hidden>⚡</span>
-                  Accès rapide au live
-                </span>
-                <span className="text-[10px] text-tf-grey transition group-open:rotate-180" aria-hidden>
-                  ▼
-                </span>
-              </summary>
-              <div className="mt-2 flex flex-col gap-2 rounded-xl border border-tf-grey-pastel/40 bg-tf-grey-pastel/10 p-2">
-                <Button
-                  variant="primary"
-                  type="button"
-                  className="min-h-11 w-full"
-                  onClick={() =>
-                    chatColumnRef.current?.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'nearest',
-                    })
-                  }
-                >
-                  {match.status === 'live'
-                    ? 'Rejoindre le live'
-                    : match.status === 'upcoming'
-                      ? 'Avant-match'
-                      : 'Salon match'}
-                </Button>
-                <Link
-                  to={`/channel/${match.id}/stade?salons=1`}
-                  className={cn(
-                    'tf-btn-fluid inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
-                    'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40',
-                  )}
-                >
-                  Rejoindre un salon
-                </Link>
-              </div>
-            </details>
             {isLiveOpen && match.status === 'live' && lastMoment ? (
               <div className="mt-2 flex items-center gap-2 overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-3 py-2 sm:gap-3 sm:px-3.5">
                 <span className="text-xs font-black tabular-nums text-tf-grey">
@@ -927,7 +973,10 @@ export function ChannelPage() {
                     )}
                   >
                     {isLiveOpen && (
-                      <div className="relative flex min-h-[9rem] flex-col overflow-hidden max-lg:max-h-[min(32vh,260px)] max-lg:min-h-[9rem] lg:min-h-0 lg:h-full lg:overflow-visible">
+                      <div
+                        id="channel-live-pitch"
+                        className="relative flex min-h-[9rem] scroll-mt-[max(5.5rem,env(safe-area-inset-top,0px))] flex-col overflow-hidden max-lg:max-h-[min(40vh,320px)] max-lg:min-h-[10rem] lg:min-h-0 lg:h-full lg:max-h-none lg:overflow-visible"
+                      >
                         <div
                           ref={pipContainerRef}
                           className="absolute top-2 right-2 z-30 h-0 w-0 overflow-visible sm:top-4 sm:right-4"

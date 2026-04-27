@@ -24,6 +24,15 @@ function randomBetween(rng: () => number, a: number, b: number) {
   return a + rng() * (b - a)
 }
 
+function normalizeScore(s: { home: unknown; away: unknown }): { home: number; away: number } {
+  const h = Number(s.home)
+  const a = Number(s.away)
+  return {
+    home: Number.isFinite(h) ? h : 0,
+    away: Number.isFinite(a) ? a : 0,
+  }
+}
+
 /** Évite un tableau type 3-2 affiché à la 8ᵉ minute si les données mock sont incohérentes. */
 function coherentMinuteWithScore(
   minuteFromMatch: number,
@@ -68,9 +77,19 @@ export function useLiveEncartSimulation(match: Match | null) {
   const smSeenKeysRef = useRef<Set<string>>(new Set())
   const smPrimedRef = useRef(false)
 
+  /** Dernière minute « officielle » SM + horodatage : le poll timeline est ~12 s, le calendrier rare — on fait dériver l’affichage entre deux syncs. */
+  const minuteAnchorRef = useRef<{ m: number; atMs: number }>({ m: 1, atMs: Date.now() })
+  const [liveChronoTick, setLiveChronoTick] = useState(0)
+
   const active = Boolean(match && match.status === 'live')
   const smTimelineDriving =
     active && Boolean(match?.sportMonksFixtureId) && Boolean(getSportMonksToken())
+
+  const snapMinuteFromAuthority = useCallback((m: number) => {
+    const clamped = Math.min(99, Math.max(1, Math.round(m)))
+    minuteAnchorRef.current = { m: clamped, atMs: Date.now() }
+    setMinute(clamped)
+  }, [])
 
   const clearBumpSoon = useCallback(() => {
     if (bumpClearRef.current) clearTimeout(bumpClearRef.current)
@@ -97,6 +116,7 @@ export function useLiveEncartSimulation(match: Match | null) {
 
   useEffect(() => {
     if (!match || match.status !== 'live') {
+      minuteAnchorRef.current = { m: 1, atMs: Date.now() }
       setMinute(1)
       setScore({ home: 0, away: 0 })
       scoreRef.current = { home: 0, away: 0 }
@@ -106,35 +126,45 @@ export function useLiveEncartSimulation(match: Match | null) {
       setRim(null)
       return
     }
-    const s = initialScoreFromMatch(match)
+    const s = normalizeScore(initialScoreFromMatch(match))
     const rawMin = Math.min(89, match.minute ?? 12)
     const m = coherentMinuteWithScore(rawMin, s.home + s.away)
-    setMinute(m)
+    snapMinuteFromAuthority(m)
     setScore(s)
     scoreRef.current = s
     setBumpSide(null)
     setBurst(null)
     setToast(null)
     setRim(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset ciblé sur id + statut live
-  }, [match?.id, match?.status])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset ciblé sur id + statut live (+ snap stable)
+  }, [match?.id, match?.status, snapMinuteFromAuthority])
 
   useEffect(() => {
     smSeenKeysRef.current = new Set()
     smPrimedRef.current = false
   }, [match?.id])
 
+  /** Minute calendrier SM : quand la timeline conduit l’encart, réaligner sur le calendrier (même logique « cohérente » que le reset). */
+  useEffect(() => {
+    if (!match || match.status !== 'live') return
+    if (!smTimelineDriving) return
+    const s = normalizeScore(initialScoreFromMatch(match))
+    const rawMin = Math.min(89, match.minute ?? 12)
+    const m = coherentMinuteWithScore(rawMin, s.home + s.away)
+    snapMinuteFromAuthority(m)
+  }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, match?.status, smTimelineDriving, snapMinuteFromAuthority])
+
   /** À chaque refetch `MatchesContext` (~45 s) : réaligner score + minute SM sans réinitialiser tout l’encart. */
   useEffect(() => {
     if (!match || match.status !== 'live') return
     if (smTimelineDriving) return
-    const s = initialScoreFromMatch(match)
+    const s = normalizeScore(initialScoreFromMatch(match))
     const rawMin = Math.min(89, match.minute ?? 12)
     const m = coherentMinuteWithScore(rawMin, s.home + s.away)
     setScore(s)
     scoreRef.current = s
-    setMinute(m)
-  }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, smTimelineDriving])
+    snapMinuteFromAuthority(m)
+  }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, smTimelineDriving, snapMinuteFromAuthority])
 
   useEffect(() => {
     if (!active) return
@@ -147,6 +177,13 @@ export function useLiveEncartSimulation(match: Match | null) {
     }, MINUTE_MS)
     return () => clearInterval(id)
   }, [active, smTimelineDriving])
+
+  /** Ré-affiche la minute dérivée pendant le live piloté par la timeline SM. */
+  useEffect(() => {
+    if (!active || !smTimelineDriving) return
+    const id = window.setInterval(() => setLiveChronoTick((n) => n + 1), 10_000)
+    return () => window.clearInterval(id)
+  }, [active, smTimelineDriving, match?.id])
 
   /** Timeline événements fixture SM : score, minute, animations (remplace la simulation aléatoire). */
   useEffect(() => {
@@ -167,12 +204,13 @@ export function useLiveEncartSimulation(match: Match | null) {
 
         const goals = extractCurrentGoalsFromSmFixture(fx)
         if (goals) {
-          setScore(goals)
-          scoreRef.current = goals
+          const g = normalizeScore(goals)
+          setScore(g)
+          scoreRef.current = g
         }
         const liveMin = extractLiveMinuteFromSmFixture(fx)
         if (Number.isFinite(liveMin) && liveMin >= 0) {
-          setMinute(Math.min(99, Math.max(1, liveMin)))
+          snapMinuteFromAuthority(Math.min(99, Math.max(1, liveMin)))
         }
 
         const raw = Array.isArray(fx.events) ? fx.events : []
@@ -230,7 +268,7 @@ export function useLiveEncartSimulation(match: Match | null) {
       cancelled = true
       if (intervalId) clearInterval(intervalId)
     }
-  }, [active, match?.sportMonksFixtureId, match?.id, clearBumpSoon, flashRim, showToast])
+  }, [active, match?.sportMonksFixtureId, match?.id, clearBumpSoon, flashRim, showToast, snapMinuteFromAuthority])
 
   useEffect(() => {
     if (!active) return
@@ -250,7 +288,7 @@ export function useLiveEncartSimulation(match: Match | null) {
       const m = matchRef.current
       if (!m || m.status !== 'live') return
 
-      const prev = scoreRef.current
+      const prev = normalizeScore(scoreRef.current)
       const total = prev.home + prev.away
       const rng = () => rngRef.current()
       const r = rng()
@@ -258,7 +296,7 @@ export function useLiveEncartSimulation(match: Match | null) {
       if (r < 0.32 && total < 6) {
         const homeBias = prev.home <= prev.away ? 0.52 : 0.45
         const side = rng() < homeBias ? 'home' : 'away'
-        const next = { ...prev, [side]: prev[side] + 1 } as { home: number; away: number }
+        const next = { ...prev, [side]: prev[side] + 1 }
         scoreRef.current = next
         setScore(next)
         // Faire avancer le chrono comme après une action de jeu (sinon score et minute divergent).
@@ -352,16 +390,24 @@ export function useLiveEncartSimulation(match: Match | null) {
     }
   }, [])
 
+  const displayMinute = useMemo(() => {
+    if (!active) return minute
+    if (!smTimelineDriving) return minute
+    const { m, atMs } = minuteAnchorRef.current
+    const drift = Math.floor((Date.now() - atMs) / 60_000)
+    return Math.min(99, Math.max(0, m + drift))
+  }, [active, smTimelineDriving, minute, liveChronoTick])
+
   return useMemo(
     () => ({
       active,
-      minute,
+      minute: displayMinute,
       score,
       bumpSide,
       burst,
       toast,
       rim,
     }),
-    [active, minute, score, bumpSide, burst, toast, rim],
+    [active, displayMinute, score, bumpSide, burst, toast, rim],
   )
 }

@@ -1,4 +1,5 @@
 import type { Highlight } from '../../data/highlights'
+import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
 import type { SmFixture, SmFixtureEventRow } from './types'
 
 const MAX_ROWS = 150
@@ -52,7 +53,7 @@ export function extractTimelineHighlightsFromSmFixture(
       const minute = displayMinute(c)
       const order = typeof c.order === 'number' ? c.order : typeof c.id === 'number' ? c.id : 0
       const type: Highlight['type'] = c.is_goal ? 'But' : c.is_important ? 'Occasion' : 'Info'
-      const detail = String(c.comment).trim()
+      const detail = translateSportMonksLiveTextToFr(String(c.comment).trim())
       return {
         id: `sm-comment-${c.id ?? order}-${order}`,
         matchId,
@@ -79,8 +80,8 @@ export function extractTimelineHighlightsFromSmFixture(
     const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
     const type = highlightTypeFromEventDev(dev)
     const minute = displayMinute(ev)
-    const title = eventTitle(ev, type)
-    const detail = dev || 'Événement'
+    const title = translateSportMonksLiveTextToFr(eventTitle(ev, type).trim())
+    const detail = translateSportMonksLiveTextToFr((dev || 'Événement').trim())
     return {
       id: `sm-event-${ev.id ?? `${minute}-${dev}`}`,
       matchId,

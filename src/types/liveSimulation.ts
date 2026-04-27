@@ -46,5 +46,11 @@ export function createMatchRng(matchId: string) {
 }
 
 export function initialScoreFromMatch(match: Match): { home: number; away: number } {
-  return match.score ? { ...match.score } : { home: 0, away: 0 }
+  if (!match.score) return { home: 0, away: 0 }
+  const h = Number(match.score.home)
+  const a = Number(match.score.away)
+  return {
+    home: Number.isFinite(h) ? h : 0,
+    away: Number.isFinite(a) ? a : 0,
+  }
 }

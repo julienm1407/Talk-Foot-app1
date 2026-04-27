@@ -26,7 +26,7 @@ type HomeSiteSearchProps = {
 }
 
 export type HomeSiteSearchHandle = {
-  /** Remplit la requête, ouvre le panneau de résultats et focus le champ (ex. tendances 12h). */
+  /** Remplit la requête, ouvre le panneau de résultats et focus le champ (ex. hashtag sous la recherche). */
   applyQuery: (q: string) => void
 }
 

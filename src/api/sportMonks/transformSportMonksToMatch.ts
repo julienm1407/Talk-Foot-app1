@@ -118,15 +118,16 @@ function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away
     for (const s of currentRows) {
       const g = s.score?.goals
       const part = String(s.score?.participant ?? '').toLowerCase()
-      if (g == null || Number.isNaN(Number(g))) continue
-      if (part === 'home') home = Math.max(home, g)
-      if (part === 'away') away = Math.max(away, g)
+      const gn = g == null ? NaN : Number(g)
+      if (!Number.isFinite(gn)) continue
+      if (part === 'home') home = Math.max(home, gn)
+      if (part === 'away') away = Math.max(away, gn)
     }
     if (home !== 0 || away !== 0) return { home, away }
     const sawSide = currentRows.some((s) => {
       const g = s.score?.goals
       const part = String(s.score?.participant ?? '').toLowerCase()
-      return (part === 'home' || part === 'away') && g != null && !Number.isNaN(Number(g))
+      return (part === 'home' || part === 'away') && g != null && Number.isFinite(Number(g))
     })
     if (sawSide) return { home: 0, away: 0 }
   }
@@ -147,9 +148,10 @@ function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away
   for (const s of pool) {
     const g = s.score?.goals
     const part = String(s.score?.participant ?? '').toLowerCase()
-    if (g == null || Number.isNaN(Number(g))) continue
-    if (part === 'home') home = Math.max(home, g)
-    if (part === 'away') away = Math.max(away, g)
+    const gn = g == null ? NaN : Number(g)
+    if (!Number.isFinite(gn)) continue
+    if (part === 'home') home = Math.max(home, gn)
+    if (part === 'away') away = Math.max(away, gn)
   }
   if (home !== 0 || away !== 0) return { home, away }
   home = 0
@@ -158,15 +160,16 @@ function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away
   for (const s of fallbackPool.length ? fallbackPool : scores) {
     const g = s.score?.goals
     const part = String(s.score?.participant ?? '').toLowerCase()
-    if (g == null || Number.isNaN(Number(g))) continue
-    if (part === 'home') home = Math.max(home, g)
-    if (part === 'away') away = Math.max(away, g)
+    const gn = g == null ? NaN : Number(g)
+    if (!Number.isFinite(gn)) continue
+    if (part === 'home') home = Math.max(home, gn)
+    if (part === 'away') away = Math.max(away, gn)
   }
   if (home !== 0 || away !== 0) return { home, away }
   const sawSide = scores.some((s) => {
     const g = s.score?.goals
     const part = String(s.score?.participant ?? '').toLowerCase()
-    return (part === 'home' || part === 'away') && g != null && !Number.isNaN(Number(g))
+    return (part === 'home' || part === 'away') && g != null && Number.isFinite(Number(g))
   })
   return sawSide ? { home: 0, away: 0 } : undefined
 }

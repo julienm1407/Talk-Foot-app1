@@ -24,8 +24,12 @@ export function getLiveSalonPresenceSnapshot(
 ): LiveSalonPresenceSnapshot {
   const t = tick * 0.35
   const rng = createMatchRng(`${match.id}:${Math.floor(tick / 6)}`)
-  const goals = sim.score.home + sim.score.away
-  const closeGame = Math.abs(sim.score.home - sim.score.away) <= 1 ? 1 : 0
+  const h = Number(sim.score.home)
+  const aw = Number(sim.score.away)
+  const homeN = Number.isFinite(h) ? h : 0
+  const awayN = Number.isFinite(aw) ? aw : 0
+  const goals = homeN + awayN
+  const closeGame = Math.abs(homeN - awayN) <= 1 ? 1 : 0
 
   let intensity =
     30 +

@@ -49,7 +49,7 @@ export function AppShell() {
             className={cn(
               'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
               /* Mobile : tout le live défile comme une page (doigt haut/bas). Desktop : hauteur cadrée, pas de scroll outer. */
-              'min-h-0 max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
+              'min-h-0 max-lg:touch-pan-y max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
               'lg:min-h-0 lg:overflow-hidden',
               mainBottomPadChannel,
               isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',

@@ -19,20 +19,22 @@ function AnimatedLiveScore({
   bumpSide: 'home' | 'away' | null
   className?: string
 }) {
+  const h = Number.isFinite(Number(home)) ? Number(home) : 0
+  const a = Number.isFinite(Number(away)) ? Number(away) : 0
   return (
     <span className={cn('tabular-nums', className)}>
       <span
-        key={home}
+        key="tf-score-home"
         className={cn('inline-block', bumpSide === 'home' ? 'tf-score-pop' : '')}
       >
-        {home}
+        {h}
       </span>
       <span className="mx-1.5 font-normal opacity-75">—</span>
       <span
-        key={away}
+        key="tf-score-away"
         className={cn('inline-block', bumpSide === 'away' ? 'tf-score-pop' : '')}
       >
-        {away}
+        {a}
       </span>
     </span>
   )
