@@ -10,8 +10,6 @@ import type { Match } from '../types/match'
 import { cn } from '../utils/cn'
 import {
   getFootballCalendarWindow,
-  PARIS_SM_WINDOW_DAYS_FUTURE,
-  PARIS_SM_WINDOW_DAYS_PAST,
 } from '../utils/footballCalendarWindow'
 import {
   MATCH_DISPLAY_TIME_ZONE,
@@ -21,7 +19,6 @@ import {
 } from '../utils/time'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
-import { useSportMonksLeaguesDateSummary } from '../hooks/useSportMonksLeaguesDateSummary'
 
 /** Matchs mis en avant sous « À la une » (hors live) — prochains coup d’envoi. */
 const CALENDAR_ALAUNE_MAX = 8
@@ -66,12 +63,12 @@ export function CalendarPage() {
     [matches],
   )
 
-  /** Une seule évaluation par chargement `matches` : bornes API + affichage bandeau. */
+  /** Fenêtre glissante Paris (quota API). */
   const calendarWindow = useMemo(() => getFootballCalendarWindow(new Date()), [matches])
 
   const filterChip = (selected: boolean) =>
     cn(
-      'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:px-3.5 sm:py-2 sm:text-sm',
+      'shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:px-3 sm:py-1.5 sm:text-xs',
       L
         ? selected
           ? 'bg-tf-dark text-white focus-visible:ring-tf-electric/40 focus-visible:ring-offset-white'
@@ -108,7 +105,7 @@ export function CalendarPage() {
   const [dayKey, setDayKey] = useState<string>('all')
   /** Vue principale : accès direct aux résultats sans défiler les à venir. */
   const [primaryTab, setPrimaryTab] = useState<'upcoming' | 'past'>('upcoming')
-  const { leaguesDateSummary, leaguesDateLoading } = useSportMonksLeaguesDateSummary(dayKey)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const resultsSectionRef = useRef<HTMLDivElement>(null)
 
   const poolFiltered = useMemo(() => {
@@ -351,7 +348,7 @@ export function CalendarPage() {
 
   const tabBtn = (active: boolean) =>
     cn(
-      'min-h-10 flex-1 rounded-xl px-2 py-2 text-center text-xs font-black uppercase tracking-wide transition sm:min-h-0 sm:px-4 sm:py-2.5 sm:text-sm',
+      'min-h-8 flex-1 rounded-lg px-2 py-1.5 text-center text-[11px] font-black uppercase tracking-wide transition sm:min-h-0 sm:px-3 sm:py-2 sm:text-xs',
       L
         ? active
           ? 'bg-white text-tf-dark shadow-sm'
@@ -360,6 +357,14 @@ export function CalendarPage() {
           ? 'bg-white/20 text-white shadow-inner'
           : 'text-tf-app-muted hover:bg-white/[0.06] hover:text-tf-app-fg',
     )
+
+  const quickCompetitionChips = useMemo(() => {
+    const base = competitions.slice(0, 4)
+    if (competitionId === 'all') return base
+    if (base.some((c) => c.id === competitionId)) return base
+    const selected = competitions.find((c) => c.id === competitionId)
+    return selected ? [...base.slice(0, 3), selected] : base
+  }, [competitions, competitionId])
 
   return (
     <div className="mx-auto w-full max-w-tf-wide space-y-tf-6 pb-tf-10 sm:space-y-tf-8">
@@ -394,83 +399,7 @@ export function CalendarPage() {
               </span>
             ) : null}
           </p>
-          {hasSportMonksMatches ? (
-            <details
-              className={cn(
-                'rounded-xl border text-xs font-medium leading-relaxed',
-                L ? 'border-violet-200/70 bg-violet-50/50 text-violet-950' : 'border-violet-400/25 bg-violet-950/25 text-violet-50/95',
-              )}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2 font-black uppercase tracking-wider [&::-webkit-details-marker]:hidden">
-                Fenêtre API ·{' '}
-                <span className="font-mono text-[10px] font-bold">
-                  {calendarWindow.from} → {calendarWindow.to}
-                </span>
-              </summary>
-              <div
-                className={cn(
-                  'border-t px-3 pb-2 pt-2',
-                  L ? 'border-violet-200/50' : 'border-violet-400/25',
-                )}
-              >
-                {PARIS_SM_WINDOW_DAYS_PAST} jours de résultats et {PARIS_SM_WINDOW_DAYS_FUTURE} jours à venir (fuseau
-                Paris), durée fixe pour limiter les appels SportMonks.
-              </div>
-            </details>
-          ) : null}
-          {dayKey !== 'all' && (leaguesDateLoading || (leaguesDateSummary && leaguesDateSummary.leagueCount > 0)) ? (
-            <details
-              className={cn(
-                'rounded-xl border text-xs font-semibold leading-snug',
-                L ? 'border-sky-200/70 bg-sky-50/80 text-sky-950' : 'border-sky-400/25 bg-sky-950/30 text-sky-100/95',
-              )}
-            >
-              <summary className="cursor-pointer list-none px-3 py-2 font-black uppercase tracking-wider [&::-webkit-details-marker]:hidden">
-                {leaguesDateLoading ? (
-                  <>Détail jour · chargement…</>
-                ) : (
-                  <>
-                    Détail jour · <span className="font-mono">{dayKey}</span>
-                  </>
-                )}
-              </summary>
-              <div
-                className={cn('border-t px-3 pb-2 pt-2', L ? 'border-sky-200/50' : 'border-sky-400/20')}
-                role="status"
-              >
-                {leaguesDateLoading ? (
-                  <>SportMonks · bilan ligues pour <span className="font-mono">{dayKey}</span>…</>
-                ) : leaguesDateSummary ? (
-                  <>
-                    <span className="font-mono">{dayKey}</span> (Paris) :{' '}
-                    <strong className="font-black">{leaguesDateSummary.leagueCount}</strong> compétition
-                    {leaguesDateSummary.leagueCount > 1 ? 's' : ''},{' '}
-                    <strong className="font-black">{leaguesDateSummary.scheduledSlots}</strong> ligne
-                    {leaguesDateSummary.scheduledSlots > 1 ? 's' : ''} dans{' '}
-                    <code className="font-mono text-[10px]">today</code>
-                    {leaguesDateSummary.sampleLeagueNames.length ? (
-                      <>
-                        {' '}
-                        — {leaguesDateSummary.sampleLeagueNames.slice(0, 4).join(' · ')}
-                        {leaguesDateSummary.sampleLeagueNames.length > 4 ? '…' : ''}
-                      </>
-                    ) : null}
-                    {leaguesDateSummary.frenchTvStations.length ? (
-                      <>
-                        <br />
-                        <span className={cn('font-black', L ? 'text-sky-900' : 'text-sky-50')}>TV (France)</span>
-                        {' : '}
-                        {leaguesDateSummary.frenchTvStations.slice(0, 12).join(' · ')}
-                        {leaguesDateSummary.frenchTvStations.length > 12
-                          ? ` · +${leaguesDateSummary.frenchTvStations.length - 12}`
-                          : ''}
-                      </>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            </details>
-          ) : null}
+          {/* UI orientée utilisateur: filtres directs uniquement (sans détails techniques API). */}
         </div>
       </header>
 
@@ -532,7 +461,7 @@ export function CalendarPage() {
         </section>
       ) : null}
 
-      <div className="sticky top-0 z-10 -mx-1 mb-tf-4 sm:-mx-0" aria-label="Filtres et vue calendrier">
+      <div className="sticky top-0 z-10 -mx-1 mb-tf-2 sm:-mx-0 sm:mb-tf-3" aria-label="Filtres et vue calendrier">
         <div
           className={cn(
             'overflow-hidden rounded-tf-2xl border shadow-tf-elev-2 backdrop-blur-md',
@@ -541,84 +470,166 @@ export function CalendarPage() {
         >
           <div
             className={cn(
-              'space-y-tf-3 p-tf-3 sm:p-tf-4',
+              'space-y-2 p-2.5 sm:space-y-2.5 sm:p-3',
               L ? 'bg-[color:color-mix(in_srgb,var(--tf-c60-base)_94%,white)]' : 'bg-[#071e33]/92',
             )}
           >
-            <div
-              role="tablist"
-              aria-label="Affichage"
-              className={cn('flex rounded-2xl p-1', L ? 'bg-black/[0.04]' : 'bg-white/[0.07]')}
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={primaryTab === 'upcoming'}
-                onClick={() => setPrimaryTab('upcoming')}
-                className={tabBtn(primaryTab === 'upcoming')}
-              >
-                À venir{upcomingTotal > 0 ? ` · ${upcomingTotal}` : ''}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={primaryTab === 'past'}
-                onClick={() => setPrimaryTab('past')}
-                className={tabBtn(primaryTab === 'past')}
-              >
-                Résultats{pastTotal > 0 ? ` · ${pastTotal}` : ''}
-              </button>
-            </div>
-            <div className="space-y-tf-2">
-              <p
-                className={cn(
-                  'text-[10px] font-black uppercase tracking-[0.16em]',
-                  L ? 'text-tf-grey' : 'text-tf-app-muted',
-                )}
-              >
-                Ligue
-              </p>
+            <div className="flex items-center gap-2">
               <div
-                className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]"
-                role="group"
-                aria-label="Filtrer par ligue"
+                role="tablist"
+                aria-label="Affichage"
+                className={cn('flex min-w-0 flex-1 rounded-xl p-1', L ? 'bg-black/[0.04]' : 'bg-white/[0.07]')}
               >
-                {leagueChipRow}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={primaryTab === 'upcoming'}
+                  onClick={() => setPrimaryTab('upcoming')}
+                  className={tabBtn(primaryTab === 'upcoming')}
+                >
+                  À venir{upcomingTotal > 0 ? ` · ${upcomingTotal}` : ''}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={primaryTab === 'past'}
+                  onClick={() => setPrimaryTab('past')}
+                  className={tabBtn(primaryTab === 'past')}
+                >
+                  Résultats{pastTotal > 0 ? ` · ${pastTotal}` : ''}
+                </button>
               </div>
-            </div>
-            <div className="space-y-tf-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <p
+              <div
+                className="hidden max-w-[40%] items-center gap-1.5 overflow-x-auto pr-1 md:flex [scrollbar-width:thin]"
+                role="group"
+                aria-label="Filtres ligue rapides"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCompetitionId('all')
+                    setDayKey('all')
+                  }}
                   className={cn(
-                    'text-[10px] font-black uppercase tracking-[0.16em]',
-                    L ? 'text-tf-grey' : 'text-tf-app-muted',
+                    'shrink-0 rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition',
+                    competitionId === 'all'
+                      ? L
+                        ? 'border-tf-dark/35 bg-tf-dark text-white'
+                        : 'border-sky-300/45 bg-sky-500/20 text-white'
+                      : L
+                        ? 'border-tf-grey-pastel/70 bg-white text-tf-dark hover:border-tf-dark/30'
+                        : 'border-white/20 bg-white/[0.08] text-sky-100 hover:bg-white/[0.14]',
                   )}
                 >
-                  Jour
-                </p>
-                <span className={cn('text-[10px] font-bold', L ? 'text-tf-grey' : 'text-sky-200/90')}>
-                  {dayKey === 'all' ? 'Tous' : dayChips.find((d) => d.key === dayKey)?.label}
-                </span>
+                  Toutes
+                </button>
+                {quickCompetitionChips.map((c) => {
+                  const selected = competitionId === c.id
+                  return (
+                    <button
+                      key={`quick-${c.id}`}
+                      type="button"
+                      onClick={() => {
+                        setCompetitionId(c.id)
+                        setDayKey('all')
+                      }}
+                      className={cn(
+                        'shrink-0 rounded-md border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition',
+                        selected
+                          ? L
+                            ? 'border-tf-dark/35 bg-tf-dark text-white'
+                            : 'border-sky-300/45 bg-sky-500/20 text-white'
+                          : L
+                            ? 'border-tf-grey-pastel/70 bg-white text-tf-dark hover:border-tf-dark/30'
+                            : 'border-white/20 bg-white/[0.08] text-sky-100 hover:bg-white/[0.14]',
+                      )}
+                      aria-pressed={selected}
+                    >
+                      {c.shortName}
+                    </button>
+                  )
+                })}
               </div>
-              <div
-                className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]"
-                role="group"
-                aria-label="Filtrer par jour"
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((v) => !v)}
+                aria-expanded={filtersOpen}
+                className={cn(
+                  'shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide transition',
+                  L
+                    ? 'border-tf-grey-pastel/70 bg-white text-tf-dark hover:border-tf-dark/30'
+                    : 'border-white/20 bg-white/[0.08] text-sky-100 hover:bg-white/[0.14]',
+                )}
               >
-                {dayChipRow}
-              </div>
+                Filtres {filtersOpen ? '−' : '+'}
+              </button>
             </div>
+            <div className="flex items-center justify-between gap-2 text-[11px] font-bold">
+              <span className={cn(L ? 'text-tf-grey' : 'text-sky-200/90')}>
+                {competitionId === 'all'
+                  ? 'Toutes ligues'
+                  : `Ligue: ${competitions.find((c) => c.id === competitionId)?.shortName ?? '—'}`}
+              </span>
+              <span className={cn(L ? 'text-tf-grey' : 'text-sky-200/90')}>
+                {dayKey === 'all' ? 'Tous les jours' : dayChips.find((d) => d.key === dayKey)?.label}
+              </span>
+            </div>
+            {filtersOpen ? (
+              <>
+                <div className="space-y-tf-2">
+                  <p
+                    className={cn(
+                      'text-[10px] font-black uppercase tracking-[0.16em]',
+                      L ? 'text-tf-grey' : 'text-tf-app-muted',
+                    )}
+                  >
+                    Ligue
+                  </p>
+                  <div
+                    className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]"
+                    role="group"
+                    aria-label="Filtrer par ligue"
+                  >
+                    {leagueChipRow}
+                  </div>
+                </div>
+                <div className="space-y-tf-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p
+                      className={cn(
+                        'text-[10px] font-black uppercase tracking-[0.16em]',
+                        L ? 'text-tf-grey' : 'text-tf-app-muted',
+                      )}
+                    >
+                      Jour
+                    </p>
+                    <span className={cn('text-[10px] font-bold', L ? 'text-tf-grey' : 'text-sky-200/90')}>
+                      {dayKey === 'all' ? 'Tous' : dayChips.find((d) => d.key === dayKey)?.label}
+                    </span>
+                  </div>
+                  <div
+                    className="flex gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]"
+                    role="group"
+                    aria-label="Filtrer par jour"
+                  >
+                    {dayChipRow}
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
-          {/* Fondu : le contenu qui remonte sous les filtres semble s’estomper vers le haut */}
-          <div
-            aria-hidden
-            className={cn(
-              'pointer-events-none h-14 w-full bg-gradient-to-b sm:h-16',
-              L
-                ? 'from-[color:color-mix(in_srgb,var(--tf-c60-base)_94%,white)] via-[color:color-mix(in_srgb,var(--tf-c60-base)_88%,white)]/55 to-transparent'
-                : 'from-[#071e33]/92 via-[#071e33]/55 to-transparent',
-            )}
-          />
+          {/* Fondu utile surtout quand le panneau détaillé est ouvert. */}
+          {filtersOpen ? (
+            <div
+              aria-hidden
+              className={cn(
+                'pointer-events-none h-4 w-full bg-gradient-to-b sm:h-6',
+                L
+                  ? 'from-[color:color-mix(in_srgb,var(--tf-c60-base)_94%,white)] via-[color:color-mix(in_srgb,var(--tf-c60-base)_88%,white)]/55 to-transparent'
+                  : 'from-[#071e33]/92 via-[#071e33]/55 to-transparent',
+              )}
+            />
+          ) : null}
         </div>
       </div>
 

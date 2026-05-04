@@ -18,6 +18,8 @@ export type SmParticipant = {
   id?: number
   name?: string
   meta?: { location?: string }
+  image_path?: string | null
+  logo_path?: string | null
 }
 
 export type SmLeague = {
@@ -46,6 +48,20 @@ export type SmFixtureTrend = {
   participant?: { id?: number }
   value?: number | string | null
   data?: { value?: number | string | null }
+}
+
+/** Ligne de prédiction fixture (`include=predictions.type`). */
+export type SmFixturePrediction = {
+  id?: number
+  type_id?: number
+  type?: { id?: number; developer_name?: string; name?: string }
+  value?: number | string | null
+  data?: { value?: number | string | null; probability?: number | string | null; odd?: number | string | null }
+  probability?: number | string | null
+  percent?: number | string | null
+  odd?: number | string | null
+  label?: string | null
+  name?: string | null
 }
 
 export type SmXGFixtureRow = {
@@ -127,6 +143,8 @@ export type SmFixture = {
   formations?: SmFormationRow[]
   /** Include `trends.type`, `trends.participant`. */
   trends?: SmFixtureTrend[]
+  /** Include `predictions.type`. */
+  predictions?: SmFixturePrediction[]
 }
 
 /** Ligne `formations` sur une fixture (`include=formations`). */

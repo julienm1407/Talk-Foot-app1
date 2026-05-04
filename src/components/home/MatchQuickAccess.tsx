@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
+import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { formatKickoff } from '../../utils/time'
@@ -20,6 +21,7 @@ function sortPool(matches: Match[], clubFocusIds: string[] | null) {
 /** Puce horizontale : lisible, couleurs clubs, sans colonne étriquée */
 function RailMatchChip({ match, light }: { match: Match; light: boolean }) {
   const isLive = match.status === 'live'
+  const liveMin = useLinearDisplayedLiveMinute(match)
   const sc = match.score ?? { home: 0, away: 0 }
   return (
     <Link
@@ -81,7 +83,7 @@ function RailMatchChip({ match, light }: { match: Match; light: boolean }) {
             light ? 'text-emerald-700' : 'text-emerald-400',
           )}
         >
-          {match.minute != null ? `${match.minute}′` : 'En cours'}
+          {`${liveMin}′`}
         </p>
       )}
     </Link>

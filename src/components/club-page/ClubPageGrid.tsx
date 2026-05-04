@@ -9,6 +9,16 @@ import type { ClubDebateItem, ClubPageMock, ClubSquadNode, ClubShopItem } from '
 import type { TeamSeasonStatRow } from '../../api/sportMonks'
 import { Card } from '../ui/Card'
 import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
+import { ClubCrest } from '../brand/ClubCrest'
+
+type ClubReadingLink = {
+  id: string
+  title: string
+  excerpt: string
+  url: string
+  source: string
+  internal: boolean
+}
 
 function encartClass(
   key:
@@ -19,7 +29,8 @@ function encartClass(
     | 'tribune'
     | 'stats'
     | 'podium'
-    | 'pulse',
+    | 'pulse'
+    | 'reading',
 ) {
   const c = {
     pitch:
@@ -38,6 +49,8 @@ function encartClass(
       'border border-white/10 border-l-4 border-l-amber-300/80 bg-gradient-to-b from-amber-950/30 via-[#0f0c08] to-tf-c30-surface/98 shadow-[0_1px_0_rgba(255,255,255,0.05),inset_0_0_0_1px_rgba(251,191,36,0.1)]',
     pulse:
       'border border-white/10 border-l-4 border-l-tf-cta/85 bg-gradient-to-b from-red-950/25 via-[#120a0a] to-tf-c30-surface/98 shadow-[0_1px_0_rgba(255,255,255,0.05),inset_0_0_0_1px_rgba(255,59,59,0.1)]',
+    reading:
+      'border border-white/10 border-l-4 border-l-sky-300/80 bg-gradient-to-b from-sky-950/25 via-[#090f16] to-tf-c30-surface/98 shadow-[0_1px_0_rgba(255,255,255,0.05),inset_0_0_0_1px_rgba(125,211,252,0.1)]',
   } as const
   return c[key]
 }
@@ -330,6 +343,27 @@ function fmtSeasonStat(n: number) {
   return n.toFixed(1).replace('.', ',')
 }
 
+function normalizeStatToken(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
+function pickStatValue(
+  rows: TeamSeasonStatRow[] | null | undefined,
+  matchers: string[],
+): number | null {
+  if (!rows?.length) return null
+  const hit = rows.find((r) => {
+    const key = normalizeStatToken(r.key)
+    const label = normalizeStatToken(r.label)
+    return matchers.some((m) => key.includes(m) || label.includes(m))
+  })
+  return hit?.value ?? null
+}
+
 function ClubSeasonSnapshotBlock({
   data,
   team,
@@ -349,11 +383,24 @@ function ClubSeasonSnapshotBlock({
     kickoff: string
     venue: 'dom' | 'ext'
     scoreLine: string
+    homeName: string
+    awayName: string
+    homeLogoUrl?: string
+    awayLogoUrl?: string
+    homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+    awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
   } | null
   seasonStatsRows?: TeamSeasonStatRow[] | null
   seasonStatsHint?: string | null
 }) {
-  const { upcoming, formStrip, formStripFromApi, tableSnapshot, trophies } = data
+  const { upcoming, formStrip, formStripFromApi, trophies } = data
+  const apiPosition = pickStatValue(seasonStatsRows, ['position', 'rank', 'standing'])
+  const apiPoints = pickStatValue(seasonStatsRows, ['points', 'point'])
+  const hasApiTable = apiPosition != null || apiPoints != null
+  const tableTitle = hasApiTable ? 'Championnat (SportMonks)' : 'Championnat'
+  const tablePosition = apiPosition != null ? `${Math.round(apiPosition)}e` : 'Classement indisponible'
+  const tablePoints = apiPoints != null ? `${Math.round(apiPoints)} pts` : 'Points indisponibles'
+  const tableLine = formStripFromApi ? `Forme 5j : ${formStrip.join(' - ')}` : 'Forme récente indisponible'
   return (
     <Card
       className={cn('p-0 shadow-tf-elev-2', encartClass('season'), matchMode && 'ring-1 ring-rose-500/15')}
@@ -419,7 +466,7 @@ function ClubSeasonSnapshotBlock({
           <p className="mt-2 text-[10px] font-bold text-sky-200/80">
             {formStripFromApi
               ? 'Résultats issus du calendrier équipe (SportMonks).'
-              : 'Données génériques · hub Talk Foot'}
+              : 'Données de forme indisponibles via API.'}
           </p>
         </div>
       </div>
@@ -428,21 +475,56 @@ function ClubSeasonSnapshotBlock({
           <p className="text-[9px] font-black uppercase tracking-wider text-violet-200/95">
             Dernier match (SportMonks)
           </p>
-          <p className="mt-0.5 text-sm font-black text-tf-app-fg">
+          <p className="mt-0.5 text-[11px] font-bold text-violet-200/90">
             {clubLastMatch.league}
           </p>
-          <p className="mt-0.5 text-xs font-bold text-violet-100/90">
-            {clubLastMatch.venue === 'dom' ? (
-              <span>
-                {team.shortName} {clubLastMatch.scoreLine} {clubLastMatch.opponent}
-              </span>
-            ) : (
-              <span>
-                {clubLastMatch.opponent} {clubLastMatch.scoreLine} {team.shortName}
-              </span>
-            )}
-          </p>
-          <p className="mt-1.5 text-[11px] font-bold text-amber-200/90">{clubLastMatch.kickoff}</p>
+          <div className="mt-2 rounded-xl border border-violet-300/15 bg-black/25 px-3 py-3">
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                {clubLastMatch.homeLogoUrl ? (
+                  <img
+                    src={clubLastMatch.homeLogoUrl}
+                    alt={`Logo ${clubLastMatch.homeName}`}
+                    className="h-8 w-8 shrink-0 rounded-full border border-white/20 bg-white object-contain p-0.5"
+                    loading="lazy"
+                  />
+                ) : (
+                  <ClubCrest
+                    id={clubLastMatch.homeCrest.id}
+                    shortName={clubLastMatch.homeCrest.shortName}
+                    colors={clubLastMatch.homeCrest.colors}
+                    size={32}
+                    clickable={false}
+                    className="shrink-0 !rounded-full"
+                  />
+                )}
+                <p className="truncate text-xs font-black text-sky-50">{clubLastMatch.homeName}</p>
+              </div>
+              <p className="text-lg font-black leading-none text-amber-200 sm:text-xl">
+                {clubLastMatch.scoreLine}
+              </p>
+              <div className="flex min-w-0 items-center justify-end gap-2">
+                <p className="truncate text-right text-xs font-black text-sky-50">{clubLastMatch.awayName}</p>
+                {clubLastMatch.awayLogoUrl ? (
+                  <img
+                    src={clubLastMatch.awayLogoUrl}
+                    alt={`Logo ${clubLastMatch.awayName}`}
+                    className="h-8 w-8 shrink-0 rounded-full border border-white/20 bg-white object-contain p-0.5"
+                    loading="lazy"
+                  />
+                ) : (
+                  <ClubCrest
+                    id={clubLastMatch.awayCrest.id}
+                    shortName={clubLastMatch.awayCrest.shortName}
+                    colors={clubLastMatch.awayCrest.colors}
+                    size={32}
+                    clickable={false}
+                    className="shrink-0 !rounded-full"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
       {scheduleHint ? (
@@ -457,21 +539,23 @@ function ClubSeasonSnapshotBlock({
         </p>
       ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
-        {trophies.map((t) => (
-          <div
-            key={t.label}
-            className="min-w-0 flex-1 rounded-xl border border-white/12 bg-black/35 px-2.5 py-2 ring-1 ring-white/5 sm:min-w-[7rem] sm:flex-initial"
-          >
-            <p className="text-[8px] font-bold uppercase text-sky-200/80">{t.label}</p>
-            <p className="text-sm font-black text-amber-100/95 [text-shadow:0_1px_0_rgba(0,0,0,0.5)]">{t.count}</p>
-          </div>
-        ))}
+        {hasApiTable
+          ? null
+          : trophies.map((t) => (
+              <div
+                key={t.label}
+                className="min-w-0 flex-1 rounded-xl border border-white/12 bg-black/35 px-2.5 py-2 ring-1 ring-white/5 sm:min-w-[7rem] sm:flex-initial"
+              >
+                <p className="text-[8px] font-bold uppercase text-sky-200/80">{t.label}</p>
+                <p className="text-sm font-black text-amber-100/95 [text-shadow:0_1px_0_rgba(0,0,0,0.5)]">{t.count}</p>
+              </div>
+            ))}
         <div className="min-w-full rounded-xl border border-amber-400/30 bg-amber-500/12 px-2.5 py-2 sm:min-w-0 sm:flex-1 sm:pl-3">
-          <p className="text-[8px] font-bold uppercase text-amber-200/90">Championnat (démo)</p>
+          <p className="text-[8px] font-bold uppercase text-amber-200/90">{tableTitle}</p>
           <p className="text-sm font-black text-white [text-shadow:0_1px_0_rgba(0,0,0,0.45)]">
-            {tableSnapshot.position} · {tableSnapshot.points}
+            {tablePosition} · {tablePoints}
           </p>
-          <p className="text-[10px] font-semibold text-sky-200/80">{tableSnapshot.line}</p>
+          <p className="text-[10px] font-semibold text-sky-200/80">{tableLine}</p>
         </div>
       </div>
       {seasonStatsRows?.length ? (
@@ -502,6 +586,55 @@ function ClubSeasonSnapshotBlock({
   )
 }
 
+function ClubReadingBlock({ links }: { links: ClubReadingLink[] }) {
+  return (
+    <Card className={cn('p-0 shadow-tf-elev-2', encartClass('reading'))}>
+      <div className="border-b border-sky-400/20 bg-black/20 p-3 sm:p-4">
+        <ClubEncartTitle
+          kicker="Sources & contenus"
+          kickerClass="text-sky-200/90"
+          subtitle="Articles Talk Foot + liens externes reputes (sans copie integrale)."
+        >
+          A lire sur le club
+        </ClubEncartTitle>
+      </div>
+      <ul className="space-y-2 p-3 sm:p-4">
+        {links.length === 0 ? (
+          <li className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-xs font-semibold text-sky-100/80">
+            Aucun lien dedie pour ce club pour le moment.
+          </li>
+        ) : (
+          links.map((item) => (
+            <li key={item.id} className="rounded-2xl border border-white/10 bg-black/25 p-3">
+              {item.internal ? (
+                <Link to={item.url} className="block">
+                  <span className="inline-flex items-center rounded-md border border-sky-300/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-100/95">
+                    {item.source}
+                  </span>
+                  <p className="mt-1.5 text-sm font-black leading-snug text-tf-app-fg hover:text-sky-100">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-sky-100/80">{item.excerpt}</p>
+                </Link>
+              ) : (
+                <a href={item.url} target="_blank" rel="noreferrer noopener" className="block">
+                  <span className="inline-flex items-center rounded-md border border-sky-300/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-100/95">
+                    {item.source}
+                  </span>
+                  <p className="mt-1.5 text-sm font-black leading-snug text-tf-app-fg hover:text-sky-100">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-sky-100/80">{item.excerpt}</p>
+                </a>
+              )}
+            </li>
+          ))
+        )}
+      </ul>
+    </Card>
+  )
+}
+
 export function ClubPageGrid({
   team,
   data,
@@ -512,6 +645,7 @@ export function ClubPageGrid({
   squadFromSportMonks,
   clubSeasonStats,
   clubSeasonStatsHint,
+  clubReadingLinks,
 }: {
   team: Team
   data: ClubPageMock
@@ -524,11 +658,18 @@ export function ClubPageGrid({
     kickoff: string
     venue: 'dom' | 'ext'
     scoreLine: string
+    homeName: string
+    awayName: string
+    homeLogoUrl?: string
+    awayLogoUrl?: string
+    homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+    awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
   } | null
   /** Noms sur le terrain alignés sur `squads/teams` (filtre stats saison optionnel). */
   squadFromSportMonks?: boolean
   clubSeasonStats?: TeamSeasonStatRow[] | null
   clubSeasonStatsHint?: string | null
+  clubReadingLinks: ClubReadingLink[]
 }) {
   const [selId, setSelId] = useState(data.hotPlayerId)
   const [shopPreview, setShopPreview] = useState<string | null>(null)
@@ -800,6 +941,8 @@ export function ClubPageGrid({
             </p>
           </div>
         </Card>
+
+        <ClubReadingBlock links={clubReadingLinks} />
       </div>
     </div>
   )

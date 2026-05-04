@@ -1,8 +1,12 @@
 import { TF_SM_SERVER_RELAY_PLACEHOLDER } from '../../utils/apiTokens'
+import { sortSearchParamsForStableCaching } from '../../utils/sportMonksRequestUtils'
 
 const SM_BASE_REMOTE = 'https://api.sportmonks.com/v3/football'
 
-/** URL absolue d’appel : en `vite dev`, proxy same-origin `/sm-api` → `api.sportmonks.com/v3/football`. */
+/**
+ * Appel direct SM (jeton dans le navigateur) : en `vite dev`, proxy `/sm-api` → `api.sportmonks.com/v3/football`.
+ * Si tout passe par le relais (`TF_SM_SERVER_RELAY_PLACEHOLDER`), `buildSmRequestUrl` utilise `/api/sm` à la place.
+ */
 function sportMonksRequestHref(pathWithLeadingSlash: string): string {
   if (import.meta.env.DEV && typeof globalThis !== 'undefined' && 'location' in globalThis) {
     const o = (globalThis as { location?: { origin?: string } }).location?.origin
@@ -36,8 +40,12 @@ function buildSmRequestUrl(
   if (!u.searchParams.has('timezone')) {
     u.searchParams.set('timezone', 'Europe/Paris')
   }
+  sortSearchParamsForStableCaching(u)
   return u
 }
+
+/** Requêtes identiques en parallèle → une seule montée réseau (réduit pics quota). */
+const smInflightJson = new Map<string, Promise<unknown>>()
 
 export type SportMonksListEnvelope<T> = {
   data: T
@@ -64,26 +72,38 @@ export async function sportMonksFetchJson<T>(
 ): Promise<T> {
   const viaServerRelay = token === TF_SM_SERVER_RELAY_PLACEHOLDER
   const url = buildSmRequestUrl(pathWithLeadingSlash, search, viaServerRelay)
-  const res = await fetch(url.toString(), {
-    headers: viaServerRelay ? {} : { Authorization: token },
-    /** Évite un snapshot « figé » si le navigateur réutilise une réponse GET en cache. */
-    cache: 'no-store',
-  })
-  const text = await res.text()
-  let body: unknown
-  try {
-    body = JSON.parse(text) as unknown
-  } catch {
-    throw new Error(`SportMonks ${res.status}: réponse non JSON (${text.slice(0, 120)})`)
+  const urlKey = url.toString()
+
+  let p = smInflightJson.get(urlKey) as Promise<T> | undefined
+  if (!p) {
+    p = (async (): Promise<T> => {
+      const res = await fetch(urlKey, {
+        headers: viaServerRelay ? {} : { Authorization: token },
+        /** Évite un snapshot « figé » si le navigateur réutilise une réponse GET en cache. */
+        cache: 'no-store',
+      })
+      const text = await res.text()
+      let body: unknown
+      try {
+        body = JSON.parse(text) as unknown
+      } catch {
+        throw new Error(`SportMonks ${res.status}: réponse non JSON (${text.slice(0, 120)})`)
+      }
+      if (!res.ok) {
+        const msg =
+          typeof body === 'object' && body && 'message' in body
+            ? String((body as { message: string }).message)
+            : text.slice(0, 200)
+        throw new Error(`SportMonks ${res.status}: ${msg}`)
+      }
+      return body as T
+    })()
+    smInflightJson.set(urlKey, p as Promise<unknown>)
+    void (p as Promise<unknown>).finally(() => {
+      if (smInflightJson.get(urlKey) === p) smInflightJson.delete(urlKey)
+    })
   }
-  if (!res.ok) {
-    const msg =
-      typeof body === 'object' && body && 'message' in body
-        ? String((body as { message: string }).message)
-        : text.slice(0, 200)
-    throw new Error(`SportMonks ${res.status}: ${msg}`)
-  }
-  return body as T
+  return (await p) as T
 }
 
 export function sportMonksPaginationHasMore(

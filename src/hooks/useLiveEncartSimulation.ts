@@ -13,12 +13,12 @@ import type { LiveEncartBurst, LiveEncartRim, LiveEncartToast } from '../types/l
 import { createMatchRng, initialScoreFromMatch } from '../types/liveSimulation'
 import { getSportMonksToken } from '../utils/apiTokens'
 
-/** Avance douce du chrono entre les actions (réalisme vs score). */
-const MINUTE_MS = 9000
+/** Avance du chrono démo (sans SportMonks) : 1 minute affichée ≈ 1 minute réelle. */
+const MINUTE_MS = 60_000
 const EVENT_MIN_MS = 10_000
 const EVENT_MAX_MS = 22_000
 /** Rafraîchissement timeline événements SM (cartons, buts…) pour caler les animations. */
-const SM_TIMELINE_POLL_MS = 12_000
+const SM_TIMELINE_POLL_MS = 22_000
 
 function randomBetween(rng: () => number, a: number, b: number) {
   return a + rng() * (b - a)
@@ -77,7 +77,7 @@ export function useLiveEncartSimulation(match: Match | null) {
   const smSeenKeysRef = useRef<Set<string>>(new Set())
   const smPrimedRef = useRef(false)
 
-  /** Dernière minute « officielle » SM + horodatage : le poll timeline est ~12 s, le calendrier rare — on fait dériver l’affichage entre deux syncs. */
+  /** Dernière minute « officielle » SM + horodatage : le poll timeline est ~22 s, le calendrier rare — on fait dériver l’affichage entre deux syncs. */
   const minuteAnchorRef = useRef<{ m: number; atMs: number }>({ m: 1, atMs: Date.now() })
   const [liveChronoTick, setLiveChronoTick] = useState(0)
 
@@ -178,10 +178,10 @@ export function useLiveEncartSimulation(match: Match | null) {
     return () => clearInterval(id)
   }, [active, smTimelineDriving])
 
-  /** Ré-affiche la minute dérivée pendant le live piloté par la timeline SM. */
+  /** Recalcul de la minute dérivée (SM) chaque seconde — évite l’effet figé puis rattrapage. */
   useEffect(() => {
     if (!active || !smTimelineDriving) return
-    const id = window.setInterval(() => setLiveChronoTick((n) => n + 1), 10_000)
+    const id = window.setInterval(() => setLiveChronoTick((n) => n + 1), 1000)
     return () => window.clearInterval(id)
   }, [active, smTimelineDriving, match?.id])
 
@@ -263,10 +263,39 @@ export function useLiveEncartSimulation(match: Match | null) {
     }
 
     void poll()
-    intervalId = window.setInterval(poll, SM_TIMELINE_POLL_MS)
+
+    const clear = () => {
+      if (intervalId) {
+        window.clearInterval(intervalId)
+        intervalId = null
+      }
+    }
+    const arm = () => {
+      clear()
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      intervalId = window.setInterval(poll, SM_TIMELINE_POLL_MS)
+    }
+    const onVis = () => {
+      if (typeof document === 'undefined') return
+      if (document.visibilityState === 'hidden') clear()
+      else {
+        void poll()
+        arm()
+      }
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis)
+      arm()
+    } else {
+      arm()
+    }
+
     return () => {
       cancelled = true
-      if (intervalId) clearInterval(intervalId)
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis)
+      }
+      clear()
     }
   }, [active, match?.sportMonksFixtureId, match?.id, clearBumpSoon, flashRim, showToast, snapMinuteFromAuthority])
 

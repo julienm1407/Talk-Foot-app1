@@ -205,6 +205,485 @@ html[data-tf-appearance='light'] .tf-home-block {
   color: var(--tf-text);
 }
 
+/* Live Channel — vraie version jour */
+html[data-tf-appearance='light'] .tf-channel-live {
+  background: linear-gradient(180deg, #e9f2ff 0%, #dfeafb 100%);
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-col {
+  border-color: rgba(66, 115, 160, 0.24);
+  background: #dfeafb;
+  box-shadow: 0 10px 20px rgba(9, 40, 69, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card {
+  border-color: rgba(66, 119, 164, 0.3);
+  background: #f4f9ff;
+  color: #103b60;
+  box-shadow: 0 10px 22px rgba(9, 40, 69, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card .text-sky-50,
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card .text-sky-100 {
+  color: #123f64 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card .text-sky-200\/80,
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card .text-sky-200\/75,
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card .text-sky-200\/70,
+html[data-tf-appearance='light'] .tf-channel-live .tf-live-card .text-sky-100\/75 {
+  color: #456786 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live [class*='bg-[#18d3b8'] {
+  background: #2ccfb7 !important;
+  color: #08343e !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget {
+  border-color: rgba(66, 119, 164, 0.34);
+  background: #f2f8ff;
+  box-shadow: 0 10px 24px rgba(9, 40, 69, 0.1);
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft {
+  background: #dceafb !important;
+  border-color: rgba(84, 124, 164, 0.4) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-prematch {
+  background: #eef6ff;
+  border-color: rgba(88, 128, 166, 0.38);
+}
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-prematch::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7ea0c2;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-info {
+  background: #f4f9ff;
+  border-color: rgba(88, 128, 166, 0.38);
+}
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-info::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7ea0c2;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-community,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-tribune {
+  background: #f2f7ff;
+  border-color: rgba(88, 128, 166, 0.38);
+}
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-community::before,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-tribune::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7ea0c2;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-chat {
+  background: #eef4ff;
+  border-color: rgba(88, 128, 166, 0.4);
+}
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-chat::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7ea0c2;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-live {
+  background: #eefbfb;
+  border-color: rgba(88, 128, 166, 0.4);
+}
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-live::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7ea0c2;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-lineup {
+  background: #f2f7ff;
+  border-color: rgba(88, 128, 166, 0.38);
+}
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-lineup::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7ea0c2;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-bet-shell .tf-live-card {
+  background: transparent;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-prematch,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-info,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-community,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-tribune,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-chat,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-live,
+html[data-tf-appearance='light'] .tf-channel-live .tf-card-lineup {
+  border-width: 1.5px;
+  box-shadow: 0 10px 18px rgba(11, 41, 69, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* Live channel day mode (strong readability) */
+html[data-tf-appearance='light'] .tf-channel-live-light {
+  background: #ffffff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-col {
+  background: #deebfa !important;
+  border-color: rgba(72, 115, 156, 0.3) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-card {
+  background: #f7fbff !important;
+  border-color: rgba(74, 118, 159, 0.34) !important;
+  color: #123b60 !important;
+  box-shadow: 0 10px 18px rgba(11, 41, 69, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-scroll {
+  background: #e6f0fb !important;
+  box-shadow: inset 0 0 0 1px rgba(84, 124, 164, 0.24) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-message {
+  background: #f2f8ff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-message:hover {
+  background: #e9f3ff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-50,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-100,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-white {
+  color: #123b60 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-200\/80,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-200\/75,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-200\/70,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-slate-300 {
+  color: #4d6f8d !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-soft-surface {
+  background: #dbeaf9 !important;
+  border-color: rgba(84, 124, 164, 0.38) !important;
+  color: #153f63 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-control {
+  background: #e3eefb !important;
+  color: #143f64 !important;
+  border-color: rgba(84, 124, 164, 0.48) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-pitch-shell {
+  background: #d8e8f7 !important;
+  border: 1px solid rgba(84, 124, 164, 0.34);
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-pitch-field {
+  background: #4b9a77 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-canvas {
+  background: #dbeaf9 !important;
+  border-color: rgba(84, 124, 164, 0.34) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-canvas-bg {
+  display: none !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft {
+  background: #dceafb !important;
+  border-color: rgba(84, 124, 164, 0.4) !important;
+  color: #153f63 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft * {
+  color: #153f63 !important;
+}
+
+/* Hard override for residual dark blocks in live day mode */
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-col {
+  background: #deebfa !important;
+  border-color: rgba(72, 115, 156, 0.3) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-card {
+  background: #f7fbff !important;
+  border-color: rgba(74, 118, 159, 0.34) !important;
+  color: #123b60 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-scroll {
+  background: #e7f1fb !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-message {
+  background: #f1f7ff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-message:hover {
+  background: #e7f1fd !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-widget {
+  background: #f3f8ff !important;
+  border-color: rgba(84, 124, 164, 0.42) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-head,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-secondary-shell,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-odd-chip,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-summary-row,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-soft {
+  background: #dceafb !important;
+  border-color: rgba(84, 124, 164, 0.42) !important;
+  color: #153f63 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-canvas {
+  background: #dce9f8 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-canvas-bg {
+  filter: saturate(0.9) brightness(1.08) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-overlay {
+  border-color: rgba(64, 106, 146, 0.28) !important;
+  background: linear-gradient(180deg, rgba(248, 252, 255, 0.6) 0%, rgba(248, 252, 255, 0.06) 100%) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-ring {
+  border-color: rgba(66, 110, 150, 0.4) !important;
+  background-color: rgba(66, 110, 150, 0.28) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-label {
+  color: #18486f !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-footer {
+  background: linear-gradient(180deg, rgba(221, 235, 248, 0) 0%, rgba(200, 220, 240, 0.7) 42%, rgba(189, 212, 235, 0.92) 100%) !important;
+  color: #18486f !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-lineup-pitch {
+  background: #57a884 !important;
+  border-color: rgba(74, 146, 112, 0.42) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-pitch-shell {
+  background: #d8e7f6 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-pitch-field {
+  background: #4d9d79 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-tactical-chip {
+  background: #d9e8f8 !important;
+  color: #123f64 !important;
+  box-shadow: 0 6px 14px rgba(63, 105, 142, 0.18) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-tactical-chip span:first-child {
+  color: #356485 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-tab {
+  border-color: rgba(88, 128, 166, 0.5) !important;
+  background: #d9e8f8 !important;
+  color: #123f64 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-like {
+  border-color: rgba(88, 128, 166, 0.5) !important;
+  background: #d9e8f8 !important;
+  color: #123f64 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-like:hover {
+  border-color: rgba(68, 114, 156, 0.7) !important;
+  background: #cfe2f6 !important;
+}
+
+/* Live channel day mode - final visual polish */
+html[data-tf-appearance='light'] .tf-channel-live-light {
+  background: #ffffff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-col {
+  background: #f3f6fb !important;
+  border-color: rgba(138, 162, 190, 0.34) !important;
+  box-shadow: 0 8px 20px rgba(16, 42, 68, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-card {
+  background: #ffffff !important;
+  border-color: rgba(127, 153, 184, 0.34) !important;
+  color: #123957 !important;
+  box-shadow: 0 8px 18px rgba(20, 48, 76, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-50,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-100,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-white {
+  color: #123957 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-200\/80,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-200\/75,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-200\/70,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-slate-300 {
+  color: #4d6a84 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-scroll {
+  background: #f6f9fd !important;
+  box-shadow: inset 0 0 0 1px rgba(127, 153, 184, 0.28) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-message {
+  background: #ffffff !important;
+  border: 1px solid rgba(127, 153, 184, 0.26) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-message:hover {
+  background: #f2f7ff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-soft-surface,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-soft,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-head,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-secondary-shell,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-odd-chip,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-summary-row {
+  background: #f4f8fd !important;
+  border-color: rgba(127, 153, 184, 0.32) !important;
+  color: #163f61 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-tab,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-like,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-tactical-chip {
+  background: #edf4fc !important;
+  border-color: rgba(108, 139, 174, 0.45) !important;
+  color: #123d61 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-chat-like:hover {
+  background: #e3eefb !important;
+  border-color: rgba(86, 122, 162, 0.58) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-chip {
+  background: #f7f9fc !important;
+  border-color: rgba(123, 141, 162, 0.34) !important;
+  color: #243f5a !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-mini {
+  background: #ffffff !important;
+  border-color: rgba(123, 141, 162, 0.3) !important;
+  color: #243f5a !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-momentum {
+  background: #f6f8fb !important;
+  border-color: rgba(123, 141, 162, 0.3) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-widget {
+  background: #ffffff !important;
+  border-color: rgba(123, 141, 162, 0.34) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-widget > .tf-bet-soft {
+  background: #f7f9fc !important;
+  border-color: rgba(123, 141, 162, 0.3) !important;
+}
+
+.tf-channel-shell {
+  background: #03172a;
+}
+
+html[data-tf-appearance='light'] .tf-channel-shell {
+  background: #ffffff;
+}
+
+/* Live channel dark mode - closer to home cards identity */
+.tf-channel-live:not(.tf-channel-live-light) {
+  background: #031429 !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-col {
+  background: #06203a !important;
+  border-color: rgba(72, 130, 178, 0.3) !important;
+  box-shadow: 0 14px 28px rgba(2, 8, 18, 0.34), inset 0 1px 0 rgba(170, 214, 247, 0.08) !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-card {
+  background: linear-gradient(165deg, #0b2946 0%, #081e34 52%, #061a2c 100%) !important;
+  border-color: rgba(82, 137, 183, 0.42) !important;
+  box-shadow: 0 12px 28px rgba(2, 8, 18, 0.32), inset 0 1px 0 rgba(176, 220, 250, 0.12) !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 24%, rgba(245, 250, 255, 0.08) 46%, transparent 62%);
+  opacity: 0.45;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-chat-scroll {
+  background: #071b2f !important;
+  box-shadow: inset 0 0 0 1px rgba(128, 176, 216, 0.24) !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-chat-message {
+  background: #0a233b !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-chat-message:hover {
+  background: #0d2b46 !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-soft-surface,
+.tf-channel-live:not(.tf-channel-live-light) .tf-bet-soft {
+  background: #0b2741 !important;
+  border-color: rgba(92, 146, 191, 0.35) !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-control {
+  background: #0a2742 !important;
+  border-color: rgba(92, 146, 191, 0.45) !important;
+}
+
 html[data-tf-appearance='light'] .tf-panel input,
 html[data-tf-appearance='light'] .tf-panel textarea,
 html[data-tf-appearance='light'] .tf-panel select {

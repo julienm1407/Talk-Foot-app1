@@ -1,4 +1,5 @@
 import type { Match } from '../../types/match'
+import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { formatKickoff, formatRelativeMinute } from '../../utils/time'
 import { ClubCrest } from '../brand/ClubCrest'
 import { themeForCompetition } from '../../data/competitionThemes'
@@ -6,89 +7,69 @@ import { cn } from '../../utils/cn'
 
 export function ChannelHeader({ match }: { match: Match }) {
   const isLive = match.status === 'live'
+  const liveMinute = useLinearDisplayedLiveMinute(match)
   const theme = themeForCompetition(match.competition.id)
   const homeScore = match.score?.home ?? '—'
   const awayScore = match.score?.away ?? '—'
-  const minuteText = isLive ? `${match.minute ?? 0}'` : 'AVANT'
+  const minuteText = isLive ? `${liveMinute}'` : 'AVANT'
 
   return (
-    <header className="flex min-w-0 flex-col gap-2 sm:gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-      {/* Teams + competition */}
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-4">
-        <ClubCrest
-          id={match.home.id}
-          shortName={match.home.shortName}
-          colors={match.home.colors}
-          size={36}
-          className="shrink-0"
-        />
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="text-[11px] font-black tracking-[0.16em] text-slate-500 uppercase">
-            {match.competition.shortName}
-          </div>
-          <h1 className="mt-0.5 line-clamp-2 break-words text-lg font-black tracking-tight text-slate-900 sm:text-xl">
-            {match.home.shortName} — {match.away.shortName}
-          </h1>
-          <div className="mt-0.5 text-xs font-semibold text-slate-600">
-            {!isLive
-              ? `Coup d'envoi ${formatKickoff(match.kickoffAt)}`
-              : 'En direct'}
-          </div>
-        </div>
-        <ClubCrest
-          id={match.away.id}
-          shortName={match.away.shortName}
-          colors={match.away.colors}
-          size={36}
-          className="shrink-0"
-        />
+    <header className="rounded-2xl border border-[#16334d] bg-[#041a2d] px-2.5 py-2 text-white shadow-[0_14px_28px_rgba(0,0,0,0.35)] sm:px-3.5 lg:h-[86px] lg:py-1.5">
+      <div className="mb-1 flex items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] text-sky-100/65">
+        {match.competition.shortName}
       </div>
-
-      {/* Scoreboard bloc */}
-      <div className="flex w-full min-w-0 shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3 lg:h-[54px]">
+        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 sm:px-3 sm:py-2">
+          <ClubCrest
+            id={match.home.id}
+            shortName={match.home.shortName}
+            colors={match.home.colors}
+            size={34}
+            className="shrink-0"
+          />
+          <span className="truncate text-sm font-black uppercase tracking-wide sm:text-lg lg:text-[30px] lg:leading-none">
+            {match.home.shortName}
+          </span>
+        </div>
         <div
           className={cn(
-            'flex min-w-0 flex-1 items-center justify-center gap-3 rounded-2xl px-3 py-2 shadow-sm sm:flex-initial sm:gap-4 sm:px-5 sm:py-3',
-            theme
-              ? 'border'
-              : 'border border-slate-200/80 bg-white/95',
+            'flex flex-col items-center rounded-xl border px-3 py-1.5 sm:px-5 sm:py-2',
+            theme ? 'border-white/20' : 'border-white/15',
           )}
-          style={
-            theme
-              ? {
-                  borderColor: `${theme.accent}30`,
-                  background: `linear-gradient(135deg, ${theme.accent}08, ${theme.accent2}06)`,
-                }
-              : undefined
-          }
+          style={theme ? { background: `linear-gradient(140deg, ${theme.accent}3d, #061a2f)` } : undefined}
         >
-          <span className="text-xl font-black tabular-nums text-slate-900 sm:text-3xl">
-            {homeScore}
-          </span>
-          <span className="text-base font-bold text-slate-400 sm:text-lg">–</span>
-          <span className="text-xl font-black tabular-nums text-slate-900 sm:text-3xl">
-            {awayScore}
-          </span>
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col items-center rounded-2xl border border-slate-200/80 bg-white/95 px-3 py-2 shadow-sm sm:flex-initial sm:px-4 sm:py-3">
-          <div className="text-[10px] font-black tracking-[0.2em] text-slate-500 uppercase">
-            Temps
+          <div className="text-2xl font-black tabular-nums leading-none sm:text-4xl lg:text-[46px]">
+            {homeScore} <span className="px-1 text-slate-300">-</span> {awayScore}
           </div>
-          <div className="mt-1 flex items-center gap-1.5">
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-sky-100/75">
             {isLive && (
               <span
-                className="h-2 w-2 rounded-full bg-rose-500"
+                className="h-2 w-2 rounded-full bg-rose-400"
                 style={{ animation: 'tf-live-dot 1.2s ease-in-out infinite' }}
                 aria-hidden
               />
             )}
-            <span className="text-xl font-black tabular-nums text-slate-900">
-              {isLive ? formatRelativeMinute(match.minute) || minuteText : formatKickoff(match.kickoffAt)}
-            </span>
+            {isLive ? formatRelativeMinute(liveMinute) || minuteText : formatKickoff(match.kickoffAt)}
           </div>
         </div>
+        <div className="flex min-w-0 items-center justify-end gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 sm:px-3 sm:py-2">
+          <span className="truncate text-right text-sm font-black uppercase tracking-wide sm:text-lg lg:text-[30px] lg:leading-none">
+            {match.away.shortName}
+          </span>
+          <ClubCrest
+            id={match.away.id}
+            shortName={match.away.shortName}
+            colors={match.away.colors}
+            size={34}
+            className="shrink-0"
+          />
+        </div>
       </div>
+      {!isLive ? (
+        <p className="mt-2 text-center text-xs font-semibold text-sky-100/80">
+          Coup d&apos;envoi {formatKickoff(match.kickoffAt)}
+        </p>
+      ) : null}
     </header>
   )
 }

@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { extractMatchXGFromFixture, fetchSportMonksFixtureWithXG, type SmMatchXGTotals } from '../api/sportMonks'
 import { getSportMonksToken } from '../utils/apiTokens'
+import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+
+const POLL_LIVE_MS = 120_000
+const POLL_UPCOMING_MS = 180_000
 
 /**
  * xG cumulés domicile / extérieur (`GET /fixtures/{id}` + include `xGFixture`…).
@@ -12,6 +16,12 @@ export function useSportMonksFixtureXG(
 ) {
   const [xg, setXg] = useState<SmMatchXGTotals | null>(null)
   const [loading, setLoading] = useState(false)
+  const cancelledRef = useRef(false)
+  const runRef = useRef<() => void>(() => {})
+
+  const pollMs =
+    matchStatus === 'live' ? POLL_LIVE_MS : matchStatus === 'upcoming' ? POLL_UPCOMING_MS : 0
+  const pollEnabled = Boolean(sportMonksFixtureId && pollMs > 0)
 
   useEffect(() => {
     if (!sportMonksFixtureId) {
@@ -26,35 +36,32 @@ export function useSportMonksFixtureXG(
       return
     }
 
-    let cancelled = false
-    const pollMs = matchStatus === 'live' ? 90_000 : matchStatus === 'upcoming' ? 120_000 : 0
+    cancelledRef.current = false
 
     const run = () => {
       setLoading(true)
       fetchSportMonksFixtureWithXG(token, sportMonksFixtureId)
         .then((fx) => {
-          if (cancelled || !fx) return
+          if (cancelledRef.current || !fx) return
           setXg(extractMatchXGFromFixture(fx))
         })
         .catch(() => {
-          if (!cancelled) setXg(null)
+          if (!cancelledRef.current) setXg(null)
         })
         .finally(() => {
-          if (!cancelled) setLoading(false)
+          if (!cancelledRef.current) setLoading(false)
         })
     }
 
-    run()
-    if (!pollMs) return () => {
-      cancelled = true
-    }
+    runRef.current = run
+    if (!pollMs) void run()
 
-    const id = window.setInterval(run, pollMs)
     return () => {
-      cancelled = true
-      window.clearInterval(id)
+      cancelledRef.current = true
     }
-  }, [sportMonksFixtureId, matchStatus])
+  }, [sportMonksFixtureId, matchStatus, pollMs])
+
+  useVisibilityAwareInterval(() => runRef.current(), pollMs, pollEnabled)
 
   return { xgTotals: xg, xgLoading: loading }
 }

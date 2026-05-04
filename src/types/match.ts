@@ -3,6 +3,8 @@ export type Team = {
   name: string
   shortName: string
   colors: { primary: string; secondary: string }
+  /** Logo réel club (SportMonks `image_path`/`logo_path`) quand disponible. */
+  logoUrl?: string
   /** Renseigné quand le club apparaît dans une fixture SportMonks (calendrier / club). */
   sportMonksTeamId?: number
 }

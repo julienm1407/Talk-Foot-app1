@@ -66,6 +66,8 @@ function namesFromParticipants(f: SmFixture): {
   away: string
   homeSmId?: number
   awaySmId?: number
+  homeLogoUrl?: string
+  awayLogoUrl?: string
 } {
   const parts = f.participants
   if (!Array.isArray(parts) || parts.length < 2) {
@@ -80,15 +82,21 @@ function namesFromParticipants(f: SmFixture): {
   let away = ''
   let homeSmId: number | undefined
   let awaySmId: number | undefined
+  let homeLogoUrl: string | undefined
+  let awayLogoUrl: string | undefined
   for (const p of parts) {
     const loc = p.meta?.location?.toLowerCase()
     if (loc === 'home') {
       home = p.name ?? ''
       if (typeof p.id === 'number') homeSmId = p.id
+      if (typeof p.image_path === 'string' && p.image_path.trim()) homeLogoUrl = p.image_path.trim()
+      else if (typeof p.logo_path === 'string' && p.logo_path.trim()) homeLogoUrl = p.logo_path.trim()
     }
     if (loc === 'away') {
       away = p.name ?? ''
       if (typeof p.id === 'number') awaySmId = p.id
+      if (typeof p.image_path === 'string' && p.image_path.trim()) awayLogoUrl = p.image_path.trim()
+      else if (typeof p.logo_path === 'string' && p.logo_path.trim()) awayLogoUrl = p.logo_path.trim()
     }
   }
   if (!home || !away) {
@@ -99,7 +107,7 @@ function namesFromParticipants(f: SmFixture): {
       away: away || (bits[1] ?? 'Away').trim(),
     }
   }
-  return { home, away, homeSmId, awaySmId }
+  return { home, away, homeSmId, awaySmId, homeLogoUrl, awayLogoUrl }
 }
 
 function isPartialPeriodScoreRow(s: SmScoreRow): boolean {
@@ -206,10 +214,14 @@ function getTeam(
   compId: string,
   apiName: string,
   sportMonksTeamId?: number,
+  logoUrl?: string,
 ): Team {
   const ourId = apiNameToOurId(apiName)
   const compTeams = teams[compId as keyof typeof teams]
-  const sm = sportMonksTeamId != null ? { sportMonksTeamId } : {}
+  const sm = {
+    ...(sportMonksTeamId != null ? { sportMonksTeamId } : {}),
+    ...(logoUrl ? { logoUrl } : {}),
+  }
   if (!compTeams) {
     return {
       id: ourId,
@@ -243,9 +255,9 @@ export function smFixtureToMatch(f: SmFixture): Match {
       .slice(0, 5)
       .toUpperCase() || '?',
   }
-  const { home: hn, away: an, homeSmId, awaySmId } = namesFromParticipants(f)
-  const home = getTeam(compId, hn, homeSmId)
-  const away = getTeam(compId, an, awaySmId)
+  const { home: hn, away: an, homeSmId, awaySmId, homeLogoUrl, awayLogoUrl } = namesFromParticipants(f)
+  const home = getTeam(compId, hn, homeSmId, homeLogoUrl)
+  const away = getTeam(compId, an, awaySmId, awayLogoUrl)
   const status = smStatus(f)
   const id = `m-sm-${f.id}`
   const kickoffAt = startingAtIso(f)

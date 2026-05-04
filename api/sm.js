@@ -43,13 +43,42 @@ export default async function handler(req, res) {
     upstream.searchParams.set('timezone', 'Europe/Paris')
   }
 
-  const smRes = await fetch(upstream.toString(), {
-    headers: { Authorization: token },
-    cache: 'no-store',
-  })
-  const text = await smRes.text()
-  const ct = smRes.headers.get('content-type') || 'application/json; charset=utf-8'
-  res.statusCode = smRes.status
-  res.setHeader('Content-Type', ct)
-  res.end(text)
+  function cachePolicyForPath(pathname) {
+    // Cache partagé CDN (s-maxage) : plusieurs visiteurs = moins d’appels vers api.sportmonks.com.
+    if (pathname.startsWith('/livescores/inplay')) return 'public, s-maxage=30, stale-while-revalidate=60'
+    if (pathname.startsWith('/fixtures/')) return 'public, s-maxage=45, stale-while-revalidate=90'
+    if (pathname.startsWith('/rounds/')) return 'public, s-maxage=60, stale-while-revalidate=120'
+    if (pathname.startsWith('/leagues/date/')) return 'public, s-maxage=300, stale-while-revalidate=600'
+    if (pathname.startsWith('/standings/')) return 'public, s-maxage=180, stale-while-revalidate=360'
+    if (pathname.startsWith('/schedules/')) return 'public, s-maxage=120, stale-while-revalidate=240'
+    if (pathname.startsWith('/teams/')) return 'public, s-maxage=120, stale-while-revalidate=240'
+    if (pathname.startsWith('/squads/')) return 'public, s-maxage=300, stale-while-revalidate=600'
+    return 'public, s-maxage=60, stale-while-revalidate=120'
+  }
+
+  try {
+    const smRes = await fetch(upstream.toString(), {
+      headers: { Authorization: token },
+      cache: 'no-store',
+    })
+    const text = await smRes.text()
+    const ct = smRes.headers.get('content-type') || 'application/json; charset=utf-8'
+    res.statusCode = smRes.status
+    res.setHeader('Content-Type', ct)
+    if (smRes.status >= 200 && smRes.status < 300) {
+      res.setHeader('Cache-Control', cachePolicyForPath(smPath))
+    } else {
+      res.setHeader('Cache-Control', 'no-store')
+    }
+    res.end(text)
+  } catch (e) {
+    res.statusCode = 502
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-store')
+    res.end(
+      JSON.stringify({
+        message: e instanceof Error ? `SportMonks relay error: ${e.message}` : 'SportMonks relay error',
+      }),
+    )
+  }
 }

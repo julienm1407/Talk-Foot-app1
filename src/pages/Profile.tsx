@@ -23,6 +23,7 @@ import { useMatches } from '../contexts/MatchesContext'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { findTeamInAnyLeague } from '../data/allClubsCatalog'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
@@ -30,6 +31,9 @@ import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
 import { useAppearance } from '../contexts/AppearanceContext'
 import type { Appearance } from '../contexts/AppearanceContext'
+import { LeagueMark } from '../components/brand/LeagueMark'
+import { ClubCrest } from '../components/brand/ClubCrest'
+import { sportMonksTeamLogoUrlForClubId } from '../data/sportMonksLogoUrls'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -105,6 +109,14 @@ export function ProfilePage() {
       })
       .join(' · ')
   })()
+  const leagueTheme = favoriteLeagueId ? competitionThemes[favoriteLeagueId] ?? null : null
+  const favoriteClubEntries = favoriteClubIds
+    .map((id) => {
+      const meta = ALL_CLUBS_BY_ID[id]
+      const team = findTeamInAnyLeague(id)
+      return { id, meta, team }
+    })
+    .filter((x) => Boolean(x.meta && x.team))
   const [editOpen, setEditOpen] = useState(false)
   const { wallet } = useWallet()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
@@ -355,46 +367,27 @@ export function ProfilePage() {
 
         <ProfilePrivacySection />
 
-        <Link
-          to="/settings/donnees#tf-sportmonks-cle"
-          className={cn(
-            TF_FOCUS_VISIBLE,
-            'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
-            L
-              ? 'border-tf-electric/35 bg-sky-50/90 text-tf-dark hover:border-tf-electric/50 hover:shadow-md'
-              : 'border-sky-400/30 bg-sky-950/35 text-sky-100 hover:border-sky-300/45 hover:shadow-md',
-          )}
-        >
-          <span>Données live (clé SportMonks)</span>
-          <span aria-hidden className="text-lg">
-            →
-          </span>
-        </Link>
       </div>
 
       {/* Mode Virage : réglage principal, visible dès l’ouverture du profil */}
       <Card
         id="mode-virage"
         className={cn(
-          'scroll-mt-4 overflow-hidden p-0 transition-shadow',
-          L && 'shadow-[0_12px_40px_rgba(1,30,51,0.08)]',
-          !L && 'shadow-[0_8px_32px_rgba(0,0,0,0.2)]',
+          'scroll-mt-4 overflow-hidden p-0 tf-card-hover',
           virageMode
-            ? 'border-2 border-rose-500/50 ring-2 ring-rose-400/25'
-            : 'border border-[color:var(--tf-c30-border)]',
+            ? L
+              ? 'border-2 border-rose-500/60 bg-gradient-to-br from-rose-50/95 via-white to-tf-ice/80 ring-2 ring-rose-400/25'
+              : 'border-2 border-rose-500/50 bg-gradient-to-br from-rose-900/35 via-slate-900/40 to-slate-900/25 ring-2 ring-rose-400/20'
+            : L
+              ? 'border-tf-electric/25 bg-gradient-to-br from-tf-electric-soft/90 to-white/95'
+              : 'border-cyan-500/20 bg-gradient-to-br from-slate-900/50 via-slate-900/35 to-cyan-950/25',
         )}
         elevation="soft"
       >
         <div
           className={cn(
             'px-5 py-5 sm:px-6 sm:py-6',
-            virageMode
-              ? L
-                ? 'bg-gradient-to-br from-rose-50/95 via-white to-tf-ice/80'
-                : 'bg-gradient-to-br from-rose-900/30 via-slate-900/40 to-slate-900/20'
-              : L
-                ? 'bg-gradient-to-br from-tf-white to-tf-grey-pastel/15'
-                : 'bg-gradient-to-br from-white/[0.06] to-transparent',
+            !L && !virageMode && 'bg-white/[0.02]',
           )}
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
@@ -411,14 +404,11 @@ export function ProfilePage() {
                 {LIVE_FIL_EQUIPE_COEUR.label}
               </h2>
               <p className="text-[11px] font-bold uppercase tracking-wide text-tf-app-muted">
-                À ne pas confondre avec la zone stade « Virage » sur un live, ni avec un salon de groupe privé.
+                Filtrer le chat par tes clubs favoris
               </p>
               <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-app-fg/90">
-                Quand il est <strong className="text-tf-app-fg">activé</strong>, tu ne vois (en plus de toi) que les
-                messages des personnes qui ont renseigné{' '}
-                <strong className="text-tf-app-fg">un de tes clubs favoris</strong> — sur le live public, dans les salons
-                groupe et dans le top commentaires. Le mode supporter (teinte maillot) ne fait pas ce filtrage : c’est
-                uniquement ce réglage.
+                Active ce mode pour voir surtout les messages de supporters qui suivent au moins un de tes clubs
+                favoris.
               </p>
               {!preferencesComplete || favoriteClubIds.length === 0 ? (
                 <p
@@ -429,8 +419,7 @@ export function ProfilePage() {
                       : 'border-amber-400/35 bg-amber-950/50 text-amber-100',
                   )}
                 >
-                  Choisis au moins une ligue et un club avec « Modifier ligue / clubs » pour que le filtrage ait du
-                  sens.
+                  Action requise : ajoute d'abord un club favori via « Modifier ligue / clubs ».
                 </p>
               ) : (
                 <p className="text-xs font-bold text-tf-app-muted">
@@ -451,7 +440,7 @@ export function ProfilePage() {
                 }
                 onClick={() => setVirageMode(!virageMode)}
                 className={cn(
-                  'relative h-16 min-w-[200px] rounded-2xl border-2 px-2 transition',
+                  'relative h-16 min-w-[170px] sm:min-w-[200px] rounded-2xl border-2 px-2 transition',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/40',
                   L ? 'focus-visible:ring-offset-2' : 'focus-visible:ring-offset-0',
                   virageMode
@@ -474,7 +463,7 @@ export function ProfilePage() {
                 <span
                   className={cn(
                     'relative z-[1] flex h-full w-full items-center gap-2 text-sm font-black',
-                    virageMode ? 'justify-end pr-3.5' : 'justify-start pl-[3.75rem]',
+                    virageMode ? 'justify-end pr-2.5 sm:pr-3.5' : 'justify-start pl-[3.4rem] sm:pl-[3.75rem]',
                     !L && !virageMode && 'text-sky-100',
                   )}
                 >
@@ -483,7 +472,8 @@ export function ProfilePage() {
                       <span className="text-lg" aria-hidden>
                         ✓
                       </span>
-                      {LIVE_FIL_EQUIPE_COEUR.labelOn}
+                      <span className="sm:hidden">Fil ON</span>
+                      <span className="hidden sm:inline">{LIVE_FIL_EQUIPE_COEUR.labelOn}</span>
                     </>
                   ) : (
                     <>
@@ -496,9 +486,7 @@ export function ProfilePage() {
                 </span>
               </button>
               <p className="text-center text-[11px] font-bold text-tf-app-muted lg:max-w-[11rem] lg:text-left">
-                {virageMode
-                  ? 'Raccourci aussi sur le live (bouton à côté du chat).'
-                  : 'Un clic : tu vois tout le monde (sauf filtres zone stade sur le live).'}
+                {virageMode ? 'Mode actif. Tu peux aussi le changer depuis un live.' : 'Action simple : clique sur Activer le fil.'}
               </p>
             </div>
           </div>
@@ -513,37 +501,63 @@ export function ProfilePage() {
       >
         <Card
           className={cn(
-            'tf-card-hover p-5 sm:p-6',
+            'tf-card-hover relative overflow-hidden p-5 sm:p-6',
             L
-              ? 'border-tf-electric/25 bg-gradient-to-br from-tf-electric-soft/90 to-white/95'
-              : 'border-cyan-500/20 bg-gradient-to-br from-slate-900/50 via-slate-900/35 to-cyan-950/25',
+              ? 'border-amber-300/45 bg-gradient-to-br from-amber-50/95 via-white to-orange-50/80'
+              : 'border-amber-400/25 bg-gradient-to-br from-[#2a1a0a]/95 via-[#1e140a]/95 to-[#331a0f]/90',
           )}
           elevation="soft"
         >
+          <div
+            className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full"
+            aria-hidden
+            style={{
+              background:
+                'radial-gradient(circle, rgba(251,191,36,0.35) 0%, rgba(251,191,36,0.08) 42%, rgba(251,191,36,0) 72%)',
+            }}
+          />
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
+            <div className="min-w-0 space-y-2">
               <p
                 className={cn(
-                  'text-[11px] font-black tracking-[0.18em]',
-                  L ? 'text-tf-electric-deep' : 'text-cyan-200/90',
+                  'text-[11px] font-black tracking-[0.22em]',
+                  L ? 'text-amber-700' : 'text-amber-200/95',
                 )}
               >
                 BOUTIQUE
               </p>
-              <h2 className="mt-1 font-display text-xl font-black text-tf-app-fg">
-                Maillots, emotes & cosmétiques
+              <h2 className="font-display text-xl font-black text-tf-app-fg">
+                Drop maillots, emotes et packs supporters
               </h2>
-              <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-                Accès ici (plus dans le menu) — mets ton équipe.
+              <p className={cn('text-sm font-semibold', L ? 'text-slate-700/90' : 'text-amber-50/85')}>
+                Personnalise ton style matchday avec les couleurs de ton club.
               </p>
+              <div className="flex flex-wrap gap-1.5">
+                <span
+                  className={cn(
+                    'rounded-full border px-2 py-0.5 text-[11px] font-black',
+                    L ? 'border-amber-300/70 bg-amber-100/85 text-amber-900' : 'border-amber-400/30 bg-amber-300/10 text-amber-200',
+                  )}
+                >
+                  Nouveautes
+                </span>
+                <span
+                  className={cn(
+                    'rounded-full border px-2 py-0.5 text-[11px] font-black',
+                    L ? 'border-rose-300/70 bg-rose-100/80 text-rose-900' : 'border-rose-400/30 bg-rose-300/10 text-rose-200',
+                  )}
+                >
+                  Editions club
+                </span>
+              </div>
             </div>
             <span
               className={cn(
-                'inline-flex rounded-2xl px-5 py-2.5 text-sm font-black text-white shadow-sm',
-                L ? 'bg-tf-dark' : 'bg-gradient-to-r from-rose-600 to-rose-500',
+                'inline-flex items-center rounded-2xl px-5 py-2.5 text-sm font-black text-white shadow-sm',
+                L ? 'bg-gradient-to-r from-amber-600 to-orange-500' : 'bg-gradient-to-r from-amber-500 to-orange-500',
               )}
             >
-              Ouvrir →
+              Ouvrir la boutique →
             </span>
           </div>
         </Card>
@@ -630,27 +644,54 @@ export function ProfilePage() {
       <Card id="supporter" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
         <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">SUPPORTER</div>
         <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-app-fg">
-          Club & ligue
+          Personnalise ton experience
         </div>
         <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-          Ta ligue et tes clubs (jusqu’à 3) servent aux titres, couleurs et repères — tu gardes accès à tous les
-          salons compatibles (ex. ultras du même club). Seul le{' '}
-          <strong className="text-tf-app-fg">{LIVE_FIL_EQUIPE_COEUR.label}</strong> filtre les messages (live, salons,
-          top com.).
+          Choisis 1 ligue + jusqu a 3 clubs. Active ensuite le {LIVE_FIL_EQUIPE_COEUR.label} pour filtrer les messages.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className={cn('rounded-2xl border px-4 py-3', profileIncard(appearance))}>
             <div className="text-xs font-bold text-tf-app-muted">Ligue favorite</div>
-            <div className="mt-1 text-base font-black text-tf-app-fg break-words">{leagueName}</div>
+            <div className="mt-2">
+              {leagueTheme ? (
+                <LeagueMark theme={leagueTheme} label={leagueTheme.name} />
+              ) : (
+                <div className="text-base font-black text-tf-app-fg break-words">{leagueName}</div>
+              )}
+            </div>
           </div>
           <div className={cn('rounded-2xl border px-4 py-3', profileIncard(appearance))}>
             <div className="text-xs font-bold text-tf-app-muted">Clubs favoris (max. 3)</div>
-            <div className="mt-1 break-words text-base font-black text-tf-app-fg">{clubsLabel}</div>
+            {favoriteClubEntries.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {favoriteClubEntries.map(({ id, meta, team }) => (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-xs font-bold text-tf-app-fg"
+                  >
+                    {team ? (
+                      <ClubCrest
+                        id={team.id}
+                        shortName={team.shortName}
+                        colors={team.colors}
+                        logoUrl={sportMonksTeamLogoUrlForClubId(id) ?? undefined}
+                        size={18}
+                        clickable={false}
+                        className="rounded-full"
+                      />
+                    ) : null}
+                    {meta?.name ?? id}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-1 break-words text-base font-black text-tf-app-fg">{clubsLabel}</div>
+            )}
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <Button variant="primary" className="w-full rounded-2xl sm:w-auto" onClick={openOnboarding}>
-            Modifier ligue / clubs
+            Choisir ligue et clubs
           </Button>
           <a
             href="#mode-virage"

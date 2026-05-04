@@ -32,8 +32,22 @@ function parseForm(raw: unknown): FormResult[] {
     return out.slice(-5)
   }
   if (!Array.isArray(raw)) return []
+
+  /** SportMonks `StandingForm` : ordre chronologique via `sort_order` (plus ancien → plus récent). */
+  const arr = [...raw]
+  const hasSortOrder = arr.some(
+    (item) => item && typeof item === 'object' && typeof (item as Record<string, unknown>).sort_order === 'number',
+  )
+  if (hasSortOrder) {
+    arr.sort((a, b) => {
+      const sa = a && typeof a === 'object' ? Number((a as Record<string, unknown>).sort_order) : 0
+      const sb = b && typeof b === 'object' ? Number((b as Record<string, unknown>).sort_order) : 0
+      return (Number.isFinite(sa) ? sa : 0) - (Number.isFinite(sb) ? sb : 0)
+    })
+  }
+
   const out: FormResult[] = []
-  for (const item of raw) {
+  for (const item of arr) {
     if (typeof item === 'string') {
       const u = item.trim().toUpperCase()
       if (u.startsWith('W')) out.push('W')
@@ -43,6 +57,20 @@ function parseForm(raw: unknown): FormResult[] {
     }
     if (!item || typeof item !== 'object') continue
     const o = item as Record<string, unknown>
+    /** Champ officiel `StandingForm.form` : une lettre W / D / L (doc SportMonks). */
+    const smForm = String(o.form ?? '').trim().toUpperCase()
+    if (smForm.startsWith('W')) {
+      out.push('W')
+      continue
+    }
+    if (smForm.startsWith('L')) {
+      out.push('L')
+      continue
+    }
+    if (smForm.startsWith('D') || smForm.startsWith('N')) {
+      out.push('D')
+      continue
+    }
     const r = String(o.result ?? o.description ?? '').toUpperCase()
     if (r.includes('WIN')) out.push('W')
     else if (r.includes('LOSS') || r.includes('DEF')) out.push('L')
@@ -62,17 +90,47 @@ function shortParticipantLabel(name: string): string {
   return t.slice(0, 4).toUpperCase()
 }
 
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]/g, '')
+}
+
+function compactClubName(s: string): string {
+  return normalizeName(s).replace(
+    /(footballclub|fc|ac|sc|as|rc|cf|afc|clubathletique|sportingclub|olympique|stade|de|du|des|la|le|the)/g,
+    '',
+  )
+}
+
 function resolveTeamId(
   participantId: number,
   participantName: string,
   talkFootLeagueId: string,
 ): { teamId: string; displayName?: string } {
-  for (const [clubId, smId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
-    if (smId === participantId) return { teamId: clubId }
+  const pool = teams[talkFootLeagueId as keyof typeof teams]
+  if (pool?.length) {
+    const n = normalizeName(participantName)
+    const c = compactClubName(participantName)
+    const exact = pool.find((x) => normalizeName(x.name) === n || normalizeName(x.shortName) === n)
+    if (exact) return { teamId: exact.id }
+    const fuzzy = pool.find((x) => {
+      const xn = normalizeName(x.name)
+      const xc = compactClubName(x.name)
+      return (
+        (c.length >= 4 && xc.length >= 4 && (c.includes(xc) || xc.includes(c))) ||
+        (n.length >= 5 && (n.includes(xn) || xn.includes(n)))
+      )
+    })
+    if (fuzzy) return { teamId: fuzzy.id }
   }
   const guessed = apiNameToOurId(participantName)
-  const pool = teams[talkFootLeagueId as keyof typeof teams]
   if (pool?.some((x) => x.id === guessed)) return { teamId: guessed }
+  for (const [clubId, smId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
+    if (smId === participantId && pool?.some((x) => x.id === clubId)) return { teamId: clubId }
+  }
   return {
     teamId: `sm-${participantId}`,
     displayName: shortParticipantLabel(participantName),
@@ -90,6 +148,22 @@ function parseDetailBlob(details: unknown): {
   const out = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0 }
   if (!Array.isArray(details)) return out
 
+  const putBest = (
+    key: 'played' | 'won' | 'drawn' | 'lost' | 'gf' | 'ga',
+    value: number,
+    score: number,
+    cur: Record<string, number>,
+    quality: Record<string, number>,
+  ) => {
+    const qk = `q_${key}`
+    const prev = quality[qk] ?? -1
+    if (score >= prev) {
+      cur[key] = value
+      quality[qk] = score
+    }
+  }
+  const quality: Record<string, number> = {}
+
   for (const raw of details) {
     if (!raw || typeof raw !== 'object') continue
     const d = raw as Record<string, unknown>
@@ -103,16 +177,53 @@ function parseDetailBlob(details: unknown): {
         ? String((typeObj as Record<string, unknown>).name ?? '').toUpperCase()
         : ''
     const blob = `${dev} ${nm}`
+    const isHomeAway = /HOME|AWAY|DOMICILE|EXTERIEUR/i.test(blob)
+    const isOverall = /OVERALL|TOTAL|ALL/i.test(blob) && !isHomeAway
+    const score = isOverall ? 3 : isHomeAway ? 1 : 2
     const val = parseNum(d.value ?? d.total)
     if (val == null) continue
 
-    if (/PLAYED|GAMES?\s*PLAY|MATCHES?\s*PLAY|PJ\b|MP\b/i.test(blob)) out.played = val
-    else if (/OVERALL.*WIN|^WINS?$|TOTAL.*WIN/i.test(blob) || (/\bWIN\b/.test(blob) && !/HOME|AWAY/.test(blob)))
-      out.won = val
-    else if (/DRAW|TIE|NUL/i.test(blob)) out.drawn = val
-    else if (/LOSS|DEFEAT|LOST|DEFAITE/i.test(blob)) out.lost = val
-    else if (/SCORE|GOAL.*FOR|GOALS?\s*FOR|GF\b|FAVOR/i.test(blob)) out.gf = val
-    else if (/CONCED|AGAINST|GOALS?\s*AG|GA\b|ENC/i.test(blob)) out.ga = val
+    if (dev === 'GOALS_FOR') {
+      putBest('gf', val, 5, out, quality)
+      continue
+    }
+    if (dev === 'GOALS_AGAINST') {
+      putBest('ga', val, 5, out, quality)
+      continue
+    }
+    if (dev === 'WON' || dev === 'WINS') {
+      putBest('won', val, 5, out, quality)
+      continue
+    }
+    if (dev === 'DRAW' || dev === 'DRAWS') {
+      putBest('drawn', val, 5, out, quality)
+      continue
+    }
+    if (dev === 'LOST' || dev === 'LOSSES') {
+      putBest('lost', val, 5, out, quality)
+      continue
+    }
+    if (dev === 'MATCHES_PLAYED' || dev === 'GAMES_PLAYED' || dev === 'PLAYED') {
+      putBest('played', val, 5, out, quality)
+      continue
+    }
+
+    if (/PLAYED|GAMES?\s*PLAY|MATCHES?\s*PLAY|PJ\b|MP\b/i.test(blob)) {
+      putBest('played', val, score, out, quality)
+    } else if (
+      /OVERALL.*WIN|^WINS?$|TOTAL.*WIN/i.test(blob) ||
+      (/\bWIN\b/.test(blob) && !/HOME|AWAY|DOMICILE|EXTERIEUR/.test(blob))
+    ) {
+      putBest('won', val, score, out, quality)
+    } else if (/DRAW|TIE|NUL/i.test(blob)) {
+      putBest('drawn', val, score, out, quality)
+    } else if (/LOSS|DEFEAT|LOST|DEFAITE/i.test(blob)) {
+      putBest('lost', val, score, out, quality)
+    } else if (/SCORE|GOAL.*FOR|GOALS?\s*FOR|GF\b|FAVOR/i.test(blob)) {
+      putBest('gf', val, score, out, quality)
+    } else if (/CONCED|AGAINST|GOALS?\s*AG|GA\b|ENC/i.test(blob)) {
+      putBest('ga', val, score, out, quality)
+    }
   }
 
   return out
@@ -175,6 +286,68 @@ function parseOverallBlock(row: Record<string, unknown>): Partial<{
   const lost = parseNum(g.losses ?? g.loss ?? g.lost)
   const gf = parseNum(g.goals_scored ?? g.goals_for ?? g.scored)
   const ga = parseNum(g.goals_against ?? g.against ?? g.conceded)
+  if (played != null) partial.played = played
+  if (won != null) partial.won = won
+  if (drawn != null) partial.drawn = drawn
+  if (lost != null) partial.lost = lost
+  if (gf != null) partial.gf = gf
+  if (ga != null) partial.ga = ga
+  return Object.keys(partial).length ? partial : null
+}
+
+function parseTopLevelBlock(row: Record<string, unknown>): Partial<{
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  gf: number
+  ga: number
+}> | null {
+  const partial: Partial<{
+    played: number
+    won: number
+    drawn: number
+    lost: number
+    gf: number
+    ga: number
+  }> = {}
+  const played = parseNum(row.played ?? row.games_played ?? row.matches_played ?? row.match_played)
+  const won = parseNum(row.won ?? row.wins ?? row.win)
+  const drawn = parseNum(row.drawn ?? row.draws ?? row.draw)
+  const lost = parseNum(row.lost ?? row.losses ?? row.loss)
+  const gf = parseNum(row.goals_for ?? row.goals_scored ?? row.scored)
+  const ga = parseNum(row.goals_against ?? row.conceded ?? row.against)
+  if (played != null) partial.played = played
+  if (won != null) partial.won = won
+  if (drawn != null) partial.drawn = drawn
+  if (lost != null) partial.lost = lost
+  if (gf != null) partial.gf = gf
+  if (ga != null) partial.ga = ga
+  return Object.keys(partial).length ? partial : null
+}
+
+function parseDirectStandingsCore(row: Record<string, unknown>): Partial<{
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  gf: number
+  ga: number
+}> | null {
+  const partial: Partial<{
+    played: number
+    won: number
+    drawn: number
+    lost: number
+    gf: number
+    ga: number
+  }> = {}
+  const played = parseNum(row.games_played ?? row.played ?? row.matches_played)
+  const won = parseNum(row.won ?? row.wins)
+  const drawn = parseNum(row.drawn ?? row.draws ?? row.draw)
+  const lost = parseNum(row.lost ?? row.losses ?? row.loss)
+  const gf = parseNum(row.goals_for ?? row.goals_scored ?? row.scored)
+  const ga = parseNum(row.goals_against ?? row.conceded ?? row.against)
   if (played != null) partial.played = played
   if (won != null) partial.won = won
   if (drawn != null) partial.drawn = drawn
@@ -304,10 +477,15 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
   for (const raw of list) {
     if (!raw || typeof raw !== 'object') continue
     const row = raw as Record<string, unknown>
-    const pid = row.participant_id
-    if (typeof pid !== 'number' || !Number.isFinite(pid)) continue
-
     const part = row.participant
+    const pidFromRow = parseNum(row.participant_id)
+    const pidFromPart =
+      part && typeof part === 'object'
+        ? parseNum((part as Record<string, unknown>).id)
+        : null
+    const pid = pidFromRow ?? pidFromPart
+    if (pid == null || !Number.isFinite(pid)) continue
+
     const pname =
       part && typeof part === 'object'
         ? String((part as Record<string, unknown>).name ?? (part as Record<string, unknown>).short_code ?? '')
@@ -320,11 +498,17 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
     const points = parseNum(row.points) ?? 0
 
     let d = parseDetailBlob(row.details)
+    const direct = parseDirectStandingsCore(row)
+    if (direct) d = { ...d, ...direct }
+    const top = parseTopLevelBlock(row)
+    if (top) d = { ...d, ...top }
     const ov = parseOverallBlock(row)
     if (ov) d = { ...d, ...ov }
 
     const { won, drawn, lost, gf, ga } = d
     let played = d.played
+    const sumWdl = won + drawn + lost
+    if (played > 0 && sumWdl > played) played = sumWdl
     if (!played && won + drawn + lost > 0) played = won + drawn + lost
     if (!played) played = Math.max(1, won + drawn + lost)
 

@@ -17,18 +17,41 @@ export function buildEmbedSportMonksTokenAtViteBuild(): boolean {
 }
 
 export function getSportMonksTokenSource(): SportMonksTokenSource {
+  if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) return 'env'
+  if (import.meta.env.VITE_SPORTMONKS_RELAY_ONLY === 'true' || import.meta.env.VITE_SPORTMONKS_RELAY_ONLY === '1')
+    return 'env'
+  if (
+    import.meta.env.DEV &&
+    (import.meta.env.VITE_USE_SM_DEV_RELAY === 'true' || import.meta.env.VITE_USE_SM_DEV_RELAY === '1')
+  )
+    return 'env'
   if (trimOrUndef(import.meta.env.VITE_SPORTMONKS_TOKEN)) return 'env'
   try {
     if (trimOrUndef(localStorage.getItem(LS_KEY_SPORTMONKS_TOKEN))) return 'browser'
   } catch {
     /* private mode */
   }
-  if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) return 'env'
   return 'none'
 }
 
-/** Priorité : variable d’environnement Vite, puis navigateur, puis relais Vercel `/api/sm`. */
+/**
+ * Priorité :
+ * - déploiement Vercel (`VERCEL=1` au build) → relais `/api/sm` uniquement ;
+ * - `VITE_SPORTMONKS_RELAY_ONLY` → même relais (hébergement avec `api/sm.js` sans bundle de clé) ;
+ * - dev + `VITE_USE_SM_DEV_RELAY` → relais `/api/sm` servi par Vite (clé `SPORTMONKS_TOKEN` dans `.env.local`, sans préfixe VITE_) ;
+ * - sinon `VITE_SPORTMONKS_TOKEN` ou clé navigateur (Profil → Données).
+ */
 export function getSportMonksToken(): string | undefined {
+  if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) {
+    return TF_SM_SERVER_RELAY_PLACEHOLDER
+  }
+  const relayOnly =
+    import.meta.env.VITE_SPORTMONKS_RELAY_ONLY === 'true' || import.meta.env.VITE_SPORTMONKS_RELAY_ONLY === '1'
+  if (relayOnly) return TF_SM_SERVER_RELAY_PLACEHOLDER
+  const devRelay =
+    import.meta.env.DEV &&
+    (import.meta.env.VITE_USE_SM_DEV_RELAY === 'true' || import.meta.env.VITE_USE_SM_DEV_RELAY === '1')
+  if (devRelay) return TF_SM_SERVER_RELAY_PLACEHOLDER
   const env = trimOrUndef(import.meta.env.VITE_SPORTMONKS_TOKEN)
   if (env) return env
   try {
@@ -36,9 +59,6 @@ export function getSportMonksToken(): string | undefined {
     if (ls) return ls
   } catch {
     /* private mode */
-  }
-  if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) {
-    return TF_SM_SERVER_RELAY_PLACEHOLDER
   }
   return undefined
 }

@@ -117,6 +117,8 @@ export function encartPulseFromSmEvent(ev: SmFixtureEventRow, match: Match): SmL
   const isGoalish =
     (dev.includes('GOAL') && !dev.includes('DISALLOW')) ||
     dev.includes('OWNGOAL') ||
+    dev.includes('OWN-GOAL') ||
+    /\bGOL\b/.test(dev) ||
     (dev.includes('PENALTY') && dev.includes('SCORED')) ||
     (dev.includes('PENALTY') && dev.includes('GOAL') && !dev.includes('MISSED') && !dev.includes('SAVED'))
 

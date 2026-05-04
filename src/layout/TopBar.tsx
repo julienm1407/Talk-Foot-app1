@@ -111,8 +111,8 @@ export function TopBar() {
       <div
         className={cn(
           'relative mx-auto grid w-full min-w-0 max-w-tf-content items-center gap-x-2 gap-y-1.5 px-2 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
-          /* <700px : logo + actions ; ≥700px : logo | nav (prend l’espace flexible, scroll si besoin) | actions */
-          'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto]',
+          /* <700px : logo + actions ; ≥700px : 3 colonnes symétriques pour centrer vraiment la nav */
+          'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
         )}
       >
         <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">

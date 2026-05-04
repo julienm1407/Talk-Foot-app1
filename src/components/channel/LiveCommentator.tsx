@@ -246,9 +246,23 @@ export function LiveCommentator({
           className,
         )}
       >
-        <p className="mb-1 text-[9px] font-black uppercase tracking-[0.14em] text-rose-800/70 sm:mb-1.5 sm:text-[10px]">
-          Commentaire live
-        </p>
+        <div className="mb-1 flex items-center justify-between gap-2 sm:mb-1.5 sm:block">
+          <p className="mb-0 text-[9px] font-black uppercase tracking-[0.14em] text-rose-800/70 sm:mb-1.5 sm:text-[10px]">
+            Commentaire live
+          </p>
+          {!isActive ? (
+            <button
+              type="button"
+              onClick={() => setIsActive(true)}
+              className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-200 bg-rose-50/95 text-base shadow-sm transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400 sm:hidden',
+              )}
+              aria-label="Ouvrir le panneau commentateur"
+            >
+              <span aria-hidden>🎙️</span>
+            </button>
+          ) : null}
+        </div>
 
         {liveCommentary && isSpeaking && (
           <div
@@ -291,7 +305,7 @@ export function LiveCommentator({
             type="button"
             onClick={() => setIsActive(true)}
             className={cn(
-              'flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/95 px-4 py-2.5 text-sm font-bold text-rose-800 shadow-sm transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400 sm:justify-start',
+              'hidden w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/95 px-4 py-2.5 text-sm font-bold text-rose-800 shadow-sm transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-400 sm:flex sm:justify-start',
             )}
             aria-label="Activer le mode commentaire"
           >

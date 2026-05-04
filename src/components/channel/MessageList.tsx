@@ -150,7 +150,8 @@ export function MessageList({
               </div>
               <div
                 className={cn(
-                  'mt-1 rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed text-slate-700',
+                  'relative mt-1 rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed text-slate-700',
+                  onToggleLike && 'pr-12',
                   bubbleClass(kind),
                   (m.gifUrl || m.emoteId || m.groupScarf) && 'p-2',
                 )}
@@ -184,25 +185,23 @@ export function MessageList({
                 ) : (
                   m.text
                 )}
+                {onToggleLike ? (
+                  <button
+                    type="button"
+                    onClick={() => onToggleLike(m)}
+                    className={cn(
+                      'absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-black leading-none transition',
+                      safeHasLiked(m.id)
+                        ? 'border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-300 hover:bg-rose-100'
+                        : 'border-slate-200 bg-white/85 text-slate-500 hover:border-rose-200 hover:text-rose-500',
+                    )}
+                    aria-label={safeHasLiked(m.id) ? 'Retirer le like' : 'Liker le commentaire'}
+                  >
+                    <span aria-hidden>{safeHasLiked(m.id) ? '♥' : '♡'}</span>
+                    {safeGetLikes(m.id) > 0 && <span className="tabular-nums">{safeGetLikes(m.id)}</span>}
+                  </button>
+                ) : null}
               </div>
-              {onToggleLike && (
-                <button
-                  type="button"
-                  onClick={() => onToggleLike(m)}
-                  className={cn(
-                    'mt-1 flex items-center gap-1.5 text-xs font-semibold transition',
-                    safeHasLiked(m.id)
-                      ? 'text-rose-600 hover:text-rose-700'
-                      : 'text-slate-400 hover:text-rose-500',
-                  )}
-                  aria-label={safeHasLiked(m.id) ? 'Retirer le like' : 'Liker le commentaire'}
-                >
-                  <span aria-hidden>{safeHasLiked(m.id) ? '❤️' : '🤍'}</span>
-                  {safeGetLikes(m.id) > 0 && (
-                    <span>{safeGetLikes(m.id)}</span>
-                  )}
-                </button>
-              )}
             </div>
           </li>
         )

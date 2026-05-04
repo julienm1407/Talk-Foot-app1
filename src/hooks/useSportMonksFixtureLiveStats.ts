@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   extractLiveFixtureStatistics,
   extractTimelineHighlightsFromSmFixture,
@@ -7,6 +7,10 @@ import {
 } from '../api/sportMonks'
 import type { Highlight } from '../data/highlights'
 import { getSportMonksToken } from '../utils/apiTokens'
+import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+
+/** Live : un peu moins agressif sur le quota (CDN + relais). */
+const LIVE_POLL_MS = 90_000
 
 /**
  * Statistiques équipe (`statistics` + `statistics.type`) pour un match live ou terminé.
@@ -20,8 +24,13 @@ export function useSportMonksFixtureLiveStats(
   const [rows, setRows] = useState<LiveFixtureStatRow[]>([])
   const [timeline, setTimeline] = useState<Highlight[]>([])
   const [loading, setLoading] = useState(false)
+  const cancelledRef = useRef(false)
+  const runRef = useRef<() => void>(() => {})
+
+  const pollLive = matchStatus === 'live'
 
   useEffect(() => {
+    cancelledRef.current = false
     if (!sportMonksFixtureId || matchStatus === 'upcoming') {
       setRows([])
       setTimeline([])
@@ -36,14 +45,11 @@ export function useSportMonksFixtureLiveStats(
       return
     }
 
-    let cancelled = false
-    const pollMs = matchStatus === 'live' ? 60_000 : 0
-
     const run = () => {
       setLoading(true)
       fetchSportMonksFixtureEventsWeather(token, sportMonksFixtureId)
         .then((fx) => {
-          if (cancelled || !fx) return
+          if (cancelledRef.current || !fx) return
           setRows(extractLiveFixtureStatistics(fx))
           if (channelMatchId) {
             setTimeline(extractTimelineHighlightsFromSmFixture(fx, channelMatchId))
@@ -52,26 +58,29 @@ export function useSportMonksFixtureLiveStats(
           }
         })
         .catch(() => {
-          if (!cancelled) {
+          if (!cancelledRef.current) {
             setRows([])
             setTimeline([])
           }
         })
         .finally(() => {
-          if (!cancelled) setLoading(false)
+          if (!cancelledRef.current) setLoading(false)
         })
     }
 
-    run()
-    if (!pollMs) return () => {
-      cancelled = true
-    }
-    const id = window.setInterval(run, pollMs)
+    runRef.current = run
+    if (!pollLive) void run()
+
     return () => {
-      cancelled = true
-      window.clearInterval(id)
+      cancelledRef.current = true
     }
-  }, [sportMonksFixtureId, matchStatus, channelMatchId])
+  }, [sportMonksFixtureId, matchStatus, channelMatchId, pollLive])
+
+  useVisibilityAwareInterval(
+    () => runRef.current(),
+    LIVE_POLL_MS,
+    Boolean(sportMonksFixtureId && pollLive),
+  )
 
   return { liveStatRows: rows, liveStatsLoading: loading, smTimelineHighlights: timeline }
 }

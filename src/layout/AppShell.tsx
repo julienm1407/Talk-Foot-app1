@@ -13,7 +13,7 @@ import { PageAdRails } from './PageAdRails'
 import { cn } from '../utils/cn'
 
 const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
-const mainBottomPadChannel = 'pb-[max(5rem,calc(5rem+env(safe-area-inset-bottom,0px)))]'
+const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
 /** Accueil desktop : pas de bottom nav — éviter le grand vide gris sous le hub. */
 const mainBottomPadHomeDesktop = 'md:pb-2 lg:pb-3'
 
@@ -47,7 +47,7 @@ export function AppShell() {
         {isChannel ? (
           <div
             className={cn(
-              'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
+              'tf-channel-shell mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
               /* Mobile : tout le live défile comme une page (doigt haut/bas). Desktop : hauteur cadrée, pas de scroll outer. */
               'min-h-0 max-lg:touch-pan-y max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
               'lg:min-h-0 lg:overflow-hidden',
@@ -89,7 +89,7 @@ export function AppShell() {
         )}
       </main>
 
-      <BottomNav />
+      {!isChannel ? <BottomNav /> : null}
     </div>
     </PrivateMessagesUiProvider>
     </DirectMessagesProvider>

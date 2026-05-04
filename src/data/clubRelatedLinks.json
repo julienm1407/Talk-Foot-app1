@@ -1,0 +1,34 @@
+[
+  {
+    "id": "psg-official",
+    "clubIds": ["psg"],
+    "title": "Paris Saint-Germain — Site officiel",
+    "excerpt": "Actualites, calendrier, effectif et infos billetterie du club.",
+    "url": "https://www.psg.fr/",
+    "source": "Club"
+  },
+  {
+    "id": "om-official",
+    "clubIds": ["om"],
+    "title": "Olympique de Marseille — Site officiel",
+    "excerpt": "Actualites, matchs, equipe pro et infos supporters.",
+    "url": "https://www.om.fr/",
+    "source": "Club"
+  },
+  {
+    "id": "uefa-news",
+    "clubIds": ["psg", "om", "asm", "ol", "losc", "rennes"],
+    "title": "UEFA.com — Football européen",
+    "excerpt": "Competitions UEFA, resultats et dossiers clubs.",
+    "url": "https://www.uefa.com/",
+    "source": "UEFA"
+  },
+  {
+    "id": "lfp-home",
+    "clubIds": ["psg", "om", "asm", "ol", "losc", "rennes", "nantes", "nice"],
+    "title": "Ligue 1 McDonald's — Site officiel",
+    "excerpt": "Classements, calendrier et feuilles de match Ligue 1.",
+    "url": "https://www.ligue1.com/",
+    "source": "LFP"
+  }
+]

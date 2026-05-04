@@ -8,9 +8,15 @@ const meta: Record<FormResult, { label: string; className: string }> = {
 }
 
 export function FormStrip({ form, className }: { form: FormResult[]; className?: string }) {
+  // Affichage le plus récent à gauche (plus lisible pour les users).
+  const display = [...form].reverse()
+  const aria = display
+    .map((r) => (r === 'W' ? 'Victoire' : r === 'D' ? 'Nul' : 'Défaite'))
+    .join(', ')
+
   return (
-    <div className={cn('flex gap-0.5', className)} role="img" aria-label={`Forme : ${form.join(', ')}`}>
-      {form.map((r, i) => (
+    <div className={cn('flex gap-0.5', className)} role="img" aria-label={`Forme récente : ${aria}`}>
+      {display.map((r, i) => (
         <span
           key={i}
           className={cn(

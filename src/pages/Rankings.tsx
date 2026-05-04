@@ -18,10 +18,13 @@ import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniR
 import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { Link } from 'react-router-dom'
+import { useAppearance } from '../contexts/AppearanceContext'
 
 type MainTab = 'parieurs' | 'ligues' | 'forme'
 
 export function RankingsPage() {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   const [mainTab, setMainTab] = useState<MainTab>('parieurs')
   const [leagueId, setLeagueId] = useState<BigFiveLeagueId>('ligue-1')
 
@@ -104,8 +107,12 @@ export function RankingsPage() {
                   className={cn(
                     'rounded-2xl border-2 px-4 py-2 text-xs font-black transition sm:text-sm',
                     active
-                      ? 'border-tf-dark bg-tf-dark text-white shadow-md'
-                      : 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35',
+                      ? L
+                        ? 'border-tf-dark bg-tf-dark text-white shadow-md'
+                        : 'border-sky-300/45 bg-sky-500/20 text-white shadow-md'
+                      : L
+                        ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35'
+                        : 'border-white/20 bg-white/[0.06] text-sky-100 hover:border-sky-300/40 hover:bg-white/[0.1]',
                   )}
                   style={
                     active && th
@@ -173,8 +180,12 @@ export function RankingsPage() {
                   className={cn(
                     'rounded-2xl border-2 px-3 py-2 text-[11px] font-black sm:px-4 sm:text-xs',
                     active
-                      ? 'border-tf-dark bg-tf-dark text-white'
-                      : 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35',
+                      ? L
+                        ? 'border-tf-dark bg-tf-dark text-white'
+                        : 'border-sky-300/45 bg-sky-500/20 text-white'
+                      : L
+                        ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35'
+                        : 'border-white/20 bg-white/[0.06] text-sky-100 hover:border-sky-300/40 hover:bg-white/[0.1]',
                   )}
                   style={active && th ? { borderColor: th.accent, backgroundColor: th.accent } : undefined}
                 >

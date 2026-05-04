@@ -9,12 +9,14 @@ import { formatKickoff, formatRelativeMinute } from '../../utils/time'
 import { cn } from '../../utils/cn'
 import { getGroupAccess, sortGroupsByFanAffinity } from '../../utils/groupAccess'
 import type { Match } from '../../types/match'
+import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 
 function MatchFavChip({ m, light }: { m: Match; light: boolean }) {
   const live = m.status === 'live'
+  const linearMin = useLinearDisplayedLiveMinute(m)
   const sc = m.score
   const scoreStr = sc ? `${sc.home}-${sc.away}` : null
-  const sub = live ? (formatRelativeMinute(m.minute) ?? scoreStr ?? 'Live') : formatKickoff(m.kickoffAt)
+  const sub = live ? (formatRelativeMinute(linearMin) ?? scoreStr ?? 'Live') : formatKickoff(m.kickoffAt)
 
   return (
     <Link

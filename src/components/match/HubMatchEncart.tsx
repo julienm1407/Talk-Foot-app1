@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
+import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { LiveSalonPresenceStrip } from '../home/LiveSalonPresenceStrip'
 import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
@@ -30,7 +31,7 @@ export function HubMatchProgressBar({ minute, className }: { minute: number; cla
       aria-valuemax={100}
     >
       <div
-        className="h-full rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.55)] transition-[width] duration-700 ease-out"
+        className="h-full rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.55)] transition-[width] duration-300 ease-linear"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -106,7 +107,8 @@ export function HubStripLive({
   asLink?: boolean
 }) {
   const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
-  const minute = sim ? sim.minute : match.minute ?? 0
+  const linearMinute = useLinearDisplayedLiveMinute(match)
+  const minute = sim ? sim.minute : linearMinute
   const sc = sim ? sim.score : match.score ?? { home: 0, away: 0 }
   const bump = sim?.bumpSide ?? null
   const fans = hubFansK(match)
@@ -812,7 +814,7 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
 
 export function HubRailRowLive({ match, className }: { match: Match; className?: string }) {
   const sc = match.score ?? { home: 0, away: 0 }
-  const min = match.minute ?? 0
+  const min = useLinearDisplayedLiveMinute(match)
   return (
     <Link
       to={`/channel/${match.id}`}

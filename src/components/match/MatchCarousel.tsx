@@ -106,7 +106,7 @@ export function MatchCarousel({
     )
   }, [matches])
 
-  const [clockTick, setClockTick] = useState(0)
+  const [carouselNowMs, setCarouselNowMs] = useState(() => Date.now())
   const [index, setIndex] = useState(0)
   const [desktopLayout, setDesktopLayout] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
@@ -121,7 +121,7 @@ export function MatchCarousel({
   }, [])
 
   useEffect(() => {
-    const id = window.setInterval(() => setClockTick((t) => t + 1), 5000)
+    const id = window.setInterval(() => setCarouselNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
   }, [])
 
@@ -147,10 +147,11 @@ export function MatchCarousel({
     return sorted.map((m) => {
       if (m.status !== 'live') return m
       if (liveMirror && m.id === liveMirror.matchId) return m
-      const base = m.minute ?? 1
-      return { ...m, minute: Math.min(99, base + clockTick) }
+      const ko = new Date(m.kickoffAt).getTime()
+      const linearMin = Math.min(99, Math.max(1, Math.floor((carouselNowMs - ko) / 60_000)))
+      return { ...m, minute: linearMin }
     })
-  }, [sorted, clockTick, liveMirror?.matchId])
+  }, [sorted, carouselNowMs, liveMirror?.matchId])
 
   const activeTheme = useMemo(() => {
     const m = viewMatches[index]

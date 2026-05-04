@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { clubPathForId } from '../../utils/clubRoute'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
+import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { ClubCrest } from '../brand/ClubCrest'
 import { formatRelativeMinute } from '../../utils/time'
 import { cn } from '../../utils/cn'
@@ -82,7 +83,8 @@ export function LiveMatchHero({
   className?: string
 }) {
   const spotlight = variant === 'spotlight' && !compact
-  const minute = simulation.active ? simulation.minute : match.minute ?? 0
+  const linearMinute = useLinearDisplayedLiveMinute(match)
+  const minute = simulation.active ? simulation.minute : linearMinute
   const score = simulation.active ? simulation.score : match.score ?? { home: 0, away: 0 }
   const { bumpSide, burst, toast, rim } = simulation
   /** Effets plein hero : flouter le terrain + renforcer le voile pour lisibilité */

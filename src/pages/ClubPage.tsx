@@ -18,6 +18,9 @@ import {
 } from '../api/sportMonks'
 import { getClubPageMock } from '../data/clubPageMock'
 import type { ClubPageMock } from '../data/clubPageMock'
+import { getExternalClubReadingLinks } from '../data/clubRelatedLinks'
+import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { mockNews, newsItemHasArticlePage } from '../data/news'
 import type { SmSquadPlayerRow, TeamSeasonStatRow } from '../api/sportMonks'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
@@ -38,13 +41,67 @@ import { ClubPageHero } from '../components/club-page/ClubPageHero'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { formatKickoff } from '../utils/time'
 
+function readPositiveInt(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : Number(String(v ?? '').trim())
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.floor(n)
+}
+
+function inferSeasonIdFromSmFixturePayload(payload: unknown): number | null {
+  const queue: unknown[] = [payload]
+  const seen = new Set<object>()
+  const hits = new Map<number, number>()
+
+  while (queue.length > 0) {
+    const cur = queue.shift()
+    if (!cur || typeof cur !== 'object') continue
+    if (seen.has(cur)) continue
+    seen.add(cur)
+
+    if (Array.isArray(cur)) {
+      for (const x of cur) queue.push(x)
+      continue
+    }
+
+    const o = cur as Record<string, unknown>
+    const direct = readPositiveInt(o.season_id ?? o.seasonId)
+    if (direct != null) hits.set(direct, (hits.get(direct) ?? 0) + 1)
+
+    const season = o.season
+    if (typeof season === 'number' || typeof season === 'string') {
+      const sid = readPositiveInt(season)
+      if (sid != null) hits.set(sid, (hits.get(sid) ?? 0) + 1)
+    } else if (season && typeof season === 'object') {
+      const sid = readPositiveInt((season as Record<string, unknown>).id)
+      if (sid != null) hits.set(sid, (hits.get(sid) ?? 0) + 1)
+      queue.push(season)
+    }
+
+    for (const v of Object.values(o)) {
+      if (v && typeof v === 'object') queue.push(v)
+    }
+  }
+
+  if (hits.size === 0) return null
+  return [...hits.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+}
+
 export function ClubPage() {
   const { clubSlug = '' } = useParams()
   const { pathname } = useLocation()
   const [infoOpen, setInfoOpen] = useState(false)
   const { sportMonksTeamIdByClubId } = useMatches()
   const [smScheduleUi, setSmScheduleUi] = useState<{
-    upcoming: ClubPageMock['upcoming'] | null
+    upcoming:
+      | (ClubPageMock['upcoming'] & {
+          homeName: string
+          awayName: string
+          homeLogoUrl?: string
+          awayLogoUrl?: string
+          homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+          awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+        })
+      | null
     formStrip: Array<'V' | 'N' | 'D'> | null
     lastMatch: {
       opponent: string
@@ -52,12 +109,19 @@ export function ClubPage() {
       kickoff: string
       venue: 'dom' | 'ext'
       scoreLine: string
+      homeName: string
+      awayName: string
+      homeLogoUrl?: string
+      awayLogoUrl?: string
+      homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+      awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
     } | null
   } | null>(null)
   /** Pourquoi l’encart reste en démo (token, CORS, 401, etc.). */
   const [clubScheduleHint, setClubScheduleHint] = useState<string | null>(null)
   const [clubSeasonStats, setClubSeasonStats] = useState<TeamSeasonStatRow[] | null>(null)
   const [clubSeasonStatsHint, setClubSeasonStatsHint] = useState<string | null>(null)
+  const [smSeasonIdFromFixtures, setSmSeasonIdFromFixtures] = useState<number | null>(null)
   const scheduleFetchSeq = useRef(0)
   const seasonStatsFetchSeq = useRef(0)
   const squadFetchSeq = useRef(0)
@@ -158,11 +222,13 @@ export function ClubPage() {
     if (!team || smTeamId == null) {
       setSmScheduleUi(null)
       setClubScheduleHint(null)
+      setSmSeasonIdFromFixtures(null)
       return
     }
     const token = getSportMonksToken()
     if (!token) {
       setSmScheduleUi(null)
+      setSmSeasonIdFromFixtures(null)
       setClubScheduleHint(
         'Jeton SportMonks introuvable dans ce navigateur : menu Profil → Données, ou variable VITE_SPORTMONKS_TOKEN + redémarrage de `npm run dev`.',
       )
@@ -186,10 +252,14 @@ export function ClubPage() {
         const fromSchedule = findNextClubMatchFromSchedule(scheduleJson, team.id, smOpts)
         const next = fromUpcoming ?? fromSchedule
         const formStrip = lastFiveFormFromTeamSchedule(scheduleJson, team.id, smOpts)
+        const inferredSeasonId =
+          inferSeasonIdFromSmFixturePayload(upcomingJson) ??
+          inferSeasonIdFromSmFixturePayload(scheduleJson)
         const lastFinished =
           upcomingJson && typeof upcomingJson === 'object'
             ? findLastFinishedClubMatchFromTeamLatest(upcomingJson, team.id, smOpts)
             : null
+        setSmSeasonIdFromFixtures(inferredSeasonId)
         setClubScheduleHint(null)
         setSmScheduleUi({
           upcoming: next
@@ -199,6 +269,12 @@ export function ClubPage() {
                 opponent: next.opponent,
                 kickoff: formatKickoff(next.kickoffIso),
                 venue: next.venue,
+              homeName: next.homeName,
+              awayName: next.awayName,
+              homeLogoUrl: next.homeLogoUrl,
+              awayLogoUrl: next.awayLogoUrl,
+              homeCrest: next.homeCrest,
+              awayCrest: next.awayCrest,
               }
             : null,
           formStrip,
@@ -209,6 +285,12 @@ export function ClubPage() {
                 kickoff: formatKickoff(lastFinished.kickoffIso),
                 venue: lastFinished.venue,
                 scoreLine: lastFinished.scoreLine,
+                homeName: lastFinished.homeName,
+                awayName: lastFinished.awayName,
+                homeLogoUrl: lastFinished.homeLogoUrl,
+                awayLogoUrl: lastFinished.awayLogoUrl,
+                homeCrest: lastFinished.homeCrest,
+                awayCrest: lastFinished.awayCrest,
               }
             : null,
         })
@@ -220,6 +302,7 @@ export function ClubPage() {
           `Impossible de charger le calendrier SportMonks (${msg}). L’encart reste en démo.`,
         )
         setSmScheduleUi(null)
+        setSmSeasonIdFromFixtures(null)
       })
     return () => {
       cancelled = true
@@ -245,11 +328,11 @@ export function ClubPage() {
 
     void (async () => {
       try {
-        let seasonId = smSeasonIdOverride
+        let seasonId = smSeasonIdOverride ?? smSeasonIdFromFixtures
         if (seasonId == null) {
           const seasonsJson = await fetchSportMonksTeamActiveSeasons(token, smTeamId)
           if (cancelled || seq !== seasonStatsFetchSeq.current) return
-          seasonId = pickActiveSeasonIdFromSmTeamPayload(seasonsJson)
+          seasonId = pickActiveSeasonIdFromSmTeamPayload(seasonsJson) ?? null
         }
         if (seasonId == null) {
           if (!cancelled && seq === seasonStatsFetchSeq.current) {
@@ -279,7 +362,7 @@ export function ClubPage() {
     return () => {
       cancelled = true
     }
-  }, [team, smTeamId, smSeasonIdOverride, smTokenTick])
+  }, [team, smTeamId, smSeasonIdOverride, smSeasonIdFromFixtures, smTokenTick])
 
   const data = useMemo(() => {
     if (!dataBase) return null
@@ -308,6 +391,57 @@ export function ClubPage() {
     () => (team ? countSalonChannelsForClub(team.id, groups) : 0),
     [team, groups],
   )
+  const clubReadingLinks = useMemo<
+    Array<{ id: string; title: string; excerpt: string; url: string; source: string; internal: boolean }>
+  >(() => {
+    if (!team) return []
+    const teamLeagueId = ALL_CLUBS_BY_ID[team.id]?.leagueId ?? null
+
+    const toInternal = (n: (typeof mockNews)[number]) => ({
+        id: n.id,
+        title: n.title,
+        excerpt: n.excerpt,
+        url: `/article/${n.slug}`,
+        source: 'Talk Foot',
+        internal: true as const,
+    })
+
+    const byClub = mockNews
+      .filter((n) => newsItemHasArticlePage(n) && n.clubIds?.includes(team.id))
+      .map(toInternal)
+
+    const byLeague = mockNews
+      .filter(
+        (n) =>
+          newsItemHasArticlePage(n) &&
+          !n.clubIds?.length &&
+          !!teamLeagueId &&
+          n.leagueIds?.includes(teamLeagueId),
+      )
+      .map(toInternal)
+
+    const generic = mockNews
+      .filter((n) => newsItemHasArticlePage(n) && !n.clubIds?.length && !n.leagueIds?.length)
+      .map(toInternal)
+
+    const internal = [...byClub, ...byLeague, ...generic]
+      .filter((item, idx, arr) => arr.findIndex((x) => x.id === item.id) === idx)
+      .slice(0, 4)
+
+    const external = getExternalClubReadingLinks(team.id, 4).map((x): {
+      id: string
+      title: string
+      excerpt: string
+      url: string
+      source: string
+      internal: boolean
+    } => ({
+      ...x,
+      internal: false,
+    }))
+
+    return [...internal, ...external]
+  }, [team])
 
   usePageSeo(
     pathname,
@@ -352,6 +486,7 @@ export function ClubPage() {
         squadFromSportMonks={Boolean(data.squadFromSportMonks)}
         clubSeasonStats={clubSeasonStats}
         clubSeasonStatsHint={clubSeasonStatsHint}
+        clubReadingLinks={clubReadingLinks}
       />
       <ClubInfoDrawer
         open={infoOpen}

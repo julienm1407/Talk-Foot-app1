@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
+import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { Avatar } from '../ui/Avatar'
 import { cn } from '../../utils/cn'
 import { getLiveSalonPresenceSnapshot, liveSalonActiveSeeds } from '../../utils/liveSalonPresence'
@@ -38,7 +39,8 @@ export function LiveSalonPresenceStrip({
     return () => window.clearInterval(id)
   }, [match.id])
 
-  const minute = simulation.active ? simulation.minute : match.minute ?? 0
+  const linearMinute = useLinearDisplayedLiveMinute(match)
+  const minute = simulation.active ? simulation.minute : linearMinute
   const score = simulation.active ? simulation.score : match.score ?? { home: 0, away: 0 }
   const simForPresence = useMemo(
     () => ({ ...simulation, minute, score }),

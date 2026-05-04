@@ -68,7 +68,12 @@ export function LeagueStandingsTable({
             <th className="px-2 py-3 text-center">G</th>
             <th className="px-2 py-3 text-center">N</th>
             <th className="px-2 py-3 text-center">P</th>
-            <th className="px-2 py-3 text-center">Buts</th>
+            <th className="px-2 py-3 text-center" title="Buts Pour">
+              BP
+            </th>
+            <th className="px-2 py-3 text-center" title="Buts Contre">
+              BC
+            </th>
             <th className="px-2 py-3 text-center">Diff</th>
             <th className="px-2 py-3 text-center font-black text-tf-app-fg">Pts</th>
             <th className="hidden px-1 py-3 text-center text-[9px] font-black uppercase text-tf-app-muted sm:table-cell">
@@ -98,8 +103,11 @@ export function LeagueStandingsTable({
                 <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-fg">{r.won}</td>
                 <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-fg">{r.drawn}</td>
                 <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-fg">{r.lost}</td>
-                <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-muted">
-                  {r.gf}:{r.ga}
+                <td className="px-2 py-2.5 text-center tabular-nums text-emerald-700" title="Buts Pour">
+                  {r.gf}
+                </td>
+                <td className="px-2 py-2.5 text-center tabular-nums text-rose-600" title="Buts Contre">
+                  {r.ga}
                 </td>
                 <td
                   className={cn(
@@ -109,7 +117,7 @@ export function LeagueStandingsTable({
                     diff === 0 && 'text-tf-app-muted',
                   )}
                 >
-                  {diff > 0 ? `+${diff}` : diff}
+                  {Math.abs(diff)}
                 </td>
                 <td className="px-2 py-2.5 text-center font-black text-tf-app-fg">{r.points}</td>
                 <td className="hidden px-1 py-2.5 text-center tabular-nums text-tf-app-muted sm:table-cell">

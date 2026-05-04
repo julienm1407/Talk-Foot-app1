@@ -2,6 +2,8 @@ import type { Match } from '../../types/match'
 import type { SmFixture } from './types'
 import { smFixtureToMatch } from './transformSportMonksToMatch'
 
+type CrestFallback = { id: string; shortName: string; colors: { primary: string; secondary: string } }
+
 function weAreHome(m: Match, clubOurId: string, smTeamId?: number): boolean {
   if (m.home.id === clubOurId) return true
   if (smTeamId != null && m.home.sportMonksTeamId === smTeamId) return true
@@ -36,6 +38,19 @@ function fixtureFromScheduleRow(row: unknown): SmFixture | null {
   if (fx && typeof fx === 'object' && typeof (fx as SmFixture).id === 'number') return fx as SmFixture
   if (typeof o.id === 'number' && ('starting_at' in o || 'starting_at_timestamp' in o)) return row as SmFixture
   return null
+}
+
+function participantLogoFromFixture(fx: SmFixture, participantSmId: number | undefined): string | undefined {
+  if (participantSmId == null) return undefined
+  const p = fx.participants?.find((x) => typeof x.id === 'number' && x.id === participantSmId)
+  const raw = p?.image_path ?? p?.logo_path
+  if (typeof raw !== 'string') return undefined
+  const trimmed = raw.trim()
+  return trimmed ? trimmed : undefined
+}
+
+function crestFromTeam(t: Match['home']): CrestFallback {
+  return { id: t.id, shortName: t.shortName, colors: t.colors }
 }
 
 export type TeamScheduleFixtureRow = {
@@ -135,6 +150,12 @@ export type ClubLastMatchFromApi = {
   venue: 'dom' | 'ext'
   /** Score brut domicile–extérieur (terrain). */
   scoreLine: string
+  homeName: string
+  awayName: string
+  homeLogoUrl?: string
+  awayLogoUrl?: string
+  homeCrest: CrestFallback
+  awayCrest: CrestFallback
 }
 
 /** Dernier match terminé du club via `latest` (plus récent). */
@@ -144,27 +165,36 @@ export function findLastFinishedClubMatchFromTeamLatest(
   opts?: { sportMonksTeamId?: number },
 ): ClubLastMatchFromApi | null {
   const smTeamId = opts?.sportMonksTeamId
-  const matches: Match[] = []
+  const rows: Array<{ match: Match; fixture: SmFixture }> = []
   for (const fx of smFixturesFromTeamLatestEnvelope(envelope)) {
     try {
-      matches.push(smFixtureToMatch(fx))
+      rows.push({ match: smFixtureToMatch(fx), fixture: fx })
     } catch {
       /* fixture incomplète */
     }
   }
-  const finished = matches
-    .filter((m) => m.status === 'finished' && m.score != null)
-    .filter((m) => weInMatch(m, clubOurId, smTeamId))
-  finished.sort((a, b) => +new Date(b.kickoffAt) - +new Date(a.kickoffAt))
-  const m = finished[0]
-  if (!m?.score) return null
+  const finished = rows
+    .filter((x) => x.match.status === 'finished' && x.match.score != null)
+    .filter((x) => weInMatch(x.match, clubOurId, smTeamId))
+  finished.sort((a, b) => +new Date(b.match.kickoffAt) - +new Date(a.match.kickoffAt))
+  const first = finished[0]
+  const m = first?.match
+  if (!m?.score || !first) return null
   const atHome = weAreHome(m, clubOurId, smTeamId)
+  const home = m.home
+  const away = m.away
   return {
     opponent: atHome ? m.away.name : m.home.name,
     kickoffIso: m.kickoffAt,
     league: m.competition.shortName,
     venue: atHome ? 'dom' : 'ext',
     scoreLine: `${m.score.home}-${m.score.away}`,
+    homeName: home.name,
+    awayName: away.name,
+    homeLogoUrl: participantLogoFromFixture(first.fixture, home.sportMonksTeamId),
+    awayLogoUrl: participantLogoFromFixture(first.fixture, away.sportMonksTeamId),
+    homeCrest: crestFromTeam(home),
+    awayCrest: crestFromTeam(away),
   }
 }
 
@@ -179,16 +209,22 @@ export function findNextClubMatchFromTeamUpcoming(
   league: string
   venue: 'dom' | 'ext'
   matchday: string
+  homeName: string
+  awayName: string
+  homeLogoUrl?: string
+  awayLogoUrl?: string
+  homeCrest: CrestFallback
+  awayCrest: CrestFallback
 } | null {
   const smTeamId = opts?.sportMonksTeamId
-  const rows: { match: Match; roundName?: string }[] = []
+  const rows: { match: Match; roundName?: string; fixture: SmFixture }[] = []
   for (const fx of smFixturesFromTeamUpcomingEnvelope(envelope)) {
     try {
       const roundName =
         fx.round && typeof fx.round === 'object' && typeof (fx.round as { name?: string }).name === 'string'
           ? String((fx.round as { name: string }).name).trim() || undefined
           : undefined
-      rows.push({ match: smFixtureToMatch(fx), roundName })
+      rows.push({ match: smFixtureToMatch(fx), roundName, fixture: fx })
     } catch {
       /* fixture incomplète */
     }
@@ -200,12 +236,20 @@ export function findNextClubMatchFromTeamUpcoming(
   if (!first) return null
   const m = first.match
   const atHome = weAreHome(m, clubOurId, smTeamId)
+  const home = m.home
+  const away = m.away
   return {
     opponent: atHome ? m.away.name : m.home.name,
     kickoffIso: m.kickoffAt,
     league: m.competition.shortName,
     venue: atHome ? 'dom' : 'ext',
     matchday: formatScheduleRoundLabel(first.roundName),
+    homeName: home.name,
+    awayName: away.name,
+    homeLogoUrl: participantLogoFromFixture(first.fixture, home.sportMonksTeamId),
+    awayLogoUrl: participantLogoFromFixture(first.fixture, away.sportMonksTeamId),
+    homeCrest: crestFromTeam(home),
+    awayCrest: crestFromTeam(away),
   }
 }
 
@@ -214,12 +258,24 @@ export function findNextClubMatchFromSchedule(
   envelope: { data?: unknown },
   clubOurId: string,
   opts?: { sportMonksTeamId?: number },
-): { opponent: string; kickoffIso: string; league: string; venue: 'dom' | 'ext'; matchday: string } | null {
+): {
+  opponent: string
+  kickoffIso: string
+  league: string
+  venue: 'dom' | 'ext'
+  matchday: string
+  homeName: string
+  awayName: string
+  homeLogoUrl?: string
+  awayLogoUrl?: string
+  homeCrest: CrestFallback
+  awayCrest: CrestFallback
+} | null {
   const smTeamId = opts?.sportMonksTeamId
-  const rows: { match: Match; roundName?: string }[] = []
+  const rows: { match: Match; roundName?: string; fixture: SmFixture }[] = []
   for (const { fixture: fx, roundName } of teamScheduleFixtureRows(envelope)) {
     try {
-      rows.push({ match: smFixtureToMatch(fx), roundName })
+      rows.push({ match: smFixtureToMatch(fx), roundName, fixture: fx })
     } catch {
       /* fixture incomplète */
     }
@@ -231,12 +287,20 @@ export function findNextClubMatchFromSchedule(
   if (!first) return null
   const m = first.match
   const atHome = weAreHome(m, clubOurId, smTeamId)
+  const home = m.home
+  const away = m.away
   return {
     opponent: atHome ? m.away.name : m.home.name,
     kickoffIso: m.kickoffAt,
     league: m.competition.shortName,
     venue: atHome ? 'dom' : 'ext',
     matchday: formatScheduleRoundLabel(first.roundName),
+    homeName: home.name,
+    awayName: away.name,
+    homeLogoUrl: participantLogoFromFixture(first.fixture, home.sportMonksTeamId),
+    awayLogoUrl: participantLogoFromFixture(first.fixture, away.sportMonksTeamId),
+    homeCrest: crestFromTeam(home),
+    awayCrest: crestFromTeam(away),
   }
 }
 

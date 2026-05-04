@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineConfig, loadEnv, type Plugin, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import { copyFileSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -113,6 +114,94 @@ Sitemap: ${origin}${prefix}/sitemap.xml
   }
 }
 
+/** En dev, même contrat que `api/sm.js` (Vercel) : clé `SPORTMONKS_TOKEN` hors bundle + `VITE_USE_SM_DEV_RELAY=true`. */
+function sportMonksRelayDevPlugin(mode: string): Plugin {
+  return {
+    name: 'tf-sportmonks-relay-dev',
+    configureServer(server) {
+      const env = loadEnv(mode, process.cwd(), '')
+      const useRelay = env.VITE_USE_SM_DEV_RELAY === 'true' || env.VITE_USE_SM_DEV_RELAY === '1'
+      const token = String(env.SPORTMONKS_TOKEN || env.VITE_SPORTMONKS_TOKEN || '').trim()
+      if (!useRelay || !token) {
+        if (useRelay && !token) {
+          console.warn(
+            '[TalkFoot] VITE_USE_SM_DEV_RELAY activé mais SPORTMONKS_TOKEN (ou VITE_SPORTMONKS_TOKEN) manquant dans .env.local — relais /api/sm indisponible.',
+          )
+        }
+        return
+      }
+      console.info('[TalkFoot] Relais dev SportMonks : GET /api/sm → api.sportmonks.com (jeton côté serveur Vite).')
+
+      const cachePolicyForPath = (pathname: string) => {
+        if (pathname.startsWith('/livescores/inplay')) return 'public, s-maxage=30, stale-while-revalidate=60'
+        if (pathname.startsWith('/fixtures/')) return 'public, s-maxage=45, stale-while-revalidate=90'
+        if (pathname.startsWith('/rounds/')) return 'public, s-maxage=60, stale-while-revalidate=120'
+        if (pathname.startsWith('/leagues/date/')) return 'public, s-maxage=300, stale-while-revalidate=600'
+        if (pathname.startsWith('/standings/')) return 'public, s-maxage=180, stale-while-revalidate=360'
+        if (pathname.startsWith('/schedules/')) return 'public, s-maxage=120, stale-while-revalidate=240'
+        if (pathname.startsWith('/teams/')) return 'public, s-maxage=120, stale-while-revalidate=240'
+        if (pathname.startsWith('/squads/')) return 'public, s-maxage=300, stale-while-revalidate=600'
+        return 'public, s-maxage=60, stale-while-revalidate=120'
+      }
+
+      server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
+        const rawUrl = req.url ?? ''
+        if (!rawUrl.startsWith('/api/sm')) return next()
+        if (req.method !== 'GET') {
+          res.statusCode = 405
+          res.setHeader('Allow', 'GET')
+          res.end('Method Not Allowed')
+          return
+        }
+        const host = req.headers.host || 'localhost'
+        const incoming = new URL(rawUrl, `http://${host}`)
+        const smPath = incoming.searchParams.get('__sm_path') || ''
+        if (!smPath.startsWith('/') || smPath.includes('..')) {
+          res.statusCode = 400
+          res.setHeader('Content-Type', 'application/json; charset=utf-8')
+          res.end(JSON.stringify({ message: 'Paramètre __sm_path invalide' }))
+          return
+        }
+        incoming.searchParams.delete('__sm_path')
+        const upstream = new URL(`https://api.sportmonks.com/v3/football${smPath}`)
+        incoming.searchParams.forEach((value, key) => {
+          upstream.searchParams.set(key, value)
+        })
+        if (!upstream.searchParams.has('timezone')) {
+          upstream.searchParams.set('timezone', 'Europe/Paris')
+        }
+
+        void fetch(upstream.toString(), {
+          headers: { Authorization: token },
+          cache: 'no-store',
+        })
+          .then(async (smRes) => {
+            const text = await smRes.text()
+            const ct = smRes.headers.get('content-type') || 'application/json; charset=utf-8'
+            res.statusCode = smRes.status
+            res.setHeader('Content-Type', ct)
+            if (smRes.status >= 200 && smRes.status < 300) {
+              res.setHeader('Cache-Control', cachePolicyForPath(smPath))
+            } else {
+              res.setHeader('Cache-Control', 'no-store')
+            }
+            res.end(text)
+          })
+          .catch((e: unknown) => {
+            res.statusCode = 502
+            res.setHeader('Content-Type', 'application/json; charset=utf-8')
+            res.setHeader('Cache-Control', 'no-store')
+            res.end(
+              JSON.stringify({
+                message: e instanceof Error ? `SportMonks relay: ${e.message}` : 'SportMonks relay error',
+              }),
+            )
+          })
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   /** Aligné sur ce que Vite injecte dans `import.meta.env` au build (inclut `process.env` Vercel, etc.). */
@@ -123,7 +212,7 @@ export default defineConfig(({ mode }) => {
   /** Aligné sur `base` : URLs publiques complètes (ex. GitHub Pages sous /Talk-Foot-app1/). */
   const publicPathPrefix = GITHUB_PAGES ? GH_PAGES_BASE.replace(/\/$/, '') : ''
 
-  const plugins: PluginOption[] = [react()]
+  const plugins: PluginOption[] = [react(), sportMonksRelayDevPlugin(mode)]
   if (GITHUB_PAGES) plugins.push(githubPagesStaticPlugin('docs'))
   if (siteUrl) plugins.push(tfSitemapRobotsPlugin(outDir, siteUrl, publicPathPrefix))
 

@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   extract1x2OddsFromOddsList,
+  extract1x2OddsFromPredictions,
+  extractOverUnder25OddsFromOddsList,
   fetchSportMonksFixturePrematchOdds,
   fetchSportMonksRoundWithOdds,
   type SmBookOdds1x2,
+  type SmBookOddsOverUnder25,
 } from '../api/sportMonks'
 import { getSportMonksToken } from '../utils/apiTokens'
+import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
 
 function parseRoundIdEnv(raw: string | undefined): number | undefined {
   if (!raw || !String(raw).trim()) return undefined
@@ -14,8 +18,8 @@ function parseRoundIdEnv(raw: string | undefined): number | undefined {
 }
 
 function oddsPollMs(status: 'upcoming' | 'live' | 'finished' | undefined): number {
-  if (status === 'upcoming') return 60_000
-  if (status === 'live') return 90_000
+  if (status === 'upcoming') return 90_000
+  if (status === 'live') return 120_000
   return 0
 }
 
@@ -30,12 +34,16 @@ export function useSportMonksRound1x2Odds(
   matchStatus?: 'upcoming' | 'live' | 'finished',
 ) {
   const [odds, setOdds] = useState<SmBookOdds1x2 | null>(null)
+  const [oddsOverUnder25, setOddsOverUnder25] = useState<SmBookOddsOverUnder25 | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const cancelledRef = useRef(false)
+  const runRef = useRef<(opts?: { silent?: boolean }) => Promise<void>>(async () => {})
 
   const envRound = parseRoundIdEnv(import.meta.env.VITE_SPORTMONKS_PREMATCH_ODDS_ROUND_ID)
   const roundId = sportMonksRoundId ?? envRound
   const pollMs = oddsPollMs(matchStatus)
+  const pollEnabled = Boolean(sportMonksFixtureId && pollMs > 0)
 
   useEffect(() => {
     if (!sportMonksFixtureId) {
@@ -52,7 +60,7 @@ export function useSportMonksRound1x2Odds(
       return
     }
 
-    let cancelled = false
+    cancelledRef.current = false
 
     const run = async (opts?: { silent?: boolean }) => {
       const silent = Boolean(opts?.silent)
@@ -62,53 +70,59 @@ export function useSportMonksRound1x2Odds(
       }
 
       let o: SmBookOdds1x2 | null = null
+      let ou25: SmBookOddsOverUnder25 | null = null
 
       try {
         if (roundId) {
           try {
             const round = await fetchSportMonksRoundWithOdds(token, roundId)
-            if (cancelled) return
+            if (cancelledRef.current) return
             const fx = round.fixtures?.find((f) => f.id === sportMonksFixtureId)
             o = extract1x2OddsFromOddsList(fx?.odds, { fixture: fx })
+            ou25 = extractOverUnder25OddsFromOddsList(fx?.odds, { fixture: fx })
           } catch {
             /* journée absente ou fixture non listée → repli fixture */
           }
         }
 
-        if (!o && !cancelled) {
+        if ((!o || !ou25) && !cancelledRef.current) {
           const fx2 = await fetchSportMonksFixturePrematchOdds(token, sportMonksFixtureId)
-          if (cancelled) return
-          o = extract1x2OddsFromOddsList(fx2?.odds, { fixture: fx2 })
+          if (cancelledRef.current) return
+          if (!o) o = extract1x2OddsFromOddsList(fx2?.odds, { fixture: fx2 })
+          if (!o) o = extract1x2OddsFromPredictions(fx2)
+          if (!ou25) ou25 = extractOverUnder25OddsFromOddsList(fx2?.odds, { fixture: fx2 })
         }
 
-        if (!cancelled) {
+        if (!cancelledRef.current) {
           setOdds(o)
+          setOddsOverUnder25(ou25)
           if (!o) setError(null)
         }
       } catch (e: unknown) {
-        if (cancelled) return
+        if (cancelledRef.current) return
         if (!silent) {
           setOdds(null)
+          setOddsOverUnder25(null)
           setError(e instanceof Error ? e.message : 'Erreur cotes')
         }
       } finally {
-        if (!cancelled && !silent) setLoading(false)
+        if (!cancelledRef.current && !silent) setLoading(false)
       }
     }
 
-    void run()
-    if (!pollMs) {
-      return () => {
-        cancelled = true
-      }
-    }
+    runRef.current = run
+    if (!pollMs) void run()
 
-    const id = window.setInterval(() => void run({ silent: true }), pollMs)
     return () => {
-      cancelled = true
-      window.clearInterval(id)
+      cancelledRef.current = true
     }
   }, [sportMonksFixtureId, roundId, pollMs])
 
-  return { odds1x2: odds, oddsLoading: loading, oddsError: error }
+  useVisibilityAwareInterval(
+    () => void runRef.current({ silent: true }),
+    pollMs,
+    pollEnabled,
+  )
+
+  return { odds1x2: odds, oddsOverUnder25, oddsLoading: loading, oddsError: error }
 }

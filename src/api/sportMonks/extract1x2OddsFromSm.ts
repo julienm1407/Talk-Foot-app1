@@ -2,6 +2,7 @@ import type { SmFixture, SmOdd } from './types'
 import { SM_ODDS_1X2_MARKET_ID, sportMonksOddsBookmakerId } from './includes'
 
 export type SmBookOdds1x2 = { home: number; draw: number; away: number }
+export type SmBookOddsOverUnder25 = { over: number; under: number }
 
 export type Extract1x2OddsOpts = {
   /** Surcharge rare — par défaut = `sportMonksOddsBookmakerId()` (un seul bookmaker site-wide). */
@@ -16,6 +17,13 @@ function parseDecimalOdd(raw: string | number | null | undefined): number | null
   const n = typeof raw === 'number' ? raw : Number(String(raw).trim().replace(',', '.'))
   if (!Number.isFinite(n) || n < 1.01) return null
   return Math.round(n * 100) / 100
+}
+
+function parseNumericId(raw: unknown): number | null {
+  if (raw == null) return null
+  const n = typeof raw === 'number' ? raw : Number(String(raw).trim())
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.floor(n)
 }
 
 function oddNumericValue(o: SmOdd): number | null {
@@ -44,7 +52,7 @@ export function smHomeAwayParticipantIds(f: SmFixture | null | undefined): {
 }
 
 function isFulltimeResultMarket(o: SmOdd, marketId: number): boolean {
-  const mk = o.market_id ?? o.market?.id
+  const mk = parseNumericId(o.market_id ?? o.market?.id)
   if (mk === marketId) return true
   const dev = String(o.market?.developer_name ?? '')
     .toUpperCase()
@@ -106,6 +114,18 @@ function resolveSide(
   return null
 }
 
+function parsePredictionMetric(v: unknown): number | null {
+  if (v == null) return null
+  const n = typeof v === 'number' ? v : Number(String(v).trim().replace(',', '.'))
+  if (!Number.isFinite(n) || n <= 0) return null
+  // Probabilité déjà normalisée (0..1)
+  if (n <= 1) return n
+  // Heuristique SportMonks: petite valeur => cote décimale, sinon pourcentage.
+  if (n <= 15) return 1 / n
+  if (n <= 100) return n / 100
+  return null
+}
+
 function collect1x2FromOdds(
   odds: SmOdd[],
   opts: {
@@ -123,7 +143,7 @@ function collect1x2FromOdds(
     if (o.stopped === true) continue
     if (!isFulltimeResultMarket(o, opts.marketId)) continue
 
-    const bm = o.bookmaker_id ?? o.bookmaker?.id
+    const bm = parseNumericId(o.bookmaker_id ?? o.bookmaker?.id)
     if (bm == null || bm !== opts.bookmakerId) continue
 
     const side = resolveSide(o, opts.homePid, opts.awayPid)
@@ -155,4 +175,102 @@ export function extract1x2OddsFromOddsList(
   const { home: homePid, away: awayPid } = smHomeAwayParticipantIds(opts?.fixture ?? undefined)
 
   return collect1x2FromOdds(odds, { marketId, bookmakerId, homePid, awayPid })
+}
+
+/**
+ * Repli prédictions (fixture `predictions.type`) -> cotes 1N2 réalistes.
+ * Utilisé uniquement en absence de bookmaker exploitable.
+ */
+export function extract1x2OddsFromPredictions(fixture: SmFixture | null | undefined): SmBookOdds1x2 | null {
+  const rows = fixture?.predictions
+  if (!Array.isArray(rows) || rows.length === 0) return null
+
+  let homeP: number | null = null
+  let drawP: number | null = null
+  let awayP: number | null = null
+
+  for (const r of rows) {
+    if (!r || typeof r !== 'object') continue
+    const side = oddSideFromLabels(
+      String(r.type?.developer_name ?? r.type?.name ?? r.label ?? '').trim(),
+      String(r.type?.name ?? r.name ?? '').trim(),
+    )
+    if (!side) continue
+    const metric =
+      parsePredictionMetric(r.probability) ??
+      parsePredictionMetric(r.percent) ??
+      parsePredictionMetric(r.data?.probability) ??
+      parsePredictionMetric(r.odd) ??
+      parsePredictionMetric(r.data?.odd) ??
+      parsePredictionMetric(r.value) ??
+      parsePredictionMetric(r.data?.value)
+    if (metric == null) continue
+    if (side === 'home') homeP = metric
+    else if (side === 'draw') drawP = metric
+    else awayP = metric
+  }
+
+  if (homeP == null || drawP == null || awayP == null) return null
+  const sum = homeP + drawP + awayP
+  if (!Number.isFinite(sum) || sum <= 0) return null
+
+  // Normalisation + marge légère (overround bookmaker) pour rester réaliste.
+  const overround = 1.06
+  const toOdd = (p: number): number => {
+    const implied = (p / sum) * overround
+    if (!Number.isFinite(implied) || implied <= 0) return 0
+    const odd = 1 / implied
+    return Math.round(Math.max(1.01, Math.min(25, odd)) * 100) / 100
+  }
+
+  const home = toOdd(homeP)
+  const draw = toOdd(drawP)
+  const away = toOdd(awayP)
+  if (home <= 0 || draw <= 0 || away <= 0) return null
+  return { home, draw, away }
+}
+
+function isOverUnderMarket(o: SmOdd): boolean {
+  const dev = String(o.market?.developer_name ?? '')
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+  const name = String(o.market?.name ?? '').toUpperCase()
+  return dev.includes('OVER_UNDER') || name.includes('OVER/UNDER') || name.includes('TOTAL GOALS')
+}
+
+function pickOverUnderSide(o: SmOdd): 'over' | 'under' | null {
+  const raw = stripAccents(`${o.label ?? ''} ${o.name ?? ''}`.toUpperCase())
+  const has25 = raw.includes('2.5') || raw.includes('2,5')
+  if (!has25) return null
+  if (raw.includes('OVER') || /\bPLUS\b/.test(raw)) return 'over'
+  if (raw.includes('UNDER') || /\bMOINS\b/.test(raw)) return 'under'
+  return null
+}
+
+/** Extrait le marché over/under 2.5 buts (bookmaker unique). */
+export function extractOverUnder25OddsFromOddsList(
+  odds: SmOdd[] | undefined,
+  opts?: Extract1x2OddsOpts,
+): SmBookOddsOverUnder25 | null {
+  if (!Array.isArray(odds) || !odds.length) return null
+  const bookmakerId = opts?.bookmakerId ?? sportMonksOddsBookmakerId()
+  const collect = (strictBookmaker: boolean): SmBookOddsOverUnder25 | null => {
+    let over: number | undefined
+    let under: number | undefined
+    for (const o of odds) {
+      if (o.stopped === true) continue
+      const bm = parseNumericId(o.bookmaker_id ?? o.bookmaker?.id)
+      if (strictBookmaker && (bm == null || bm !== bookmakerId)) continue
+      if (!isOverUnderMarket(o)) continue
+      const side = pickOverUnderSide(o)
+      if (!side) continue
+      const v = oddNumericValue(o)
+      if (v == null) continue
+      if (side === 'over') over = v
+      else under = v
+    }
+    if (over == null || under == null) return null
+    return { over, under }
+  }
+  return collect(true) ?? collect(false)
 }

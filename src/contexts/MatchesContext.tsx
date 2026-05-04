@@ -25,6 +25,7 @@ import {
   parisCalendarDayKeysInclusive,
 } from '../utils/time'
 import { useKickoffScheduledRefetch } from '../hooks/useKickoffScheduledRefetch'
+import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
 
 /** Appels `leagues/date` par vague pour compléter le calendrier (surtout matchs à venir). */
 const LEAGUES_DATE_BATCH = 10
@@ -138,7 +139,6 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         const baseList = merged
           .map(smFixtureToMatch)
           .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-
         if (baseList.length > 0) {
           setMatches(baseList)
           setError(null)
@@ -219,12 +219,13 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     getSportMonksTokenSource() !== 'none',
   )
 
-  /** Filet de sécurité : beaucoup moins d’appels que l’ancien poll à la minute (quota API). */
-  useEffect(() => {
-    if (getSportMonksTokenSource() === 'none') return
-    const id = window.setInterval(silentRefetch, 20 * 60_000)
-    return () => window.clearInterval(id)
-  }, [silentRefetch, tokenRev])
+  /** Filet de sécurité : poll long + pause hors onglet actif (quota API / relais). */
+  useVisibilityAwareInterval(
+    () => void silentRefetch(),
+    20 * 60_000,
+    getSportMonksTokenSource() !== 'none',
+    true,
+  )
 
   /** Au retour sur l’onglet / la fenêtre : mise à jour sans bloquer l’UI (débounce un peu plus long pour éviter les rafales). */
   useEffect(() => {

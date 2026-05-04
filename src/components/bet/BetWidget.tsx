@@ -9,7 +9,7 @@ import type { Bet } from '../../types/bet'
 import type { Wallet } from '../../types/bet'
 import type { BetMarket, BetSelection } from '../../types/bet'
 import { useBetting } from '../../hooks/useBetting'
-import type { SmBookOdds1x2 } from '../../api/sportMonks'
+import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../../api/sportMonks'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -20,11 +20,13 @@ export function BetWidget({
   match,
   betting,
   bookOdds1x2 = null,
+  bookOddsOverUnder25 = null,
   bookOddsLoading = false,
   compact = false,
 }: {
   match: Match
   bookOdds1x2?: SmBookOdds1x2 | null
+  bookOddsOverUnder25?: SmBookOddsOverUnder25 | null
   bookOddsLoading?: boolean
   compact?: boolean
   betting?: {
@@ -61,7 +63,7 @@ export function BetWidget({
   const maxStake = Math.min(maxStakeCap, Math.max(0, wallet.tokens))
   const minStake = 5
 
-  /** Triplet 1N2 affichable : API si valide ; démo seulement hors fixture SM ; sinon `null` (chargement ou indispo). */
+  /** Triplet 1N2 affichable : API uniquement (pas de fallback démo). */
   const x12Resolved = useMemo((): SmBookOdds1x2 | null => {
     if (
       bookOdds1x2 &&
@@ -71,34 +73,39 @@ export function BetWidget({
     ) {
       return bookOdds1x2
     }
-    if (match.sportMonksFixtureId) return null
-    return { home: 1.85, draw: 3.2, away: 2.05 }
-  }, [bookOdds1x2, match.sportMonksFixtureId])
+    return null
+  }, [bookOdds1x2])
 
   const x12Ready = Boolean(x12Resolved)
   const x12OddsPending = Boolean(match.sportMonksFixtureId && bookOddsLoading && !x12Ready)
+  const x12UnavailableLabel = x12OddsPending ? 'Chargement…' : 'Bientot'
+  const ou25Ready = Boolean(
+    bookOddsOverUnder25 &&
+      bookOddsOverUnder25.over >= 1.01 &&
+      bookOddsOverUnder25.under >= 1.01,
+  )
+  const ou25UnavailableLabel =
+    match.sportMonksFixtureId && bookOddsLoading && !ou25Ready ? 'Chargement…' : 'Bientot'
 
   const markets = useMemo(() => {
-    const demo = { home: 1.85, draw: 3.2, away: 2.05 }
-    const x = x12Resolved ?? demo
     const base = [
       {
         id: 'result_1x2' as const,
         label: '1N2',
         enabled: x12Ready,
         picks: [
-          { id: 'home' as const, label: match.home.shortName, odds: x.home },
-          { id: 'draw' as const, label: 'Nul', odds: x.draw },
-          { id: 'away' as const, label: match.away.shortName, odds: x.away },
+          { id: 'home' as const, label: match.home.shortName, odds: x12Resolved?.home ?? 0 },
+          { id: 'draw' as const, label: 'Nul', odds: x12Resolved?.draw ?? 0 },
+          { id: 'away' as const, label: match.away.shortName, odds: x12Resolved?.away ?? 0 },
         ],
       },
       {
         id: 'over25' as const,
         label: '+2,5 buts',
-        enabled: true,
+        enabled: ou25Ready,
         picks: [
-          { id: 'over' as const, label: 'Over', odds: 1.75 },
-          { id: 'under' as const, label: 'Under', odds: 2.05 },
+          { id: 'over' as const, label: 'Over', odds: bookOddsOverUnder25?.over ?? 0 },
+          { id: 'under' as const, label: 'Under', odds: bookOddsOverUnder25?.under ?? 0 },
         ],
       },
       {
@@ -118,7 +125,7 @@ export function BetWidget({
     ]
 
     return base
-  }, [isUpcoming, match.away.shortName, match.home.shortName, x12Ready, x12Resolved])
+  }, [bookOddsOverUnder25?.over, bookOddsOverUnder25?.under, isUpcoming, match.away.shortName, match.home.shortName, ou25Ready, x12Ready, x12Resolved])
 
   const canStake =
     maxStake >= minStake && stake >= minStake && stake <= maxStake && stake <= wallet.tokens
@@ -161,73 +168,95 @@ export function BetWidget({
   const potentialReturn = pending ? Math.round(stake * pending.odds * 10) / 10 : 0
 
   return (
-    <div className={cn('rounded-xl border border-slate-200/60 bg-white/90 shadow-sm', compact ? 'p-2' : 'p-3')}>
+    <div
+      className={cn(
+        'tf-bet-widget relative flex h-full flex-col overflow-hidden rounded-xl border border-[#3a6690]/55 bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
+        compact ? 'p-2' : 'p-3',
+      )}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-emerald-300/85" />
       <div
         className={cn(
-          'flex flex-col gap-2 rounded-xl border border-slate-200/50 bg-gradient-to-r from-sky-50/80 to-white sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3',
-          compact ? 'p-2.5' : 'p-3',
+          'tf-bet-soft rounded-xl border border-[#4b7ba8]/60 bg-[#0d2741]',
+          compact ? 'space-y-2.5 p-2.5' : 'flex flex-col gap-2 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3',
         )}
       >
-        <div className="flex min-w-0 items-start gap-2 sm:items-center">
-          <span className={cn('shrink-0', compact ? 'text-base' : 'text-lg')} aria-hidden="true">
+        <div className={cn('flex min-w-0 items-start gap-2', compact ? 'items-center justify-between' : 'sm:items-center')}>
+          <span className={cn('shrink-0', compact ? 'text-sm' : 'text-lg')} aria-hidden="true">
             🎯
           </span>
           <div className="min-w-0">
-            <span className="block text-sm font-black text-slate-900">Pronos</span>
+            <span className={cn('block font-black text-sky-100', compact ? 'text-[11px]' : 'text-sm')}>Pronos Live</span>
             {!compact ? (
-              <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-slate-500">
+              <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-sky-200/70">
                 Mise rapide ou ouvre le détail des marchés.
               </span>
             ) : (
-              <span className="mt-0.5 hidden text-[10px] font-semibold text-slate-500 sm:block">
-                Mise & marchés
-              </span>
+              <span className="mt-0.5 block text-[10px] font-semibold text-sky-200/70">Mise rapide</span>
             )}
           </div>
+          {compact ? (
+            <button
+              type="button"
+              onClick={openSheet}
+              aria-haspopup="dialog"
+              aria-expanded={sheetOpen}
+              className="shrink-0 rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
+            >
+              Ouvrir
+            </button>
+          ) : null}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-2.5',
+            compact ? 'justify-between' : 'sm:justify-end',
+          )}
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="border-slate-200/70 bg-white text-slate-800">
+            <Badge className={cn('tf-bet-chip border-[#557da3]/70 bg-[#0e2a45] text-sky-100', compact ? 'px-2 py-0.5 text-[10px]' : '')}>
               {wallet.tokens} jetons
             </Badge>
-            <Badge className="border-slate-200/60 bg-slate-50/80 text-slate-600">
+            <Badge className={cn('tf-bet-chip border-[#6a5bd7]/70 bg-[#6a5bd7]/18 text-violet-100', compact ? 'px-2 py-0.5 text-[10px]' : '')}>
               {stats.won}/{Math.max(1, stats.total)} ✓
             </Badge>
           </div>
-          <button
-            type="button"
-            onClick={openSheet}
-            aria-haspopup="dialog"
-            aria-expanded={sheetOpen}
-            className="min-h-11 w-full shrink-0 rounded-xl bg-sky-600 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-sky-500 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sky-400/50 sm:min-h-0 sm:w-auto sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
-          >
-            Ouvrir
-          </button>
+          {!compact ? (
+            <button
+              type="button"
+              onClick={openSheet}
+              aria-haspopup="dialog"
+              aria-expanded={sheetOpen}
+              className="min-h-11 w-full shrink-0 rounded-xl border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:min-h-0 sm:w-auto sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
+            >
+              Ouvrir
+            </button>
+          ) : null}
         </div>
       </div>
 
       <div
         className={cn(
-          'space-y-2 rounded-xl border border-slate-200/55 bg-slate-50/90 p-2 sm:bg-transparent sm:p-0',
-          compact ? 'mt-2' : 'mt-3',
+          'tf-bet-soft space-y-2.5 rounded-xl border border-[#3f6f97]/50 bg-[#0b2238]/82 p-2.5 sm:bg-transparent sm:p-0',
+          compact ? 'mt-2.5' : 'mt-3',
         )}
       >
-        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
           <Button
             variant="soft"
             title="Pari 1N2 — vainqueur domicile"
             disabled={!x12Ready}
             className={cn(
               'min-h-11 min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:min-h-0 sm:px-4',
-              compact ? 'sm:h-9' : 'sm:h-10',
+              compact ? 'sm:h-10' : 'sm:h-10',
             )}
             onClick={() => pickQuick('home')}
           >
             <span className="min-w-0 overflow-hidden text-ellipsis">
               {match.home.shortName}
             </span>
-            <span className="shrink-0 text-xs font-black text-slate-500">
-              {x12OddsPending ? '…' : x12Ready ? fmtOdds(x12Resolved!.home) : '—'}
+              <span className="shrink-0 text-xs font-black text-sky-200/75">
+              {x12Ready ? fmtOdds(x12Resolved!.home) : x12UnavailableLabel}
             </span>
           </Button>
           <Button
@@ -236,37 +265,85 @@ export function BetWidget({
             disabled={!x12Ready}
             className={cn(
               'min-h-11 min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:min-h-0 sm:px-4',
-              compact ? 'sm:h-9' : 'sm:h-10',
+              compact ? 'sm:h-10' : 'sm:h-10',
             )}
             onClick={() => pickQuick('away')}
           >
             <span className="min-w-0 overflow-hidden text-ellipsis">
               {match.away.shortName}
             </span>
-            <span className="shrink-0 text-xs font-black text-slate-500">
-              {x12OddsPending ? '…' : x12Ready ? fmtOdds(x12Resolved!.away) : '—'}
+              <span className="shrink-0 text-xs font-black text-sky-200/75">
+              {x12Ready ? fmtOdds(x12Resolved!.away) : x12UnavailableLabel}
             </span>
           </Button>
         </div>
+        {compact ? (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!x12Resolved) return
+                setPending({
+                  market: 'result_1x2',
+                  selection: 'draw',
+                  odds: x12Resolved.draw,
+                  label: '1N2 · Nul',
+                })
+                openSheet()
+              }}
+              className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-left text-[11px] font-bold text-sky-100 transition hover:border-sky-300/70"
+              disabled={!x12Ready}
+              title="Pari 1N2 — nul"
+            >
+              <span className="block text-[10px] text-sky-200/70">Nul</span>
+              <span>{x12Ready ? fmtOdds(x12Resolved!.draw) : x12UnavailableLabel}</span>
+            </button>
+            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-[11px] font-bold text-sky-100">
+              <span className="block text-[10px] text-sky-200/70">+2,5</span>
+              <span>{ou25Ready ? fmtOdds(bookOddsOverUnder25!.over) : ou25UnavailableLabel}</span>
+            </div>
+            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-[11px] font-bold text-sky-100">
+              <span className="block text-[10px] text-sky-200/70">-2,5</span>
+              <span>{ou25Ready ? fmtOdds(bookOddsOverUnder25!.under) : ou25UnavailableLabel}</span>
+            </div>
+          </div>
+        ) : null}
 
         <div
           className={cn(
-            'flex items-center justify-between rounded-xl border border-slate-200/50 bg-slate-50/50 px-2.5 sm:px-3',
-            compact ? 'py-1.5' : 'py-2',
+            'tf-bet-soft flex items-center justify-between rounded-xl border border-[#3f6f97]/55 bg-[#0d2842]/75 px-2.5 sm:px-3',
+            compact ? 'py-2' : 'py-2',
           )}
         >
-          <div className="flex gap-2 text-xs font-semibold text-slate-600">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-sky-200/75">
             <span>En cours: {openBets.length}</span>
             <span>•</span>
             <span>Résolus: {settled.length}</span>
           </div>
           <Link
             to="/profile"
-            className="text-xs font-bold text-blue-600 hover:text-blue-700"
+            className="text-xs font-bold text-cyan-300 hover:text-cyan-200"
           >
             Profil →
           </Link>
         </div>
+        {compact ? (
+          <div className="tf-bet-soft tf-bet-momentum rounded-xl border border-[#496f91]/40 bg-[#11263f]/86 px-2.5 py-2.5">
+            <div className="flex items-center justify-between text-[10px] font-semibold text-sky-200/80">
+              <span>Momentum pronos</span>
+              <span className="text-violet-200">{Math.min(99, 52 + openBets.length * 6)}%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#1a3a57]/80">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-300"
+                style={{ width: `${Math.min(100, 52 + openBets.length * 6)}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-[10px] font-semibold text-sky-100/75">
+              Activité live: {openBets.length > 0 ? 'marchés chauds' : 'ouverture prudente'}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {sheetOpen ? (
@@ -315,7 +392,7 @@ export function BetWidget({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
-              <div className="rounded-2xl border border-sky-200/70 bg-gradient-to-b from-sky-50/90 to-white p-4 shadow-sm">
+              <div className="rounded-2xl border border-sky-200/70 bg-sky-50/90 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-black uppercase tracking-wide text-sky-900/80">
                     Ta mise
@@ -475,7 +552,7 @@ export function BetWidget({
                           {m.id === 'result_1x2'
                             ? x12OddsPending
                               ? '…'
-                              : 'Indispo.'
+                              : 'Bientot'
                             : 'Live'}
                         </Badge>
                       )}

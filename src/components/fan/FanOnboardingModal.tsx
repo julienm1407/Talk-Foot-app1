@@ -10,6 +10,10 @@ import { Button } from '../ui/Button'
 import { cn } from '../../utils/cn'
 import { LogoMark } from '../../layout/LogoMark'
 import { ClubSearchCombobox } from './ClubSearchCombobox'
+import { LEAGUE_OFFICIAL_LOGO_BY_ID } from '../../data/leagueOfficialLogoUrls'
+import { ClubCrest } from '../brand/ClubCrest'
+import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
+import { sportMonksTeamLogoUrlForClubId } from '../../data/sportMonksLogoUrls'
 
 const MAX_CLUBS = 3
 
@@ -94,8 +98,8 @@ export function FanOnboardingModal() {
               </h2>
               <p className="mt-1 text-sm font-semibold text-tf-grey">
                 {step === 1
-                  ? 'On adapte actus, salons et recommandations.'
-                  : `Optionnel — jusqu’à ${MAX_CLUBS} clubs parmi toutes les équipes du catalogue. Tape quelques lettres pour ouvrir le menu.`}
+                  ? 'Choisis ta ligue principale pour personnaliser l experience.'
+                  : `Choisis jusqu a ${MAX_CLUBS} clubs (optionnel).`}
               </p>
             </div>
           </div>
@@ -139,7 +143,24 @@ export function FanOnboardingModal() {
                         : undefined
                     }
                   >
-                    {L.name}
+                    <span className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-black/10">
+                        {LEAGUE_OFFICIAL_LOGO_BY_ID[L.id] ? (
+                          <img
+                            src={LEAGUE_OFFICIAL_LOGO_BY_ID[L.id]}
+                            alt=""
+                            className="h-[82%] w-[82%] object-contain"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span
+                            className="inline-flex h-full w-full rounded-full"
+                            style={{ background: `linear-gradient(135deg, ${L.accent}, ${L.accent2})` }}
+                          />
+                        )}
+                      </span>
+                      <span>{L.name}</span>
+                    </span>
                   </button>
                 )
               })}
@@ -167,15 +188,27 @@ export function FanOnboardingModal() {
                   <div className="flex flex-wrap gap-2">
                     {clubIds.map((id) => {
                       const meta = ALL_CLUBS_BY_ID[id]
+                      const team = findTeamInAnyLeague(id)
                       return (
                         <button
                           key={id}
                           type="button"
                           onClick={() => setClubIds((prev) => prev.filter((x) => x !== id))}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-tf-dark/20 bg-tf-dark/5 px-3 py-1.5 text-left text-xs font-black text-tf-dark transition hover:bg-tf-dark/10"
+                          className="inline-flex items-center gap-2 rounded-full border border-tf-dark/20 bg-tf-dark/5 px-2.5 py-1.5 text-left text-xs font-black text-tf-dark transition hover:bg-tf-dark/10"
                           title="Retirer ce club"
                         >
-                          <span>{meta ? `${meta.shortName} (${meta.leagueName})` : labelForClubId(id)}</span>
+                          {team ? (
+                            <ClubCrest
+                              id={team.id}
+                              shortName={team.shortName}
+                              colors={team.colors}
+                              logoUrl={sportMonksTeamLogoUrlForClubId(id) ?? undefined}
+                              size={18}
+                              clickable={false}
+                              className="rounded-full"
+                            />
+                          ) : null}
+                          <span>{meta ? `${meta.name} (${meta.leagueName})` : labelForClubId(id)}</span>
                           <span className="text-tf-grey" aria-hidden>
                             ×
                           </span>
@@ -194,6 +227,7 @@ export function FanOnboardingModal() {
                   {suggestedEntries.map((c) => {
                     const selected = clubIds.includes(c.id)
                     const atMax = clubIds.length >= MAX_CLUBS && !selected
+                    const team = findTeamInAnyLeague(c.id)
                     return (
                       <button
                         key={c.id}
@@ -207,7 +241,20 @@ export function FanOnboardingModal() {
                             : 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:bg-tf-grey-pastel/20',
                         )}
                       >
-                        {c.shortName}
+                        <span className="inline-flex items-center gap-1.5">
+                          {team ? (
+                            <ClubCrest
+                              id={team.id}
+                              shortName={team.shortName}
+                              colors={team.colors}
+                              logoUrl={sportMonksTeamLogoUrlForClubId(c.id) ?? undefined}
+                              size={16}
+                              clickable={false}
+                              className="rounded-full"
+                            />
+                          ) : null}
+                          {c.shortName}
+                        </span>
                       </button>
                     )
                   })}

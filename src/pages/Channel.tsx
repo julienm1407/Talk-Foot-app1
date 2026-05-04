@@ -1,1351 +1,1708 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { initialMessages } from '../data/messages'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
-import { chatPersonasPool, currentUser, mockFriendUsers, mockUsers } from '../data/users'
-import type { Message, ReactionEvent, ReactionType } from '../types/chat'
-import { Card } from '../components/ui/Card'
-import { ChannelHeader } from '../components/channel/ChannelHeader'
-import { MatchXGStrip } from '../components/channel/MatchXGStrip'
-import { MatchLiveStatsStrip } from '../components/channel/MatchLiveStatsStrip'
-import { MatchTrendsStrip } from '../components/channel/MatchTrendsStrip'
-import { LivePitch } from '../components/channel/LivePitch'
-import { MatchHighlights } from '../components/channel/MatchHighlights'
-import { MatchPreview } from '../components/channel/MatchPreview'
-import { MessageList } from '../components/channel/MessageList'
-import { MessageComposer } from '../components/channel/MessageComposer'
-import { ReactionBar } from '../components/reaction/ReactionBar'
-import { reactionMeta } from '../components/reaction/reactions'
-import {
-  FloatingReactions,
-  type FloatingReaction,
-} from '../components/reaction/FloatingReactions'
-import { LiveEffects } from '../components/reaction/LiveEffects'
-import { ReactionSummary } from '../components/reaction/ReactionSummary'
-import { HypeMeter } from '../components/reaction/HypeMeter'
-import { ActiveUsers } from '../components/channel/ActiveUsers'
-import { ShareButton } from '../components/ui/ShareButton'
-import { LiveCommentator } from '../components/channel/LiveCommentator'
-import { useAutoScroll } from '../hooks/useAutoScroll'
-import { mockHighlights } from '../data/highlights'
+import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
+import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
+import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
 import { BetWidget } from '../components/bet/BetWidget'
 import { useBetting } from '../hooks/useBetting'
-import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
-import { useSportMonksFixtureXG } from '../hooks/useSportMonksFixtureXG'
-import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
-import { useSportMonksFixtureTrends } from '../hooks/useSportMonksFixtureTrends'
-import { useUnlockedEmotes } from '../hooks/useUnlockedEmotes'
-import { useMessageLikes } from '../hooks/useMessageLikes'
-import { themeForCompetition } from '../data/competitionThemes'
-import { useFanPreferences } from '../contexts/FanPreferencesContext'
-import { StadiumModeEncart, TribuneQuickSwitch } from '../components/channel/StadiumTribunes'
-import { Button } from '../components/ui/Button'
-import { cn } from '../utils/cn'
-import { useMatchTribune } from '../hooks/useMatchTribune'
-import { useMatchStadiumGroup } from '../hooks/useMatchStadiumGroup'
-import { useSupporterGroups } from '../hooks/useSupporterGroups'
-import { salonsForMatch } from '../utils/matchSalons'
-import { aggregateTribuneStats, useTribuneLiveStats } from '../hooks/useTribuneLiveStats'
-import { randomTribuneForBot, TRIBUNES } from '../data/tribunes'
-import type { TribuneId } from '../types/tribune'
-import { useAuth } from '../contexts/AuthContext'
-import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
-import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
-import { shouldSimulateLiveCrowd } from '../config/liveSimulation'
-import { MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../utils/bannedWords'
-import type { Match } from '../types/match'
-import type {
-  FixtureTrendDisplayRow,
-  LiveFixtureStatRow,
-  SmMatchXGTotals,
-} from '../api/sportMonks'
+import { DressableCharacter } from '../components/profile/DressableCharacter'
+import { defaultUserProfile } from '../data/userAppStateDefaults'
+import { mergeCharacterLook } from '../data/characterPresets'
+import { seedToLegoPalette } from '../utils/seedLegoPalette'
+import { useAppearanceOptional } from '../contexts/AppearanceContext'
+import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 
-const TF_MOBILE_MENU_SUMMARY =
-  'flex w-full cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-tf-grey-pastel/60 bg-white/95 px-3 py-2.5 text-left text-xs font-black uppercase tracking-wide text-tf-dark shadow-sm outline-none transition hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/35 [&::-webkit-details-marker]:hidden'
+type ChatMessageItem = {
+  id: string
+  username: string
+  text: string
+  time: string
+  avatarSeed: string
+  avatarAccent?: 'violet' | 'emerald' | 'rose' | 'amber'
+  likes: number
+  likedByMe?: boolean
+}
 
-function ChannelMatchStatsBlocks({
-  match,
-  matchView,
-  xgTotals,
-  xgLoading,
-  liveStatRows,
-  liveStatsLoading,
-  trendRows,
-  trendsLoading,
+type PaidAnimation = {
+  id: 'fumigene' | 'ola' | 'tifo-geant' | 'stroboscope'
+  label: string
+  cost: number
+  emoji: string
+}
+
+type ActivePaidFx = {
+  id: PaidAnimation['id']
+  label: string
+}
+
+function Card({
+  className = '',
+  children,
+  style,
 }: {
-  match: Match
-  matchView: Match
-  xgTotals: SmMatchXGTotals | null
-  xgLoading: boolean
-  liveStatRows: LiveFixtureStatRow[]
-  liveStatsLoading: boolean
-  trendRows: FixtureTrendDisplayRow[]
-  trendsLoading: boolean
+  className?: string
+  children: React.ReactNode
+  style?: React.CSSProperties
 }) {
   return (
-    <>
-      <MatchXGStrip
-        match={matchView}
-        xg={xgTotals}
-        loading={xgLoading}
-        className="min-w-0 sm:max-w-[15rem]"
-      />
-      {(match.status === 'live' || match.status === 'finished') && (
-        <MatchLiveStatsStrip
-          match={matchView}
-          rows={liveStatRows}
-          loading={liveStatsLoading}
-          className="min-w-0 flex-1 sm:min-w-[12rem] sm:max-w-md"
-        />
+    <section
+      className={`tf-live-card relative overflow-hidden rounded-xl border border-[#2d5f8a]/55 bg-[#0b2440] p-4 text-sky-50 shadow-[0_10px_28px_rgba(2,8,18,0.3),inset_0_1px_0_rgba(125,211,252,0.14)] ${className}`}
+      style={style}
+    >
+      {children}
+    </section>
+  )
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide text-sky-100">
+      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#32d4ff] shadow-[0_0_8px_rgba(50,212,255,0.45)]" />
+      {children}
+    </h3>
+  )
+}
+
+function TeamLogo({ label, logoUrl }: { label: string; logoUrl?: string }) {
+  return (
+    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-[#d9e6f3] text-xs font-bold text-[#0a223a]">
+      {logoUrl ? (
+        <img src={logoUrl} alt={`Logo ${label}`} className="h-[78%] w-[78%] object-contain" loading="lazy" />
+      ) : (
+        label.slice(0, 3).toUpperCase()
       )}
-      <MatchTrendsStrip
-        match={matchView}
-        rows={trendRows}
-        loading={trendsLoading}
-        className="min-w-0 sm:max-w-[15rem]"
-      />
-    </>
+    </div>
+  )
+}
+
+function teamShortChip(label: string) {
+  const cleaned = label.replace(/[^A-Za-z0-9 ]/g, ' ').trim()
+  if (!cleaned) return '---'
+  const parts = cleaned.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}${parts[0][1] ?? ''}`.toUpperCase()
+  }
+  return parts[0].slice(0, 3).toUpperCase()
+}
+
+function compactPlayerLabel(name: string) {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  if (!cleaned) return 'Joueur'
+  const parts = cleaned.split(' ')
+  const last = parts[parts.length - 1] ?? cleaned
+  const candidate = last.length >= 3 ? last : cleaned
+  return candidate.slice(0, 10)
+}
+
+function translateHighlightTextToFr(text: string): string {
+  if (!text) return text
+  return text
+    .replace(/wins a corner/gi, 'obtient un corner')
+    .replace(/wins a free kick/gi, 'obtient un coup franc')
+    .replace(/wins a coup franc/gi, 'obtient un coup franc')
+    .replace(/on the left wing/gi, 'sur l aile gauche')
+    .replace(/on the right wing/gi, 'sur l aile droite')
+    .replace(/left wing/gi, 'aile gauche')
+    .replace(/right wing/gi, 'aile droite')
+    .replace(/fouled by/gi, 'faute de')
+    .replace(/is shown the yellow card/gi, 'recoit un carton jaune')
+    .replace(/is shown the red card/gi, 'recoit un carton rouge')
+    .replace(/goal!/gi, 'but!')
+    .replace(/substitution/gi, 'changement')
+    .replace(/offside/gi, 'hors-jeu')
+    .replace(/penalty/gi, 'penalty')
+    .replace(/shot blocked/gi, 'tir contré')
+    .replace(/shot missed/gi, 'tir manqué')
+    .replace(/shot saved/gi, 'tir arrêté')
+    .replace(/hand ball/gi, 'main')
+}
+
+function MatchRow({
+  home,
+  away,
+  homeScore,
+  awayScore,
+}: {
+  home: string
+  away: string
+  homeScore: number
+  awayScore: number
+}) {
+  return (
+    <div className="tf-live-soft-surface flex items-center justify-between rounded-lg bg-[#0a233d] px-3 py-2">
+      <div className="flex items-center gap-2">
+        <TeamLogo label={home} />
+        <span className="text-sm font-semibold text-sky-50">{home}</span>
+      </div>
+      <span className="text-lg font-bold text-white">
+        {homeScore} - {awayScore}
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-sky-50">{away}</span>
+        <TeamLogo label={away} />
+      </div>
+    </div>
+  )
+}
+
+function ChatMessage({
+  message,
+  onToggleLike,
+}: {
+  message: ChatMessageItem
+  onToggleLike: (id: string) => void
+}) {
+  const avatarProfile = useMemo(
+    () => ({
+      ...defaultUserProfile,
+      characterLook: mergeCharacterLook({
+        ...seedToLegoPalette(message.avatarSeed, message.avatarAccent ?? 'violet'),
+        supporterTint: false,
+      }),
+    }),
+    [message.avatarAccent, message.avatarSeed],
+  )
+
+  return (
+    <article className="tf-chat-message flex items-start gap-2 rounded-lg bg-[#0a2239] p-1.5 transition hover:bg-[#0f2841]">
+      <div className="relative h-6 w-6 shrink-0 overflow-visible">
+        <div className="pointer-events-none absolute left-1/2 top-0 origin-top -translate-x-1/2 scale-[0.18]">
+          <DressableCharacter profile={avatarProfile} variant="front" />
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-xs font-semibold text-sky-50">{message.username}</p>
+          <p className="text-[10px] text-sky-200/70">{message.time}</p>
+        </div>
+        <p className="mt-0.5 text-xs leading-tight text-sky-100">{message.text}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggleLike(message.id)}
+        className={`tf-chat-like mt-0.5 inline-flex h-6 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition ${
+          message.likedByMe
+            ? 'border-rose-300/70 bg-rose-400/20 text-rose-100'
+            : 'border-[#3a6690] bg-[#08223a] text-sky-100 hover:border-sky-300/70'
+        }`}
+        title="Like"
+      >
+        <span aria-hidden="true">{message.likedByMe ? '❤️' : '🤍'}</span>
+        <span>{message.likes}</span>
+      </button>
+    </article>
+  )
+}
+
+function PlayerBadge({ name, className }: { name: string; className: string }) {
+  return (
+    <div
+      className={`absolute max-w-[30%] truncate rounded-md border border-cyan-200/55 bg-[#062235]/92 px-1.5 py-1 text-[9px] font-bold leading-none text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)] backdrop-blur-[1px] ${className}`}
+      title={name}
+    >
+      {compactPlayerLabel(name)}
+    </div>
   )
 }
 
 export function ChannelPage() {
+  const appearance = useAppearanceOptional()
+  const isLight = appearance?.appearance === 'light'
+  const navigate = useNavigate()
   const { matchId } = useParams()
-  const { user: authUser } = useAuth()
-  const selfChatUserId = authUser?.id ?? 'me'
-  const livePersonaSelf = useMemo(() => {
-    if (!authUser) return currentUser
-    return { ...currentUser, id: authUser.id, username: authUser.displayName }
-  }, [authUser])
-  const channelMatchId = matchId ?? ''
   const { matches } = useMatches()
-  const match = useMemo(
-    () => matches.find((m) => m.id === matchId) ?? null,
-    [matches, matchId],
+  const routeMatch = useMemo(() => matches.find((m) => m.id === matchId) ?? null, [matches, matchId])
+  const fallbackMatch = useMemo(
+    () => matches.find((m) => m.status === 'live') ?? matches[0] ?? null,
+    [matches],
   )
-
-  const users = useMemo(() => [currentUser, ...mockFriendUsers, ...mockUsers], [])
-  const { virageMode, favoriteClubIds } = useFanPreferences()
-  const { tribune: activeTribune, setTribune } = useMatchTribune(matchId)
-  const { stadiumGroupId, clearStadiumGroup } = useMatchStadiumGroup(matchId)
-  const { groups: supporterGroupsAll, joinedGroupIds } = useSupporterGroups()
-  const activeStadiumGroup = useMemo(
-    () =>
-      stadiumGroupId
-        ? supporterGroupsAll.find((g) => g.id === stadiumGroupId) ?? null
-        : null,
-    [stadiumGroupId, supporterGroupsAll],
-  )
-  const salonPoolGroupIds = useMemo(() => {
-    if (!match) return [] as string[]
-    return salonsForMatch(match, supporterGroupsAll).map((p) => p.group.id)
-  }, [match, supporterGroupsAll])
-
-  const scarfChoices = useMemo(
-    () =>
-      supporterGroupsAll
-        .filter((g) => joinedGroupIds.includes(g.id) && g.scarf)
-        .map((g) => ({
-          groupId: g.id,
-          groupName: g.name,
-          text: g.scarf!.label,
-          colorA: g.scarf!.colorA,
-          colorB: g.scarf!.colorB,
-          colorC: g.scarf!.colorC,
-        })),
-    [supporterGroupsAll, joinedGroupIds],
-  )
-  const tribuneLiveStats = useTribuneLiveStats()
-  const [chatFeedScope, setChatFeedScope] = useState<'general' | 'tribune'>('tribune')
-
-  const usersById = useMemo(() => {
-    const base = Object.fromEntries(users.map((u) => [u.id, u]))
-    const meClub = favoriteClubIds[0]
-    if (meClub && base.me && !base.me.fanClubId) {
-      base.me = { ...base.me, fanClubId: meClub }
-    }
-    if (authUser) {
-      const seed =
-        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
-      base[authUser.id] = {
-        id: authUser.id,
-        username: authUser.displayName,
-        avatarSeed: seed,
-        accent: 'emerald',
-        ...(meClub ? { fanClubId: meClub } : {}),
-      }
-    }
-    return base
-  }, [users, favoriteClubIds, authUser])
-
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const seeded = initialMessages.filter((m) => m.matchId === matchId)
-    return seeded.length
-      ? seeded
-      : [
-          {
-            id: 'msg-welcome',
-            matchId: matchId ?? 'unknown',
-            userId: 'u-1',
-            text: 'Bienvenue dans le live. Balance ton premier avis.',
-            createdAt: Date.now() - 25_000,
-          },
-        ]
-  })
-
+  const match = routeMatch ?? fallbackMatch
   useEffect(() => {
-    if (!matchId) return
-    const seeded = initialMessages.filter((m) => m.matchId === matchId)
-    setMessages(
-      seeded.length
-        ? seeded
-        : [
-            {
-              id: 'msg-welcome',
-              matchId,
-              userId: 'u-1',
-              text: 'Bienvenue dans le live. Balance ton premier avis.',
-              createdAt: Date.now() - 25_000,
-            },
-          ],
-    )
-  }, [matchId])
+    if (routeMatch || !fallbackMatch) return
+    navigate(`/channel/${fallbackMatch.id}`, { replace: true })
+  }, [routeMatch, fallbackMatch, navigate])
 
-  const mergeRemoteMessages = useCallback((incoming: Message[]) => {
-    if (!incoming.length) return
-    setMessages((prev) => {
-      const seen = new Set(prev.map((m) => m.id))
-      const next = [...prev]
-      for (const m of incoming) {
-        if (!seen.has(m.id)) {
-          next.push(m)
-          seen.add(m.id)
-        }
-      }
-      next.sort((a, b) => a.createdAt - b.createdAt)
-      return next.slice(-280)
-    })
-  }, [])
-
-  const [reactions, setReactions] = useState<ReactionEvent[]>([])
-  const [floating, setFloating] = useState<FloatingReaction[]>([])
-  const idRef = useRef(0)
-  /** Ancre API + horloge locale : le poll SM du calendrier est rare (~20 min) ; on fait avancer l’affichage entre deux syncs. */
-  const [liveMinuteAnchor, setLiveMinuteAnchor] = useState<{ minute: number; atMs: number }>(() => ({
-    minute: match?.minute ?? 0,
-    atMs: Date.now(),
-  }))
-  const [liveMinuteClock, setLiveMinuteClock] = useState(0)
-  const liveMinuteSyncRef = useRef<{ matchId: string; lastApiMinute: number | undefined }>({
-    matchId: '',
-    lastApiMinute: undefined,
-  })
-  const [simScore, setSimScore] = useState<{ home: number; away: number } | undefined>(
-    () => match?.score,
-  )
-  const simScoreRef = useRef<{ home: number; away: number } | undefined>(match?.score)
-
-  const pipContainerRef = useRef<HTMLDivElement | null>(null)
-  const chatColumnRef = useRef<HTMLDivElement | null>(null)
-  const betting = useBetting(matchId ?? 'unknown')
-  const { odds1x2: bookOdds1x2, oddsLoading: bookOddsLoading } = useSportMonksRound1x2Odds(
+  const homeName = match?.home.name ?? match?.home.shortName ?? 'Paris SG'
+  const awayName = match?.away.name ?? match?.away.shortName ?? 'Nantes'
+  const homeFullName = match?.home.name ?? homeName
+  const awayFullName = match?.away.name ?? awayName
+  const initialHomeScore = match?.score?.home ?? 0
+  const initialAwayScore = match?.score?.away ?? 0
+  const [displayScore, setDisplayScore] = useState({ home: initialHomeScore, away: initialAwayScore })
+  useEffect(() => {
+    setDisplayScore({ home: initialHomeScore, away: initialAwayScore })
+  }, [match?.id, initialHomeScore, initialAwayScore])
+  const homeScore = displayScore.home
+  const awayScore = displayScore.away
+  const status = match?.status ?? 'upcoming'
+  const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
+  const betting = useBetting(match?.id ?? 'channel-demo-match')
+  const { odds1x2, oddsOverUnder25, oddsLoading } = useSportMonksRound1x2Odds(
     match?.sportMonksFixtureId,
     match?.sportMonksRoundId,
-    match?.status,
+    status,
   )
-  const { xgTotals, xgLoading } = useSportMonksFixtureXG(
+  const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
+  const oddsReady = Boolean(
+    odds1x2 && odds1x2.home >= 1.01 && odds1x2.draw >= 1.01 && odds1x2.away >= 1.01,
+  )
+  const { liveStatRows, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
-    match?.status ?? 'upcoming',
+    status,
+    match?.id,
   )
-  const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
-    match?.sportMonksFixtureId,
-    match?.status ?? 'upcoming',
-    channelMatchId || undefined,
+  const liveMatches = useMemo(
+    () => matches.filter((m) => m.status === 'live' && m.id !== match?.id),
+    [matches, match?.id],
   )
-
-  const highlights = useMemo(() => {
-    if (smTimelineHighlights.length > 0) return smTimelineHighlights
-    return mockHighlights.filter((h) => h.matchId === matchId)
-  }, [smTimelineHighlights, matchId])
-
-  const lastMoment = useMemo(() => {
-    if (match?.status !== 'live' || highlights.length === 0) return null
-    const sorted = [...highlights].sort((a, b) => {
-      if (b.minute !== a.minute) return b.minute - a.minute
-      const ord = (b.order ?? 0) - (a.order ?? 0)
-      if (ord !== 0) return ord
-      return b.id.localeCompare(a.id)
-    })
-    return sorted[0] ?? null
-  }, [match?.status, highlights])
-  const { trendRows, trendsLoading, trendRecentForm } = useSportMonksFixtureTrends(
-    match?.sportMonksFixtureId,
-    match?.status ?? 'upcoming',
-  )
-  const { unlockedIds: unlockedEmoteIds, unlock: unlockEmote } = useUnlockedEmotes()
-  const messageLikes = useMessageLikes()
-
-  const recentReactions = useMemo(() => {
-    const now = Date.now()
-    return reactions.filter((r) => now - r.createdAt < 60_000)
-  }, [reactions])
-
-  const visibleMessages = useMemo(() => {
-    let list = messages
-    if (virageMode && favoriteClubIds.length > 0) {
-      list = messages.filter((m) => {
-        if (m.userId === selfChatUserId) return true
-        if (m.authorDisplayName) return true
-        const u = usersById[m.userId]
-        const fid = u?.fanClubId
-        return Boolean(fid && favoriteClubIds.includes(fid))
-      })
-    }
-    if (stadiumGroupId) {
-      list = list.filter(
-        (m) => m.userId === selfChatUserId || m.supporterGroupId === stadiumGroupId,
-      )
-    } else if (chatFeedScope === 'tribune') {
-      list = list.filter((m) => !m.tribune || m.tribune === activeTribune)
-    }
-    return list
-  }, [
-    messages,
-    virageMode,
-    favoriteClubIds,
-    usersById,
-    activeTribune,
-    chatFeedScope,
-    stadiumGroupId,
-    selfChatUserId,
-  ])
-
-  const crowdMetrics = useMemo(() => {
-    if (stadiumGroupId && activeStadiumGroup) {
-      const est = Math.round(
-        activeStadiumGroup.members * (activeStadiumGroup.intensity / 100) * 0.04,
-      )
-      return {
-        participants: Math.max(28, Math.min(9200, est)),
-        activity: activeStadiumGroup.intensity,
-      }
-    }
-    if (chatFeedScope === 'general') {
-      return aggregateTribuneStats(tribuneLiveStats)
-    }
-    return tribuneLiveStats[activeTribune]
-  }, [
-    activeStadiumGroup,
-    chatFeedScope,
-    activeTribune,
-    stadiumGroupId,
-    tribuneLiveStats,
-  ])
-
-  const reactionDensity =
-    stadiumGroupId && activeStadiumGroup
-      ? activeStadiumGroup.intensity < 42
-        ? 'minimal'
-        : 'full'
-      : chatFeedScope === 'general'
-        ? 'full'
-        : activeTribune === 'analyse'
-          ? 'minimal'
-          : activeTribune === 'chill'
-            ? 'chill'
-            : 'full'
-
-  const tribuneAccentClass =
-    stadiumGroupId && activeStadiumGroup
-      ? 'border-l-transparent'
-      : chatFeedScope === 'general'
-        ? 'border-l-slate-400/45'
-        : activeTribune === 'virage'
-          ? 'border-l-rose-400/55'
-          : activeTribune === 'analyse'
-            ? 'border-l-slate-400/50'
-            : 'border-l-teal-400/50'
-
-  const feedRef = useAutoScroll<HTMLDivElement>([
-    visibleMessages.length,
-    floating.length,
-  ])
-
-  // Le live s'ouvre 1 min avant le coup d'envoi
-  const [msUntilKickoff, setMsUntilKickoff] = useState(() =>
-    match && match.status === 'upcoming'
-      ? new Date(match.kickoffAt).getTime() - Date.now()
-      : 0,
-  )
+  const [selectedLiveMatchId, setSelectedLiveMatchId] = useState<string>('')
   useEffect(() => {
-    if (!match || match.status !== 'upcoming') return
-    const tick = () => {
-      const ms = new Date(match.kickoffAt).getTime() - Date.now()
-      setMsUntilKickoff(Math.max(0, ms))
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [match?.id, match?.kickoffAt, match?.status])
-
-  const isLiveOpen = match
-    ? match.status === 'live' || (match.status === 'upcoming' && msUntilKickoff <= 60_000)
-    : false
-
-  const { publishMessage, isCloudChatConfigured } = useLiveMatchChatSync({
-    matchId: channelMatchId,
-    enabled: isLiveOpen,
-    onRemoteMessages: mergeRemoteMessages,
-  })
-  const cloudChatEnabled = isCloudChatConfigured && isLiveOpen
-
-  const [chatModerationHint, setChatModerationHint] = useState<string | null>(null)
-
-  const pushReactionEffects = useCallback((event: ReactionEvent, withFloating: boolean) => {
-    setReactions((prev) => {
-      if (prev.some((r) => r.id === event.id)) return prev
-      return [...prev, event].slice(-80)
-    })
-    if (!withFloating) return
-    setFloating((prev) => {
-      if (prev.some((f) => f.id === event.id)) return prev
-      const side = Math.random() < 0.5 ? 'left' : 'right'
-      const sideJitter = 4 + Math.random() * 6
-      const xPct = side === 'left' ? 2 + sideJitter : 98 - sideJitter
-      const bottomPx = 18 + Math.random() * 92
-      const float: FloatingReaction = {
-        id: event.id,
-        type: event.type,
-        createdAt: event.createdAt,
-        xPct,
-        bottomPx,
-      }
-      window.setTimeout(() => {
-        setFloating((p) => p.filter((f) => f.id !== event.id))
-      }, 950)
-      return [...prev, float].slice(-16)
-    })
-  }, [])
-
-  const mergeHydrateReactions = useCallback(
-    (events: ReactionEvent[]) => {
-      if (!events.length) return
-      setReactions((prev) => {
-        const seen = new Set(prev.map((r) => r.id))
-        const next = [...prev]
-        for (const e of events) {
-          if (!seen.has(e.id)) {
-            next.push(e)
-            seen.add(e.id)
-          }
-        }
-        next.sort((a, b) => a.createdAt - b.createdAt)
-        return next.slice(-80)
-      })
-      /* Après hydratation : rejouer léger effet visuel pour les toutes dernières (fumigène / confettis / emojis). */
-      window.setTimeout(() => {
-        for (const e of events.slice(-6)) {
-          pushReactionEffects(e, true)
-        }
-      }, 0)
-    },
-    [pushReactionEffects],
-  )
-
-  const emitReaction = useCallback(
-    (
-      type: ReactionType,
-      userId: string,
-      preset?: { id: string; createdAt: number },
-      withFloating = true,
-    ) => {
-      const id = preset?.id ?? `rx-${Date.now()}-${idRef.current++}`
-      const createdAt = preset?.createdAt ?? Date.now()
-      const event: ReactionEvent = {
-        id,
-        matchId: channelMatchId,
-        userId,
-        type,
-        createdAt,
-      }
-      pushReactionEffects(event, withFloating)
-    },
-    [channelMatchId, pushReactionEffects],
-  )
-
-  const onLiveInsertReaction = useCallback(
-    (event: ReactionEvent) => {
-      emitReaction(event.type, event.userId, { id: event.id, createdAt: event.createdAt }, true)
-    },
-    [emitReaction],
-  )
-
-  const { publishReaction: publishLiveReaction, isCloudReactionsConfigured } = useLiveMatchReactionsSync({
-    matchId: channelMatchId,
-    enabled: isLiveOpen,
-    onHydrate: mergeHydrateReactions,
-    onLiveInsert: onLiveInsertReaction,
-  })
-  const cloudReactionsEnabled = isCloudReactionsConfigured && isLiveOpen
-
-  // Tick pour faire décroître la barre d'ambiance au fil du temps
-  const [ambianceTick, setAmbianceTick] = useState(0)
-  useEffect(() => {
-    if (!isLiveOpen) return
-    const id = setInterval(() => setAmbianceTick((t) => t + 1), 800)
-    return () => clearInterval(id)
-  }, [isLiveOpen])
-
-  const ambianceLevel = useMemo(() => {
-    const now = Date.now()
-    const WINDOW_MS = 50_000
-    let score = 0
-    for (const r of recentReactions) {
-      const age = now - r.createdAt
-      if (age > WINDOW_MS) continue
-      const weight = 1 - age / WINDOW_MS
-      score += weight * 18
-    }
-    return Math.min(100, Math.round(score))
-  }, [recentReactions, ambianceTick])
-
-  const compTheme = match ? themeForCompetition(match.competition.id) : null
-
-  const liveDisplayMinute = useMemo(() => {
-    if (!match || match.status !== 'live') return match?.minute ?? 0
-    const driftMin = Math.floor((Date.now() - liveMinuteAnchor.atMs) / 60_000)
-    return Math.min(130, Math.max(0, liveMinuteAnchor.minute + driftMin))
-  }, [match, match?.status, liveMinuteAnchor, liveMinuteClock])
-
-  const matchView = useMemo(() => {
-    if (!match) return null
-    if (match.status !== 'live') return match
-    return { ...match, minute: liveDisplayMinute, score: simScore }
-  }, [match, liveDisplayMinute, simScore])
-
-  // Score live : valeurs SportMonks ; la minute affichée combine ancre API + dérive locale (`liveMinuteClock`).
-  useEffect(() => {
-    if (!match || match.status !== 'live') return
-    setSimScore(match.score ?? { home: 0, away: 0 })
-    simScoreRef.current = match.score ?? { home: 0, away: 0 }
-  }, [match?.id, match?.status, match?.score?.home, match?.score?.away])
-
-  useEffect(() => {
-    if (!match || match.status !== 'live') return
-    const apiM = match.minute ?? 0
-    const r = liveMinuteSyncRef.current
-    if (r.matchId !== match.id) {
-      liveMinuteSyncRef.current = { matchId: match.id, lastApiMinute: apiM }
-      setLiveMinuteAnchor({ minute: apiM, atMs: Date.now() })
+    if (!liveMatches.length) {
+      setSelectedLiveMatchId('')
       return
     }
-    if (r.lastApiMinute !== apiM) {
-      liveMinuteSyncRef.current = { ...r, lastApiMinute: apiM }
-      setLiveMinuteAnchor({ minute: apiM, atMs: Date.now() })
-    }
-  }, [match?.id, match?.status, match?.minute])
-
-  useEffect(() => {
-    if (!match || match.status !== 'live') return
-    const id = window.setInterval(() => setLiveMinuteClock((n) => n + 1), 5000)
-    return () => window.clearInterval(id)
-  }, [match?.id, match?.status])
-
-  const messageExtras = () =>
-    stadiumGroupId
-      ? { tribune: activeTribune, supporterGroupId: stadiumGroupId }
-      : { tribune: activeTribune }
-
-  const tryCloudThenLocal = useCallback(
-    async (msg: Message) => {
-      setChatModerationHint(null)
-      if (!validateOutgoingChatPayload({ text: msg.text, groupScarf: msg.groupScarf }).ok) {
-        setChatModerationHint(MODERATION_REFUSED_MESSAGE_FR)
-        return
-      }
-      if (cloudChatEnabled) {
-        const r = await publishMessage({
-          matchId: msg.matchId,
-          text: msg.text,
-          tribune: msg.tribune,
-          supporterGroupId: msg.supporterGroupId,
-          gifUrl: msg.gifUrl,
-          emoteId: msg.emoteId,
-          groupScarf: msg.groupScarf,
-        })
-        if (r.ok) {
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === r.message.id)) return prev
-            return [...prev, r.message].sort((a, b) => a.createdAt - b.createdAt).slice(-280)
-          })
-          return
-        }
-        if (r.error === 'moderation') {
-          setChatModerationHint(MODERATION_REFUSED_MESSAGE_FR)
-          return
-        }
-      }
-      setMessages((prev) => [...prev, msg])
-    },
-    [cloudChatEnabled, publishMessage],
+    setSelectedLiveMatchId((prev) =>
+      liveMatches.some((m) => m.id === prev) ? prev : liveMatches[0].id,
+    )
+  }, [liveMatches])
+  const selectedLiveMatch = useMemo(
+    () => liveMatches.find((m) => m.id === selectedLiveMatchId) ?? null,
+    [liveMatches, selectedLiveMatchId],
   )
 
-  const onSend = (text: string) => {
-    const msg: Message = {
-      id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      matchId: channelMatchId,
-      userId: selfChatUserId,
-      text,
-      createdAt: Date.now(),
-      ...messageExtras(),
+  const liveDisplayedMinute = useLinearDisplayedLiveMinute(match)
+
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+  const timerText = useMemo(() => {
+    const kickoffTs = match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null
+    if (status === 'upcoming' && kickoffTs != null) {
+      const remaining = Math.max(0, kickoffTs - nowMs)
+      const totalSec = Math.floor(remaining / 1000)
+      const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0')
+      const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0')
+      const ss = String(totalSec % 60).padStart(2, '0')
+      return `${hh}:${mm}:${ss}`
     }
-    void tryCloudThenLocal(msg)
-  }
-
-  const onSendGif = (gifUrl: string) => {
-    const msg: Message = {
-      id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      matchId: channelMatchId,
-      userId: selfChatUserId,
-      text: '[GIF]',
-      createdAt: Date.now(),
-      gifUrl,
-      ...messageExtras(),
+    if (status === 'live') {
+      return `${Math.max(0, liveDisplayedMinute)}'`
     }
-    void tryCloudThenLocal(msg)
-  }
-
-  const onSendEmote = (emoteId: string) => {
-    const msg: Message = {
-      id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      matchId: channelMatchId,
-      userId: selfChatUserId,
-      text: '[Emote]',
-      createdAt: Date.now(),
-      emoteId,
-      ...messageExtras(),
+    return 'Terminé'
+  }, [match?.kickoffAt, nowMs, status, liveDisplayedMinute])
+  const liveTickSec = Math.floor(nowMs / 1000)
+  const kickoffMs = useMemo(
+    () => (match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null),
+    [match?.kickoffAt],
+  )
+  const chatOpenAtMs = kickoffMs != null ? kickoffMs - 5 * 60 * 1000 : null
+  const chatLocked = status === 'upcoming' && chatOpenAtMs != null && nowMs < chatOpenAtMs
+  const chatCountdownText = useMemo(() => {
+    if (!chatLocked || chatOpenAtMs == null) return null
+    const remainingMs = Math.max(0, chatOpenAtMs - nowMs)
+    const totalSec = Math.floor(remainingMs / 1000)
+    if (totalSec >= 3600) {
+      const days = Math.floor(totalSec / 86400)
+      const hours = Math.floor((totalSec % 86400) / 3600)
+      const mins = Math.floor((totalSec % 3600) / 60)
+      if (days > 0) return `${days}j ${hours}h ${mins}min`
+      return `${hours}h ${mins}min`
     }
-    void tryCloudThenLocal(msg)
-  }
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0')
+    const ss = String(totalSec % 60).padStart(2, '0')
+    return `${mm}:${ss}`
+  }, [chatLocked, chatOpenAtMs, nowMs])
 
-  const onSendScarf = (payload: NonNullable<Message['groupScarf']>) => {
-    const msg: Message = {
-      id: `msg-scarf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      matchId: channelMatchId,
-      userId: selfChatUserId,
-      text: '',
-      createdAt: Date.now(),
-      groupScarf: payload,
-      ...messageExtras(),
-    }
-    void tryCloudThenLocal(msg)
-  }
+  const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([
+    { id: '1', username: 'Pseudo_1', text: 'Allez Paris !', time: '20:45', avatarSeed: 'pseudo_1', avatarAccent: 'emerald', likes: 2 },
+    { id: '2', username: 'Pseudo_2', text: "On va les gagner aujourd'hui 🔥", time: '20:45', avatarSeed: 'pseudo_2', avatarAccent: 'violet', likes: 1 },
+    { id: '3', username: 'Pseudo_3', text: 'Nantes va défendre à fond...', time: '20:45', avatarSeed: 'pseudo_3', avatarAccent: 'amber', likes: 0 },
+    { id: '4', username: 'Pseudo_4 (Mod)', text: 'Bienvenue à tous dans le tchat !', time: '20:45', avatarSeed: 'pseudo_4_mod', avatarAccent: 'rose', likes: 3 },
+    { id: '5', username: 'Pseudo_5', text: 'Dembélé titulaire, ça va faire mal 😈', time: '20:45', avatarSeed: 'pseudo_5', avatarAccent: 'emerald', likes: 1 },
+  ])
+  const [draft, setDraft] = useState('')
+  const [selectedTribune, setSelectedTribune] = useState<'home-ultras' | 'away-ultras' | 'analystes' | 'neutres'>('home-ultras')
+  const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
+  const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
+  const [mobileMatchTab, setMobileMatchTab] = useState<'stats' | 'infos' | 'compo'>('stats')
+  const [animationsOpen, setAnimationsOpen] = useState(false)
+  const [animationNotice, setAnimationNotice] = useState<string | null>(null)
+  const [activePaidFx, setActivePaidFx] = useState<ActivePaidFx | null>(null)
+  const [livePanelOpen, setLivePanelOpen] = useState(false)
+  const [liveMicEnabled, setLiveMicEnabled] = useState(true)
+  const [liveCamEnabled, setLiveCamEnabled] = useState(false)
+  const [liveBroadcastActive, setLiveBroadcastActive] = useState(false)
+  const chatBottomRef = useRef<HTMLDivElement | null>(null)
+  const pageScrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [chatMessages.length])
+  useEffect(() => {
+    pageScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [match?.id, status])
 
-  const handleUnlockEmote = (emoteId: string, cost: number): boolean => {
-    const result = betting.spendTokens(cost, 'emote')
-    if (!result.ok) return false
-    unlockEmote(emoteId)
-    return true
+  const onSend = (e: FormEvent) => {
+    e.preventDefault()
+    if (chatLocked) return
+    const text = draft.trim()
+    if (!text) return
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-${Date.now()}`,
+        username: 'Vous',
+        text,
+        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        avatarSeed: 'vous',
+        avatarAccent: 'violet',
+        likes: 0,
+      },
+    ])
+    setDraft('')
   }
-
-  const onReact = (type: ReactionType) => {
-    const cost = reactionMeta[type].cost
-    const result = betting.spendTokens(cost, 'reaction')
-    if (!result.ok) return
-    void (async () => {
-      if (cloudReactionsEnabled) {
-        const r = await publishLiveReaction(type)
-        if (r.ok) {
-          emitReaction(type, selfChatUserId, { id: r.event.id, createdAt: r.event.createdAt })
-          return
+  const onToggleLikeMessage = (id: string) => {
+    setChatMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== id) return m
+        const liked = Boolean(m.likedByMe)
+        return {
+          ...m,
+          likedByMe: !liked,
+          likes: Math.max(0, (m.likes ?? 0) + (liked ? -1 : 1)),
         }
-      }
-      emitReaction(type, selfChatUserId)
-    })()
+      }),
+    )
   }
+
+  const [highlightTickerIndex, setHighlightTickerIndex] = useState(0)
+  useEffect(() => {
+    if (smTimelineHighlights.length <= 1) {
+      setHighlightTickerIndex(0)
+      return
+    }
+    const id = window.setInterval(() => {
+      setHighlightTickerIndex((prev) => (prev + 1) % smTimelineHighlights.length)
+    }, 3200)
+    return () => window.clearInterval(id)
+  }, [smTimelineHighlights])
+  const currentHighlight = smTimelineHighlights[highlightTickerIndex] ?? null
+  const currentHighlightText = useMemo(() => {
+    const raw = currentHighlight?.title || currentHighlight?.detail || ''
+    return translateHighlightTextToFr(raw)
+  }, [currentHighlight])
+  const [fullscreenEvent, setFullscreenEvent] = useState<{
+    kind: 'goal' | 'card' | 'var' | 'kickoff'
+    title: string
+    subtitle?: string
+  } | null>(null)
+  const [lastApiHighlightId, setLastApiHighlightId] = useState<string | null>(null)
+  /** Détecte les nouveaux buts dans la timeline dès le poll API (sans attendre le carrousel « moments forts »). */
+  const goalFxMatchIdRef = useRef<string | undefined>(undefined)
+  const goalHighlightAnimPrimedRef = useRef(false)
+  const goalHighlightAnimIdsRef = useRef<Set<string>>(new Set())
+
+  const launchFullscreenEvent = useCallback(
+    (kind: 'goal' | 'card' | 'var' | 'kickoff', title: string, subtitle?: string, durationMs = 3200) => {
+      setFullscreenEvent({ kind, title, subtitle })
+      window.setTimeout(() => setFullscreenEvent(null), durationMs)
+    },
+    [],
+  )
+  const kickoffFxMatchIdRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (!match?.id) return
+    if (status !== 'live') return
+    if (kickoffFxMatchIdRef.current === match.id) return
+    kickoffFxMatchIdRef.current = match.id
+    launchFullscreenEvent('kickoff', 'COUP D’ENVOI', `${homeName} vs ${awayName}`, 2100)
+  }, [status, match?.id, homeName, awayName, launchFullscreenEvent])
 
   useEffect(() => {
-    if (!shouldSimulateLiveCrowd()) return
-    if (!match || match.status !== 'live') return
-    const phrases = [
-      'Ça presse très haut là.',
-      'On sent que ça peut basculer sur la prochaine action.',
-      'Le milieu se fait manger, faut réagir.',
-      "C'est chaud dans la surface…",
-      "L'arbitre laisse jouer, ça chauffe.",
-      "Quelle intensité, c'est un vrai match de stade.",
-      'La relance est risquée…',
-      'Ça combine bien sur le côté.',
-    ]
-    const reactionBag: ReactionType[] = ['confetti', 'flare', 'rage', 'goal']
-    const schedule = () => 5200 + Math.random() * 5200
-    let timeout = 0
-    let burst = 0
+    if (goalFxMatchIdRef.current !== match?.id) {
+      goalFxMatchIdRef.current = match?.id
+      goalHighlightAnimPrimedRef.current = false
+      goalHighlightAnimIdsRef.current = new Set()
+    }
+    if (status !== 'live' || !smTimelineHighlights.length) return
 
-    const tick = () => {
-      const u = chatPersonasPool[(Math.random() * chatPersonasPool.length) | 0]
-      const text = phrases[(Math.random() * phrases.length) | 0]
-      const gid = stadiumGroupId
-        ? stadiumGroupId
-        : salonPoolGroupIds.length > 0
-          ? salonPoolGroupIds[(Math.random() * salonPoolGroupIds.length) | 0]
-          : undefined
-      setMessages((prev) =>
-        [
-          ...prev,
-          {
-            id: `msg-bot-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            matchId: channelMatchId,
-            userId: u.id,
-            text,
-            createdAt: Date.now(),
-            tribune: randomTribuneForBot(),
-            ...(gid ? { supporterGroupId: gid } : {}),
-          },
-        ].slice(-220),
-      )
+    const goalRows = smTimelineHighlights.filter((h) => String(h.type || '').toLowerCase().includes('but'))
 
-      if (Math.random() < 0.18) {
-        emitReaction(reactionBag[(Math.random() * reactionBag.length) | 0], u.id)
-      }
-
-      burst += 1
-      timeout = window.setTimeout(tick, burst < 2 ? 1200 : schedule())
+    if (!goalHighlightAnimPrimedRef.current) {
+      for (const g of goalRows) goalHighlightAnimIdsRef.current.add(g.id)
+      goalHighlightAnimPrimedRef.current = true
+      return
     }
 
-    timeout = window.setTimeout(tick, 900)
-    return () => window.clearTimeout(timeout)
-  }, [match?.status, matchId, stadiumGroupId, salonPoolGroupIds, channelMatchId, emitReaction])
+    for (const g of goalRows) {
+      if (goalHighlightAnimIdsRef.current.has(g.id)) continue
+      goalHighlightAnimIdsRef.current.add(g.id)
+      setLastApiHighlightId(g.id)
+      launchFullscreenEvent('goal', 'BUT', `${g.minute}' · But`, 1800)
+    }
+  }, [smTimelineHighlights, status, match?.id, launchFullscreenEvent])
 
-  if (!match || !matchId || !matchView) {
-    return (
-      <Card className="p-6">
-        <div className="font-display text-lg font-black tracking-tight text-tf-dark">
-          Canal introuvable
-        </div>
-        <div className="mt-2 text-sm font-medium text-tf-grey">
-          Ce match n’est pas dans le calendrier chargé (SportMonks). Ouvre l’agenda pour en choisir un autre.
-        </div>
-      </Card>
-    )
+  useEffect(() => {
+    if (!currentHighlight?.id) return
+    if (currentHighlight.id === lastApiHighlightId) return
+    const t = String(currentHighlight.type || '').toLowerCase()
+    if (t.includes('carton')) {
+      launchFullscreenEvent('card', 'CARTON', `${currentHighlight.minute}' · Carton`, 1700)
+      setLastApiHighlightId(currentHighlight.id)
+      return
+    }
+    if (t.includes('var')) {
+      launchFullscreenEvent('var', 'VAR', `${currentHighlight.minute}' ${currentHighlightText}`, 1700)
+      setLastApiHighlightId(currentHighlight.id)
+    }
+  }, [currentHighlight, currentHighlightText, lastApiHighlightId, launchFullscreenEvent])
+  const kickoffLabel = match?.kickoffAt
+    ? new Date(match.kickoffAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : '21:00'
+  const homeLineupNames = useMemo(() => {
+    const home = starters?.home?.slice(0, 11) ?? []
+    return home.map((p) => (typeof p === 'string' ? p : p.label))
+  }, [starters])
+  const awayLineupNames = useMemo(() => {
+    const away = starters?.away?.slice(0, 11) ?? []
+    return away.map((p) => (typeof p === 'string' ? p : p.label))
+  }, [starters])
+  const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
+  const lineupAutoTimerRef = useRef<number | null>(null)
+  const lineupAutoPausedUntilRef = useRef<number>(0)
+  const pauseLineupAutoFor3Min = () => {
+    lineupAutoPausedUntilRef.current = Date.now() + 3 * 60 * 1000
+  }
+  useEffect(() => {
+    if (!homeLineupNames.length || !awayLineupNames.length) return
+    const scheduleNext = () => {
+      lineupAutoTimerRef.current = window.setTimeout(() => {
+        if (lineupAutoPausedUntilRef.current > Date.now()) {
+          scheduleNext()
+          return
+        }
+        setLineupSide((prev) => (prev === 'home' ? 'away' : 'home'))
+        scheduleNext()
+      }, 10000)
+    }
+    scheduleNext()
+    return () => {
+      if (lineupAutoTimerRef.current != null) {
+        window.clearTimeout(lineupAutoTimerRef.current)
+        lineupAutoTimerRef.current = null
+      }
+    }
+  }, [homeLineupNames.length, awayLineupNames.length])
+  const displayedLineupNames = lineupSide === 'home' ? homeLineupNames : awayLineupNames
+  const homeColor = match?.home.colors.primary ?? '#2f8fff'
+  const awayColor = match?.away.colors.primary ?? '#ff3b3b'
+  const homeSecondaryColor = match?.home.colors.secondary ?? homeColor
+  const awaySecondaryColor = match?.away.colors.secondary ?? awayColor
+  const homeToneColor = `color-mix(in srgb, ${homeColor} 72%, ${homeSecondaryColor} 28%)`
+  const awayToneColor = `color-mix(in srgb, ${awayColor} 72%, ${awaySecondaryColor} 28%)`
+  const ballX = 50 + Math.sin(liveTickSec / 3.2) * 36
+  const ballY = 50 + Math.cos(liveTickSec / 2.4) * 30
+  const homePlayers = [
+    [12, 50],
+    [24, 18],
+    [24, 38],
+    [24, 62],
+    [24, 82],
+    [38, 24],
+    [38, 44],
+    [38, 58],
+    [38, 78],
+    [50, 35],
+    [50, 65],
+  ] as const
+  const awayPlayers = [
+    [88, 50],
+    [76, 18],
+    [76, 38],
+    [76, 62],
+    [76, 82],
+    [62, 24],
+    [62, 44],
+    [62, 58],
+    [62, 78],
+    [50, 30],
+    [50, 70],
+  ] as const
+  const tribuneOptions = useMemo(
+    () => [
+      { id: 'home-ultras' as const, label: `Ultras ${homeName}`, vibe: 'Chants et ambiance chaude' },
+      { id: 'away-ultras' as const, label: `Parcage ${awayName}`, vibe: 'Bloc visiteurs' },
+      { id: 'analystes' as const, label: 'Analystes', vibe: 'Debat tactique en direct' },
+      { id: 'neutres' as const, label: 'Neutres', vibe: 'Discussion chill' },
+    ],
+    [homeName, awayName],
+  )
+  const tacticalRows = useMemo(() => {
+    const pick = (keys: string[]) => liveStatRows.find((r) => keys.includes(r.key))
+    const dangerous = pick(['dangerous_attacks'])
+    const shotsOnTarget = pick(['shots_on_target', 'shotsontarget'])
+    const shotsTotal = pick(['shots_total', 'shots'])
+    const corners = pick(['corners'])
+    const fouls = pick(['fouls'])
+    const offsides = pick(['offsides'])
+    const yellow = pick(['yellowcards', 'yellow_cards'])
+    const red = pick(['redcards', 'red_cards'])
+    const saves = pick(['saves'])
+    const possession = pick(['ball_possession', 'possession'])
+    return [
+      dangerous ? { label: 'Att. dangereuses', home: dangerous.home, away: dangerous.away } : null,
+      shotsOnTarget ? { label: 'Tirs cadres', home: shotsOnTarget.home, away: shotsOnTarget.away } : null,
+      shotsTotal ? { label: 'Tirs', home: shotsTotal.home, away: shotsTotal.away } : null,
+      corners ? { label: 'Corners', home: corners.home, away: corners.away } : null,
+      fouls ? { label: 'Coups francs', home: fouls.home, away: fouls.away } : null,
+      offsides ? { label: 'Hors-jeu', home: offsides.home, away: offsides.away } : null,
+      yellow ? { label: 'Cartons jaunes', home: yellow.home, away: yellow.away } : null,
+      red ? { label: 'Cartons rouges', home: red.home, away: red.away } : null,
+      saves ? { label: 'Arrets', home: saves.home, away: saves.away } : null,
+      possession ? { label: 'Possession %', home: possession.home, away: possession.away } : null,
+    ].filter(Boolean) as Array<{ label: string; home: number; away: number }>
+  }, [liveStatRows])
+  const dangerousRow = useMemo(
+    () => liveStatRows.find((r) => r.key === 'dangerous_attacks') ?? null,
+    [liveStatRows],
+  )
+  const [tacticalTickerIndex, setTacticalTickerIndex] = useState(0)
+  useEffect(() => {
+    if (tacticalRows.length <= 1) {
+      setTacticalTickerIndex(0)
+      return
+    }
+    const id = window.setInterval(() => {
+      setTacticalTickerIndex((prev) => (prev + 1) % tacticalRows.length)
+    }, 2200)
+    return () => window.clearInterval(id)
+  }, [tacticalRows])
+  const primaryTactical = tacticalRows[tacticalTickerIndex] ?? { label: 'Att. dangereuses', home: 0, away: 0 }
+  const dangerousDelta = (dangerousRow?.home ?? 0) - (dangerousRow?.away ?? 0)
+  const dangerousLeader = dangerousDelta === 0 ? 'equal' : dangerousDelta > 0 ? 'home' : 'away'
+  const tacticalAbbrev = primaryTactical.label
+    .replace('Att. dangereuses', 'ATT DANG')
+    .replace('Tirs cadres', 'TIRS CAD')
+    .replace('Cartons jaunes', 'JAUNES')
+    .replace('Cartons rouges', 'ROUGES')
+    .replace('Coups francs', 'CFRANCS')
+    .replace('Hors-jeu', 'HORS JEU')
+    .replace('Arrets', 'ARRETS')
+    .replace('Possession %', 'POSS')
+    .toUpperCase()
+  const paidAnimations = useMemo<PaidAnimation[]>(
+    () => [
+      { id: 'fumigene', label: 'Fumigene rouge', cost: 20, emoji: '🚬' },
+      { id: 'ola', label: 'Ola du virage', cost: 12, emoji: '🙌' },
+      { id: 'tifo-geant', label: 'Tifo geant', cost: 35, emoji: '🧢' },
+      { id: 'stroboscope', label: 'Stroboscope', cost: 18, emoji: '✨' },
+    ],
+    [],
+  )
+  const fxActiveCount = activePaidFx ? 1 : 0
+  const viewersDisplay = 'N/D'
+
+  const triggerPaidAnimation = (anim: PaidAnimation) => {
+    const res = betting.spendTokens(anim.cost, `chat_animation:${anim.id}`)
+    if (!res.ok) {
+      setAnimationNotice('Pas assez de jetons pour lancer cette animation.')
+      window.setTimeout(() => setAnimationNotice(null), 1800)
+      return
+    }
+    const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `anim-${Date.now()}`,
+        username: 'Systeme',
+        text: `${anim.emoji} Animation lancee: ${anim.label} (${anim.cost} jetons)`,
+        time: now,
+        avatarSeed: 'systeme',
+        avatarAccent: 'amber',
+        likes: 0,
+      },
+    ])
+    setAnimationsOpen(false)
+    setAnimationNotice(`${anim.emoji} ${anim.label} activee`)
+    setActivePaidFx({ id: anim.id, label: anim.label })
+    window.setTimeout(() => setAnimationNotice(null), 1600)
+    window.setTimeout(() => setActivePaidFx(null), 2200)
+  }
+
+  const startLiveBroadcast = () => {
+    const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: `live-${Date.now()}`,
+        username: 'Systeme',
+        text: `🔴 Vous etes en LIVE (${liveMicEnabled ? 'micro ON' : 'micro OFF'} · ${liveCamEnabled ? 'camera ON' : 'camera OFF'})`,
+        time: now,
+        avatarSeed: 'systeme-live',
+        avatarAccent: 'rose',
+        likes: 0,
+      },
+    ])
+    setLiveBroadcastActive(true)
+    setAnimationNotice(`Live demarre (${liveMicEnabled ? 'micro ON' : 'micro OFF'} · ${liveCamEnabled ? 'cam ON' : 'cam OFF'})`)
+    window.setTimeout(() => setAnimationNotice(null), 1800)
+    setLivePanelOpen(false)
   }
 
   return (
     <div
-      className={cn(
-        'tf-match-page flex w-full min-w-0 flex-col',
-        'max-lg:flex-none max-lg:overflow-visible max-lg:pb-2',
-        'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
-      )}
+      ref={pageScrollRef}
+      className={`tf-channel-live relative flex h-full w-full flex-col overflow-y-auto bg-[#03172a] p-3 lg:p-4 ${
+        isLight ? 'tf-channel-live-light' : ''
+      }`}
       style={
         {
-          '--tf-match-home': match.home.colors.primary,
-          '--tf-match-away': match.away.colors.primary,
-          '--tf-match-accent': compTheme?.accent ?? '#0a3dff',
+          '--tf-home-color': homeToneColor,
+          '--tf-away-color': awayToneColor,
         } as React.CSSProperties
       }
     >
       <div
-        className={cn(
-          'relative isolate flex flex-col rounded-2xl border border-tf-grey-pastel/50 bg-tf-white shadow-[0_8px_40px_rgba(1,30,51,0.08)]',
-          'max-lg:overflow-visible',
-          'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
-        )}
+        className="pointer-events-none absolute inset-x-0 top-0 z-0 h-28"
+        style={{
+          background: `radial-gradient(55% 90% at 18% 0%, color-mix(in srgb, ${homeToneColor} 34%, transparent), transparent 72%), radial-gradient(52% 88% at 82% 0%, color-mix(in srgb, ${awayToneColor} 30%, transparent), transparent 74%)`,
+        }}
+      />
+      <div className="pointer-events-none absolute left-4 top-3 z-0 h-20 w-20 rounded-full blur-2xl" style={{ backgroundColor: `color-mix(in srgb, ${homeToneColor} 28%, transparent)` }} />
+      <div className="pointer-events-none absolute right-6 top-4 z-0 h-20 w-20 rounded-full blur-2xl" style={{ backgroundColor: `color-mix(in srgb, ${awayToneColor} 28%, transparent)` }} />
+      <header
+        className={`relative z-10 overflow-hidden rounded-xl border p-3 shadow-[0_14px_30px_rgba(2,8,18,0.33),inset_0_1px_0_rgba(125,211,252,0.16)] ${
+          isLight ? 'border-[#8fb2d3] bg-[#f6fbff]' : 'border-[#2f5f8f] bg-[#0b2440]'
+        }`}
+        style={
+          status === 'live'
+            ? {
+                boxShadow: `0 0 0 1px ${homeColor}44, 0 0 24px ${awayColor}30`,
+                background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 22%, #0b2440) 0%, #0b2440 42%, color-mix(in srgb, ${awayToneColor} 20%, #0b2440) 100%)`,
+              }
+            : {
+                background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 20%, #0b2440) 0%, #0b2440 40%, color-mix(in srgb, ${awayToneColor} 18%, #0b2440) 100%)`,
+              }
+        }
       >
-        {isLiveOpen ? <LiveEffects events={recentReactions} fullScreen /> : null}
-        {isLiveOpen && (
-          <div
-            className="absolute top-0 left-0 right-0 z-20 h-1 overflow-hidden rounded-t-2xl"
-            aria-hidden="true"
-          >
-            <div className="h-full w-full bg-tf-grey-pastel/40" />
+        {status === 'live' ? (
+          <div className="pointer-events-none absolute inset-0 rounded-xl border border-rose-400/80 animate-pulse" />
+        ) : null}
+        {status === 'live' ? (
+          <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-[#0a1a2d]">
             <div
-              className="absolute inset-y-0 left-0 rounded-t-2xl transition-all duration-500 ease-out"
-              style={{
-                width: `${ambianceLevel}%`,
-                background: `linear-gradient(90deg, ${match.home.colors.primary}, ${match.away.colors.primary})`,
-              }}
+              className="h-full w-full tf-hype-glow"
+              style={{ background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }}
             />
           </div>
-        )}
-        <div
-          className={cn(
-            'flex flex-col',
-            'max-lg:flex-none max-lg:overflow-visible',
-            'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
-          )}
-        >
-          {/* Hero header */}
-          <div
-            className={cn(
-              'shrink-0 border-b border-tf-grey-pastel/50 bg-tf-white/95 px-2.5 py-1.5 backdrop-blur-md sm:px-4 sm:py-2 lg:py-2.5',
-              isLiveOpen && 'pt-2 sm:pt-2.5 sm:pt-3',
-            )}
-          >
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-between sm:gap-3">
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <ChannelHeader match={matchView} />
-                <div className="mt-1 flex flex-col gap-2 sm:mt-0 sm:flex-row sm:flex-wrap">
-                  <Button
-                    variant="primary"
-                    type="button"
-                    className="min-h-11 w-full shrink-0 sm:min-h-0 sm:w-auto"
-                    onClick={() =>
-                      chatColumnRef.current?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start',
-                      })
-                    }
+        ) : null}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3 justify-self-start">
+            <TeamLogo label={homeName} logoUrl={match?.home.logoUrl} />
+            <p className="truncate text-lg font-semibold text-white">{homeName}</p>
+          </div>
+          <div className="flex flex-col items-center justify-self-center text-center">
+            <p className="text-3xl font-bold text-white">
+              {homeScore} - {awayScore}
+            </p>
+            <p className="text-sm text-sky-200/80">
+              {status === 'live' ? (
+                <span className="inline-flex items-center gap-1">
+                  <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
+                  {timerText}
+                </span>
+              ) : (
+                timerText
+              )}
+            </p>
+          </div>
+          <div className="flex min-w-0 items-center justify-end gap-3 justify-self-end">
+            <p className="truncate text-right text-lg font-semibold text-white">{awayName}</p>
+            <TeamLogo label={awayName} logoUrl={match?.away.logoUrl} />
+          </div>
+        </div>
+        {status === 'upcoming' ? (
+          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-[#3a6690]/55 bg-[#0a2238]/70 p-2.5">
+            <div
+              className="rounded-md px-2 py-2 text-center"
+              style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${homeToneColor} 34%, transparent), transparent)` }}
+            >
+              <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">Domicile</p>
+              <p className="mt-0.5 truncate text-sm font-extrabold text-sky-50">{homeFullName}</p>
+            </div>
+            <div className="rounded-md border border-sky-300/35 bg-[#102f4d]/75 px-2 py-1 text-[11px] font-black uppercase tracking-wide text-sky-100">
+              VS
+            </div>
+            <div
+              className="rounded-md px-2 py-2 text-center"
+              style={{ background: `linear-gradient(225deg, color-mix(in srgb, ${awayToneColor} 34%, transparent), transparent)` }}
+            >
+              <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">Extérieur</p>
+              <p className="mt-0.5 truncate text-sm font-extrabold text-sky-50">{awayFullName}</p>
+            </div>
+          </div>
+        ) : null}
+      </header>
+
+      <main
+        className={`relative z-10 mt-2 grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[0.7fr_2fr_0.7fr] md:items-stretch ${
+          status === 'upcoming' ? 'gap-1.5' : 'gap-2'
+        }`}
+      >
+        <div className="tf-live-col hidden min-w-0 space-y-1.5 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:flex-col">
+          <Card className="tf-card-prematch !p-3">
+            <div className="flex items-center justify-between gap-2">
+              <SectionTitle>Avant-match</SectionTitle>
+              <button className="shrink-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-semibold text-[#0a223a] transition hover:bg-gray-100">
+                {status === 'live' ? 'En direct' : `Coup d’envoi ${kickoffLabel}`}
+              </button>
+            </div>
+            <div className="mt-1.5 space-y-1">
+              {status === 'live' && liveStatRows.length > 0 ? (
+                liveStatRows.slice(0, 3).map((row) => (
+                  <div
+                    key={`prematch-live-${row.key}`}
+                    className="tf-live-soft-surface flex items-center justify-between rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-xs"
                   >
-                    {match.status === 'live'
-                      ? 'Rejoindre le live'
-                      : match.status === 'upcoming'
-                        ? 'Avant-match'
-                        : 'Salon match'}
-                  </Button>
-                  <Link
-                    to={`/channel/${match.id}/stade?salons=1`}
-                    className={cn(
-                      'tf-btn-fluid inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-2xl border border-tf-grey-pastel/60 bg-white/95 px-4 py-2 text-sm font-semibold text-[#011e33] font-display outline-none transition',
-                      'hover:border-tf-electric/25 hover:bg-tf-ice/80 focus-visible:ring-2 focus-visible:ring-tf-electric/40',
-                      'sm:min-h-0 sm:w-auto',
-                    )}
-                  >
-                    Rejoindre un salon
-                  </Link>
+                    <span className="font-bold text-white">{row.home}</span>
+                    <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-sky-200/80">
+                      {row.label}
+                    </span>
+                    <span className="font-bold text-white">{row.away}</span>
+                  </div>
+                ))
+              ) : status === 'upcoming' ? (
+                <div className="grid grid-cols-1 gap-1">
+                  <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-[11px]">
+                    <span className="text-sky-200/75">Ouverture tchat: </span>
+                    <span className="font-bold text-white">{chatLocked ? `dans ${chatCountdownText}` : 'ouverte'}</span>
+                  </div>
+                  <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-[11px]">
+                    <span className="text-sky-200/75">Cotes 1N2: </span>
+                    <span className="font-bold text-white">
+                      {oddsReady ? 'disponibles' : oddsLoading ? 'chargement' : 'ouverture imminente'}
+                    </span>
+                  </div>
+                  <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-[11px]">
+                    <span className="text-sky-200/75">Compositions: </span>
+                    <span className="font-bold text-white">{hasAnyLineup ? 'publiées' : 'en attente'}</span>
+                  </div>
                 </div>
-                {match?.sportMonksFixtureId ? (
-                  <>
-                    <details className="group xl:hidden">
-                      <summary className={TF_MOBILE_MENU_SUMMARY}>
-                        <span className="flex items-center gap-2">
-                          <span aria-hidden>📊</span>
-                          Stats & tendances (SportMonks)
-                        </span>
-                        <span
-                          className="text-[10px] text-tf-grey transition group-open:rotate-180"
-                          aria-hidden
-                        >
-                          ▼
-                        </span>
-                      </summary>
-                      <div className="mt-2 flex max-w-full flex-col gap-2 rounded-xl border border-tf-grey-pastel/40 bg-tf-grey-pastel/10 p-2 sm:flex-row sm:flex-wrap sm:items-stretch">
-                        <ChannelMatchStatsBlocks
-                          match={match}
-                          matchView={matchView}
-                          xgTotals={xgTotals}
-                          xgLoading={xgLoading}
-                          liveStatRows={liveStatRows}
-                          liveStatsLoading={liveStatsLoading}
-                          trendRows={trendRows}
-                          trendsLoading={trendsLoading}
-                        />
-                      </div>
-                    </details>
-                    <div className="hidden max-w-xl flex-col gap-2 xl:flex xl:max-w-none xl:flex-row xl:flex-wrap xl:items-stretch">
-                      <ChannelMatchStatsBlocks
-                        match={match}
-                        matchView={matchView}
-                        xgTotals={xgTotals}
-                        xgLoading={xgLoading}
-                        liveStatRows={liveStatRows}
-                        liveStatsLoading={liveStatsLoading}
-                        trendRows={trendRows}
-                        trendsLoading={trendsLoading}
-                      />
-                    </div>
-                  </>
-                ) : null}
+              ) : (
+                <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-2 text-center text-[11px] font-semibold text-sky-100/85">
+                  Aucune stat exploitable pour le moment.
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card className="tf-card-info !p-3 border border-[#3d78aa]/55 bg-[#10263f]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
+            <SectionTitle>Infos générales</SectionTitle>
+            <div className="mt-2 grid grid-cols-2 gap-1">
+              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
+                <p className="text-[10px] leading-none text-sky-200/80">Compétition</p>
+                <p className="mt-1 truncate text-[12px] font-extrabold leading-tight text-white">
+                  {match?.competition.shortName ?? match?.competition.name ?? 'Ligue 1'}
+                </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-start sm:justify-start">
-                <ShareButton
-                  compact
-                  path={`/channel/${channelMatchId}`}
-                  title={`${match.home.shortName} – ${match.away.shortName}`}
-                  text={`Salon live Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
-                />
-                <ActiveUsers users={users} />
+              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
+                <p className="text-[10px] leading-none text-sky-200/80">Coup d’envoi</p>
+                <p className="mt-1 text-[12px] font-extrabold leading-tight text-white">{kickoffLabel}</p>
+              </div>
+              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
+                <p className="text-[10px] leading-none text-sky-200/80">Statut</p>
+                <p className="mt-1 text-[12px] font-extrabold leading-tight text-white">
+                  {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
+                </p>
+              </div>
+              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
+                <p className="text-[10px] leading-none text-sky-200/80">Minute</p>
+                <p className="mt-1 text-[12px] font-extrabold leading-tight text-white">
+                  {status === 'live' ? `${liveDisplayedMinute}'` : '—'}
+                </p>
               </div>
             </div>
-            {isLiveOpen && match.status === 'live' && lastMoment ? (
-              <div className="mt-2 flex items-center gap-2 overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-3 py-2 sm:gap-3 sm:px-3.5">
-                <span className="text-xs font-black tabular-nums text-tf-grey">
-                  {lastMoment.minute > 0 ? `${lastMoment.minute}'` : '—'}
-                </span>
-                <span className="text-sm font-black text-tf-dark">
-                  {lastMoment.title.trim() ||
-                    (lastMoment.type === 'Info' ? 'Commentaire' : lastMoment.type)}
-                </span>
-                <span className="min-w-0 truncate text-sm font-medium text-tf-grey">
-                  {lastMoment.detail}
-                </span>
+          </Card>
+
+          <Card className="tf-card-community !p-3 border border-[#5f4be2]/45 bg-[#14253c]">
+            <SectionTitle>En direct · Matchs</SectionTitle>
+            {liveMatches.length > 1 ? (
+              <div className="mt-2">
+                <select
+                  value={selectedLiveMatchId}
+                  onChange={(e) => setSelectedLiveMatchId(e.target.value)}
+                  className="w-full rounded-lg border border-[#2a5a84] bg-[#0a1f35] px-2 py-1.5 text-xs font-semibold text-sky-50 outline-none focus:border-[#4f7ea8]"
+                >
+                  {liveMatches.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.home.shortName} vs {m.away.shortName}
+                    </option>
+                  ))}
+                </select>
               </div>
             ) : null}
-            {isLiveOpen ? (
-              <>
-                <details className="group mt-2 lg:hidden">
-                  <summary className={TF_MOBILE_MENU_SUMMARY}>
-                    <span className="flex items-center gap-2">
-                      <span aria-hidden>🏟️</span>
-                      Tribunes & vue stade
-                    </span>
-                    <span className="text-[10px] text-tf-grey transition group-open:rotate-180" aria-hidden>
-                      ▼
-                    </span>
-                  </summary>
-                  <div className="mt-1 rounded-xl border border-tf-grey-pastel/40 bg-tf-grey-pastel/10 p-2">
-                    <StadiumModeEncart
-                      matchId={match.id}
-                      activeTribune={activeTribune}
-                      stadiumGroupLabel={activeStadiumGroup?.name ?? null}
-                      stadiumGroupEmoji={activeStadiumGroup?.emoji ?? null}
-                      onClearStadiumGroup={stadiumGroupId ? clearStadiumGroup : undefined}
-                    />
-                  </div>
-                </details>
-                <div className="mt-2 hidden lg:block">
-                  <StadiumModeEncart
-                    matchId={match.id}
-                    activeTribune={activeTribune}
-                    stadiumGroupLabel={activeStadiumGroup?.name ?? null}
-                    stadiumGroupEmoji={activeStadiumGroup?.emoji ?? null}
-                    onClearStadiumGroup={stadiumGroupId ? clearStadiumGroup : undefined}
-                  />
+            <div className="mt-1.5">
+              {selectedLiveMatch ? (
+                <MatchRow
+                  home={selectedLiveMatch.home.shortName}
+                  away={selectedLiveMatch.away.shortName}
+                  homeScore={selectedLiveMatch.score?.home ?? 0}
+                  awayScore={selectedLiveMatch.score?.away ?? 0}
+                />
+              ) : (
+                <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-2 text-center text-[11px] font-semibold text-sky-100/85">
+                  Aucun autre match en direct
                 </div>
-              </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
+              }}
+              disabled={!selectedLiveMatch}
+              className="mt-1.5 w-full rounded-lg border border-[#2a5a84] bg-white px-3 py-1 text-[11px] font-bold text-[#0a223a] transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Rejoindre le live
+            </button>
+          </Card>
+
+          <Card className="tf-card-tribune !p-3 md:flex md:flex-1 md:flex-col">
+            <SectionTitle>Tribune supporters</SectionTitle>
+            <div className="tf-tribune-canvas mt-1 relative h-[68px] overflow-hidden rounded-lg border border-[#3b7fb1]/45 bg-[#050d17] md:h-auto md:min-h-[94px] md:flex-1">
+              <div
+                className="tf-tribune-canvas-bg absolute inset-0"
+                style={{
+                  background: `
+                    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(255,255,255,0.14), transparent 46%),
+                    radial-gradient(circle at 12% 32%, ${homeColor}55, transparent 35%),
+                    radial-gradient(circle at 88% 32%, ${awayColor}55, transparent 35%),
+                    linear-gradient(180deg, #0c1a2a 0%, #07111c 55%, #040911 100%)
+                  `,
+                }}
+              />
+              <div className="tf-tribune-overlay absolute inset-[4%] rounded-[16px] border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent" />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[58px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/12" />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[44px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/10" />
+              <div
+                className="absolute left-1/2 top-[52%] h-[30px] w-[48%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-cyan-200/35"
+                style={{
+                  background: `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 26%, #0a3b5e) 0%, #0b4b73 45%, color-mix(in srgb, ${awayColor} 24%, #0a3b5e) 100%)`,
+                }}
+              />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[30px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[8px] w-[8px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+              <div className="tf-tribune-label absolute left-[7%] top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wide text-sky-100/80">Virage</div>
+              <div className="tf-tribune-label absolute right-[7%] top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wide text-sky-100/80">Parcage</div>
+              <div className="tf-tribune-footer absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent pb-1 pt-4 text-center text-[8px] font-black uppercase tracking-[0.24em] text-white/70">
+                Plan stade
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTribuneModalOpen(true)}
+              className="mt-1 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-1 text-[11px] font-extrabold text-[#06242a] shadow-sm transition hover:bg-[#2be0c6]"
+            >
+              Ouvrir la carte du stade
+            </button>
+            <p className="mt-0.5 text-[10px] font-semibold text-sky-200/80">
+              Tribune actuelle · {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Aucune'}
+            </p>
+          </Card>
+        </div>
+
+        <div className="tf-live-col min-w-0 space-y-2 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] md:flex md:h-full md:flex-col">
+          <Card
+            className={`tf-card-chat relative overflow-hidden ${
+              status === 'upcoming' ? 'min-h-[220px] md:min-h-[260px]' : 'min-h-[260px] md:min-h-[320px]'
+            }`}
+            style={
+              status === 'live'
+                ? {
+                    borderColor: `${homeColor}88`,
+                    boxShadow: `0 0 0 1px ${awayColor}26, 0 0 34px ${homeColor}28`,
+                  }
+                : undefined
+            }
+          >
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -top-10 left-1/2 h-24 w-[78%] -translate-x-1/2 rounded-full bg-cyan-300/12 blur-2xl" />
+              <div className="absolute -left-10 top-[32%] h-24 w-24 rounded-full bg-violet-400/12 blur-2xl" />
+              <div className="absolute -right-8 bottom-[20%] h-20 w-20 rounded-full bg-cyan-300/10 blur-2xl" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/55 to-transparent" />
+            </div>
+            <div className="relative z-10">
+            <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
+            <SectionTitle>Chat live</SectionTitle>
+            <div className="mt-0.5 flex items-start justify-end gap-1.5 md:items-center md:justify-between md:gap-2">
+              <div className="hidden min-w-0 flex-wrap gap-1 md:flex">
+                {['Général', 'Virage', 'Analyse', 'Chill'].map((t, i) => (
+                  <span
+                    key={t}
+                    className={`tf-chat-tab rounded-md border px-1.5 py-1 text-[10px] font-bold uppercase tracking-wide leading-none ${
+                      i === 0
+                        ? 'border-[#8b7bff]/80 bg-[#8b7bff]/18 text-[#ece8ff]'
+                        : i === 1
+                          ? 'border-[#c17a67]/70 bg-[#c17a67]/18 text-[#ffd8cf]'
+                          : i === 2
+                            ? 'border-[#8ea5d6]/70 bg-[#8ea5d6]/16 text-[#dbe8ff]'
+                            : 'border-[#74bba0]/70 bg-[#74bba0]/16 text-[#d8fff0]'
+                    }`}
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div className="hidden grid-cols-2 gap-1 md:grid">
+                <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-2 py-1">
+                  <p className="text-[10px] font-semibold leading-none text-sky-100/75">
+                    Viewers <span className="ml-1 text-xs font-bold text-white">{viewersDisplay}</span>
+                  </p>
+                </div>
+                <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-2 py-1">
+                  <p className="text-[10px] font-semibold leading-none text-sky-100/75">
+                    FX actifs <span className="ml-1 text-xs font-bold text-white">{fxActiveCount}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-1 flex items-center gap-1 md:hidden">
+              <span className="rounded-md border border-[#8b7bff]/80 bg-[#8b7bff]/18 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#ece8ff]">
+                Général
+              </span>
+              <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-1.5 py-0.5">
+                <p className="text-[9px] font-semibold leading-none text-sky-100/75">
+                  Viewers <span className="ml-1 text-[10px] font-bold text-white">{viewersDisplay}</span>
+                </p>
+              </div>
+              <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-1.5 py-0.5">
+                <p className="text-[9px] font-semibold leading-none text-sky-100/75">
+                  FX <span className="ml-1 text-[10px] font-bold text-white">{fxActiveCount}</span>
+                </p>
+              </div>
+            </div>
+            {animationNotice ? (
+              <div className="mt-2 rounded-lg bg-[#8b7bff]/16 px-2 py-1 text-[11px] font-semibold text-[#ece8ff]">
+                {animationNotice}
+              </div>
+            ) : null}
+            <div
+              className={`tf-chat-scroll mt-1.5 space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)] ${
+                status === 'upcoming' ? 'h-[140px] md:h-[170px]' : 'h-[180px] md:h-[230px]'
+              }`}
+            >
+              {chatLocked ? (
+                <div className="flex h-full min-h-[150px] items-center justify-center rounded-lg border border-[#3a6690]/60 bg-[#0c2339]/80 p-3 text-center">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wide text-sky-100">
+                      Tchat verrouillé
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold text-sky-200/80">
+                      Ouverture 5 min avant le coup d&apos;envoi
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-cyan-200">{chatCountdownText ?? '00:00'}</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {chatMessages.map((msg) => (
+                    <ChatMessage key={msg.id} message={msg} onToggleLike={onToggleLikeMessage} />
+                  ))}
+                  <div ref={chatBottomRef} />
+                </>
+              )}
+            </div>
+            <form onSubmit={onSend} className="relative mt-2 flex items-center gap-1.5 md:gap-2">
+              {livePanelOpen ? (
+                <div className="absolute bottom-[calc(100%+8px)] left-0 z-20 w-[240px] rounded-lg bg-[#102945] p-1.5 shadow-xl">
+                  <div className="mb-1 flex items-center justify-between px-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-sky-100/85">Live</p>
+                    <button
+                      type="button"
+                      onClick={() => setLivePanelOpen(false)}
+                      className="rounded border border-[#5f81a1] px-1.5 py-0.5 text-[10px] font-bold text-sky-100"
+                    >
+                      X
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setLiveMicEnabled((v) => !v)}
+                      className={`rounded-md border px-2 py-1 text-left text-[11px] font-bold ${
+                        liveMicEnabled
+                          ? 'border-cyan-300/75 bg-cyan-300/16 text-cyan-100'
+                          : 'border-[#4b6f90] bg-[#0b2741] text-sky-100'
+                      }`}
+                    >
+                      🎤 {liveMicEnabled ? 'Micro ON' : 'Micro OFF'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLiveCamEnabled((v) => !v)}
+                      className={`rounded-md border px-2 py-1 text-left text-[11px] font-bold ${
+                        liveCamEnabled
+                          ? 'border-cyan-300/75 bg-cyan-300/16 text-cyan-100'
+                          : 'border-[#4b6f90] bg-[#0b2741] text-sky-100'
+                      }`}
+                    >
+                      📷 {liveCamEnabled ? 'Cam ON' : 'Cam OFF'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startLiveBroadcast}
+                      className="rounded-md border border-rose-300/80 bg-rose-500/90 px-2 py-1.5 text-xs font-bold text-white hover:bg-rose-500 active:scale-[0.99]"
+                    >
+                      Demarrer le live
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setLivePanelOpen((v) => !v)}
+                className={`tf-live-control rounded-lg border px-2 py-2 text-xs font-bold transition ${
+                  livePanelOpen || liveBroadcastActive
+                    ? 'border-rose-300/70 bg-rose-500/80 text-white'
+                    : 'border-[#3a6690] bg-[#0a1f35] text-sky-100 hover:border-sky-300/70'
+                }`}
+                title="Live micro + camera"
+              >
+                {liveBroadcastActive ? 'LIVE ON' : 'LIVE'}
+              </button>
+              {animationsOpen ? (
+                <div className="absolute bottom-[calc(100%+8px)] left-10 z-20 w-[240px] rounded-lg bg-[#102945] p-1.5 shadow-xl">
+                  <div className="mb-1 flex items-center justify-between px-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-sky-100/85">Animations</p>
+                    <button
+                      type="button"
+                      onClick={() => setAnimationsOpen(false)}
+                      className="rounded border border-[#5f81a1] px-1.5 py-0.5 text-[10px] font-bold text-sky-100"
+                    >
+                      X
+                    </button>
+                  </div>
+                  <p className="mb-1 px-1 text-[10px] font-semibold text-sky-200/85">
+                    Jetons: <span className="text-violet-200">{betting.wallet.tokens}</span>
+                  </p>
+                  <div className="grid grid-cols-1 gap-1">
+                    {paidAnimations.map((anim) => (
+                      <button
+                        key={anim.id}
+                        type="button"
+                        onClick={() => triggerPaidAnimation(anim)}
+                        className="rounded-md border border-[#4b6f90] bg-[#0b2741] px-2 py-1 text-left transition hover:border-[#8b7bff]/75"
+                      >
+                        <p className="text-[11px] font-bold text-sky-50">
+                          {anim.emoji} {anim.label}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-sky-200/70">{anim.cost} jetons</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setAnimationsOpen((v) => !v)}
+                className={`tf-live-control rounded-lg border px-2 py-2 text-xs font-bold transition ${
+                  animationsOpen
+                    ? 'border-[#8b7bff] bg-[#8b7bff]/18 text-[#ece8ff]'
+                    : 'border-[#3a6690] bg-[#0a1f35] text-sky-100 hover:border-sky-300/70'
+                }`}
+                title="Animations payantes"
+              >
+                FX
+              </button>
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={chatLocked ? 'Le tchat ouvre 5 min avant le match' : 'Écrire un message...'}
+                disabled={chatLocked}
+                className="min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-sm text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3"
+              />
+              <button
+                type="submit"
+                disabled={chatLocked}
+                className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 md:px-4 md:text-sm"
+              >
+                {chatLocked ? 'Bientôt' : 'Envoyer'}
+              </button>
+            </form>
+            </div>
+          </Card>
+
+          <Card
+            className={`tf-card-live md:flex md:flex-1 md:flex-col ${
+              status === 'upcoming' ? 'md:min-h-[150px]' : 'md:min-h-[190px]'
+            }`}
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
+            <div className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:justify-between md:gap-2">
+              <SectionTitle>Live</SectionTitle>
+              <div className="tf-live-soft-surface min-w-0 w-full rounded-md bg-[#122940] px-2 py-1 text-[10px] text-sky-100/90 md:w-[90%]">
+                {currentHighlight ? (
+                  <span className="block truncate font-semibold">
+                    {currentHighlight.minute}' {currentHighlightText}
+                  </span>
+                ) : (
+                  <span className="block truncate font-semibold text-sky-200/70">Moments forts en attente...</span>
+                )}
+              </div>
+            </div>
+            {status === 'live' ? (
+              <div className="tf-live-pitch-shell mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-[#101c2a] p-2">
+                <div className="tf-live-pitch-field relative min-h-[120px] flex-1 overflow-hidden rounded-md bg-[#124238]">
+                <div className="pointer-events-none absolute inset-0 z-10">
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[22px] font-black tracking-wider text-white/12">
+                    {tacticalAbbrev}
+                  </div>
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 text-[28px] font-black transition-all duration-500 ${
+                      dangerousLeader === 'home' ? 'left-2 text-emerald-300/95 drop-shadow-[0_0_10px_rgba(16,185,129,0.85)]' : 'left-3 text-white/25'
+                    }`}
+                  >
+                    ←
+                  </div>
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 text-[28px] font-black transition-all duration-500 ${
+                      dangerousLeader === 'away' ? 'right-2 text-rose-300/95 drop-shadow-[0_0_10px_rgba(251,113,133,0.85)]' : 'right-3 text-white/25'
+                    }`}
+                  >
+                    →
+                  </div>
+                  <div className="tf-live-tactical-chip absolute left-1/2 top-2 -translate-x-1/2 rounded-md bg-[#0c2034]/90 px-2 py-0.5 text-[10px] font-bold text-sky-100 shadow-[0_6px_18px_rgba(0,0,0,0.3)]">
+                    <span className="mr-1 text-sky-200/80">{primaryTactical.label}</span>
+                    <span>{primaryTactical.home}</span>
+                    <span className="mx-1 text-sky-200/70">-</span>
+                    <span>{primaryTactical.away}</span>
+                  </div>
+                </div>
+                <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/20" />
+                <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
+                <div
+                  className={`absolute left-0 top-[18%] h-[64%] w-12 border-r border-y transition-all ${
+                    dangerousLeader === 'home'
+                      ? 'border-emerald-200/70 bg-emerald-300/10 shadow-[inset_0_0_18px_rgba(16,185,129,0.35)]'
+                      : 'border-white/20'
+                  }`}
+                />
+                <div
+                  className={`absolute right-0 top-[18%] h-[64%] w-12 border-l border-y transition-all ${
+                    dangerousLeader === 'away'
+                      ? 'border-rose-200/70 bg-rose-300/10 shadow-[inset_0_0_18px_rgba(251,113,133,0.35)]'
+                      : 'border-white/20'
+                  }`}
+                />
+                <div
+                  className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-[0_0_12px_rgba(255,255,255,0.9)] transition-all duration-500"
+                  style={{ left: `${ballX}%`, top: `${ballY}%` }}
+                />
+                {homePlayers.map((p, i) => (
+                  <div
+                    key={`h-${i}`}
+                    className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 shadow-[0_0_8px_rgba(0,0,0,0.35)]"
+                    style={{ left: `${p[0]}%`, top: `${p[1]}%`, backgroundColor: homeColor }}
+                  />
+                ))}
+                {awayPlayers.map((p, i) => (
+                  <div
+                    key={`a-${i}`}
+                    className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 shadow-[0_0_8px_rgba(0,0,0,0.35)]"
+                    style={{ left: `${p[0]}%`, top: `${p[1]}%`, backgroundColor: awayColor }}
+                  />
+                ))}
+                </div>
+              </div>
+            ) : (
+              <div className="tf-live-pitch-shell mt-2 flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-[#101c2a] p-3">
+                <div className="tf-live-soft-surface rounded-lg border border-[#3a6690]/55 bg-[#0f2740]/85 px-3 py-3 text-center">
+                  <p className="text-xs font-black uppercase tracking-wide text-sky-200/80">Match en attente</p>
+                  <p className="mt-1 text-sm font-bold text-sky-50">
+                    Coup d&apos;envoi prévu à {kickoffLabel}
+                  </p>
+                  <p className="mt-1 text-[11px] font-semibold text-sky-200/75">
+                    Les stats live et la dynamique terrain arrivent au démarrage du match.
+                  </p>
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="tf-live-col hidden min-w-0 space-y-2 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:flex-col">
+          <Card
+            className={`tf-card-lineup border-fuchsia-400/45 bg-[#1e2336] ${
+              status === 'upcoming' ? 'md:min-h-[250px]' : 'md:min-h-[300px]'
+            }`}
+          >
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
+            <div className="flex items-center justify-between gap-2">
+              <SectionTitle>Compositions</SectionTitle>
+              <div className="inline-flex items-center gap-1 rounded-md bg-[#0a1f35]/80 p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    pauseLineupAutoFor3Min()
+                    setLineupSide('home')
+                  }}
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold transition ${
+                    lineupSide === 'home' ? 'text-white' : 'text-sky-100/80'
+                  }`}
+                  style={
+                    lineupSide === 'home'
+                      ? {
+                          backgroundColor: homeToneColor,
+                          boxShadow: `0 0 0 1px color-mix(in srgb, ${homeToneColor} 74%, white)`,
+                        }
+                      : undefined
+                  }
+                >
+                  {teamShortChip(homeName)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pauseLineupAutoFor3Min()
+                    setLineupSide('away')
+                  }}
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold transition ${
+                    lineupSide === 'away' ? 'text-white' : 'text-sky-100/80'
+                  }`}
+                  style={
+                    lineupSide === 'away'
+                      ? {
+                          backgroundColor: awayToneColor,
+                          boxShadow: `0 0 0 1px color-mix(in srgb, ${awayToneColor} 74%, white)`,
+                        }
+                      : undefined
+                  }
+                >
+                  {teamShortChip(awayName)}
+                </button>
+              </div>
+            </div>
+            <div
+              className="tf-lineup-pitch relative mt-1.5 h-[250px] overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]"
+              style={{
+                background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
+              }}
+            >
+              <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
+              <div className="absolute left-7 right-7 top-5 h-[41%] rounded-md border border-white/20" />
+              <div className="absolute bottom-5 left-7 right-7 h-[41%] rounded-md border border-white/20" />
+
+              <PlayerBadge name={displayedLineupNames[0] ?? 'Attaquant'} className="left-1/2 top-[18px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[1] ?? 'Ailier G'} className="left-[23%] top-[50px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[2] ?? 'Ailier D'} className="left-[77%] top-[50px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[3] ?? 'Milieu G'} className="left-[20%] top-[92px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[4] ?? 'Milieu C'} className="left-1/2 top-[86px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[5] ?? 'Milieu D'} className="left-[80%] top-[92px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[6] ?? 'Déf G'} className="left-[13%] top-[136px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[7] ?? 'DC G'} className="left-[36%] top-[144px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[8] ?? 'DC D'} className="left-[64%] top-[144px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[9] ?? 'Déf D'} className="left-[87%] top-[136px] -translate-x-1/2" />
+              <PlayerBadge name={displayedLineupNames[10] ?? 'Gardien'} className="left-1/2 bottom-[18px] -translate-x-1/2" />
+            </div>
+          </Card>
+
+          <Card
+            className={`tf-card-bet-shell md:flex md:flex-1 md:flex-col !p-0 bg-transparent shadow-none ${
+              status === 'upcoming' ? 'md:min-h-[180px]' : 'md:min-h-[220px]'
+            }`}
+          >
+            <div className="md:flex-1">
+              {match ? (
+                <BetWidget
+                  match={match}
+                  betting={betting}
+                  bookOdds1x2={odds1x2}
+                  bookOddsOverUnder25={oddsOverUnder25}
+                  bookOddsLoading={oddsLoading}
+                  compact
+                />
+              ) : (
+                <div className="rounded-lg bg-[#0a1f35]/80 px-3 py-2 text-sm font-semibold text-sky-100">
+                  Match indisponible pour les paris.
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      </main>
+
+      <div className="fixed bottom-3 left-1/2 z-[88] flex w-[calc(100%-1.25rem)] max-w-[420px] -translate-x-1/2 items-center gap-1.5 rounded-xl border border-[#3a6690] bg-[#0a1f35]/92 p-1.5 shadow-2xl backdrop-blur-sm md:hidden">
+        <button
+          type="button"
+          onClick={() => {
+            setMobilePanel('match')
+            setMobileMatchTab('stats')
+          }}
+          className="flex-1 rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-2 py-1 text-[10px] font-bold text-sky-100"
+        >
+          Match
+        </button>
+        <button type="button" onClick={() => setMobilePanel('paris')} className="flex-1 rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-2 py-1 text-[10px] font-bold text-sky-100">
+          Paris
+        </button>
+        <button type="button" onClick={() => setMobilePanel('tribune')} className="flex-1 rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-2 py-1 text-[10px] font-bold text-sky-100">
+          Tribune
+        </button>
+      </div>
+
+      {mobilePanel ? (
+        <div className="fixed inset-0 z-[89] flex items-end bg-slate-900/60 p-2 backdrop-blur-[2px] md:hidden">
+          <div className="w-full rounded-2xl border border-[#3a6690] bg-[#0b2440] p-3 shadow-2xl">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs font-black uppercase tracking-wider text-sky-100">
+                {mobilePanel === 'match' ? 'Match' : mobilePanel === 'paris' ? 'Paris' : 'Tribune'}
+              </p>
+              <button type="button" onClick={() => setMobilePanel(null)} className="rounded-md border border-[#4f7ea8] px-2 py-1 text-[10px] font-bold text-sky-100">
+                Fermer
+              </button>
+            </div>
+            {mobilePanel === 'match' ? (
+              <div className="mb-2 grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => setMobileMatchTab('stats')}
+                  className={`rounded-md border px-2 py-1 text-[10px] font-bold ${mobileMatchTab === 'stats' ? 'border-sky-300 bg-sky-300/20 text-sky-100' : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-200/80'}`}
+                >
+                  Stats
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileMatchTab('infos')}
+                  className={`rounded-md border px-2 py-1 text-[10px] font-bold ${mobileMatchTab === 'infos' ? 'border-sky-300 bg-sky-300/20 text-sky-100' : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-200/80'}`}
+                >
+                  Infos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileMatchTab('compo')}
+                  className={`rounded-md border px-2 py-1 text-[10px] font-bold ${mobileMatchTab === 'compo' ? 'border-sky-300 bg-sky-300/20 text-sky-100' : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-200/80'}`}
+                >
+                  Compo
+                </button>
+              </div>
+            ) : null}
+            {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
+              <div className="space-y-1">
+                {(liveStatRows.length ? liveStatRows : tacticalRows).slice(0, 5).map((row, i) => (
+                  <div key={`mobile-stat-${i}`} className="flex items-center justify-between rounded-md bg-[#0a1f35]/70 px-2 py-1 text-xs">
+                    <span className="font-bold text-white">{row.home}</span>
+                    <span className="text-sky-200/80">{row.label}</span>
+                    <span className="font-bold text-white">{row.away}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {mobilePanel === 'match' && mobileMatchTab === 'infos' ? (
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <div className="rounded-md bg-[#0a1f35]/70 px-2 py-1.5 text-sky-100">Compétition: {match?.competition.shortName ?? 'Ligue 1'}</div>
+                <div className="rounded-md bg-[#0a1f35]/70 px-2 py-1.5 text-sky-100">Coup d’envoi: {kickoffLabel}</div>
+                <div className="rounded-md bg-[#0a1f35]/70 px-2 py-1.5 text-sky-100">Statut: {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}</div>
+                <div className="rounded-md bg-[#0a1f35]/70 px-2 py-1.5 text-sky-100">Minute: {status === 'live' ? `${liveDisplayedMinute}'` : '—'}</div>
+              </div>
+            ) : null}
+            {mobilePanel === 'match' && mobileMatchTab === 'compo' ? (
+              <div className="grid grid-cols-2 gap-1">
+                {displayedLineupNames.slice(0, 10).map((p, i) => (
+                  <div key={`mobile-lineup-${i}`} className="truncate rounded-md bg-[#0a1f35]/70 px-2 py-1 text-[11px] text-sky-100">
+                    {p}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {mobilePanel === 'paris' ? (
+              <div className="max-h-[45vh] overflow-y-auto">
+                {match ? (
+                  <BetWidget
+                    match={match}
+                    betting={betting}
+                    bookOdds1x2={odds1x2}
+                    bookOddsOverUnder25={oddsOverUnder25}
+                    bookOddsLoading={oddsLoading}
+                    compact
+                  />
+                ) : (
+                  <div className="rounded-md bg-[#0a1f35]/70 px-2 py-2 text-xs font-semibold text-sky-100">Match indisponible pour les paris.</div>
+                )}
+              </div>
+            ) : null}
+            {mobilePanel === 'tribune' ? (
+              <div className="space-y-2">
+                <p className="text-xs text-sky-200/80">Tribune actuelle: {tribuneOptions.find((t) => t.id === selectedTribune)?.label}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobilePanel(null)
+                    setTribuneModalOpen(true)
+                  }}
+                  className="w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-bold text-[#06242a]"
+                >
+                  Ouvrir la carte du stade
+                </button>
+              </div>
             ) : null}
           </div>
+        </div>
+      ) : null}
 
-          <div
-            className={cn(
-              'flex flex-col gap-2 p-2 sm:gap-3 sm:p-3',
-              'max-lg:flex-none max-lg:overflow-visible',
-              'lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[1.2fr_0.8fr] lg:grid-rows-1 lg:items-stretch lg:overflow-hidden xl:grid-cols-[1.25fr_0.75fr]',
-            )}
-          >
-            {/* Haut : terrain, moments, pronos — sur mobile tout suit le scroll page */}
-            <div
-              className={cn(
-                'flex w-full min-w-0 flex-col gap-2 sm:gap-3',
-                'max-lg:flex-none max-lg:overflow-visible',
-                'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
-              )}
-            >
-              <div className="flex min-w-0 max-w-full flex-col overflow-visible rounded-2xl border border-tf-grey-pastel/50 bg-gradient-to-b from-tf-grey-pastel/20 to-tf-white/90 shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-                <div className="order-2 shrink-0 border-b border-tf-grey-pastel/50 lg:order-1">
-                  <details className="group lg:hidden">
-                    <summary className={TF_MOBILE_MENU_SUMMARY}>
-                      <span className="flex items-center gap-2">
-                        <span aria-hidden>🎯</span>
-                        Paris & pronos
-                      </span>
-                      <span className="text-[10px] text-tf-grey transition group-open:rotate-180" aria-hidden>
-                        ▼
-                      </span>
-                    </summary>
-                    <div className="border-t border-tf-grey-pastel/40 p-2.5 sm:p-3">
-                      <BetWidget
-                        match={matchView}
-                        betting={betting}
-                        bookOdds1x2={bookOdds1x2}
-                        bookOddsLoading={bookOddsLoading}
-                        compact
-                      />
-                    </div>
-                  </details>
-                  <div className="hidden p-2.5 sm:p-3 lg:block">
-                    <BetWidget
-                      match={matchView}
-                      betting={betting}
-                      bookOdds1x2={bookOdds1x2}
-                      bookOddsLoading={bookOddsLoading}
-                      compact
-                    />
-                  </div>
-                </div>
-                <div className="order-1 min-h-0 flex-1 p-2.5 sm:p-3 lg:order-2">
-                  <div
-                    className={cn(
-                      'grid min-h-0 gap-2 sm:gap-3',
-                      'max-lg:auto-rows-min',
-                      isLiveOpen
-                        ? 'lg:h-full lg:grid-cols-1 lg:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[1.05fr_0.95fr] xl:grid-rows-none'
-                        : 'grid-cols-1 lg:h-full',
-                    )}
-                  >
-                    {isLiveOpen && (
-                      <div
-                        id="channel-live-pitch"
-                        className="relative flex min-h-[9rem] scroll-mt-[max(5.5rem,env(safe-area-inset-top,0px))] flex-col overflow-hidden max-lg:max-h-[min(40vh,320px)] max-lg:min-h-[10rem] lg:min-h-0 lg:h-full lg:max-h-none lg:overflow-visible"
-                      >
-                        <div
-                          ref={pipContainerRef}
-                          className="absolute top-2 right-2 z-30 h-0 w-0 overflow-visible sm:top-4 sm:right-4"
-                          aria-hidden="true"
-                        />
-                        <LivePitch match={matchView} />
-                      </div>
-                    )}
-                    <details className="group flex min-h-0 flex-col overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 shadow-sm lg:hidden">
-                      <summary className="shrink-0 list-none border-b border-tf-grey-pastel/50 px-3 py-2 sm:px-3.5 [&::-webkit-details-marker]:hidden">
-                        <div className="flex cursor-pointer items-start justify-between gap-2">
-                          <div>
-                            <h2 className="font-display text-sm font-black text-tf-dark">
-                              {match.status === 'live' ? 'Moments forts' : 'Avant-match'}
-                            </h2>
-                            <p className="mt-0.5 text-xs font-medium text-tf-grey">
-                              {match.status === 'live'
-                                ? 'Timeline — ouvrir pour tout voir'
-                                : 'Compos & infos — ouvrir'}
-                            </p>
-                          </div>
-                          <span
-                            className="mt-0.5 text-[10px] font-black text-tf-grey transition group-open:rotate-180"
-                            aria-hidden
-                          >
-                            ▼
-                          </span>
-                        </div>
-                      </summary>
-                      <div
-                        className={cn(
-                          'max-h-[min(42vh,300px)] min-h-0 overflow-y-auto px-3 py-2 sm:px-3.5 [-webkit-overflow-scrolling:touch]',
-                          'overscroll-y-auto',
-                        )}
-                      >
-                        {match.status === 'live' ? (
-                          <MatchHighlights items={highlights} activeId={lastMoment?.id} />
-                        ) : (
-                          <MatchPreview
-                            match={match}
-                            trendRecentForm={trendRecentForm}
-                            trendsLoading={trendsLoading}
-                          />
-                        )}
-                        <div className="h-4" />
-                      </div>
-                    </details>
-                    <div className="hidden min-h-[10rem] flex-col overflow-hidden rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 shadow-sm lg:flex lg:min-h-0 lg:flex-1">
-                      <div className="shrink-0 border-b border-tf-grey-pastel/50 px-3 py-2 sm:px-3.5">
-                        <h2 className="font-display text-sm font-black text-tf-dark">
-                          {match.status === 'live' ? 'Moments forts' : 'Avant-match'}
-                        </h2>
-                        <p className="mt-0.5 text-xs font-medium text-tf-grey">
-                          {match.status === 'live'
-                            ? 'Timeline du match'
-                            : 'Compos probables, forme, infos'}
-                        </p>
-                      </div>
-                      <div
-                        className={cn(
-                          'min-h-0 flex-1 overflow-y-auto px-3 py-2 sm:px-3.5 [-webkit-overflow-scrolling:touch]',
-                          'lg:overscroll-y-contain',
-                        )}
-                      >
-                        {match.status === 'live' ? (
-                          <MatchHighlights
-                            items={highlights}
-                            activeId={lastMoment?.id}
-                          />
-                        ) : (
-                          <MatchPreview
-                            match={match}
-                            trendRecentForm={trendRecentForm}
-                            trendsLoading={trendsLoading}
-                          />
-                        )}
-                        <div className="h-4" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {tribuneModalOpen ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-4"
+          data-no-swipe="true"
+          data-tf-modal="true"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choix de tribune"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]"
+            onClick={() => setTribuneModalOpen(false)}
+            aria-label="Fermer la carte du stade"
+          />
+          <div className="relative z-10 w-full max-w-xl rounded-2xl border border-[#5d7cff]/45 bg-[#0c2b48] p-4 shadow-2xl">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-bold text-sky-100">Carte des tribunes</h3>
+              <button
+                type="button"
+                onClick={() => setTribuneModalOpen(false)}
+                className="rounded-md border border-[#5b7da0] bg-[#0a1f35] px-2 py-1 text-xs font-bold text-sky-100"
+              >
+                Fermer
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-sky-200/80">
+              Selectionne ta zone pour vivre le match dans le groupe qui te correspond.
+            </p>
+
+            <div className="relative mt-3 h-[220px] overflow-hidden rounded-xl border border-[#2a5a84] bg-[#061524]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(125,211,252,0.18),transparent_52%)]" />
+              <div className="absolute left-1/2 top-1/2 h-[196px] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-sky-200/20 bg-gradient-to-b from-[#12324f] to-[#0a2238]" />
+              <div className="absolute left-1/2 top-1/2 h-[168px] w-[84%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-sky-200/15 bg-gradient-to-b from-[#0f2e49] to-[#0a2136]" />
+              <div className="absolute left-1/2 top-1/2 h-[142px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-sky-200/20 bg-[#0c2740]" />
+              <div className="absolute left-1/2 top-1/2 h-[112px] w-[56%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-emerald-200/30 bg-gradient-to-b from-[#0f5b3d] to-[#0a3f2b]" />
+
+              <div className="absolute left-1/2 top-[11%] h-[124px] w-px -translate-x-1/2 bg-sky-100/15" />
+              <div className="absolute bottom-[11%] left-1/2 h-[124px] w-px -translate-x-1/2 bg-sky-100/15" />
+              <div className="absolute left-[11%] top-1/2 h-px w-[124px] -translate-y-1/2 bg-sky-100/15" />
+              <div className="absolute right-[11%] top-1/2 h-px w-[124px] -translate-y-1/2 bg-sky-100/15" />
+
+              <div className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+              <div className="absolute left-1/2 top-1/2 h-[70px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/20" />
+              <div className="absolute left-1/2 top-1/2 h-px w-[98px] -translate-x-1/2 -translate-y-1/2 bg-white/20" />
+
+              {tribuneOptions.map((opt, i) => (
+                <button
+                  key={`stadium-${opt.id}`}
+                  type="button"
+                  onClick={() => setSelectedTribune(opt.id)}
+                  className={`absolute border text-[10px] font-bold transition-all duration-300 ${
+                    i === 0
+                      ? 'left-[14%] right-[14%] top-[5%] h-[17%] rounded-b-[1.2rem] rounded-t-md'
+                      : i === 1
+                        ? 'left-[14%] right-[14%] bottom-[5%] h-[17%] rounded-t-[1.2rem] rounded-b-md'
+                        : i === 2
+                          ? 'left-[4%] top-[24%] bottom-[24%] w-[13%] rounded-r-[1.2rem] rounded-l-md'
+                          : 'right-[4%] top-[24%] bottom-[24%] w-[13%] rounded-l-[1.2rem] rounded-r-md'
+                  } ${
+                    selectedTribune === opt.id
+                      ? 'border-sky-200 bg-sky-300/28 text-sky-50 shadow-[0_0_20px_rgba(125,211,252,0.35)]'
+                      : 'border-white/20 bg-white/[0.06] text-sky-100/90 hover:border-sky-300/70 hover:bg-sky-300/15'
+                  }`}
+                >
+                  <span className="flex h-full w-full items-center justify-center px-1 text-center leading-tight">
+                    {opt.label}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {/* Right: Chat (bloqué avant J-1 min) */}
-            <div
-              ref={chatColumnRef}
-              id="channel-live-chat"
-              className={cn(
-                'relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-tf-grey-pastel/50 border-l-4 bg-gradient-to-b from-tf-grey-pastel/15 to-tf-white/95 shadow-sm',
-                'max-lg:mt-1 max-lg:min-h-0 max-lg:flex-none max-lg:overflow-visible',
-                /* Moins de scroll excessif quand on vise le chat depuis « Rejoindre le live » */
-                'scroll-mt-[max(4.5rem,env(safe-area-inset-top,0px))]',
-                'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
-                tribuneAccentClass,
-              )}
-              style={
-                activeStadiumGroup
-                  ? { borderLeftColor: activeStadiumGroup.theme.primary }
-                  : undefined
-              }
+            <div className="mt-3 rounded-lg bg-[#0e253d]/85 px-3 py-2">
+              <p className="text-xs font-bold text-sky-100">
+                {tribuneOptions.find((t) => t.id === selectedTribune)?.label}
+              </p>
+              <p className="mt-0.5 text-[11px] text-sky-200/75">
+                {tribuneOptions.find((t) => t.id === selectedTribune)?.vibe}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setTribuneModalOpen(false)}
+              className="mt-3 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-bold text-[#06242a] transition hover:bg-[#2be0c6]"
             >
-              {isLiveOpen ? <FloatingReactions items={floating} /> : null}
-              <div
-                className={cn(
-                  'flex flex-col',
-                  'max-lg:flex-none max-lg:overflow-visible',
-                  'lg:min-h-0 lg:flex-1 lg:overflow-hidden',
-                )}
+              Rejoindre cette tribune
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {activePaidFx ? (
+        <div className="pointer-events-none fixed inset-0 z-[94] overflow-hidden">
+          {activePaidFx.id === 'fumigene' ? (
+            <>
+              <div className="absolute bottom-0 left-0 h-40 w-40 animate-pulse rounded-full bg-rose-500/30 blur-2xl" />
+              <div className="absolute bottom-2 left-20 h-44 w-44 animate-pulse rounded-full bg-rose-400/25 blur-2xl" />
+              <div className="absolute bottom-0 right-0 h-40 w-40 animate-pulse rounded-full bg-rose-500/30 blur-2xl" />
+            </>
+          ) : null}
+          {activePaidFx.id === 'ola' ? (
+            <>
+              <div className="absolute bottom-16 left-[8%] right-[8%] h-2 animate-pulse rounded-full bg-cyan-300/70" />
+              <div className="absolute bottom-24 left-[15%] right-[15%] h-2 animate-pulse rounded-full bg-violet-300/65" />
+            </>
+          ) : null}
+          {activePaidFx.id === 'tifo-geant' ? (
+            <div className="absolute inset-x-[8%] top-[12%] rounded-2xl border border-sky-200/60 bg-gradient-to-r from-[#0e2f4d]/90 via-[#2b2a76]/90 to-[#0e2f4d]/90 px-4 py-3 text-center shadow-2xl backdrop-blur-sm">
+              <p className="text-lg font-black tracking-widest text-white">ALLEZ {homeName.toUpperCase()}</p>
+            </div>
+          ) : null}
+          {activePaidFx.id === 'stroboscope' ? (
+            <>
+              <div className="absolute inset-0 animate-pulse bg-white/10" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,0.28),transparent_42%),radial-gradient(circle_at_70%_30%,rgba(167,139,250,0.24),transparent_40%)]" />
+            </>
+          ) : null}
+          <div className="absolute left-1/2 top-8 -translate-x-1/2 rounded-full bg-[#041a2d]/85 px-3 py-1 text-xs font-bold text-sky-100 shadow-lg">
+            FX: {activePaidFx.label}
+          </div>
+        </div>
+      ) : null}
+      {fullscreenEvent ? (
+        <div className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
+          <div className="absolute inset-0 bg-black/46 backdrop-blur-[4px]" />
+          <div
+            className={`absolute inset-[-16%] animate-[tf-goal-bg_1100ms_ease-out_forwards] ${
+              fullscreenEvent.kind === 'goal'
+                ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.46),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+                : fullscreenEvent.kind === 'card'
+                  ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+                  : fullscreenEvent.kind === 'kickoff'
+                    ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+                    : 'bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+            }`}
+          />
+          <div
+            className={`absolute inset-0 border-[5px] animate-[tf-live-rim-pulse_850ms_ease-in-out_2] ${
+              fullscreenEvent.kind === 'goal'
+                ? 'border-emerald-300/85'
+                : fullscreenEvent.kind === 'card'
+                  ? 'border-rose-300/85'
+                  : fullscreenEvent.kind === 'kickoff'
+                    ? 'border-sky-300/85'
+                    : 'border-violet-300/85'
+            }`}
+          />
+
+          {fullscreenEvent.kind === 'goal'
+            ? [
+                ['10%', '18%', 'text-2xl', 0],
+                ['26%', '66%', 'text-4xl', 120],
+                ['48%', '14%', 'text-6xl', 60],
+                ['66%', '62%', 'text-3xl', 180],
+                ['80%', '28%', 'text-5xl', 90],
+              ].map(([l, t, size, d], i) => (
+                <span
+                  key={`goal-word-${i}`}
+                  className={`absolute font-black uppercase tracking-widest text-emerald-200/85 ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
+                  style={{ left: l, top: t, animationDelay: `${d}ms` }}
+                >
+                  GOAL
+                </span>
+              ))
+            : null}
+
+          {fullscreenEvent.kind === 'card'
+            ? [
+                ['12%', '22%', '🟨', 'text-5xl', 0],
+                ['24%', '70%', '🟥', 'text-4xl', 120],
+                ['44%', '18%', '🟨', 'text-6xl', 70],
+                ['68%', '64%', '🟥', 'text-5xl', 180],
+                ['82%', '30%', '🟨', 'text-4xl', 90],
+              ].map(([l, t, emoji, size, d], i) => (
+                <span
+                  key={`card-emoji-${i}`}
+                  className={`absolute ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
+                  style={{ left: l, top: t, animationDelay: `${d}ms` }}
+                >
+                  {emoji}
+                </span>
+              ))
+            : null}
+          {fullscreenEvent.kind === 'kickoff'
+            ? [
+                ['12%', '22%', '🔔', 'text-5xl', 0],
+                ['28%', '70%', '📣', 'text-4xl', 120],
+                ['48%', '16%', '🎺', 'text-6xl', 70],
+                ['70%', '64%', '🔔', 'text-5xl', 180],
+                ['84%', '30%', '📣', 'text-4xl', 90],
+              ].map(([l, t, emoji, size, d], i) => (
+                <span
+                  key={`kickoff-emoji-${i}`}
+                  className={`absolute ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
+                  style={{ left: l, top: t, animationDelay: `${d}ms` }}
+                >
+                  {emoji}
+                </span>
+              ))
+            : null}
+
+          <div
+            className={`absolute inset-0 flex justify-center px-4 ${
+              fullscreenEvent.kind === 'var' ? 'items-start pt-20' : 'items-center'
+            }`}
+          >
+            <div
+              className={`w-full max-w-xl rounded-2xl border px-7 py-5 text-center shadow-2xl backdrop-blur-md [transform:translateZ(0)] ${
+                fullscreenEvent.kind === 'goal'
+                  ? 'border-emerald-300/80 bg-[#07221e]/82'
+                  : fullscreenEvent.kind === 'card'
+                    ? 'border-rose-300/85 bg-[#2a0f16]/82'
+                    : fullscreenEvent.kind === 'kickoff'
+                      ? 'border-sky-300/85 bg-[#0b1f35]/84'
+                      : 'border-violet-300/85 bg-[#1a1333]/82'
+              }`}
+              style={{
+                animation:
+                  fullscreenEvent.kind === 'var'
+                    ? 'tf-commentary-in 380ms ease-out forwards'
+                    : 'tf-commentary-in 260ms ease-out forwards',
+              }}
+            >
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-white/75">Ambiance stade</p>
+              <p
+                className={`mt-1 text-5xl font-black tracking-wider ${
+                  fullscreenEvent.kind === 'goal'
+                    ? 'text-emerald-200 animate-[tf-goal-shake_760ms_ease-out_1]'
+                    : fullscreenEvent.kind === 'card'
+                      ? 'text-rose-200 animate-[tf-goal-shake_760ms_ease-out_1]'
+                      : fullscreenEvent.kind === 'kickoff'
+                        ? 'text-sky-200 animate-[tf-goal-shake_760ms_ease-out_1]'
+                        : 'text-violet-200'
+                }`}
               >
-                <div className="shrink-0 border-b border-tf-grey-pastel/50 px-2 py-1 sm:px-3.5 sm:py-2">
-                  <h2 className="font-display text-xs font-black text-tf-dark sm:text-sm">Chat live</h2>
-                  {isLiveOpen ? (
-                    <div className="mt-1 space-y-1.5 sm:mt-2 sm:space-y-2">
-                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2 sm:gap-x-3">
-                        {stadiumGroupId && activeStadiumGroup ? (
-                          <>
-                            <details className="group min-w-0 w-full lg:hidden">
-                              <summary
-                                className={cn(
-                                  TF_MOBILE_MENU_SUMMARY,
-                                  'normal-case tracking-normal',
-                                )}
-                              >
-                                <span className="min-w-0 truncate font-black">
-                                  {activeStadiumGroup.emoji} Salon : {activeStadiumGroup.name}
-                                </span>
-                                <span
-                                  className="shrink-0 text-[10px] text-tf-grey transition group-open:rotate-180"
-                                  aria-hidden
-                                >
-                                  ▼
-                                </span>
-                              </summary>
-                              <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-tf-grey-pastel/40 bg-tf-grey-pastel/10 p-2">
-                                <Button
-                                  type="button"
-                                  variant="primary"
-                                  className="h-8 shrink-0 rounded-xl px-2.5 py-0 text-[10px] font-black sm:h-9 sm:px-3 sm:text-[11px]"
-                                  onClick={clearStadiumGroup}
-                                >
-                                  🏟️ Tout le stade
-                                </Button>
-                                <Link
-                                  to={`/channel/${match.id}/stade`}
-                                  className="shrink-0 text-[10px] font-black text-tf-electric underline decoration-2 underline-offset-2"
-                                >
-                                  Tribunes
-                                </Link>
-                              </div>
-                            </details>
-                            <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-2 lg:flex">
-                              <Button
-                                type="button"
-                                variant="primary"
-                                className="h-8 shrink-0 rounded-xl px-2.5 py-0 text-[10px] font-black sm:h-9 sm:px-3 sm:text-[11px]"
-                                onClick={clearStadiumGroup}
-                              >
-                                🏟️ Tout le stade
-                              </Button>
-                              <span
-                                className="max-w-[min(100%,200px)] truncate rounded-xl border border-violet-200/80 bg-violet-50/90 px-2 py-1 text-[10px] font-black text-violet-950"
-                                title={activeStadiumGroup.name}
-                              >
-                                {activeStadiumGroup.emoji} {activeStadiumGroup.name}
-                              </span>
-                              <Link
-                                to={`/channel/${match.id}/stade`}
-                                className="shrink-0 text-[10px] font-black text-tf-electric underline decoration-2 underline-offset-2"
-                              >
-                                Tribunes
-                              </Link>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="hidden min-w-0 flex-1 lg:block">
-                              <TribuneQuickSwitch
-                                feedScope={chatFeedScope}
-                                onSelectGeneral={() => setChatFeedScope('general')}
-                                selected={activeTribune}
-                                onSelect={(id) => {
-                                  setTribune(id)
-                                  setChatFeedScope('tribune')
-                                }}
-                              />
-                            </div>
-                            <div className="w-full min-w-0 lg:hidden">
-                              <label htmlFor="tf-channel-tribune" className="sr-only">
-                                Zone d&apos;affichage du chat
-                              </label>
-                              <select
-                                id="tf-channel-tribune"
-                                className="w-full rounded-lg border border-tf-grey-pastel/60 bg-white px-2 py-1.5 text-[10px] font-black text-tf-dark shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40 sm:rounded-xl sm:px-3 sm:py-2 sm:text-[11px]"
-                                value={chatFeedScope === 'general' ? 'general' : activeTribune}
-                                onChange={(e) => {
-                                  const v = e.target.value
-                                  if (v === 'general') setChatFeedScope('general')
-                                  else {
-                                    setTribune(v as TribuneId)
-                                    setChatFeedScope('tribune')
-                                  }
-                                }}
-                              >
-                                <option value="general">🏟️ Général (toutes tribunes)</option>
-                                {TRIBUNES.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    {t.emoji} Tribune {t.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </>
-                        )}
-                        <span
-                          className="shrink-0 text-[10px] font-semibold tabular-nums text-slate-500 max-lg:ml-auto"
-                          aria-live="polite"
-                          title="Estimation live (démo)"
-                        >
-                          {crowdMetrics.participants.toLocaleString('fr-FR')} spect. · {crowdMetrics.activity}%
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-[11px] font-medium text-slate-500">
-                      Ouvre 1 minute avant le coup d&apos;envoi
-                    </p>
-                  )}
-                  {isLiveOpen && (
-                    <>
-                      <div className="mt-2 hidden flex-col gap-1.5 border-t border-tf-grey-pastel/40 pt-2 sm:flex sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <HypeMeter
-                            value={ambianceLevel}
-                            totalReactions={recentReactions.length}
-                            className="w-full max-w-[240px]"
-                            homeColor={match.home.colors.primary}
-                            awayColor={match.away.colors.primary}
-                          />
-                          <ReactionBar
-                            onReact={onReact}
-                            tokens={betting.wallet.tokens}
-                            density={reactionDensity}
-                          />
-                        </div>
-                        <div className="shrink-0 border-t border-tf-grey-pastel/40 pt-2 sm:border-t-0 sm:border-l sm:border-tf-grey-pastel/40 sm:pl-3 sm:pt-0">
-                          <ReactionSummary reactions={recentReactions} />
-                        </div>
-                      </div>
-                      <details className="mt-2 border-t border-tf-grey-pastel/40 pt-1.5 sm:hidden">
-                        <summary className="cursor-pointer list-none text-[10px] font-black uppercase tracking-wide text-slate-500 [&::-webkit-details-marker]:hidden">
-                          Ambiance & réactions
-                        </summary>
-                        <div className="mt-2 flex flex-col gap-2">
-                          <HypeMeter
-                            value={ambianceLevel}
-                            totalReactions={recentReactions.length}
-                            className="w-full max-w-[240px]"
-                            homeColor={match.home.colors.primary}
-                            awayColor={match.away.colors.primary}
-                          />
-                          <ReactionBar
-                            onReact={onReact}
-                            tokens={betting.wallet.tokens}
-                            density={reactionDensity}
-                          />
-                          <ReactionSummary reactions={recentReactions} />
-                        </div>
-                      </details>
-                    </>
-                  )}
-                </div>
-
-                {isLiveOpen ? (
-                  <>
-                    <div
-                      ref={feedRef}
-                      className={cn(
-                        'px-2 py-1.5 sm:px-4 sm:py-3',
-                        /* Mobile : encart court + scroll interne aux messages */
-                        'max-lg:min-h-[5.5rem] max-lg:max-h-[min(28vh,200px)] max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
-                        'lg:min-h-0 lg:flex-1 lg:max-h-none lg:overflow-y-auto lg:overscroll-y-contain lg:[-webkit-overflow-scrolling:touch]',
-                      )}
-                      role="log"
-                      aria-label="Messages en direct"
-                      aria-live="polite"
-                    >
-                      <MessageList
-                        messages={visibleMessages}
-                        usersById={usersById}
-                        selfUserId={selfChatUserId}
-                        getLikes={messageLikes.getLikes}
-                        hasLiked={(id) => messageLikes.hasLiked(id, selfChatUserId)}
-                        onToggleLike={(m) => {
-                          if (messageLikes.hasLiked(m.id, 'me')) {
-                            messageLikes.unlike(m.id)
-                          } else {
-                            messageLikes.like(m.id, m, match, usersById[m.userId])
-                          }
-                        }}
-                      />
-                      <div className="h-2 sm:h-4" />
-                    </div>
-
-                    {isLiveOpen && match.status === 'live' ? (
-                      <LiveCommentator
-                        pipTargetRef={pipContainerRef}
-                        user={livePersonaSelf}
-                        onCommentary={(text) => {
-                          const msg: Message = {
-                            id: `msg-com-${Date.now()}`,
-                            matchId: channelMatchId,
-                            userId: selfChatUserId,
-                            text: `🎙️ ${text}`,
-                            createdAt: Date.now(),
-                            ...messageExtras(),
-                          }
-                          void tryCloudThenLocal(msg)
-                        }}
-                      />
-                    ) : null}
-
-                    <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-tf-white/95 px-2 py-1.5 backdrop-blur-sm sm:px-4 sm:py-2.5">
-                      {chatModerationHint ? (
-                        <p className="mb-2 rounded-xl border border-rose-200/80 bg-rose-50/95 px-3 py-2 text-xs font-semibold text-rose-800">
-                          {chatModerationHint}
-                        </p>
-                      ) : null}
-                      <MessageComposer
-                        onSend={onSend}
-                        onSendGif={onSendGif}
-                        onSendEmote={onSendEmote}
-                        tokens={betting.wallet.tokens}
-                        unlockedEmoteIds={unlockedEmoteIds}
-                        onUnlockEmote={handleUnlockEmote}
-                        richMedia={reactionDensity !== 'chill'}
-                        placeholder={
-                          reactionDensity === 'chill'
-                            ? 'Message texte (zone Chill)…'
-                            : 'Écrire un message…'
-                        }
-                        scarfChoices={scarfChoices.length > 0 ? scarfChoices : undefined}
-                        onSendScarf={scarfChoices.length > 0 ? onSendScarf : undefined}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 py-8 text-center">
-                    <div className="text-4xl opacity-50">💬</div>
-                    <p className="text-sm font-bold text-tf-grey">
-                      Le chat ouvrira 1 minute avant le coup d'envoi
-                    </p>
-                    <p className="text-xs font-medium text-tf-grey">
-                      {msUntilKickoff > 60_000
-                        ? `Dans ${Math.ceil(msUntilKickoff / 60_000)} min`
-                        : msUntilKickoff > 0
-                          ? `Dans ${Math.ceil(msUntilKickoff / 1000)} s`
-                          : "C'est parti !"}
-                    </p>
-                    <p className="text-xs font-semibold text-tf-grey">
-                      En attendant, tu peux placer tes paris ci-dessous
-                    </p>
-                  </div>
-                )}
-              </div>
+                {fullscreenEvent.kind === 'goal'
+                  ? '⚽'
+                  : fullscreenEvent.kind === 'card'
+                    ? '🟨'
+                    : fullscreenEvent.kind === 'kickoff'
+                      ? '🎺'
+                      : '📺'}{' '}
+                {fullscreenEvent.title}
+              </p>
+              {fullscreenEvent.subtitle ? (
+                <p className="mt-2 text-base font-semibold text-sky-50">{fullscreenEvent.subtitle}</p>
+              ) : null}
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }

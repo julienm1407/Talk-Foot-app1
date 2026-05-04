@@ -21,14 +21,14 @@ export function sportMonksOddsBookmakerId(): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 2
 }
 
-/** Filtre `filters` pour `GET /rounds/{id}` — aligné sur `sportMonksOddsBookmakerId()`. */
+/** Filtre `filters` pour `GET /rounds/{id}` — bookmaker ciblé, sans bloquer les marchés. */
 export function smRoundOddsFiltersDefault(): string {
-  return `markets:${SM_ODDS_1X2_MARKET_ID};bookmakers:${sportMonksOddsBookmakerId()}`
+  return `bookmakers:${sportMonksOddsBookmakerId()}`
 }
 
 /** `GET /fixtures/{id}` — cotes 1N2 seules (repli si la fixture n’est pas dans `/rounds/{id}`). */
 export const SM_INCLUDE_FIXTURE_PREMATCH_ODDS =
-  'odds.market;odds.bookmaker;participants' as const
+  'odds.market;odds.bookmaker;participants;predictions.type' as const
 
 /** Liste calendrier / agrégation (léger + état + scores). */
 export const SM_INCLUDE_FIXTURE_LIST = 'participants;scores.type;league;state;round' as const
@@ -85,4 +85,4 @@ export const SM_INCLUDE_TEAM_SQUAD =
 
 /** Classements : équipe, détail par type, forme récente. */
 export const SM_INCLUDE_STANDINGS =
-  'participant;details.type;form' as const
+  'participant;rule.type;details.type;form;stage;league;group' as const

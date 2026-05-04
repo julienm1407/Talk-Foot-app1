@@ -4,6 +4,16 @@ import type { SmFixture, SmFixtureEventRow } from './types'
 
 const MAX_ROWS = 150
 
+/** SM n’alimente pas toujours `is_goal` sur les `comments` — évite de classer un vrai but en « Info ». */
+function commentLooksLikeGoal(text: string): boolean {
+  const u = text.toUpperCase()
+  if (u.includes('GOAL') || u.includes('OWN GOAL') || u.includes('OWNGOAL')) return true
+  if (u.includes('PENALTY') && (u.includes('SCORE') || u.includes('GOAL'))) return true
+  if (/\bBUT\b/.test(u) || u.includes('BUT!') || u.includes('BUT !')) return true
+  if (/\bGOL\b/.test(u) || u.includes('¡GOL') || u.includes('GOL!')) return true
+  return false
+}
+
 function displayMinute(row: { minute?: number | null; extra_minute?: number | null }): number {
   const m = typeof row.minute === 'number' ? row.minute : 0
   const x = typeof row.extra_minute === 'number' ? row.extra_minute : 0
@@ -13,7 +23,7 @@ function displayMinute(row: { minute?: number | null; extra_minute?: number | nu
 
 function highlightTypeFromEventDev(dev: string): Highlight['type'] {
   const u = dev.toUpperCase()
-  if (u.includes('GOAL') || u.includes('OWN') || u.includes('PENALTY')) return 'But'
+  if (u.includes('GOAL') || u.includes('OWN') || u.includes('PENALTY') || /\bGOL\b/.test(u)) return 'But'
   if (u.includes('YELLOW')) return 'Carton'
   if (u.includes('RED')) return 'Carton'
   if (u.includes('VAR')) return 'VAR'
@@ -52,8 +62,14 @@ export function extractTimelineHighlightsFromSmFixture(
     return slice.map((c) => {
       const minute = displayMinute(c)
       const order = typeof c.order === 'number' ? c.order : typeof c.id === 'number' ? c.id : 0
-      const type: Highlight['type'] = c.is_goal ? 'But' : c.is_important ? 'Occasion' : 'Info'
-      const detail = translateSportMonksLiveTextToFr(String(c.comment).trim())
+      const rawComment = String(c.comment ?? '').trim()
+      const type: Highlight['type'] =
+        c.is_goal || commentLooksLikeGoal(rawComment)
+          ? 'But'
+          : c.is_important
+            ? 'Occasion'
+            : 'Info'
+      const detail = translateSportMonksLiveTextToFr(rawComment)
       return {
         id: `sm-comment-${c.id ?? order}-${order}`,
         matchId,

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:pages": "tsc -b && GITHUB_PAGES=true vite build",
     "lint": "eslint .",
+    "diag:bookmakers": "node scripts/diagnose-bookmakers.mjs",
     "preview": "vite preview",
     "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs"
   },

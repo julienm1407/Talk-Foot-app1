@@ -53,8 +53,11 @@ export {
 } from './extractFixtureTrendsFromSm'
 export {
   extract1x2OddsFromOddsList,
+  extract1x2OddsFromPredictions,
+  extractOverUnder25OddsFromOddsList,
   smHomeAwayParticipantIds,
   type SmBookOdds1x2,
+  type SmBookOddsOverUnder25,
   type Extract1x2OddsOpts,
 } from './extract1x2OddsFromSm'
 export { extractMatchXGFromFixture, type SmMatchXGTotals } from './extractMatchXGFromSmFixture'

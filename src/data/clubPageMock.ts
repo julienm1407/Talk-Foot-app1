@@ -59,6 +59,12 @@ export type ClubPageMock = {
     opponent: string
     kickoff: string
     venue: 'dom' | 'ext'
+    homeName?: string
+    awayName?: string
+    homeLogoUrl?: string
+    awayLogoUrl?: string
+    homeCrest?: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+    awayCrest?: { id: string; shortName: string; colors: { primary: string; secondary: string } }
   }
   /** 5 dernières (V/N/D) */
   formStrip: Array<'V' | 'N' | 'D'>

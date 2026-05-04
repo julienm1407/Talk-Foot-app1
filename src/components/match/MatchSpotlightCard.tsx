@@ -36,7 +36,7 @@ export function MatchSpotlightCard({
           'group relative flex min-h-[220px] flex-col overflow-hidden rounded-2xl border border-tf-dark/10 bg-tf-white shadow-md outline-none transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-sky-500/40',
           className,
         )}
-        aria-label={`${match.home.shortName} contre ${match.away.shortName}, terminé`}
+        aria-label={`${match.home.name} contre ${match.away.name}, terminé`}
       >
         <div className="relative min-h-[160px] p-5" style={{ background: gradient }}>
           <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/45 to-black/60" />
@@ -63,9 +63,15 @@ export function MatchSpotlightCard({
             </div>
             <div className="mt-4 flex flex-1 items-center justify-between gap-3">
               <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
-                <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={44} />
+                <ClubCrest
+                  id={match.home.id}
+                  shortName={match.home.shortName}
+                  colors={match.home.colors}
+                  logoUrl={match.home.logoUrl}
+                  size={44}
+                />
                 <span className="w-full truncate text-sm font-black text-white drop-shadow-md sm:text-base">
-                  {match.home.shortName}
+                  {match.home.name}
                 </span>
               </div>
               <div className="shrink-0 text-center">
@@ -75,9 +81,15 @@ export function MatchSpotlightCard({
                 <span className="mt-1 text-[11px] font-bold text-white/75">Score final</span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
-                <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={44} />
+                <ClubCrest
+                  id={match.away.id}
+                  shortName={match.away.shortName}
+                  colors={match.away.colors}
+                  logoUrl={match.away.logoUrl}
+                  size={44}
+                />
                 <span className="w-full truncate text-sm font-black text-white drop-shadow-md sm:text-base">
-                  {match.away.shortName}
+                  {match.away.name}
                 </span>
               </div>
             </div>
@@ -110,7 +122,7 @@ export function MatchSpotlightCard({
         'group relative flex min-h-[240px] flex-col overflow-hidden rounded-2xl border border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.28)] outline-none transition hover:-translate-y-0.5 hover:shadow-[0_20px_56px_rgba(0,0,0,0.35)] focus-visible:ring-2 focus-visible:ring-sky-400/50',
         className,
       )}
-      aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+      aria-label={`${match.home.name} contre ${match.away.name}, à venir`}
     >
       <div className="relative min-h-[188px] flex-1 p-5 sm:min-h-[200px] sm:p-6" style={{ background: gradient }}>
         <div
@@ -144,9 +156,15 @@ export function MatchSpotlightCard({
 
           <div className="mt-5 flex flex-1 items-center justify-between gap-2 sm:gap-4">
             <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5 text-center">
-              <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={48} />
-              <span className="w-full max-w-[7rem] truncate text-sm font-black leading-tight text-white drop-shadow-md sm:max-w-[9rem] sm:text-base">
-                {match.home.shortName}
+              <ClubCrest
+                id={match.home.id}
+                shortName={match.home.shortName}
+                colors={match.home.colors}
+                logoUrl={match.home.logoUrl}
+                size={48}
+              />
+              <span className="w-full max-w-[10rem] truncate text-sm font-black leading-tight text-white drop-shadow-md sm:max-w-[13rem] sm:text-base">
+                {match.home.name}
               </span>
             </div>
 
@@ -160,9 +178,15 @@ export function MatchSpotlightCard({
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5 text-center">
-              <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={48} />
-              <span className="w-full max-w-[7rem] truncate text-sm font-black leading-tight text-white drop-shadow-md sm:max-w-[9rem] sm:text-base">
-                {match.away.shortName}
+              <ClubCrest
+                id={match.away.id}
+                shortName={match.away.shortName}
+                colors={match.away.colors}
+                logoUrl={match.away.logoUrl}
+                size={48}
+              />
+              <span className="w-full max-w-[10rem] truncate text-sm font-black leading-tight text-white drop-shadow-md sm:max-w-[13rem] sm:text-base">
+                {match.away.name}
               </span>
             </div>
           </div>
