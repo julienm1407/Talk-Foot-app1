@@ -2,6 +2,7 @@ export {
   fetchSportMonksInplay,
   fetchSportMonksRoundWithOdds,
   fetchSportMonksFixturePrematchOdds,
+  fetchSportMonksFixturePredictionsOnly,
   fetchSportMonksFixturesBetween,
   fetchSportMonksFixturesByDate,
   fetchSportMonksFixtureWithXG,

@@ -131,6 +131,7 @@ function collect1x2FromOdds(
   opts: {
     marketId: number
     bookmakerId: number
+    strictBookmaker: boolean
     homePid?: number
     awayPid?: number
   },
@@ -144,7 +145,7 @@ function collect1x2FromOdds(
     if (!isFulltimeResultMarket(o, opts.marketId)) continue
 
     const bm = parseNumericId(o.bookmaker_id ?? o.bookmaker?.id)
-    if (bm == null || bm !== opts.bookmakerId) continue
+    if (opts.strictBookmaker && (bm == null || bm !== opts.bookmakerId)) continue
 
     const side = resolveSide(o, opts.homePid, opts.awayPid)
     if (!side) continue
@@ -174,7 +175,12 @@ export function extract1x2OddsFromOddsList(
   const marketId = opts?.marketId ?? SM_ODDS_1X2_MARKET_ID
   const { home: homePid, away: awayPid } = smHomeAwayParticipantIds(opts?.fixture ?? undefined)
 
-  return collect1x2FromOdds(odds, { marketId, bookmakerId, homePid, awayPid })
+  // 1) bookmaker prioritaire (cohérence site-wide)
+  // 2) fallback multi-bookmakers pour éviter "indisponible" permanent si ce bookmaker n'est pas coté sur ce match
+  return (
+    collect1x2FromOdds(odds, { marketId, bookmakerId, strictBookmaker: true, homePid, awayPid }) ??
+    collect1x2FromOdds(odds, { marketId, bookmakerId, strictBookmaker: false, homePid, awayPid })
+  )
 }
 
 /**

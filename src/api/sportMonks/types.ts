@@ -117,6 +117,7 @@ export type SmFixture = {
   starting_at_timestamp?: number | string | null
   state_id?: number
   league_id?: number
+  round_id?: number
   state?: SmState
   league?: SmLeague
   venue?: { name?: string; city?: string }

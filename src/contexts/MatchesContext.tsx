@@ -32,9 +32,8 @@ const LEAGUES_DATE_BATCH = 10
 /** Aligné sur `getFootballCalendarWindow` : même étendue que `fixtures/between`. */
 const LEAGUES_DATE_FULL_BACK = 7
 const LEAGUES_DATE_FULL_FORWARD = 10
-/** Poll silencieux : mini fenêtre pour limiter le quota API. */
-const LEAGUES_DATE_SILENT_BACK = 2
-const LEAGUES_DATE_SILENT_FORWARD = 3
+/** Pendant un live, on rafraîchit plus souvent pour propager score/buts sans F5. */
+const LIVE_SILENT_POLL_MS = 12_000
 
 const NO_SM_TOKEN_MESSAGE_FR =
   'Aucune clé SportMonks : ajoute-la dans Profil → Données (ou VITE_SPORTMONKS_TOKEN dans .env.local), puis recharge la page. Les matchs démo ne sont plus affichés.'
@@ -112,21 +111,21 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         if (inplaySettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(inplaySettled))
         if (betweenSettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(betweenSettled))
 
-        const leaguesDateKeys = parisCalendarDayKeysInclusive(
-          addParisCalendarDays(
-            todayParis,
-            silent ? -LEAGUES_DATE_SILENT_BACK : -LEAGUES_DATE_FULL_BACK,
-          ),
-          addParisCalendarDays(
-            todayParis,
-            silent ? LEAGUES_DATE_SILENT_FORWARD : LEAGUES_DATE_FULL_FORWARD,
-          ),
-        )
         let fromLeaguesDate: SmFixture[] = []
-        try {
-          fromLeaguesDate = await smFixturesFromLeaguesDateKeys(sportmonksToken, leaguesDateKeys)
-        } catch {
-          fromLeaguesDate = []
+        /**
+         * Poll silencieux live : éviter la passe `leagues/date` (coûteuse) pour accélérer
+         * la remontée score/événements. Le chargement initial garde la passe complète.
+         */
+        if (!silent) {
+          const leaguesDateKeys = parisCalendarDayKeysInclusive(
+            addParisCalendarDays(todayParis, -LEAGUES_DATE_FULL_BACK),
+            addParisCalendarDays(todayParis, LEAGUES_DATE_FULL_FORWARD),
+          )
+          try {
+            fromLeaguesDate = await smFixturesFromLeaguesDateKeys(sportmonksToken, leaguesDateKeys)
+          } catch {
+            fromLeaguesDate = []
+          }
         }
 
         const mergedSm = new Map<number, (typeof between)[number]>()
@@ -217,6 +216,14 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     matches,
     silentRefetch,
     getSportMonksTokenSource() !== 'none',
+  )
+
+  /** Live en cours : cadence plus courte pour remonter rapidement les buts et animations. */
+  useVisibilityAwareInterval(
+    () => void silentRefetch(),
+    LIVE_SILENT_POLL_MS,
+    getSportMonksTokenSource() !== 'none' && matches.some((m) => m.status === 'live'),
+    true,
   )
 
   /** Filet de sécurité : poll long + pause hors onglet actif (quota API / relais). */

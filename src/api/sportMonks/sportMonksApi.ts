@@ -15,6 +15,7 @@ import {
   SM_INCLUDE_LEAGUE_BY_DATE,
   SM_INCLUDE_ROUND_ODDS,
   SM_INCLUDE_FIXTURE_PREMATCH_ODDS,
+  SM_INCLUDE_FIXTURE_PREDICTIONS_ONLY,
   smRoundOddsFiltersDefault,
   SM_INCLUDE_TEAM_FORM,
   SM_INCLUDE_TEAM_SEASON_STATS,
@@ -68,6 +69,17 @@ export async function fetchSportMonksFixturePrematchOdds(
 ): Promise<SmFixture | null> {
   const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(`/fixtures/${fixtureId}`, token, {
     include: SM_INCLUDE_FIXTURE_PREMATCH_ODDS,
+  })
+  return envelopeDataAsFixture(json.data)
+}
+
+/** Repli plans API limités : charge seulement participants + predictions (sans include `odds`). */
+export async function fetchSportMonksFixturePredictionsOnly(
+  token: string,
+  fixtureId: number,
+): Promise<SmFixture | null> {
+  const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(`/fixtures/${fixtureId}`, token, {
+    include: SM_INCLUDE_FIXTURE_PREDICTIONS_ONLY,
   })
   return envelopeDataAsFixture(json.data)
 }

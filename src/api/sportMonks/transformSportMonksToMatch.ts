@@ -263,7 +263,12 @@ export function smFixtureToMatch(f: SmFixture): Match {
   const kickoffAt = startingAtIso(f)
   const score = goalsFromScores(f.scores)
 
-  const roundId = typeof f.round?.id === 'number' ? f.round.id : undefined
+  const roundId =
+    typeof f.round?.id === 'number'
+      ? f.round.id
+      : typeof f.round_id === 'number'
+        ? f.round_id
+        : undefined
 
   const base: Match = {
     id,

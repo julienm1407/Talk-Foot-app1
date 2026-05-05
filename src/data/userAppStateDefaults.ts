@@ -3,6 +3,7 @@ import type { Wallet } from '../types/bet'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from './characterPresets'
 import { DEFAULT_WALLET } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
+import { AVATAR_2D_DEFAULTS } from './avatar2dCatalog'
 
 export const defaultUserProfile: UserProfile = {
   level: 1,
@@ -10,6 +11,14 @@ export const defaultUserProfile: UserProfile = {
   equippedItems: { scarf: null, hat: null, jersey: null, accessory: null },
   ownedItemIds: [],
   characterLook: DEFAULT_CHARACTER_LOOK,
+  avatarLoadout: {
+    ...AVATAR_2D_DEFAULTS.loadout,
+    ...AVATAR_2D_DEFAULTS.colors,
+  },
+  premiumInventory: {
+    ownedItemIds: [],
+    equippedByCategory: {},
+  },
 }
 
 export type UserAppStateV1 = {

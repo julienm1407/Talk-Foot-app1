@@ -30,6 +30,10 @@ export function smRoundOddsFiltersDefault(): string {
 export const SM_INCLUDE_FIXTURE_PREMATCH_ODDS =
   'odds.market;odds.bookmaker;participants;predictions.type' as const
 
+/** Repli sans `odds` (plans API restreints) : récupère participants + predictions uniquement. */
+export const SM_INCLUDE_FIXTURE_PREDICTIONS_ONLY =
+  'participants;predictions.type' as const
+
 /** Liste calendrier / agrégation (léger + état + scores). */
 export const SM_INCLUDE_FIXTURE_LIST = 'participants;scores.type;league;state;round' as const
 

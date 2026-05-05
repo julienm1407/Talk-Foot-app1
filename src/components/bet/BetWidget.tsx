@@ -15,6 +15,55 @@ function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
 }
 
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n))
+}
+
+function seeded01(seed: number): number {
+  const x = Math.sin(seed * 12_989.123) * 43_758.5453
+  return x - Math.floor(x)
+}
+
+function hashMatchSeed(match: Match): number {
+  const s = `${match.id}|${match.home.id}|${match.away.id}|${match.kickoffAt}`
+  let h = 0
+  for (let i = 0; i < s.length; i += 1) {
+    h = (h * 31 + s.charCodeAt(i)) >>> 0
+  }
+  return h || 1
+}
+
+function synthetic1x2ForMatch(match: Match): SmBookOdds1x2 {
+  const seed = hashMatchSeed(match)
+  const h = seeded01(seed + 11)
+  const d = seeded01(seed + 23)
+  const pHome = 0.42 + (h - 0.5) * 0.16 + 0.06
+  const pDraw = 0.26 + (d - 0.5) * 0.1
+  const pAway = clamp(1 - pHome - pDraw, 0.15, 0.56)
+  const sum = pHome + pDraw + pAway
+  const overround = 1.06
+  const toOdd = (p: number) => {
+    const implied = clamp((p / sum) * overround, 0.02, 0.92)
+    return Math.round(clamp(1 / implied, 1.2, 25) * 100) / 100
+  }
+  return { home: toOdd(pHome), draw: toOdd(pDraw), away: toOdd(pAway) }
+}
+
+function syntheticOu25ForMatch(match: Match): SmBookOddsOverUnder25 {
+  const seed = hashMatchSeed(match)
+  const s = seeded01(seed + 41)
+  const lambda = 2.55 + (s - 0.5) * 0.7
+  const exp = Math.exp(-lambda)
+  const pUnder = exp * (1 + lambda + (lambda * lambda) / 2)
+  const pOver = clamp(1 - pUnder, 0.2, 0.8)
+  const overround = 1.05
+  const toOdd = (p: number) => {
+    const implied = clamp(p * overround, 0.02, 0.92)
+    return Math.round(clamp(1 / implied, 1.2, 20) * 100) / 100
+  }
+  return { over: toOdd(pOver), under: toOdd(1 - pOver) }
+}
+
 /** `bookOdds1x2` : cotes 1N2 API ; `bookOddsLoading` : pas de cote démo tant que le chargement SM. */
 export function BetWidget({
   match,
@@ -63,7 +112,7 @@ export function BetWidget({
   const maxStake = Math.min(maxStakeCap, Math.max(0, wallet.tokens))
   const minStake = 5
 
-  /** Triplet 1N2 affichable : API uniquement (pas de fallback démo). */
+  /** Triplet 1N2 affichable : API, puis fallback estimé stable par match. */
   const x12Resolved = useMemo((): SmBookOdds1x2 | null => {
     if (
       bookOdds1x2 &&
@@ -73,19 +122,21 @@ export function BetWidget({
     ) {
       return bookOdds1x2
     }
-    return null
-  }, [bookOdds1x2])
+    return synthetic1x2ForMatch(match)
+  }, [bookOdds1x2, match])
 
   const x12Ready = Boolean(x12Resolved)
   const x12OddsPending = Boolean(match.sportMonksFixtureId && bookOddsLoading && !x12Ready)
-  const x12UnavailableLabel = x12OddsPending ? 'Chargement…' : 'Bientot'
+  const x12UnavailableLabel = x12OddsPending ? 'Chargement…' : 'Estimé'
   const ou25Ready = Boolean(
     bookOddsOverUnder25 &&
       bookOddsOverUnder25.over >= 1.01 &&
       bookOddsOverUnder25.under >= 1.01,
   )
-  const ou25UnavailableLabel =
-    match.sportMonksFixtureId && bookOddsLoading && !ou25Ready ? 'Chargement…' : 'Bientot'
+  const ou25Resolved = useMemo(() => {
+    if (ou25Ready && bookOddsOverUnder25) return bookOddsOverUnder25
+    return syntheticOu25ForMatch(match)
+  }, [ou25Ready, bookOddsOverUnder25, match])
 
   const markets = useMemo(() => {
     const base = [
@@ -102,10 +153,10 @@ export function BetWidget({
       {
         id: 'over25' as const,
         label: '+2,5 buts',
-        enabled: ou25Ready,
+        enabled: true,
         picks: [
-          { id: 'over' as const, label: 'Over', odds: bookOddsOverUnder25?.over ?? 0 },
-          { id: 'under' as const, label: 'Under', odds: bookOddsOverUnder25?.under ?? 0 },
+          { id: 'over' as const, label: 'Over', odds: ou25Resolved.over },
+          { id: 'under' as const, label: 'Under', odds: ou25Resolved.under },
         ],
       },
       {
@@ -125,7 +176,7 @@ export function BetWidget({
     ]
 
     return base
-  }, [bookOddsOverUnder25?.over, bookOddsOverUnder25?.under, isUpcoming, match.away.shortName, match.home.shortName, ou25Ready, x12Ready, x12Resolved])
+  }, [isUpcoming, match.away.shortName, match.home.shortName, x12Ready, x12Resolved, ou25Resolved])
 
   const canStake =
     maxStake >= minStake && stake >= minStake && stake <= maxStake && stake <= wallet.tokens
@@ -300,11 +351,11 @@ export function BetWidget({
             </button>
             <div className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-[11px] font-bold text-sky-100">
               <span className="block text-[10px] text-sky-200/70">+2,5</span>
-              <span>{ou25Ready ? fmtOdds(bookOddsOverUnder25!.over) : ou25UnavailableLabel}</span>
+              <span>{fmtOdds(ou25Resolved.over)}</span>
             </div>
             <div className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-[11px] font-bold text-sky-100">
               <span className="block text-[10px] text-sky-200/70">-2,5</span>
-              <span>{ou25Ready ? fmtOdds(bookOddsOverUnder25!.under) : ou25UnavailableLabel}</span>
+              <span>{fmtOdds(ou25Resolved.under)}</span>
             </div>
           </div>
         ) : null}

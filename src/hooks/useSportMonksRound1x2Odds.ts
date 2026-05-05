@@ -4,6 +4,7 @@ import {
   extract1x2OddsFromPredictions,
   extractOverUnder25OddsFromOddsList,
   fetchSportMonksFixturePrematchOdds,
+  fetchSportMonksFixturePredictionsOnly,
   fetchSportMonksRoundWithOdds,
   type SmBookOdds1x2,
   type SmBookOddsOverUnder25,
@@ -21,6 +22,55 @@ function oddsPollMs(status: 'upcoming' | 'live' | 'finished' | undefined): numbe
   if (status === 'upcoming') return 90_000
   if (status === 'live') return 120_000
   return 0
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n))
+}
+
+/** RNG déterministe (stable par fixture/round) pour garder les mêmes cotes entre refresh. */
+function seeded01(seed: number): number {
+  const x = Math.sin(seed * 12_989.123) * 43_758.5453
+  return x - Math.floor(x)
+}
+
+function normalize3(a: number, b: number, c: number): [number, number, number] {
+  const s = a + b + c
+  if (!Number.isFinite(s) || s <= 0) return [0.42, 0.28, 0.3]
+  return [a / s, b / s, c / s]
+}
+
+function toOddFromProb(p: number, overround = 1.06): number {
+  const implied = clamp(p * overround, 0.02, 0.92)
+  return Math.round(clamp(1 / implied, 1.2, 25) * 100) / 100
+}
+
+function synthetic1x2Odds(fixtureId: number, roundId?: number): SmBookOdds1x2 {
+  const s1 = seeded01(fixtureId + (roundId ?? 0) * 17 + 1)
+  const s2 = seeded01(fixtureId + (roundId ?? 0) * 17 + 2)
+  // Prior: léger avantage domicile + bruit stable.
+  const homeRaw = 0.44 + 0.1 * (s1 - 0.5) + 0.07
+  const drawRaw = 0.26 + 0.08 * (s2 - 0.5)
+  const awayRaw = clamp(1 - homeRaw - drawRaw, 0.15, 0.55)
+  const [ph, pd, pa] = normalize3(homeRaw, drawRaw, awayRaw)
+  return {
+    home: toOddFromProb(ph, 1.06),
+    draw: toOddFromProb(pd, 1.06),
+    away: toOddFromProb(pa, 1.06),
+  }
+}
+
+function syntheticOverUnder25Odds(fixtureId: number, roundId?: number): SmBookOddsOverUnder25 {
+  // Modèle simple Poisson sur total buts.
+  const s = seeded01(fixtureId + (roundId ?? 0) * 29 + 9)
+  const lambda = 2.55 + (s - 0.5) * 0.7 // ~[2.2 ; 2.9]
+  const exp = Math.exp(-lambda)
+  const pUnder = exp * (1 + lambda + (lambda * lambda) / 2) // P(X<=2)
+  const pOver = clamp(1 - pUnder, 0.2, 0.8)
+  return {
+    over: toOddFromProb(pOver, 1.05),
+    under: toOddFromProb(1 - pOver, 1.05),
+  }
 }
 
 /**
@@ -71,6 +121,7 @@ export function useSportMonksRound1x2Odds(
 
       let o: SmBookOdds1x2 | null = null
       let ou25: SmBookOddsOverUnder25 | null = null
+      let syntheticMode = false
 
       try {
         if (roundId) {
@@ -86,17 +137,39 @@ export function useSportMonksRound1x2Odds(
         }
 
         if ((!o || !ou25) && !cancelledRef.current) {
-          const fx2 = await fetchSportMonksFixturePrematchOdds(token, sportMonksFixtureId)
+          let fx2 = null
+          try {
+            fx2 = await fetchSportMonksFixturePrematchOdds(token, sportMonksFixtureId)
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            // Plans sans accès include `odds`: on bascule sur predictions-only.
+            if (/403/i.test(msg) && /odds/i.test(msg)) {
+              fx2 = await fetchSportMonksFixturePredictionsOnly(token, sportMonksFixtureId)
+            } else {
+              throw e
+            }
+          }
           if (cancelledRef.current) return
-          if (!o) o = extract1x2OddsFromOddsList(fx2?.odds, { fixture: fx2 })
+          if (!o) o = extract1x2OddsFromOddsList(fx2?.odds, { fixture: fx2 ?? undefined })
           if (!o) o = extract1x2OddsFromPredictions(fx2)
-          if (!ou25) ou25 = extractOverUnder25OddsFromOddsList(fx2?.odds, { fixture: fx2 })
+          if (!ou25) ou25 = extractOverUnder25OddsFromOddsList(fx2?.odds, { fixture: fx2 ?? undefined })
+        }
+
+        if ((!o || !ou25) && !cancelledRef.current) {
+          // Filet final: cotes estimées pour garder le widget utilisable sans droits `odds`.
+          if (!o) o = synthetic1x2Odds(sportMonksFixtureId, roundId)
+          if (!ou25) ou25 = syntheticOverUnder25Odds(sportMonksFixtureId, roundId)
+          syntheticMode = true
         }
 
         if (!cancelledRef.current) {
           setOdds(o)
           setOddsOverUnder25(ou25)
-          if (!o) setError(null)
+          setError(
+            syntheticMode
+              ? 'Mode cotes estimées actif (fallback temporaire en attendant accès odds).'
+              : null,
+          )
         }
       } catch (e: unknown) {
         if (cancelledRef.current) return

@@ -384,7 +384,7 @@ export function BoutiquePage() {
                   [
                     ['all', 'Tout le catalogue'],
                     ['accessories', 'Accessoires'],
-                    ['jerseys', 'Maillots'],
+                    ['kits', 'Maillots'],
                     ['medals_eur', 'Packs médailles (€)'],
                   ] as const
                 ).map(([id, label]) => (

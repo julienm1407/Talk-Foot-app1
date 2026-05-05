@@ -1,6 +1,9 @@
 import type { PixelJerseyPresetId } from '../data/pixelJerseyPresets'
 
 export type AvatarSlot = 'scarf' | 'hat' | 'jersey' | 'accessory'
+export type AvatarIdentitySlot = 'base' | 'eyes' | 'beard' | 'hair'
+export type AvatarStyleCategory = 'kit' | 'accessory'
+export type AvatarLoadoutSlot = AvatarIdentitySlot | AvatarStyleCategory
 
 /** Motifs maillot (géométriques — pas de logos officiels) */
 export type JerseyPattern =
@@ -34,6 +37,21 @@ export type AvatarItem = {
   }
   /** Texte neutre du type d’inspiration (sans marque) */
   inspirationNote?: string
+}
+
+export type AvatarIdentityItem = {
+  id: string
+  name: string
+  slot: AvatarIdentitySlot
+}
+
+export type AvatarStyleItem = {
+  id: string
+  name: string
+  image: string
+  price: number
+  category: AvatarStyleCategory
+  linkedAvatarItemId?: string
 }
 
 /** Personnage SVG (corps + tête) — indépendant des logos clubs */
@@ -109,4 +127,19 @@ export type UserProfile = {
   profilePhotoDataUrl?: string
   /** Phrase courte « à propos de toi » (optionnel), saisie à la création compte OAuth. */
   aboutLine?: string
+  avatarLoadout?: {
+    base: string
+    eyes: string
+    beard: string
+    hair: string
+    kit: string
+    accessory: string
+    skinColor: string
+    eyeColor: string
+    hairColor: string
+  }
+  premiumInventory?: {
+    ownedItemIds: string[]
+    equippedByCategory: { kit?: string; accessory?: string }
+  }
 }

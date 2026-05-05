@@ -12,9 +12,14 @@ import { mergeCharacterLook } from '../data/characterPresets'
 import { seedToLegoPalette } from '../utils/seedLegoPalette'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
+import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
+import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
+import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
+import type { Message, ReactionType } from '../types/chat'
 
 type ChatMessageItem = {
   id: string
+  userId: string
   username: string
   text: string
   time: string
@@ -22,6 +27,7 @@ type ChatMessageItem = {
   avatarAccent?: 'violet' | 'emerald' | 'rose' | 'amber'
   likes: number
   likedByMe?: boolean
+  emoteId?: string
 }
 
 type PaidAnimation = {
@@ -95,27 +101,36 @@ function compactPlayerLabel(name: string) {
   return candidate.slice(0, 10)
 }
 
-function translateHighlightTextToFr(text: string): string {
-  if (!text) return text
-  return text
-    .replace(/wins a corner/gi, 'obtient un corner')
-    .replace(/wins a free kick/gi, 'obtient un coup franc')
-    .replace(/wins a coup franc/gi, 'obtient un coup franc')
-    .replace(/on the left wing/gi, 'sur l aile gauche')
-    .replace(/on the right wing/gi, 'sur l aile droite')
-    .replace(/left wing/gi, 'aile gauche')
-    .replace(/right wing/gi, 'aile droite')
-    .replace(/fouled by/gi, 'faute de')
-    .replace(/is shown the yellow card/gi, 'recoit un carton jaune')
-    .replace(/is shown the red card/gi, 'recoit un carton rouge')
-    .replace(/goal!/gi, 'but!')
-    .replace(/substitution/gi, 'changement')
-    .replace(/offside/gi, 'hors-jeu')
-    .replace(/penalty/gi, 'penalty')
-    .replace(/shot blocked/gi, 'tir contré')
-    .replace(/shot missed/gi, 'tir manqué')
-    .replace(/shot saved/gi, 'tir arrêté')
-    .replace(/hand ball/gi, 'main')
+function cloudMessageToUi(m: Message): ChatMessageItem {
+  const created = new Date(m.createdAt)
+  const time = Number.isFinite(created.getTime())
+    ? created.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : '--:--'
+  return {
+    id: m.id,
+    userId: m.userId,
+    username: m.authorDisplayName?.trim() || 'Supporteur',
+    text: m.text,
+    time,
+    avatarSeed: m.userId || m.authorDisplayName || m.id,
+    avatarAccent: 'violet',
+    likes: 0,
+    emoteId: m.emoteId,
+  }
+}
+
+function paidAnimationToReactionType(id: PaidAnimation['id']): ReactionType {
+  if (id === 'fumigene') return 'flare'
+  if (id === 'ola') return 'confetti'
+  if (id === 'tifo-geant') return 'goal'
+  return 'rage'
+}
+
+function reactionTypeToPaidFx(type: ReactionType): ActivePaidFx {
+  if (type === 'flare') return { id: 'fumigene', label: 'Fumigene rouge' }
+  if (type === 'confetti') return { id: 'ola', label: 'Ola du virage' }
+  if (type === 'goal') return { id: 'tifo-geant', label: 'Tifo geant' }
+  return { id: 'stroboscope', label: 'Stroboscope' }
 }
 
 function MatchRow({
@@ -211,17 +226,19 @@ export function ChannelPage() {
   const isLight = appearance?.appearance === 'light'
   const navigate = useNavigate()
   const { matchId } = useParams()
-  const { matches } = useMatches()
+  const { matches, loading } = useMatches()
   const routeMatch = useMemo(() => matches.find((m) => m.id === matchId) ?? null, [matches, matchId])
+  const hasRouteMatchId = Boolean(matchId)
+  const waitingRouteResolution = hasRouteMatchId && loading && !routeMatch
   const fallbackMatch = useMemo(
     () => matches.find((m) => m.status === 'live') ?? matches[0] ?? null,
     [matches],
   )
-  const match = routeMatch ?? fallbackMatch
+  const match = waitingRouteResolution ? null : routeMatch ?? fallbackMatch
   useEffect(() => {
-    if (routeMatch || !fallbackMatch) return
+    if (waitingRouteResolution || routeMatch || !fallbackMatch) return
     navigate(`/channel/${fallbackMatch.id}`, { replace: true })
-  }, [routeMatch, fallbackMatch, navigate])
+  }, [waitingRouteResolution, routeMatch, fallbackMatch, navigate])
 
   const homeName = match?.home.name ?? match?.home.shortName ?? 'Paris SG'
   const awayName = match?.away.name ?? match?.away.shortName ?? 'Nantes'
@@ -316,13 +333,7 @@ export function ChannelPage() {
     return `${mm}:${ss}`
   }, [chatLocked, chatOpenAtMs, nowMs])
 
-  const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([
-    { id: '1', username: 'Pseudo_1', text: 'Allez Paris !', time: '20:45', avatarSeed: 'pseudo_1', avatarAccent: 'emerald', likes: 2 },
-    { id: '2', username: 'Pseudo_2', text: "On va les gagner aujourd'hui 🔥", time: '20:45', avatarSeed: 'pseudo_2', avatarAccent: 'violet', likes: 1 },
-    { id: '3', username: 'Pseudo_3', text: 'Nantes va défendre à fond...', time: '20:45', avatarSeed: 'pseudo_3', avatarAccent: 'amber', likes: 0 },
-    { id: '4', username: 'Pseudo_4 (Mod)', text: 'Bienvenue à tous dans le tchat !', time: '20:45', avatarSeed: 'pseudo_4_mod', avatarAccent: 'rose', likes: 3 },
-    { id: '5', username: 'Pseudo_5', text: 'Dembélé titulaire, ça va faire mal 😈', time: '20:45', avatarSeed: 'pseudo_5', avatarAccent: 'emerald', likes: 1 },
-  ])
+  const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([])
   const [draft, setDraft] = useState('')
   const [selectedTribune, setSelectedTribune] = useState<'home-ultras' | 'away-ultras' | 'analystes' | 'neutres'>('home-ultras')
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
@@ -335,6 +346,32 @@ export function ChannelPage() {
   const [liveMicEnabled, setLiveMicEnabled] = useState(true)
   const [liveCamEnabled, setLiveCamEnabled] = useState(false)
   const [liveBroadcastActive, setLiveBroadcastActive] = useState(false)
+  const { publishMessage, isCloudChatConfigured } = useLiveMatchChatSync({
+    matchId: match?.id ?? '',
+    enabled: Boolean(match?.id),
+    onRemoteMessages: (msgs) => {
+      setChatMessages((prev) => {
+        const byId = new Map(prev.map((m) => [m.id, m]))
+        for (const m of msgs) {
+          const mapped = cloudMessageToUi(m)
+          if (!byId.has(mapped.id)) byId.set(mapped.id, mapped)
+        }
+        return Array.from(byId.values())
+      })
+    },
+  })
+  const { publishReaction } = useLiveMatchReactionsSync({
+    matchId: match?.id ?? '',
+    enabled: Boolean(match?.id),
+    onHydrate: (events) => {
+      const last = events[events.length - 1]
+      if (!last) return
+      setActivePaidFx(reactionTypeToPaidFx(last.type))
+    },
+    onLiveInsert: (event) => {
+      setActivePaidFx(reactionTypeToPaidFx(event.type))
+    },
+  })
   const chatBottomRef = useRef<HTMLDivElement | null>(null)
   const pageScrollRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -343,24 +380,50 @@ export function ChannelPage() {
   useEffect(() => {
     pageScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
   }, [match?.id, status])
+  useEffect(() => {
+    setChatMessages([])
+  }, [match?.id])
+  useEffect(() => {
+    if (!activePaidFx) return
+    const timeout = window.setTimeout(() => setActivePaidFx(null), 2200)
+    return () => window.clearTimeout(timeout)
+  }, [activePaidFx])
+  useEffect(() => {
+    const latestFxMessage = [...chatMessages]
+      .reverse()
+      .find((m) => typeof m.emoteId === 'string' && m.emoteId.startsWith('fx:'))
+    if (!latestFxMessage?.emoteId) return
+    const fxIdRaw = latestFxMessage.emoteId.slice(3)
+    if (
+      fxIdRaw !== 'fumigene' &&
+      fxIdRaw !== 'ola' &&
+      fxIdRaw !== 'tifo-geant' &&
+      fxIdRaw !== 'stroboscope'
+    ) {
+      return
+    }
+    const fxId: PaidAnimation['id'] = fxIdRaw
+    const labelById: Record<string, string> = {
+      fumigene: 'Fumigene rouge',
+      ola: 'Ola du virage',
+      'tifo-geant': 'Tifo geant',
+      stroboscope: 'Stroboscope',
+    }
+    setActivePaidFx({ id: fxId, label: labelById[fxId] ?? fxId })
+  }, [chatMessages])
 
-  const onSend = (e: FormEvent) => {
+  const onSend = async (e: FormEvent) => {
     e.preventDefault()
     if (chatLocked) return
+    if (!match?.id) return
     const text = draft.trim()
     if (!text) return
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `msg-${Date.now()}`,
-        username: 'Vous',
-        text,
-        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        avatarSeed: 'vous',
-        avatarAccent: 'violet',
-        likes: 0,
-      },
-    ])
+    const res = await publishMessage({ matchId: match.id, text })
+    if (!res.ok) {
+      setAnimationNotice("Impossible d'envoyer le message (sync cloud indisponible).")
+      window.setTimeout(() => setAnimationNotice(null), 1800)
+      return
+    }
     setDraft('')
   }
   const onToggleLikeMessage = (id: string) => {
@@ -391,22 +454,48 @@ export function ChannelPage() {
   const currentHighlight = smTimelineHighlights[highlightTickerIndex] ?? null
   const currentHighlightText = useMemo(() => {
     const raw = currentHighlight?.title || currentHighlight?.detail || ''
-    return translateHighlightTextToFr(raw)
+    return translateSportMonksLiveTextToFr(raw)
   }, [currentHighlight])
   const [fullscreenEvent, setFullscreenEvent] = useState<{
     kind: 'goal' | 'card' | 'var' | 'kickoff'
     title: string
     subtitle?: string
+    side?: 'home' | 'away'
   } | null>(null)
   const [lastApiHighlightId, setLastApiHighlightId] = useState<string | null>(null)
   /** Détecte les nouveaux buts dans la timeline dès le poll API (sans attendre le carrousel « moments forts »). */
   const goalFxMatchIdRef = useRef<string | undefined>(undefined)
   const goalHighlightAnimPrimedRef = useRef(false)
   const goalHighlightAnimIdsRef = useRef<Set<string>>(new Set())
+  const infoHighlightPrimedRef = useRef(false)
+  const infoHighlightIdsRef = useRef<Set<string>>(new Set())
+  const infoToastTimeoutRef = useRef<number | null>(null)
+
+  const detectHighlightSide = useCallback(
+    (raw: string): 'home' | 'away' | undefined => {
+      const s = raw.toLowerCase()
+      const homeTokens = [match?.home.name, match?.home.shortName, homeName]
+        .filter(Boolean)
+        .map((x) => String(x).toLowerCase())
+      const awayTokens = [match?.away.name, match?.away.shortName, awayName]
+        .filter(Boolean)
+        .map((x) => String(x).toLowerCase())
+      if (homeTokens.some((t) => t.length >= 2 && s.includes(t))) return 'home'
+      if (awayTokens.some((t) => t.length >= 2 && s.includes(t))) return 'away'
+      return undefined
+    },
+    [match?.home.name, match?.home.shortName, match?.away.name, match?.away.shortName, homeName, awayName],
+  )
 
   const launchFullscreenEvent = useCallback(
-    (kind: 'goal' | 'card' | 'var' | 'kickoff', title: string, subtitle?: string, durationMs = 3200) => {
-      setFullscreenEvent({ kind, title, subtitle })
+    (
+      kind: 'goal' | 'card' | 'var' | 'kickoff',
+      title: string,
+      subtitle?: string,
+      durationMs = 3200,
+      side?: 'home' | 'away',
+    ) => {
+      setFullscreenEvent({ kind, title, subtitle, side })
       window.setTimeout(() => setFullscreenEvent(null), durationMs)
     },
     [],
@@ -417,7 +506,7 @@ export function ChannelPage() {
     if (status !== 'live') return
     if (kickoffFxMatchIdRef.current === match.id) return
     kickoffFxMatchIdRef.current = match.id
-    launchFullscreenEvent('kickoff', 'COUP D’ENVOI', `${homeName} vs ${awayName}`, 2100)
+    launchFullscreenEvent('kickoff', 'COUP D’ENVOI', `${homeName} vs ${awayName}`, 4200)
   }, [status, match?.id, homeName, awayName, launchFullscreenEvent])
 
   useEffect(() => {
@@ -425,6 +514,8 @@ export function ChannelPage() {
       goalFxMatchIdRef.current = match?.id
       goalHighlightAnimPrimedRef.current = false
       goalHighlightAnimIdsRef.current = new Set()
+      infoHighlightPrimedRef.current = false
+      infoHighlightIdsRef.current = new Set()
     }
     if (status !== 'live' || !smTimelineHighlights.length) return
 
@@ -440,24 +531,88 @@ export function ChannelPage() {
       if (goalHighlightAnimIdsRef.current.has(g.id)) continue
       goalHighlightAnimIdsRef.current.add(g.id)
       setLastApiHighlightId(g.id)
-      launchFullscreenEvent('goal', 'BUT', `${g.minute}' · But`, 1800)
+      const side = detectHighlightSide(`${g.title ?? ''} ${g.detail ?? ''}`)
+      const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
+      launchFullscreenEvent(
+        'goal',
+        'BUT',
+        `${g.minute}' · But${teamLabel ? ` · ${teamLabel}` : ''}`,
+        6200,
+        side,
+      )
     }
-  }, [smTimelineHighlights, status, match?.id, launchFullscreenEvent])
+  }, [smTimelineHighlights, status, match?.id, launchFullscreenEvent, detectHighlightSide, homeName, awayName])
+
+  /** Moments forts API (hors but/carton/VAR) → micro-signal visuel lisible sans envahir l’écran. */
+  useEffect(() => {
+    if (!match?.id || status !== 'live' || smTimelineHighlights.length === 0) return
+
+    if (!infoHighlightPrimedRef.current) {
+      for (const h of smTimelineHighlights) infoHighlightIdsRef.current.add(h.id)
+      infoHighlightPrimedRef.current = true
+      return
+    }
+
+    const unseen = smTimelineHighlights.filter((h) => !infoHighlightIdsRef.current.has(h.id))
+    if (unseen.length === 0) return
+    for (const h of unseen) infoHighlightIdsRef.current.add(h.id)
+
+    const latest = unseen[unseen.length - 1]
+    const t = String(latest.type || '').toLowerCase()
+    if (t.includes('but') || t.includes('carton') || t.includes('var')) return
+
+    const raw = String(latest.title || latest.detail || '').trim()
+    const translated = translateSportMonksLiveTextToFr(raw)
+    const compact = translated.length > 92 ? `${translated.slice(0, 89)}…` : translated
+    const side = detectHighlightSide(`${latest.title ?? ''} ${latest.detail ?? ''}`)
+    const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
+    const label =
+      t.includes('arrêt') || t.includes('arret') || t.includes('save')
+        ? '🧤 Arrêt'
+        : t.includes('occasion') || t.includes('shot') || t.includes('chance')
+          ? '⚡ Occasion'
+          : t.includes('penalty')
+            ? '🎯 Penalty'
+            : t.includes('hors') || t.includes('offside')
+              ? '🚫 Hors-jeu'
+              : '📣 Live'
+
+    setAnimationNotice(
+      `${label}${latest.minute ? ` ${latest.minute}'` : ''}${teamLabel ? ` · ${teamLabel}` : ''}${compact ? ` — ${compact}` : ''}`,
+    )
+    if (infoToastTimeoutRef.current != null) window.clearTimeout(infoToastTimeoutRef.current)
+    infoToastTimeoutRef.current = window.setTimeout(() => setAnimationNotice(null), 3600)
+  }, [smTimelineHighlights, status, match?.id, detectHighlightSide, homeName, awayName])
+
+  useEffect(
+    () => () => {
+      if (infoToastTimeoutRef.current != null) window.clearTimeout(infoToastTimeoutRef.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!currentHighlight?.id) return
     if (currentHighlight.id === lastApiHighlightId) return
     const t = String(currentHighlight.type || '').toLowerCase()
     if (t.includes('carton')) {
-      launchFullscreenEvent('card', 'CARTON', `${currentHighlight.minute}' · Carton`, 1700)
+      const side = detectHighlightSide(`${currentHighlight.title ?? ''} ${currentHighlight.detail ?? ''}`)
+      const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
+      launchFullscreenEvent(
+        'card',
+        'CARTON',
+        `${currentHighlight.minute}' · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
+        4600,
+        side,
+      )
       setLastApiHighlightId(currentHighlight.id)
       return
     }
     if (t.includes('var')) {
-      launchFullscreenEvent('var', 'VAR', `${currentHighlight.minute}' ${currentHighlightText}`, 1700)
+      launchFullscreenEvent('var', 'VAR', `${currentHighlight.minute}' ${currentHighlightText}`, 5200)
       setLastApiHighlightId(currentHighlight.id)
     }
-  }, [currentHighlight, currentHighlightText, lastApiHighlightId, launchFullscreenEvent])
+  }, [currentHighlight, currentHighlightText, lastApiHighlightId, launchFullscreenEvent, detectHighlightSide, homeName, awayName])
   const kickoffLabel = match?.kickoffAt
     ? new Date(match.kickoffAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     : '21:00'
@@ -502,6 +657,12 @@ export function ChannelPage() {
   const awaySecondaryColor = match?.away.colors.secondary ?? awayColor
   const homeToneColor = `color-mix(in srgb, ${homeColor} 72%, ${homeSecondaryColor} 28%)`
   const awayToneColor = `color-mix(in srgb, ${awayColor} 72%, ${awaySecondaryColor} 28%)`
+  const fullscreenAccentColor =
+    fullscreenEvent?.side === 'home'
+      ? homeColor
+      : fullscreenEvent?.side === 'away'
+        ? awayColor
+        : null
   const ballX = 50 + Math.sin(liveTickSec / 3.2) * 36
   const ballY = 50 + Math.cos(liveTickSec / 2.4) * 30
   const homePlayers = [
@@ -604,51 +765,46 @@ export function ChannelPage() {
   const fxActiveCount = activePaidFx ? 1 : 0
   const viewersDisplay = 'N/D'
 
-  const triggerPaidAnimation = (anim: PaidAnimation) => {
+  const triggerPaidAnimation = async (anim: PaidAnimation) => {
     const res = betting.spendTokens(anim.cost, `chat_animation:${anim.id}`)
     if (!res.ok) {
       setAnimationNotice('Pas assez de jetons pour lancer cette animation.')
       window.setTimeout(() => setAnimationNotice(null), 1800)
       return
     }
-    const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `anim-${Date.now()}`,
-        username: 'Systeme',
-        text: `${anim.emoji} Animation lancee: ${anim.label} (${anim.cost} jetons)`,
-        time: now,
-        avatarSeed: 'systeme',
-        avatarAccent: 'amber',
-        likes: 0,
-      },
-    ])
+    if (match?.id) {
+      const sent = await publishReaction(paidAnimationToReactionType(anim.id))
+      if (!sent.ok) {
+        setAnimationNotice('Animation non synchronisée (cloud indisponible).')
+        window.setTimeout(() => setAnimationNotice(null), 1800)
+      }
+    }
     setAnimationsOpen(false)
     setAnimationNotice(`${anim.emoji} ${anim.label} activee`)
-    setActivePaidFx({ id: anim.id, label: anim.label })
     window.setTimeout(() => setAnimationNotice(null), 1600)
-    window.setTimeout(() => setActivePaidFx(null), 2200)
   }
 
-  const startLiveBroadcast = () => {
-    const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `live-${Date.now()}`,
-        username: 'Systeme',
-        text: `🔴 Vous etes en LIVE (${liveMicEnabled ? 'micro ON' : 'micro OFF'} · ${liveCamEnabled ? 'camera ON' : 'camera OFF'})`,
-        time: now,
-        avatarSeed: 'systeme-live',
-        avatarAccent: 'rose',
-        likes: 0,
-      },
-    ])
+  const startLiveBroadcast = async () => {
+    if (match?.id) {
+      await publishMessage({
+        matchId: match.id,
+        text: `🔴 Live lancé (${liveMicEnabled ? 'micro ON' : 'micro OFF'} · ${liveCamEnabled ? 'camera ON' : 'camera OFF'})`,
+      })
+    }
     setLiveBroadcastActive(true)
     setAnimationNotice(`Live demarre (${liveMicEnabled ? 'micro ON' : 'micro OFF'} · ${liveCamEnabled ? 'cam ON' : 'cam OFF'})`)
     window.setTimeout(() => setAnimationNotice(null), 1800)
     setLivePanelOpen(false)
+  }
+
+  if (waitingRouteResolution) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#03172a] p-4">
+        <div className="rounded-xl border border-[#2f5f8f] bg-[#0b2440] px-4 py-3 text-center text-sm font-semibold text-sky-100">
+          Chargement du live…
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -1011,6 +1167,11 @@ export function ChannelPage() {
                   {chatMessages.map((msg) => (
                     <ChatMessage key={msg.id} message={msg} onToggleLike={onToggleLikeMessage} />
                   ))}
+                  {chatMessages.length === 0 ? (
+                    <div className="rounded-lg border border-[#3a6690]/60 bg-[#0c2339]/80 p-3 text-center text-[11px] font-semibold text-sky-200/80">
+                      Aucun message réel pour le moment.
+                    </div>
+                  ) : null}
                   <div ref={chatBottomRef} />
                 </>
               )}
@@ -1121,15 +1282,15 @@ export function ChannelPage() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder={chatLocked ? 'Le tchat ouvre 5 min avant le match' : 'Écrire un message...'}
-                disabled={chatLocked}
+                disabled={chatLocked || !isCloudChatConfigured}
                 className="min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-sm text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3"
               />
               <button
                 type="submit"
-                disabled={chatLocked}
+                disabled={chatLocked || !isCloudChatConfigured}
                 className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 md:px-4 md:text-sm"
               >
-                {chatLocked ? 'Bientôt' : 'Envoyer'}
+                {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : 'Envoyer'}
               </button>
             </form>
             </div>
@@ -1580,24 +1741,36 @@ export function ChannelPage() {
           <div
             className={`absolute inset-[-16%] animate-[tf-goal-bg_1100ms_ease-out_forwards] ${
               fullscreenEvent.kind === 'goal'
-                ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.46),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+                ? ''
                 : fullscreenEvent.kind === 'card'
-                  ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+                  ? ''
                   : fullscreenEvent.kind === 'kickoff'
                     ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
                     : 'bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
             }`}
+            style={
+              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
+                ? {
+                    background: `radial-gradient(circle at 50% 50%, color-mix(in srgb, ${fullscreenAccentColor} 52%, transparent), rgba(6,17,30,0.12) 55%, transparent 78%)`,
+                  }
+                : undefined
+            }
           />
           <div
             className={`absolute inset-0 border-[5px] animate-[tf-live-rim-pulse_850ms_ease-in-out_2] ${
               fullscreenEvent.kind === 'goal'
-                ? 'border-emerald-300/85'
+                ? ''
                 : fullscreenEvent.kind === 'card'
-                  ? 'border-rose-300/85'
+                  ? ''
                   : fullscreenEvent.kind === 'kickoff'
                     ? 'border-sky-300/85'
                     : 'border-violet-300/85'
             }`}
+            style={
+              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
+                ? { borderColor: `color-mix(in srgb, ${fullscreenAccentColor} 72%, white)` }
+                : undefined
+            }
           />
 
           {fullscreenEvent.kind === 'goal'
@@ -1610,8 +1783,15 @@ export function ChannelPage() {
               ].map(([l, t, size, d], i) => (
                 <span
                   key={`goal-word-${i}`}
-                  className={`absolute font-black uppercase tracking-widest text-emerald-200/85 ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
-                  style={{ left: l, top: t, animationDelay: `${d}ms` }}
+                  className={`absolute font-black uppercase tracking-widest ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
+                  style={{
+                    left: l,
+                    top: t,
+                    animationDelay: `${d}ms`,
+                    color: fullscreenAccentColor
+                      ? `color-mix(in srgb, ${fullscreenAccentColor} 62%, white)`
+                      : undefined,
+                  }}
                 >
                   GOAL
                 </span>
@@ -1661,14 +1841,22 @@ export function ChannelPage() {
             <div
               className={`w-full max-w-xl rounded-2xl border px-7 py-5 text-center shadow-2xl backdrop-blur-md [transform:translateZ(0)] ${
                 fullscreenEvent.kind === 'goal'
-                  ? 'border-emerald-300/80 bg-[#07221e]/82'
+                  ? ''
                   : fullscreenEvent.kind === 'card'
-                    ? 'border-rose-300/85 bg-[#2a0f16]/82'
+                    ? ''
                     : fullscreenEvent.kind === 'kickoff'
                       ? 'border-sky-300/85 bg-[#0b1f35]/84'
                       : 'border-violet-300/85 bg-[#1a1333]/82'
               }`}
               style={{
+                borderColor:
+                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
+                    ? `color-mix(in srgb, ${fullscreenAccentColor} 72%, white)`
+                    : undefined,
+                background:
+                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
+                    ? `color-mix(in srgb, ${fullscreenAccentColor} 22%, #091425)`
+                    : undefined,
                 animation:
                   fullscreenEvent.kind === 'var'
                     ? 'tf-commentary-in 380ms ease-out forwards'
@@ -1679,13 +1867,18 @@ export function ChannelPage() {
               <p
                 className={`mt-1 text-5xl font-black tracking-wider ${
                   fullscreenEvent.kind === 'goal'
-                    ? 'text-emerald-200 animate-[tf-goal-shake_760ms_ease-out_1]'
+                    ? 'animate-[tf-goal-shake_760ms_ease-out_1]'
                     : fullscreenEvent.kind === 'card'
-                      ? 'text-rose-200 animate-[tf-goal-shake_760ms_ease-out_1]'
+                      ? 'animate-[tf-goal-shake_760ms_ease-out_1]'
                       : fullscreenEvent.kind === 'kickoff'
                         ? 'text-sky-200 animate-[tf-goal-shake_760ms_ease-out_1]'
                         : 'text-violet-200'
                 }`}
+                style={
+                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
+                    ? { color: `color-mix(in srgb, ${fullscreenAccentColor} 75%, white)` }
+                    : undefined
+                }
               >
                 {fullscreenEvent.kind === 'goal'
                   ? '⚽'

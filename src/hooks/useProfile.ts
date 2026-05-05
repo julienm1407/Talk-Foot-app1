@@ -6,6 +6,7 @@ import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../data/characterPre
 import { defaultUserProfile } from '../data/userAppStateDefaults'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { resolveAvatarLoadout, styleCatalog } from '../data/avatar2dCatalog'
 
 export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
 
@@ -43,6 +44,12 @@ function isUserProfileStored(p: unknown): boolean {
     o.profilePhotoDataUrl != null &&
     (typeof o.profilePhotoDataUrl !== 'string' || !o.profilePhotoDataUrl.startsWith('data:image/'))
   ) {
+    return false
+  }
+  if (o.avatarLoadout != null && (typeof o.avatarLoadout !== 'object' || Array.isArray(o.avatarLoadout))) {
+    return false
+  }
+  if (o.premiumInventory != null && (typeof o.premiumInventory !== 'object' || Array.isArray(o.premiumInventory))) {
     return false
   }
   return true
@@ -159,6 +166,19 @@ export function useProfile() {
         return {
           ...p,
           equippedItems: { ...current, [slot]: itemId },
+          avatarLoadout: {
+            ...resolveAvatarLoadout(p),
+            ...(slot === 'jersey' ? { kit: itemId } : {}),
+            ...(slot === 'accessory' ? { accessory: itemId } : {}),
+          },
+          premiumInventory: {
+            ownedItemIds: Array.from(new Set([...(p.premiumInventory?.ownedItemIds ?? []), itemId])),
+            equippedByCategory: {
+              ...(p.premiumInventory?.equippedByCategory ?? {}),
+              ...(slot === 'jersey' ? { kit: itemId } : {}),
+              ...(slot === 'accessory' ? { accessory: itemId } : {}),
+            },
+          },
         }
       })
     },
@@ -168,6 +188,7 @@ export function useProfile() {
   const unequipSlot = useCallback(
     (slot: AvatarSlot) => {
       setProfileStore((p) => ({
+        ...(p as UserProfile),
         ...p,
         equippedItems: {
           scarf: null,
@@ -176,6 +197,19 @@ export function useProfile() {
           accessory: null,
           ...(p.equippedItems && typeof p.equippedItems === 'object' ? p.equippedItems : {}),
           [slot]: null,
+        },
+        avatarLoadout: {
+          ...resolveAvatarLoadout(p),
+          ...(slot === 'jersey' ? { kit: 'kit-default' } : {}),
+          ...(slot === 'accessory' ? { accessory: 'accessory-default' } : {}),
+        },
+        premiumInventory: {
+          ownedItemIds: p.premiumInventory?.ownedItemIds ?? [],
+          equippedByCategory: {
+            ...(p.premiumInventory?.equippedByCategory ?? {}),
+            ...(slot === 'jersey' ? { kit: undefined } : {}),
+            ...(slot === 'accessory' ? { accessory: undefined } : {}),
+          },
         },
       }))
     },
@@ -186,7 +220,20 @@ export function useProfile() {
     (itemId: string) => {
       setProfileStore((p) => {
         const ids = Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []
-        return ids.includes(itemId) ? p : { ...p, ownedItemIds: [...ids, itemId] }
+        const nextOwned = ids.includes(itemId) ? ids : [...ids, itemId]
+        return {
+          ...p,
+          ownedItemIds: nextOwned,
+          premiumInventory: {
+            ownedItemIds: Array.from(
+              new Set([
+                ...(p.premiumInventory?.ownedItemIds ?? []),
+                ...styleCatalog.filter((s) => s.id === itemId).map((s) => s.id),
+              ]),
+            ),
+            equippedByCategory: p.premiumInventory?.equippedByCategory ?? {},
+          },
+        }
       })
     },
     [setProfileStore],
@@ -196,7 +243,16 @@ export function useProfile() {
     (patch: Partial<AvatarCharacterLook>) => {
       setProfileStore((p) => {
         const base = mergeCharacterLook(p.characterLook ?? {})
-        return { ...p, characterLook: { ...base, ...patch } }
+        return {
+          ...p,
+          characterLook: { ...base, ...patch },
+          avatarLoadout: {
+            ...resolveAvatarLoadout(p),
+            ...(patch.skinTone ? { skinColor: patch.skinTone } : {}),
+            ...(patch.eyeColor ? { eyeColor: patch.eyeColor } : {}),
+            ...(patch.hairColor ? { hairColor: patch.hairColor } : {}),
+          },
+        }
       })
     },
     [setProfileStore],
@@ -267,6 +323,24 @@ export function useProfile() {
       })(),
       characterLook: mergeCharacterLook(profile.characterLook),
       jerseyCustomizations,
+      avatarLoadout: resolveAvatarLoadout(profile),
+      premiumInventory: {
+        ownedItemIds: Array.from(
+          new Set([
+            ...(profile.premiumInventory?.ownedItemIds ?? []),
+            ...(Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []).filter((id) =>
+              styleCatalog.some((it) => it.id === id),
+            ),
+          ]),
+        ),
+        equippedByCategory: {
+          kit: profile.premiumInventory?.equippedByCategory?.kit ?? profile.equippedItems?.jersey ?? undefined,
+          accessory:
+            profile.premiumInventory?.equippedByCategory?.accessory ??
+            profile.equippedItems?.accessory ??
+            undefined,
+        },
+      },
     }
   }, [profile, computedLevel])
 

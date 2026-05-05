@@ -9,8 +9,8 @@ import type { Highlight } from '../data/highlights'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
 
-/** Live : un peu moins agressif sur le quota (CDN + relais). */
-const LIVE_POLL_MS = 90_000
+/** Live : cadence renforcée pour éviter les buts invisibles sans F5. */
+const LIVE_POLL_MS = 12_000
 
 /**
  * Statistiques équipe (`statistics` + `statistics.type`) pour un match live ou terminé.
@@ -69,7 +69,7 @@ export function useSportMonksFixtureLiveStats(
     }
 
     runRef.current = run
-    if (!pollLive) void run()
+    void run()
 
     return () => {
       cancelledRef.current = true

@@ -2,7 +2,7 @@ import type { AvatarItem, MedalPack } from '../types/profile'
 import { baseAvatarItems, medalPacks } from '../data/shop'
 import { inspiredJerseyItems } from '../data/inspiredJerseys'
 
-export type CatalogFilter = 'all' | 'accessories' | 'jerseys' | 'medals_eur'
+export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'medals_eur'
 
 export type CatalogSort = 'featured' | 'price_medals_asc' | 'price_medals_desc' | 'rarity_desc'
 
@@ -36,13 +36,12 @@ function matchesPackQuery(pack: MedalPack, q: string): boolean {
 
 export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogRow[] {
   const q = query.trim().toLowerCase()
-  const inspiredIds = new Set(inspiredJerseyItems.map((x) => x.id))
   let items = [...baseAvatarItems, ...inspiredJerseyItems]
 
   if (filter === 'accessories') {
-    items = items.filter((i) => i.slot === 'scarf' || i.slot === 'hat' || i.slot === 'accessory')
-  } else if (filter === 'jerseys') {
-    items = items.filter((i) => i.slot === 'jersey' || inspiredIds.has(i.id))
+    items = items.filter((i) => i.slot === 'accessory')
+  } else if (filter === 'kits') {
+    items = items.filter((i) => i.slot === 'jersey')
   } else if (filter === 'medals_eur') {
     items = []
   }

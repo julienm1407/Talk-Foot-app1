@@ -140,8 +140,7 @@ export const medalPacks: MedalPack[] = [
 ]
 
 const dailyOfferPool: AvatarItem[] = [
-  ...inspiredJerseyItems,
-  ...baseAvatarItems.filter((i) => i.slot === 'scarf' || i.slot === 'hat' || i.slot === 'accessory'),
+  ...avatarItems.filter((i) => i.slot === 'jersey' || i.slot === 'accessory'),
 ]
 
 /** Rotation quotidienne déterministe (offre du jour). */
