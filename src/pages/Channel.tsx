@@ -210,10 +210,11 @@ function ChatMessage({
   )
 }
 
-function PlayerBadge({ name, className }: { name: string; className: string }) {
+function PlayerBadge({ name, className, style }: { name: string; className?: string; style?: React.CSSProperties }) {
   return (
     <div
-      className={`absolute max-w-[30%] truncate rounded-md border border-cyan-200/55 bg-[#062235]/92 px-1.5 py-1 text-[9px] font-bold leading-none text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)] backdrop-blur-[1px] ${className}`}
+      className={`absolute max-w-[30%] truncate rounded-md border border-cyan-200/55 bg-[#062235]/92 px-1.5 py-1 text-[9px] font-bold leading-none text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)] backdrop-blur-[1px] ${className ?? ''}`}
+      style={style}
       title={name}
     >
       {compactPlayerLabel(name)}
@@ -628,6 +629,67 @@ export function ChannelPage() {
     return away.map((p) => (typeof p === 'string' ? p : p.label))
   }, [starters])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
+  const displayedLineupPlayers = useMemo(
+    () => (lineupSide === 'home' ? starters?.home ?? [] : starters?.away ?? []),
+    [lineupSide, starters],
+  )
+  const displayedLineupBadges = useMemo(() => {
+    const fallback = [
+      { left: 50, top: 18 },
+      { left: 23, top: 50 },
+      { left: 77, top: 50 },
+      { left: 20, top: 92 },
+      { left: 50, top: 86 },
+      { left: 80, top: 92 },
+      { left: 13, top: 136 },
+      { left: 36, top: 144 },
+      { left: 64, top: 144 },
+      { left: 87, top: 136 },
+      { left: 50, top: 232 },
+    ]
+
+    const parsed = displayedLineupPlayers
+      .slice(0, 11)
+      .map((p, index) => {
+        if (typeof p === 'string') return { name: p, index }
+        const ff = p.formationField
+        if (!ff) return { name: p.label, index, formationPosition: p.formationPosition }
+        const [rowRaw, colRaw] = ff.split(':').map((x) => Number(x.trim()))
+        const row = Number.isFinite(rowRaw) ? rowRaw : null
+        const col = Number.isFinite(colRaw) ? colRaw : null
+        return { name: p.label, index, row, col, formationPosition: p.formationPosition }
+      })
+      .filter((p) => p.name.trim().length > 0)
+
+    const positioned = parsed.filter((p) => p.row != null && p.col != null)
+    if (positioned.length < 7) {
+      return parsed.map((p, i) => ({
+        name: p.name,
+        left: fallback[i]?.left ?? 50,
+        top: fallback[i]?.top ?? 120,
+      }))
+    }
+
+    const rows = [...new Set(positioned.map((p) => p.row as number))].sort((a, b) => a - b)
+    const gk = positioned.find((p) => p.formationPosition === 1)
+    const invert = gk ? (gk.row as number) <= Math.min(...rows) : true
+    const rowIndexByValue = new Map(rows.map((v, i) => [v, i] as const))
+    const rowCount = Math.max(1, rows.length - 1)
+
+    return parsed.map((p, i) => {
+      if (p.row == null || p.col == null) {
+        return { name: p.name, left: fallback[i]?.left ?? 50, top: fallback[i]?.top ?? 120 }
+      }
+      const rowPlayers = positioned.filter((x) => x.row === p.row).sort((a, b) => (a.col as number) - (b.col as number))
+      const slot = Math.max(0, rowPlayers.findIndex((x) => x === p))
+      const rowSlots = Math.max(1, rowPlayers.length - 1)
+      const x = rowPlayers.length === 1 ? 50 : 12 + (slot / rowSlots) * 76
+      const rowIdx = rowIndexByValue.get(p.row) ?? 0
+      const normalized = rowIdx / rowCount
+      const y = invert ? 86 - normalized * 74 : 12 + normalized * 74
+      return { name: p.name, left: x, top: y }
+    })
+  }, [displayedLineupPlayers])
   const lineupAutoTimerRef = useRef<number | null>(null)
   const lineupAutoPausedUntilRef = useRef<number>(0)
   const pauseLineupAutoFor3Min = () => {
@@ -1473,17 +1535,14 @@ export function ChannelPage() {
               <div className="absolute left-7 right-7 top-5 h-[41%] rounded-md border border-white/20" />
               <div className="absolute bottom-5 left-7 right-7 h-[41%] rounded-md border border-white/20" />
 
-              <PlayerBadge name={displayedLineupNames[0] ?? 'Attaquant'} className="left-1/2 top-[18px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[1] ?? 'Ailier G'} className="left-[23%] top-[50px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[2] ?? 'Ailier D'} className="left-[77%] top-[50px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[3] ?? 'Milieu G'} className="left-[20%] top-[92px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[4] ?? 'Milieu C'} className="left-1/2 top-[86px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[5] ?? 'Milieu D'} className="left-[80%] top-[92px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[6] ?? 'Déf G'} className="left-[13%] top-[136px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[7] ?? 'DC G'} className="left-[36%] top-[144px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[8] ?? 'DC D'} className="left-[64%] top-[144px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[9] ?? 'Déf D'} className="left-[87%] top-[136px] -translate-x-1/2" />
-              <PlayerBadge name={displayedLineupNames[10] ?? 'Gardien'} className="left-1/2 bottom-[18px] -translate-x-1/2" />
+              {displayedLineupBadges.map((p, i) => (
+                <PlayerBadge
+                  key={`lineup-badge-${lineupSide}-${i}-${p.name}`}
+                  name={p.name}
+                  className="-translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${p.left}%`, top: `${p.top}%` }}
+                />
+              ))}
             </div>
           </Card>
 

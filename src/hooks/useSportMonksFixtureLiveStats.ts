@@ -8,6 +8,7 @@ import {
 import type { Highlight } from '../data/highlights'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
 /** Live : cadence renforcée pour éviter les buts invisibles sans F5. */
 const LIVE_POLL_MS = 12_000
@@ -21,13 +22,14 @@ export function useSportMonksFixtureLiveStats(
   /** Identifiant salon (`Match.id`) pour la timeline « Moments forts ». */
   channelMatchId?: string,
 ) {
+  const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, matchStatus)
   const [rows, setRows] = useState<LiveFixtureStatRow[]>([])
   const [timeline, setTimeline] = useState<Highlight[]>([])
   const [loading, setLoading] = useState(false)
   const cancelledRef = useRef(false)
   const runRef = useRef<() => void>(() => {})
 
-  const pollLive = matchStatus === 'live'
+  const pollLive = matchStatus === 'live' && !liveBundleFixture
 
   useEffect(() => {
     cancelledRef.current = false
@@ -81,6 +83,14 @@ export function useSportMonksFixtureLiveStats(
     LIVE_POLL_MS,
     Boolean(sportMonksFixtureId && pollLive),
   )
+
+  useEffect(() => {
+    if (!liveBundleFixture) return
+    setRows(extractLiveFixtureStatistics(liveBundleFixture))
+    if (channelMatchId) setTimeline(extractTimelineHighlightsFromSmFixture(liveBundleFixture, channelMatchId))
+    else setTimeline([])
+    setLoading(false)
+  }, [liveBundleFixture, channelMatchId])
 
   return { liveStatRows: rows, liveStatsLoading: loading, smTimelineHighlights: timeline }
 }

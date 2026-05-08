@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { extractMatchXGFromFixture, fetchSportMonksFixtureWithXG, type SmMatchXGTotals } from '../api/sportMonks'
+import {
+  extractMatchXGFromFixture,
+  fetchSportMonksFixtureWithXG,
+  type SmMatchXGTotals,
+} from '../api/sportMonks'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
 const POLL_LIVE_MS = 120_000
 const POLL_UPCOMING_MS = 180_000
@@ -14,6 +19,7 @@ export function useSportMonksFixtureXG(
   sportMonksFixtureId: number | undefined,
   matchStatus: 'upcoming' | 'live' | 'finished',
 ) {
+  const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, matchStatus)
   const [xg, setXg] = useState<SmMatchXGTotals | null>(null)
   const [loading, setLoading] = useState(false)
   const cancelledRef = useRef(false)
@@ -21,7 +27,7 @@ export function useSportMonksFixtureXG(
 
   const pollMs =
     matchStatus === 'live' ? POLL_LIVE_MS : matchStatus === 'upcoming' ? POLL_UPCOMING_MS : 0
-  const pollEnabled = Boolean(sportMonksFixtureId && pollMs > 0)
+  const pollEnabled = Boolean(sportMonksFixtureId && pollMs > 0 && !liveBundleFixture)
 
   useEffect(() => {
     if (!sportMonksFixtureId) {
@@ -62,6 +68,12 @@ export function useSportMonksFixtureXG(
   }, [sportMonksFixtureId, matchStatus, pollMs])
 
   useVisibilityAwareInterval(() => runRef.current(), pollMs, pollEnabled)
+
+  useEffect(() => {
+    if (!liveBundleFixture) return
+    setXg(extractMatchXGFromFixture(liveBundleFixture))
+    setLoading(false)
+  }, [liveBundleFixture])
 
   return { xgTotals: xg, xgLoading: loading }
 }

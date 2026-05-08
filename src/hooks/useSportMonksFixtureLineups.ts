@@ -8,8 +8,10 @@ import {
 } from '../api/sportMonks'
 import type { FormResult } from '../types/standings'
 import { getSportMonksToken } from '../utils/apiTokens'
+import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
 export function useSportMonksFixtureLineups(sportMonksFixtureId: number | undefined) {
+  const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, 'upcoming')
   const [bundle, setBundle] = useState<SmMatchLineupBundle | null>(null)
   const [recentForm, setRecentForm] = useState<{ home: FormResult[]; away: FormResult[] } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,6 +53,13 @@ export function useSportMonksFixtureLineups(sportMonksFixtureId: number | undefi
       cancelled = true
     }
   }, [sportMonksFixtureId])
+
+  useEffect(() => {
+    if (!liveBundleFixture) return
+    setBundle(extractMatchLineupBundleFromFixture(liveBundleFixture))
+    setRecentForm(extractSmRecentFormFromFixture(liveBundleFixture))
+    setLoading(false)
+  }, [liveBundleFixture])
 
   const starters: SmStartingXIs | null = bundle?.starters ?? null
   const formations = bundle?.formations ?? {}

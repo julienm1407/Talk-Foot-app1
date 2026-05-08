@@ -1,7 +1,12 @@
 import type { SmFixture, SmLineupRow } from './types'
 import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
 
-export type SmStartingXiPlayer = { label: string; number?: string }
+export type SmStartingXiPlayer = {
+  label: string
+  number?: string
+  formationField?: string
+  formationPosition?: number
+}
 
 export type SmStartingXIs = { home: SmStartingXiPlayer[]; away: SmStartingXiPlayer[] }
 
@@ -103,19 +108,32 @@ function formationSortKey(row: SmLineupRow): number {
 function takeXiFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
   const nonBench = rows.filter((r) => !isBenchRow(r))
   const pool = nonBench.length ? nonBench : rows
-  const items = pool
-    .map((r) => {
-      const label = playerLabel(r)
-      if (!label) return null
-      const j = jerseyNumber(r)
-      const fk = formationSortKey(r)
-      return { label, j, fk }
-    })
-    .filter((x): x is { label: string; j: number; fk: number } => x != null)
+  const items: Array<{
+    label: string
+    j: number
+    fk: number
+    formationField?: string
+    formationPosition?: number
+  }> = []
+  for (const r of pool) {
+    const label = playerLabel(r)
+    if (!label) continue
+    const j = jerseyNumber(r)
+    const fk = formationSortKey(r)
+    const formationField =
+      typeof r.formation_field === 'string' && r.formation_field.trim() ? r.formation_field.trim() : undefined
+    const formationPosition =
+      typeof r.formation_position === 'number' && Number.isFinite(r.formation_position)
+        ? r.formation_position
+        : undefined
+    items.push({ label, j, fk, formationField, formationPosition })
+  }
   items.sort((a, b) => (a.fk !== b.fk ? a.fk - b.fk : a.j - b.j))
-  return items.slice(0, 11).map(({ label, j }) => ({
+  return items.slice(0, 11).map(({ label, j, formationField, formationPosition }) => ({
     label,
     number: j < 100 ? String(j) : undefined,
+    formationField,
+    formationPosition,
   }))
 }
 

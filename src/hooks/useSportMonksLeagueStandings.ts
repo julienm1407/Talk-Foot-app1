@@ -43,7 +43,8 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
     return allKnownIds.has(inferred) ? inferred : null
   }
 
-  // Retire les équipes connues d'autres ligues (ex: PSG dans Serie A).
+  // Retire les équipes connues d'autres ligues.
+  // On exploite aussi l'id inféré depuis `displayName` quand il est fiable.
   const crossLeagueFiltered = rows.filter((r) => {
     const inferred = inferredIdFromRow(r)
     if (inferred != null) return currentIds.has(inferred)
@@ -61,12 +62,22 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
       byKey.set(key, r)
       continue
     }
+    const prevRank = Number.isFinite(prev.rank) ? prev.rank : Number.POSITIVE_INFINITY
+    const nextRank = Number.isFinite(r.rank) ? r.rank : Number.POSITIVE_INFINITY
+    if (nextRank < prevRank) {
+      byKey.set(key, r)
+      continue
+    }
+    if (nextRank > prevRank) continue
+
     const prevScore = prev.played * 1000 + prev.points * 10 + prev.gf - prev.ga
     const nextScore = r.played * 1000 + r.points * 10 + r.gf - r.ga
     if (nextScore > prevScore) byKey.set(key, r)
   }
 
-  return [...byKey.values()].sort((a, b) => a.rank - b.rank || b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga))
+  return [...byKey.values()].sort(
+    (a, b) => a.rank - b.rank || b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga),
+  )
 }
 
 /**

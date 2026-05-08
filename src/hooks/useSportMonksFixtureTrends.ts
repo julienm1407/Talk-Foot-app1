@@ -8,6 +8,7 @@ import {
 import type { FormResult } from '../types/standings'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
 const POLL_LIVE_MS = 120_000
 const POLL_UPCOMING_MS = 180_000
@@ -19,6 +20,7 @@ export function useSportMonksFixtureTrends(
   sportMonksFixtureId: number | undefined,
   matchStatus: 'upcoming' | 'live' | 'finished',
 ) {
+  const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, matchStatus)
   const [rows, setRows] = useState<FixtureTrendDisplayRow[]>([])
   const [recentForm, setRecentForm] = useState<{ home: FormResult[]; away: FormResult[] } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -27,7 +29,7 @@ export function useSportMonksFixtureTrends(
 
   const pollMs =
     matchStatus === 'live' ? POLL_LIVE_MS : matchStatus === 'upcoming' ? POLL_UPCOMING_MS : 0
-  const pollEnabled = Boolean(sportMonksFixtureId && pollMs > 0)
+  const pollEnabled = Boolean(sportMonksFixtureId && pollMs > 0 && !liveBundleFixture)
 
   useEffect(() => {
     if (!sportMonksFixtureId) {
@@ -74,6 +76,13 @@ export function useSportMonksFixtureTrends(
   }, [sportMonksFixtureId, matchStatus, pollMs])
 
   useVisibilityAwareInterval(() => runRef.current(), pollMs, pollEnabled)
+
+  useEffect(() => {
+    if (!liveBundleFixture) return
+    setRows(extractFixtureTrendRowsFromSmFixture(liveBundleFixture))
+    setRecentForm(extractSmRecentFormFromFixture(liveBundleFixture))
+    setLoading(false)
+  }, [liveBundleFixture])
 
   return { trendRows: rows, trendsLoading: loading, trendRecentForm: recentForm }
 }

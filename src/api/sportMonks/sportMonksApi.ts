@@ -26,6 +26,7 @@ import {
 
 const PER_PAGE = 50
 const MAX_PAGES = 30
+const liveBundleInflight = new Map<number, Promise<SmFixture | null>>()
 
 function asFixtureArray(data: unknown): SmFixture[] {
   if (Array.isArray(data)) return data as SmFixture[]
@@ -212,6 +213,42 @@ export async function fetchSportMonksFixtureLineups(
     { include: SM_INCLUDE_FIXTURE_LINEUPS },
   )
   return envelopeDataAsFixture(json.data)
+}
+
+/**
+ * Endpoint agrégé TalkFoot (`/api/live-bundle`) :
+ * un seul appel backend pour events + stats + comments + lineups + trends + xG.
+ * Retourne `null` si indisponible (fallback ensuite sur les appels SportMonks dédiés).
+ */
+export async function fetchTalkFootLiveBundleFixture(
+  fixtureId: number,
+): Promise<SmFixture | null> {
+  if (!Number.isFinite(fixtureId) || fixtureId <= 0) return null
+  let p = liveBundleInflight.get(fixtureId)
+  if (!p) {
+    p = (async () => {
+      const origin =
+        typeof globalThis !== 'undefined' && 'location' in globalThis
+          ? (globalThis as { location?: { origin?: string } }).location?.origin
+          : undefined
+      if (!origin) return null
+      try {
+        const res = await fetch(`${origin}/api/live-bundle?fixtureId=${fixtureId}`, { cache: 'no-store' })
+        if (!res.ok) return null
+        const body = (await res.json()) as { fixture?: unknown }
+        const fx = body?.fixture
+        if (!fx || typeof fx !== 'object') return null
+        return fx as SmFixture
+      } catch {
+        return null
+      }
+    })()
+    liveBundleInflight.set(fixtureId, p)
+    void p.finally(() => {
+      if (liveBundleInflight.get(fixtureId) === p) liveBundleInflight.delete(fixtureId)
+    })
+  }
+  return p
 }
 
 /**

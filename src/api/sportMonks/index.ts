@@ -10,6 +10,7 @@ export {
   fetchSportMonksFixtureEventsWeather,
   fetchSportMonksFixtureLineups,
   fetchSportMonksFixtureTrends,
+  fetchTalkFootLiveBundleFixture,
   fetchSportMonksTeamSchedule,
   fetchSportMonksTeamDetail,
   fetchSportMonksTeamUpcoming,
