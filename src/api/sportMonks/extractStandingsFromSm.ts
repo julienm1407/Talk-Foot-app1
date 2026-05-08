@@ -175,12 +175,13 @@ function parseDetailBlob(details: unknown): {
 } {
   const out = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: null as number | null }
   if (!Array.isArray(details)) return out
+  type MutableStats = Pick<typeof out, 'played' | 'won' | 'drawn' | 'lost' | 'gf' | 'ga'>
 
   const putBest = (
     key: 'played' | 'won' | 'drawn' | 'lost' | 'gf' | 'ga',
     value: number,
     score: number,
-    cur: Record<string, number>,
+    cur: MutableStats,
     quality: Record<string, number>,
   ) => {
     const qk = `q_${key}`
