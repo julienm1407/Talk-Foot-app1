@@ -302,6 +302,8 @@ export function LiveMatchHero({
                   id={match.home.id}
                   shortName={match.home.shortName}
                   colors={match.home.colors}
+                  logoUrl={match.home.logoUrl}
+                  sportMonksTeamId={match.home.sportMonksTeamId}
                   size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
@@ -355,6 +357,8 @@ export function LiveMatchHero({
                   id={match.away.id}
                   shortName={match.away.shortName}
                   colors={match.away.colors}
+                  logoUrl={match.away.logoUrl}
+                  sportMonksTeamId={match.away.sportMonksTeamId}
                   size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',

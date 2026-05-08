@@ -21,11 +21,21 @@ function githubPagesStaticPlugin(outDir: string): Plugin {
     name: 'github-pages-static',
     closeBundle() {
       const out = resolve(__dirname, outDir)
+      writeFileSync(resolve(out, '.nojekyll'), '')
+    },
+  }
+}
+
+/** Copie `index.html` en `404.html` pour fallback SPA au refresh (hébergeurs statiques). */
+function spa404FallbackPlugin(outDir: string): Plugin {
+  return {
+    name: 'spa-404-fallback',
+    closeBundle() {
+      const out = resolve(__dirname, outDir)
       const indexHtml = resolve(out, 'index.html')
       if (existsSync(indexHtml)) {
         copyFileSync(indexHtml, resolve(out, '404.html'))
       }
-      writeFileSync(resolve(out, '.nojekyll'), '')
     },
   }
 }
@@ -212,7 +222,7 @@ export default defineConfig(({ mode }) => {
   /** Aligné sur `base` : URLs publiques complètes (ex. GitHub Pages sous /Talk-Foot-app1/). */
   const publicPathPrefix = GITHUB_PAGES ? GH_PAGES_BASE.replace(/\/$/, '') : ''
 
-  const plugins: PluginOption[] = [react(), sportMonksRelayDevPlugin(mode)]
+  const plugins: PluginOption[] = [react(), sportMonksRelayDevPlugin(mode), spa404FallbackPlugin(outDir)]
   if (GITHUB_PAGES) plugins.push(githubPagesStaticPlugin('docs'))
   if (siteUrl) plugins.push(tfSitemapRobotsPlugin(outDir, siteUrl, publicPathPrefix))
 

@@ -48,7 +48,14 @@ function HomeResultPreviewCard({ match }: { match: Match }) {
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={28} />
+          <ClubCrest
+            id={match.home.id}
+            shortName={match.home.shortName}
+            colors={match.home.colors}
+            logoUrl={match.home.logoUrl}
+            sportMonksTeamId={match.home.sportMonksTeamId}
+            size={28}
+          />
           <span className="truncate text-xs font-black text-tf-app-fg">{match.home.shortName}</span>
         </div>
         <p className="shrink-0 font-display text-lg font-black tabular-nums text-tf-app-fg sm:text-xl">
@@ -58,7 +65,14 @@ function HomeResultPreviewCard({ match }: { match: Match }) {
         </p>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
           <span className="truncate text-right text-xs font-black text-tf-app-fg">{match.away.shortName}</span>
-          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={28} />
+          <ClubCrest
+            id={match.away.id}
+            shortName={match.away.shortName}
+            colors={match.away.colors}
+            logoUrl={match.away.logoUrl}
+            sportMonksTeamId={match.away.sportMonksTeamId}
+            size={28}
+          />
         </div>
       </div>
       <span

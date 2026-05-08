@@ -418,7 +418,13 @@ function TeamStack({
   align,
   size = 56,
 }: {
-  team: { id?: string; shortName: string; colors: { primary: string; secondary: string } }
+  team: {
+    id?: string
+    shortName: string
+    colors: { primary: string; secondary: string }
+    logoUrl?: string
+    sportMonksTeamId?: number
+  }
   align: 'left' | 'right'
   size?: number
 }) {
@@ -428,6 +434,8 @@ function TeamStack({
         id={team.id ?? team.shortName}
         shortName={team.shortName}
         colors={team.colors}
+        logoUrl={team.logoUrl}
+        sportMonksTeamId={team.sportMonksTeamId}
         size={size}
         className="shrink-0"
       />

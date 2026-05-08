@@ -358,14 +358,13 @@ export function CalendarPage() {
           : 'text-tf-app-muted hover:bg-white/[0.06] hover:text-tf-app-fg',
     )
 
-  const quickCompetitionChips = useMemo(() => {
+  const quickCompetitionChips = (() => {
     const base = competitions.slice(0, 4)
     if (competitionId === 'all') return base
     if (base.some((c) => c.id === competitionId)) return base
     const selected = competitions.find((c) => c.id === competitionId)
     return selected ? [...base.slice(0, 3), selected] : base
-  }, [competitions, competitionId])
-
+  })()
   return (
     <div className="mx-auto w-full max-w-tf-wide space-y-tf-6 pb-tf-10 sm:space-y-tf-8">
       <header

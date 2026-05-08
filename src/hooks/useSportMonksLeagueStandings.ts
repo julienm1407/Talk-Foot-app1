@@ -6,9 +6,10 @@ import {
   fetchSportMonksStandingsLiveByLeague,
   fetchSportMonksTeamsBySeason,
 } from '../api/sportMonks'
-import { SM_LEAGUE_ID_BY_TALKFOOT_COMP } from '../api/footballApi'
+import { apiNameToOurId, SM_LEAGUE_ID_BY_TALKFOOT_COMP } from '../api/footballApi'
 import type { BigFiveLeagueId, LeagueStandingRow } from '../data/leagueStandings'
 import { SPORTMONKS_STANDING_SEASON_ID_BY_LEAGUE } from '../data/sportMonksStandingSeasons'
+import { teams } from '../data/teams'
 import { getSportMonksToken } from '../utils/apiTokens'
 
 function envSeasonFallback(): number | undefined {
@@ -19,6 +20,54 @@ function envSeasonFallback(): number | undefined {
 }
 
 export type StandingsDataSource = 'live' | 'season' | 'teamsSeason' | null
+
+function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagueId): LeagueStandingRow[] {
+  const idsByLeague = new Map<string, Set<string>>()
+  for (const [lid, list] of Object.entries(teams)) {
+    idsByLeague.set(
+      lid,
+      new Set((list as ReadonlyArray<{ id: string }>).map((t) => t.id)),
+    )
+  }
+  const currentIds = idsByLeague.get(leagueId) ?? new Set<string>()
+  const allKnownIds = new Set<string>()
+  for (const ids of idsByLeague.values()) {
+    for (const id of ids) allKnownIds.add(id)
+  }
+
+  const inferredIdFromRow = (r: LeagueStandingRow): string | null => {
+    if (allKnownIds.has(r.teamId)) return r.teamId
+    const label = r.displayName?.trim()
+    if (!label) return null
+    const inferred = apiNameToOurId(label)
+    return allKnownIds.has(inferred) ? inferred : null
+  }
+
+  // Retire les équipes connues d'autres ligues (ex: PSG dans Serie A).
+  const crossLeagueFiltered = rows.filter((r) => {
+    const inferred = inferredIdFromRow(r)
+    if (inferred != null) return currentIds.has(inferred)
+    if (allKnownIds.has(r.teamId)) return currentIds.has(r.teamId)
+    return true
+  })
+
+  // Déduplique les lignes par équipe canonique (évite les doublons PSG, etc.).
+  const byKey = new Map<string, LeagueStandingRow>()
+  for (const r of crossLeagueFiltered) {
+    const inferred = inferredIdFromRow(r)
+    const key = inferred != null ? `canon:${inferred}` : `raw:${r.teamId}`
+    const prev = byKey.get(key)
+    if (!prev) {
+      byKey.set(key, r)
+      continue
+    }
+    const prevScore = prev.played * 1000 + prev.points * 10 + prev.gf - prev.ga
+    const nextScore = r.played * 1000 + r.points * 10 + r.gf - r.ga
+    if (nextScore > prevScore) byKey.set(key, r)
+  }
+
+  return [...byKey.values()].sort((a, b) => a.rank - b.rank || b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga))
+}
 
 /**
  * Classement Big 5 :
@@ -97,7 +146,7 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
           }
         }
 
-        setRows(next)
+        setRows(sanitizeRowsForLeague(next, leagueId))
         setSource(src)
         setError(next.length ? null : lastError)
       } catch (e) {

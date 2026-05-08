@@ -258,9 +258,15 @@ export function smFixtureToMatch(f: SmFixture): Match {
   const { home: hn, away: an, homeSmId, awaySmId, homeLogoUrl, awayLogoUrl } = namesFromParticipants(f)
   const home = getTeam(compId, hn, homeSmId, homeLogoUrl)
   const away = getTeam(compId, an, awaySmId, awayLogoUrl)
-  const status = smStatus(f)
+  const statusFromProvider = smStatus(f)
   const id = `m-sm-${f.id}`
   const kickoffAt = startingAtIso(f)
+  const kickoffMs = Date.parse(kickoffAt)
+  const nowMs = Date.now()
+  const hasFutureKickoff = Number.isFinite(kickoffMs) && kickoffMs > nowMs + 60_000
+  // Garde-fou: certaines fixtures SM peuvent exposer un état "finished" alors que
+  // la date de coup d'envoi est encore future; on évite d'afficher un faux "Terminé".
+  const status = hasFutureKickoff && statusFromProvider === 'finished' ? 'upcoming' : statusFromProvider
   const score = goalsFromScores(f.scores)
 
   const roundId =

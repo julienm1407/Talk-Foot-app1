@@ -16,6 +16,33 @@ function parseNum(raw: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+function parseGoalDiff(raw: Record<string, unknown>): number | null {
+  return parseNum(
+    raw.goal_difference ??
+      raw.goals_difference ??
+      raw.goal_diff ??
+      raw.goals_diff ??
+      raw.gd ??
+      raw.diff ??
+      raw.difference,
+  )
+}
+
+function resolveGoalsAgainst(
+  gf: number | null,
+  gaRaw: number | null,
+  gd: number | null,
+): number | null {
+  if (gf == null || gd == null) return gaRaw
+  const gaFromDiff = gf - gd
+  if (!Number.isFinite(gaFromDiff) || gaFromDiff < 0) return gaRaw
+  if (gaRaw == null) return gaFromDiff
+  const rawDiff = Math.round(gf - gaRaw)
+  const expectedDiff = Math.round(gd)
+  if (Math.round(gaRaw) === expectedDiff || rawDiff !== expectedDiff) return gaFromDiff
+  return gaRaw
+}
+
 function parseForm(raw: unknown): FormResult[] {
   if (typeof raw === 'string') {
     const parts = raw
@@ -144,8 +171,9 @@ function parseDetailBlob(details: unknown): {
   lost: number
   gf: number
   ga: number
+  gd: number | null
 } {
-  const out = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0 }
+  const out = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: null as number | null }
   if (!Array.isArray(details)) return out
 
   const putBest = (
@@ -223,6 +251,8 @@ function parseDetailBlob(details: unknown): {
       putBest('gf', val, score, out, quality)
     } else if (/CONCED|AGAINST|GOALS?\s*AG|GA\b|ENC/i.test(blob)) {
       putBest('ga', val, score, out, quality)
+    } else if (/GOAL.*DIFF|GOALS?.*DIFF|\bGD\b|DIFFERENCE/i.test(blob)) {
+      out.gd = val
     }
   }
 
@@ -285,7 +315,9 @@ function parseOverallBlock(row: Record<string, unknown>): Partial<{
   const drawn = parseNum(g.draws ?? g.draw ?? g.drawn)
   const lost = parseNum(g.losses ?? g.loss ?? g.lost)
   const gf = parseNum(g.goals_scored ?? g.goals_for ?? g.scored)
-  const ga = parseNum(g.goals_against ?? g.against ?? g.conceded)
+  const gd = parseGoalDiff(g)
+  const gaRaw = parseNum(g.goals_against ?? g.conceded ?? g.against)
+  const ga = resolveGoalsAgainst(gf, gaRaw, gd)
   if (played != null) partial.played = played
   if (won != null) partial.won = won
   if (drawn != null) partial.drawn = drawn
@@ -316,7 +348,9 @@ function parseTopLevelBlock(row: Record<string, unknown>): Partial<{
   const drawn = parseNum(row.drawn ?? row.draws ?? row.draw)
   const lost = parseNum(row.lost ?? row.losses ?? row.loss)
   const gf = parseNum(row.goals_for ?? row.goals_scored ?? row.scored)
-  const ga = parseNum(row.goals_against ?? row.conceded ?? row.against)
+  const gd = parseGoalDiff(row)
+  const gaRaw = parseNum(row.goals_against ?? row.conceded ?? row.against)
+  const ga = resolveGoalsAgainst(gf, gaRaw, gd)
   if (played != null) partial.played = played
   if (won != null) partial.won = won
   if (drawn != null) partial.drawn = drawn
@@ -347,7 +381,9 @@ function parseDirectStandingsCore(row: Record<string, unknown>): Partial<{
   const drawn = parseNum(row.drawn ?? row.draws ?? row.draw)
   const lost = parseNum(row.lost ?? row.losses ?? row.loss)
   const gf = parseNum(row.goals_for ?? row.goals_scored ?? row.scored)
-  const ga = parseNum(row.goals_against ?? row.conceded ?? row.against)
+  const gd = parseGoalDiff(row)
+  const gaRaw = parseNum(row.goals_against ?? row.conceded ?? row.against)
+  const ga = resolveGoalsAgainst(gf, gaRaw, gd)
   if (played != null) partial.played = played
   if (won != null) partial.won = won
   if (drawn != null) partial.drawn = drawn
@@ -417,7 +453,8 @@ export function extractLeagueStandingRowsFromSmTeamsSeasonEnvelope(
     const ov = parseOverallBlock(team)
     if (ov) d = { ...d, ...ov }
 
-    const { won, drawn, lost, gf, ga } = d
+    const { won, drawn, lost, gf } = d
+    const ga = resolveGoalsAgainst(gf, d.ga, d.gd)
     let played = d.played
     const pointsFromStats = parsePointsFromStatisticDetails(flat)
     const points =
@@ -426,10 +463,11 @@ export function extractLeagueStandingRowsFromSmTeamsSeasonEnvelope(
         : Math.round(Math.max(0, won * 3 + drawn))
     if (!played && won + drawn + lost > 0) played = won + drawn + lost
     if (!played) played = Math.max(1, won + drawn + lost)
-    if (flat.length === 0 && !ov && points === 0 && won + drawn + lost === 0 && gf === 0 && ga === 0) continue
+    if (flat.length === 0 && !ov && points === 0 && won + drawn + lost === 0 && gf === 0 && (ga ?? 0) === 0)
+      continue
 
     const form: FormResult[] = []
-    const base = { played, won, drawn, lost, gf, ga, points, form }
+    const base = { played, won, drawn, lost, gf, ga: ga ?? 0, points, form }
     const idx = derivedIndices(base)
 
     rows.push({
@@ -440,7 +478,7 @@ export function extractLeagueStandingRowsFromSmTeamsSeasonEnvelope(
       drawn,
       lost,
       gf,
-      ga,
+      ga: ga ?? 0,
       points,
       form,
       ...idx,
@@ -505,7 +543,9 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
     const ov = parseOverallBlock(row)
     if (ov) d = { ...d, ...ov }
 
-    const { won, drawn, lost, gf, ga } = d
+    const { won, drawn, lost, gf } = d
+    const rowGd = parseGoalDiff(row)
+    const ga = resolveGoalsAgainst(gf, d.ga, rowGd ?? d.gd)
     let played = d.played
     const sumWdl = won + drawn + lost
     if (played > 0 && sumWdl > played) played = sumWdl
@@ -514,7 +554,7 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
 
     const form = parseForm(row.form)
 
-    const base = { played, won, drawn, lost, gf, ga, points, form }
+    const base = { played, won, drawn, lost, gf, ga: ga ?? 0, points, form }
     const idx = derivedIndices(base)
 
     rows.push({
@@ -525,7 +565,7 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
       drawn,
       lost,
       gf,
-      ga,
+      ga: ga ?? 0,
       points,
       form,
       ...idx,

@@ -30,7 +30,15 @@ function MatchFavChip({ m, light }: { m: Match; light: boolean }) {
         live && (light ? 'ring-1 ring-rose-200/60' : 'ring-1 ring-rose-500/45'),
       )}
     >
-      <ClubCrest id={m.home.id} shortName={m.home.shortName} colors={m.home.colors} size={14} className="shrink-0" />
+      <ClubCrest
+        id={m.home.id}
+        shortName={m.home.shortName}
+        colors={m.home.colors}
+        logoUrl={m.home.logoUrl}
+        sportMonksTeamId={m.home.sportMonksTeamId}
+        size={14}
+        className="shrink-0"
+      />
       <span
         className={cn(
           'min-w-0 truncate text-[9px] font-black leading-none',
@@ -50,7 +58,15 @@ function MatchFavChip({ m, light }: { m: Match; light: boolean }) {
       >
         {m.away.shortName}
       </span>
-      <ClubCrest id={m.away.id} shortName={m.away.shortName} colors={m.away.colors} size={14} className="shrink-0" />
+      <ClubCrest
+        id={m.away.id}
+        shortName={m.away.shortName}
+        colors={m.away.colors}
+        logoUrl={m.away.logoUrl}
+        sportMonksTeamId={m.away.sportMonksTeamId}
+        size={14}
+        className="shrink-0"
+      />
       <span
         className={cn(
           'ml-0.5 inline-flex shrink-0 items-center gap-0.5 border-l pl-1.5',

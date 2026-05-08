@@ -57,7 +57,14 @@ function RailMatchChip({ match, light }: { match: Match; light: boolean }) {
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={36} />
+          <ClubCrest
+            id={match.home.id}
+            shortName={match.home.shortName}
+            colors={match.home.colors}
+            logoUrl={match.home.logoUrl}
+            sportMonksTeamId={match.home.sportMonksTeamId}
+            size={36}
+          />
           <span className="truncate text-sm font-black text-tf-app-fg">{match.home.shortName}</span>
         </div>
         {isLive ? (
@@ -69,7 +76,14 @@ function RailMatchChip({ match, light }: { match: Match; light: boolean }) {
         )}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <span className="truncate text-right text-sm font-black text-tf-app-fg">{match.away.shortName}</span>
-          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={36} />
+          <ClubCrest
+            id={match.away.id}
+            shortName={match.away.shortName}
+            colors={match.away.colors}
+            logoUrl={match.away.logoUrl}
+            sportMonksTeamId={match.away.sportMonksTeamId}
+            size={36}
+          />
         </div>
       </div>
       {!isLive ? (

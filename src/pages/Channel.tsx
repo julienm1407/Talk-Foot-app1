@@ -253,6 +253,7 @@ export function ChannelPage() {
   const homeScore = displayScore.home
   const awayScore = displayScore.away
   const status = match?.status ?? 'upcoming'
+  const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? 'channel-demo-match')
   const { odds1x2, oddsOverUnder25, oddsLoading } = useSportMonksRound1x2Odds(
@@ -414,6 +415,7 @@ export function ChannelPage() {
 
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
+    if (isFinished) return
     if (chatLocked) return
     if (!match?.id) return
     const text = draft.trim()
@@ -592,6 +594,7 @@ export function ChannelPage() {
   )
 
   useEffect(() => {
+    if (status !== 'live') return
     if (!currentHighlight?.id) return
     if (currentHighlight.id === lastApiHighlightId) return
     const t = String(currentHighlight.type || '').toLowerCase()
@@ -612,7 +615,7 @@ export function ChannelPage() {
       launchFullscreenEvent('var', 'VAR', `${currentHighlight.minute}' ${currentHighlightText}`, 5200)
       setLastApiHighlightId(currentHighlight.id)
     }
-  }, [currentHighlight, currentHighlightText, lastApiHighlightId, launchFullscreenEvent, detectHighlightSide, homeName, awayName])
+  }, [currentHighlight, currentHighlightText, lastApiHighlightId, launchFullscreenEvent, detectHighlightSide, homeName, awayName, status])
   const kickoffLabel = match?.kickoffAt
     ? new Date(match.kickoffAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     : '21:00'
@@ -1071,6 +1074,7 @@ export function ChannelPage() {
         </div>
 
         <div className="tf-live-col min-w-0 space-y-2 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] md:flex md:h-full md:flex-col">
+          {!isFinished ? (
           <Card
             className={`tf-card-chat relative overflow-hidden ${
               status === 'upcoming' ? 'min-h-[220px] md:min-h-[260px]' : 'min-h-[260px] md:min-h-[320px]'
@@ -1295,6 +1299,7 @@ export function ChannelPage() {
             </form>
             </div>
           </Card>
+          ) : null}
 
           <Card
             className={`tf-card-live md:flex md:flex-1 md:flex-col ${
@@ -1376,6 +1381,18 @@ export function ChannelPage() {
                     style={{ left: `${p[0]}%`, top: `${p[1]}%`, backgroundColor: awayColor }}
                   />
                 ))}
+                </div>
+              </div>
+            ) : isFinished ? (
+              <div className="tf-live-pitch-shell mt-2 flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-[#101c2a] p-3">
+                <div className="tf-live-soft-surface rounded-lg border border-[#3a6690]/55 bg-[#0f2740]/85 px-3 py-3 text-center">
+                  <p className="text-xs font-black uppercase tracking-wide text-sky-200/80">Match terminé</p>
+                  <p className="mt-1 text-sm font-bold text-sky-50">
+                    Score final: {homeScore} - {awayScore}
+                  </p>
+                  <p className="mt-1 text-[11px] font-semibold text-sky-200/75">
+                    Statistiques finales disponibles dans les panneaux du match.
+                  </p>
                 </div>
               </div>
             ) : (
@@ -1476,7 +1493,11 @@ export function ChannelPage() {
             }`}
           >
             <div className="md:flex-1">
-              {match ? (
+              {isFinished ? (
+                <div className="rounded-lg border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-3 text-sm font-semibold text-sky-100">
+                  Paris fermés: le match est terminé.
+                </div>
+              ) : match ? (
                 <BetWidget
                   match={match}
                   betting={betting}
@@ -1580,7 +1601,11 @@ export function ChannelPage() {
             ) : null}
             {mobilePanel === 'paris' ? (
               <div className="max-h-[45vh] overflow-y-auto">
-                {match ? (
+                {isFinished ? (
+                  <div className="rounded-md border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-2 text-xs font-semibold text-sky-100">
+                    Paris fermés: le match est terminé.
+                  </div>
+                ) : match ? (
                   <BetWidget
                     match={match}
                     betting={betting}
@@ -1704,7 +1729,7 @@ export function ChannelPage() {
           </div>
         </div>
       ) : null}
-      {activePaidFx ? (
+      {!isFinished && activePaidFx ? (
         <div className="pointer-events-none fixed inset-0 z-[94] overflow-hidden">
           {activePaidFx.id === 'fumigene' ? (
             <>
@@ -1735,7 +1760,7 @@ export function ChannelPage() {
           </div>
         </div>
       ) : null}
-      {fullscreenEvent ? (
+      {!isFinished && fullscreenEvent ? (
         <div className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
           <div className="absolute inset-0 bg-black/46 backdrop-blur-[4px]" />
           <div

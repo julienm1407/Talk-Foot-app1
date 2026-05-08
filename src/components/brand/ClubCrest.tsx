@@ -17,6 +17,7 @@ export function ClubCrest({
   shortName,
   colors,
   logoUrl,
+  sportMonksTeamId,
   size = 40,
   className,
   clickable = true,
@@ -26,6 +27,8 @@ export function ClubCrest({
   colors: { primary: string; secondary: string }
   /** URL logo officiel (prioritaire sur le blason stylisé local). */
   logoUrl?: string
+  /** Id équipe SportMonks pour fallback logo CDN si besoin. */
+  sportMonksTeamId?: number
   size?: number
   className?: string
   /** Clic blason => page club (par défaut). */
@@ -42,7 +45,11 @@ export function ClubCrest({
       : variant === 1
         ? `linear-gradient(135deg, ${colors.primary}, ${colors.primary}), radial-gradient(18px 18px at 70% 30%, ${colors.secondary}aa, transparent 60%)`
         : `linear-gradient(135deg, ${colors.primary}, ${colors.secondary}), repeating-linear-gradient(135deg, rgba(255,255,255,0.22) 0 8px, rgba(255,255,255,0) 8px 16px)`
-  const resolvedLogoUrl = logoUrl?.trim() || CLUB_OFFICIAL_LOGO_BY_ID[id]
+  const sportMonksFallbackLogoUrl =
+    typeof sportMonksTeamId === 'number' && Number.isFinite(sportMonksTeamId)
+      ? `https://images.sportmonks.com/images/soccer/teams/${sportMonksTeamId}.png`
+      : undefined
+  const resolvedLogoUrl = logoUrl?.trim() || CLUB_OFFICIAL_LOGO_BY_ID[id] || sportMonksFallbackLogoUrl
 
   const openClub = (ev?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
     if (!clickable) return

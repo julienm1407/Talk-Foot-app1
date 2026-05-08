@@ -68,6 +68,7 @@ export function MatchSpotlightCard({
                   shortName={match.home.shortName}
                   colors={match.home.colors}
                   logoUrl={match.home.logoUrl}
+                  sportMonksTeamId={match.home.sportMonksTeamId}
                   size={44}
                 />
                 <span className="w-full truncate text-sm font-black text-white drop-shadow-md sm:text-base">
@@ -86,6 +87,7 @@ export function MatchSpotlightCard({
                   shortName={match.away.shortName}
                   colors={match.away.colors}
                   logoUrl={match.away.logoUrl}
+                  sportMonksTeamId={match.away.sportMonksTeamId}
                   size={44}
                 />
                 <span className="w-full truncate text-sm font-black text-white drop-shadow-md sm:text-base">
@@ -161,6 +163,7 @@ export function MatchSpotlightCard({
                 shortName={match.home.shortName}
                 colors={match.home.colors}
                 logoUrl={match.home.logoUrl}
+                sportMonksTeamId={match.home.sportMonksTeamId}
                 size={48}
               />
               <span className="w-full max-w-[10rem] truncate text-sm font-black leading-tight text-white drop-shadow-md sm:max-w-[13rem] sm:text-base">
@@ -183,6 +186,7 @@ export function MatchSpotlightCard({
                 shortName={match.away.shortName}
                 colors={match.away.colors}
                 logoUrl={match.away.logoUrl}
+                sportMonksTeamId={match.away.sportMonksTeamId}
                 size={48}
               />
               <span className="w-full max-w-[10rem] truncate text-sm font-black leading-tight text-white drop-shadow-md sm:max-w-[13rem] sm:text-base">

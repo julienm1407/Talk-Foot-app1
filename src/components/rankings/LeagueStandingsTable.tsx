@@ -117,7 +117,7 @@ export function LeagueStandingsTable({
                     diff === 0 && 'text-tf-app-muted',
                   )}
                 >
-                  {Math.abs(diff)}
+                  {diff > 0 ? `+${diff}` : String(diff)}
                 </td>
                 <td className="px-2 py-2.5 text-center font-black text-tf-app-fg">{r.points}</td>
                 <td className="hidden px-1 py-2.5 text-center tabular-nums text-tf-app-muted sm:table-cell">

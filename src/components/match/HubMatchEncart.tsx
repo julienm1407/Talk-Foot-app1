@@ -325,11 +325,25 @@ export function HubStripUpcoming({
         aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
       >
         <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
-          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={22} />
+          <ClubCrest
+            id={match.home.id}
+            shortName={match.home.shortName}
+            colors={match.home.colors}
+            logoUrl={match.home.logoUrl}
+            sportMonksTeamId={match.home.sportMonksTeamId}
+            size={22}
+          />
           <span className={cn('mx-0.5 text-[9px] font-black opacity-35', L ? 'text-tf-dark' : 'text-white')}>
             –
           </span>
-          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={22} />
+          <ClubCrest
+            id={match.away.id}
+            shortName={match.away.shortName}
+            colors={match.away.colors}
+            logoUrl={match.away.logoUrl}
+            sportMonksTeamId={match.away.sportMonksTeamId}
+            size={22}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <p className={cn('truncate text-[11px] font-black leading-tight', L ? 'text-tf-dark' : 'text-white')}>
@@ -377,11 +391,25 @@ export function HubStripUpcoming({
         aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
       >
         <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
-          <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={22} />
+          <ClubCrest
+            id={match.home.id}
+            shortName={match.home.shortName}
+            colors={match.home.colors}
+            logoUrl={match.home.logoUrl}
+            sportMonksTeamId={match.home.sportMonksTeamId}
+            size={22}
+          />
           <span className={cn('mx-px text-[9px] font-black opacity-35', L ? 'text-tf-dark' : 'text-white')}>
             –
           </span>
-          <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={22} />
+          <ClubCrest
+            id={match.away.id}
+            shortName={match.away.shortName}
+            colors={match.away.colors}
+            logoUrl={match.away.logoUrl}
+            sportMonksTeamId={match.away.sportMonksTeamId}
+            size={22}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <p
@@ -476,7 +504,14 @@ export function HubStripUpcoming({
         <div className="relative z-[1] flex flex-col gap-3 px-3.5 pb-3 pt-3.5 sm:gap-3.5 sm:px-4 sm:pb-3.5 sm:pt-4">
           <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={34} />
+              <ClubCrest
+                id={match.home.id}
+                shortName={match.home.shortName}
+                colors={match.home.colors}
+                logoUrl={match.home.logoUrl}
+                sportMonksTeamId={match.home.sportMonksTeamId}
+                size={34}
+              />
               <span className="truncate text-sm font-black leading-tight text-tf-app-fg sm:text-[0.9375rem]">
                 {match.home.shortName}
               </span>
@@ -508,7 +543,14 @@ export function HubStripUpcoming({
               <span className="truncate text-right text-sm font-black leading-tight text-tf-app-fg sm:text-[0.9375rem]">
                 {match.away.shortName}
               </span>
-              <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={34} />
+              <ClubCrest
+                id={match.away.id}
+                shortName={match.away.shortName}
+                colors={match.away.colors}
+                logoUrl={match.away.logoUrl}
+                sportMonksTeamId={match.away.sportMonksTeamId}
+                size={34}
+              />
             </div>
           </div>
           <div
@@ -658,7 +700,14 @@ export function HubStripUpcoming({
           )}
         >
           <div className={cn('flex min-w-0 items-center', isSidebar ? 'gap-1' : 'gap-2')}>
-            <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestUp} />
+            <ClubCrest
+              id={match.home.id}
+              shortName={match.home.shortName}
+              colors={match.home.colors}
+              logoUrl={match.home.logoUrl}
+              sportMonksTeamId={match.home.sportMonksTeamId}
+              size={crestUp}
+            />
             <span className={nameCls(isSidebar)}>{match.home.shortName}</span>
           </div>
           <div className="flex shrink-0 flex-col items-center px-0.5">
@@ -667,7 +716,14 @@ export function HubStripUpcoming({
           </div>
           <div className={cn('flex min-w-0 items-center justify-end text-right', isSidebar ? 'gap-1' : 'gap-2')}>
             <span className={nameCls(isSidebar)}>{match.away.shortName}</span>
-            <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestUp} />
+            <ClubCrest
+              id={match.away.id}
+              shortName={match.away.shortName}
+              colors={match.away.colors}
+              logoUrl={match.away.logoUrl}
+              sportMonksTeamId={match.away.sportMonksTeamId}
+              size={crestUp}
+            />
           </div>
         </div>
       </div>
@@ -725,7 +781,14 @@ export function HubStripFinished({ match, className }: { match: Match; className
         </span>
         <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestMd} />
+            <ClubCrest
+              id={match.home.id}
+              shortName={match.home.shortName}
+              colors={match.home.colors}
+              logoUrl={match.home.logoUrl}
+              sportMonksTeamId={match.home.sportMonksTeamId}
+              size={crestMd}
+            />
             <span className="truncate text-xs font-black text-white drop-shadow-md">{match.home.shortName}</span>
           </div>
           <div className="flex shrink-0 flex-col items-center px-1">
@@ -736,7 +799,14 @@ export function HubStripFinished({ match, className }: { match: Match; className
           </div>
           <div className="flex min-w-0 items-center justify-end gap-2 text-right">
             <span className="truncate text-xs font-black text-white drop-shadow-md">{match.away.shortName}</span>
-            <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestMd} />
+            <ClubCrest
+              id={match.away.id}
+              shortName={match.away.shortName}
+              colors={match.away.colors}
+              logoUrl={match.away.logoUrl}
+              sportMonksTeamId={match.away.sportMonksTeamId}
+              size={crestMd}
+            />
           </div>
         </div>
       </div>
@@ -794,14 +864,28 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 rounded-r-xl bg-[#050d18]/90 px-2.5 py-2">
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
-            <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestSm} />
+            <ClubCrest
+              id={match.home.id}
+              shortName={match.home.shortName}
+              colors={match.home.colors}
+              logoUrl={match.home.logoUrl}
+              sportMonksTeamId={match.home.sportMonksTeamId}
+              size={crestSm}
+            />
             <span className="truncate text-[11px] font-black text-white">{match.home.shortName}</span>
           </div>
           <span className="shrink-0 text-[10px] font-black text-emerald-400">{formatKickoff(match.kickoffAt)}</span>
         </div>
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
-            <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestSm} />
+            <ClubCrest
+              id={match.away.id}
+              shortName={match.away.shortName}
+              colors={match.away.colors}
+              logoUrl={match.away.logoUrl}
+              sportMonksTeamId={match.away.sportMonksTeamId}
+              size={crestSm}
+            />
             <span className="truncate text-[11px] font-black text-white">{match.away.shortName}</span>
           </div>
           <span className="shrink-0 text-[9px] font-bold text-sky-100/78">{formatHubDayLabel(match.kickoffAt)}</span>
@@ -834,7 +918,14 @@ export function HubRailRowLive({ match, className }: { match: Match; className?:
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 px-2.5 py-2">
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
-            <ClubCrest id={match.home.id} shortName={match.home.shortName} colors={match.home.colors} size={crestSm} />
+            <ClubCrest
+              id={match.home.id}
+              shortName={match.home.shortName}
+              colors={match.home.colors}
+              logoUrl={match.home.logoUrl}
+              sportMonksTeamId={match.home.sportMonksTeamId}
+              size={crestSm}
+            />
             <span className="truncate text-[11px] font-black text-white">{match.home.shortName}</span>
           </div>
           <span className="shrink-0 font-display text-sm font-black tabular-nums text-white">
@@ -843,7 +934,14 @@ export function HubRailRowLive({ match, className }: { match: Match; className?:
         </div>
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
-            <ClubCrest id={match.away.id} shortName={match.away.shortName} colors={match.away.colors} size={crestSm} />
+            <ClubCrest
+              id={match.away.id}
+              shortName={match.away.shortName}
+              colors={match.away.colors}
+              logoUrl={match.away.logoUrl}
+              sportMonksTeamId={match.away.sportMonksTeamId}
+              size={crestSm}
+            />
             <span className="truncate text-[11px] font-black text-white">{match.away.shortName}</span>
           </div>
           <span className="shrink-0 text-[9px] font-black text-emerald-400">{formatRelativeMinute(min) ?? `${min}′`}</span>

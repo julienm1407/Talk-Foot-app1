@@ -24,6 +24,8 @@ export function ChannelHeader({ match }: { match: Match }) {
             id={match.home.id}
             shortName={match.home.shortName}
             colors={match.home.colors}
+            logoUrl={match.home.logoUrl}
+            sportMonksTeamId={match.home.sportMonksTeamId}
             size={34}
             className="shrink-0"
           />
@@ -60,6 +62,8 @@ export function ChannelHeader({ match }: { match: Match }) {
             id={match.away.id}
             shortName={match.away.shortName}
             colors={match.away.colors}
+            logoUrl={match.away.logoUrl}
+            sportMonksTeamId={match.away.sportMonksTeamId}
             size={34}
             className="shrink-0"
           />
