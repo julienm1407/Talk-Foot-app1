@@ -19,6 +19,7 @@ import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandi
 import { getSportMonksToken } from '../utils/apiTokens'
 import { Link } from 'react-router-dom'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
 type MainTab = 'parieurs' | 'ligues' | 'forme'
 
@@ -27,6 +28,7 @@ export function RankingsPage() {
   const L = appearance === 'light'
   const [mainTab, setMainTab] = useState<MainTab>('parieurs')
   const [leagueId, setLeagueId] = useState<BigFiveLeagueId>('ligue-1')
+  const reducedMotion = useReducedMotion()
 
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
     useSportMonksLeagueStandings(leagueId)
@@ -83,18 +85,33 @@ export function RankingsPage() {
         </button>
       </div>
 
-      {mainTab === 'parieurs' ? (
-        <div className="space-y-4">
-          <FriendsParieurMiniRank />
-          <Card className="p-5 sm:p-6" elevation="soft">
-            <p className="mb-4 text-[10px] font-black uppercase tracking-wider text-tf-grey">Classement global</p>
-            <BettorLeaderboard extended />
-          </Card>
-        </div>
-      ) : null}
+      <AnimatePresence mode="wait" initial={false}>
+        {mainTab === 'parieurs' ? (
+          <motion.div
+            key="tab-parieurs"
+            className="space-y-4"
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+            exit={reducedMotion ? {} : { opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
+            <FriendsParieurMiniRank />
+            <Card className="p-5 sm:p-6" elevation="soft">
+              <p className="mb-4 text-[10px] font-black uppercase tracking-wider text-tf-grey">Classement global</p>
+              <BettorLeaderboard extended />
+            </Card>
+          </motion.div>
+        ) : null}
 
-      {mainTab === 'ligues' ? (
-        <div className="space-y-4">
+        {mainTab === 'ligues' ? (
+          <motion.div
+            key="tab-ligues"
+            className="space-y-4"
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+            exit={reducedMotion ? {} : { opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
           <div className="flex flex-wrap gap-2">
             {BIG_FIVE_LEAGUE_IDS.map((id) => {
               const th = competitionThemes[id]
@@ -152,7 +169,12 @@ export function RankingsPage() {
             <StandingsInsightsStrip leagueId={leagueId} rows={standings} />
           ) : null}
 
-          <Card className="overflow-hidden p-4 sm:p-5" elevation="soft" tone="solid">
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: 0.04 }}
+          >
+            <Card className="overflow-hidden p-4 sm:p-5" elevation="soft" tone="solid">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h2 className="font-display text-lg font-black text-tf-app-fg sm:text-xl">
@@ -162,12 +184,20 @@ export function RankingsPage() {
               </div>
             </div>
             <LeagueStandingsTable leagueId={leagueId} rows={standings} dataSourceLabel={dataSourceLabel} />
-          </Card>
-        </div>
-      ) : null}
+            </Card>
+          </motion.div>
+          </motion.div>
+        ) : null}
 
-      {mainTab === 'forme' ? (
-        <div className="space-y-4">
+        {mainTab === 'forme' ? (
+          <motion.div
+            key="tab-forme"
+            className="space-y-4"
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+            exit={reducedMotion ? {} : { opacity: 0, y: -6 }}
+            transition={{ duration: 0.2 }}
+          >
           <div className="flex flex-wrap gap-2">
             {BIG_FIVE_LEAGUE_IDS.map((id) => {
               const th = competitionThemes[id]
@@ -216,7 +246,12 @@ export function RankingsPage() {
 
           <RankingsCrossMatrix rows={standings} leagueId={leagueId} caption={matrixCaption} />
 
-          <div className="grid gap-3 lg:grid-cols-2">
+          <motion.div
+            className="grid gap-3 lg:grid-cols-2"
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: 0.04 }}
+          >
             <RankingsScatterQuadrant
               rows={standings}
               leagueId={leagueId}
@@ -224,9 +259,10 @@ export function RankingsPage() {
               accent={theme?.accent2}
             />
             <PointsVsRecentFormChart rows={standings} leagueId={leagueId} accent={theme?.accent2} />
-          </div>
-        </div>
-      ) : null}
+          </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   )
 }

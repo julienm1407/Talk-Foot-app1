@@ -33,14 +33,14 @@ function resolveGoalsAgainst(
   gaRaw: number | null,
   gd: number | null,
 ): number | null {
-  if (gf == null || gd == null) return gaRaw
+  // Si l'API donne explicitement `goals_against`, on le garde tel quel.
+  // `goal_difference` peut varier selon le contexte (overall/home/away) et ne doit pas écraser GA.
+  if (gaRaw != null) return gaRaw
+
+  if (gf == null || gd == null) return null
   const gaFromDiff = gf - gd
-  if (!Number.isFinite(gaFromDiff) || gaFromDiff < 0) return gaRaw
-  if (gaRaw == null) return gaFromDiff
-  const rawDiff = Math.round(gf - gaRaw)
-  const expectedDiff = Math.round(gd)
-  if (Math.round(gaRaw) === expectedDiff || rawDiff !== expectedDiff) return gaFromDiff
-  return gaRaw
+  if (!Number.isFinite(gaFromDiff) || gaFromDiff < 0) return null
+  return gaFromDiff
 }
 
 function parseForm(raw: unknown): FormResult[] {
@@ -172,8 +172,22 @@ function parseDetailBlob(details: unknown): {
   gf: number
   ga: number
   gd: number | null
+  hasExplicitGf: boolean
+  hasExplicitGa: boolean
+  hasExplicitGd: boolean
 } {
-  const out = { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, gd: null as number | null }
+  const out = {
+    played: 0,
+    won: 0,
+    drawn: 0,
+    lost: 0,
+    gf: 0,
+    ga: 0,
+    gd: null as number | null,
+    hasExplicitGf: false,
+    hasExplicitGa: false,
+    hasExplicitGd: false,
+  }
   if (!Array.isArray(details)) return out
   type MutableStats = Pick<typeof out, 'played' | 'won' | 'drawn' | 'lost' | 'gf' | 'ga'>
 
@@ -214,10 +228,17 @@ function parseDetailBlob(details: unknown): {
 
     if (dev === 'GOALS_FOR') {
       putBest('gf', val, 5, out, quality)
+      out.hasExplicitGf = true
       continue
     }
     if (dev === 'GOALS_AGAINST') {
       putBest('ga', val, 5, out, quality)
+      out.hasExplicitGa = true
+      continue
+    }
+    if (dev === 'GOAL_DIFFERENCE' || dev === 'GOALS_DIFFERENCE') {
+      out.gd = val
+      out.hasExplicitGd = true
       continue
     }
     if (dev === 'WON' || dev === 'WINS') {
@@ -250,7 +271,7 @@ function parseDetailBlob(details: unknown): {
       putBest('lost', val, score, out, quality)
     } else if (/SCORE|GOAL.*FOR|GOALS?\s*FOR|GF\b|FAVOR/i.test(blob)) {
       putBest('gf', val, score, out, quality)
-    } else if (/CONCED|AGAINST|GOALS?\s*AG|GA\b|ENC/i.test(blob)) {
+    } else if (/CONCED|AGAINST|GOALS?\s*AG|GA\b|ENCAISS/i.test(blob)) {
       putBest('ga', val, score, out, quality)
     } else if (/GOAL.*DIFF|GOALS?.*DIFF|\bGD\b|DIFFERENCE/i.test(blob)) {
       out.gd = val
@@ -258,6 +279,28 @@ function parseDetailBlob(details: unknown): {
   }
 
   return out
+}
+
+function mergeStandingCore(
+  base: ReturnType<typeof parseDetailBlob>,
+  patch: Partial<{
+    played: number
+    won: number
+    drawn: number
+    lost: number
+    gf: number
+    ga: number
+  }>,
+): ReturnType<typeof parseDetailBlob> {
+  const next = { ...base }
+  if (patch.played != null) next.played = patch.played
+  if (patch.won != null) next.won = patch.won
+  if (patch.drawn != null) next.drawn = patch.drawn
+  if (patch.lost != null) next.lost = patch.lost
+  // On protège GF/GA si les détails portent un champ explicite GOALS_FOR/GOALS_AGAINST.
+  if (patch.gf != null && !base.hasExplicitGf) next.gf = patch.gf
+  if (patch.ga != null && !base.hasExplicitGa) next.ga = patch.ga
+  return next
 }
 
 function flattenTeamStatisticsDetails(statistics: unknown): unknown[] {
@@ -452,7 +495,7 @@ export function extractLeagueStandingRowsFromSmTeamsSeasonEnvelope(
     const flat = flattenTeamStatisticsDetails(team.statistics)
     let d = parseDetailBlob(flat)
     const ov = parseOverallBlock(team)
-    if (ov) d = { ...d, ...ov }
+    if (ov) d = mergeStandingCore(d, ov)
 
     const { won, drawn, lost, gf } = d
     const ga = resolveGoalsAgainst(gf, d.ga, d.gd)
@@ -538,11 +581,11 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
 
     let d = parseDetailBlob(row.details)
     const direct = parseDirectStandingsCore(row)
-    if (direct) d = { ...d, ...direct }
+    if (direct) d = mergeStandingCore(d, direct)
     const top = parseTopLevelBlock(row)
-    if (top) d = { ...d, ...top }
+    if (top) d = mergeStandingCore(d, top)
     const ov = parseOverallBlock(row)
-    if (ov) d = { ...d, ...ov }
+    if (ov) d = mergeStandingCore(d, ov)
 
     const { won, drawn, lost, gf } = d
     const rowGd = parseGoalDiff(row)

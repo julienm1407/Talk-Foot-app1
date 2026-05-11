@@ -13,9 +13,12 @@
     "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.6",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
+    "@rive-app/react-canvas": "^4.28.4",
     "@supabase/supabase-js": "^2.49.1",
+    "framer-motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",

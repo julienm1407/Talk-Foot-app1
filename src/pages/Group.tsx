@@ -161,7 +161,8 @@ export function GroupPage() {
   const debateRef = useRef(debate)
   debateRef.current = debate
 
-  const threadKey = group && channel ? `${group.id}:${channel.id}` : ''
+  const activeDebateScope = channel?.id === 'general' ? (debate?.id ?? null) : null
+  const threadKey = group && channel ? `${group.id}:${channel.id}:${activeDebateScope ?? 'global'}` : ''
   const threadKeyRef = useRef(threadKey)
   threadKeyRef.current = threadKey
 
@@ -262,6 +263,7 @@ export function GroupPage() {
     useSupporterGroupChannelSync({
       groupId: group?.id ?? '',
       channelId: channel?.id ?? '',
+      debateId: activeDebateScope,
       enabled: groupCloudChatEnabled,
       skipMembershipUpsert: skipCloudMemberUpsert,
       onRemoteMessages: mergeRemoteGroupMessages,
@@ -434,6 +436,7 @@ export function GroupPage() {
           userId: msg.userId,
           groupId: group.id,
           channelId: channel.id,
+          debateId: channel.id === 'general' ? (debate?.id ?? null) : null,
           groupScarf: msg.groupScarf,
           tfPublicDebate: isOpenPublicDebateSalon,
         })
@@ -459,7 +462,15 @@ export function GroupPage() {
         [threadKey]: [...(prev[threadKey] ?? []), msg],
       }))
     },
-    [group, channel, threadKey, groupCloudChatEnabled, publishGroupChannelMessage, isOpenPublicDebateSalon],
+    [
+      group,
+      channel,
+      threadKey,
+      groupCloudChatEnabled,
+      publishGroupChannelMessage,
+      isOpenPublicDebateSalon,
+      debate?.id,
+    ],
   )
 
   const onSend = useCallback(

@@ -39,13 +39,25 @@ export function UserProfilePage() {
 
   useEffect(() => {
     if (!peer || !authUser?.id || !isSupabaseConfigured()) return
-    if (!UUID_RE.test(peer.id)) return
     const sb = getSupabaseBrowserClient()
     if (!sb) return
+    if (UUID_RE.test(peer.id)) {
+      void sb
+        .from('profiles')
+        .select('display_name')
+        .eq('id', peer.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const n = data?.display_name?.trim()
+          if (n) setLiveName(n)
+        })
+      return
+    }
+    // Compat Clerk: fallback sur `profiles.clerk_id` (texte) si `peer.id` n'est pas un UUID.
     void sb
       .from('profiles')
       .select('display_name')
-      .eq('id', peer.id)
+      .eq('clerk_id', peer.id)
       .maybeSingle()
       .then(({ data }) => {
         const n = data?.display_name?.trim()

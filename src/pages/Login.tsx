@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { isClerkAuthConfigured, useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -46,6 +46,7 @@ function oauthButtonShell(variant: (typeof TALKFOOT_OAUTH_PROVIDERS)[number]['va
 }
 
 export function LoginPage() {
+  const clerkEnabled = isClerkAuthConfigured()
   const [searchParams] = useSearchParams()
   const nextPath = safeInternalNext(searchParams.get('next'))
   const {
@@ -163,42 +164,44 @@ export function LoginPage() {
           className="border-white/45 bg-white/[0.88] p-6 shadow-tf-glass backdrop-blur-xl sm:p-8"
           elevation="soft"
         >
-          <div className="flex gap-1 rounded-xl bg-tf-grey-pastel/40 p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('login')
-                setError(null)
-                clearAuthNotice()
-                setAcceptedPrivacy(false)
-              }}
-              className={cn(
-                'flex-1 rounded-lg px-4 py-2 text-sm font-bold transition',
-                mode === 'login'
-                  ? 'bg-white text-tf-dark shadow-sm'
-                  : 'text-tf-grey hover:text-tf-dark',
-              )}
-            >
-              Connexion
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('signup')
-                setError(null)
-                clearAuthNotice()
-                setAcceptedPrivacy(false)
-              }}
-              className={cn(
-                'flex-1 rounded-lg px-4 py-2 text-sm font-bold transition',
-                mode === 'signup'
-                  ? 'bg-white text-tf-dark shadow-sm'
-                  : 'text-tf-grey hover:text-tf-dark',
-              )}
-            >
-              Créer un compte
-            </button>
-          </div>
+          {!clerkEnabled ? (
+            <div className="flex gap-1 rounded-xl bg-tf-grey-pastel/40 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login')
+                  setError(null)
+                  clearAuthNotice()
+                  setAcceptedPrivacy(false)
+                }}
+                className={cn(
+                  'flex-1 rounded-lg px-4 py-2 text-sm font-bold transition',
+                  mode === 'login'
+                    ? 'bg-white text-tf-dark shadow-sm'
+                    : 'text-tf-grey hover:text-tf-dark',
+                )}
+              >
+                Connexion
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('signup')
+                  setError(null)
+                  clearAuthNotice()
+                  setAcceptedPrivacy(false)
+                }}
+                className={cn(
+                  'flex-1 rounded-lg px-4 py-2 text-sm font-bold transition',
+                  mode === 'signup'
+                    ? 'bg-white text-tf-dark shadow-sm'
+                    : 'text-tf-grey hover:text-tf-dark',
+                )}
+              >
+                Créer un compte
+              </button>
+            </div>
+          ) : null}
 
           {authNotice && (
             <div
@@ -222,12 +225,15 @@ export function LoginPage() {
             {mode === 'login' ? 'Connexion' : 'Créer un compte'}
           </h2>
           <p className="mt-1 text-sm font-medium text-tf-grey">
-            {mode === 'login'
+            {clerkEnabled
+              ? 'Connexion Google sécurisée via Clerk.'
+              : mode === 'login'
               ? 'Connecte-toi pour accéder au live et aux paris'
               : 'Rejoins la communauté Talk Foot en quelques secondes'}
           </p>
 
-          <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4">
+          {!clerkEnabled ? (
+            <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4">
             {mode === 'signup' && (
               <div>
                 <label htmlFor="signup-displayName" className="mb-1 block text-xs font-bold text-tf-grey">
@@ -316,7 +322,8 @@ export function LoginPage() {
             >
               {submitting ? 'Patience…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
             </Button>
-          </form>
+            </form>
+          ) : null}
 
           <p className="mt-4 text-center text-[11px] font-medium text-tf-grey">
             <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
@@ -324,14 +331,18 @@ export function LoginPage() {
             </Link>
           </p>
 
-          <div className="mt-6 flex items-center gap-3">
+          {!clerkEnabled ? <div className="mt-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-tf-grey-pastel/60" />
             <span className="text-xs font-semibold text-tf-grey">ou</span>
             <div className="h-px flex-1 bg-tf-grey-pastel/60" />
-          </div>
+          </div> : null}
 
           <p className="mt-2 text-center text-[11px] font-medium leading-snug text-tf-grey">
-            {isSupabaseConfigured() ? (
+            {clerkEnabled ? (
+              <>
+                Google via Clerk activé. Les autres providers sont désactivés sur cet environnement.
+              </>
+            ) : isSupabaseConfigured() ? (
               <>
                 Connexion réelle via Supabase : Google, Apple, Facebook, Discord, GitHub. Active chaque
                 fournisseur dans le tableau Supabase (Authentication → Providers) et ajoute l’URL de retour
@@ -355,7 +366,10 @@ export function LoginPage() {
           </p>
 
           <div className="mt-6 space-y-3">
-            {TALKFOOT_OAUTH_PROVIDERS.map((p) => (
+            {(clerkEnabled
+              ? TALKFOOT_OAUTH_PROVIDERS.filter((p) => p.id === 'google')
+              : TALKFOOT_OAUTH_PROVIDERS
+            ).map((p) => (
               <button
                 key={p.id}
                 type="button"

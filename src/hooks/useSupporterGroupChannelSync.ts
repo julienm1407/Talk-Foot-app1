@@ -75,22 +75,41 @@ export const GROUP_CLOUD_HISTORY_OLDER = 150
 export function useSupporterGroupChannelSync(options: {
   groupId: string
   channelId: string
+  /** Scope débat pour le salon `general` (null = fil général hors débat). */
+  debateId?: string | null
   enabled: boolean
   /** Visiteur sur débat public (général) : pas d’upsert membre, le serveur filtre via metadata.tf_public_debate. */
   skipMembershipUpsert?: boolean
   /** `history` = lot initial ; `live` = temps réel ; `older` = pagination passée (voir merge côté page). */
   onRemoteMessages: (msgs: Message[], origin: SupporterGroupRemoteOrigin, meta?: SupporterGroupRemoteMeta) => void
 }) {
-  const { groupId, channelId, enabled, skipMembershipUpsert, onRemoteMessages } = options
+  const { groupId, channelId, debateId, enabled, skipMembershipUpsert, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
 
+  const rowMatchesDebateScope = useCallback(
+    (row: GroupMsgRow): boolean => {
+      if (channelId !== 'general') return true
+      const meta = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {}
+      const rowDebateId = typeof meta.debate_id === 'string' && meta.debate_id.trim() ? meta.debate_id.trim() : null
+      const wantedDebate = typeof debateId === 'string' && debateId.trim() ? debateId.trim() : null
+      if (wantedDebate) return rowDebateId === wantedDebate
+      return rowDebateId == null
+    },
+    [channelId, debateId],
+  )
+
   const publishMessage = useCallback(
     async (
       msg: Pick<Message, 'matchId' | 'text'> &
-        Partial<Message> & { groupId: string; channelId: string; tfPublicDebate?: boolean },
+        Partial<Message> & {
+          groupId: string
+          channelId: string
+          debateId?: string | null
+          tfPublicDebate?: boolean
+        },
     ) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
       const sb = getSupabaseBrowserClient()
@@ -110,6 +129,9 @@ export function useSupporterGroupChannelSync(options: {
       if (msg.emoteId) metadata.emoteId = msg.emoteId
       if (msg.groupScarf) metadata.groupScarf = msg.groupScarf
       if (msg.tfPublicDebate) metadata.tf_public_debate = 'true'
+      if (msg.channelId === 'general' && typeof msg.debateId === 'string' && msg.debateId.trim()) {
+        metadata.debate_id = msg.debateId.trim()
+      }
 
       const displayName = displayNameFromSession(session.user)
 
@@ -181,8 +203,9 @@ export function useSupporterGroupChannelSync(options: {
 
       if (!fetchErr) {
         const chronological = (rows ?? []).slice().reverse()
+        const scoped = chronological.filter((row) => rowMatchesDebateScope(row as GroupMsgRow))
         onRemoteMessagesRef.current(
-          chronological.map((row) => rowToMessage(row as GroupMsgRow)),
+          scoped.map((row) => rowToMessage(row as GroupMsgRow)),
           'history',
           { hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_INITIAL },
         )
@@ -206,6 +229,7 @@ export function useSupporterGroupChannelSync(options: {
             if (!row || typeof row !== 'object') return
             const r = row as GroupMsgRow
             if (r.group_id !== groupId || r.channel_id !== channelId) return
+            if (!rowMatchesDebateScope(r)) return
             onRemoteMessagesRef.current([rowToMessage(r)], 'live', undefined)
           },
         )
@@ -231,7 +255,7 @@ export function useSupporterGroupChannelSync(options: {
         channelRef.current = null
       }
     }
-  }, [groupId, channelId, enabled, skipMembershipUpsert])
+  }, [groupId, channelId, enabled, skipMembershipUpsert, rowMatchesDebateScope])
 
   const loadOlderMessages = useCallback(
     async (
@@ -257,14 +281,15 @@ export function useSupporterGroupChannelSync(options: {
         return { ok: false, error: error.message }
       }
       const chronological = (data ?? []).slice().reverse()
-      const messages = chronological.map((row) => rowToMessage(row as GroupMsgRow))
+      const scoped = chronological.filter((row) => rowMatchesDebateScope(row as GroupMsgRow))
+      const messages = scoped.map((row) => rowToMessage(row as GroupMsgRow))
       return {
         ok: true,
         messages,
         hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_OLDER,
       }
     },
-    [groupId, channelId],
+    [groupId, channelId, rowMatchesDebateScope],
   )
 
   return { publishMessage, loadOlderMessages, isCloudChatConfigured: isSupabaseConfigured() }

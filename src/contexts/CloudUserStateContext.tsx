@@ -40,6 +40,17 @@ export function useOptionalCloudUserState(): CloudUserStateValue | undefined {
 }
 
 const SAVE_DEBOUNCE_MS = 650
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isUuid(value: string | undefined | null): boolean {
+  if (!value) return false
+  return UUID_RE.test(value)
+}
+
+function profileEq(query: any, userId: string) {
+  return isUuid(userId) ? query.eq('id', userId) : query.eq('clerk_id', userId)
+}
 
 export function CloudUserStateGate({ children }: { children: ReactNode }) {
   if (!isSupabaseConfigured()) return <>{children}</>
@@ -68,13 +79,15 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
   const flushSave = useCallback(async () => {
     const sb = getSupabaseBrowserClient()
     if (!sb || !user?.id) return
-    const { error } = await sb
+    const { error } = await profileEq(
+      sb
       .from('profiles')
       .update({
         app_state: appRef.current,
         onboarding_complete: ocRef.current,
-      })
-      .eq('id', user.id)
+      }),
+      user.id,
+    )
     if (error) console.error('[Talk Foot] Sauvegarde profil cloud:', error.message)
   }, [user?.id])
 
@@ -105,12 +118,12 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         return
       }
       setLoadError(null)
-      let { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle()
+      let { data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle()
       if (cancelled) return
       if (error) {
         await new Promise((r) => setTimeout(r, 400))
         if (cancelled) return
-        ;({ data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle())
+        ;({ data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle())
       }
       if (cancelled) return
       if (error) {
@@ -125,15 +138,25 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         const { data: authPayload } = await sb.auth.getUser()
         const prov = authPayload.user?.app_metadata?.provider
         const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
-        const { error: insErr } = await sb.from('profiles').insert({
-          id: user.id,
-          display_name: user.email?.split('@')[0] ?? 'Supporter',
-          onboarding_complete: false,
-          app_state: {},
-          oauth_profile_completed: !oauthIncomplete,
-        })
+        const insertPayload = isUuid(user.id)
+          ? {
+              id: user.id,
+              display_name: user.email?.split('@')[0] ?? 'Supporter',
+              onboarding_complete: false,
+              app_state: {},
+              oauth_profile_completed: !oauthIncomplete,
+              clerk_id: user.id,
+            }
+          : {
+              clerk_id: user.id,
+              display_name: user.email?.split('@')[0] ?? 'Supporter',
+              onboarding_complete: false,
+              app_state: {},
+              oauth_profile_completed: !oauthIncomplete,
+            }
+        const { error: insErr } = await sb.from('profiles').insert(insertPayload)
         if (insErr) {
-          const { data: again } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle()
+          const { data: again } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle()
           if (again) {
             setApp(mergeUserAppState(again.app_state))
             setOnboardingCompleteCol(Boolean(again.onboarding_complete))
@@ -211,10 +234,11 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         console.error('[Talk Foot] Auth metadata:', authErr.message)
         throw new Error(authErr.message)
       }
-      const { error } = await sb
-        .from('profiles')
-        .update({ display_name: name, oauth_profile_completed: true })
-        .eq('id', user.id)
+      const scopedUpdate = profileEq(
+        sb.from('profiles').update({ display_name: name, oauth_profile_completed: true }),
+        user.id,
+      )
+      const { error } = await scopedUpdate
       if (error) {
         console.error('[Talk Foot] Profil OAuth:', error.message)
         throw new Error(error.message)

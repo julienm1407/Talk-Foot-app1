@@ -1,4 +1,5 @@
 import { cn } from '../../utils/cn'
+import { motion, useReducedMotion } from 'framer-motion'
 
 export function Card({
   className,
@@ -25,10 +26,14 @@ export function Card({
   surface?: 'light' | 'dark'
   tone?: 'default' | 'solid'
 }) {
+  const reducedMotion = useReducedMotion()
   return (
-    <div
+    <motion.div
       id={id}
       style={style}
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       data-tf-card-surface={surface === 'light' ? 'light' : undefined}
       data-tf-card-tone={tone === 'solid' ? 'solid' : undefined}
       className={cn(
@@ -41,6 +46,6 @@ export function Card({
       )}
     >
       {children}
-    </div>
+    </motion.div>
   )
 }

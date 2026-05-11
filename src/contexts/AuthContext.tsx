@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
+import { useClerk, useUser } from '@clerk/clerk-react'
 import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -14,6 +15,10 @@ import { containsBannedWord } from '../utils/bannedWords'
 
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
+
+export function isClerkAuthConfigured(): boolean {
+  return Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY?.trim())
+}
 
 export type AuthUser = {
   id: string
@@ -499,7 +504,104 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+function ClerkAuthProvider({ children }: { children: ReactNode }) {
+  const { user, isLoaded } = useUser()
+  const clerk = useClerk()
+  const [authNotice, setAuthNotice] = useState<string | null>(null)
+  const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
+
+  const mappedUser: AuthUser | null = user
+    ? withAdminFlag({
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        displayName:
+          [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+          user.username ||
+          user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+          'Supporteur',
+        provider: 'oauth',
+        avatarUrl: user.imageUrl,
+      })
+    : null
+
+  const login = useCallback((_user: AuthUser) => {
+    /* géré par Clerk */
+  }, [])
+
+  const loginWithEmail = useCallback(async (_email: string, _password: string): Promise<boolean> => {
+    setAuthNotice('Connexion email désactivée ici. Utilise Google via Clerk.')
+    return false
+  }, [])
+
+  const signUpWithEmail = useCallback(
+    async (_email: string, _password: string, _displayName?: string): Promise<boolean> => {
+      setAuthNotice('Inscription email désactivée ici. Utilise Google via Clerk.')
+      return false
+    },
+    [],
+  )
+
+  const loginWithOAuthProvider = useCallback(
+    async (provider: TalkFootOauthProviderId): Promise<boolean> => {
+      if (provider !== 'google') {
+        setAuthNotice('Seule la connexion Google est activée sur Clerk.')
+        return false
+      }
+      const next = new URLSearchParams(window.location.search).get('next') || '/'
+      await clerk.redirectToSignIn({
+        signInFallbackRedirectUrl: next.startsWith('/') ? next : '/',
+      })
+      return true
+    },
+    [clerk],
+  )
+
+  const logout = useCallback(async () => {
+    await clerk.signOut()
+  }, [clerk])
+
+  const updateProfile = useCallback(
+    (displayName: string) => {
+      const name = displayName.trim()
+      if (!name || !user) return
+      void user.update({ firstName: name, lastName: '' })
+    },
+    [user],
+  )
+
+  const changePassword = useCallback(
+    async (_currentPassword: string, _newPassword: string): Promise<{ ok: boolean; error?: string }> => {
+      return { ok: false, error: 'Gestion du mot de passe via Clerk Dashboard.' }
+    },
+    [],
+  )
+
+  const refreshAuthUser = useCallback(async () => {
+    await clerk.user?.reload()
+  }, [clerk.user])
+
+  const value: AuthContextValue = {
+    user: mappedUser,
+    isReady: isLoaded,
+    login,
+    loginWithEmail,
+    signUpWithEmail,
+    loginWithOAuthProvider,
+    logout,
+    updateProfile,
+    changePassword,
+    authNotice,
+    clearAuthNotice,
+    refreshAuthUser,
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  if (isClerkAuthConfigured()) {
+    return <ClerkAuthProvider>{children}</ClerkAuthProvider>
+  }
   if (isSupabaseConfigured()) {
     return <SupabaseAuthProvider>{children}</SupabaseAuthProvider>
   }

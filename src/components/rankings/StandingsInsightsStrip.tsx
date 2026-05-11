@@ -1,10 +1,12 @@
 import type { LeagueStandingRow } from '../../data/leagueStandings'
 import { rankingsTeamShort } from '../../utils/rankingsTeamLabel'
 import { cn } from '../../utils/cn'
-import { formWindowPoints } from '../../utils/rankingsMetrics'
+import { motion, useReducedMotion } from 'framer-motion'
 
-const pill =
-  'inline-flex items-center rounded-full border border-tf-grey-pastel/45 bg-white/95 px-2.5 py-1 text-[11px] font-bold text-tf-app-fg shadow-sm'
+function ratioPct(num: number, den: number): number {
+  if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return 0
+  return Math.max(0, Math.min(100, Math.round((num / den) * 100)))
+}
 
 /** Bandeau KPI compact (une ligne visuelle, wrap) — évite les grosses cartes podium. */
 export function StandingsInsightsStrip({
@@ -17,29 +19,28 @@ export function StandingsInsightsStrip({
   className?: string
 }) {
   if (!rows.length) return null
+  const reducedMotion = useReducedMotion()
 
   const sorted = [...rows].sort((a, b) => a.rank - b.rank)
-  const top3 = [...rows]
-    .sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points
-      const gdA = a.gf - a.ga
-      const gdB = b.gf - b.ga
-      if (gdB !== gdA) return gdB - gdA
-      return b.gf - a.gf
-    })
-    .slice(0, 3)
-  const playable = sorted.filter((r) => r.played > 0)
-  const bestForm =
-    playable.length > 0
-      ? playable.reduce((a, b) =>
-          formWindowPoints(b.form, 5) > formWindowPoints(a.form, 5) ? b : a,
-        )
-      : null
 
   const fourth = sorted.find((r) => r.rank === 4) ?? sorted[3]
   const leader = sorted[0]
   const gap14 =
     leader && fourth ? Math.max(0, leader.points - fourth.points) : null
+  const second = sorted.find((r) => r.rank === 2) ?? sorted[1] ?? null
+  const gap12 =
+    leader && second ? Math.max(0, leader.points - second.points) : null
+
+  const bestAttack = [...sorted].sort((a, b) => b.gf - a.gf || a.rank - b.rank)[0] ?? null
+  const bestDefense = [...sorted].sort((a, b) => a.ga - b.ga || a.rank - b.rank)[0] ?? null
+  const relegationCut = sorted.length >= 18 ? 3 : 2
+  const redZone = [...sorted].sort((a, b) => b.rank - a.rank).slice(0, relegationCut)
+  const redZonePointsAvg = redZone.length
+    ? Math.round(redZone.reduce((acc, r) => acc + r.points, 0) / redZone.length)
+    : null
+  const totalPlayed = sorted.reduce((acc, r) => acc + Math.max(0, r.played), 0)
+  const totalGoals = sorted.reduce((acc, r) => acc + Math.max(0, r.gf), 0)
+  const avgGoalsPerTeamGame = totalPlayed > 0 ? totalGoals / totalPlayed : null
 
   return (
     <div
@@ -51,26 +52,83 @@ export function StandingsInsightsStrip({
       <p className="text-[10px] font-black uppercase tracking-[0.12em] text-tf-app-muted">
         Resume classement
       </p>
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-        {top3.map((r, i) => (
-          <span
-            key={r.teamId}
-            className={cn(
-              pill,
-              i === 0 && 'border-emerald-300/60 bg-emerald-50/50 text-emerald-900',
-            )}
-          >
-            {i + 1}. {rankingsTeamShort(leagueId, r)} {r.points} pts
-          </span>
-        ))}
-        {bestForm ? (
-          <span className={cn(pill, 'border-violet-300/60 bg-violet-50/40 text-violet-900')}>
-            Forme: {rankingsTeamShort(leagueId, bestForm)} {formWindowPoints(bestForm.form, 5)}/15
-          </span>
-        ) : null}
-        <span className={cn(pill, 'border-amber-300/60 bg-amber-50/50 text-amber-900')}>
-          Ecart 1-4: {gap14 != null ? gap14 : '—'} pts
-        </span>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        <motion.div
+          className="rounded-xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-c30-surface)_70%,var(--tf-c30-surface-soft)_30%)] px-2.5 py-2"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <p className="text-[10px] font-black uppercase tracking-wide text-tf-app-fg">Course au titre</p>
+          <p className="mt-1 text-xs font-bold text-tf-app-fg">
+            1-2: {gap12 != null ? `${gap12} pts` : '—'} ({leader ? rankingsTeamShort(leagueId, leader) : '—'} devant)
+          </p>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[color:rgb(var(--tf-app-fg-rgb)/0.16)]">
+            <div
+              className="h-full rounded-full bg-emerald-500"
+              style={{ width: `${ratioPct(12 - Math.min(12, gap12 ?? 0), 12)}%` }}
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="rounded-xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-c30-surface)_70%,var(--tf-c30-surface-soft)_30%)] px-2.5 py-2"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, delay: 0.03 }}
+        >
+          <p className="text-[10px] font-black uppercase tracking-wide text-tf-app-fg">Attaque</p>
+          <p className="mt-1 text-xs font-bold text-tf-app-fg">
+            {bestAttack ? rankingsTeamShort(leagueId, bestAttack) : '—'} ({bestAttack?.gf ?? '—'} BP)
+          </p>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[color:rgb(var(--tf-app-fg-rgb)/0.16)]">
+            <div
+              className="h-full rounded-full bg-emerald-500"
+              style={{ width: `${ratioPct(bestAttack?.gf ?? 0, leader?.gf ?? bestAttack?.gf ?? 1)}%` }}
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="rounded-xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-c30-surface)_70%,var(--tf-c30-surface-soft)_30%)] px-2.5 py-2"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, delay: 0.06 }}
+        >
+          <p className="text-[10px] font-black uppercase tracking-wide text-tf-app-fg">Defense</p>
+          <p className="mt-1 text-xs font-bold text-tf-app-fg">
+            {bestDefense ? rankingsTeamShort(leagueId, bestDefense) : '—'} ({bestDefense?.ga ?? '—'} BC)
+          </p>
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[color:rgb(var(--tf-app-fg-rgb)/0.16)]">
+            <div
+              className="h-full rounded-full bg-sky-500"
+              style={{
+                width: `${ratioPct(
+                  (sorted.reduce((m, r) => Math.max(m, r.ga), 0) || 1) - (bestDefense?.ga ?? 0),
+                  sorted.reduce((m, r) => Math.max(m, r.ga), 0) || 1,
+                )}%`,
+              }}
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          className="rounded-xl border border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-c30-surface)_70%,var(--tf-c30-surface-soft)_30%)] px-2.5 py-2"
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.24, delay: 0.09 }}
+        >
+          <p className="text-[10px] font-black uppercase tracking-wide text-tf-app-fg">Zone rouge</p>
+          <p className="mt-1 text-xs font-bold text-tf-app-fg">
+            Moyenne: {redZonePointsAvg != null ? `${redZonePointsAvg} pts` : '—'} · {relegationCut} equipes
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-tf-app-muted">
+            Ecart 1-4: {gap14 != null ? `${gap14} pts` : '—'}
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-tf-app-muted">
+            Rythme buts: {avgGoalsPerTeamGame != null ? `${avgGoalsPerTeamGame.toFixed(2)} / match` : '—'}
+          </p>
+        </motion.div>
       </div>
     </div>
   )

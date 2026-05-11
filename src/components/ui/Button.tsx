@@ -1,17 +1,24 @@
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+import { motion, useReducedMotion, type HTMLMotionProps } from 'framer-motion'
 
 type Variant = 'primary' | 'ghost' | 'soft' | 'success'
+
+type ButtonProps = Omit<HTMLMotionProps<'button'>, 'ref'> & { variant?: Variant }
 
 export function Button({
   className,
   variant = 'soft',
   type = 'button',
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+}: ButtonProps) {
+  const reducedMotion = useReducedMotion()
   return (
-    <button
+    <motion.button
       type={type}
+      whileHover={reducedMotion ? undefined : { y: -1, scale: 1.01 }}
+      whileTap={reducedMotion ? undefined : { y: 0, scale: 0.985 }}
+      transition={{ duration: 0.14, ease: 'easeOut' }}
       className={cn(
         'tf-btn-fluid inline-flex min-h-tf-touch items-center justify-center gap-tf-2 rounded-tf-2xl px-tf-5 py-tf-3 text-tf-md font-semibold font-display',
         TF_FOCUS_VISIBLE,
