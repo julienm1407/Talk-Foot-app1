@@ -10,6 +10,33 @@ import {
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
+const DAILY_TOKEN_BONUS_AMOUNT = 35
+const DAILY_TOKEN_BONUS_HOUR = 10
+
+type DailyTokenBonusStatus = {
+  amount: number
+  canClaim: boolean
+  alreadyClaimedToday: boolean
+  nextClaimAt: Date
+  claimDayKey: string
+}
+
+function toLocalDayKey(date: Date): string {
+  const y = date.getFullYear()
+  const m = `${date.getMonth() + 1}`.padStart(2, '0')
+  const d = `${date.getDate()}`.padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function nextDailyBonusWindow(now = new Date()): { claimDayKey: string; nextClaimAt: Date } {
+  const nextClaimAt = new Date(now)
+  nextClaimAt.setHours(DAILY_TOKEN_BONUS_HOUR, 0, 0, 0)
+  if (now >= nextClaimAt) {
+    return { claimDayKey: toLocalDayKey(now), nextClaimAt }
+  }
+  return { claimDayKey: toLocalDayKey(nextClaimAt), nextClaimAt }
+}
+
 export function useWallet() {
   const cloud = useOptionalCloudUserState()
   const persistLocal = !isSupabaseConfigured()
@@ -76,16 +103,34 @@ export function useWallet() {
     [patchWallet],
   )
 
+  const dailyTokenBonusStatus = useCallback((): DailyTokenBonusStatus => {
+    const now = new Date()
+    const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
+    const alreadyClaimedToday = wallet.lastDailyTokenGrant === claimDayKey
+    return {
+      amount: DAILY_TOKEN_BONUS_AMOUNT,
+      canClaim: now >= nextClaimAt && !alreadyClaimedToday,
+      alreadyClaimedToday,
+      nextClaimAt,
+      claimDayKey,
+    }
+  }, [wallet.lastDailyTokenGrant])
+
   const claimDailyTokenBonus = useCallback((): { ok: boolean; amount?: number; reason?: string } => {
-    const today = new Date().toISOString().slice(0, 10)
+    const now = new Date()
+    const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
     let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
     patchWallet((w) => {
-      if (w.lastDailyTokenGrant === today) {
+      if (now < nextClaimAt) {
+        out = { ok: false, reason: 'not_open_yet' }
+        return w
+      }
+      if (w.lastDailyTokenGrant === claimDayKey) {
         out = { ok: false, reason: 'already_claimed' }
         return w
       }
-      out = { ok: true, amount: 35 }
-      return { ...w, tokens: w.tokens + 35, lastDailyTokenGrant: today }
+      out = { ok: true, amount: DAILY_TOKEN_BONUS_AMOUNT }
+      return { ...w, tokens: w.tokens + DAILY_TOKEN_BONUS_AMOUNT, lastDailyTokenGrant: claimDayKey }
     })
     return out
   }, [patchWallet])
@@ -97,6 +142,7 @@ export function useWallet() {
     spendTokens,
     addMedals,
     spendMedals,
+    dailyTokenBonusStatus,
     claimDailyTokenBonus,
   }
 }

@@ -77,21 +77,21 @@ function ShortSleeveArms({
   return (
     <g aria-hidden>
       <path
-        d={`M ${x + 5} ${y + 7}
-          C ${x + 1} ${y + 9}, ${x - 4} ${y + 15}, ${x - 6.5} ${y + 24}
+        d={`M ${x + 4} ${y + 7}
+          C ${x} ${y + 9}, ${x - 4} ${y + 15}, ${x - 6.5} ${y + 24}
           C ${x - 8} ${y + 30}, ${x - 7.5} ${y + 36}, ${x - 4} ${y + 38.5}
-          C ${x - 1} ${y + 40}, ${x + 2} ${y + 37}, ${x + 4} ${y + 31}
-          C ${x + 5.5} ${y + 22}, ${x + 6} ${y + 13}, ${x + 5} ${y + 7}
+          C ${x - 1} ${y + 40}, ${x + 2} ${y + 37}, ${x + 3.5} ${y + 31}
+          C ${x + 4.5} ${y + 22}, ${x + 5} ${y + 13}, ${x + 4} ${y + 7}
           Z`}
         fill={skin}
         {...stroke}
       />
       <path
-        d={`M ${x + w - 5} ${y + 7}
-          C ${x + w - 1} ${y + 9}, ${x + w + 4} ${y + 15}, ${x + w + 6.5} ${y + 24}
+        d={`M ${x + w - 4} ${y + 7}
+          C ${x + w} ${y + 9}, ${x + w + 4} ${y + 15}, ${x + w + 6.5} ${y + 24}
           C ${x + w + 8} ${y + 30}, ${x + w + 7.5} ${y + 36}, ${x + w + 4} ${y + 38.5}
-          C ${x + w + 1} ${y + 40}, ${x + w - 2} ${y + 37}, ${x + w - 4} ${y + 31}
-          C ${x + w - 5.5} ${y + 22}, ${x + w - 6} ${y + 13}, ${x + w - 5} ${y + 7}
+          C ${x + w + 1} ${y + 40}, ${x + w - 2} ${y + 37}, ${x + w - 3.5} ${y + 31}
+          C ${x + w - 4.5} ${y + 22}, ${x + w - 5} ${y + 13}, ${x + w - 4} ${y + 7}
           Z`}
         fill={skin}
         {...stroke}
@@ -104,23 +104,30 @@ function ShortSleeveArms({
  * Silhouette maillot — épaules couvertes ; base plus étroite (trapèze) calée sur
  * `TorsoBlock` 0.44 vs `LegsBlock` 0.38 en 3D : hém ≈ w×0.38/0.44 pour ne pas « flotter » au-dessus du short.
  */
-function shirtPathD(x: number, y: number, w: number, h: number, pad = 6.5) {
+/** Écart épaules / col — plus bas = silhouette plus près du corps. */
+const JERSEY_SHOULDER_PAD = 5.1
+
+function shirtPathD(x: number, y: number, w: number, h: number, pad = JERSEY_SHOULDER_PAD) {
   const cx = x + w / 2
   const neck = w * 0.2
   const neckY = y + 4
   const hemY = y + h - 0.5
   /** Demi-largeur bas maillot : même ratio que jambes / torse POP (0.38 / 0.44). */
   const hemHalf = (w * 0.38) / (2 * 0.44)
+  /* Courbes d’épaule : évite l’angle vif du « L » qui trahissait un trait net au contour. */
   return `M ${x - pad - 1.5} ${y + 12}
-    L ${x - pad * 0.35} ${y + 3}
+    Q ${x - pad * 0.62} ${y + 7.2}, ${x - pad * 0.35} ${y + 3}
     L ${cx - neck / 2 - 0.5} ${neckY}
     L ${cx + neck / 2 + 0.5} ${neckY}
     L ${x + w + pad * 0.35} ${y + 3}
-    L ${x + w + pad + 1.5} ${y + 12}
+    Q ${x + w + pad * 0.62} ${y + 7.2}, ${x + w + pad + 1.5} ${y + 12}
     L ${cx + hemHalf} ${hemY}
     L ${cx - hemHalf} ${hemY}
     Z`
 }
+
+/** Position / taille maillot 2D (avant ~28×44 @ y=72, h=48). */
+const AVATAR_KIT = { x: 31, y: 73, w: 38, h: 42 } as const
 
 /** Réf. torse 3D `PopCharacter` `TorsoBlock` (RoundedBox) — aligner les bandes SVG boutique / chat. */
 const TORSO_W_REF = 0.44
@@ -311,7 +318,7 @@ function JerseyKit({
   pixelJersey?: { preset: PixelJerseyPresetId } | null
 }) {
   const pathD = shirtPathD(x, y, w, h)
-  const pad = 6.5
+  const pad = JERSEY_SHOULDER_PAD
   const cxBox = x + w / 2
   const hemHalf = (w * 0.38) / (2 * 0.44)
   const bbox = {
@@ -377,7 +384,14 @@ function JerseyKit({
         ) : null}
       </g>
 
-      <path d={pathD} fill="none" stroke="rgba(15,23,42,.22)" strokeWidth={0.55} />
+      <path
+        d={pathD}
+        fill="none"
+        stroke="rgba(15,23,42,.12)"
+        strokeWidth={0.38}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
 
       {/* Encolure côtelée (alignée sur le haut du maillot) */}
       <path
@@ -390,10 +404,10 @@ function JerseyKit({
 
       {/* Parements manches (blanc + liseré) — visibles aussi en maillot pixel + zoom chat */}
       <g>
-        <rect x={x - 5} y={y + 15} width={13} height={4} rx={0.7} fill={light} opacity={0.98} />
-        <rect x={x - 5} y={y + 18} width={13} height={1.6} rx={0.35} fill={colors.secondary} opacity={0.96} />
-        <rect x={x + w - 8} y={y + 15} width={13} height={4} rx={0.7} fill={light} opacity={0.98} />
-        <rect x={x + w - 8} y={y + 18} width={13} height={1.6} rx={0.35} fill={colors.secondary} opacity={0.96} />
+        <rect x={x - 4} y={y + 15} width={12} height={4} rx={0.7} fill={light} opacity={0.98} />
+        <rect x={x - 4} y={y + 18} width={12} height={1.6} rx={0.35} fill={colors.secondary} opacity={0.96} />
+        <rect x={x + w - 8} y={y + 15} width={12} height={4} rx={0.7} fill={light} opacity={0.98} />
+        <rect x={x + w - 8} y={y + 18} width={12} height={1.6} rx={0.35} fill={colors.secondary} opacity={0.96} />
       </g>
 
       {variant === 'back' && flocage && (
@@ -427,58 +441,245 @@ function JerseyKit({
   )
 }
 
+/** Découpe « tout sauf visage » pour les cheveux (évite masque sur yeux / bouche). */
+function hairFaceClipPathD(cxF: number, cyF: number, rx: number, ry: number): string {
+  const outer = 'M 0 0 L 100 0 L 100 140 L 0 140 Z'
+  const top = cyF - ry
+  const inner = `M ${cxF} ${top} A ${rx} ${ry} 0 1 1 ${cxF} ${cyF + ry} A ${rx} ${ry} 0 1 1 ${cxF} ${top} Z`
+  return `${outer} ${inner}`
+}
+
 function HairPath({
   style,
-  color,
+  fill,
+  edgeColor,
   cx,
   cy,
 }: {
   style: AvatarCharacterLook['hairStyle']
-  color: string
+  /** Gradient ou couleur pleine */
+  fill: string
+  /** Contour discret pour séparer du visage */
+  edgeColor: string
   cx: number
   cy: number
 }) {
-  const common = { fill: color }
+  const stroke = { stroke: edgeColor, strokeWidth: 0.35 as const, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const }
   switch (style) {
     case 'buzz':
-      return <ellipse cx={cx} cy={cy - 18} rx={22} ry={10} {...common} />
+      return (
+        <ellipse
+          cx={cx}
+          cy={cy - 17.2}
+          rx={21.2}
+          ry={9.2}
+          fill={fill}
+          {...stroke}
+          strokeWidth={0.28}
+        />
+      )
     case 'short':
-      /* Volume latéral + calotte plus haute au centre, proche du « HairShort » 3D (côtés marqués). */
       return (
         <path
-          d={`M ${cx - 24} ${cy - 4}
-            Q ${cx - 22} ${cy - 30} ${cx - 16} ${cy - 36}
-            Q ${cx - 6} ${cy - 40} ${cx} ${cy - 34}
-            Q ${cx + 6} ${cy - 40} ${cx + 16} ${cy - 36}
-            Q ${cx + 22} ${cy - 30} ${cx + 24} ${cy - 4}
-            Q ${cx + 23} ${cy - 16} ${cx + 19} ${cy - 18}
-            Q ${cx} ${cy - 26} ${cx - 19} ${cy - 18}
-            Q ${cx - 23} ${cy - 16} ${cx - 24} ${cy - 4}
+          d={`M ${cx - 25.2} ${cy - 3.2}
+            C ${cx - 25.5} ${cy - 22}, ${cx - 21} ${cy - 34.5}, ${cx - 12} ${cy - 37.5}
+            C ${cx - 5.5} ${cy - 40}, ${cx + 5.5} ${cy - 40}, ${cx + 12} ${cy - 37.5}
+            C ${cx + 21} ${cy - 34.5}, ${cx + 25.5} ${cy - 22}, ${cx + 25.2} ${cy - 3.2}
+            C ${cx + 23} ${cy - 14}, ${cx + 14} ${cy - 21}, ${cx} ${cy - 23.5}
+            C ${cx - 14} ${cy - 21}, ${cx - 23} ${cy - 14}, ${cx - 25.2} ${cy - 3.2}
             Z`}
-          {...common}
+          fill={fill}
+          {...stroke}
         />
       )
     case 'wavy':
       return (
         <path
-          d={`M ${cx - 26} ${cy - 6} Q ${cx - 18} ${cy - 32} ${cx - 6} ${cy - 14} Q ${cx} ${cy - 36} ${cx + 6} ${cy - 14} Q ${cx + 18} ${cy - 32} ${cx + 26} ${cy - 6} L ${cx + 24} ${cy - 2} Q ${cx} ${cy - 12} ${cx - 24} ${cy - 2} Z`}
-          {...common}
+          d={`M ${cx - 26} ${cy - 4}
+            C ${cx - 27} ${cy - 22}, ${cx - 18} ${cy - 35}, ${cx - 8} ${cy - 30}
+            C ${cx - 3} ${cy - 38}, ${cx + 3} ${cy - 38}, ${cx + 8} ${cy - 30}
+            C ${cx + 18} ${cy - 35}, ${cx + 27} ${cy - 22}, ${cx + 26} ${cy - 4}
+            L ${cx + 24.5} ${cy - 1.2}
+            C ${cx + 12} ${cy - 8}, ${cx - 12} ${cy - 8}, ${cx - 24.5} ${cy - 1.2}
+            Z`}
+          fill={fill}
+          {...stroke}
         />
       )
     case 'long':
       return (
-        <path
-          d={`M ${cx - 24} ${cy - 4} Q ${cx} ${cy - 40} ${cx + 24} ${cy - 4} L ${cx + 28} ${cy + 28} Q ${cx + 10} ${cy + 8} ${cx} ${cy + 18} Q ${cx - 10} ${cy + 8} ${cx - 28} ${cy + 28} Z`}
-          {...common}
-        />
+        <g>
+          {/* Couronne — reste sur le haut du crâne */}
+          <path
+            d={`M ${cx - 25} ${cy - 2}
+              C ${cx - 26} ${cy - 24}, ${cx - 14} ${cy - 37}, ${cx} ${cy - 38}
+              C ${cx + 14} ${cy - 37}, ${cx + 26} ${cy - 24}, ${cx + 25} ${cy - 2}
+              C ${cx + 22} ${cy - 12}, ${cx + 11} ${cy - 18}, ${cx} ${cy - 20}
+              C ${cx - 11} ${cy - 18}, ${cx - 22} ${cy - 12}, ${cx - 25} ${cy - 2}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          {/* Mèches latérales — devant les oreilles, pas au centre du visage */}
+          <path
+            d={`M ${cx - 25} ${cy - 3}
+              C ${cx - 31} ${cy + 6}, ${cx - 29} ${cy + 24}, ${cx - 21} ${cy + 38}
+              C ${cx - 18} ${cy + 30}, ${cx - 19} ${cy + 14}, ${cx - 23} ${cy + 1}
+              C ${cx - 24} ${cy - 2}, ${cx - 25} ${cy - 3}, ${cx - 25} ${cy - 3}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          <path
+            d={`M ${cx + 25} ${cy - 3}
+              C ${cx + 31} ${cy + 6}, ${cx + 29} ${cy + 24}, ${cx + 21} ${cy + 38}
+              C ${cx + 18} ${cy + 30}, ${cx + 19} ${cy + 14}, ${cx + 23} ${cy + 1}
+              C ${cx + 24} ${cy - 2}, ${cx + 25} ${cy - 3}, ${cx + 25} ${cy - 3}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          {/* Volume nuque — bas et arrière uniquement (sous la mâchoire) */}
+          <path
+            d={`M ${cx - 18} ${cy + 10}
+              C ${cx - 12} ${cy + 22}, ${cx - 5} ${cy + 28}, ${cx} ${cy + 29}
+              C ${cx + 5} ${cy + 28}, ${cx + 12} ${cy + 22}, ${cx + 18} ${cy + 10}
+              C ${cx + 8} ${cy + 14}, ${cx - 8} ${cy + 14}, ${cx - 18} ${cy + 10}
+              Z`}
+            fill={fill}
+            opacity={0.98}
+            {...stroke}
+          />
+        </g>
       )
     case 'curly':
       return (
-        <g {...common}>
-          <circle cx={cx - 14} cy={cy - 22} r={9} />
-          <circle cx={cx} cy={cy - 28} r={10} />
-          <circle cx={cx + 14} cy={cy - 22} r={9} />
-          <ellipse cx={cx} cy={cy - 8} rx={26} ry={12} />
+        <path
+          d={`M ${cx - 27} ${cy - 6}
+            C ${cx - 30} ${cy - 24}, ${cx - 20} ${cy - 36}, ${cx - 10} ${cy - 32}
+            C ${cx - 5} ${cy - 40}, ${cx + 5} ${cy - 40}, ${cx + 10} ${cy - 32}
+            C ${cx + 20} ${cy - 36}, ${cx + 30} ${cy - 24}, ${cx + 27} ${cy - 6}
+            C ${cx + 24} ${cy - 2}, ${cx + 14} ${cy - 8}, ${cx} ${cy - 10}
+            C ${cx - 14} ${cy - 8}, ${cx - 24} ${cy - 2}, ${cx - 27} ${cy - 6}
+            Z`}
+          fill={fill}
+          {...stroke}
+        />
+      )
+    case 'sidepart':
+      return (
+        <path
+          d={`M ${cx - 25} ${cy - 3}
+            C ${cx - 22} ${cy - 30}, ${cx - 6} ${cy - 39}, ${cx + 6} ${cy - 35}
+            C ${cx + 18} ${cy - 37}, ${cx + 26} ${cy - 20}, ${cx + 25.5} ${cy - 4}
+            L ${cx + 23} ${cy - 1}
+            C ${cx + 10} ${cy - 14}, ${cx + 2} ${cy - 12}, ${cx - 6} ${cy - 10}
+            C ${cx - 16} ${cy - 18}, ${cx - 24} ${cy - 8}, ${cx - 25} ${cy - 3}
+            Z`}
+          fill={fill}
+          {...stroke}
+        />
+      )
+    case 'undercut':
+      return (
+        <g>
+          <path
+            d={`M ${cx - 26.5} ${cy + 1.5}
+              L ${cx - 24} ${cy - 7}
+              C ${cx - 14} ${cy - 30}, ${cx + 14} ${cy - 30}, ${cx + 24} ${cy - 7}
+              L ${cx + 26.5} ${cy + 1.5}
+              C ${cx + 14} ${cy - 8}, ${cx - 14} ${cy - 8}, ${cx - 26.5} ${cy + 1.5}
+              Z`}
+            fill={fill}
+            opacity={0.92}
+            {...stroke}
+          />
+          <ellipse cx={cx} cy={cy - 22} rx={19.5} ry={13.5} fill={fill} {...stroke} strokeWidth={0.28} />
+        </g>
+      )
+    case 'ponytail':
+      return (
+        <g>
+          <path
+            d={`M ${cx - 25} ${cy - 2}
+              C ${cx - 26} ${cy - 24}, ${cx - 14} ${cy - 37}, ${cx} ${cy - 38}
+              C ${cx + 14} ${cy - 37}, ${cx + 26} ${cy - 24}, ${cx + 25} ${cy - 2}
+              C ${cx + 22} ${cy - 12}, ${cx + 11} ${cy - 18}, ${cx} ${cy - 20}
+              C ${cx - 11} ${cy - 18}, ${cx - 22} ${cy - 12}, ${cx - 25} ${cy - 2}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          <path
+            d={`M ${cx - 23} ${cy - 1}
+              C ${cx - 27} ${cy + 8}, ${cx - 25} ${cy + 22}, ${cx - 18} ${cy + 32}
+              C ${cx - 15} ${cy + 22}, ${cx - 17} ${cy + 10}, ${cx - 21} ${cy + 1}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          <path
+            d={`M ${cx + 14} ${cy + 1}
+              C ${cx + 18} ${cy + 8}, ${cx + 22} ${cy + 20}, ${cx + 25} ${cy + 34}
+              C ${cx + 28} ${cy + 22}, ${cx + 26} ${cy + 10}, ${cx + 20} ${cy + 2}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          <ellipse
+            cx={cx + 30}
+            cy={cy + 30}
+            rx={6.2}
+            ry={9.2}
+            transform={`rotate(24 ${cx + 30} ${cy + 30})`}
+            fill={fill}
+            {...stroke}
+            strokeWidth={0.28}
+          />
+        </g>
+      )
+    case 'mohawk':
+      return (
+        <g>
+          <path
+            d={`M ${cx - 7} ${cy - 1.5}
+              L ${cx - 5} ${cy - 41}
+              C ${cx - 2} ${cy - 47}, ${cx + 2} ${cy - 47}, ${cx + 5} ${cy - 41}
+              L ${cx + 7} ${cy - 1.5}
+              C ${cx + 3} ${cy - 10}, ${cx - 3} ${cy - 10}, ${cx - 7} ${cy - 1.5}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
+          <ellipse cx={cx} cy={cy - 11} rx={20} ry={7.5} fill={edgeColor} opacity={0.28} />
+        </g>
+      )
+    case 'afro':
+      return (
+        <path
+          d={`M ${cx} ${cy - 36}
+            C ${cx + 22} ${cy - 36}, ${cx + 28} ${cy - 16}, ${cx + 26} ${cy - 4}
+            C ${cx + 22} ${cy + 4}, ${cx + 10} ${cy + 6}, ${cx} ${cy + 4}
+            C ${cx - 10} ${cy + 6}, ${cx - 22} ${cy + 4}, ${cx - 26} ${cy - 4}
+            C ${cx - 28} ${cy - 16}, ${cx - 22} ${cy - 36}, ${cx} ${cy - 36}
+            Z`}
+          fill={fill}
+          {...stroke}
+        />
+      )
+    case 'faded':
+      return (
+        <g>
+          <ellipse cx={cx} cy={cy - 17} rx={23} ry={10.5} fill={fill} opacity={0.38} />
+          <path
+            d={`M ${cx - 23} ${cy - 5}
+              C ${cx - 24} ${cy - 22}, ${cx - 12} ${cy - 33}, ${cx} ${cy - 34}
+              C ${cx + 12} ${cy - 33}, ${cx + 24} ${cy - 22}, ${cx + 23} ${cy - 5}
+              C ${cx + 18} ${cy - 14}, ${cx} ${cy - 19}, ${cx - 18} ${cy - 14}
+              Z`}
+            fill={fill}
+            {...stroke}
+          />
         </g>
       )
     default:
@@ -488,36 +689,133 @@ function HairPath({
 
 function BeardPath({
   beard,
-  color,
+  fill,
+  strokeColor,
   cx,
   cy,
 }: {
   beard: AvatarCharacterLook['beard']
-  color: string
+  /** Dégradé ou couleur */
+  fill: string
+  strokeColor: string
   cx: number
   cy: number
 }) {
+  /*
+   * `cy` = centre tête ; lèvre haute ~ cy+12, bouche ~ cy+12…16.
+   * Moustache : uniquement au-dessus de la bouche. Barbe (light, stubble, goatee, full, bouc vanDyke) : sous la bouche.
+   */
   if (beard === 'none') return null
-  const fill = color
   if (beard === 'light') {
     return (
       <path
-        d={`M ${cx - 12} ${cy + 4} Q ${cx} ${cy + 14} ${cx + 12} ${cy + 4}`}
+        d={`M ${cx - 11} ${cy + 16.2} Q ${cx} ${cy + 22} ${cx + 11} ${cy + 16.2}`}
         fill="none"
-        stroke={fill}
-        strokeWidth={3}
+        stroke={strokeColor}
+        strokeWidth={2.2}
         strokeLinecap="round"
+        opacity={0.92}
+      />
+    )
+  }
+  if (beard === 'stubble') {
+    const pts = [
+      [-13, 16.5],
+      [-9.5, 18],
+      [-6, 19.2],
+      [-2.5, 19.8],
+      [0, 20.5],
+      [2.5, 19.8],
+      [6, 19.2],
+      [9.5, 18],
+      [13, 16.5],
+      [-10, 15.5],
+      [-5, 16],
+      [0, 16.5],
+      [5, 16],
+      [10, 15.5],
+      [-8.5, 23.5],
+      [-4, 25.2],
+      [0, 26],
+      [4, 25.2],
+      [8.5, 23.5],
+    ] as const
+    return (
+      <g opacity={0.56}>
+        {pts.map(([dx, dy], i) => (
+          <circle key={i} cx={cx + dx} cy={cy + dy} r={0.9} fill={strokeColor} />
+        ))}
+        <ellipse cx={cx} cy={cy + 20.5} rx={14.5} ry={7.2} fill={fill} opacity={0.12} />
+      </g>
+    )
+  }
+  if (beard === 'moustache') {
+    return (
+      <path
+        d={`M ${cx - 14.5} ${cy + 11}
+          C ${cx - 11} ${cy + 9.4}, ${cx - 4} ${cy + 9.6}, ${cx} ${cy + 10.2}
+          C ${cx + 4} ${cy + 9.6}, ${cx + 11} ${cy + 9.4}, ${cx + 14.5} ${cy + 11}
+          C ${cx + 10} ${cy + 12.4}, ${cx + 4} ${cy + 12}, ${cx} ${cy + 11.8}
+          C ${cx - 4} ${cy + 12}, ${cx - 10} ${cy + 12.4}, ${cx - 14.5} ${cy + 11}
+          Z`}
+        fill={fill}
+        stroke={mixHex(strokeColor, '#0f172a', 0.25)}
+        strokeWidth={0.2}
+        opacity={0.96}
       />
     )
   }
   if (beard === 'goatee') {
-    return <ellipse cx={cx} cy={cy + 10} rx={8} ry={12} fill={fill} opacity={0.9} />
+    return (
+      <ellipse
+        cx={cx}
+        cy={cy + 23}
+        rx={6}
+        ry={7}
+        fill={fill}
+        stroke={mixHex(strokeColor, '#0f172a', 0.2)}
+        strokeWidth={0.2}
+        opacity={0.94}
+      />
+    )
   }
+  if (beard === 'vanDyke') {
+    return (
+      <g>
+        <path
+          d={`M ${cx - 9.5} ${cy + 10.2} Q ${cx} ${cy + 11.6} ${cx + 9.5} ${cy + 10.2}`}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={1.85}
+          strokeLinecap="round"
+          opacity={0.95}
+        />
+        <ellipse
+          cx={cx}
+          cy={cy + 23}
+          rx={5.2}
+          ry={6.8}
+          fill={fill}
+          stroke={mixHex(strokeColor, '#0f172a', 0.22)}
+          strokeWidth={0.18}
+          opacity={0.94}
+        />
+      </g>
+    )
+  }
+  /* Barbe complète : bord haut sous la bouche (pas de masse sur la lèvre / philtrum). */
   return (
     <path
-      d={`M ${cx - 20} ${cy - 2} Q ${cx - 22} ${cy + 22} ${cx} ${cy + 26} Q ${cx + 22} ${cy + 22} ${cx + 20} ${cy - 2} Q ${cx} ${cy + 8} ${cx - 20} ${cy - 2}`}
+      d={`M ${cx - 17} ${cy + 15.2}
+        C ${cx - 18.5} ${cy + 19}, ${cx - 11} ${cy + 23.8}, ${cx} ${cy + 25.2}
+        C ${cx + 11} ${cy + 23.8}, ${cx + 18.5} ${cy + 19}, ${cx + 17} ${cy + 15.2}
+        C ${cx + 10.5} ${cy + 16.4}, ${cx - 10.5} ${cy + 16.4}, ${cx - 17} ${cy + 15.2}
+        Z`}
       fill={fill}
-      opacity={0.92}
+      stroke={mixHex(strokeColor, '#0f172a', 0.2)}
+      strokeWidth={0.24}
+      strokeLinejoin="round"
+      opacity={0.94}
     />
   )
 }
@@ -596,15 +894,56 @@ function Eyebrows({
   const outerR = faceY + e.browOuterY
   const innerR = faceY + e.browInnerY
   const serious = expr === 'serious'
-  const w = serious ? 1.4 : 1.05
+  const w = serious ? 1.35 : 0.95
+  const tip = mixHex(hairColor, '#f5f5f4', 0.12)
   return (
-    <g fill="none" stroke={hairColor} strokeLinecap="round" strokeWidth={w} opacity={0.9}>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.94}>
       <path
         d={`M ${cx - 19.5} ${outerL} Q ${cx - 10} ${innerL - 1.4} ${cx - 3.2} ${innerL + (serious ? 1.4 : 0.2)}`}
+        stroke={hairColor}
+        strokeWidth={w}
       />
       <path
         d={`M ${cx + 19.5} ${outerR} Q ${cx + 10} ${innerR - 1.4} ${cx + 3.2} ${innerR + (serious ? 1.4 : 0.2)}`}
+        stroke={hairColor}
+        strokeWidth={w}
       />
+      <path
+        d={`M ${cx - 18} ${outerL + 0.2} Q ${cx - 10} ${innerL - 1.1} ${cx - 4} ${innerL + (serious ? 1.1 : 0.1)}`}
+        stroke={tip}
+        strokeWidth={w * 0.38}
+        opacity={0.55}
+      />
+      <path
+        d={`M ${cx + 18} ${outerR + 0.2} Q ${cx + 10} ${innerR - 1.1} ${cx + 4} ${innerR + (serious ? 1.1 : 0.1)}`}
+        stroke={tip}
+        strokeWidth={w * 0.38}
+        opacity={0.55}
+      />
+    </g>
+  )
+}
+
+function EyeLashArc({ rx, ry, dramatic }: { rx: number; ry: number; dramatic: boolean }) {
+  const n = dramatic ? 8 : 5
+  const strokeW = dramatic ? 0.2 : 0.14
+  const reach = dramatic ? 0.62 : 0.42
+  return (
+    <g
+      fill="none"
+      stroke="#0f172a"
+      strokeWidth={strokeW}
+      strokeLinecap="round"
+      opacity={dramatic ? 0.82 : 0.58}
+    >
+      {Array.from({ length: n }, (_, i) => {
+        const u = (i - (n - 1) / 2) / ((n - 1) / 2 || 1)
+        const x0 = u * rx * 0.88
+        const y0 = -ry * 0.42
+        const x1 = x0 + u * rx * 0.06
+        const y1 = y0 - reach
+        return <line key={i} x1={x0} y1={y0} x2={x1} y2={y1} />
+      })}
     </g>
   )
 }
@@ -617,6 +956,7 @@ function EyeGroup({
   ry,
   skinTone,
   scale,
+  eyelashStyle,
 }: {
   uid: string
   cx: number
@@ -625,52 +965,78 @@ function EyeGroup({
   ry: number
   skinTone: string
   scale: number
+  eyelashStyle: AvatarCharacterLook['eyelashStyle']
 }) {
   const irisR = Math.min(rx, ry) * 0.55
   const lid = mixHex(skinTone, '#1c1917', 0.18)
+  const lashes = eyelashStyle === 'natural' || eyelashStyle === 'dramatic'
   return (
     <g transform={`translate(${cx} ${cy}) scale(${scale})`}>
-      <ellipse rx={rx} ry={ry} fill="#f8fafc" stroke="rgba(15,23,42,.14)" strokeWidth={0.28} />
-      <ellipse rx={rx * 0.9} ry={ry * 0.86} fill={`url(#sclera-${uid})`} opacity={0.42} />
+      <ellipse rx={rx} ry={ry} fill="#e9eef4" stroke="rgba(100,116,139,0.32)" strokeWidth={0.2} />
+      <ellipse rx={rx * 0.92} ry={ry * 0.88} fill={`url(#sclera-${uid})`} opacity={0.55} />
       <circle r={irisR} fill={`url(#iris-${uid})`} />
-      <circle r={irisR * 0.42} fill="#0a0f1a" />
-      <circle cx={-irisR * 0.38} cy={-irisR * 0.36} r={irisR * 0.24} fill="#ffffff" opacity={0.94} />
-      <circle cx={irisR * 0.12} cy={irisR * 0.22} r={irisR * 0.09} fill="#ffffff" opacity={0.45} />
+      <circle r={irisR} fill="none" stroke="rgba(15,23,42,0.28)" strokeWidth={0.14} />
+      <circle r={irisR * 0.4} fill="#070b12" />
+      <circle cx={-irisR * 0.36} cy={-irisR * 0.34} r={irisR * 0.22} fill="#ffffff" opacity={0.92} />
+      <circle cx={irisR * 0.14} cy={irisR * 0.2} r={irisR * 0.08} fill="#ffffff" opacity={0.5} />
       <path
-        d={`M ${-rx * 0.92} ${-ry * 0.28} Q 0 ${-ry * 0.52} ${rx * 0.92} ${-ry * 0.28}`}
+        d={`M ${-rx * 0.94} ${-ry * 0.26} Q 0 ${-ry * 0.58} ${rx * 0.94} ${-ry * 0.26}`}
+        fill="none"
+        stroke={mixHex(lid, '#0f172a', 0.35)}
+        strokeWidth={0.52}
+        strokeLinecap="round"
+        opacity={0.42}
+      />
+      <path
+        d={`M ${-rx * 0.94} ${-ry * 0.26} Q 0 ${-ry * 0.48} ${rx * 0.94} ${-ry * 0.26}`}
         fill="none"
         stroke={lid}
-        strokeWidth={0.38}
+        strokeWidth={0.22}
         strokeLinecap="round"
-        opacity={0.5}
+        opacity={0.55}
       />
+      {lashes ? <EyeLashArc rx={rx} ry={ry} dramatic={eyelashStyle === 'dramatic'} /> : null}
     </g>
   )
 }
 
+function resolveEyeDims(shape: AvatarCharacterLook['eyeShape']): { rx: number; ry: number } {
+  switch (shape) {
+    case 'almond':
+      return { rx: 5, ry: 3.5 }
+    case 'narrow':
+      return { rx: 4.1, ry: 3.15 }
+    case 'wide':
+      return { rx: 5.7, ry: 4.55 }
+    case 'round':
+    default:
+      return { rx: 4.5, ry: 4.5 }
+  }
+}
+
 function CheekBlush({ cx, faceY, expr }: { cx: number; faceY: number; expr: FaceExpression }) {
-  const strength = EXPR[expr].cheekBlush * 0.42
+  const strength = EXPR[expr].cheekBlush * 0.32
   if (strength < 0.05) return null
   return (
     <g opacity={strength} pointerEvents="none">
-      <ellipse cx={cx - 15} cy={faceY + 7} rx={8} ry={5.5} fill="#fb7185" />
-      <ellipse cx={cx + 15} cy={faceY + 7} rx={8} ry={5.5} fill="#fb7185" />
+      <ellipse cx={cx - 14} cy={faceY + 8} rx={7} ry={4.8} fill="#fda4af" />
+      <ellipse cx={cx + 14} cy={faceY + 8} rx={7} ry={4.8} fill="#fda4af" />
     </g>
   )
 }
 
 function NoseHint({ cx, faceY, skinTone }: { cx: number; faceY: number; skinTone: string }) {
-  const shade = mixHex(skinTone, '#0f172a', 0.14)
+  const shade = mixHex(skinTone, '#0f172a', 0.1)
   return (
-    <g pointerEvents="none" opacity={0.85}>
-      <ellipse cx={cx + 0.5} cy={faceY + 6.5} rx={3.2} ry={4.8} fill={shade} opacity={0.22} />
+    <g pointerEvents="none" opacity={0.88}>
+      <ellipse cx={cx + 0.5} cy={faceY + 6.8} rx={2.8} ry={4.2} fill={shade} opacity={0.16} />
       <path
-        d={`M ${cx} ${faceY + 1.5} L ${cx - 1.2} ${faceY + 8.5}`}
+        d={`M ${cx} ${faceY + 2} Q ${cx - 0.8} ${faceY + 5.5} ${cx - 1} ${faceY + 8.2}`}
         fill="none"
-        stroke={mixHex(skinTone, '#1c1917', 0.12)}
-        strokeWidth={0.4}
+        stroke={mixHex(skinTone, '#1c1917', 0.1)}
+        strokeWidth={0.32}
         strokeLinecap="round"
-        opacity={0.35}
+        opacity={0.28}
       />
     </g>
   )
@@ -698,6 +1064,157 @@ function Glasses({ style, cx, cy }: { style: AvatarCharacterLook['glasses']; cx:
       stroke="#1e293b"
       strokeWidth={1}
     />
+  )
+}
+
+/** Bas + pieds : calques indépendants (ids boutique `pants-*` / `shoes-*`). */
+function LowerBodyFeetLayer({
+  pantsItemId,
+  shoesItemId,
+  shortsFill,
+  skin,
+}: {
+  pantsItemId: string
+  shoesItemId: string
+  shortsFill: string
+  skin: string
+}) {
+  const pants = pantsItemId || 'pants-kit'
+  const shoes = shoesItemId || 'shoes-studs'
+
+  const denim = '#3d4f6f'
+  const jogger = '#2a3038'
+  const chino = '#c9b896'
+  const cargo = '#4a5d46'
+
+  const pantsLegFill =
+    pants === 'pants-jeans'
+      ? denim
+      : pants === 'pants-jogger'
+        ? jogger
+        : pants === 'pants-chino'
+          ? chino
+          : pants === 'pants-cargo'
+            ? cargo
+            : '#1e293b'
+
+  const showKitShorts = pants === 'pants-kit'
+
+  const shoeTop =
+    shoes === 'shoes-sneaker-white' || shoes === 'shoes-sneaker-neon'
+      ? '#f8fafc'
+      : shoes === 'shoes-retro-gum'
+        ? '#fde68a'
+        : '#0f172a'
+
+  const shoeAccent =
+    shoes === 'shoes-sneaker-neon' ? '#22d3ee' : shoes === 'shoes-retro-gum' ? '#92400e' : '#334155'
+
+  const legY = showKitShorts ? 118 : 114
+  const legH = showKitShorts ? 20 : 24
+  const legW = 11
+  const legRx = 3
+  const leftX = 33
+  const rightX = 56
+
+  const legFill =
+    showKitShorts && (shoes === 'shoes-studs' || shoes === 'shoes-retro-gum')
+      ? pantsLegFill
+      : !showKitShorts
+        ? pantsLegFill
+        : skin
+
+  const drawSneakerSole = shoes === 'shoes-sneaker-white' || shoes === 'shoes-sneaker-neon'
+  const sneakerBodyH = 7
+
+  return (
+    <g aria-hidden>
+      {!showKitShorts ? (
+        <path
+          d="M 31 108 L 69 108 L 68 118 L 32 118 Z"
+          fill={pantsLegFill}
+          stroke="rgba(15,23,42,0.12)"
+          strokeWidth={0.35}
+        />
+      ) : null}
+
+      {showKitShorts ? (
+        <rect
+          x={31}
+          y={115}
+          width={38}
+          height={7}
+          rx={2.5}
+          fill={shortsFill}
+          opacity={0.88}
+          stroke="rgba(15,23,42,.15)"
+          strokeWidth={0.4}
+        />
+      ) : null}
+
+      <rect x={leftX} y={legY} width={legW} height={legH} rx={legRx} fill={legFill} stroke="rgba(15,23,42,0.14)" strokeWidth={0.35} />
+      <rect x={rightX} y={legY} width={legW} height={legH} rx={legRx} fill={legFill} stroke="rgba(15,23,42,0.14)" strokeWidth={0.35} />
+
+      {drawSneakerSole ? (
+        <g>
+          <rect
+            x={leftX - 0.5}
+            y={legY + legH - sneakerBodyH}
+            width={legW + 1}
+            height={sneakerBodyH}
+            rx={2}
+            fill={shoeTop}
+            stroke="rgba(15,23,42,0.2)"
+            strokeWidth={0.3}
+          />
+          <rect
+            x={rightX - 0.5}
+            y={legY + legH - sneakerBodyH}
+            width={legW + 1}
+            height={sneakerBodyH}
+            rx={2}
+            fill={shoeTop}
+            stroke="rgba(15,23,42,0.2)"
+            strokeWidth={0.3}
+          />
+          <rect x={leftX} y={legY + legH - 2} width={legW} height={2} rx={0.5} fill={shoeAccent} opacity={0.85} />
+          <rect x={rightX} y={legY + legH - 2} width={legW} height={2} rx={0.5} fill={shoeAccent} opacity={0.85} />
+          {shoes === 'shoes-sneaker-neon' ? (
+            <>
+              <rect x={leftX + 2} y={legY + legH - 5} width={3} height={2} rx={0.5} fill="#22d3ee" opacity={0.95} />
+              <rect x={rightX + 2} y={legY + legH - 5} width={3} height={2} rx={0.5} fill="#22d3ee" opacity={0.95} />
+            </>
+          ) : null}
+        </g>
+      ) : (
+        <g>
+          <rect
+            x={leftX + 1}
+            y={legY + legH - 5}
+            width={legW - 2}
+            height={5}
+            rx={1.2}
+            fill={shoeTop}
+            opacity={0.95}
+          />
+          <rect
+            x={rightX + 1}
+            y={legY + legH - 5}
+            width={legW - 2}
+            height={5}
+            rx={1.2}
+            fill={shoeTop}
+            opacity={0.95}
+          />
+          {shoes === 'shoes-retro-gum' ? (
+            <>
+              <rect x={leftX} y={legY + legH - 1.5} width={legW} height={1.5} rx={0.4} fill="#b45309" opacity={0.9} />
+              <rect x={rightX} y={legY + legH - 1.5} width={legW} height={1.5} rx={0.4} fill="#b45309" opacity={0.9} />
+            </>
+          ) : null}
+        </g>
+      )}
+    </g>
   )
 }
 
@@ -739,6 +1256,8 @@ export function CharacterAvatarSvg({
   suppressBaseHeadwear,
   className,
   pixelJersey,
+  pantsItemId,
+  shoesItemId,
 }: {
   look: AvatarCharacterLook
   jerseyOverride: TorsoColors | null
@@ -748,6 +1267,8 @@ export function CharacterAvatarSvg({
   suppressBaseHeadwear?: boolean
   className?: string
   pixelJersey?: { preset: PixelJerseyPresetId } | null
+  pantsItemId?: string | null
+  shoesItemId?: string | null
 }) {
   const uid = useId().replace(/:/g, '')
   const torso = resolveTorso(look, jerseyOverride, supporterColors)
@@ -755,89 +1276,110 @@ export function CharacterAvatarSvg({
   const faceY = 48
   const headTop = 18
 
-  const eyeRx = look.eyeShape === 'almond' ? 5 : 4.5
-  const eyeRy = look.eyeShape === 'almond' ? 3.5 : 4.5
+  const { rx: eyeRx, ry: eyeRy } = resolveEyeDims(look.eyeShape)
   const expr: FaceExpression = look.faceExpression ?? 'happy'
   const eyeScale = EXPR[expr].eyeScale
 
   const shortsFill = torso.primary
+  const pid = pantsItemId ?? 'pants-kit'
+  const sid = shoesItemId ?? 'shoes-studs'
 
   return (
     <svg
       viewBox="0 0 100 140"
       className={cn('h-full w-full max-h-[140px] max-w-[100px]', className)}
+      shapeRendering="geometricPrecision"
       aria-hidden
     >
       <defs>
-        <linearGradient id={`neck-${uid}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={look.skinTone} />
-          <stop offset="100%" stopColor={look.skinTone} stopOpacity={0.85} />
-        </linearGradient>
-        <radialGradient id={`faceSkin-${uid}`} cx="36%" cy="30%" r="72%">
-          <stop offset="0%" stopColor={mixHex(look.skinTone, '#ffffff', 0.2)} />
+        <linearGradient id={`neck-${uid}`} gradientUnits="userSpaceOnUse" x1="50" y1="60" x2="50" y2="77.5">
+          <stop offset="0%" stopColor={mixHex(look.skinTone, '#0f172a', 0.14)} />
           <stop offset="38%" stopColor={look.skinTone} />
-          <stop offset="100%" stopColor={mixHex(look.skinTone, '#292524', 0.14)} />
+          <stop offset="100%" stopColor={mixHex(look.skinTone, '#57534e', 0.08)} />
+        </linearGradient>
+        <clipPath id={`hairClip-${uid}`} clipPathUnits="userSpaceOnUse">
+          <path fillRule="evenodd" d={hairFaceClipPathD(50, 48, 23.6, 21.6)} />
+        </clipPath>
+        <radialGradient id={`faceSkin-${uid}`} cx="40%" cy="28%" r="78%">
+          <stop offset="0%" stopColor={mixHex(look.skinTone, '#ffffff', 0.11)} />
+          <stop offset="32%" stopColor={look.skinTone} />
+          <stop offset="72%" stopColor={mixHex(look.skinTone, '#78716c', 0.1)} />
+          <stop offset="100%" stopColor={mixHex(look.skinTone, '#1c1917', 0.18)} />
         </radialGradient>
-        <radialGradient id={`sclera-${uid}`} cx="32%" cy="28%" r="75%">
+        <radialGradient id={`sclera-${uid}`} cx="35%" cy="32%" r="78%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#e2e8f0" />
+          <stop offset="70%" stopColor="#e8edf3" />
+          <stop offset="100%" stopColor="#cbd5e1" />
         </radialGradient>
-        <radialGradient id={`iris-${uid}`} cx="38%" cy="35%" r="65%">
-          <stop offset="0%" stopColor={mixHex(look.eyeColor, '#f8fafc', 0.28)} />
-          <stop offset="55%" stopColor={look.eyeColor} />
-          <stop offset="100%" stopColor={mixHex(look.eyeColor, '#020617', 0.45)} />
+        <radialGradient id={`iris-${uid}`} cx="40%" cy="38%" r="68%">
+          <stop offset="0%" stopColor={mixHex(look.eyeColor, '#f8fafc', 0.35)} />
+          <stop offset="38%" stopColor={look.eyeColor} />
+          <stop offset="72%" stopColor={mixHex(look.eyeColor, '#0f172a', 0.22)} />
+          <stop offset="100%" stopColor={mixHex(look.eyeColor, '#020617', 0.55)} />
         </radialGradient>
+        <linearGradient id={`hairVol-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={mixHex(look.hairColor, '#ffffff', 0.2)} />
+          <stop offset="40%" stopColor={look.hairColor} />
+          <stop offset="100%" stopColor={mixHex(look.hairColor, '#0a0806', 0.52)} />
+        </linearGradient>
+        <linearGradient id={`beardVol-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={mixHex(look.beardColor ?? look.hairColor, '#ffffff', 0.09)} />
+          <stop offset="52%" stopColor={look.beardColor ?? look.hairColor} />
+          <stop offset="100%" stopColor={mixHex(look.beardColor ?? look.hairColor, '#020617', 0.42)} />
+        </linearGradient>
         {variant === 'back' ? (
-          <radialGradient id={`hairBack-${uid}`} cx="35%" cy="25%" r="78%">
-            <stop offset="0%" stopColor={mixHex(look.hairColor, '#fef3c7', 0.1)} />
-            <stop offset="62%" stopColor={look.hairColor} />
-            <stop offset="100%" stopColor={mixHex(look.hairColor, '#0f172a', 0.38)} />
+          <radialGradient id={`hairBack-${uid}`} cx="38%" cy="28%" r="80%">
+            <stop offset="0%" stopColor={mixHex(look.hairColor, '#ffffff', 0.16)} />
+            <stop offset="45%" stopColor={look.hairColor} />
+            <stop offset="100%" stopColor={mixHex(look.hairColor, '#0a0806', 0.5)} />
           </radialGradient>
         ) : null}
       </defs>
 
-      {/* Jambes : espacement cohérent avec short élargi (ref. jambes 3D 0.38 vs torse 0.44). */}
-      <rect x={33} y={118} width={11} height={20} rx={3} fill="#1e293b" />
-      <rect x={56} y={118} width={11} height={20} rx={3} fill="#1e293b" />
+      <LowerBodyFeetLayer pantsItemId={pid} shoesItemId={sid} shortsFill={shortsFill} skin={look.skinTone} />
 
       {/* Bras sous le maillot : le torse + clip recouvrent la peau au centre, seuls les côtés restent visibles */}
-      {variant === 'front' ? <ShortSleeveArms skin={look.skinTone} x={28} y={72} w={44} /> : null}
+      {variant === 'front' ? (
+        <ShortSleeveArms skin={look.skinTone} x={AVATAR_KIT.x} y={AVATAR_KIT.y} w={AVATAR_KIT.w} />
+      ) : null}
 
       <JerseyKit
         uid={uid}
-        x={28}
-        y={72}
-        w={44}
-        h={48}
+        x={AVATAR_KIT.x}
+        y={AVATAR_KIT.y}
+        w={AVATAR_KIT.w}
+        h={AVATAR_KIT.h}
         colors={torso}
         variant={variant}
         flocage={variant === 'back' ? flocage : undefined}
         pixelJersey={pixelJersey}
       />
 
-      <rect
-        x={31}
-        y={115}
-        width={38}
-        height={7}
-        rx={2.5}
-        fill={shortsFill}
-        opacity={0.88}
-        stroke="rgba(15,23,42,.15)"
-        strokeWidth={0.4}
+      <path
+        d={`M 43.4 62.2 Q 50 60.2 56.6 62.2 L 57.6 ${AVATAR_KIT.y + 1.2} Q 50 ${AVATAR_KIT.y + 2.6} 42.4 ${AVATAR_KIT.y + 1.2} Z`}
+        fill={`url(#neck-${uid})`}
+        stroke={mixHex(look.skinTone, '#1c1917', 0.1)}
+        strokeWidth={0.26}
       />
-
-      <rect x={42} y={64} width={16} height={14} fill={`url(#neck-${uid})`} />
+      {/* Relief encolure : uniquement sous le cou (pas d’arc pleine largeur → évite la « barre » sur les épaules). */}
+      <path
+        d={`M ${cx - 10} ${AVATAR_KIT.y - 0.5} Q ${cx} ${AVATAR_KIT.y - 2} ${cx + 10} ${AVATAR_KIT.y - 0.5}`}
+        fill="none"
+        stroke={mixHex(look.skinTone, '#0f172a', 0.1)}
+        strokeWidth={0.22}
+        strokeLinecap="round"
+        opacity={0.55}
+      />
 
       {/* Tête : un peu plus large que haute, comme la sphère tête 3D (scale ~1.15×1.2). */}
       <ellipse
         cx={cx}
         cy={faceY}
-        rx={26}
-        ry={24}
+        rx={25.5}
+        ry={23.5}
         fill={`url(#faceSkin-${uid})`}
-        stroke="rgba(0,0,0,.1)"
-        strokeWidth={0.55}
+        stroke={mixHex(look.skinTone, '#1c1917', 0.14)}
+        strokeWidth={0.38}
       />
 
       {variant === 'front' && (
@@ -852,6 +1394,7 @@ export function CharacterAvatarSvg({
             ry={eyeRy}
             skinTone={look.skinTone}
             scale={eyeScale}
+            eyelashStyle={look.eyelashStyle ?? 'none'}
           />
           <EyeGroup
             uid={uid}
@@ -861,6 +1404,7 @@ export function CharacterAvatarSvg({
             ry={eyeRy}
             skinTone={look.skinTone}
             scale={eyeScale}
+            eyelashStyle={look.eyelashStyle ?? 'none'}
           />
           <Eyebrows cx={cx} faceY={faceY} hairColor={look.hairColor} expr={expr} />
           <ExpressiveMouth cx={cx} faceY={faceY} expr={expr} />
@@ -883,8 +1427,22 @@ export function CharacterAvatarSvg({
 
       {variant === 'front' && (
         <>
-          <BeardPath beard={look.beard} color={look.hairColor} cx={cx} cy={faceY} />
-          <HairPath style={look.hairStyle} color={look.hairColor} cx={cx} cy={faceY} />
+          <BeardPath
+            beard={look.beard}
+            fill={`url(#beardVol-${uid})`}
+            strokeColor={look.beardColor ?? look.hairColor}
+            cx={cx}
+            cy={faceY}
+          />
+          <g clipPath={`url(#hairClip-${uid})`}>
+            <HairPath
+              style={look.hairStyle}
+              fill={`url(#hairVol-${uid})`}
+              edgeColor={mixHex(look.hairColor, '#0f172a', 0.28)}
+              cx={cx}
+              cy={faceY}
+            />
+          </g>
           {!suppressBaseHeadwear && <BaseHeadwear style={look.headwear} cx={cx} headTop={headTop} />}
         </>
       )}

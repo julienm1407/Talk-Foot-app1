@@ -24,10 +24,17 @@ export const PRESET_HAIR = [
 
 export const PRESET_EYES = [
   '#1e293b',
+  '#0c4a6e',
   '#0ea5e9',
+  '#06b6d4',
   '#16a34a',
+  '#15803d',
   '#a16207',
+  '#b45309',
   '#7c3aed',
+  '#c026d3',
+  '#e11d48',
+  '#f8fafc',
 ]
 
 export const DEFAULT_CHARACTER_LOOK: AvatarCharacterLook = {
@@ -35,6 +42,7 @@ export const DEFAULT_CHARACTER_LOOK: AvatarCharacterLook = {
   hairStyle: 'short',
   eyeColor: '#1e293b',
   eyeShape: 'round',
+  eyelashStyle: 'none',
   beard: 'none',
   skinTone: '#e8b89a',
   faceExpression: 'happy',
@@ -52,17 +60,57 @@ const HAIR_STYLES: ReadonlySet<AvatarCharacterLook['hairStyle']> = new Set([
   'wavy',
   'long',
   'curly',
+  'sidepart',
+  'undercut',
+  'ponytail',
+  'mohawk',
+  'afro',
+  'faded',
 ])
 
-const BEARD_STYLES: ReadonlySet<AvatarCharacterLook['beard']> = new Set(['none', 'light', 'full', 'goatee'])
+const BEARD_STYLES: ReadonlySet<AvatarCharacterLook['beard']> = new Set([
+  'none',
+  'light',
+  'stubble',
+  'full',
+  'goatee',
+  'moustache',
+  'vanDyke',
+])
+
+const EYE_SHAPES: ReadonlySet<AvatarCharacterLook['eyeShape']> = new Set([
+  'round',
+  'almond',
+  'narrow',
+  'wide',
+])
+
+const EYELASH_STYLES: ReadonlySet<AvatarCharacterLook['eyelashStyle']> = new Set([
+  'none',
+  'natural',
+  'dramatic',
+])
+
+function isHex6(s: unknown): s is string {
+  return typeof s === 'string' && /^#[0-9a-fA-F]{6}$/.test(s)
+}
 
 function sanitizeLook(p: Partial<AvatarCharacterLook>): Partial<AvatarCharacterLook> {
   const out = { ...p }
+  if (p.beardColor != null && !isHex6(p.beardColor)) {
+    delete (out as { beardColor?: unknown }).beardColor
+  }
   if (p.hairStyle != null && !HAIR_STYLES.has(p.hairStyle as AvatarCharacterLook['hairStyle'])) {
     delete (out as { hairStyle?: unknown }).hairStyle
   }
   if (p.beard != null && !BEARD_STYLES.has(p.beard as AvatarCharacterLook['beard'])) {
     delete (out as { beard?: unknown }).beard
+  }
+  if (p.eyeShape != null && !EYE_SHAPES.has(p.eyeShape as AvatarCharacterLook['eyeShape'])) {
+    delete (out as { eyeShape?: unknown }).eyeShape
+  }
+  if (p.eyelashStyle != null && !EYELASH_STYLES.has(p.eyelashStyle as AvatarCharacterLook['eyelashStyle'])) {
+    delete (out as { eyelashStyle?: unknown }).eyelashStyle
   }
   return out
 }

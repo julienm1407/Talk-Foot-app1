@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { CalendarPage } from './pages/Calendar'
 import { ChannelPage } from './pages/Channel'
@@ -18,6 +18,7 @@ import { ArticlePage } from './pages/ArticlePage'
 import { ClubPage } from './pages/ClubPage'
 import { AdminPage } from './pages/AdminPage'
 import { PrivacyPage } from './pages/PrivacyPage'
+import { TermsPage } from './pages/TermsPage'
 import { DataSourcesSettingsPage } from './pages/DataSourcesSettings'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
@@ -25,8 +26,9 @@ import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
 import { CloudUserStateGate } from './contexts/CloudUserStateContext'
 import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function RequireAuthRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
+  const location = useLocation()
   if (!isReady) {
     return (
       <div className="relative flex min-h-dvh items-center justify-center">
@@ -36,7 +38,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
   if (!user) {
-    return <Navigate to="/login" replace />
+    const next = encodeURIComponent(`${location.pathname}${location.search}${location.hash}`)
+    return <Navigate to={`/login?next=${next}&gate=shared`} replace />
   }
   return <>{children}</>
 }
@@ -65,39 +68,80 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/article/:slug" element={<ArticlePage />} />
       <Route
         path="/"
         element={
-          <ProtectedRoute>
-            <CloudUserStateGate>
-              <FanPreferencesProvider>
-                <MatchesProvider>
-                  <MonEspaceDrawerProvider>
-                    <AppShell />
-                  </MonEspaceDrawerProvider>
-                </MatchesProvider>
-              </FanPreferencesProvider>
-            </CloudUserStateGate>
-          </ProtectedRoute>
+          <CloudUserStateGate>
+            <FanPreferencesProvider>
+              <MatchesProvider>
+                <MonEspaceDrawerProvider>
+                  <AppShell />
+                </MonEspaceDrawerProvider>
+              </MatchesProvider>
+            </FanPreferencesProvider>
+          </CloudUserStateGate>
         }
       >
         <Route index element={<HomePage />} />
         <Route path="matches" element={<Navigate to="/match" replace />} />
         <Route path="debates" element={<DebatesPage />} />
-        <Route path="debate/:debateId" element={<DebateDetailPage />} />
+        <Route
+          path="debate/:debateId"
+          element={
+            <RequireAuthRoute>
+              <DebateDetailPage />
+            </RequireAuthRoute>
+          }
+        />
         <Route path="groups" element={<GroupsHubPage />} />
         <Route path="videos" element={<VideosPage />} />
         <Route path="rankings" element={<RankingsPage />} />
-        <Route path="channel/:matchId/stade" element={<ChannelStadiumPage />} />
-        <Route path="channel/:matchId" element={<ChannelPage />} />
-        <Route path="group/:groupId" element={<GroupPage />} />
+        <Route
+          path="channel/:matchId/stade"
+          element={
+            <RequireAuthRoute>
+              <ChannelStadiumPage />
+            </RequireAuthRoute>
+          }
+        />
+        <Route
+          path="channel/:matchId"
+          element={
+            <RequireAuthRoute>
+              <ChannelPage />
+            </RequireAuthRoute>
+          }
+        />
+        <Route
+          path="group/:groupId"
+          element={
+            <RequireAuthRoute>
+              <GroupPage />
+            </RequireAuthRoute>
+          }
+        />
         <Route path="match" element={<CalendarPage />} />
         <Route path="agenda" element={<Navigate to="/match" replace />} />
         <Route path="calendar" element={<Navigate to="/match" replace />} />
         <Route path="boutique" element={<BoutiquePage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="settings/donnees" element={<DataSourcesSettingsPage />} />
+        <Route
+          path="profile"
+          element={
+            <RequireAuthRoute>
+              <ProfilePage />
+            </RequireAuthRoute>
+          }
+        />
+        <Route
+          path="settings/donnees"
+          element={
+            <RequireAuthRoute>
+              <DataSourcesSettingsPage />
+            </RequireAuthRoute>
+          }
+        />
         <Route path="user/:userId" element={<UserProfilePage />} />
         <Route path="club/:clubSlug" element={<ClubPage />} />
         <Route

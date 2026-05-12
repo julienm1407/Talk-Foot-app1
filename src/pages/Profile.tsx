@@ -12,8 +12,7 @@ import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
 import { AvatarEditor } from '../components/profile/AvatarEditor'
 import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
-import { CharacterLookEditor } from '../components/profile/CharacterLookEditor'
-import { RiveCharacterLab } from '../components/profile/RiveCharacterLab'
+import { CharacterLayerStudio } from '../components/profile/CharacterLayerStudio'
 import { EditProfileModal } from '../components/profile/EditProfileModal'
 import { UserRankCard } from '../components/profile/UserRankCard'
 import { useUserBets } from '../hooks/useUserBets'
@@ -723,9 +722,8 @@ export function ProfilePage() {
 
       <div id="apparence" className="scroll-mt-4 space-y-4 sm:space-y-5">
         <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
-        <RiveCharacterLab />
+        <CharacterLayerStudio />
 
-        <CharacterLookEditor />
         <AvatarEditor />
       </div>
 

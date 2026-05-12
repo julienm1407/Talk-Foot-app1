@@ -39,8 +39,8 @@ export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }
       <div className="text-[11px] font-black tracking-[0.18em] text-tf-grey">PHOTO DE PROFIL</div>
       <p className="mt-1 text-sm font-semibold text-tf-grey">
         Optionnelle : une <strong>photo perso</strong> (portrait, selfie…), stockée ici, distincte de ton{' '}
-        <strong>personnage 3D</strong> in-app. Les avatars, menus et listes affichent ton look Talk Foot, pas
-        ce fichier, sauf dans cet aperçu.
+        <strong>avatar illustré Talk Foot</strong>. Les menus et listes utilisent ton look Talk Foot, pas cette photo, sauf dans
+        cet aperçu.
       </p>
       <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
         <div

@@ -72,10 +72,11 @@ type EyeP = { side: -1 | 1; mats: PopFaceMats; ex: PopFaceExpr; look: PopAvatarC
  * Sclère (ellipsoïde léger) + iris + pupille + catchlight, volumes séparés, relief sur la tête.
  */
 function EyeAssembly({ side, mats, ex, look }: EyeP) {
-  const al = look.eyeShape === 'almond'
-  const sx = al ? 0.9 : 1
-  const sy = al ? 1.05 : 1
-  const sz = al ? 0.9 : 1
+  const almondLike = look.eyeShape === 'almond' || look.eyeShape === 'narrow'
+  const wide = look.eyeShape === 'wide'
+  const sx = wide ? 1.08 : almondLike ? 0.9 : 1
+  const sy = wide ? 1.12 : almondLike ? 1.05 : 1
+  const sz = wide ? 1.02 : almondLike ? 0.9 : 1
   const x = 0.0515 * side
   const re = 0.0188 * ex.eyeScale
   return (

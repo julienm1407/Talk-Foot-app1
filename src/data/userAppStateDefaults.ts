@@ -8,8 +8,17 @@ import { AVATAR_2D_DEFAULTS } from './avatar2dCatalog'
 export const defaultUserProfile: UserProfile = {
   level: 1,
   xp: 45,
-  equippedItems: { scarf: null, hat: null, jersey: null, accessory: null },
+  equippedItems: {
+    scarf: null,
+    hat: null,
+    jersey: null,
+    accessory: null,
+    pants: 'pants-kit',
+    shoes: 'shoes-studs',
+  },
   ownedItemIds: [],
+  portraitBackdrop: 'tribune',
+  portraitBackdropClubId: null,
   characterLook: DEFAULT_CHARACTER_LOOK,
   avatarLoadout: {
     ...AVATAR_2D_DEFAULTS.loadout,

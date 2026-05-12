@@ -29,7 +29,7 @@ import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGri
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
 
 export function BoutiquePage() {
-  const { wallet, addMedals, spendMedals, spendTokens, claimDailyTokenBonus } = useWallet()
+  const { wallet, addMedals, spendMedals, spendTokens, claimDailyTokenBonus, dailyTokenBonusStatus } = useWallet()
   const { ownsItem, addOwnedItem, setJerseyCustomization, equipItem } = useProfile()
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>('all')
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('featured')
@@ -43,6 +43,7 @@ export function BoutiquePage() {
   const dailyItem = useMemo(() => pickDailyOfferItem(), [])
   const dailyPrice = dailyOfferDiscountedCost(dailyItem)
   const shop = getAppSectionTheme('boutique')
+  const dailyBonus = dailyTokenBonusStatus()
 
   const catalogRows = useMemo(
     () => buildCatalogRows(catalogFilter, catalogSearch),
@@ -329,14 +330,17 @@ export function BoutiquePage() {
                 type="button"
                 variant="success"
                 className="min-h-11 w-full rounded-xl px-6 text-sm font-black sm:w-auto"
+                disabled={!dailyBonus.canClaim}
                 onClick={() => {
                   const r = claimDailyTokenBonus()
-                  if (!r.ok && r.reason === 'already_claimed') showNotice('err', 'Déjà récupéré aujourd’hui.')
+                  if (!r.ok && r.reason === 'already_claimed') showNotice('err', 'Déjà récupéré pour cette journée.')
+                  else if (!r.ok && r.reason === 'not_open_yet')
+                    showNotice('err', 'Disponible chaque jour à 10h. Reviens au coup d’envoi.')
                   else if (r.ok) showNotice('ok', `+${r.amount} jetons !`)
                   else showNotice('err', 'Impossible pour le moment.')
                 }}
               >
-                Récupérer
+                {dailyBonus.canClaim ? 'Récupérer' : dailyBonus.alreadyClaimedToday ? 'Déjà récupéré' : 'Disponible à 10h'}
               </Button>
             </div>
           </article>
@@ -385,6 +389,7 @@ export function BoutiquePage() {
                     ['all', 'Tout le catalogue'],
                     ['accessories', 'Accessoires'],
                     ['kits', 'Maillots'],
+                    ['outfit_lower', 'Bas & chaussures'],
                     ['medals_eur', 'Packs médailles (€)'],
                   ] as const
                 ).map(([id, label]) => (

@@ -2,7 +2,7 @@ import type { AvatarItem, MedalPack } from '../types/profile'
 import { baseAvatarItems, medalPacks } from '../data/shop'
 import { inspiredJerseyItems } from '../data/inspiredJerseys'
 
-export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'medals_eur'
+export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'outfit_lower' | 'medals_eur'
 
 export type CatalogSort = 'featured' | 'price_medals_asc' | 'price_medals_desc' | 'rarity_desc'
 
@@ -42,6 +42,8 @@ export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogR
     items = items.filter((i) => i.slot === 'accessory')
   } else if (filter === 'kits') {
     items = items.filter((i) => i.slot === 'jersey')
+  } else if (filter === 'outfit_lower') {
+    items = items.filter((i) => i.slot === 'pants' || i.slot === 'shoes')
   } else if (filter === 'medals_eur') {
     items = []
   }

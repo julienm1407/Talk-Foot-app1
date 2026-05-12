@@ -166,7 +166,7 @@ export function HomeDesktopExperience({
         <div
           ref={centerScrollRef}
           onScroll={syncCenterScrollFade}
-          className="min-h-0 h-full min-w-0 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain pb-8 pr-0.5 [scrollbar-gutter:stable] sm:space-y-6"
+          className="min-h-0 h-full min-w-0 space-y-5 overflow-y-auto overflow-x-hidden overscroll-contain pb-8 pr-0.5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:space-y-6"
         >
         <div
           className={cn(
@@ -436,11 +436,7 @@ export function HomeDesktopExperience({
             </div>
             <div
               className={cn(
-                'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 [scrollbar-width:thin]',
-                '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full',
-                L
-                  ? '[&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent'
-                  : '[&::-webkit-scrollbar-thumb]:bg-white/22 [&::-webkit-scrollbar-track]:bg-transparent',
+                'min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
               )}
             >
               <ul className="space-y-3 pb-0.5 pt-0.5" role="list">
@@ -476,23 +472,15 @@ export function HomeDesktopExperience({
             </div>
             <div
               className={cn(
-                'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 [scrollbar-width:thin]',
-                '[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full',
+                'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
                 'pt-2.5',
-                L
-                  ? '[&::-webkit-scrollbar-thumb]:bg-slate-300/90 [&::-webkit-scrollbar-track]:bg-transparent'
-                  : '[&::-webkit-scrollbar-thumb]:bg-white/22 [&::-webkit-scrollbar-track]:bg-transparent',
               )}
             >
               <ol className="space-y-3 pb-1" role="list">
                 {topDebates.map((d, i) => (
                   <li
                     key={d.id}
-                    className={cn(
-                      'min-w-0',
-                      // 3ᵉ toujours visible dès le rail (≥md) — 4ᵉ seulement très grands écrans
-                      i === 3 && 'hidden 2xl:block',
-                    )}
+                    className="min-w-0"
                   >
                     <Link to={`/debate/${d.id}`} className={debateRow}>
                       <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 text-xs font-black text-white sm:size-8 sm:text-sm">

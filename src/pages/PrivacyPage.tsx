@@ -125,6 +125,13 @@ export function PrivacyPage() {
           <p className="mt-10 text-xs font-medium opacity-70">
             Contact éditeur : à renseigner avant mise en production publique (email ou formulaire).
           </p>
+          <p className="mt-3 text-xs font-medium opacity-70">
+            Voir aussi les{' '}
+            <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              conditions d&apos;utilisation
+            </Link>
+            .
+          </p>
         </article>
       </div>
     </div>

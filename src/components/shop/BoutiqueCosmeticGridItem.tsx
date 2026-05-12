@@ -16,6 +16,8 @@ const SLOT_LABELS: Record<AvatarSlot, string> = {
   hat: 'Casquette / chapeau',
   jersey: 'Maillot',
   accessory: 'Accessoire',
+  pants: 'Bas',
+  shoes: 'Chaussures',
 }
 
 export function BoutiqueCosmeticGridItem({

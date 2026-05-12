@@ -180,10 +180,14 @@ export function HairRig({ style, mat }: { style: HairStyle; mat: M }) {
   return (
     <group position={[0, Y, 0.012]}>
       {style === 'buzz' && <HairBuzz mat={mat} />}
-      {style === 'short' && <HairShort mat={mat} />}
+      {(style === 'short' ||
+        style === 'sidepart' ||
+        style === 'undercut' ||
+        style === 'mohawk' ||
+        style === 'faded') && <HairShort mat={mat} />}
       {style === 'wavy' && <HairWavy mat={mat} />}
-      {style === 'long' && <HairLong mat={mat} />}
-      {style === 'curly' && <HairCurly mat={mat} />}
+      {(style === 'long' || style === 'ponytail') && <HairLong mat={mat} />}
+      {(style === 'curly' || style === 'afro') && <HairCurly mat={mat} />}
     </group>
   )
 }
@@ -305,13 +309,33 @@ function BeardGoatee({ mat }: { mat: M }) {
   )
 }
 
+function BeardMoustacheOnly({ mat }: { mat: M }) {
+  return (
+    <mesh position={[0, 0.02, 0.175]} rotation={[0.12, 0, 0]} material={mat} castShadow receiveShadow>
+      <capsuleGeometry args={[0.055, 0.014, 6, 8]} />
+    </mesh>
+  )
+}
+
 export function BeardRig({ variant, mat }: { variant: Beard; mat: M }) {
   if (variant === 'none') return null
   return (
     <group position={[0, Y, 0.04]}>
       {variant === 'light' && <BeardLight mat={mat} />}
+      {variant === 'stubble' && (
+        <group scale={0.88}>
+          <BeardLight mat={mat} />
+        </group>
+      )}
       {variant === 'full' && <BeardFull mat={mat} />}
       {variant === 'goatee' && <BeardGoatee mat={mat} />}
+      {variant === 'vanDyke' && (
+        <group>
+          <BeardMoustacheOnly mat={mat} />
+          <BeardGoatee mat={mat} />
+        </group>
+      )}
+      {variant === 'moustache' && <BeardMoustacheOnly mat={mat} />}
     </group>
   )
 }

@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import type { AvatarCharacterLook, AvatarSlot, JerseyCustomization, UserProfile } from '../types/profile'
+
+const EQUIPPED_BASE: Record<AvatarSlot, string | null> = {
+  scarf: null,
+  hat: null,
+  jersey: null,
+  accessory: null,
+  pants: 'pants-kit',
+  shoes: 'shoes-studs',
+}
 import { useLocalStorageState } from './useLocalStorage'
 import { levelFromXp, getLevelTier, xpPerLevel } from '../data/shop'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../data/characterPresets'
@@ -7,6 +16,13 @@ import { defaultUserProfile } from '../data/userAppStateDefaults'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { resolveAvatarLoadout, styleCatalog } from '../data/avatar2dCatalog'
+import { avatarItems } from '../data/shop'
+
+function catalogItemOwned(itemId: string, ownedItemIds: string[]): boolean {
+  if (ownedItemIds.includes(itemId)) return true
+  const row = avatarItems.find((i) => i.id === itemId)
+  return Boolean(row && row.cost === 0)
+}
 
 export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
 
@@ -50,6 +66,23 @@ function isUserProfileStored(p: unknown): boolean {
     return false
   }
   if (o.premiumInventory != null && (typeof o.premiumInventory !== 'object' || Array.isArray(o.premiumInventory))) {
+    return false
+  }
+  const backdrops = new Set([
+    'tribune',
+    'club_sunburst',
+    'club_stripes',
+    'bubbles',
+    'confetti',
+    'calm',
+  ])
+  if (
+    o.portraitBackdrop != null &&
+    (typeof o.portraitBackdrop !== 'string' || !backdrops.has(o.portraitBackdrop))
+  ) {
+    return false
+  }
+  if (o.portraitBackdropClubId != null && typeof o.portraitBackdropClubId !== 'string') {
     return false
   }
   return true
@@ -158,11 +191,12 @@ export function useProfile() {
   const equipItem = useCallback(
     (itemId: string, slot: AvatarSlot) => {
       setProfileStore((p) => {
-        if (!(Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []).includes(itemId)) return p
-        const current =
-          p.equippedItems && typeof p.equippedItems === 'object'
-            ? p.equippedItems
-            : { scarf: null, hat: null, jersey: null, accessory: null }
+        const owned = Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []
+        if (!catalogItemOwned(itemId, owned)) return p
+        const current = {
+          ...EQUIPPED_BASE,
+          ...(p.equippedItems && typeof p.equippedItems === 'object' ? p.equippedItems : {}),
+        }
         return {
           ...p,
           equippedItems: { ...current, [slot]: itemId },
@@ -191,10 +225,7 @@ export function useProfile() {
         ...(p as UserProfile),
         ...p,
         equippedItems: {
-          scarf: null,
-          hat: null,
-          jersey: null,
-          accessory: null,
+          ...EQUIPPED_BASE,
           ...(p.equippedItems && typeof p.equippedItems === 'object' ? p.equippedItems : {}),
           [slot]: null,
         },
@@ -312,14 +343,10 @@ export function useProfile() {
       level: computedLevel,
       ownedItemIds: Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
       equippedItems: (() => {
-        const def = { scarf: null, hat: null, jersey: null, accessory: null } as Record<
-          AvatarSlot,
-          string | null
-        >
         if (profile.equippedItems && typeof profile.equippedItems === 'object') {
-          return { ...def, ...profile.equippedItems }
+          return { ...EQUIPPED_BASE, ...profile.equippedItems }
         }
-        return def
+        return { ...EQUIPPED_BASE }
       })(),
       characterLook: mergeCharacterLook(profile.characterLook),
       jerseyCustomizations,
@@ -358,7 +385,7 @@ export function useProfile() {
     setProfilePhotoDataUrl,
     creditWonBets,
     ownsItem: (id: string) =>
-      (Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []).includes(id),
+      catalogItemOwned(id, Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []),
     setProfile: setProfileStore,
   }
 }

@@ -49,6 +49,7 @@ export function LoginPage() {
   const clerkEnabled = isClerkAuthConfigured()
   const [searchParams] = useSearchParams()
   const nextPath = safeInternalNext(searchParams.get('next'))
+  const cameFromSharedSpace = searchParams.get('gate') === 'shared'
   const {
     user,
     isReady,
@@ -203,6 +204,16 @@ export function LoginPage() {
             </div>
           ) : null}
 
+          {cameFromSharedSpace && (
+            <div
+              role="status"
+              className="mt-6 rounded-xl border border-amber-200/80 bg-amber-50/95 p-3 text-xs font-semibold text-amber-950"
+            >
+              ⚽ Le coup d&apos;envoi du salon est lancé : connecte-toi pour entrer sur le terrain et participer au
+              live avec les supporters.
+            </div>
+          )}
+
           {authNotice && (
             <div
               role="status"
@@ -221,123 +232,142 @@ export function LoginPage() {
             </div>
           )}
 
-          <h2 className="mt-6 text-lg font-black text-tf-dark">
-            {mode === 'login' ? 'Connexion' : 'Créer un compte'}
-          </h2>
+          <h2 className="mt-6 text-lg font-black text-tf-dark">Choisis ton entrée dans le match</h2>
           <p className="mt-1 text-sm font-medium text-tf-grey">
-            {clerkEnabled
-              ? 'Connexion Google sécurisée via Clerk.'
-              : mode === 'login'
-              ? 'Connecte-toi pour accéder au live et aux paris'
-              : 'Rejoins la communauté Talk Foot en quelques secondes'}
+            Connexion classique ou via un service, les deux options sont au même niveau.
           </p>
 
-          {!clerkEnabled ? (
-            <form onSubmit={handleEmailSubmit} className="mt-6 space-y-4">
-            {mode === 'signup' && (
-              <div>
-                <label htmlFor="signup-displayName" className="mb-1 block text-xs font-bold text-tf-grey">
-                  Nom d&apos;affichage (optionnel)
-                </label>
-                <Input
-                  id="signup-displayName"
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Ton pseudo"
-                  autoComplete="username"
-                  className="w-full rounded-xl border-tf-grey-pastel/50"
-                />
+          <div className={cn('mt-6 grid gap-4', !clerkEnabled && 'md:grid-cols-2 md:items-stretch')}>
+            {!clerkEnabled ? (
+              <section className="rounded-2xl border border-tf-grey-pastel/60 bg-white/75 p-4">
+                <h3 className="text-sm font-black text-tf-dark">{mode === 'login' ? 'Connexion email' : 'Créer un compte'}</h3>
+                <p className="mt-1 text-[11px] font-medium text-tf-grey">
+                  {mode === 'login' ? 'Email + mot de passe' : 'Inscription rapide en 30 secondes'}
+                </p>
+                <form onSubmit={handleEmailSubmit} className="mt-4 space-y-4">
+                  {mode === 'signup' && (
+                    <div>
+                      <label htmlFor="signup-displayName" className="mb-1 block text-xs font-bold text-tf-grey">
+                        Nom d&apos;affichage (optionnel)
+                      </label>
+                      <Input
+                        id="signup-displayName"
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="Ton pseudo"
+                        autoComplete="username"
+                        className="w-full rounded-xl border-tf-grey-pastel/50"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label htmlFor="login-email" className="mb-1 block text-xs font-bold text-tf-grey">
+                      Email
+                    </label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="toi@exemple.com"
+                      autoComplete="email"
+                      className="w-full rounded-xl border-tf-grey-pastel/50"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="login-password" className="mb-1 block text-xs font-bold text-tf-grey">
+                      Mot de passe
+                    </label>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={mode === 'signup' ? '6 caractères minimum' : '••••••••'}
+                      autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                      className="w-full rounded-xl border-tf-grey-pastel/50"
+                    />
+                  </div>
+                  {mode === 'signup' && (
+                    <div>
+                      <label htmlFor="login-confirm" className="mb-1 block text-xs font-bold text-tf-grey">
+                        Confirmer le mot de passe
+                      </label>
+                      <Input
+                        id="login-confirm"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="new-password"
+                        className="w-full rounded-xl border-tf-grey-pastel/50"
+                      />
+                    </div>
+                  )}
+                  {mode === 'signup' && (
+                    <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-tf-dark">
+                      <input
+                        type="checkbox"
+                        checked={acceptedPrivacy}
+                        onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                        className="mt-0.5 size-4 shrink-0 rounded border-tf-grey-pastel text-tf-cta focus:ring-tf-cta"
+                      />
+                      <span>
+                        J&apos;ai lu la{' '}
+                        <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                          politique de confidentialité
+                        </Link>{' '}
+                        et les{' '}
+                        <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                          conditions d&apos;utilisation
+                        </Link>{' '}
+                        et j&apos;accepte le stockage des données nécessaires sur mon appareil.
+                      </span>
+                    </label>
+                  )}
+                  {error && <p className="text-sm font-semibold text-rose-600">{error}</p>}
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-full rounded-xl py-3 font-bold"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Patience…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+                  </Button>
+                </form>
+              </section>
+            ) : null}
+
+            <section className="rounded-2xl border border-tf-grey-pastel/60 bg-white/75 p-4">
+              <h3 className="text-sm font-black text-tf-dark">Connexion avec un service</h3>
+              <p className="mt-1 text-[11px] font-medium text-tf-grey">
+                {clerkEnabled ? 'Google sécurisé via Clerk' : 'Google, Apple, Facebook, Discord, GitHub'}
+              </p>
+              <div className="mt-4 space-y-3">
+                {(clerkEnabled
+                  ? TALKFOOT_OAUTH_PROVIDERS.filter((p) => p.id === 'google')
+                  : TALKFOOT_OAUTH_PROVIDERS
+                ).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => runOAuth(p.id)}
+                    disabled={oauthLoading !== null}
+                    className={cn(
+                      oauthButtonShell(p.variant),
+                      oauthLoading !== null && 'pointer-events-none opacity-60',
+                    )}
+                  >
+                    <OAuthProviderIcon id={p.id} />
+                    {oauthLoading === p.id ? 'Redirection…' : p.label}
+                  </button>
+                ))}
               </div>
-            )}
-            <div>
-              <label htmlFor="login-email" className="mb-1 block text-xs font-bold text-tf-grey">
-                Email
-              </label>
-              <Input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="toi@exemple.com"
-                autoComplete="email"
-                className="w-full rounded-xl border-tf-grey-pastel/50"
-              />
-            </div>
-            <div>
-              <label htmlFor="login-password" className="mb-1 block text-xs font-bold text-tf-grey">
-                Mot de passe
-              </label>
-              <Input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === 'signup' ? '6 caractères minimum' : '••••••••'}
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                className="w-full rounded-xl border-tf-grey-pastel/50"
-              />
-            </div>
-            {mode === 'signup' && (
-              <div>
-                <label htmlFor="login-confirm" className="mb-1 block text-xs font-bold text-tf-grey">
-                  Confirmer le mot de passe
-                </label>
-                <Input
-                  id="login-confirm"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className="w-full rounded-xl border-tf-grey-pastel/50"
-                />
-              </div>
-            )}
-            {mode === 'signup' && (
-              <label className="flex cursor-pointer items-start gap-2.5 text-xs font-medium text-tf-dark">
-                <input
-                  type="checkbox"
-                  checked={acceptedPrivacy}
-                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
-                  className="mt-0.5 size-4 shrink-0 rounded border-tf-grey-pastel text-tf-cta focus:ring-tf-cta"
-                />
-                <span>
-                  J&apos;ai lu la{' '}
-                  <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-                    politique de confidentialité
-                  </Link>{' '}
-                  et j&apos;accepte le stockage des données nécessaires sur mon appareil.
-                </span>
-              </label>
-            )}
-            {error && (
-              <p className="text-sm font-semibold text-rose-600">{error}</p>
-            )}
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full rounded-xl py-3 font-bold"
-              disabled={submitting}
-            >
-              {submitting ? 'Patience…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
-            </Button>
-            </form>
-          ) : null}
+            </section>
+          </div>
 
-          <p className="mt-4 text-center text-[11px] font-medium text-tf-grey">
-            <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-              Confidentialité & données
-            </Link>
-          </p>
-
-          {!clerkEnabled ? <div className="mt-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-tf-grey-pastel/60" />
-            <span className="text-xs font-semibold text-tf-grey">ou</span>
-            <div className="h-px flex-1 bg-tf-grey-pastel/60" />
-          </div> : null}
-
-          <p className="mt-2 text-center text-[11px] font-medium leading-snug text-tf-grey">
+          <p className="mt-4 text-center text-[11px] font-medium leading-snug text-tf-grey">
             {clerkEnabled ? (
               <>
                 Google via Clerk activé. Les autres providers sont désactivés sur cet environnement.
@@ -349,6 +379,10 @@ export function LoginPage() {
                 (Redirect URLs). En continuant, tu reconnais la{' '}
                 <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
                   politique de confidentialité
+                </Link>{' '}
+                et les{' '}
+                <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                  conditions d&apos;utilisation
                 </Link>
                 .
               </>
@@ -359,32 +393,24 @@ export function LoginPage() {
                 <span className="font-mono text-[10px]">VITE_SUPABASE_ANON_KEY</span>.{' '}
                 <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
                   Confidentialité
+                </Link>{' '}
+                &{' '}
+                <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+                  Conditions
                 </Link>
                 .
               </>
             )}
           </p>
-
-          <div className="mt-6 space-y-3">
-            {(clerkEnabled
-              ? TALKFOOT_OAUTH_PROVIDERS.filter((p) => p.id === 'google')
-              : TALKFOOT_OAUTH_PROVIDERS
-            ).map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => runOAuth(p.id)}
-                disabled={oauthLoading !== null}
-                className={cn(
-                  oauthButtonShell(p.variant),
-                  oauthLoading !== null && 'pointer-events-none opacity-60',
-                )}
-              >
-                <OAuthProviderIcon id={p.id} />
-                {oauthLoading === p.id ? 'Redirection…' : p.label}
-              </button>
-            ))}
-          </div>
+          <p className="mt-3 text-center text-[11px] font-medium text-tf-grey">
+            <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              Confidentialité & données
+            </Link>{' '}
+            ·{' '}
+            <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              Conditions d&apos;utilisation
+            </Link>
+          </p>
         </Card>
       </div>
     </div>

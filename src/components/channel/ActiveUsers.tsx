@@ -7,15 +7,7 @@ import type { UserProfile } from '../../types/profile'
 import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
 import { cn } from '../../utils/cn'
-
-/** Styles illustrés différents pour varier les silhouettes (DiceBear 9.x). */
-const DICEBEAR_STYLES = ['lorelei', 'notionists', 'avataaars', 'micah'] as const
-
-function dicebearSrc(seed: string, styleIndex: number) {
-  const style = DICEBEAR_STYLES[styleIndex % DICEBEAR_STYLES.length]
-  const bg = 'b6e3f4,c0aede,d1d4f9,ffd5dc'
-  return `https://api.dicebear.com/9.x/${style}/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&size=128`
-}
+import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
 
 const ACCENT_FALLBACK: Record<User['accent'], string> = {
   violet: 'from-violet-500 to-violet-700',
@@ -128,7 +120,7 @@ function LiveFanFaceRow({
       <InitialFallback seed={user.avatarSeed} accent={user.accent} />
     ) : (
       <img
-        src={dicebearSrc(`${user.id}-${user.avatarSeed}`, stackIndex)}
+        src={dicebearAvatarUrl(`${user.id}-${user.avatarSeed}`, 128, stackIndex)}
         alt=""
         className="size-full object-cover object-top"
         loading="lazy"

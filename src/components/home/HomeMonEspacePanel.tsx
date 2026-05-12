@@ -6,6 +6,7 @@ import { useProfile } from '../../hooks/useProfile'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useMatches } from '../../contexts/MatchesContext'
+import { useWallet } from '../../hooks/useWallet'
 import { mockFriendUsers } from '../../data/users'
 import { hubGlassPanel, hubPillLink } from '../../utils/hubSurface'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
@@ -20,6 +21,7 @@ import { Avatar } from '../ui/Avatar'
 import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { cn } from '../../utils/cn'
+import { TokenGlyph } from '../ui/TokenGlyph'
 
 /** Petites offres mockées pour le rail hub (évite le vide visuel sous les tribunes). */
 const RAIL_BOUTIQUE_OFFERS = [
@@ -57,6 +59,7 @@ export function HomeMonEspacePanel({
   const { profile } = useProfile()
   const displayLabel = authUser?.displayName ?? currentUser.username
   const { appearance } = useAppearance()
+  const { claimDailyTokenBonus, dailyTokenBonusStatus } = useWallet()
   const firstLiveMatch = useMemo(
     () => matches.find((m) => m.status === 'live') ?? null,
     [matches],
@@ -64,6 +67,8 @@ export function HomeMonEspacePanel({
   const L = appearance === 'light'
   const slim = density === 'hubSlim'
   const [inviteHint, setInviteHint] = useState(false)
+  const [dailyClaimHint, setDailyClaimHint] = useState<string | null>(null)
+  const dailyBonus = dailyTokenBonusStatus()
 
   const railSep = L ? 'border-t border-tf-dark/10' : 'border-t border-white/10'
   const hubCaps = L ? 'text-tf-dark/82' : 'text-sky-100'
@@ -101,7 +106,8 @@ export function HomeMonEspacePanel({
         className={cn(
           'flex flex-col p-4',
           slim ? 'gap-3.5' : 'gap-5',
-          railScrollBody && 'min-h-0 flex-1 overflow-hidden',
+          railScrollBody &&
+            'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         )}
       >
         {showTopHeading && !slim ? (
@@ -306,9 +312,65 @@ export function HomeMonEspacePanel({
         </div>
 
         {slim ? (
+          <section className={cn('border-t pt-2', railSep)} aria-labelledby="rail-daily-bonus-title">
+            <p
+              id="rail-daily-bonus-title"
+              className={cn('px-1 text-[9px] font-black uppercase tracking-[0.16em]', hubCaps)}
+            >
+              Récompense quotidienne
+            </p>
+            <div
+              className={cn(
+                'mt-1.5 rounded-lg border p-2',
+                L
+                  ? 'border-emerald-300/70 bg-gradient-to-br from-emerald-50 to-white'
+                  : 'border-emerald-400/30 bg-emerald-500/10',
+              )}
+            >
+              <div className="flex items-start gap-1.5">
+                <TokenGlyph className="mt-0.5 size-4 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-tf-app-fg">+{dailyBonus.amount} jetons à 10h</p>
+                  <p className={cn('mt-0.5 text-[9px] font-semibold leading-snug', hubSecondary)}>
+                    1 récupération / jour.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={cn(
+                  'mt-2 w-full rounded-md px-2 py-1.5 text-[10px] font-black transition',
+                  dailyBonus.canClaim
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : L
+                    ? 'bg-slate-200 text-slate-600'
+                    : 'bg-white/15 text-white/70',
+                )}
+                disabled={!dailyBonus.canClaim}
+                onClick={() => {
+                  const r = claimDailyTokenBonus()
+                  if (r.ok) setDailyClaimHint(`+${r.amount} jetons récupérés !`)
+                  else if (r.reason === 'already_claimed') setDailyClaimHint('Déjà récupéré pour cette journée.')
+                  else if (r.reason === 'not_open_yet') setDailyClaimHint('Le bonus ouvre tous les jours à 10h.')
+                  else setDailyClaimHint('Impossible pour le moment.')
+                  window.setTimeout(() => setDailyClaimHint(null), 2600)
+                }}
+              >
+                {dailyBonus.canClaim ? 'Récupérer' : dailyBonus.alreadyClaimedToday ? 'Déjà récupéré' : 'À 10h'}
+              </button>
+              {dailyClaimHint ? (
+                <p className={cn('mt-1 text-[9px] font-bold leading-snug', dailyBonus.canClaim ? 'text-emerald-700' : hubSecondary)}>
+                  {dailyClaimHint}
+                </p>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {slim ? (
           <section
             className={cn(
-              'mt-auto flex flex-col gap-2 border-t pt-3',
+              'flex flex-col gap-2 border-t pt-3',
               railSep,
             )}
             aria-labelledby="rail-boutique-offers-title"

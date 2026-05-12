@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { cn } from '../../utils/cn'
+import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
 
 const accentGradient: Record<string, string> = {
   violet: 'from-violet-400/70 to-violet-600/70',
@@ -10,7 +11,7 @@ const accentGradient: Record<string, string> = {
 
 /**
  * Avatar avec représentation humaine (illustration) pour une meilleure immersion.
- * Utilise DiceBear lorelei - style illustré, déterminé par le seed.
+ * Utilise DiceBear (style lorelei via rotation) — même base d’URL que `dicebearAvatar.ts`.
  * Fallback sur initiale si le chargement échoue.
  */
 export function HumanAvatar({
@@ -26,7 +27,8 @@ export function HumanAvatar({
 }) {
   const [errored, setErrored] = useState(false)
   const safeSeed = (seed.trim() || 'user') + `-${accent}`
-  const url = `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(safeSeed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc`
+  /** index 1 → lorelei (liste micah / lorelei / notionists). */
+  const url = dicebearAvatarUrl(safeSeed, 128, 1)
 
   if (errored) {
     const initial = seed.trim().slice(0, 1).toUpperCase() || '?'

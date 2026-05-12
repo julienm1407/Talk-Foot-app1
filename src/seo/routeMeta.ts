@@ -23,6 +23,12 @@ const PRIVACY: RouteSeoConfig = {
     'Politique de confidentialité Talk Foot : données collectées, finalités, cookies et tes droits (RGPD).',
 }
 
+const TERMS: RouteSeoConfig = {
+  title: `Conditions d'utilisation — ${SITE_NAME}`,
+  description:
+    "Conditions d'utilisation Talk Foot : règles de conduite, responsabilités, disponibilité du service et modération.",
+}
+
 const LOGIN: RouteSeoConfig = {
   title: `Connexion — ${SITE_NAME}`,
   description: `Connecte-toi à ${SITE_NAME} pour accéder au live, aux salons supporters et à ton profil.`,
@@ -118,6 +124,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
 
   if (pathname === '/' || pathname === '') return HOME
   if (pathname === '/privacy') return PRIVACY
+  if (pathname === '/terms') return TERMS
   if (pathname === '/login') return LOGIN
   if (pathname === '/match' || pathname === '/matches' || pathname === '/agenda' || pathname === '/calendar')
     return MATCH

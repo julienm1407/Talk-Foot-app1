@@ -18,7 +18,14 @@ export function buildChatPeerProfile(user: User | undefined): UserProfile {
   return {
     ...defaultUserProfile,
     characterLook: look,
-    equippedItems: { scarf: null, hat: null, jersey: null, accessory: null },
+    equippedItems: {
+      scarf: null,
+      hat: null,
+      jersey: null,
+      accessory: null,
+      pants: 'pants-kit',
+      shoes: 'shoes-studs',
+    },
     ownedItemIds: [],
   }
 }

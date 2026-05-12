@@ -1,6 +1,6 @@
 import type { PixelJerseyPresetId } from '../data/pixelJerseyPresets'
 
-export type AvatarSlot = 'scarf' | 'hat' | 'jersey' | 'accessory'
+export type AvatarSlot = 'scarf' | 'hat' | 'jersey' | 'accessory' | 'pants' | 'shoes'
 export type AvatarIdentitySlot = 'base' | 'eyes' | 'beard' | 'hair'
 export type AvatarStyleCategory = 'kit' | 'accessory'
 export type AvatarLoadoutSlot = AvatarIdentitySlot | AvatarStyleCategory
@@ -55,9 +55,22 @@ export type AvatarStyleItem = {
 }
 
 /** Personnage SVG (corps + tête) — indépendant des logos clubs */
-export type HairStyle = 'buzz' | 'short' | 'wavy' | 'long' | 'curly'
-export type EyeShape = 'round' | 'almond'
-export type BeardStyle = 'none' | 'light' | 'full' | 'goatee'
+export type HairStyle =
+  | 'buzz'
+  | 'short'
+  | 'wavy'
+  | 'long'
+  | 'curly'
+  | 'sidepart'
+  | 'undercut'
+  | 'ponytail'
+  | 'mohawk'
+  | 'afro'
+  | 'faded'
+export type EyeShape = 'round' | 'almond' | 'narrow' | 'wide'
+export type BeardStyle = 'none' | 'light' | 'stubble' | 'full' | 'goatee' | 'moustache' | 'vanDyke'
+/** Cils / intensité du regard (rendu SVG portrait). */
+export type EyelashStyle = 'none' | 'natural' | 'dramatic'
 export type HeadwearBase = 'none' | 'cap' | 'beanie'
 export type GlassesStyle = 'none' | 'round' | 'sport'
 
@@ -66,9 +79,12 @@ export type FaceExpression = 'neutral' | 'happy' | 'hyped' | 'serious'
 
 export type AvatarCharacterLook = {
   hairColor: string
+  /** Si absent, la barbe réutilise `hairColor`. */
+  beardColor?: string
   hairStyle: HairStyle
   eyeColor: string
   eyeShape: EyeShape
+  eyelashStyle: EyelashStyle
   beard: BeardStyle
   skinTone: string
   /** Sourire, cran tribune, concentré… */
@@ -110,6 +126,15 @@ export type MedalPack = {
 
 export type LevelTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond'
 
+/** Fond derrière le personnage (portrait profil) — simple et lisible. */
+export type PortraitBackdropId =
+  | 'tribune'
+  | 'club_sunburst'
+  | 'club_stripes'
+  | 'bubbles'
+  | 'confetti'
+  | 'calm'
+
 export type UserProfile = {
   level: number
   xp: number
@@ -118,6 +143,10 @@ export type UserProfile = {
   creditedBetIds?: string[] // paris déjà crédités en XP
   /** Apparence du personnage (SVG) */
   characterLook?: AvatarCharacterLook
+  /** Style de fond du portrait (derrière le SVG / photo). */
+  portraitBackdrop?: PortraitBackdropId
+  /** Club dont on prend les couleurs pour les fonds « club » ; si absent → 1er favori. */
+  portraitBackdropClubId?: string | null
   /** Flocage / taille par maillot inspiré possédé */
   jerseyCustomizations?: Record<string, JerseyCustomization>
   /**

@@ -32,6 +32,8 @@ export function Avatar2DComposer({ profile, className, size = 'profile' }: Props
 
   const kit = avatarItems.find((item) => item.id === loadout.kit)
   const accessory = avatarItems.find((item) => item.id === loadout.accessory)
+  const pantsId = profile.equippedItems?.pants ?? 'pants-kit'
+  const shoesId = profile.equippedItems?.shoes ?? 'shoes-studs'
   const box = SIZE_MAP[size]
 
   return (
@@ -49,8 +51,10 @@ export function Avatar2DComposer({ profile, className, size = 'profile' }: Props
             supporterColors={null}
             variant="front"
             className="drop-shadow-[0_6px_14px_rgba(2,6,23,0.42)]"
+            pantsItemId={pantsId}
+            shoesItemId={shoesId}
           />
-          {accessory ? (
+          {accessory && accessory.id !== 'accessory-default' ? (
             <div
               className={`pointer-events-none absolute right-0 top-[55%] z-10 -translate-y-1/2 drop-shadow-[0_2px_6px_rgba(2,6,23,0.55)] ${box.accessoryClass}`}
               aria-hidden

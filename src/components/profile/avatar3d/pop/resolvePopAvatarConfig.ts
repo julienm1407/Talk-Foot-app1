@@ -85,7 +85,7 @@ export function resolvePopAvatarConfig(
     headwear3d,
     glasses: look.glasses,
     hasScarf: Boolean(eq.scarf),
-    hasAccessory: Boolean(eq.accessory),
+    hasAccessory: Boolean(eq.accessory && eq.accessory !== 'accessory-default'),
     hasShopJersey: Boolean(jerseyItem?.jerseyVisual),
   }
 }

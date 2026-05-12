@@ -83,7 +83,7 @@ function tfSitemapRobotsPlugin(outDir: string, siteUrl: string, publicPathPrefix
     const p = path.startsWith('/') ? path : `/${path}`
     return escapeXml(`${origin}${prefix}${p}`)
   }
-  const staticPaths = ['/', '/privacy', '/match', '/groups', '/debates', '/rankings', '/boutique', '/videos']
+  const staticPaths = ['/', '/privacy', '/terms', '/match', '/groups', '/debates', '/rankings', '/boutique', '/videos']
   return {
     name: 'tf-sitemap-robots',
     closeBundle() {

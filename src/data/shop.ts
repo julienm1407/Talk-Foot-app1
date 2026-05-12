@@ -6,6 +6,111 @@ export const TOKENS_PER_MEDAL = 200
 
 /** Écharpes, casquettes, maillots emoji, accessoires — sans la collection « inspirée » */
 export const baseAvatarItems: AvatarItem[] = [
+  {
+    id: 'kit-default',
+    name: 'Maillot tribune (base)',
+    slot: 'jersey',
+    emoji: '👕',
+    cost: 0,
+    rarity: 'common',
+    description: 'Tenue d’origine — toujours disponible.',
+    jerseyVisual: {
+      primary: '#0f2744',
+      secondary: '#c8102e',
+      pattern: 'hechter',
+      stripeLight: '#f8fafc',
+    },
+  },
+  {
+    id: 'accessory-default',
+    name: 'Sans accessoire',
+    slot: 'accessory',
+    emoji: '·',
+    cost: 0,
+    rarity: 'common',
+    description: 'Look épuré.',
+  },
+  {
+    id: 'pants-kit',
+    name: 'Short assorti au maillot',
+    slot: 'pants',
+    emoji: '🩳',
+    cost: 0,
+    rarity: 'common',
+    description: 'Short qui reprend les couleurs du haut.',
+  },
+  {
+    id: 'shoes-studs',
+    name: 'Crampons classiques',
+    slot: 'shoes',
+    emoji: '⚽',
+    cost: 0,
+    rarity: 'common',
+    description: 'Chaussures stade sombres.',
+  },
+  {
+    id: 'pants-jeans',
+    name: 'Jean brut',
+    slot: 'pants',
+    emoji: '👖',
+    cost: 28,
+    rarity: 'common',
+    description: 'Denim tribune.',
+  },
+  {
+    id: 'pants-jogger',
+    name: 'Jogging technique',
+    slot: 'pants',
+    emoji: '🏃',
+    cost: 36,
+    rarity: 'rare',
+    description: 'Textile mat, coupe slim.',
+  },
+  {
+    id: 'pants-chino',
+    name: 'Chino sable',
+    slot: 'pants',
+    emoji: '🧥',
+    cost: 32,
+    rarity: 'common',
+    description: 'Tenue casual avant-match.',
+  },
+  {
+    id: 'pants-cargo',
+    name: 'Cargo kaki',
+    slot: 'pants',
+    emoji: '🎒',
+    cost: 44,
+    rarity: 'rare',
+    description: 'Poches utilitaires.',
+  },
+  {
+    id: 'shoes-sneaker-white',
+    name: 'Baskets blanches',
+    slot: 'shoes',
+    emoji: '👟',
+    cost: 24,
+    rarity: 'common',
+    description: 'Street & stade.',
+  },
+  {
+    id: 'shoes-sneaker-neon',
+    name: 'Baskets néon',
+    slot: 'shoes',
+    emoji: '💠',
+    cost: 52,
+    rarity: 'rare',
+    description: 'Accents fluo.',
+  },
+  {
+    id: 'shoes-retro-gum',
+    name: 'Retro semelle gomme',
+    slot: 'shoes',
+    emoji: '🟤',
+    cost: 68,
+    rarity: 'epic',
+    description: 'Vintage terrasse.',
+  },
   { id: 'scarf-1', name: 'Écharpe bleue', slot: 'scarf', emoji: '🔵', cost: 16, rarity: 'common', description: 'Écharpe aux couleurs du club' },
   { id: 'scarf-2', name: 'Écharpe rouge', slot: 'scarf', emoji: '🔴', cost: 40, rarity: 'rare', description: 'Écharpe passion' },
   { id: 'scarf-3', name: 'Écharpe rayée', slot: 'scarf', emoji: '🌈', cost: 80, rarity: 'epic', description: 'Écharpe arc-en-ciel tribune' },
@@ -140,7 +245,9 @@ export const medalPacks: MedalPack[] = [
 ]
 
 const dailyOfferPool: AvatarItem[] = [
-  ...avatarItems.filter((i) => i.slot === 'jersey' || i.slot === 'accessory'),
+  ...avatarItems.filter(
+    (i) => (i.slot === 'jersey' || i.slot === 'accessory') && i.cost > 0,
+  ),
 ]
 
 /** Rotation quotidienne déterministe (offre du jour). */
