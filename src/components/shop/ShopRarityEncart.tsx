@@ -105,7 +105,7 @@ export function ShopRarityEncart({
 
       <ShopRarityTopBadges rarity={rarity} />
 
-      <div className="absolute inset-0 z-20 flex min-h-0 flex-col px-[5%] pb-[4%] pt-14 sm:px-[6%] sm:pb-[4.5%] sm:pt-16">
+      <div className="absolute inset-0 z-20 flex h-full min-h-0 flex-col px-[5%] pb-[4%] pt-14 sm:px-[6%] sm:pb-[4.5%] sm:pt-16">
         {children}
       </div>
     </article>

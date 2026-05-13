@@ -14,6 +14,15 @@ function stateIdOf(f: SmFixture): number | undefined {
   return f.state?.id ?? f.state_id
 }
 
+/** Mi-temps / pause : la minute API ne doit pas être « extrapolée » minute par minute côté client. */
+function liveClockPausedFromSmFixture(f: SmFixture): boolean {
+  const blob = `${f.state?.developer_name ?? ''} ${f.state?.state ?? ''}`.toUpperCase()
+  if (blob.includes('HT') || blob.includes('HALF')) return true
+  const sid = stateIdOf(f)
+  if (sid === 3) return true
+  return false
+}
+
 /** Ligue pour le mapping compétition : SM envoie parfois seulement `league_id` sur la fixture. */
 function leagueForInfer(f: SmFixture): SmLeague | null {
   const lid = f.league?.id ?? f.league_id
@@ -293,6 +302,7 @@ export function smFixtureToMatch(f: SmFixture): Match {
       ...base,
       minute: minuteFromFixture(f),
       score: score ?? { home: 0, away: 0 },
+      liveClockPaused: liveClockPausedFromSmFixture(f),
     }
   }
   if (status === 'finished' && score) {

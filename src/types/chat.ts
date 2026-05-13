@@ -1,6 +1,9 @@
 import type { TribuneId } from './tribune'
 import type { AvatarCharacterLook } from './profile'
 
+/** Zone tribune du salon live canal (métadonnée `match_tribune` / `matchTribune`). */
+export type MatchTribuneZone = 'home-ultras' | 'away-ultras' | 'analystes' | 'neutres'
+
 export type ReactionType = 'flare' | 'confetti' | 'goal' | 'rage'
 
 export type User = {
@@ -33,6 +36,8 @@ export type Message = {
   emoteId?: string
   /** Tribune du stade digital ; absent = visible dans toutes les tribunes (ex. messages globaux). */
   tribune?: TribuneId
+  /** Tribune live canal (domicile / parcage / analyse / neutre). Absent = fil « neutre » (analystes + neutres). */
+  matchTribune?: MatchTribuneZone
   /** Salon supporter (tribune groupe) — filtré sur le live quand une tribune groupe est active. */
   supporterGroupId?: string
   /** Bloc écharpe d’un groupe (message visuel). */

@@ -11,7 +11,9 @@ export function ChannelHeader({ match }: { match: Match }) {
   const theme = themeForCompetition(match.competition.id)
   const homeScore = match.score?.home ?? '—'
   const awayScore = match.score?.away ?? '—'
-  const minuteText = isLive ? `${liveMinute}'` : 'AVANT'
+  const liveStatusLine = match.liveClockPaused
+    ? 'Mi-temps'
+    : formatRelativeMinute(liveMinute) || `${liveMinute}'`
 
   return (
     <header className="rounded-2xl border border-[#16334d] bg-[#041a2d] px-2.5 py-2 text-white shadow-[0_14px_28px_rgba(0,0,0,0.35)] sm:px-3.5 lg:h-[86px] lg:py-1.5">
@@ -51,7 +53,7 @@ export function ChannelHeader({ match }: { match: Match }) {
                 aria-hidden
               />
             )}
-            {isLive ? formatRelativeMinute(liveMinute) || minuteText : formatKickoff(match.kickoffAt)}
+            {isLive ? liveStatusLine : formatKickoff(match.kickoffAt)}
           </div>
         </div>
         <div className="flex min-w-0 items-center justify-end gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 sm:px-3 sm:py-2">

@@ -21,6 +21,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import {
   buildCatalogRows,
+  filterMedalPacksByQuery,
   sortCatalogRows,
   type CatalogFilter,
   type CatalogSort,
@@ -34,6 +35,7 @@ export function BoutiquePage() {
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>('all')
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('featured')
   const [catalogSearch, setCatalogSearch] = useState('')
+  const [packSearch, setPackSearch] = useState('')
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
   const [paymentPack, setPaymentPack] = useState<MedalPack | null>(null)
   const [jerseyModalItem, setJerseyModalItem] = useState<AvatarItemType | null>(null)
@@ -53,6 +55,7 @@ export function BoutiquePage() {
     () => sortCatalogRows(catalogRows, catalogSort),
     [catalogRows, catalogSort],
   )
+  const filteredPacks = useMemo(() => filterMedalPacksByQuery(packSearch), [packSearch])
 
   const showNotice = (tone: 'ok' | 'err', text: string) => {
     setNotice({ tone, text })
@@ -345,12 +348,19 @@ export function BoutiquePage() {
             </div>
           </article>
 
-          <div className="flex justify-center pt-1">
+          <div className="flex flex-wrap justify-center gap-2 pt-1">
             <a
               href="#boutique-catalog"
               className="inline-flex items-center gap-2 rounded-full border-2 border-tf-dark/12 bg-white px-5 py-2.5 text-sm font-black text-tf-dark shadow-sm transition hover:border-tf-dark/25 hover:bg-slate-50"
             >
-              Parcourir tout le catalogue
+              Catalogue accessoires & maillots
+              <span aria-hidden>↓</span>
+            </a>
+            <a
+              href="#boutique-packs-medailles"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-amber-400/70 bg-gradient-to-r from-amber-50 to-amber-100/90 px-5 py-2.5 text-sm font-black text-amber-950 shadow-sm transition hover:border-amber-500 hover:from-amber-100 hover:to-amber-50"
+            >
+              Packs médailles (€)
               <span aria-hidden>↓</span>
             </a>
           </div>
@@ -362,9 +372,12 @@ export function BoutiquePage() {
           <div className="border-b border-tf-grey-pastel/50 bg-gradient-to-r from-slate-50/95 via-white to-sky-50/50 px-4 py-4 sm:px-6 sm:py-5">
             <h2 className="font-display text-xl font-black tracking-tight text-tf-dark sm:text-2xl">Catalogue</h2>
             <p className="mt-1 max-w-3xl text-sm font-medium leading-snug text-tf-grey">
-              Une seule vitrine : cherche, filtre par rayon, trie comme en grande surface.{' '}
-              <strong className="text-tf-dark">Accessoires & maillots</strong> (🏅 ou jetons) et{' '}
-              <strong className="text-tf-dark">packs médailles en €</strong> au même endroit.
+              Accessoires et maillots payables en <strong className="text-tf-dark">médailles 🏅</strong> ou en{' '}
+              <strong className="text-tf-dark">jetons</strong> (paris, bonus). Les recharges en euros sont à part,{' '}
+              <a href="#boutique-packs-medailles" className="font-bold text-amber-800 underline decoration-amber-400/80 underline-offset-2 hover:text-amber-950">
+                section packs médailles
+              </a>
+              .
             </p>
           </div>
 
@@ -383,14 +396,13 @@ export function BoutiquePage() {
                   autoComplete="off"
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:thin] sm:mx-0 sm:flex-wrap sm:overflow-x-visible">
                 {(
                   [
-                    ['all', 'Tout le catalogue'],
+                    ['all', 'Tout'],
                     ['accessories', 'Accessoires'],
                     ['kits', 'Maillots'],
                     ['outfit_lower', 'Bas & chaussures'],
-                    ['medals_eur', 'Packs médailles (€)'],
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -398,7 +410,7 @@ export function BoutiquePage() {
                     type="button"
                     onClick={() => setCatalogFilter(id)}
                     className={cn(
-                      'rounded-full border px-3 py-2 text-xs font-black transition sm:text-sm',
+                      'snap-start shrink-0 rounded-full border px-3 py-2 text-xs font-black transition sm:text-sm',
                       catalogFilter === id
                         ? 'border-tf-dark bg-tf-dark text-white shadow-sm'
                         : 'border-slate-300/70 bg-white text-tf-dark shadow-sm hover:border-tf-dark/25',
@@ -408,7 +420,7 @@ export function BoutiquePage() {
                   </button>
                 ))}
               </div>
-              <div className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-[13rem]">
+              <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:min-w-[13rem]">
                 <label
                   htmlFor="boutique-catalog-sort"
                   className="text-[10px] font-black uppercase tracking-wider text-tf-grey"
@@ -430,26 +442,69 @@ export function BoutiquePage() {
             </div>
           </div>
 
-          <div className="space-y-4 p-4 sm:p-6">
+          <div className="p-4 sm:p-6">
             {sortedCatalogRows.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm font-bold text-tf-grey">
                 Aucun article pour ces critères — essaie un autre filtre ou une autre recherche.
               </p>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {sortedCatalogRows.map((row) =>
-                  row.kind === 'cosmetic' ? (
-                    <BoutiqueCosmeticGridItem
-                      key={row.item.id}
-                      item={row.item}
-                      ownsItem={ownsItem}
-                      openJerseyShop={openJerseyShop}
-                      handleBuyCosmetic={handleBuyCosmetic}
-                    />
-                  ) : (
-                    <BoutiquePackGridItem key={row.pack.id} pack={row.pack} onSelect={handleOpenMedalPack} />
-                  ),
-                )}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
+                {sortedCatalogRows.map((row) => (
+                  <BoutiqueCosmeticGridItem
+                    key={row.item.id}
+                    item={row.item}
+                    ownsItem={ownsItem}
+                    openJerseyShop={openJerseyShop}
+                    handleBuyCosmetic={handleBuyCosmetic}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <div id="boutique-packs-medailles" className="scroll-mt-28 space-y-4">
+        <Card className="overflow-hidden p-0 sm:p-0" elevation="soft">
+          <div className="border-b border-amber-200/80 bg-gradient-to-r from-amber-50 via-white to-amber-50/90 px-4 py-4 sm:px-6 sm:py-5">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="font-display text-xl font-black tracking-tight text-amber-950 sm:text-2xl">
+                  Packs médailles
+                </h2>
+                <p className="mt-1 max-w-3xl text-sm font-medium leading-snug text-amber-950/80">
+                  Recharge en euros (simulation) — uniquement pour obtenir des 🏅. Ce n’est pas le catalogue
+                  accessoires : les maillots et goodies restent dans la section ci-dessus.
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-sm">
+                Paiement €
+              </span>
+            </div>
+            <div className="mt-4 max-w-md">
+              <label htmlFor="boutique-pack-search" className="sr-only">
+                Rechercher un pack
+              </label>
+              <Input
+                id="boutique-pack-search"
+                className="rounded-xl border-amber-200/80 bg-white"
+                placeholder="Rechercher un pack (nom, montant…)"
+                value={packSearch}
+                onChange={(e) => setPackSearch(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <div className="p-4 sm:p-6">
+            {filteredPacks.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-amber-200 bg-amber-50/50 px-4 py-10 text-center text-sm font-bold text-amber-950/70">
+                Aucun pack pour cette recherche.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+                {filteredPacks.map((pack) => (
+                  <BoutiquePackGridItem key={pack.id} pack={pack} onSelect={handleOpenMedalPack} />
+                ))}
               </div>
             )}
           </div>

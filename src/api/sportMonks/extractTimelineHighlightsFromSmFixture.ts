@@ -61,6 +61,28 @@ function highlightDedupeKey(h: Highlight): string {
   return `${h.minute}|${h.type}|${text}`
 }
 
+/** Clé stable pour n’afficher qu’une fois un même but / carton / VAR malgré doublons API (ids différents). */
+export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'minute' | 'type' | 'title' | 'detail'>): string {
+  const raw = String(h.detail || h.title || '')
+  const text = raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 140)
+  const t = String(h.type || '').toLowerCase()
+  const bucket = t.includes('but')
+    ? 'but'
+    : t.includes('carton')
+      ? 'carton'
+      : t.includes('var')
+        ? 'var'
+        : 'other'
+  return `${bucket}|${h.minute}|${text}`
+}
+
 function eventTitle(ev: SmFixtureEventRow, type: Highlight['type']): string {
   const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
   const player = String(ev.player?.display_name ?? ev.player?.name ?? '').trim()
@@ -83,6 +105,9 @@ export function extractTimelineHighlightsFromSmFixture(
   const withText = comments.filter((c) => String(c.comment ?? '').trim())
   if (withText.length) {
     const sorted = [...withText].sort((a, b) => {
+      const ma = displayMinute(a)
+      const mb = displayMinute(b)
+      if (ma !== mb) return ma - mb
       const oa = a.order ?? a.id ?? 0
       const ob = b.order ?? b.id ?? 0
       if (typeof oa === 'number' && typeof ob === 'number' && oa !== ob) return oa - ob

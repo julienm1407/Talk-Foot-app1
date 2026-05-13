@@ -5,7 +5,7 @@ import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
-import type { Message } from '../types/chat'
+import type { Message, MatchTribuneZone } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
 import { validateOutgoingChatPayload } from '../utils/bannedWords'
 
@@ -17,6 +17,11 @@ type LiveMsgRow = {
   body: string
   metadata: Record<string, unknown> | null
   created_at: string
+}
+
+function pickMatchTribune(v: unknown): MatchTribuneZone | undefined {
+  if (v === 'home-ultras' || v === 'away-ultras' || v === 'analystes' || v === 'neutres') return v
+  return undefined
 }
 
 function pickTribune(v: unknown): TribuneId | undefined {
@@ -46,6 +51,7 @@ function rowToMessage(row: LiveMsgRow): Message {
     createdAt: new Date(row.created_at).getTime(),
     authorDisplayName: row.display_name,
     tribune: pickTribune(meta.tribune),
+    matchTribune: pickMatchTribune(meta.matchTribune),
     supporterGroupId: typeof meta.supporterGroupId === 'string' ? meta.supporterGroupId : undefined,
     gifUrl: typeof meta.gifUrl === 'string' ? meta.gifUrl : undefined,
     emoteId: typeof meta.emoteId === 'string' ? meta.emoteId : undefined,
@@ -95,6 +101,7 @@ export function useLiveMatchChatSync(options: {
       }
       const metadata: Record<string, unknown> = {}
       if (msg.tribune) metadata.tribune = msg.tribune
+      if (msg.matchTribune) metadata.matchTribune = msg.matchTribune
       if (msg.supporterGroupId) metadata.supporterGroupId = msg.supporterGroupId
       if (msg.gifUrl) metadata.gifUrl = msg.gifUrl
       if (msg.emoteId) metadata.emoteId = msg.emoteId

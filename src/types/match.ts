@@ -32,5 +32,7 @@ export type Match = {
   sportMonksFixtureId?: number
   /** Journée SM — pour charger les cotes `/rounds/{id}` (prématch). */
   sportMonksRoundId?: number
+  /** Mi-temps / pause : la minute affichée ne doit pas continuer à défiler entre deux polls API. */
+  liveClockPaused?: boolean
 }
 

@@ -2,13 +2,11 @@ import type { AvatarItem, MedalPack } from '../types/profile'
 import { baseAvatarItems, medalPacks } from '../data/shop'
 import { inspiredJerseyItems } from '../data/inspiredJerseys'
 
-export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'outfit_lower' | 'medals_eur'
+export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'outfit_lower'
 
 export type CatalogSort = 'featured' | 'price_medals_asc' | 'price_medals_desc' | 'rarity_desc'
 
-export type CatalogRow =
-  | { kind: 'cosmetic'; item: AvatarItem }
-  | { kind: 'pack'; pack: MedalPack }
+export type CatalogRow = { kind: 'cosmetic'; item: AvatarItem }
 
 const RARITY_ORDER: Record<AvatarItem['rarity'], number> = {
   common: 0,
@@ -34,6 +32,12 @@ function matchesPackQuery(pack: MedalPack, q: string): boolean {
   )
 }
 
+/** Packs médailles (€) — vitrine séparée du catalogue cosmétiques. */
+export function filterMedalPacksByQuery(query: string): MedalPack[] {
+  const q = query.trim().toLowerCase()
+  return medalPacks.filter((p) => matchesPackQuery(p, q))
+}
+
 export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogRow[] {
   const q = query.trim().toLowerCase()
   let items = [...baseAvatarItems, ...inspiredJerseyItems]
@@ -44,28 +48,15 @@ export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogR
     items = items.filter((i) => i.slot === 'jersey')
   } else if (filter === 'outfit_lower') {
     items = items.filter((i) => i.slot === 'pants' || i.slot === 'shoes')
-  } else if (filter === 'medals_eur') {
-    items = []
   }
 
   items = items.filter((i) => matchesQuery(i, q))
 
-  let rows: CatalogRow[] = items.map((item) => ({ kind: 'cosmetic', item }))
-
-  if (filter === 'all' || filter === 'medals_eur') {
-    const packs = medalPacks.filter((p) => matchesPackQuery(p, q))
-    if (filter === 'medals_eur') {
-      rows = packs.map((pack) => ({ kind: 'pack' as const, pack }))
-    } else {
-      rows = [...rows, ...packs.map((pack) => ({ kind: 'pack' as const, pack }))]
-    }
-  }
-
-  return rows
+  return items.map((item) => ({ kind: 'cosmetic', item }))
 }
 
 function priceMedals(r: CatalogRow): number {
-  return r.kind === 'cosmetic' ? r.item.cost : r.pack.medals + (r.pack.bonus ?? 0)
+  return r.item.cost
 }
 
 export function sortCatalogRows(rows: CatalogRow[], sort: CatalogSort): CatalogRow[] {
@@ -75,24 +66,9 @@ export function sortCatalogRows(rows: CatalogRow[], sort: CatalogSort): CatalogR
   } else if (sort === 'price_medals_desc') {
     copy.sort((a, b) => priceMedals(b) - priceMedals(a))
   } else if (sort === 'rarity_desc') {
-    copy.sort((a, b) => {
-      if (a.kind === 'pack' && b.kind === 'pack') {
-        return medalPacks.findIndex((x) => x.id === a.pack.id) - medalPacks.findIndex((x) => x.id === b.pack.id)
-      }
-      if (a.kind === 'pack') return 1
-      if (b.kind === 'pack') return -1
-      return RARITY_ORDER[b.item.rarity] - RARITY_ORDER[a.item.rarity]
-    })
+    copy.sort((a, b) => RARITY_ORDER[b.item.rarity] - RARITY_ORDER[a.item.rarity])
   } else {
-    copy.sort((a, b) => {
-      if (a.kind === 'pack' && b.kind === 'pack') {
-        return medalPacks.findIndex((x) => x.id === a.pack.id) - medalPacks.findIndex((x) => x.id === b.pack.id)
-      }
-      if (a.kind === 'cosmetic' && b.kind === 'cosmetic') {
-        return RARITY_ORDER[b.item.rarity] - RARITY_ORDER[a.item.rarity]
-      }
-      return a.kind === 'cosmetic' ? -1 : 1
-    })
+    copy.sort((a, b) => RARITY_ORDER[b.item.rarity] - RARITY_ORDER[a.item.rarity])
   }
   return copy
 }

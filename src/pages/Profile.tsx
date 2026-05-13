@@ -720,11 +720,43 @@ export function ProfilePage() {
       {/* Classement parieur */}
       <UserRankCard />
 
-      <div id="apparence" className="scroll-mt-4 space-y-4 sm:space-y-5">
-        <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
-        <CharacterLayerStudio />
+      <div id="apparence" className="scroll-mt-4 space-y-3 sm:space-y-5">
+        <p className={cn('text-[11px] font-black tracking-[0.18em]', L ? 'text-tf-grey' : 'text-sky-200/80')}>
+          APPARENCE & PERSONNALISATION
+        </p>
+        <nav
+          className={cn(
+            '-mx-1 flex snap-x snap-mandatory items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1',
+            '[scrollbar-width:thin] sm:mx-0 sm:hidden',
+          )}
+          aria-label="Sections apparence"
+        >
+          {(
+            [
+              ['profil-photo', 'Photo'],
+              ['profil-look', 'Perso 3D'],
+              ['profil-avatar', 'Look Lego'],
+            ] as const
+          ).map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className={cn('snap-start', profileNavLink(appearance), TF_FOCUS_VISIBLE)}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div id="profil-photo" className="scroll-mt-28 sm:scroll-mt-4">
+          <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
+        </div>
 
-        <AvatarEditor />
+        <div id="profil-look" className="scroll-mt-28 space-y-3 sm:scroll-mt-4 sm:space-y-4">
+          <CharacterLayerStudio />
+        </div>
+        <div id="profil-avatar" className="scroll-mt-28 sm:scroll-mt-4">
+          <AvatarEditor />
+        </div>
       </div>
 
       <Card id="stats-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
