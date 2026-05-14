@@ -61,17 +61,25 @@ function highlightDedupeKey(h: Highlight): string {
   return `${h.minute}|${h.type}|${text}`
 }
 
-/** Clé stable pour n’afficher qu’une fois un même but / carton / VAR malgré doublons API (ids différents). */
-export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'minute' | 'type' | 'title' | 'detail'>): string {
-  const raw = String(h.detail || h.title || '')
-  const text = raw
+const FULLSCREEN_NOISE =
+  /\b(but|goal|gol|own|penalty|penal|carton|jaune|rouge|yellow|red|card|var|min|minute|the|a|de|la|le|les|un|une|pour|scored|marque|against)\b/gi
+
+/** Clé stable pour n’afficher qu’une fois un même but / carton / VAR malgré doublons API (ids différents, commentaire + event). */
+export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' | 'type' | 'title' | 'detail'>): string {
+  const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()}`.trim()
+  const text = combined
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(FULLSCREEN_NOISE, ' ')
     .replace(/[^a-z0-9\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 140)
+    .split(' ')
+    .filter(Boolean)
+    .sort()
+    .join(' ')
+    .slice(0, 120)
   const t = String(h.type || '').toLowerCase()
   const bucket = t.includes('but')
     ? 'but'

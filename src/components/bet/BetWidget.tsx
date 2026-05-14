@@ -10,6 +10,13 @@ import type { Wallet } from '../../types/bet'
 import type { BetMarket, BetSelection } from '../../types/bet'
 import { useBetting } from '../../hooks/useBetting'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../../api/sportMonks'
+import {
+  adjust1x2OddsForLive,
+  anytimeScorerOdds,
+  scorerLineupMatchesScoredGoal,
+  slugScorer,
+  type ScorerLineupMeta,
+} from '../../utils/liveFootballOdds'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -64,7 +71,14 @@ function syntheticOu25ForMatch(match: Match): SmBookOddsOverUnder25 {
   return { over: toOdd(pOver), under: toOdd(1 - pOver) }
 }
 
-/** `bookOdds1x2` : cotes 1N2 API ; `bookOddsLoading` : pas de cote démo tant que le chargement SM. */
+type ScorerPickRow = {
+  id: BetSelection
+  label: string
+  odds: number
+  disabled?: boolean
+}
+
+/** Cotes 1N2 bookmaker (SportMonks) + ajustement live score ; jetons fictifs. */
 export function BetWidget({
   match,
   betting,
@@ -72,12 +86,25 @@ export function BetWidget({
   bookOddsOverUnder25 = null,
   bookOddsLoading = false,
   compact = false,
+  liveScore = null,
+  liveMinute = null,
+  lineupScorers = [],
+  scoredButeurs = [],
 }: {
   match: Match
   bookOdds1x2?: SmBookOdds1x2 | null
   bookOddsOverUnder25?: SmBookOddsOverUnder25 | null
   bookOddsLoading?: boolean
   compact?: boolean
+  liveScore?: { home: number; away: number } | null
+  liveMinute?: number | null
+  lineupScorers?: {
+    side: 'home' | 'away'
+    name: string
+    formationPosition?: number
+    formationField?: string
+  }[]
+  scoredButeurs?: { side: 'home' | 'away'; slug: string; name?: string }[]
   betting?: {
     wallet: Wallet
     matchBets: Bet[]
@@ -138,16 +165,84 @@ export function BetWidget({
     return syntheticOu25ForMatch(match)
   }, [ou25Ready, bookOddsOverUnder25, match])
 
+  const isLive = match.status === 'live'
+  const scoreHome = liveScore?.home ?? match.score?.home ?? 0
+  const scoreAway = liveScore?.away ?? match.score?.away ?? 0
+  const minuteLive = Math.max(0, liveMinute ?? match.minute ?? 0)
+
+  /** Cotes affichées / prise de pari : book (ou synthèse) hors live ; ajustement dynamique en live. */
+  const x12Displayed = useMemo((): SmBookOdds1x2 | null => {
+    if (!x12Resolved) return null
+    if (!isLive) return x12Resolved
+    return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive)
+  }, [x12Resolved, isLive, scoreHome, scoreAway, minuteLive])
+
+  const usedBook1x2 = Boolean(
+    bookOdds1x2 &&
+      bookOdds1x2.home >= 1.01 &&
+      bookOdds1x2.draw >= 1.01 &&
+      bookOdds1x2.away >= 1.01,
+  )
+
+  const scorerPicksSplit = useMemo(() => {
+    if (!x12Resolved) return { home: [] as ScorerPickRow[], away: [] as ScorerPickRow[] }
+    const seenH = new Set<string>()
+    const seenA = new Set<string>()
+    const home: ScorerPickRow[] = []
+    const away: ScorerPickRow[] = []
+    for (const p of lineupScorers) {
+      const slug = slugScorer(p.name)
+      if (!slug) continue
+      const k = `${p.side}:${slug}`
+      const already = scoredButeurs.some(
+        (s) => s.side === p.side && scorerLineupMatchesScoredGoal(slug, s),
+      )
+      const meta: ScorerLineupMeta | null =
+        p.formationPosition != null || (p.formationField != null && p.formationField.length > 0)
+          ? { formationPosition: p.formationPosition, formationField: p.formationField }
+          : null
+      const row: ScorerPickRow = {
+        id: `scor:${p.side}:${slug}`,
+        label: p.name,
+        odds: anytimeScorerOdds(p.name, p.side, x12Resolved, already, meta, {
+          liveMinute: isLive ? minuteLive : undefined,
+        }),
+        disabled: already,
+      }
+      if (p.side === 'home') {
+        if (seenH.has(k)) continue
+        seenH.add(k)
+        home.push(row)
+      } else {
+        if (seenA.has(k)) continue
+        seenA.add(k)
+        away.push(row)
+      }
+    }
+    return { home, away }
+  }, [lineupScorers, scoredButeurs, x12Resolved, isLive, minuteLive])
+
+  const scorerPicksTotal = scorerPicksSplit.home.length + scorerPicksSplit.away.length
+
   const markets = useMemo(() => {
-    const base = [
+    const x12 = x12Displayed
+    const base: Array<{
+      id: BetMarket
+      label: string
+      enabled: boolean
+      gridCols?: 2 | 3
+      picks: ScorerPickRow[]
+      /** Marché buteur : deux colonnes (domicile / extérieur), sans mélanger les joueurs. */
+      scorerSides?: { teamLabel: string; picks: ScorerPickRow[] }[]
+    }> = [
       {
         id: 'result_1x2' as const,
-        label: '1N2',
+        label: isLive ? '1N2 (cotes live)' : '1N2',
         enabled: x12Ready,
         picks: [
-          { id: 'home' as const, label: match.home.shortName, odds: x12Resolved?.home ?? 0 },
-          { id: 'draw' as const, label: 'Nul', odds: x12Resolved?.draw ?? 0 },
-          { id: 'away' as const, label: match.away.shortName, odds: x12Resolved?.away ?? 0 },
+          { id: 'home' as const, label: match.home.shortName, odds: x12?.home ?? 0 },
+          { id: 'draw' as const, label: 'Nul', odds: x12?.draw ?? 0 },
+          { id: 'away' as const, label: match.away.shortName, odds: x12?.away ?? 0 },
         ],
       },
       {
@@ -175,8 +270,32 @@ export function BetWidget({
       },
     ]
 
+    if (scorerPicksTotal > 0 && (isUpcoming || isLive)) {
+      base.push({
+        id: 'anytime_scorer',
+        label: 'Buteur (marque dans le match)',
+        enabled: x12Ready,
+        gridCols: 2,
+        picks: [...scorerPicksSplit.home, ...scorerPicksSplit.away],
+        scorerSides: [
+          { teamLabel: match.home.shortName, picks: scorerPicksSplit.home },
+          { teamLabel: match.away.shortName, picks: scorerPicksSplit.away },
+        ],
+      })
+    }
+
     return base
-  }, [isUpcoming, match.away.shortName, match.home.shortName, x12Ready, x12Resolved, ou25Resolved])
+  }, [
+    isLive,
+    isUpcoming,
+    match.away.shortName,
+    match.home.shortName,
+    ou25Resolved,
+    scorerPicksSplit,
+    scorerPicksTotal,
+    x12Displayed,
+    x12Ready,
+  ])
 
   const canStake =
     maxStake >= minStake && stake >= minStake && stake <= maxStake && stake <= wallet.tokens
@@ -187,8 +306,8 @@ export function BetWidget({
   const openSheet = () => setSheetOpen(true)
 
   const pickQuick = (side: 'home' | 'away') => {
-    if (!x12Resolved) return
-    const odds = side === 'home' ? x12Resolved.home : x12Resolved.away
+    if (!x12Displayed) return
+    const odds = side === 'home' ? x12Displayed.home : x12Displayed.away
     setPending({
       market: 'result_1x2',
       selection: side,
@@ -203,6 +322,21 @@ export function BetWidget({
 
   const placePending = () => {
     if (!pending) return
+    if (pending.market === 'anytime_scorer') {
+      const m = /^scor:(home|away):(.+)$/.exec(pending.selection)
+      if (m) {
+        const side = m[1] as 'home' | 'away'
+        const pickSlug = m[2] ?? ''
+        const blocked = scoredButeurs.some(
+          (s) => s.side === side && scorerLineupMatchesScoredGoal(pickSlug, s),
+        )
+        if (blocked) {
+          setNotice({ tone: 'err', text: 'Ce joueur a déjà marqué : pari buteur fermé.' })
+          setPending(null)
+          return
+        }
+      }
+    }
     const res = placeBet(pending.market, pending.selection, stake, pending.odds)
     if (res && typeof res === 'object' && 'ok' in res && (res as { ok: boolean }).ok === false) {
       setNotice({ tone: 'err', text: 'Pas assez de jetons.' })
@@ -240,7 +374,12 @@ export function BetWidget({
             <span className={cn('block font-black text-sky-100', compact ? 'text-[11px]' : 'text-sm')}>Pronos Live</span>
             {!compact ? (
               <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-sky-200/70">
-                Mise rapide ou ouvre le détail des marchés.
+                {isLive
+                  ? `Cotes 1N2 ajustées au score (${scoreHome}–${scoreAway}, ${minuteLive}′).`
+                  : usedBook1x2
+                    ? 'Cotes type bookmaker (SportMonks) + autres marchés.'
+                    : 'Cotes estimées en attendant les grilles API.'}{' '}
+                Mise rapide ou détail ci-dessous.
               </span>
             ) : (
               <span className="mt-0.5 block text-[10px] font-semibold text-sky-200/70">Mise rapide</span>
@@ -296,35 +435,37 @@ export function BetWidget({
           <Button
             variant="soft"
             title="Pari 1N2 — vainqueur domicile"
-            disabled={!x12Ready}
+            disabled={!x12Ready || !x12Displayed}
             className={cn(
-              'min-h-11 min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:min-h-0 sm:px-4',
+              'tf-bet-pick min-h-11 min-w-0 justify-between gap-2 rounded-xl border-2 border-sky-400/55 bg-[#e8f3fc] px-3 text-sm font-bold text-[#04202f] shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:px-4',
+              'hover:border-sky-300/90 hover:bg-[#f2f8ff] disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
               compact ? 'sm:h-10' : 'sm:h-10',
             )}
             onClick={() => pickQuick('home')}
           >
-            <span className="min-w-0 overflow-hidden text-ellipsis">
+            <span className="tf-bet-pick-name min-w-0 overflow-hidden text-ellipsis font-extrabold text-[#04202f]">
               {match.home.shortName}
             </span>
-              <span className="shrink-0 text-xs font-black text-sky-200/75">
-              {x12Ready ? fmtOdds(x12Resolved!.home) : x12UnavailableLabel}
+            <span className="tf-bet-pick-odd shrink-0 rounded-lg border border-emerald-700/35 bg-emerald-600/12 px-2 py-0.5 text-xs font-black tabular-nums text-emerald-950">
+              {x12Ready && x12Displayed ? fmtOdds(x12Displayed.home) : x12UnavailableLabel}
             </span>
           </Button>
           <Button
             variant="soft"
             title="Pari 1N2 — vainqueur extérieur"
-            disabled={!x12Ready}
+            disabled={!x12Ready || !x12Displayed}
             className={cn(
-              'min-h-11 min-w-0 justify-between gap-2 rounded-xl px-3 text-sm font-bold sm:min-h-0 sm:px-4',
+              'tf-bet-pick min-h-11 min-w-0 justify-between gap-2 rounded-xl border-2 border-sky-400/55 bg-[#e8f3fc] px-3 text-sm font-bold text-[#04202f] shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:px-4',
+              'hover:border-sky-300/90 hover:bg-[#f2f8ff] disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
               compact ? 'sm:h-10' : 'sm:h-10',
             )}
             onClick={() => pickQuick('away')}
           >
-            <span className="min-w-0 overflow-hidden text-ellipsis">
+            <span className="tf-bet-pick-name min-w-0 overflow-hidden text-ellipsis font-extrabold text-[#04202f]">
               {match.away.shortName}
             </span>
-              <span className="shrink-0 text-xs font-black text-sky-200/75">
-              {x12Ready ? fmtOdds(x12Resolved!.away) : x12UnavailableLabel}
+            <span className="tf-bet-pick-odd shrink-0 rounded-lg border border-emerald-700/35 bg-emerald-600/12 px-2 py-0.5 text-xs font-black tabular-nums text-emerald-950">
+              {x12Ready && x12Displayed ? fmtOdds(x12Displayed.away) : x12UnavailableLabel}
             </span>
           </Button>
         </div>
@@ -333,29 +474,31 @@ export function BetWidget({
             <button
               type="button"
               onClick={() => {
-                if (!x12Resolved) return
+                if (!x12Displayed) return
                 setPending({
                   market: 'result_1x2',
                   selection: 'draw',
-                  odds: x12Resolved.draw,
+                  odds: x12Displayed.draw,
                   label: '1N2 · Nul',
                 })
                 openSheet()
               }}
-              className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-left text-[11px] font-bold text-sky-100 transition hover:border-sky-300/70"
-              disabled={!x12Ready}
+              className="tf-bet-soft tf-bet-mini tf-bet-mini-pick rounded-lg border border-sky-400/50 bg-[#102f4d] px-2 py-1.5 text-left text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-sky-300/80 hover:bg-[#153a5c]"
+              disabled={!x12Ready || !x12Displayed}
               title="Pari 1N2 — nul"
             >
-              <span className="block text-[10px] text-sky-200/70">Nul</span>
-              <span>{x12Ready ? fmtOdds(x12Resolved!.draw) : x12UnavailableLabel}</span>
+              <span className="block text-[10px] font-bold text-sky-200">Nul</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">
+                {x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : x12UnavailableLabel}
+              </span>
             </button>
-            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-[11px] font-bold text-sky-100">
-              <span className="block text-[10px] text-sky-200/70">+2,5</span>
-              <span>{fmtOdds(ou25Resolved.over)}</span>
+            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <span className="block text-[10px] font-bold text-sky-200">+2,5</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Resolved.over)}</span>
             </div>
-            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-[#4f7ea8]/60 bg-[#0d2842] px-2 py-1.5 text-[11px] font-bold text-sky-100">
-              <span className="block text-[10px] text-sky-200/70">-2,5</span>
-              <span>{fmtOdds(ou25Resolved.under)}</span>
+            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <span className="block text-[10px] font-bold text-sky-200">-2,5</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Resolved.under)}</span>
             </div>
           </div>
         ) : null}
@@ -564,27 +707,50 @@ export function BetWidget({
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
                   Coup rapide — 1N2
                 </p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="mt-2 grid grid-cols-3 gap-2">
                   <Button
                     variant="soft"
-                    className="h-11 justify-between rounded-xl px-4 text-sm font-bold"
-                    disabled={!x12Ready}
+                    className="h-11 justify-between rounded-xl px-3 text-sm font-bold"
+                    disabled={!x12Ready || !x12Displayed}
                     onClick={() => pickQuick('home')}
                   >
                     <span className="truncate">{match.home.shortName}</span>
                     <span className="shrink-0 text-xs font-black text-slate-500">
-                      {x12OddsPending ? '…' : x12Ready ? fmtOdds(x12Resolved!.home) : '—'}
+                      {x12OddsPending ? '…' : x12Ready && x12Displayed ? fmtOdds(x12Displayed.home) : '—'}
                     </span>
                   </Button>
                   <Button
                     variant="soft"
-                    className="h-11 justify-between rounded-xl px-4 text-sm font-bold"
-                    disabled={!x12Ready}
+                    className="h-11 flex-col justify-center gap-0.5 rounded-xl px-2 text-[11px] font-bold leading-tight"
+                    disabled={!x12Ready || !x12Displayed}
+                    onClick={() => {
+                      if (!x12Displayed) return
+                      setPending({
+                        market: 'result_1x2',
+                        selection: 'draw',
+                        odds: x12Displayed.draw,
+                        label: '1N2 · Nul',
+                      })
+                      openSheet()
+                      if (maxStake >= minStake) {
+                        setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                      }
+                    }}
+                  >
+                    <span className="text-[10px] font-semibold text-slate-500">Nul</span>
+                    <span className="font-black text-slate-700">
+                      {x12OddsPending ? '…' : x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : '—'}
+                    </span>
+                  </Button>
+                  <Button
+                    variant="soft"
+                    className="h-11 justify-between rounded-xl px-3 text-sm font-bold"
+                    disabled={!x12Ready || !x12Displayed}
                     onClick={() => pickQuick('away')}
                   >
                     <span className="truncate">{match.away.shortName}</span>
                     <span className="shrink-0 text-xs font-black text-slate-500">
-                      {x12OddsPending ? '…' : x12Ready ? fmtOdds(x12Resolved!.away) : '—'}
+                      {x12OddsPending ? '…' : x12Ready && x12Displayed ? fmtOdds(x12Displayed.away) : '—'}
                     </span>
                   </Button>
                 </div>
@@ -603,41 +769,104 @@ export function BetWidget({
                           {m.id === 'result_1x2'
                             ? x12OddsPending
                               ? '…'
-                              : 'Bientot'
-                            : 'Live'}
+                              : 'Indispo'
+                            : m.id === 'exact_score'
+                              ? 'Live'
+                              : 'Pause'}
                         </Badge>
                       )}
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      {m.picks.map((p) => (
-                        <Button
-                          key={p.id}
-                          variant="soft"
-                          className="h-10 min-w-0 justify-between gap-1 rounded-xl px-2 text-xs font-bold"
-                          disabled={!m.enabled}
-                          onClick={() => {
-                            setPending({
-                              market: m.id,
-                              selection: p.id,
-                              odds: p.odds,
-                              label: `${m.label} • ${p.label}`,
-                            })
-                            if (maxStake >= minStake) {
-                              setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                            }
-                          }}
-                        >
-                          <span className="min-w-0 truncate">{p.label}</span>
-                          <span className="shrink-0 font-black text-slate-500">
-                            {m.id === 'result_1x2' && !x12Ready
-                              ? x12OddsPending
-                                ? '…'
-                                : '—'
-                              : fmtOdds(p.odds)}
-                          </span>
-                        </Button>
-                      ))}
-                    </div>
+                    {m.scorerSides && m.scorerSides.length > 0 ? (
+                      <div className="mt-2 max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain pr-0.5 sm:max-h-64">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {m.scorerSides.map((side) => (
+                            <div
+                              key={side.teamLabel}
+                              className="min-w-0 rounded-xl border border-slate-200/90 bg-slate-100/55 p-2.5 shadow-sm"
+                            >
+                              <p className="border-b border-slate-200/80 pb-1.5 text-center text-[10px] font-black uppercase tracking-wide text-slate-600">
+                                {side.teamLabel}
+                              </p>
+                              {side.picks.length === 0 ? (
+                                <p className="mt-3 text-center text-[10px] font-semibold text-slate-400">
+                                  Aucun titulaire listé
+                                </p>
+                              ) : (
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                  {side.picks.map((p) => (
+                                    <Button
+                                      key={p.id}
+                                      variant="soft"
+                                      className="h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold"
+                                      disabled={!m.enabled || p.disabled}
+                                      onClick={() => {
+                                        setPending({
+                                          market: m.id,
+                                          selection: p.id,
+                                          odds: p.odds,
+                                          label: `${m.label} • ${p.label}`,
+                                        })
+                                        if (maxStake >= minStake) {
+                                          setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                                        }
+                                      }}
+                                    >
+                                      <span className="min-w-0 text-center leading-snug sm:text-left">
+                                        {p.label}
+                                      </span>
+                                      <span className="shrink-0 font-black text-slate-500">
+                                        {p.disabled ? 'But ✓' : fmtOdds(p.odds)}
+                                      </span>
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          'mt-2 grid gap-2',
+                          m.gridCols === 2 ? 'grid-cols-2' : 'grid-cols-3',
+                        )}
+                      >
+                        {m.picks.map((p) => (
+                          <Button
+                            key={p.id}
+                            variant="soft"
+                            className={cn(
+                              'min-h-10 justify-between gap-1 rounded-xl px-2 text-xs font-bold',
+                              m.id === 'anytime_scorer' ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
+                            )}
+                            disabled={!m.enabled || p.disabled}
+                            onClick={() => {
+                              setPending({
+                                market: m.id,
+                                selection: p.id,
+                                odds: p.odds,
+                                label: `${m.label} • ${p.label}`,
+                              })
+                              if (maxStake >= minStake) {
+                                setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                              }
+                            }}
+                          >
+                            <span className="min-w-0 text-center leading-snug sm:text-left">{p.label}</span>
+                            <span className="shrink-0 font-black text-slate-500">
+                              {m.id === 'result_1x2' && !x12Ready
+                                ? x12OddsPending
+                                  ? '…'
+                                  : '—'
+                                : p.disabled
+                                  ? 'But ✓'
+                                  : fmtOdds(p.odds)}
+                            </span>
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

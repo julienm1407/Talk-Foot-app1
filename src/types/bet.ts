@@ -4,6 +4,7 @@ export type BetMarket =
   | 'exact_score'
   | 'result_1x2'
   | 'over25'
+  | 'anytime_scorer'
 
 export type BetStatus = 'open' | 'won' | 'lost' | 'cancelled'
 
@@ -20,6 +21,7 @@ export type BetSelection =
   | '11'
   | '01'
   | '12'
+  | `scor:${'home' | 'away'}:${string}`
 
 export type Bet = {
   id: string

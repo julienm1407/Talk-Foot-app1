@@ -626,6 +626,37 @@ html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-widget > .tf-bet
   border-color: rgba(123, 141, 162, 0.3) !important;
 }
 
+/* Opacités Tailwind (text-sky-100/75 …) : sans règle dédiée le texte restait trop clair sur fonds éclaircis */
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-100\/75,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-100\/80,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-100\/85,
+html[data-tf-appearance='light'] .tf-channel-live-light .text-sky-100\/90 {
+  color: #2d4f6f !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-channel-chat-form input::placeholder {
+  color: rgba(2, 52, 88, 0.58) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-channel-chat-form input:disabled::placeholder {
+  color: rgba(2, 52, 88, 0.68) !important;
+}
+
+/* Overlay animations payantes : texte blanc lisible (le live jour force sinon du navy partout) */
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-paid-fx-portal .text-white,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-paid-fx-portal .text-sky-50,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-paid-fx-portal .text-sky-100 {
+  color: #f8fafc !important;
+}
+
+/* Pastilles stats sous le terrain : fond sombre, texte clair (évite le forcage navy du mode jour) */
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-stat-pill .text-white,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-stat-pill .text-sky-100,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-stat-pill .text-sky-300\/90,
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-stat-pill .text-sky-400\/75 {
+  color: #eaf4ff !important;
+}
+
 .tf-channel-shell {
   background: #03172a;
 }

@@ -181,7 +181,15 @@ export function useBetting(matchId: string) {
   )
 
   const settleMatchResult = useCallback(
-    (finalScore: { home: number; away: number }) => {
+    (
+      finalScore: { home: number; away: number },
+      opts?: {
+        scorerEvents?: { side: 'home' | 'away'; slug: string }[]
+        /** Règle les paris de ce match (ex. après navigation, le hook courant peut être un autre `matchId`). */
+        forMatchId?: string
+      },
+    ) => {
+      const targetMatchId = opts?.forMatchId ?? matchId
       const run = (bets: Bet[], now: string) => {
         let delta = 0
         const { home, away } = finalScore
@@ -189,8 +197,18 @@ export function useBetting(matchId: string) {
         const homeWins = home > away
         const awayWins = away > home
         const isDraw = home === away
+        const scoreKeyMap: Record<string, [number, number]> = {
+          '00': [0, 0],
+          '10': [1, 0],
+          '20': [2, 0],
+          '21': [2, 1],
+          '11': [1, 1],
+          '01': [0, 1],
+          '12': [1, 2],
+        }
+        const scorerEvents = opts?.scorerEvents ?? []
         const next = bets.map((b) => {
-          if (b.matchId !== matchId) return b
+          if (b.matchId !== targetMatchId) return b
           if (b.status !== 'open') return b
           if (b.market === 'result_1x2') {
             const won =
@@ -208,6 +226,30 @@ export function useBetting(matchId: string) {
             const won =
               (b.selection === 'over' && totalGoals > 2) ||
               (b.selection === 'under' && totalGoals <= 2)
+            if (won) {
+              const payout = Math.round(b.stake * b.odds)
+              delta += payout
+              return { ...b, status: 'won' as const, settledAt: now, payout }
+            }
+            return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+          }
+          if (b.market === 'exact_score') {
+            const exp = scoreKeyMap[b.selection as keyof typeof scoreKeyMap]
+            const won = Boolean(exp && exp[0] === home && exp[1] === away)
+            if (won) {
+              const payout = Math.round(b.stake * b.odds)
+              delta += payout
+              return { ...b, status: 'won' as const, settledAt: now, payout }
+            }
+            return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+          }
+          if (b.market === 'anytime_scorer' && typeof b.selection === 'string' && b.selection.startsWith('scor:')) {
+            const rest = b.selection.slice('scor:'.length)
+            const idx = rest.indexOf(':')
+            if (idx === -1) return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+            const side = rest.slice(0, idx) as 'home' | 'away'
+            const slug = rest.slice(idx + 1)
+            const won = scorerEvents.some((e) => e.side === side && e.slug === slug)
             if (won) {
               const payout = Math.round(b.stake * b.odds)
               delta += payout

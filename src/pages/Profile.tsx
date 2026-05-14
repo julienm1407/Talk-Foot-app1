@@ -151,6 +151,7 @@ export function ProfilePage() {
       if (m === 'result_1x2') return '1N2'
       if (m === 'over25') return '+2,5 buts'
       if (m === 'exact_score') return 'Score exact'
+      if (m === 'anytime_scorer') return 'Buteur'
       return m
     }
     const selectionLabel = (b: Bet, matchId: string) => {
@@ -163,6 +164,11 @@ export function ProfilePage() {
       if (s === 'draw') return 'Nul'
       if (s === 'over') return 'Over'
       if (s === 'under') return 'Under'
+      if (typeof s === 'string' && s.startsWith('scor:')) {
+        const slug = s.slice(s.lastIndexOf(':') + 1)
+        const pretty = slug.replace(/-/g, ' ')
+        return pretty ? `Buteur · ${pretty}` : 'Buteur'
+      }
       return s
     }
 
