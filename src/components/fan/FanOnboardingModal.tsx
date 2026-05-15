@@ -10,10 +10,10 @@ import { Button } from '../ui/Button'
 import { cn } from '../../utils/cn'
 import { LogoMark } from '../../layout/LogoMark'
 import { ClubSearchCombobox } from './ClubSearchCombobox'
-import { LEAGUE_OFFICIAL_LOGO_BY_ID } from '../../data/leagueOfficialLogoUrls'
 import { ClubCrest } from '../brand/ClubCrest'
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
-import { sportMonksTeamLogoUrlForClubId } from '../../data/sportMonksLogoUrls'
+import { getLeagueLogoUrl, resolveClubCatalogLogoUrl } from '../../utils/catalogLogos'
+import { SafeLogoImg } from './SafeLogoImg'
 
 const MAX_CLUBS = 3
 
@@ -82,7 +82,7 @@ export function FanOnboardingModal() {
       aria-modal="true"
       aria-labelledby="fan-onboard-title"
     >
-      <div className="max-h-[min(92dvh,720px)] w-full max-w-lg overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white shadow-[0_24px_80px_rgba(1,30,51,0.2)]">
+      <div className="max-h-[min(92dvh,720px)] w-full max-w-lg overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white text-tf-dark shadow-[0_24px_80px_rgba(1,30,51,0.2)]">
         <div className="border-b border-tf-grey-pastel/50 bg-tf-ice/90 px-5 py-4">
           <div className="flex items-start gap-3">
             <LogoMark variant="compact" className="!h-8" decorative={false} />
@@ -133,7 +133,7 @@ export function FanOnboardingModal() {
                       'rounded-2xl border px-4 py-3 text-left text-sm font-black transition',
                       selected
                         ? 'border-tf-dark bg-tf-dark text-white shadow-md'
-                        : 'border-tf-grey-pastel/60 bg-tf-white hover:bg-tf-grey-pastel/20',
+                        : 'border-tf-grey-pastel/60 bg-tf-white text-tf-dark hover:bg-tf-grey-pastel/20',
                     )}
                     style={
                       !selected
@@ -143,23 +143,15 @@ export function FanOnboardingModal() {
                         : undefined
                     }
                   >
-                    <span className="flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-black/10">
-                        {LEAGUE_OFFICIAL_LOGO_BY_ID[L.id] ? (
-                          <img
-                            src={LEAGUE_OFFICIAL_LOGO_BY_ID[L.id]}
-                            alt=""
-                            className="h-[82%] w-[82%] object-contain"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span
-                            className="inline-flex h-full w-full rounded-full"
-                            style={{ background: `linear-gradient(135deg, ${L.accent}, ${L.accent2})` }}
-                          />
-                        )}
+                    <span className="flex items-center gap-2.5">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-black/10">
+                        <SafeLogoImg
+                          src={getLeagueLogoUrl(L.id)}
+                          alt=""
+                          className="h-[82%] w-[82%]"
+                        />
                       </span>
-                      <span>{L.name}</span>
+                      <span className={selected ? 'text-white' : 'text-tf-dark'}>{L.name}</span>
                     </span>
                   </button>
                 )
@@ -202,7 +194,7 @@ export function FanOnboardingModal() {
                               id={team.id}
                               shortName={team.shortName}
                               colors={team.colors}
-                              logoUrl={sportMonksTeamLogoUrlForClubId(id) ?? undefined}
+                              logoUrl={resolveClubCatalogLogoUrl(id) ?? undefined}
                               size={18}
                               clickable={false}
                               className="rounded-full"
@@ -247,7 +239,7 @@ export function FanOnboardingModal() {
                               id={team.id}
                               shortName={team.shortName}
                               colors={team.colors}
-                              logoUrl={sportMonksTeamLogoUrlForClubId(c.id) ?? undefined}
+                              logoUrl={resolveClubCatalogLogoUrl(c.id) ?? undefined}
                               size={16}
                               clickable={false}
                               className="rounded-full"

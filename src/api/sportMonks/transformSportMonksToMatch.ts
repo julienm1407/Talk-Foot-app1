@@ -15,7 +15,7 @@ function stateIdOf(f: SmFixture): number | undefined {
 }
 
 /** Mi-temps / pause : la minute API ne doit pas être « extrapolée » minute par minute côté client. */
-function liveClockPausedFromSmFixture(f: SmFixture): boolean {
+export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
   const blob = `${f.state?.developer_name ?? ''} ${f.state?.state ?? ''}`.toUpperCase()
   if (blob.includes('HT') || blob.includes('HALF')) return true
   const sid = stateIdOf(f)

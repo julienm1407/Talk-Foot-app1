@@ -5,6 +5,7 @@ import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { ClubCrest } from '../brand/ClubCrest'
 import { formatRelativeMinute } from '../../utils/time'
+import { getSportMonksToken } from '../../utils/apiTokens'
 import { cn } from '../../utils/cn'
 import { LiveSalonPresenceStrip } from './LiveSalonPresenceStrip'
 import { HUB_STADIUM_URL, HubMatchProgressBar } from '../match/HubMatchEncart'
@@ -84,8 +85,13 @@ export function LiveMatchHero({
 }) {
   const spotlight = variant === 'spotlight' && !compact
   const linearMinute = useLinearDisplayedLiveMinute(match)
-  const minute = simulation.active ? simulation.minute : linearMinute
-  const score = simulation.active ? simulation.score : match.score ?? { home: 0, away: 0 }
+  const smDriven = Boolean(match.sportMonksFixtureId && getSportMonksToken())
+  const minute = smDriven ? linearMinute : simulation.active ? simulation.minute : linearMinute
+  const score = smDriven
+    ? (match.score ?? { home: 0, away: 0 })
+    : simulation.active
+      ? simulation.score
+      : (match.score ?? { home: 0, away: 0 })
   const { bumpSide, burst, toast, rim } = simulation
   /** Effets plein hero : flouter le terrain + renforcer le voile pour lisibilité */
   const heroAnimBackdrop =
@@ -384,6 +390,7 @@ export function LiveMatchHero({
             <div className={cn(compact ? 'px-3 pb-1.5 pt-0' : spotlight ? 'px-3 pb-2 pt-0 sm:px-4' : 'px-4 pb-3 pt-1')}>
               <HubMatchProgressBar
                 minute={minute}
+                paused={Boolean(match.liveClockPaused)}
                 className={
                   spotlight ? 'h-1 sm:h-1.5 [&>div]:shadow-[0_0_12px_rgba(16,185,129,0.55)]' : undefined
                 }

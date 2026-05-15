@@ -7,6 +7,10 @@ export type Highlight = {
   type: 'But' | 'Occasion' | 'Carton' | 'VAR' | 'Arrêt' | 'Info'
   title: string
   detail: string
+  /** Camp buteur (événements structurés SM). */
+  side?: 'home' | 'away'
+  /** Nom du buteur si connu (événements SM). */
+  scorerName?: string
 }
 
 /** Plus de moments clés seed pour des matchs fictifs ; les vrais salons pourront s’enrichir via l’API. */

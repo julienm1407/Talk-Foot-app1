@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "diag:bookmakers": "node scripts/diagnose-bookmakers.mjs",
     "preview": "vite preview",
-    "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs"
+    "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs",
+    "test:avatar-zones": "npx tsx --test src/components/profile/avatarHeadZones.test.ts"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.6",

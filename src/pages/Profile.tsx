@@ -33,7 +33,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import type { Appearance } from '../contexts/AppearanceContext'
 import { LeagueMark } from '../components/brand/LeagueMark'
 import { ClubCrest } from '../components/brand/ClubCrest'
-import { sportMonksTeamLogoUrlForClubId } from '../data/sportMonksLogoUrls'
+import { resolveClubCatalogLogoUrl } from '../utils/catalogLogos'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -680,7 +680,7 @@ export function ProfilePage() {
                         id={team.id}
                         shortName={team.shortName}
                         colors={team.colors}
-                        logoUrl={sportMonksTeamLogoUrlForClubId(id) ?? undefined}
+                        logoUrl={resolveClubCatalogLogoUrl(id) ?? undefined}
                         size={18}
                         clickable={false}
                         className="rounded-full"

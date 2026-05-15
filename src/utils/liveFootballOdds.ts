@@ -1,5 +1,5 @@
 import type { Highlight } from '../data/highlights'
-import type { SmBookOdds1x2 } from '../api/sportMonks'
+import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../api/sportMonks'
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n))
@@ -32,12 +32,18 @@ export function adjust1x2OddsForLive(
   const { pH, pD, pA } = impliedProbs1x2(prematch)
   const d = homeGoals - awayGoals
   const tau = clamp((minute + 8) / 96, 0.1, 1)
-  const k = 0.95 + 0.55 * tau
+  const k = 0.95 + 0.85 * tau
   const sh = Math.exp(k * d)
   const sa = Math.exp(-k * d)
   let pH2 = pH * sh
   let pA2 = pA * sa
-  let pD2 = pD * Math.exp(-0.32 * Math.abs(d) * tau)
+  let pD2 = pD * Math.exp(-0.42 * Math.abs(d) * tau)
+  if (d === 0 && minute >= 55) {
+    const lateTie = clamp((minute - 55) / 40, 0, 1)
+    pD2 *= Math.exp(-2.4 * lateTie * tau)
+    pH2 *= 1 + 0.12 * lateTie
+    pA2 *= 1 + 0.12 * lateTie
+  }
   const sum = pH2 + pD2 + pA2
   pH2 /= sum
   pD2 /= sum
@@ -48,6 +54,44 @@ export function adjust1x2OddsForLive(
     home: clamp(toDec(pH2), 1.02, 80),
     draw: clamp(toDec(pD2), 1.02, 80),
     away: clamp(toDec(pA2), 1.02, 80),
+  }
+}
+
+/** Cotes Over/Under 2,5 ajustées au score et au temps restant. */
+export function adjustOverUnder25ForLive(
+  prematch: SmBookOddsOverUnder25,
+  totalGoals: number,
+  minute: number,
+): SmBookOddsOverUnder25 {
+  const iOver = 1 / prematch.over
+  const iUnder = 1 / prematch.under
+  const s = iOver + iUnder
+  let pOver = s > 0 ? iOver / s : 0.5
+  let pUnder = s > 0 ? iUnder / s : 0.5
+  const tau = clamp((minute + 6) / 98, 0.08, 1)
+  const goalsNeededForOver = Math.max(0, 3 - totalGoals)
+  if (goalsNeededForOver === 0) {
+    pOver = 0.99
+    pUnder = 0.01
+  } else if (goalsNeededForOver >= 3) {
+    const timeLeft = clamp(1 - tau, 0.05, 0.95)
+    pOver *= Math.exp(-2.2 * timeLeft)
+    pUnder = 1 - pOver
+  } else {
+    const urgency = clamp((minute - 20) / 75, 0, 1) * goalsNeededForOver
+    pOver *= Math.exp(-1.15 * urgency * tau)
+    pUnder = 1 - pOver
+  }
+  const norm = pOver + pUnder
+  if (norm > 0) {
+    pOver /= norm
+    pUnder /= norm
+  }
+  const overround = 1.05
+  const toDec = (p: number) => round2(1 / clamp(p * overround, 0.02, 0.92))
+  return {
+    over: clamp(toDec(pOver), 1.02, 50),
+    under: clamp(toDec(pUnder), 1.02, 50),
   }
 }
 
@@ -82,6 +126,15 @@ export function scorerLineupMatchesScoredGoal(
   const single = parts.length === 1
   if (single && goal.slug.length >= 5 && lineupSlug.endsWith(`-${goal.slug}`)) return true
   return false
+}
+
+/** Nom court affiché sous le score (nom de famille si possible). */
+export function compactScorerDisplayName(name: string): string {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  if (!cleaned) return 'Buteur'
+  const parts = cleaned.split(' ').filter(Boolean)
+  if (parts.length >= 2) return parts[parts.length - 1] ?? cleaned
+  return cleaned
 }
 
 /** Extrait « prénom nom » depuis un libellé de but (timeline FR / EN). */
@@ -138,9 +191,13 @@ export function parseLiveGoalRowsFromHighlights(
   for (const h of highlights) {
     if (h.type !== 'But') continue
     const raw = `${h.title ?? ''} ${h.detail ?? ''}`
-    const name = parseGoalScorerName(raw) ?? parseGoalScorerName(String(h.detail ?? ''))
+    const name =
+      h.scorerName?.trim() ||
+      parseGoalScorerName(raw) ||
+      parseGoalScorerName(String(h.detail ?? '')) ||
+      parseGoalScorerName(String(h.title ?? ''))
     if (!name) continue
-    const side = guessSideFromText(raw, homeShort, awayShort)
+    const side = h.side ?? guessSideFromText(raw, homeShort, awayShort)
     if (!side) continue
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
     const slug = slugScorer(name)
@@ -148,7 +205,7 @@ export function parseLiveGoalRowsFromHighlights(
     const key = `${side}:${slug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name, minute })
+    out.push({ side, name: compactScorerDisplayName(name), minute })
   }
   out.sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))
   return out

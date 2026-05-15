@@ -17,9 +17,23 @@ import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import type { Message, ReactionType, MatchTribuneZone } from '../types/chat'
 import type { Highlight } from '../data/highlights'
-import { highlightFullscreenDedupeKey, type SmStartingXiPlayer } from '../api/sportMonks'
+import {
+  extractCurrentGoalsFromSmFixture,
+  extractLiveMinuteFromSmFixture,
+  highlightFullscreenDedupeKey,
+  liveClockPausedFromSmFixture,
+  type SmStartingXiPlayer,
+} from '../api/sportMonks'
+import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
-import { extractScorerEventsFromHighlights, parseLiveGoalRowsFromHighlights } from '../utils/liveFootballOdds'
+import {
+  compactScorerDisplayName,
+  extractScorerEventsFromHighlights,
+  parseLiveGoalRowsFromHighlights,
+} from '../utils/liveFootballOdds'
+
+/** Débrief tchat après le coup de sifflet final. */
+const POST_MATCH_CHAT_MS = 8 * 60 * 1000
 
 type ChatMessageItem = {
   id: string
@@ -394,12 +408,35 @@ export function ChannelPage() {
   const initialHomeScore = match?.score?.home ?? 0
   const initialAwayScore = match?.score?.away ?? 0
   const [displayScore, setDisplayScore] = useState({ home: initialHomeScore, away: initialAwayScore })
+  const status = match?.status ?? 'upcoming'
+  const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
+  const liveSnapshot = useMemo(() => {
+    if (!liveBundleFixture || status !== 'live') return null
+    return {
+      score: extractCurrentGoalsFromSmFixture(liveBundleFixture),
+      minute: extractLiveMinuteFromSmFixture(liveBundleFixture),
+      paused: liveClockPausedFromSmFixture(liveBundleFixture),
+    }
+  }, [liveBundleFixture, status])
+  const matchForClock = useMemo(() => {
+    if (!match) return null
+    if (!liveSnapshot) return match
+    return {
+      ...match,
+      minute: liveSnapshot.minute,
+      liveClockPaused: liveSnapshot.paused,
+      score: liveSnapshot.score ?? match.score,
+    }
+  }, [match, liveSnapshot])
   useEffect(() => {
-    setDisplayScore({ home: initialHomeScore, away: initialAwayScore })
-  }, [match?.id, initialHomeScore, initialAwayScore])
+    const fromBundle = liveSnapshot?.score
+    const fromMatch = match?.score
+    const home = fromBundle?.home ?? fromMatch?.home ?? initialHomeScore
+    const away = fromBundle?.away ?? fromMatch?.away ?? initialAwayScore
+    setDisplayScore({ home, away })
+  }, [match?.id, liveSnapshot?.score?.home, liveSnapshot?.score?.away, match?.score?.home, match?.score?.away, initialHomeScore, initialAwayScore])
   const homeScore = displayScore.home
   const awayScore = displayScore.away
-  const status = match?.status ?? 'upcoming'
   const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? 'channel-demo-match')
@@ -438,13 +475,24 @@ export function ChannelPage() {
     [liveMatches, selectedLiveMatchId],
   )
 
-  const liveDisplayedMinute = useLinearDisplayedLiveMinute(match)
-
   const [nowMs, setNowMs] = useState(() => Date.now())
+  const liveDisplayedMinute = useLinearDisplayedLiveMinute(matchForClock)
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
   }, [])
+  const [finishedAtMs, setFinishedAtMs] = useState<number | null>(null)
+  useEffect(() => {
+    if (status === 'finished') {
+      setFinishedAtMs((prev) => prev ?? Date.now())
+      return
+    }
+    setFinishedAtMs(null)
+  }, [status, match?.id])
+  const chatDebriefOpen =
+    isFinished && finishedAtMs != null && nowMs - finishedAtMs < POST_MATCH_CHAT_MS
+  const chatClosedAfterMatch = isFinished && !chatDebriefOpen
+  const showLiveChat = !chatClosedAfterMatch
   const timerText = useMemo(() => {
     const kickoffTs = match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null
     if (status === 'upcoming' && kickoffTs != null) {
@@ -485,7 +533,7 @@ export function ChannelPage() {
 
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([])
   const [draft, setDraft] = useState('')
-  const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('home-ultras')
+  const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
@@ -569,7 +617,7 @@ export function ChannelPage() {
 
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
-    if (isFinished) return
+    if (chatClosedAfterMatch) return
     if (chatLocked) return
     if (!match?.id) return
     const text = draft.trim()
@@ -614,6 +662,7 @@ export function ChannelPage() {
   const fullscreenDedupePrimedRef = useRef(false)
   const fullscreenDedupeKeysRef = useRef<Set<string>>(new Set())
   const fullscreenShownHighlightIdsRef = useRef<Set<string>>(new Set())
+  const lastGoalFullscreenAtRef = useRef(0)
   const infoHighlightPrimedRef = useRef(false)
   const infoHighlightIdsRef = useRef<Set<string>>(new Set())
   const infoToastTimeoutRef = useRef<number | null>(null)
@@ -703,43 +752,57 @@ export function ChannelPage() {
       return
     }
 
-    for (const h of smTimelineHighlights) {
+    const pending = smTimelineHighlights.filter((h) => {
       const kind = fullscreenKindFromHighlight(h)
-      if (!kind) continue
-      if (fullscreenShownHighlightIdsRef.current.has(h.id)) continue
+      if (!kind) return false
+      if (fullscreenShownHighlightIdsRef.current.has(h.id)) return false
       const key = highlightFullscreenDedupeKey(h)
       if (fullscreenDedupeKeysRef.current.has(key)) {
         fullscreenShownHighlightIdsRef.current.add(h.id)
-        continue
+        return false
       }
+      return true
+    })
+
+    pending.forEach((h, index) => {
+      const kind = fullscreenKindFromHighlight(h)!
+      const key = highlightFullscreenDedupeKey(h)
       fullscreenDedupeKeysRef.current.add(key)
       fullscreenShownHighlightIdsRef.current.add(h.id)
       const raw = `${h.title ?? ''} ${h.detail ?? ''}`
-      const side = detectHighlightSide(raw)
+      const side = h.side ?? detectHighlightSide(raw)
       const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
+      const scorer =
+        h.scorerName?.trim() ||
+        parseLiveGoalRowsFromHighlights([h], match?.home.shortName ?? homeName, match?.away.shortName ?? awayName)[0]
+          ?.name
+      const delayMs = index * 900
 
-      if (kind === 'goal') {
-        launchFullscreenEvent(
-          'goal',
-          'BUT',
-          `${h.minute}' · But${teamLabel ? ` · ${teamLabel}` : ''}`,
-          6200,
-          side,
-        )
-      } else if (kind === 'card') {
-        launchFullscreenEvent(
-          'card',
-          'CARTON',
-          `${h.minute}' · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
-          4600,
-          side,
-        )
-      } else {
-        launchFullscreenEvent('var', 'VAR', `${h.minute}' ${hlText}`, 5200)
-      }
-      break
-    }
+      window.setTimeout(() => {
+        if (kind === 'goal') {
+          lastGoalFullscreenAtRef.current = Date.now()
+          const scorerLabel = scorer ? compactScorerDisplayName(scorer) : teamLabel
+          launchFullscreenEvent(
+            'goal',
+            'BUT',
+            `${h.minute}'${scorerLabel ? ` · ${scorerLabel}` : ''}`,
+            6200,
+            side,
+          )
+        } else if (kind === 'card') {
+          launchFullscreenEvent(
+            'card',
+            'CARTON',
+            `${h.minute}' · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
+            4600,
+            side,
+          )
+        } else {
+          launchFullscreenEvent('var', 'VAR', `${h.minute}' ${hlText}`, 5200)
+        }
+      }, delayMs)
+    })
   }, [
     smTimelineHighlights,
     status,
@@ -767,6 +830,7 @@ export function ChannelPage() {
     const latest = unseen[unseen.length - 1]
     const t = String(latest.type || '').toLowerCase()
     if (t.includes('but') || t.includes('carton') || t.includes('var')) return
+    if (Date.now() - lastGoalFullscreenAtRef.current < 12_000) return
 
     const raw = String(latest.title || latest.detail || '').trim()
     const translated = translateSportMonksLiveTextToFr(raw)
@@ -1034,6 +1098,10 @@ export function ChannelPage() {
     ],
     [homeName, awayName],
   )
+  const possessionRow = useMemo(
+    () => liveStatRows.find((r) => r.key === 'ball_possession' || r.key === 'possession') ?? null,
+    [liveStatRows],
+  )
   const tacticalRows = useMemo(() => {
     const pick = (keys: string[]) => liveStatRows.find((r) => keys.includes(r.key))
     const dangerous = pick(['dangerous_attacks'])
@@ -1045,20 +1113,19 @@ export function ChannelPage() {
     const yellow = pick(['yellowcards', 'yellow_cards'])
     const red = pick(['redcards', 'red_cards'])
     const saves = pick(['saves'])
-    const possession = pick(['ball_possession', 'possession'])
     return [
-      dangerous ? { label: 'Att. dangereuses', home: dangerous.home, away: dangerous.away } : null,
-      shotsOnTarget ? { label: 'Tirs cadres', home: shotsOnTarget.home, away: shotsOnTarget.away } : null,
+      possessionRow ? { label: 'Possession %', home: possessionRow.home, away: possessionRow.away } : null,
       shotsTotal ? { label: 'Tirs', home: shotsTotal.home, away: shotsTotal.away } : null,
+      shotsOnTarget ? { label: 'Tirs cadrés', home: shotsOnTarget.home, away: shotsOnTarget.away } : null,
+      dangerous ? { label: 'Att. dangereuses', home: dangerous.home, away: dangerous.away } : null,
       corners ? { label: 'Corners', home: corners.home, away: corners.away } : null,
-      fouls ? { label: 'Coups francs', home: fouls.home, away: fouls.away } : null,
+      fouls ? { label: 'Fautes', home: fouls.home, away: fouls.away } : null,
       offsides ? { label: 'Hors-jeu', home: offsides.home, away: offsides.away } : null,
       yellow ? { label: 'Cartons jaunes', home: yellow.home, away: yellow.away } : null,
       red ? { label: 'Cartons rouges', home: red.home, away: red.away } : null,
-      saves ? { label: 'Arrets', home: saves.home, away: saves.away } : null,
-      possession ? { label: 'Possession %', home: possession.home, away: possession.away } : null,
+      saves ? { label: 'Arrêts', home: saves.home, away: saves.away } : null,
     ].filter(Boolean) as Array<{ label: string; home: number; away: number }>
-  }, [liveStatRows])
+  }, [liveStatRows, possessionRow])
   const dangerousRow = useMemo(
     () => liveStatRows.find((r) => r.key === 'dangerous_attacks') ?? null,
     [liveStatRows],
@@ -1078,13 +1145,13 @@ export function ChannelPage() {
     return { dh, da, homeRatio, tot }
   }, [dangerousRow])
   const possessionRatioHome = useMemo(() => {
-    const row = liveStatRows.find((r) => r.key === 'ball_possession' || r.key === 'possession')
+    const row = possessionRow
     if (!row) return null
     const h = Number(row.home)
     const a = Number(row.away)
     if (!Number.isFinite(h) || !Number.isFinite(a) || h + a < 5) return null
     return h / (h + a)
-  }, [liveStatRows])
+  }, [possessionRow])
   /** Balle liée à la pression (domicile à gauche, extérieur à droite) + léger balancement temporel. */
   const ballMotion = useMemo(() => {
     const { homeRatio } = livePitchPressure
@@ -1359,10 +1426,10 @@ export function ChannelPage() {
               </button>
             </div>
             <div className="mt-1.5 space-y-1">
-              {status === 'live' && liveStatRows.length > 0 ? (
-                liveStatRows.slice(0, 3).map((row) => (
+              {status === 'live' && tacticalRows.length > 0 ? (
+                tacticalRows.slice(0, 4).map((row) => (
                   <div
-                    key={`prematch-live-${row.key}`}
+                    key={`prematch-live-${row.label}`}
                     className="tf-live-soft-surface flex items-center justify-between rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-xs"
                   >
                     <span className="font-bold text-white">{row.home}</span>
@@ -1515,7 +1582,7 @@ export function ChannelPage() {
         </div>
 
         <div className="tf-live-col min-w-0 space-y-2 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col">
-          {!isFinished ? (
+          {showLiveChat ? (
           <Card
             className={`tf-card-chat relative shrink-0 ${
               animationsOpen || livePanelOpen ? '!overflow-visible' : 'overflow-hidden'
@@ -1540,6 +1607,11 @@ export function ChannelPage() {
             <div className="relative z-10">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle>Chat live</SectionTitle>
+            {chatDebriefOpen ? (
+              <p className="mt-1 rounded-lg border border-amber-400/35 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-100">
+                Match terminé — débrief ouvert encore quelques minutes.
+              </p>
+            ) : null}
             <div className="mt-0.5 flex items-start justify-end gap-1.5 md:items-center md:justify-between md:gap-2">
               <div className="hidden min-w-0 flex-wrap gap-1 md:flex">
                 {['Général', 'Virage', 'Analyse', 'Chill'].map((t, i) => (
@@ -1724,7 +1796,7 @@ export function ChannelPage() {
                     <p className={`mt-0.5 text-[10px] ${chFxSectionLabel}`}>{paidAnimations[0].cost} jetons</p>
                   </button>
                   <p className={`mb-0.5 mt-2 shrink-0 px-0.5 text-[9px] font-bold uppercase tracking-wide ${chFxSectionLabel}`}>
-                    Ambiance
+                    Ola / chants
                   </p>
                   <button
                     type="button"
@@ -1878,6 +1950,22 @@ export function ChannelPage() {
                       style={{ width: `${(1 - livePitchPressure.homeRatio) * 100}%` }}
                     />
                   </div>
+                  {possessionRow && possessionRatioHome != null ? (
+                    <div className="space-y-0.5 px-0.5">
+                      <div className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-wide text-sky-200/90">
+                        <span>Possession</span>
+                        <span className="tabular-nums text-sky-50">
+                          {Math.round(possessionRow.home)}% – {Math.round(possessionRow.away)}%
+                        </span>
+                      </div>
+                      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-black/35">
+                        <div
+                          className="absolute inset-y-0 left-0 rounded-l-full bg-sky-400/90 transition-[width] duration-700"
+                          style={{ width: `${possessionRatioHome * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                   {pitchStatPills.length > 0 ? (
                     <div className="-mx-0.5 flex max-w-full gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
                       {pitchStatPills.map((row) => (
@@ -2156,7 +2244,7 @@ export function ChannelPage() {
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
               <div className="space-y-1">
-                {(liveStatRows.length ? liveStatRows : tacticalRows).slice(0, 5).map((row, i) => (
+                {tacticalRows.slice(0, 6).map((row, i) => (
                   <div key={`mobile-stat-${i}`} className={`flex items-center justify-between ${chSoftRow}`}>
                     <span className="font-bold text-white">{row.home}</span>
                     <span className="text-sky-200/80">{row.label}</span>
@@ -2294,7 +2382,11 @@ export function ChannelPage() {
             </div>
             <p className="mt-1 text-[11px] text-sky-200/80">
               Selectionne ta zone pour vivre le match dans le groupe qui te correspond.
-              {isFinished ? ' Le match est terminé : consultation seule, sans changement de tribune.' : ''}
+              {chatClosedAfterMatch
+                ? ' Le match est terminé : consultation seule, sans changement de tribune.'
+                : chatDebriefOpen
+                  ? ' Débrief : le tchat reste ouvert quelques minutes.'
+                  : ''}
             </p>
 
             <div className="relative mt-3 h-[220px] overflow-hidden rounded-xl border border-[#2a5a84] bg-[#061524]">
@@ -2318,9 +2410,9 @@ export function ChannelPage() {
                   key={`stadium-${opt.id}`}
                   type="button"
                   onClick={() => {
-                    if (!isFinished) setSelectedTribune(opt.id)
+                    if (!chatClosedAfterMatch) setSelectedTribune(opt.id)
                   }}
-                  disabled={isFinished}
+                  disabled={chatClosedAfterMatch}
                   className={`absolute border text-[10px] font-bold transition-all duration-300 ${
                     i === 0
                       ? 'left-[14%] right-[14%] top-[5%] h-[17%] rounded-b-[1.2rem] rounded-t-md'
@@ -2333,7 +2425,7 @@ export function ChannelPage() {
                     selectedTribune === opt.id
                       ? 'border-sky-200 bg-sky-300/28 text-sky-50 shadow-[0_0_20px_rgba(125,211,252,0.35)]'
                       : 'border-white/20 bg-white/[0.06] text-sky-100/90 hover:border-sky-300/70 hover:bg-sky-300/15'
-                  } ${isFinished ? 'cursor-not-allowed opacity-55' : ''}`}
+                  } ${chatClosedAfterMatch ? 'cursor-not-allowed opacity-55' : ''}`}
                 >
                   <span className="flex h-full w-full items-center justify-center px-1 text-center leading-tight">
                     {opt.label}

@@ -1,6 +1,7 @@
 import { cn } from '../../utils/cn'
 import type { CompetitionTheme } from '../../data/competitionThemes'
-import { LEAGUE_OFFICIAL_LOGO_BY_ID } from '../../data/leagueOfficialLogoUrls'
+import { getLeagueLogoUrl } from '../../utils/catalogLogos'
+import { SafeLogoImg } from '../fan/SafeLogoImg'
 
 export function LeagueMark({
   theme,
@@ -12,7 +13,7 @@ export function LeagueMark({
   className?: string
 }) {
   if (!theme) return null
-  const logoUrl = LEAGUE_OFFICIAL_LOGO_BY_ID[theme.id]
+  const logoUrl = getLeagueLogoUrl(theme.id)
   return (
     <span
       className={cn(
@@ -26,18 +27,10 @@ export function LeagueMark({
       }}
     >
       {logoUrl ? (
-        <span className="inline-flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-200/80">
-          <img src={logoUrl} alt="" className="h-[80%] w-[80%] object-contain" loading="lazy" />
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-slate-200/80">
+          <SafeLogoImg src={logoUrl} alt="" className="h-[80%] w-[80%]" />
         </span>
-      ) : (
-        <span
-          className="inline-flex h-5 w-5 rounded-full ring-1 ring-slate-200/80"
-          style={{
-            background: `linear-gradient(135deg, ${theme.accent}, ${theme.accent2})`,
-          }}
-          aria-hidden="true"
-        />
-      )}
+      ) : null}
       {label}
     </span>
   )

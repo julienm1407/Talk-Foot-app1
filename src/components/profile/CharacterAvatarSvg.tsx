@@ -3,6 +3,15 @@ import type { AvatarCharacterLook, FaceExpression, JerseyPattern } from '../../t
 import { PIXEL_JERSEY_PRESETS, type PixelJerseyPresetId } from '../../data/pixelJerseyPresets'
 import { PixelJerseyPixelGroup } from '../kit/PixelJerseySvg'
 import { cn } from '../../utils/cn'
+import { HairBackPath, HairBackViewPath, HairFrontPath } from './avatarHairPaths'
+import {
+  AVATAR_HEAD,
+  beardAreaClipPathD,
+  hairAreaClipPathD,
+  hairBackAreaClipPathD,
+  hairRingGradientCoords,
+  hairStyleUsesBackLayer,
+} from './avatarHeadZones'
 
 function parseHex(h: string): { r: number; g: number; b: number } | null {
   const s = h.replace('#', '').trim()
@@ -441,251 +450,6 @@ function JerseyKit({
   )
 }
 
-/** Découpe « tout sauf visage » pour les cheveux (évite masque sur yeux / bouche). */
-function hairFaceClipPathD(cxF: number, cyF: number, rx: number, ry: number): string {
-  const outer = 'M 0 0 L 100 0 L 100 140 L 0 140 Z'
-  const top = cyF - ry
-  const inner = `M ${cxF} ${top} A ${rx} ${ry} 0 1 1 ${cxF} ${cyF + ry} A ${rx} ${ry} 0 1 1 ${cxF} ${top} Z`
-  return `${outer} ${inner}`
-}
-
-function HairPath({
-  style,
-  fill,
-  edgeColor,
-  cx,
-  cy,
-}: {
-  style: AvatarCharacterLook['hairStyle']
-  /** Gradient ou couleur pleine */
-  fill: string
-  /** Contour discret pour séparer du visage */
-  edgeColor: string
-  cx: number
-  cy: number
-}) {
-  const stroke = { stroke: edgeColor, strokeWidth: 0.35 as const, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const }
-  switch (style) {
-    case 'buzz':
-      return (
-        <ellipse
-          cx={cx}
-          cy={cy - 17.2}
-          rx={21.2}
-          ry={9.2}
-          fill={fill}
-          {...stroke}
-          strokeWidth={0.28}
-        />
-      )
-    case 'short':
-      return (
-        <path
-          d={`M ${cx - 25.2} ${cy - 3.2}
-            C ${cx - 25.5} ${cy - 22}, ${cx - 21} ${cy - 34.5}, ${cx - 12} ${cy - 37.5}
-            C ${cx - 5.5} ${cy - 40}, ${cx + 5.5} ${cy - 40}, ${cx + 12} ${cy - 37.5}
-            C ${cx + 21} ${cy - 34.5}, ${cx + 25.5} ${cy - 22}, ${cx + 25.2} ${cy - 3.2}
-            C ${cx + 23} ${cy - 14}, ${cx + 14} ${cy - 21}, ${cx} ${cy - 23.5}
-            C ${cx - 14} ${cy - 21}, ${cx - 23} ${cy - 14}, ${cx - 25.2} ${cy - 3.2}
-            Z`}
-          fill={fill}
-          {...stroke}
-        />
-      )
-    case 'wavy':
-      return (
-        <path
-          d={`M ${cx - 26} ${cy - 4}
-            C ${cx - 27} ${cy - 22}, ${cx - 18} ${cy - 35}, ${cx - 8} ${cy - 30}
-            C ${cx - 3} ${cy - 38}, ${cx + 3} ${cy - 38}, ${cx + 8} ${cy - 30}
-            C ${cx + 18} ${cy - 35}, ${cx + 27} ${cy - 22}, ${cx + 26} ${cy - 4}
-            L ${cx + 24.5} ${cy - 1.2}
-            C ${cx + 12} ${cy - 8}, ${cx - 12} ${cy - 8}, ${cx - 24.5} ${cy - 1.2}
-            Z`}
-          fill={fill}
-          {...stroke}
-        />
-      )
-    case 'long':
-      return (
-        <g>
-          {/* Couronne — reste sur le haut du crâne */}
-          <path
-            d={`M ${cx - 25} ${cy - 2}
-              C ${cx - 26} ${cy - 24}, ${cx - 14} ${cy - 37}, ${cx} ${cy - 38}
-              C ${cx + 14} ${cy - 37}, ${cx + 26} ${cy - 24}, ${cx + 25} ${cy - 2}
-              C ${cx + 22} ${cy - 12}, ${cx + 11} ${cy - 18}, ${cx} ${cy - 20}
-              C ${cx - 11} ${cy - 18}, ${cx - 22} ${cy - 12}, ${cx - 25} ${cy - 2}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          {/* Mèches latérales — devant les oreilles, pas au centre du visage */}
-          <path
-            d={`M ${cx - 25} ${cy - 3}
-              C ${cx - 31} ${cy + 6}, ${cx - 29} ${cy + 24}, ${cx - 21} ${cy + 38}
-              C ${cx - 18} ${cy + 30}, ${cx - 19} ${cy + 14}, ${cx - 23} ${cy + 1}
-              C ${cx - 24} ${cy - 2}, ${cx - 25} ${cy - 3}, ${cx - 25} ${cy - 3}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          <path
-            d={`M ${cx + 25} ${cy - 3}
-              C ${cx + 31} ${cy + 6}, ${cx + 29} ${cy + 24}, ${cx + 21} ${cy + 38}
-              C ${cx + 18} ${cy + 30}, ${cx + 19} ${cy + 14}, ${cx + 23} ${cy + 1}
-              C ${cx + 24} ${cy - 2}, ${cx + 25} ${cy - 3}, ${cx + 25} ${cy - 3}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          {/* Volume nuque — bas et arrière uniquement (sous la mâchoire) */}
-          <path
-            d={`M ${cx - 18} ${cy + 10}
-              C ${cx - 12} ${cy + 22}, ${cx - 5} ${cy + 28}, ${cx} ${cy + 29}
-              C ${cx + 5} ${cy + 28}, ${cx + 12} ${cy + 22}, ${cx + 18} ${cy + 10}
-              C ${cx + 8} ${cy + 14}, ${cx - 8} ${cy + 14}, ${cx - 18} ${cy + 10}
-              Z`}
-            fill={fill}
-            opacity={0.98}
-            {...stroke}
-          />
-        </g>
-      )
-    case 'curly':
-      return (
-        <path
-          d={`M ${cx - 27} ${cy - 6}
-            C ${cx - 30} ${cy - 24}, ${cx - 20} ${cy - 36}, ${cx - 10} ${cy - 32}
-            C ${cx - 5} ${cy - 40}, ${cx + 5} ${cy - 40}, ${cx + 10} ${cy - 32}
-            C ${cx + 20} ${cy - 36}, ${cx + 30} ${cy - 24}, ${cx + 27} ${cy - 6}
-            C ${cx + 24} ${cy - 2}, ${cx + 14} ${cy - 8}, ${cx} ${cy - 10}
-            C ${cx - 14} ${cy - 8}, ${cx - 24} ${cy - 2}, ${cx - 27} ${cy - 6}
-            Z`}
-          fill={fill}
-          {...stroke}
-        />
-      )
-    case 'sidepart':
-      return (
-        <path
-          d={`M ${cx - 25} ${cy - 3}
-            C ${cx - 22} ${cy - 30}, ${cx - 6} ${cy - 39}, ${cx + 6} ${cy - 35}
-            C ${cx + 18} ${cy - 37}, ${cx + 26} ${cy - 20}, ${cx + 25.5} ${cy - 4}
-            L ${cx + 23} ${cy - 1}
-            C ${cx + 10} ${cy - 14}, ${cx + 2} ${cy - 12}, ${cx - 6} ${cy - 10}
-            C ${cx - 16} ${cy - 18}, ${cx - 24} ${cy - 8}, ${cx - 25} ${cy - 3}
-            Z`}
-          fill={fill}
-          {...stroke}
-        />
-      )
-    case 'undercut':
-      return (
-        <g>
-          <path
-            d={`M ${cx - 26.5} ${cy + 1.5}
-              L ${cx - 24} ${cy - 7}
-              C ${cx - 14} ${cy - 30}, ${cx + 14} ${cy - 30}, ${cx + 24} ${cy - 7}
-              L ${cx + 26.5} ${cy + 1.5}
-              C ${cx + 14} ${cy - 8}, ${cx - 14} ${cy - 8}, ${cx - 26.5} ${cy + 1.5}
-              Z`}
-            fill={fill}
-            opacity={0.92}
-            {...stroke}
-          />
-          <ellipse cx={cx} cy={cy - 22} rx={19.5} ry={13.5} fill={fill} {...stroke} strokeWidth={0.28} />
-        </g>
-      )
-    case 'ponytail':
-      return (
-        <g>
-          <path
-            d={`M ${cx - 25} ${cy - 2}
-              C ${cx - 26} ${cy - 24}, ${cx - 14} ${cy - 37}, ${cx} ${cy - 38}
-              C ${cx + 14} ${cy - 37}, ${cx + 26} ${cy - 24}, ${cx + 25} ${cy - 2}
-              C ${cx + 22} ${cy - 12}, ${cx + 11} ${cy - 18}, ${cx} ${cy - 20}
-              C ${cx - 11} ${cy - 18}, ${cx - 22} ${cy - 12}, ${cx - 25} ${cy - 2}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          <path
-            d={`M ${cx - 23} ${cy - 1}
-              C ${cx - 27} ${cy + 8}, ${cx - 25} ${cy + 22}, ${cx - 18} ${cy + 32}
-              C ${cx - 15} ${cy + 22}, ${cx - 17} ${cy + 10}, ${cx - 21} ${cy + 1}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          <path
-            d={`M ${cx + 14} ${cy + 1}
-              C ${cx + 18} ${cy + 8}, ${cx + 22} ${cy + 20}, ${cx + 25} ${cy + 34}
-              C ${cx + 28} ${cy + 22}, ${cx + 26} ${cy + 10}, ${cx + 20} ${cy + 2}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          <ellipse
-            cx={cx + 30}
-            cy={cy + 30}
-            rx={6.2}
-            ry={9.2}
-            transform={`rotate(24 ${cx + 30} ${cy + 30})`}
-            fill={fill}
-            {...stroke}
-            strokeWidth={0.28}
-          />
-        </g>
-      )
-    case 'mohawk':
-      return (
-        <g>
-          <path
-            d={`M ${cx - 7} ${cy - 1.5}
-              L ${cx - 5} ${cy - 41}
-              C ${cx - 2} ${cy - 47}, ${cx + 2} ${cy - 47}, ${cx + 5} ${cy - 41}
-              L ${cx + 7} ${cy - 1.5}
-              C ${cx + 3} ${cy - 10}, ${cx - 3} ${cy - 10}, ${cx - 7} ${cy - 1.5}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-          <ellipse cx={cx} cy={cy - 11} rx={20} ry={7.5} fill={edgeColor} opacity={0.28} />
-        </g>
-      )
-    case 'afro':
-      return (
-        <path
-          d={`M ${cx} ${cy - 36}
-            C ${cx + 22} ${cy - 36}, ${cx + 28} ${cy - 16}, ${cx + 26} ${cy - 4}
-            C ${cx + 22} ${cy + 4}, ${cx + 10} ${cy + 6}, ${cx} ${cy + 4}
-            C ${cx - 10} ${cy + 6}, ${cx - 22} ${cy + 4}, ${cx - 26} ${cy - 4}
-            C ${cx - 28} ${cy - 16}, ${cx - 22} ${cy - 36}, ${cx} ${cy - 36}
-            Z`}
-          fill={fill}
-          {...stroke}
-        />
-      )
-    case 'faded':
-      return (
-        <g>
-          <ellipse cx={cx} cy={cy - 17} rx={23} ry={10.5} fill={fill} opacity={0.38} />
-          <path
-            d={`M ${cx - 23} ${cy - 5}
-              C ${cx - 24} ${cy - 22}, ${cx - 12} ${cy - 33}, ${cx} ${cy - 34}
-              C ${cx + 12} ${cy - 33}, ${cx + 24} ${cy - 22}, ${cx + 23} ${cy - 5}
-              C ${cx + 18} ${cy - 14}, ${cx} ${cy - 19}, ${cx - 18} ${cy - 14}
-              Z`}
-            fill={fill}
-            {...stroke}
-          />
-        </g>
-      )
-    default:
-      return null
-  }
-}
 
 function BeardPath({
   beard,
@@ -1272,9 +1036,10 @@ export function CharacterAvatarSvg({
 }) {
   const uid = useId().replace(/:/g, '')
   const torso = resolveTorso(look, jerseyOverride, supporterColors)
-  const cx = 50
-  const faceY = 48
-  const headTop = 18
+  const cx = AVATAR_HEAD.cx
+  const faceY = AVATAR_HEAD.faceY
+  const headTop = AVATAR_HEAD.headTop
+  const hairGrad = hairRingGradientCoords()
 
   const { rx: eyeRx, ry: eyeRy } = resolveEyeDims(look.eyeShape)
   const expr: FaceExpression = look.faceExpression ?? 'happy'
@@ -1297,8 +1062,14 @@ export function CharacterAvatarSvg({
           <stop offset="38%" stopColor={look.skinTone} />
           <stop offset="100%" stopColor={mixHex(look.skinTone, '#57534e', 0.08)} />
         </linearGradient>
-        <clipPath id={`hairClip-${uid}`} clipPathUnits="userSpaceOnUse">
-          <path fillRule="evenodd" d={hairFaceClipPathD(50, 48, 23.6, 21.6)} />
+        <clipPath id={`hairArea-${uid}`} clipPathUnits="userSpaceOnUse">
+          <path fillRule="evenodd" d={hairAreaClipPathD()} />
+        </clipPath>
+        <clipPath id={`beardArea-${uid}`} clipPathUnits="userSpaceOnUse">
+          <path d={beardAreaClipPathD()} />
+        </clipPath>
+        <clipPath id={`hairBackArea-${uid}`} clipPathUnits="userSpaceOnUse">
+          <path d={hairBackAreaClipPathD()} />
         </clipPath>
         <radialGradient id={`faceSkin-${uid}`} cx="40%" cy="28%" r="78%">
           <stop offset="0%" stopColor={mixHex(look.skinTone, '#ffffff', 0.11)} />
@@ -1317,11 +1088,17 @@ export function CharacterAvatarSvg({
           <stop offset="72%" stopColor={mixHex(look.eyeColor, '#0f172a', 0.22)} />
           <stop offset="100%" stopColor={mixHex(look.eyeColor, '#020617', 0.55)} />
         </radialGradient>
-        <linearGradient id={`hairVol-${uid}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={mixHex(look.hairColor, '#ffffff', 0.2)} />
-          <stop offset="40%" stopColor={look.hairColor} />
+        <radialGradient
+          id={`hairVol-${uid}`}
+          gradientUnits="userSpaceOnUse"
+          cx={hairGrad.cx}
+          cy={hairGrad.cy - hairGrad.outerRy * 0.55}
+          r={hairGrad.outerRy * 1.15}
+        >
+          <stop offset="0%" stopColor={mixHex(look.hairColor, '#ffffff', 0.22)} />
+          <stop offset="42%" stopColor={look.hairColor} />
           <stop offset="100%" stopColor={mixHex(look.hairColor, '#0a0806', 0.52)} />
-        </linearGradient>
+        </radialGradient>
         <linearGradient id={`beardVol-${uid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={mixHex(look.beardColor ?? look.hairColor, '#ffffff', 0.09)} />
           <stop offset="52%" stopColor={look.beardColor ?? look.hairColor} />
@@ -1371,12 +1148,22 @@ export function CharacterAvatarSvg({
         opacity={0.55}
       />
 
+      {variant === 'front' && hairStyleUsesBackLayer(look.hairStyle) ? (
+        <g clipPath={`url(#hairBackArea-${uid})`}>
+          <HairBackPath
+            style={look.hairStyle}
+            fill={`url(#hairVol-${uid})`}
+            edgeColor={mixHex(look.hairColor, '#0f172a', 0.28)}
+          />
+        </g>
+      ) : null}
+
       {/* Tête : un peu plus large que haute, comme la sphère tête 3D (scale ~1.15×1.2). */}
       <ellipse
         cx={cx}
         cy={faceY}
-        rx={25.5}
-        ry={23.5}
+        rx={AVATAR_HEAD.skullRx}
+        ry={AVATAR_HEAD.skullRy}
         fill={`url(#faceSkin-${uid})`}
         stroke={mixHex(look.skinTone, '#1c1917', 0.14)}
         strokeWidth={0.38}
@@ -1409,42 +1196,32 @@ export function CharacterAvatarSvg({
           <Eyebrows cx={cx} faceY={faceY} hairColor={look.hairColor} expr={expr} />
           <ExpressiveMouth cx={cx} faceY={faceY} expr={expr} />
           <Glasses style={look.glasses} cx={cx} cy={faceY - 2.2} />
-        </>
-      )}
-
-      {variant === 'back' && (
-        <ellipse
-          cx={cx}
-          cy={faceY - 4}
-          rx={24}
-          ry={22}
-          fill={`url(#hairBack-${uid})`}
-          stroke={mixHex(look.hairColor, '#0f172a', 0.2)}
-          strokeWidth={0.35}
-          opacity={0.98}
-        />
-      )}
-
-      {variant === 'front' && (
-        <>
-          <BeardPath
-            beard={look.beard}
-            fill={`url(#beardVol-${uid})`}
-            strokeColor={look.beardColor ?? look.hairColor}
-            cx={cx}
-            cy={faceY}
-          />
-          <g clipPath={`url(#hairClip-${uid})`}>
-            <HairPath
-              style={look.hairStyle}
-              fill={`url(#hairVol-${uid})`}
-              edgeColor={mixHex(look.hairColor, '#0f172a', 0.28)}
+          <g clipPath={`url(#beardArea-${uid})`}>
+            <BeardPath
+              beard={look.beard}
+              fill={`url(#beardVol-${uid})`}
+              strokeColor={look.beardColor ?? look.hairColor}
               cx={cx}
               cy={faceY}
             />
           </g>
+          <g clipPath={`url(#hairArea-${uid})`}>
+            <HairFrontPath
+              style={look.hairStyle}
+              fill={`url(#hairVol-${uid})`}
+              edgeColor={mixHex(look.hairColor, '#0f172a', 0.28)}
+            />
+          </g>
           {!suppressBaseHeadwear && <BaseHeadwear style={look.headwear} cx={cx} headTop={headTop} />}
         </>
+      )}
+
+      {variant === 'back' && (
+        <HairBackViewPath
+          style={look.hairStyle}
+          fill={`url(#hairBack-${uid})`}
+          edgeColor={mixHex(look.hairColor, '#0f172a', 0.28)}
+        />
       )}
     </svg>
   )

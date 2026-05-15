@@ -1,16 +1,18 @@
 import type { Highlight } from '../../data/highlights'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
+import { parseGoalScorerName } from '../../utils/liveFootballOdds'
 import type { SmFixture, SmFixtureEventRow } from './types'
+import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
 
 const MAX_ROWS = 150
 
-/** SM n’alimente pas toujours `is_goal` sur les `comments` — évite de classer un vrai but en « Info ». */
+/** SM n’alimente pas toujours `is_goal` — patterns explicites uniquement (évite les faux « BUT » ambiance). */
 function commentLooksLikeGoal(text: string): boolean {
   const u = text.toUpperCase()
-  if (u.includes('GOAL') || u.includes('OWN GOAL') || u.includes('OWNGOAL')) return true
-  if (u.includes('PENALTY') && (u.includes('SCORE') || u.includes('GOAL'))) return true
-  if (/\bBUT\b/.test(u) || u.includes('BUT!') || u.includes('BUT !')) return true
-  if (/\bGOL\b/.test(u) || u.includes('¡GOL') || u.includes('GOL!')) return true
+  if (u.includes('OWN GOAL') || u.includes('OWNGOAL')) return true
+  if (/\bGOAL!\b/.test(u) || /\bGOAL !\b/.test(u)) return true
+  if (u.includes('PENALTY') && (u.includes('SCORED') || u.includes('GOAL'))) return true
+  if (u.includes('BUT!') || u.includes('BUT !') || u.includes('¡GOL') || u.includes('GOL!')) return true
   return false
 }
 
@@ -58,15 +60,15 @@ function highlightDedupeKey(h: Highlight): string {
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim()
-  return `${h.minute}|${h.type}|${text}`
+  return `${h.minute}|${h.type}|${h.side ?? ''}|${text}`
 }
 
 const FULLSCREEN_NOISE =
   /\b(but|goal|gol|own|penalty|penal|carton|jaune|rouge|yellow|red|card|var|min|minute|the|a|de|la|le|les|un|une|pour|scored|marque|against)\b/gi
 
 /** Clé stable pour n’afficher qu’une fois un même but / carton / VAR malgré doublons API (ids différents, commentaire + event). */
-export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' | 'type' | 'title' | 'detail'>): string {
-  const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()}`.trim()
+export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' | 'type' | 'title' | 'detail' | 'side' | 'scorerName'>): string {
+  const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()} ${String(h.scorerName ?? '').trim()}`.trim()
   const text = combined
     .toLowerCase()
     .normalize('NFD')
@@ -88,19 +90,30 @@ export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' 
       : t.includes('var')
         ? 'var'
         : 'other'
-  return `${bucket}|${h.minute}|${text}`
+  const sideKey = h.side ?? ''
+  return `${bucket}|${h.minute}|${sideKey}|${text}`
 }
 
-function eventTitle(ev: SmFixtureEventRow, type: Highlight['type']): string {
-  const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+function sideFromParticipant(
+  participantId: number | null | undefined,
+  homeId: number | undefined,
+  awayId: number | undefined,
+): 'home' | 'away' | undefined {
+  if (participantId == null || !Number.isFinite(participantId)) return undefined
+  if (homeId != null && participantId === homeId) return 'home'
+  if (awayId != null && participantId === awayId) return 'away'
+  return undefined
+}
+
+function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   const player = String(ev.player?.display_name ?? ev.player?.name ?? '').trim()
-  if (player) return `${dev || type} · ${player}`
-  return dev || ''
+  if (player.length >= 2) return player
+  const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+  return parseGoalScorerName(dev) ?? undefined
 }
 
 /**
- * Timeline « Moments forts » : d’abord les **comments** texte (include `comments` sur la fixture),
- * sinon les **events** structurés.
+ * Timeline « Moments forts » : événements structurés en priorité, commentaires texte en complément.
  */
 export function extractTimelineHighlightsFromSmFixture(
   fixture: SmFixture | null | undefined,
@@ -108,7 +121,48 @@ export function extractTimelineHighlightsFromSmFixture(
 ): Highlight[] {
   if (!fixture) return []
 
+  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
   const out: Highlight[] = []
+
+  const events = Array.isArray(fixture.events) ? fixture.events : []
+  if (events.length) {
+    const sortedEv = [...events].sort((a, b) => {
+      const ma = displayMinute(a)
+      const mb = displayMinute(b)
+      if (ma !== mb) return ma - mb
+      return (a.id ?? 0) - (b.id ?? 0)
+    })
+    const sliceEv = sortedEv.length > MAX_ROWS ? sortedEv.slice(-MAX_ROWS) : sortedEv
+    for (const ev of sliceEv) {
+      const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+      const type = highlightTypeFromEventDev(dev)
+      const minute = displayMinute(ev)
+      const side = sideFromParticipant(ev.participant_id, homeId, awayId)
+      const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
+      const title =
+        type === 'But' && scorerName
+          ? scorerName
+          : translateSportMonksLiveTextToFr(
+              scorerName ? `${dev} · ${scorerName}`.trim() : (dev || 'Événement').trim(),
+            )
+      const detail =
+        type === 'But' && scorerName
+          ? `${minute}' · ${scorerName}`
+          : translateSportMonksLiveTextToFr((dev || 'Événement').trim())
+      out.push({
+        id: `sm-event-${ev.id ?? `${minute}-${dev}`}`,
+        matchId,
+        minute,
+        order: ev.id,
+        type,
+        title,
+        detail,
+        ...(side ? { side } : {}),
+        ...(scorerName ? { scorerName } : {}),
+      })
+    }
+  }
+
   const comments = Array.isArray(fixture.comments) ? fixture.comments : []
   const withText = comments.filter((c) => String(c.comment ?? '').trim())
   if (withText.length) {
@@ -122,51 +176,24 @@ export function extractTimelineHighlightsFromSmFixture(
       return String(a.id ?? '').localeCompare(String(b.id ?? ''))
     })
     const slice = sorted.length > MAX_ROWS ? sorted.slice(-MAX_ROWS) : sorted
-    const fromComments = slice.map((c) => {
+    for (const c of slice) {
       const minute = displayMinute(c)
       const order = typeof c.order === 'number' ? c.order : typeof c.id === 'number' ? c.id : 0
       const rawComment = String(c.comment ?? '').trim()
       const type = c.is_goal ? 'But' : highlightTypeFromComment(rawComment, Boolean(c.is_important))
       const detail = translateSportMonksLiveTextToFr(rawComment)
-      return {
+      const scorerName = type === 'But' ? parseGoalScorerName(rawComment) ?? undefined : undefined
+      out.push({
         id: `sm-comment-${c.id ?? order}-${order}`,
         matchId,
         minute,
         order,
         type,
-        title: '',
+        title: scorerName ?? '',
         detail,
-      }
-    })
-    out.push(...fromComments)
-  }
-
-  const events = Array.isArray(fixture.events) ? fixture.events : []
-  if (events.length) {
-    const sortedEv = [...events].sort((a, b) => {
-      const ma = displayMinute(a)
-      const mb = displayMinute(b)
-      if (ma !== mb) return ma - mb
-      return (a.id ?? 0) - (b.id ?? 0)
-    })
-    const sliceEv = sortedEv.length > MAX_ROWS ? sortedEv.slice(-MAX_ROWS) : sortedEv
-    const fromEvents = sliceEv.map((ev) => {
-      const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
-      const type = highlightTypeFromEventDev(dev)
-      const minute = displayMinute(ev)
-      const title = translateSportMonksLiveTextToFr(eventTitle(ev, type).trim())
-      const detail = translateSportMonksLiveTextToFr((dev || 'Événement').trim())
-      return {
-        id: `sm-event-${ev.id ?? `${minute}-${dev}`}`,
-        matchId,
-        minute,
-        order: ev.id,
-        type,
-        title,
-        detail,
-      }
-    })
-    out.push(...fromEvents)
+        ...(scorerName ? { scorerName } : {}),
+      })
+    }
   }
 
   if (!out.length) return []
@@ -174,7 +201,15 @@ export function extractTimelineHighlightsFromSmFixture(
   const byKey = new Map<string, Highlight>()
   for (const h of out) {
     const k = highlightDedupeKey(h)
-    if (!byKey.has(k)) byKey.set(k, h)
+    const prev = byKey.get(k)
+    if (!prev) {
+      byKey.set(k, h)
+      continue
+    }
+    const prevIsEvent = prev.id.startsWith('sm-event-')
+    const nextIsEvent = h.id.startsWith('sm-event-')
+    if (!prevIsEvent && nextIsEvent) byKey.set(k, h)
+    else if (prevIsEvent && nextIsEvent && h.scorerName && !prev.scorerName) byKey.set(k, h)
   }
 
   const merged = Array.from(byKey.values()).sort((a, b) => {

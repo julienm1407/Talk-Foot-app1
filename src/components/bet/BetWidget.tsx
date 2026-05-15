@@ -12,6 +12,7 @@ import { useBetting } from '../../hooks/useBetting'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../../api/sportMonks'
 import {
   adjust1x2OddsForLive,
+  adjustOverUnder25ForLive,
   anytimeScorerOdds,
   scorerLineupMatchesScoredGoal,
   slugScorer,
@@ -177,6 +178,12 @@ export function BetWidget({
     return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive)
   }, [x12Resolved, isLive, scoreHome, scoreAway, minuteLive])
 
+  const ou25Displayed = useMemo(() => {
+    if (!isLive) return ou25Resolved
+    const totalGoals = scoreHome + scoreAway
+    return adjustOverUnder25ForLive(ou25Resolved, totalGoals, minuteLive)
+  }, [ou25Resolved, isLive, scoreHome, scoreAway, minuteLive])
+
   const usedBook1x2 = Boolean(
     bookOdds1x2 &&
       bookOdds1x2.home >= 1.01 &&
@@ -250,8 +257,8 @@ export function BetWidget({
         label: '+2,5 buts',
         enabled: true,
         picks: [
-          { id: 'over' as const, label: 'Over', odds: ou25Resolved.over },
-          { id: 'under' as const, label: 'Under', odds: ou25Resolved.under },
+          { id: 'over' as const, label: 'Over', odds: ou25Displayed.over },
+          { id: 'under' as const, label: 'Under', odds: ou25Displayed.under },
         ],
       },
       {
@@ -290,7 +297,7 @@ export function BetWidget({
     isUpcoming,
     match.away.shortName,
     match.home.shortName,
-    ou25Resolved,
+    ou25Displayed,
     scorerPicksSplit,
     scorerPicksTotal,
     x12Displayed,
@@ -494,11 +501,11 @@ export function BetWidget({
             </button>
             <div className="tf-bet-soft tf-bet-mini rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
               <span className="block text-[10px] font-bold text-sky-200">+2,5</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Resolved.over)}</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Displayed.over)}</span>
             </div>
             <div className="tf-bet-soft tf-bet-mini rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
               <span className="block text-[10px] font-bold text-sky-200">-2,5</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Resolved.under)}</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Displayed.under)}</span>
             </div>
           </div>
         ) : null}

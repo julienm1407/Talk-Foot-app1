@@ -31,6 +31,7 @@ export {
   inferCompIdFromLeague,
   extractCurrentGoalsFromSmFixture,
   extractLiveMinuteFromSmFixture,
+  liveClockPausedFromSmFixture,
 } from './transformSportMonksToMatch'
 export {
   findLastFinishedClubMatchFromTeamLatest,

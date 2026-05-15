@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Input } from '../ui/Input'
 import { cn } from '../../utils/cn'
 import {
+  findTeamInAnyLeague,
   type ClubCatalogEntry,
   searchClubsCatalog,
 } from '../../data/allClubsCatalog'
+import { resolveClubCatalogLogoUrl } from '../../utils/catalogLogos'
+import { ClubCrest } from '../brand/ClubCrest'
 
 type Props = {
   query: string
@@ -74,7 +77,7 @@ export function ClubSearchCombobox({
             <li key={c.id} role="option">
               <button
                 type="button"
-                className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm transition hover:bg-tf-grey-pastel/25"
+                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition hover:bg-tf-grey-pastel/25"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   onPick(c)
@@ -82,11 +85,27 @@ export function ClubSearchCombobox({
                   setOpen(false)
                 }}
               >
-                <span className="font-black text-tf-dark">
-                  {c.shortName}{' '}
-                  <span className="font-semibold text-tf-grey">— {c.name}</span>
+                {(() => {
+                  const team = findTeamInAnyLeague(c.id)
+                  return team ? (
+                    <ClubCrest
+                      id={team.id}
+                      shortName={team.shortName}
+                      colors={team.colors}
+                      logoUrl={resolveClubCatalogLogoUrl(c.id) ?? undefined}
+                      size={22}
+                      clickable={false}
+                      className="shrink-0 rounded-full"
+                    />
+                  ) : null
+                })()}
+                <span className="min-w-0 flex-1">
+                  <span className="block font-black text-tf-dark">
+                    {c.shortName}{' '}
+                    <span className="font-semibold text-tf-grey">— {c.name}</span>
+                  </span>
+                  <span className="block text-[11px] font-bold text-tf-grey">{c.leagueName}</span>
                 </span>
-                <span className="text-[11px] font-bold text-tf-grey">{c.leagueName}</span>
               </button>
             </li>
           ))}

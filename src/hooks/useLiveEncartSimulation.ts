@@ -18,7 +18,7 @@ const MINUTE_MS = 60_000
 const EVENT_MIN_MS = 10_000
 const EVENT_MAX_MS = 22_000
 /** Rafraîchissement timeline événements SM (cartons, buts…) pour caler les animations. */
-const SM_TIMELINE_POLL_MS = 22_000
+const SM_TIMELINE_POLL_MS = 12_000
 
 function randomBetween(rng: () => number, a: number, b: number) {
   return a + rng() * (b - a)
@@ -33,14 +33,9 @@ function normalizeScore(s: { home: unknown; away: unknown }): { home: number; aw
   }
 }
 
-/** Évite un tableau type 3-2 affiché à la 8ᵉ minute si les données mock sont incohérentes. */
-function coherentMinuteWithScore(
-  minuteFromMatch: number,
-  goalsTotal: number,
-): number {
-  if (goalsTotal <= 0) return Math.min(89, Math.max(1, minuteFromMatch))
-  const floorByGoals = Math.min(88, 10 + goalsTotal * 12)
-  return Math.min(89, Math.max(minuteFromMatch, floorByGoals))
+/** Minute affichée : on ne fait pas avancer artificiellement le chrono selon le score. */
+function displayMinuteFromMatch(minuteFromMatch: number): number {
+  return Math.min(99, Math.max(0, Math.round(minuteFromMatch)))
 }
 
 export function useLiveEncartSimulation(match: Match | null) {
@@ -128,7 +123,7 @@ export function useLiveEncartSimulation(match: Match | null) {
     }
     const s = normalizeScore(initialScoreFromMatch(match))
     const rawMin = Math.min(89, match.minute ?? 12)
-    const m = coherentMinuteWithScore(rawMin, s.home + s.away)
+    const m = displayMinuteFromMatch(rawMin)
     snapMinuteFromAuthority(m)
     setScore(s)
     scoreRef.current = s
@@ -149,8 +144,10 @@ export function useLiveEncartSimulation(match: Match | null) {
     if (!match || match.status !== 'live') return
     if (!smTimelineDriving) return
     const s = normalizeScore(initialScoreFromMatch(match))
+    setScore(s)
+    scoreRef.current = s
     const rawMin = Math.min(89, match.minute ?? 12)
-    const m = coherentMinuteWithScore(rawMin, s.home + s.away)
+    const m = displayMinuteFromMatch(rawMin)
     snapMinuteFromAuthority(m)
   }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, match?.status, smTimelineDriving, snapMinuteFromAuthority])
 
@@ -160,7 +157,7 @@ export function useLiveEncartSimulation(match: Match | null) {
     if (smTimelineDriving) return
     const s = normalizeScore(initialScoreFromMatch(match))
     const rawMin = Math.min(89, match.minute ?? 12)
-    const m = coherentMinuteWithScore(rawMin, s.home + s.away)
+    const m = displayMinuteFromMatch(rawMin)
     setScore(s)
     scoreRef.current = s
     snapMinuteFromAuthority(m)
@@ -422,6 +419,8 @@ export function useLiveEncartSimulation(match: Match | null) {
   const displayMinute = useMemo(() => {
     if (!active) return minute
     if (!smTimelineDriving) return minute
+    const m0 = matchRef.current
+    if (m0?.liveClockPaused) return minuteAnchorRef.current.m
     const { m, atMs } = minuteAnchorRef.current
     const drift = Math.floor((Date.now() - atMs) / 60_000)
     return Math.min(99, Math.max(0, m + drift))

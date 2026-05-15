@@ -20,7 +20,15 @@ export function hubFansK(m: Match) {
   return 8 + (m.home.shortName.length + m.away.shortName.length) * 0.42
 }
 
-export function HubMatchProgressBar({ minute, className }: { minute: number; className?: string }) {
+export function HubMatchProgressBar({
+  minute,
+  paused = false,
+  className,
+}: {
+  minute: number
+  paused?: boolean
+  className?: string
+}) {
   const pct = Math.min(100, Math.max(0, (minute / 90) * 100))
   return (
     <div
@@ -31,7 +39,10 @@ export function HubMatchProgressBar({ minute, className }: { minute: number; cla
       aria-valuemax={100}
     >
       <div
-        className="h-full rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.55)] transition-[width] duration-300 ease-linear"
+        className={cn(
+          'h-full rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.55)]',
+          paused ? '' : 'transition-[width] duration-300 ease-linear',
+        )}
         style={{ width: `${pct}%` }}
       />
     </div>
