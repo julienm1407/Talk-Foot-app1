@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { clubPathForId } from '../utils/clubRoute'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
 import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
 import { BetWidget } from '../components/bet/BetWidget'
+import { MatchHighlights } from '../components/channel/MatchHighlights'
+import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
+import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandings'
+import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
+import { projectStandingsWithLiveMatch } from '../utils/liveStandingsProjection'
 import { useBetting } from '../hooks/useBetting'
 import { DressableCharacter } from '../components/profile/DressableCharacter'
 import { defaultUserProfile } from '../data/userAppStateDefaults'
@@ -27,13 +34,19 @@ import {
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
 import {
-  compactScorerDisplayName,
   extractScorerEventsFromHighlights,
+  formatGoalScorerLabel,
   parseLiveGoalRowsFromHighlights,
 } from '../utils/liveFootballOdds'
 
 /** Débrief tchat après le coup de sifflet final. */
 const POST_MATCH_CHAT_MS = 8 * 60 * 1000
+
+type ChannelMatchTab = 'stats' | 'infos' | 'compo' | 'actions' | 'classement'
+
+function isBigFiveLeagueId(id: string): id is BigFiveLeagueId {
+  return (BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(id)
+}
 
 type ChatMessageItem = {
   id: string
@@ -113,10 +126,10 @@ function teamShortChip(label: string) {
 }
 
 function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | null {
-  const t = String(h.type || '').toLowerCase()
-  if (t.includes('but')) return 'goal'
-  if (t.includes('carton')) return 'card'
-  if (t.includes('var')) return 'var'
+  const t = String(h.type || '').trim()
+  if (t === 'But') return 'goal'
+  if (t === 'Carton') return 'card'
+  if (t === 'VAR') return 'var'
   return null
 }
 
@@ -135,7 +148,7 @@ function LiveHeaderScorers({
   align,
   light,
 }: {
-  goals: { name: string; minute: number }[]
+  goals: { name: string; minute: number; assistName?: string }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -161,7 +174,16 @@ function LiveHeaderScorers({
           <span className="shrink-0 text-[11px] leading-none sm:text-xs" aria-hidden>
             ⚽
           </span>
-          <span className="min-w-0 flex-1 truncate">{g.name}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {g.assistName ? (
+              <>
+                {g.name}
+                <span className="font-semibold opacity-90"> ({g.assistName})</span>
+              </>
+            ) : (
+              g.name
+            )}
+          </span>
           <span
             className={cn(
               'shrink-0 tabular-nums',
@@ -207,11 +229,39 @@ function paidAnimationToReactionType(id: PaidAnimation['id']): ReactionType {
   return 'rage'
 }
 
-function reactionTypeToPaidFx(type: ReactionType): ActivePaidFx {
+function reactionTypeToPaidFx(type: ReactionType, tifoSide?: 'home' | 'away'): ActivePaidFx {
   if (type === 'flare') return { id: 'fumigene', label: 'Fumigène (pyro)' }
   if (type === 'confetti') return { id: 'ola', label: 'Ola du virage' }
-  if (type === 'goal') return { id: 'tifo-geant', label: 'Tifo géant' }
+  if (type === 'goal') {
+    return {
+      id: 'tifo-geant',
+      label: 'Tifo géant',
+      ...(tifoSide ? { tifoSide } : {}),
+    }
+  }
   return { id: 'stroboscope', label: 'Stroboscope' }
+}
+
+function TeamLogoLink({
+  clubId,
+  label,
+  logoUrl,
+}: {
+  clubId?: string
+  label: string
+  logoUrl?: string
+}) {
+  const inner = <TeamLogo label={label} logoUrl={logoUrl} />
+  if (!clubId) return inner
+  return (
+    <Link
+      to={clubPathForId(clubId)}
+      className="shrink-0 rounded-full outline-none ring-offset-2 transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400/80"
+      aria-label={`Page ${label}`}
+    >
+      {inner}
+    </Link>
+  )
 }
 
 function MatchRow({
@@ -244,11 +294,19 @@ function MatchRow({
 
 function ChatMessage({
   message,
+  selfUserId,
   onToggleLike,
 }: {
   message: ChatMessageItem
+  selfUserId?: string | null
   onToggleLike: (id: string) => void
 }) {
+  const profileTo =
+    message.userId && selfUserId && message.userId === selfUserId
+      ? '/profile'
+      : message.userId
+        ? `/user/${message.userId}`
+        : null
   const avatarProfile = useMemo(
     () => ({
       ...defaultUserProfile,
@@ -270,7 +328,16 @@ function ChatMessage({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-1">
-            <p className="truncate text-xs font-semibold text-sky-50">{message.username}</p>
+            {profileTo ? (
+              <Link
+                to={profileTo}
+                className="truncate text-xs font-semibold text-sky-50 underline-offset-2 hover:text-cyan-100 hover:underline"
+              >
+                {message.username}
+              </Link>
+            ) : (
+              <p className="truncate text-xs font-semibold text-sky-50">{message.username}</p>
+            )}
             {message.matchTribune ? (
               <span className="shrink-0 rounded border border-white/15 bg-black/25 px-1 py-px text-[8px] font-bold uppercase tracking-wide text-sky-200/90">
                 {message.matchTribune === 'home-ultras'
@@ -298,7 +365,7 @@ function ChatMessage({
         title="Like"
       >
         <span aria-hidden="true">{message.likedByMe ? '❤️' : '🤍'}</span>
-        <span>{message.likes}</span>
+        <span>{message.likes ?? 0}</span>
       </button>
     </article>
   )
@@ -384,6 +451,8 @@ export function ChannelPage() {
     : 'rounded border border-[#5f81a1] px-1.5 py-0.5 text-[10px] font-bold text-sky-100'
   const navigate = useNavigate()
   const { matchId } = useParams()
+  const { user: authUser } = useAuth()
+  const selfUserId = authUser?.id ?? null
   const { matches, loading } = useMatches()
   const routeMatch = useMemo(() => matches.find((m) => m.id === matchId) ?? null, [matches, matchId])
   const hasRouteMatchId = Boolean(matchId)
@@ -456,6 +525,26 @@ export function ChannelPage() {
   )
   const timelineHighlightsRef = useRef(smTimelineHighlights)
   timelineHighlightsRef.current = smTimelineHighlights
+
+  const standingsLeagueId = match && isBigFiveLeagueId(match.competition.id) ? match.competition.id : null
+  const { standingsRows, standingsSource, standingsLoading, standingsError } =
+    useSportMonksLeagueStandings(standingsLeagueId ?? 'ligue-1')
+  const standingsSourceLabel = useMemo(() => {
+    if (standingsSource === 'live') return 'SportMonks · classement live'
+    if (standingsSource === 'season') return 'SportMonks · saison en cours'
+    if (standingsSource === 'teamsSeason') return 'SportMonks · stats équipes'
+    return undefined
+  }, [standingsSource])
+  const displayedStandingsRows = useMemo(() => {
+    if (!standingsLeagueId || !standingsRows.length || !match) return []
+    if (status !== 'live') return standingsRows
+    return projectStandingsWithLiveMatch(standingsRows, {
+      homeTeamId: match.home.id,
+      awayTeamId: match.away.id,
+      homeScore,
+      awayScore,
+    })
+  }, [standingsLeagueId, standingsRows, match, status, homeScore, awayScore])
   const liveMatches = useMemo(
     () => matches.filter((m) => m.status === 'live' && m.id !== match?.id),
     [matches, match?.id],
@@ -537,10 +626,12 @@ export function ChannelPage() {
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
-  const [mobileMatchTab, setMobileMatchTab] = useState<'stats' | 'infos' | 'compo'>('stats')
+  const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
+  const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
   const [activePaidFx, setActivePaidFx] = useState<ActivePaidFx | null>(null)
+  const seenReactionIdsRef = useRef(new Set<string>())
   const [livePanelOpen, setLivePanelOpen] = useState(false)
   const [liveMicEnabled, setLiveMicEnabled] = useState(true)
   const [liveCamEnabled, setLiveCamEnabled] = useState(false)
@@ -553,7 +644,16 @@ export function ChannelPage() {
         const byId = new Map(prev.map((m) => [m.id, m]))
         for (const m of msgs) {
           const mapped = cloudMessageToUi(m)
-          if (!byId.has(mapped.id)) byId.set(mapped.id, mapped)
+          const existing = byId.get(mapped.id)
+          if (existing) {
+            byId.set(mapped.id, {
+              ...mapped,
+              likes: existing.likes,
+              likedByMe: existing.likedByMe,
+            })
+          } else {
+            byId.set(mapped.id, mapped)
+          }
         }
         return Array.from(byId.values())
       })
@@ -567,12 +667,19 @@ export function ChannelPage() {
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
     onHydrate: (events) => {
-      const last = events[events.length - 1]
-      if (!last) return
-      setActivePaidFx(reactionTypeToPaidFx(last.type))
+      for (const e of events) seenReactionIdsRef.current.add(e.id)
     },
     onLiveInsert: (event) => {
-      setActivePaidFx(reactionTypeToPaidFx(event.type))
+      if (seenReactionIdsRef.current.has(event.id)) {
+        if (event.tifoSide) {
+          setActivePaidFx((prev) =>
+            prev?.id === 'tifo-geant' ? { ...prev, tifoSide: event.tifoSide } : prev,
+          )
+        }
+        return
+      }
+      seenReactionIdsRef.current.add(event.id)
+      setActivePaidFx(reactionTypeToPaidFx(event.type, event.tifoSide))
     },
   })
   const chatBottomRef = useRef<HTMLDivElement | null>(null)
@@ -585,36 +692,13 @@ export function ChannelPage() {
   }, [match?.id, status])
   useEffect(() => {
     setChatMessages([])
+    seenReactionIdsRef.current = new Set()
   }, [match?.id])
   useEffect(() => {
     if (!activePaidFx) return
     const timeout = window.setTimeout(() => setActivePaidFx(null), 2200)
     return () => window.clearTimeout(timeout)
   }, [activePaidFx])
-  useEffect(() => {
-    const latestFxMessage = [...chatMessages]
-      .reverse()
-      .find((m) => typeof m.emoteId === 'string' && m.emoteId.startsWith('fx:'))
-    if (!latestFxMessage?.emoteId) return
-    const fxIdRaw = latestFxMessage.emoteId.slice(3)
-    if (
-      fxIdRaw !== 'fumigene' &&
-      fxIdRaw !== 'ola' &&
-      fxIdRaw !== 'tifo-geant' &&
-      fxIdRaw !== 'stroboscope'
-    ) {
-      return
-    }
-    const fxId: PaidAnimation['id'] = fxIdRaw
-    const labelById: Record<string, string> = {
-      fumigene: 'Fumigène (pyro)',
-      ola: 'Ola du virage',
-      'tifo-geant': 'Tifo géant',
-      stroboscope: 'Stroboscope',
-    }
-    setActivePaidFx({ id: fxId, label: labelById[fxId] ?? fxId, ...(fxId === 'tifo-geant' ? { tifoSide: 'home' as const } : {}) })
-  }, [chatMessages])
-
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
     if (chatClosedAfterMatch) return
@@ -704,15 +788,22 @@ export function ChannelPage() {
     if (typeof window === 'undefined') return
 
     const ssKey = `tf-fs-kickoff-${match.id}`
-    const flag = sessionStorage.getItem(ssKey)
+    const flag = localStorage.getItem(ssKey)
     if (flag === 'shown' || flag === 'skip') {
       kickoffFxMatchIdRef.current = match.id
       return
     }
 
-    if (liveDisplayedMinute > 3) {
+    const apiMinute = Math.max(
+      Math.round(Number(match?.minute) || 0),
+      liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) ?? 0 : 0,
+    )
+    const effectiveMinute = Math.max(apiMinute, liveDisplayedMinute)
+    const totalGoals = (match?.score?.home ?? 0) + (match?.score?.away ?? 0)
+
+    if (effectiveMinute > 3 || totalGoals > 0) {
       try {
-        sessionStorage.setItem(ssKey, 'skip')
+        localStorage.setItem(ssKey, 'skip')
       } catch {
         /* private mode */
       }
@@ -723,12 +814,23 @@ export function ChannelPage() {
     if (kickoffFxMatchIdRef.current === match.id) return
     kickoffFxMatchIdRef.current = match.id
     try {
-      sessionStorage.setItem(ssKey, 'shown')
+      localStorage.setItem(ssKey, 'shown')
     } catch {
       /* private mode */
     }
     launchFullscreenEvent('kickoff', 'COUP D’ENVOI', `${homeName} vs ${awayName}`, 4200)
-  }, [status, match?.id, liveDisplayedMinute, homeName, awayName, launchFullscreenEvent])
+  }, [
+    status,
+    match?.id,
+    match?.minute,
+    match?.score?.home,
+    match?.score?.away,
+    liveDisplayedMinute,
+    liveBundleFixture,
+    homeName,
+    awayName,
+    launchFullscreenEvent,
+  ])
 
   useEffect(() => {
     if (channelLiveMatchIdRef.current !== match?.id) {
@@ -773,16 +875,19 @@ export function ChannelPage() {
       const side = h.side ?? detectHighlightSide(raw)
       const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
-      const scorer =
-        h.scorerName?.trim() ||
-        parseLiveGoalRowsFromHighlights([h], match?.home.shortName ?? homeName, match?.away.shortName ?? awayName)[0]
-          ?.name
+      const goalRow = parseLiveGoalRowsFromHighlights(
+        [h],
+        match?.home.shortName ?? homeName,
+        match?.away.shortName ?? awayName,
+      )[0]
+      const scorer = h.scorerName?.trim() || goalRow?.name
+      const assist = h.assistName?.trim() || goalRow?.assistName
       const delayMs = index * 900
 
       window.setTimeout(() => {
         if (kind === 'goal') {
           lastGoalFullscreenAtRef.current = Date.now()
-          const scorerLabel = scorer ? compactScorerDisplayName(scorer) : teamLabel
+          const scorerLabel = scorer ? formatGoalScorerLabel(scorer, assist) : teamLabel
           launchFullscreenEvent(
             'goal',
             'BUT',
@@ -918,11 +1023,17 @@ export function ChannelPage() {
     [smTimelineHighlights, status, match, homeName, awayName],
   )
   const headerHomeScorers = useMemo(
-    () => liveGoalDisplayRows.filter((r) => r.side === 'home').map(({ name, minute }) => ({ name, minute })),
+    () =>
+      liveGoalDisplayRows
+        .filter((r) => r.side === 'home')
+        .map(({ name, minute, assistName }) => ({ name, minute, assistName })),
     [liveGoalDisplayRows],
   )
   const headerAwayScorers = useMemo(
-    () => liveGoalDisplayRows.filter((r) => r.side === 'away').map(({ name, minute }) => ({ name, minute })),
+    () =>
+      liveGoalDisplayRows
+        .filter((r) => r.side === 'away')
+        .map(({ name, minute, assistName }) => ({ name, minute, assistName })),
     [liveGoalDisplayRows],
   )
 
@@ -1194,20 +1305,25 @@ export function ChannelPage() {
       return
     }
     if (match?.id) {
-      const sent = await publishReaction(paidAnimationToReactionType(anim.id))
-      if (!sent.ok) {
+      const tifoSideForSync =
+        anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
+      const sent = await publishReaction(
+        paidAnimationToReactionType(anim.id),
+        tifoSideForSync ? { tifoSide: tifoSideForSync } : undefined,
+      )
+      if (sent.ok && sent.event) {
+        seenReactionIdsRef.current.add(sent.event.id)
+      } else if (!sent.ok) {
         setAnimationNotice('Animation non synchronisée (cloud indisponible).')
         window.setTimeout(() => setAnimationNotice(null), 1800)
       }
     }
     const tifoSide = anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
-    window.setTimeout(() => {
-      setActivePaidFx({
-        id: anim.id,
-        label: anim.label,
-        ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
-      })
-    }, 80)
+    setActivePaidFx({
+      id: anim.id,
+      label: anim.label,
+      ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
+    })
     setAnimationsOpen(false)
     setAnimationNotice(`${anim.emoji} ${anim.label} activee`)
     window.setTimeout(() => setAnimationNotice(null), 1600)
@@ -1297,14 +1413,15 @@ export function ChannelPage() {
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <TeamLogo label={homeName} logoUrl={match?.home.logoUrl} />
-                <p
-                  className={`min-w-0 truncate text-sm font-semibold leading-tight ${
+                <TeamLogoLink clubId={match?.home.id} label={homeName} logoUrl={match?.home.logoUrl} />
+                <Link
+                  to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+                  className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
                     L ? 'text-[#052032]' : 'text-white'
                   }`}
                 >
                   {homeName}
-                </p>
+                </Link>
               </div>
               {status === 'live' || status === 'finished' ? (
                 <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
@@ -1312,14 +1429,15 @@ export function ChannelPage() {
             </div>
             <div className="min-w-0 text-right">
               <div className="flex min-w-0 items-center justify-end gap-2">
-                <p
-                  className={`min-w-0 truncate text-sm font-semibold leading-tight ${
+                <Link
+                  to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                  className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
                     L ? 'text-[#052032]' : 'text-white'
                   }`}
                 >
                   {awayName}
-                </p>
-                <TeamLogo label={awayName} logoUrl={match?.away.logoUrl} />
+                </Link>
+                <TeamLogoLink clubId={match?.away.id} label={awayName} logoUrl={match?.away.logoUrl} />
               </div>
               {status === 'live' || status === 'finished' ? (
                 <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
@@ -1345,8 +1463,13 @@ export function ChannelPage() {
         <div className="hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:gap-4 md:grid">
           <div className="flex min-w-0 flex-col gap-1 justify-self-start">
             <div className="flex min-w-0 items-center gap-3">
-              <TeamLogo label={homeName} logoUrl={match?.home.logoUrl} />
-              <p className={`truncate text-lg font-semibold ${L ? 'text-[#052032]' : 'text-white'}`}>{homeName}</p>
+              <TeamLogoLink clubId={match?.home.id} label={homeName} logoUrl={match?.home.logoUrl} />
+              <Link
+                to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+                className={`truncate text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+              >
+                {homeName}
+              </Link>
             </div>
             {status === 'live' || status === 'finished' ? (
               <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
@@ -1369,10 +1492,13 @@ export function ChannelPage() {
           </div>
           <div className="flex min-w-0 flex-col items-end gap-1 justify-self-end">
             <div className="flex min-w-0 items-center justify-end gap-3">
-              <p className={`truncate text-right text-lg font-semibold ${L ? 'text-[#052032]' : 'text-white'}`}>
+              <Link
+                to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                className={`truncate text-right text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+              >
                 {awayName}
-              </p>
-              <TeamLogo label={awayName} logoUrl={match?.away.logoUrl} />
+              </Link>
+              <TeamLogoLink clubId={match?.away.id} label={awayName} logoUrl={match?.away.logoUrl} />
             </div>
             {status === 'live' || status === 'finished' ? (
               <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
@@ -1688,7 +1814,12 @@ export function ChannelPage() {
               ) : (
                 <>
                   {filteredChatMessages.map((msg) => (
-                    <ChatMessage key={msg.id} message={msg} onToggleLike={onToggleLikeMessage} />
+                    <ChatMessage
+                      key={msg.id}
+                      message={msg}
+                      selfUserId={selfUserId}
+                      onToggleLike={onToggleLikeMessage}
+                    />
                   ))}
                   {filteredChatMessages.length === 0 ? (
                     <div
@@ -2060,6 +2191,65 @@ export function ChannelPage() {
               </div>
             )}
           </Card>
+
+          <Card className="tf-card-feed hidden shrink-0 md:block md:max-h-[min(380px,42vh)] md:overflow-hidden">
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-1"
+              style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }}
+            />
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <SectionTitle>Match</SectionTitle>
+              <div className="inline-flex rounded-md bg-[#0a1f35]/80 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setDesktopFeedTab('actions')}
+                  className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
+                    desktopFeedTab === 'actions'
+                      ? 'bg-sky-300/25 text-sky-50'
+                      : 'text-sky-200/70 hover:text-sky-50'
+                  }`}
+                >
+                  Actions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopFeedTab('classement')}
+                  className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
+                    desktopFeedTab === 'classement'
+                      ? 'bg-sky-300/25 text-sky-50'
+                      : 'text-sky-200/70 hover:text-sky-50'
+                  }`}
+                >
+                  Classement
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[min(320px,36vh)] overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+              {desktopFeedTab === 'actions' ? (
+                <MatchHighlights
+                  items={smTimelineHighlights}
+                  activeId={latestHighlight?.id}
+                  variant="channel"
+                />
+              ) : standingsLeagueId ? (
+                <LiveMatchStandingsPanel
+                  leagueId={standingsLeagueId}
+                  rows={displayedStandingsRows}
+                  homeTeamId={match?.home.id}
+                  awayTeamId={match?.away.id}
+                  loading={standingsLoading}
+                  error={standingsError}
+                  dataSourceLabel={standingsSourceLabel}
+                  projectedLive={status === 'live'}
+                  light={L}
+                />
+              ) : (
+                <p className="text-xs font-semibold text-sky-200/80">
+                  Classement live disponible pour Ligue 1, Premier League, LaLiga, Serie A et Bundesliga.
+                </p>
+              )}
+            </div>
+          </Card>
         </div>
 
         <div className="tf-live-col hidden min-w-0 space-y-2 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:flex-col">
@@ -2212,34 +2402,27 @@ export function ChannelPage() {
               </button>
             </div>
             {mobilePanel === 'match' ? (
-              <div className="mb-2 grid grid-cols-3 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setMobileMatchTab('stats')}
-                  className={`rounded-md border px-2 py-1 text-[10px] font-bold ${
-                    mobileMatchTab === 'stats' ? chSheetTabActive : chSheetTabIdle
-                  }`}
-                >
-                  Stats
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMobileMatchTab('infos')}
-                  className={`rounded-md border px-2 py-1 text-[10px] font-bold ${
-                    mobileMatchTab === 'infos' ? chSheetTabActive : chSheetTabIdle
-                  }`}
-                >
-                  Infos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMobileMatchTab('compo')}
-                  className={`rounded-md border px-2 py-1 text-[10px] font-bold ${
-                    mobileMatchTab === 'compo' ? chSheetTabActive : chSheetTabIdle
-                  }`}
-                >
-                  Compo
-                </button>
+              <div className="mb-2 flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+                {(
+                  [
+                    ['stats', 'Stats'],
+                    ['infos', 'Infos'],
+                    ['compo', 'Compo'],
+                    ['actions', 'Actions'],
+                    ['classement', 'Class.'],
+                  ] as const
+                ).map(([tab, label]) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setMobileMatchTab(tab)}
+                    className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold ${
+                      mobileMatchTab === tab ? chSheetTabActive : chSheetTabIdle
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
@@ -2261,6 +2444,35 @@ export function ChannelPage() {
                   Statut: {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
                 </div>
                 <div className={chInfoCell}>Minute: {status === 'live' ? `${liveDisplayedMinute}'` : '—'}</div>
+              </div>
+            ) : null}
+            {mobilePanel === 'match' && mobileMatchTab === 'actions' ? (
+              <div className="max-h-[58vh] overflow-y-auto pr-0.5">
+                <MatchHighlights
+                  items={smTimelineHighlights}
+                  activeId={latestHighlight?.id}
+                  variant="channel"
+                />
+              </div>
+            ) : null}
+            {mobilePanel === 'match' && mobileMatchTab === 'classement' ? (
+              <div className="max-h-[58vh] overflow-y-auto pr-0.5">
+                {standingsLeagueId ? (
+                  <LiveMatchStandingsPanel
+                    leagueId={standingsLeagueId}
+                    rows={displayedStandingsRows}
+                    homeTeamId={match?.home.id}
+                    awayTeamId={match?.away.id}
+                    loading={standingsLoading}
+                    error={standingsError}
+                    dataSourceLabel={standingsSourceLabel}
+                    projectedLive={status === 'live'}
+                  />
+                ) : (
+                  <p className="text-xs font-semibold text-sky-200/80">
+                    Classement live : Big 5 uniquement (L1, EPL, LaLiga, Serie A, Bundesliga).
+                  </p>
+                )}
               </div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'compo' ? (
@@ -2485,9 +2697,21 @@ export function ChannelPage() {
                 </>
               ) : null}
               {activePaidFx.id === 'ola' ? (
-                <div className="absolute bottom-[10%] left-1/2 w-[min(88vw,20rem)] -translate-x-1/2 space-y-2.5 sm:bottom-[14%] sm:w-full sm:max-w-md">
-                  <div className="h-2 w-full animate-pulse rounded-full bg-cyan-300/75 shadow-[0_0_20px_rgba(34,211,238,0.35)]" />
-                  <div className="h-2 w-full animate-pulse rounded-full bg-violet-300/70 shadow-[0_0_18px_rgba(167,139,250,0.32)]" />
+                <div
+                  className="absolute bottom-[8%] left-1/2 flex w-[min(92vw,28rem)] -translate-x-1/2 items-end justify-center gap-1 sm:bottom-[12%] sm:gap-1.5"
+                  aria-hidden
+                >
+                  {Array.from({ length: 14 }, (_, i) => (
+                    <div
+                      key={i}
+                      className="w-2 origin-bottom rounded-full bg-gradient-to-t from-cyan-400/90 to-violet-400/75 shadow-[0_0_12px_rgba(34,211,238,0.35)] sm:w-2.5"
+                      style={{
+                        height: '2.75rem',
+                        animation: 'tf-ola-wave 1.1s ease-in-out infinite',
+                        animationDelay: `${i * 0.07}s`,
+                      }}
+                    />
+                  ))}
                 </div>
               ) : null}
               {activePaidFx.id === 'tifo-geant' ? (

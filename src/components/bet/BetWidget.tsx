@@ -255,7 +255,7 @@ export function BetWidget({
       {
         id: 'over25' as const,
         label: '+2,5 buts',
-        enabled: true,
+        enabled: !isLive || scoreHome + scoreAway < 3,
         picks: [
           { id: 'over' as const, label: 'Over', odds: ou25Displayed.over },
           { id: 'under' as const, label: 'Under', odds: ou25Displayed.under },

@@ -101,3 +101,9 @@ export function formatRelativeMinute(minute?: number) {
   if (minute > 90) return `${90}+${minute - 90}'`
   return `${minute}'`
 }
+
+/** Minute live ou « Mi-temps » quand l’horloge API est en pause. */
+export function formatLiveMatchClock(minute?: number, paused?: boolean) {
+  if (paused) return 'Mi-temps'
+  return formatRelativeMinute(minute) || '—'
+}

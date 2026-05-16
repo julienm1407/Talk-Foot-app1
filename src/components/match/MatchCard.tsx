@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
-import { formatKickoff, formatRelativeMinute } from '../../utils/time'
+import { formatKickoff, formatLiveMatchClock } from '../../utils/time'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
@@ -346,7 +346,7 @@ export function MatchCard({
                 )}
               >
                 {isLive
-                  ? formatRelativeMinute(displayMinute) || '—'
+                  ? formatLiveMatchClock(displayMinute, match.liveClockPaused)
                   : (
                     <>
                       <span className="block">{kickoffDay}</span>

@@ -38,7 +38,16 @@ function broadcastPayloadToRow(msg: unknown, fallbackMatchId: string): ReactionR
   }
 }
 
-export function rowToReactionEvent(row: ReactionRow, matchId: string): ReactionEvent | null {
+function tifoSideFromPayload(payload: Record<string, unknown> | undefined): 'home' | 'away' | undefined {
+  const v = payload?.tifo_side
+  return v === 'home' || v === 'away' ? v : undefined
+}
+
+export function rowToReactionEvent(
+  row: ReactionRow,
+  matchId: string,
+  meta?: { tifoSide?: 'home' | 'away' },
+): ReactionEvent | null {
   const t = row.reaction_type
   if (t !== 'flare' && t !== 'confetti' && t !== 'goal' && t !== 'rage') return null
   const ms = new Date(row.created_at).getTime()
@@ -49,6 +58,7 @@ export function rowToReactionEvent(row: ReactionRow, matchId: string): ReactionE
     userId: row.user_id,
     type: t as ReactionType,
     createdAt,
+    ...(t === 'goal' && meta?.tifoSide ? { tifoSide: meta.tifoSide } : {}),
   }
 }
 
@@ -71,7 +81,7 @@ export function useLiveMatchReactionsSync(options: {
   const reactionChannelRef = useRef<ReactionRealtimeChannel | null>(null)
 
   const publishReaction = useCallback(
-    async (reactionType: ReactionType) => {
+    async (reactionType: ReactionType, meta?: { tifoSide?: 'home' | 'away' }) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
@@ -91,7 +101,7 @@ export function useLiveMatchReactionsSync(options: {
 
       if (error || !data) return { ok: false as const, error: error?.message ?? 'insert_failed' }
       const row = data as ReactionRow
-      const ev = rowToReactionEvent(row, matchId)
+      const ev = rowToReactionEvent(row, matchId, meta)
       if (!ev) return { ok: false as const, error: 'invalid_type' }
 
       const ch = reactionChannelRef.current
@@ -105,6 +115,7 @@ export function useLiveMatchReactionsSync(options: {
             user_id: row.user_id,
             reaction_type: row.reaction_type,
             created_at: row.created_at,
+            ...(meta?.tifoSide ? { tifo_side: meta.tifoSide } : {}),
           },
         })
       }
@@ -142,6 +153,7 @@ export function useLiveMatchReactionsSync(options: {
           .filter((e): e is ReactionEvent => e != null)
         if (events.length) onHydrateRef.current(events)
       }
+      // Pas de replay FX à l’hydratation — onHydrate sert uniquement à amorcer les ids vus côté Channel.
 
       if (cancelled) return
 
@@ -159,16 +171,25 @@ export function useLiveMatchReactionsSync(options: {
             filter: matchFilter,
           },
           (payload: RealtimePostgresChangesPayload<ReactionRow>) => {
-            const row = payload.new
-            if (!row || typeof row !== 'object') return
-            const ev = rowToReactionEvent(row as ReactionRow, matchId)
-            if (ev) onLiveInsertRef.current(ev)
+            void payload
+            // FX joués via broadcast uniquement (évite doublon postgres + broadcast, et porte tifo_side).
           },
         )
         .on('broadcast', { event: BROADCAST_REACTION_EVENT }, (msg: unknown) => {
           const row = broadcastPayloadToRow(msg, matchId)
           if (!row) return
-          const ev = rowToReactionEvent(row, matchId)
+          const inner =
+            msg && typeof msg === 'object'
+              ? (() => {
+                  const o = msg as Record<string, unknown>
+                  return o.payload && typeof o.payload === 'object'
+                    ? (o.payload as Record<string, unknown>)
+                    : o
+                })()
+              : undefined
+          const ev = rowToReactionEvent(row, matchId, {
+            tifoSide: tifoSideFromPayload(inner),
+          })
           if (ev) onLiveInsertRef.current(ev)
         })
         .subscribe((status) => {

@@ -1,6 +1,11 @@
 import type { Highlight } from '../../data/highlights'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
-import { parseGoalScorerName } from '../../utils/liveFootballOdds'
+import {
+  compactScorerDisplayName,
+  parseGoalAssistFromText,
+  parseGoalScorerName,
+  slugScorer,
+} from '../../utils/liveFootballOdds'
 import type { SmFixture, SmFixtureEventRow } from './types'
 import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
 
@@ -23,9 +28,28 @@ function displayMinute(row: { minute?: number | null; extra_minute?: number | nu
   return m + x
 }
 
+function eventDevLooksLikeGoal(u: string): boolean {
+  if (u.includes('GOALKICK') || u.includes('GOAL KICK') || u.includes('GOALKEEPER')) return false
+  if (u.includes('DISALLOWED') || u.includes('CANCELLED')) return false
+  if (u.includes('OWN GOAL') || u.includes('OWNGOAL') || u.includes('OWN-GOAL')) return true
+  if (/\bGOAL\b/.test(u)) return true
+  if (u.includes('PENALTY') && (u.includes('SCORED') || u.includes('GOAL') || u.includes('BUT'))) return true
+  if (/\bGOL\b/.test(u)) return true
+  return false
+}
+
+function commentLooksLikeCorner(text: string): boolean {
+  const u = text.toUpperCase()
+  return u.includes('CORNER') || u.includes('COUP FRANC') || u.includes('FREE KICK')
+}
+
+function commentMentionsVar(text: string): boolean {
+  return /\bVAR\b/i.test(text)
+}
+
 function highlightTypeFromEventDev(dev: string): Highlight['type'] {
   const u = dev.toUpperCase()
-  if (u.includes('GOAL') || u.includes('OWN') || u.includes('PENALTY') || /\bGOL\b/.test(u)) return 'But'
+  if (eventDevLooksLikeGoal(u)) return 'But'
   if (u.includes('YELLOW')) return 'Carton'
   if (u.includes('RED')) return 'Carton'
   if (u.includes('VAR')) return 'VAR'
@@ -40,7 +64,7 @@ function highlightTypeFromComment(rawComment: string, isImportant: boolean): Hig
   if (u.includes('YELLOW') || u.includes('JAUNE') || u.includes('RED') || u.includes('ROUGE')) {
     return 'Carton'
   }
-  if (u.includes('VAR')) return 'VAR'
+  if (commentMentionsVar(rawComment)) return 'VAR'
   if (u.includes('SAVE') || u.includes('ARRÊT') || u.includes('ARRET')) return 'Arrêt'
   if (
     u.includes('CHANCE') ||
@@ -56,6 +80,8 @@ function highlightTypeFromComment(rawComment: string, isImportant: boolean): Hig
 }
 
 function highlightDedupeKey(h: Highlight): string {
+  const goalKey = goalSemanticKey(h)
+  if (goalKey) return `but|${goalKey}`
   const text = String(h.detail || h.title || '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -66,8 +92,40 @@ function highlightDedupeKey(h: Highlight): string {
 const FULLSCREEN_NOISE =
   /\b(but|goal|gol|own|penalty|penal|carton|jaune|rouge|yellow|red|card|var|min|minute|the|a|de|la|le|les|un|une|pour|scored|marque|against)\b/gi
 
+function scorerSlugForHighlight(h: Pick<Highlight, 'scorerName' | 'title' | 'detail'>): string {
+  const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()} ${String(h.scorerName ?? '').trim()}`.trim()
+  const scorer =
+    h.scorerName?.trim() ||
+    parseGoalScorerName(combined) ||
+    parseGoalScorerName(String(h.detail ?? '')) ||
+    parseGoalScorerName(String(h.title ?? ''))
+  if (!scorer) return ''
+  return slugScorer(compactScorerDisplayName(scorer))
+}
+
+/** Clé stable but : minute + camp + buteur (ignore le doublon event / commentaire). */
+export function goalSemanticKey(h: Pick<Highlight, 'type' | 'minute' | 'side' | 'scorerName' | 'title' | 'detail'>): string | null {
+  if (h.type !== 'But') return null
+  const slug = scorerSlugForHighlight(h)
+  if (!slug) return null
+  return `${h.minute}|${h.side ?? '?'}|${slug}`
+}
+
 /** Clé stable pour n’afficher qu’une fois un même but / carton / VAR malgré doublons API (ids différents, commentaire + event). */
 export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' | 'type' | 'title' | 'detail' | 'side' | 'scorerName'>): string {
+  const t = String(h.type || '').toLowerCase()
+  const bucket = t.includes('but')
+    ? 'but'
+    : t.includes('carton')
+      ? 'carton'
+      : t.includes('var')
+        ? 'var'
+        : 'other'
+  const sideKey = h.side ?? ''
+  if (bucket === 'but') {
+    const slug = scorerSlugForHighlight(h)
+    if (slug) return `but|${h.minute}|${sideKey}|${slug}`
+  }
   const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()} ${String(h.scorerName ?? '').trim()}`.trim()
   const text = combined
     .toLowerCase()
@@ -82,15 +140,6 @@ export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' 
     .sort()
     .join(' ')
     .slice(0, 120)
-  const t = String(h.type || '').toLowerCase()
-  const bucket = t.includes('but')
-    ? 'but'
-    : t.includes('carton')
-      ? 'carton'
-      : t.includes('var')
-        ? 'var'
-        : 'other'
-  const sideKey = h.side ?? ''
   return `${bucket}|${h.minute}|${sideKey}|${text}`
 }
 
@@ -110,6 +159,33 @@ function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   if (player.length >= 2) return player
   const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
   return parseGoalScorerName(dev) ?? undefined
+}
+
+function assistFromEvent(ev: SmFixtureEventRow): string | undefined {
+  const fromObj = String(ev.related_player?.display_name ?? ev.related_player?.name ?? '').trim()
+  if (fromObj.length >= 2) return fromObj
+  const fromName = String(ev.related_player_name ?? '').trim()
+  if (fromName.length >= 2) return fromName
+  return undefined
+}
+
+function mergeGoalHighlights(primary: Highlight, secondary: Highlight): Highlight {
+  const eventRow = primary.id.startsWith('sm-event-')
+    ? primary
+    : secondary.id.startsWith('sm-event-')
+      ? secondary
+      : primary
+  const other = eventRow === primary ? secondary : primary
+  const scorerName = eventRow.scorerName ?? other.scorerName
+  const assistName = eventRow.assistName ?? other.assistName
+  return {
+    ...eventRow,
+    ...(scorerName ? { scorerName } : {}),
+    ...(assistName ? { assistName } : {}),
+    side: eventRow.side ?? other.side,
+    title: scorerName ?? eventRow.title,
+    detail: eventRow.detail || other.detail,
+  }
 }
 
 /**
@@ -139,6 +215,7 @@ export function extractTimelineHighlightsFromSmFixture(
       const minute = displayMinute(ev)
       const side = sideFromParticipant(ev.participant_id, homeId, awayId)
       const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
+      const assistName = type === 'But' ? assistFromEvent(ev) : undefined
       const title =
         type === 'But' && scorerName
           ? scorerName
@@ -159,6 +236,7 @@ export function extractTimelineHighlightsFromSmFixture(
         detail,
         ...(side ? { side } : {}),
         ...(scorerName ? { scorerName } : {}),
+        ...(assistName ? { assistName } : {}),
       })
     }
   }
@@ -180,9 +258,13 @@ export function extractTimelineHighlightsFromSmFixture(
       const minute = displayMinute(c)
       const order = typeof c.order === 'number' ? c.order : typeof c.id === 'number' ? c.id : 0
       const rawComment = String(c.comment ?? '').trim()
-      const type = c.is_goal ? 'But' : highlightTypeFromComment(rawComment, Boolean(c.is_important))
+      const type =
+        c.is_goal && !commentLooksLikeCorner(rawComment)
+          ? 'But'
+          : highlightTypeFromComment(rawComment, Boolean(c.is_important))
       const detail = translateSportMonksLiveTextToFr(rawComment)
       const scorerName = type === 'But' ? parseGoalScorerName(rawComment) ?? undefined : undefined
+      const assistName = type === 'But' ? parseGoalAssistFromText(rawComment) ?? undefined : undefined
       out.push({
         id: `sm-comment-${c.id ?? order}-${order}`,
         matchId,
@@ -192,18 +274,36 @@ export function extractTimelineHighlightsFromSmFixture(
         title: scorerName ?? '',
         detail,
         ...(scorerName ? { scorerName } : {}),
+        ...(assistName ? { assistName } : {}),
       })
     }
   }
 
   if (!out.length) return []
 
+  const eventGoalKeys = new Set(
+    out
+      .filter((h) => h.type === 'But' && h.id.startsWith('sm-event-'))
+      .map((h) => goalSemanticKey(h))
+      .filter((k): k is string => Boolean(k)),
+  )
+
+  const withoutDupComments = out.filter((h) => {
+    if (h.type !== 'But' || !h.id.startsWith('sm-comment-')) return true
+    const key = goalSemanticKey(h)
+    return !key || !eventGoalKeys.has(key)
+  })
+
   const byKey = new Map<string, Highlight>()
-  for (const h of out) {
+  for (const h of withoutDupComments) {
     const k = highlightDedupeKey(h)
     const prev = byKey.get(k)
     if (!prev) {
       byKey.set(k, h)
+      continue
+    }
+    if (h.type === 'But' && prev.type === 'But') {
+      byKey.set(k, mergeGoalHighlights(prev, h))
       continue
     }
     const prevIsEvent = prev.id.startsWith('sm-event-')

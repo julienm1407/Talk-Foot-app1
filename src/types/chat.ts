@@ -57,5 +57,7 @@ export type ReactionEvent = {
   userId: string
   type: ReactionType
   createdAt: number
+  /** Tifo géant : camp choisi (diffusé en broadcast, pas en base). */
+  tifoSide?: 'home' | 'away'
 }
 

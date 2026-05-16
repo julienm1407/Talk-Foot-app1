@@ -11,6 +11,8 @@ export type Highlight = {
   side?: 'home' | 'away'
   /** Nom du buteur si connu (événements SM). */
   scorerName?: string
+  /** Passeur décisif si connu (related_player SM ou texte commentaire). */
+  assistName?: string
 }
 
 /** Plus de moments clés seed pour des matchs fictifs ; les vrais salons pourront s’enrichir via l’API. */

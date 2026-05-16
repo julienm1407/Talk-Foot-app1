@@ -137,6 +137,37 @@ export function compactScorerDisplayName(name: string): string {
   return cleaned
 }
 
+/** Extrait le passeur depuis un libellé de but (commentaire SM / EN / FR). */
+export function parseGoalAssistFromText(raw: string): string | null {
+  const s = raw.replace(/\s+/g, ' ').trim()
+  if (!s) return null
+
+  const assistClause =
+    s.match(/\bassist(?:ed)?\s*(?:by|:)\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,48})/i) ??
+    s.match(/\bpasse\s+d[eé]cisive\s+(?:de\s+)?([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,48})/i)
+  if (assistClause?.[1]) {
+    const name = assistClause[1].replace(/\s+\d{1,2}['']?\s*$/u, '').trim()
+    if (name.length >= 2) return name
+  }
+
+  const parenPairs = [...s.matchAll(/\(([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,48})\)/g)]
+  if (parenPairs.length) {
+    const last = parenPairs[parenPairs.length - 1][1].trim()
+    if (last.length >= 2 && !/^\d{1,2}\+?\d*['']?$/.test(last)) return last
+  }
+
+  return null
+}
+
+/** Libellé buteur + passeur : « Salah (Alexander-Arnold) » — le ballon ne concerne que le buteur. */
+export function formatGoalScorerLabel(scorer: string, assist?: string | null): string {
+  const sc = compactScorerDisplayName(scorer)
+  if (!assist?.trim()) return sc
+  const as = compactScorerDisplayName(assist)
+  if (!as || slugScorer(as) === slugScorer(sc)) return sc
+  return `${sc} (${as})`
+}
+
 /** Extrait « prénom nom » depuis un libellé de but (timeline FR / EN). */
 export function parseGoalScorerName(raw: string): string | null {
   const s = raw.replace(/\s+/g, ' ').trim()
@@ -175,7 +206,12 @@ function guessSideFromText(
 }
 
 /** Buts affichables (salon live : nom + minute sous le bon camp). */
-export type LiveGoalDisplayRow = { side: 'home' | 'away'; name: string; minute: number }
+export type LiveGoalDisplayRow = {
+  side: 'home' | 'away'
+  name: string
+  minute: number
+  assistName?: string
+}
 
 /**
  * Liste ordonnée des buts avec minute et camp, à partir de la timeline SM.
@@ -202,10 +238,17 @@ export function parseLiveGoalRowsFromHighlights(
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
     const slug = slugScorer(name)
     if (!slug) continue
+    const assistRaw = h.assistName?.trim() || parseGoalAssistFromText(raw) || undefined
+    const assistName = assistRaw ? compactScorerDisplayName(assistRaw) : undefined
     const key = `${side}:${slug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name: compactScorerDisplayName(name), minute })
+    out.push({
+      side,
+      name: compactScorerDisplayName(name),
+      minute,
+      ...(assistName ? { assistName } : {}),
+    })
   }
   out.sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))
   return out
