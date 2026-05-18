@@ -265,16 +265,20 @@ export function extractScorerEventsFromHighlights(
   for (const h of highlights) {
     if (h.type !== 'But') continue
     const raw = `${h.title ?? ''} ${h.detail ?? ''}`
-    const name = parseGoalScorerName(raw) ?? parseGoalScorerName(String(h.detail ?? ''))
+    const name =
+      h.scorerName?.trim() ||
+      parseGoalScorerName(raw) ||
+      parseGoalScorerName(String(h.detail ?? '')) ||
+      parseGoalScorerName(String(h.title ?? ''))
     if (!name) continue
     const slug = slugScorer(name)
     if (!slug) continue
-    const side = guessSideFromText(raw, homeShort, awayShort)
+    const side = h.side ?? guessSideFromText(raw, homeShort, awayShort)
     if (!side) continue
     const key = `${side}:${slug}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, slug, name })
+    out.push({ side, slug, name: compactScorerDisplayName(name) })
   }
   return out
 }

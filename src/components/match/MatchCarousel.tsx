@@ -244,8 +244,21 @@ export function MatchCarousel({
               L ? 'text-tf-dark/75' : 'text-sky-200/95',
             )}
           >
-            Navigation
+            {viewMatches.length > 1
+              ? `${index + 1} / ${viewMatches.length} — glisse ou flèches`
+              : 'Navigation'}
           </p>
+          {viewMatches.length > 2 ? (
+            <Link
+              to="/match"
+              className={cn(
+                'text-[11px] font-black uppercase tracking-wide underline-offset-2 hover:underline sm:order-last',
+                L ? 'text-tf-electric-deep' : 'text-sky-300',
+              )}
+            >
+              Tous les matchs →
+            </Link>
+          ) : null}
           <div
             className="flex flex-wrap items-center gap-1.5 sm:justify-end"
             role="tablist"

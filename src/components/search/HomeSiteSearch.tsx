@@ -129,17 +129,15 @@ export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchPro
         Rechercher sur Talk Foot (matchs, groupes, débats, actus)
       </label>
       <div className={cn('relative', hub && 'flex items-center')}>
-        {hub ? (
-          <span
-            className={cn(
-              'pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-[15px] opacity-55',
-              L ? 'text-tf-dark' : 'text-sky-100',
-            )}
-            aria-hidden
-          >
-            🔍
-          </span>
-        ) : null}
+        <span
+          className={cn(
+            'pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-[15px] opacity-55',
+            L ? 'text-tf-dark' : 'text-sky-100',
+          )}
+          aria-hidden
+        >
+          🔍
+        </span>
         <input
           ref={inputRef}
           id={inputId}
@@ -169,7 +167,7 @@ export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchPro
                     : 'border-white/[0.09] bg-black/25 text-white placeholder:text-sky-200/55',
                 )
               : cn(
-                  'rounded-tf-xl py-2.5 pl-3 pr-3 focus:border-sky-400/50 focus:ring-sky-500/30',
+                  'rounded-tf-xl py-2.5 pl-9 pr-3 focus:border-sky-400/50 focus:ring-sky-500/30',
                   L
                     ? 'border-tf-dark/15 bg-white text-tf-dark placeholder:text-tf-dark/50'
                     : 'border-white/12 bg-black/30 text-white placeholder:text-sky-200/70',

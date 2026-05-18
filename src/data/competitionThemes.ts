@@ -1,6 +1,8 @@
 export type CompetitionTheme = {
   id: string
   name: string
+  /** Sigle affiché sans logo (onboarding, badges). */
+  shortName: string
   accent: string
   accent2: string
   labelBg: string
@@ -11,6 +13,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   'ligue-1': {
     id: 'ligue-1',
     name: 'Ligue 1',
+    shortName: 'L1',
     accent: '#0b1b3a',
     accent2: '#0ea5e9',
     labelBg: 'bg-sky-100',
@@ -19,6 +22,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   epl: {
     id: 'epl',
     name: 'Premier League',
+    shortName: 'EPL',
     accent: '#4c1d95',
     accent2: '#22c55e',
     labelBg: 'bg-violet-100',
@@ -27,6 +31,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   laliga: {
     id: 'laliga',
     name: 'LaLiga',
+    shortName: 'LaLiga',
     accent: '#0f172a',
     accent2: '#f59e0b',
     labelBg: 'bg-amber-100',
@@ -35,6 +40,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   'serie-a': {
     id: 'serie-a',
     name: 'Serie A',
+    shortName: 'Serie A',
     accent: '#0b1b3a',
     accent2: '#2563eb',
     labelBg: 'bg-blue-100',
@@ -43,6 +49,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   bund: {
     id: 'bund',
     name: 'Bundesliga',
+    shortName: 'BUN',
     accent: '#111827',
     accent2: '#ef4444',
     labelBg: 'bg-rose-100',
@@ -51,6 +58,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   ucl: {
     id: 'ucl',
     name: 'Ligue des champions',
+    shortName: 'UCL',
     accent: '#0c1929',
     accent2: '#eab308',
     labelBg: 'bg-amber-100',
@@ -59,6 +67,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   uel: {
     id: 'uel',
     name: 'Ligue Europa',
+    shortName: 'UEL',
     accent: '#1e1b4b',
     accent2: '#f97316',
     labelBg: 'bg-orange-100',
@@ -67,6 +76,7 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
   uecl: {
     id: 'uecl',
     name: 'Europa Conf.',
+    shortName: 'UECL',
     accent: '#0f172a',
     accent2: '#38bdf8',
     labelBg: 'bg-sky-100',

@@ -106,9 +106,14 @@ export function LoginPage() {
       }
       setSubmitting(true)
       try {
-        const ok = await signUpWithEmail(email, password, displayName || undefined)
-        if (!ok) {
-          setError('Cet email est déjà utilisé ou les champs sont invalides.')
+        const signup = await signUpWithEmail(email, password, displayName || undefined)
+        if (signup.status === 'error') {
+          setError(signup.message)
+          return
+        }
+        setError(null)
+        if (signup.status === 'confirm_email') {
+          setMode('login')
           return
         }
         markPendingFanOnboardingAfterLogin()

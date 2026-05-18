@@ -3,6 +3,7 @@ import type { Bet, BetMarket, BetSelection } from '../types/bet'
 import {
   normalizeWallet,
 } from '../utils/walletNormalize'
+import { scorerLineupMatchesScoredGoal } from '../utils/liveFootballOdds'
 import { useWallet } from './useWallet'
 import { useUserBets } from './useUserBets'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
@@ -184,7 +185,7 @@ export function useBetting(matchId: string) {
     (
       finalScore: { home: number; away: number },
       opts?: {
-        scorerEvents?: { side: 'home' | 'away'; slug: string }[]
+        scorerEvents?: { side: 'home' | 'away'; slug: string; name?: string }[]
         /** Règle les paris de ce match (ex. après navigation, le hook courant peut être un autre `matchId`). */
         forMatchId?: string
       },
@@ -249,7 +250,9 @@ export function useBetting(matchId: string) {
             if (idx === -1) return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
             const side = rest.slice(0, idx) as 'home' | 'away'
             const slug = rest.slice(idx + 1)
-            const won = scorerEvents.some((e) => e.side === side && e.slug === slug)
+            const won = scorerEvents.some(
+              (e) => e.side === side && scorerLineupMatchesScoredGoal(slug, e),
+            )
             if (won) {
               const payout = Math.round(b.stake * b.odds)
               delta += payout

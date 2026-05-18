@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
-import { HubMatchStrip } from '../components/match/HubMatchEncart'
+import { HubMatchStrip, HubRailRowLive } from '../components/match/HubMatchEncart'
 import { MatchSpotlightCard } from '../components/match/MatchSpotlightCard'
 import { Card } from '../components/ui/Card'
 import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
@@ -115,9 +115,7 @@ export function CalendarPage() {
   }, [competitionId, sorted])
 
   const liveFeatured = useMemo(() => poolFiltered.filter((m) => m.status === 'live'), [poolFiltered])
-
-  /** Jusqu’à 4 lives en tête de page ; le reste reste dans la liste par jour */
-  const liveAgendaFeatured = useMemo(() => liveFeatured.slice(0, 4), [liveFeatured])
+  const isMultiplex = liveFeatured.length > 1
 
   const upcomingSpotlightMatches = useMemo(() => {
     if (liveFeatured.length > 0) return [] as Match[]
@@ -132,10 +130,9 @@ export function CalendarPage() {
 
   const excludedIds = useMemo(() => {
     const s = new Set<string>()
-    liveAgendaFeatured.forEach((m) => s.add(m.id))
     upcomingSpotlightMatches.forEach((m) => s.add(m.id))
     return s
-  }, [liveAgendaFeatured, upcomingSpotlightMatches])
+  }, [upcomingSpotlightMatches])
 
   const filtered = useMemo(() => {
     const base =
@@ -381,6 +378,14 @@ export function CalendarPage() {
           {dataSourceBanner}
           {apiErrorBanner}
           <p className="text-sm font-medium leading-snug text-tf-app-muted sm:text-base">
+            {liveFeatured.length > 0 ? (
+              <>
+                <span className="font-black text-rose-600 dark:text-rose-400">
+                  {liveFeatured.length} en direct
+                </span>
+                <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
+              </>
+            ) : null}
             <span className="font-black text-tf-app-fg">{upcomingTotal}</span> à venir
             <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
             <span className="font-black text-tf-app-fg">{pastTotal}</span> résultats
@@ -405,21 +410,65 @@ export function CalendarPage() {
       {liveFeatured.length > 0 ? (
         <section aria-labelledby="cal-live-heading" className="space-y-tf-3">
           <div className="flex flex-wrap items-end justify-between gap-2">
-            <h2 id="cal-live-heading" className={cn(sectionHeading, 'tracking-wider')}>
-              En direct
-            </h2>
+            <div className="min-w-0 space-y-1">
+              <h2 id="cal-live-heading" className={cn(sectionHeading, 'tracking-wider')}>
+                {isMultiplex ? 'Multiplex — en direct' : 'En direct'}
+              </h2>
+              {isMultiplex ? (
+                <p
+                  className={cn(
+                    'text-xs font-semibold leading-snug sm:text-sm',
+                    L ? 'text-tf-grey' : 'text-sky-100/90',
+                  )}
+                >
+                  <span className="md:hidden">
+                    Fais défiler la liste horizontale pour voir les {liveFeatured.length} matchs, puis touche un
+                    salon pour entrer.
+                  </span>
+                  <span className="hidden md:inline">
+                    {liveFeatured.length} rencontres en cours — choisis un match pour ouvrir le salon live.
+                  </span>
+                </p>
+              ) : null}
+            </div>
             <span
               className={cn(
-                'rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
+                'shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide',
                 L ? 'bg-tf-grey-pastel/40 text-tf-dark' : 'bg-white/[0.1] text-sky-100/90 ring-1 ring-white/15',
               )}
             >
-              {liveFeatured.length} live
+              {liveFeatured.length} live{liveFeatured.length > 1 ? 's' : ''}
             </span>
           </div>
           <HubEncartTopAccent appearance={L ? 'light' : 'dark'} preset="live" />
-          <div className="flex flex-wrap gap-tf-4">
-            {liveAgendaFeatured.map((m) => (
+          {isMultiplex ? (
+            <div
+              className="relative -mx-1 md:hidden"
+              role="region"
+              aria-label="Liste des matchs en direct, défilement horizontal"
+            >
+              <div className="flex gap-3 overflow-x-auto px-1 pb-2 pt-0.5 snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
+                {liveFeatured.map((m) => (
+                  <div key={m.id} className="w-[min(86vw,19.5rem)] max-w-full shrink-0 snap-center">
+                    <HubRailRowLive match={m} className="h-full min-h-[4.5rem]" />
+                  </div>
+                ))}
+              </div>
+              <p
+                className={cn(
+                  'pointer-events-none mt-1 flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-[0.2em]',
+                  L ? 'text-tf-grey/90' : 'text-sky-200/75',
+                )}
+                aria-hidden
+              >
+                <span>←</span>
+                <span>Glisser pour tous les matchs</span>
+                <span>→</span>
+              </p>
+            </div>
+          ) : null}
+          <div className={cn('flex flex-wrap gap-tf-4', isMultiplex ? 'hidden md:flex' : 'flex')}>
+            {liveFeatured.map((m) => (
               <div
                 key={m.id}
                 className="flex min-w-0 w-full grow basis-full sm:basis-[calc((100%-var(--tf-space-4))/2)] xl:basis-[calc((100%-3rem)/4)]"
@@ -428,13 +477,6 @@ export function CalendarPage() {
               </div>
             ))}
           </div>
-          {liveFeatured.length > liveAgendaFeatured.length ? (
-            <p className={cn('text-tf-xs font-semibold', L ? 'text-tf-grey' : 'text-tf-app-muted')}>
-              +{liveFeatured.length - liveAgendaFeatured.length} autre
-              {liveFeatured.length - liveAgendaFeatured.length > 1 ? 's' : ''} en direct — onglet « À venir », même
-              jour sélectionné.
-            </p>
-          ) : null}
         </section>
       ) : upcomingSpotlightMatches.length > 0 ? (
         <section aria-labelledby="cal-featured-heading" className="space-y-tf-3">
@@ -562,6 +604,67 @@ export function CalendarPage() {
               >
                 Filtres {filtersOpen ? '−' : '+'}
               </button>
+            </div>
+            <div
+              className="flex gap-1.5 overflow-x-auto pb-0.5 md:hidden [scrollbar-width:thin]"
+              role="group"
+              aria-label="Filtrer par ligue"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setCompetitionId('all')
+                  setDayKey('all')
+                }}
+                className={cn(
+                  'shrink-0 rounded-md border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition',
+                  competitionId === 'all'
+                    ? L
+                      ? 'border-tf-dark/35 bg-tf-dark text-white'
+                      : 'border-sky-300/45 bg-sky-500/20 text-white'
+                    : L
+                      ? 'border-tf-grey-pastel/70 bg-white text-tf-dark'
+                      : 'border-white/20 bg-white/[0.08] text-sky-100',
+                )}
+              >
+                Toutes ligues
+              </button>
+              {competitions.map((c) => {
+                const selected = competitionId === c.id
+                const th = themeForCompetition(c.id)
+                return (
+                  <button
+                    key={`mobile-league-${c.id}`}
+                    type="button"
+                    onClick={() => {
+                      setCompetitionId(c.id)
+                      setDayKey('all')
+                    }}
+                    className={cn(
+                      'shrink-0 rounded-md border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition',
+                      selected
+                        ? 'text-white ring-2 ring-white/40'
+                        : L
+                          ? 'border-tf-grey-pastel/70 bg-white text-tf-dark'
+                          : 'border-white/20 bg-white/[0.08] text-sky-100',
+                    )}
+                    style={
+                      th
+                        ? {
+                            background: selected
+                              ? `linear-gradient(135deg, ${th.accent}, ${th.accent2})`
+                              : L
+                                ? `linear-gradient(135deg, ${th.accent}33, ${th.accent2}22)`
+                                : `linear-gradient(135deg, ${th.accent}66, ${th.accent2}44)`,
+                          }
+                        : undefined
+                    }
+                    aria-pressed={selected}
+                  >
+                    {c.shortName}
+                  </button>
+                )
+              })}
             </div>
             <div className="flex items-center justify-between gap-2 text-[11px] font-bold">
               <span className={cn(L ? 'text-tf-grey' : 'text-sky-200/90')}>
@@ -741,6 +844,16 @@ export function CalendarPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : isMultiplex ? (
+              <div className="space-y-3 rounded-2xl border border-dashed border-rose-400/35 bg-rose-500/[0.06] p-4 text-center">
+                <p className={cn('text-sm font-bold', L ? 'text-tf-dark' : 'text-tf-app-fg')}>
+                  Multiplex en cours — tous les lives sont en haut de page
+                </p>
+                <p className={cn('text-xs font-medium', L ? 'text-tf-grey' : 'text-tf-app-muted')}>
+                  Remonte à la section « Multiplex — en direct » et fais défiler horizontalement pour choisir un
+                  match.
+                </p>
               </div>
             ) : liveFeatured.length > 0 || upcomingSpotlightMatches.length > 0 ? (
               <p className={cn('text-center text-sm font-medium', L ? 'text-tf-grey' : 'text-tf-app-muted')}>

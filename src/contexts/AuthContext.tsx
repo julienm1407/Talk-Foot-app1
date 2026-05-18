@@ -45,10 +45,16 @@ type AuthState = {
   isReady: boolean
 }
 
+/** Inscription email : session immédiate, confirmation mail, ou échec. */
+export type SignUpEmailResult =
+  | { status: 'signed_in' }
+  | { status: 'confirm_email' }
+  | { status: 'error'; message: string }
+
 export type AuthContextValue = AuthState & {
   login: (user: AuthUser) => void
   loginWithEmail: (email: string, password: string) => Promise<boolean>
-  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<boolean>
+  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<SignUpEmailResult>
   loginWithOAuthProvider: (provider: TalkFootOauthProviderId) => Promise<boolean>
   logout: () => void
   updateProfile: (displayName: string) => void
@@ -215,18 +221,24 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string, displayName?: string): Promise<boolean> => {
-      if (!email.trim() || !password) return false
+    async (email: string, password: string, displayName?: string): Promise<SignUpEmailResult> => {
+      if (!email.trim() || !password) {
+        return { status: 'error', message: 'Email et mot de passe requis.' }
+      }
       const key = email.trim().toLowerCase()
       const registry = loadRegistry()
-      if (registry[key]) return false
+      if (registry[key]) {
+        return { status: 'error', message: 'Cet email est déjà utilisé.' }
+      }
       const name = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
-      if (containsBannedWord(name)) return false
+      if (containsBannedWord(name)) {
+        return { status: 'error', message: 'Pseudo ou nom d’affichage non autorisé.' }
+      }
       const { salt, passwordHash } = await hashPasswordForStorage(password)
       registry[key] = { id: `email-${Date.now()}`, displayName: name, salt, passwordHash }
       saveRegistry(registry)
       login({ id: registry[key].id, email: email.trim(), displayName: name, provider: 'email' })
-      return true
+      return { status: 'signed_in' }
     },
     [login],
   )
@@ -399,14 +411,15 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string, displayName?: string): Promise<boolean> => {
+    async (email: string, password: string, displayName?: string): Promise<SignUpEmailResult> => {
       const sb = getSupabaseBrowserClient()
-      if (!sb) return false
+      if (!sb) {
+        return { status: 'error', message: 'Supabase non configuré.' }
+      }
       setAuthNotice(null)
       const name = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
       if (containsBannedWord(name)) {
-        setAuthNotice('Pseudo ou nom d’affichage non autorisé.')
-        return false
+        return { status: 'error', message: 'Pseudo ou nom d’affichage non autorisé.' }
       }
       const { data, error } = await sb.auth.signUp({
         email: email.trim(),
@@ -418,16 +431,26 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         },
       })
       if (error) {
-        setAuthNotice(error.message)
-        return false
+        return { status: 'error', message: error.message }
       }
-      if (data.session && data.user) {
-        return true
+      if (!data.user) {
+        return { status: 'error', message: 'Inscription impossible. Réessaie dans un instant.' }
+      }
+      if (data.session) {
+        return { status: 'signed_in' }
+      }
+      // Supabase renvoie identities vide si l’email est déjà inscrit (sans erreur explicite).
+      if (!data.user.identities?.length) {
+        return {
+          status: 'error',
+          message:
+            'Cet email est peut-être déjà utilisé. Connecte-toi ou utilise la réinitialisation du mot de passe si besoin.',
+        }
       }
       setAuthNotice(
-        'Compte créé : vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi. (Tu peux désactiver la confirmation email dans le tableau Supabase → Authentication.)',
+        'Compte créé : vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.',
       )
-      return false
+      return { status: 'confirm_email' }
     },
     [],
   )
@@ -534,9 +557,9 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUpWithEmail = useCallback(
-    async (_email: string, _password: string, _displayName?: string): Promise<boolean> => {
+    async (_email: string, _password: string, _displayName?: string): Promise<SignUpEmailResult> => {
       setAuthNotice('Inscription email désactivée ici. Utilise Google via Clerk.')
-      return false
+      return { status: 'error', message: 'Inscription email désactivée ici. Utilise Google via Clerk.' }
     },
     [],
   )
