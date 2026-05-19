@@ -21,6 +21,7 @@ import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
+import { useLiveMatchMessageLikesSync } from '../hooks/useLiveMatchMessageLikesSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import type { Message, ReactionType, MatchTribuneZone } from '../types/chat'
 import type { Highlight } from '../data/highlights'
@@ -295,12 +296,16 @@ function MatchRow({
 function ChatMessage({
   message,
   selfUserId,
+  likeState,
   onToggleLike,
 }: {
   message: ChatMessageItem
   selfUserId?: string | null
+  likeState?: { likes: number; likedByMe: boolean }
   onToggleLike: (id: string) => void
 }) {
+  const likes = likeState?.likes ?? message.likes ?? 0
+  const likedByMe = likeState?.likedByMe ?? Boolean(message.likedByMe)
   const profileTo =
     message.userId && selfUserId && message.userId === selfUserId
       ? '/profile'
@@ -358,14 +363,17 @@ function ChatMessage({
         type="button"
         onClick={() => onToggleLike(message.id)}
         className={`tf-chat-like mt-0.5 inline-flex h-6 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition ${
-          message.likedByMe
+          likedByMe
             ? 'border-rose-300/70 bg-rose-400/20 text-rose-100'
-            : 'border-[#3a6690] bg-[#08223a] text-sky-100 hover:border-sky-300/70'
+            : likes > 0
+              ? 'border-rose-400/45 bg-rose-500/10 text-rose-100'
+              : 'border-[#3a6690] bg-[#08223a] text-sky-100 hover:border-sky-300/70'
         }`}
-        title="Like"
+        title={likedByMe ? 'Retirer ton like' : 'Aimer ce message'}
+        aria-pressed={likedByMe}
       >
-        <span aria-hidden="true">{message.likedByMe ? '❤️' : '🤍'}</span>
-        <span>{message.likes ?? 0}</span>
+        <span aria-hidden="true">{likedByMe ? '❤️' : likes > 0 ? '❤️' : '🤍'}</span>
+        <span aria-live="polite">{likes}</span>
       </button>
     </article>
   )
@@ -644,20 +652,16 @@ export function ChannelPage() {
         const byId = new Map(prev.map((m) => [m.id, m]))
         for (const m of msgs) {
           const mapped = cloudMessageToUi(m)
-          const existing = byId.get(mapped.id)
-          if (existing) {
-            byId.set(mapped.id, {
-              ...mapped,
-              likes: existing.likes,
-              likedByMe: existing.likedByMe,
-            })
-          } else {
-            byId.set(mapped.id, mapped)
-          }
+          byId.set(mapped.id, mapped)
         }
         return Array.from(byId.values())
       })
     },
+  })
+  const messageLikes = useLiveMatchMessageLikesSync({
+    matchId: match?.id ?? '',
+    enabled: Boolean(match?.id),
+    userId: selfUserId,
   })
   const filteredChatMessages = useMemo(
     () => chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),
@@ -715,6 +719,10 @@ export function ChannelPage() {
     setDraft('')
   }
   const onToggleLikeMessage = (id: string) => {
+    if (messageLikes.isConfigured) {
+      void messageLikes.toggleLike(id)
+      return
+    }
     setChatMessages((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m
@@ -1818,6 +1826,7 @@ export function ChannelPage() {
                       key={msg.id}
                       message={msg}
                       selfUserId={selfUserId}
+                      likeState={messageLikes.getLikeState(msg.id)}
                       onToggleLike={onToggleLikeMessage}
                     />
                   ))}
