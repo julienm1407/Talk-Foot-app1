@@ -4,7 +4,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { clubPathForId } from '../utils/clubRoute'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
-import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
+import {
+  teamAttackIndicesFromStandings,
+  useTalkFootInternalOdds,
+} from '../hooks/useTalkFootInternalOdds'
+import { useSportMonksTeamLatestFormPair } from '../hooks/useSportMonksTeamLatestFormPair'
+import { extractSidelinedCountsFromSmFixture } from '../api/sportMonks/extractSidelinedFromSm'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
 import { BetWidget } from '../components/bet/BetWidget'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
@@ -105,6 +110,25 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
+function SideInfoCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[3.5rem] flex-col justify-center rounded-lg border border-[#4a7faa]/50 bg-[#0c2d4a] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <p className="text-[11px] font-semibold leading-snug text-sky-100/95">{label}</p>
+      <p className="mt-1 truncate text-sm font-extrabold leading-tight text-white">{children}</p>
+    </div>
+  )
+}
+
+/** Ligne label / valeur — colonne latérale pré-match */
+function SideEncartRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <p className="text-[11px] font-semibold leading-snug text-sky-100/95">{label}</p>
+      <p className="mt-1 text-sm font-bold leading-snug text-white">{value}</p>
+    </div>
+  )
+}
+
 function TeamLogo({ label, logoUrl }: { label: string; logoUrl?: string }) {
   return (
     <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-[#d9e6f3] text-xs font-bold text-[#0a223a]">
@@ -135,13 +159,13 @@ function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | nu
   return null
 }
 
-function compactPlayerLabel(name: string) {
+function compactPlayerLabel(name: string, maxLen = 12) {
   const cleaned = name.replace(/\s+/g, ' ').trim()
   if (!cleaned) return 'Joueur'
   const parts = cleaned.split(' ')
   const last = parts[parts.length - 1] ?? cleaned
   const candidate = last.length >= 3 ? last : cleaned
-  return candidate.slice(0, 10)
+  return candidate.length > maxLen ? `${candidate.slice(0, maxLen - 1)}…` : candidate
 }
 
 /** Buteurs uniquement, sous le camp qui a marqué. */
@@ -375,7 +399,7 @@ function PlayerBadge({
 }) {
   return (
     <div
-      className={`absolute max-w-[30%] truncate rounded-md border px-1.5 py-1 text-[9px] font-bold leading-none backdrop-blur-[1px] ${
+      className={`absolute max-w-[44%] truncate rounded-md border px-1.5 py-1 text-[10px] font-bold leading-tight backdrop-blur-[1px] ${
         light
           ? 'border-sky-400/40 bg-white/95 text-[#023458] shadow-[0_4px_12px_rgba(15,40,70,0.12)]'
           : 'border-cyan-200/55 bg-[#062235]/92 text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)]'
@@ -468,6 +492,7 @@ export function ChannelPage() {
   const initialAwayScore = match?.score?.away ?? 0
   const [displayScore, setDisplayScore] = useState({ home: initialHomeScore, away: initialAwayScore })
   const status = match?.status ?? 'upcoming'
+  const isUpcoming = status === 'upcoming'
   const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
   const liveSnapshot = useMemo(() => {
     if (!liveBundleFixture || status !== 'live') return null
@@ -519,15 +544,6 @@ export function ChannelPage() {
   const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? 'channel-demo-match')
-  const { odds1x2, oddsOverUnder25, oddsLoading } = useSportMonksRound1x2Odds(
-    match?.sportMonksFixtureId,
-    match?.sportMonksRoundId,
-    status,
-  )
-  const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
-  const oddsReady = Boolean(
-    odds1x2 && odds1x2.home >= 1.01 && odds1x2.draw >= 1.01 && odds1x2.away >= 1.01,
-  )
   const { liveStatRows, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
     status,
@@ -555,6 +571,7 @@ export function ChannelPage() {
       awayScore,
     })
   }, [standingsLeagueId, standingsRows, match, status, homeScore, awayScore])
+
   const liveMatches = useMemo(
     () => matches.filter((m) => m.status === 'live' && m.id !== match?.id),
     [matches, match?.id],
@@ -576,6 +593,44 @@ export function ChannelPage() {
 
   const [nowMs, setNowMs] = useState(() => Date.now())
   const liveDisplayedMinute = useLinearDisplayedLiveMinute(matchForClock)
+
+  const sidelinedCounts = useMemo(
+    () => extractSidelinedCountsFromSmFixture(liveBundleFixture),
+    [liveBundleFixture],
+  )
+  const formMatch = match ?? fallbackMatch
+  const { teamPairForm } = useSportMonksTeamLatestFormPair(
+    formMatch,
+    Boolean(formMatch && status === 'upcoming'),
+  )
+  const { odds1x2, oddsOverUnder25, oddsLoading, oddsMeta } = useTalkFootInternalOdds({
+    match,
+    standingsRows: displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+    standingsLoading,
+    homeFormOverride: teamPairForm?.home,
+    awayFormOverride: teamPairForm?.away,
+    homeAbsences: sidelinedCounts.home,
+    awayAbsences: sidelinedCounts.away,
+    liveStatRows,
+    liveScore: { home: homeScore, away: awayScore },
+    liveMinute: liveDisplayedMinute,
+  })
+  const attackIndices = useMemo(
+    () =>
+      match
+        ? teamAttackIndicesFromStandings(
+            displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+            match.home.id,
+            match.away.id,
+          )
+        : { home: 50, away: 50 },
+    [match, displayedStandingsRows, standingsRows],
+  )
+  const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
+  const oddsReady = Boolean(
+    odds1x2 && odds1x2.home >= 1.01 && odds1x2.draw >= 1.01 && odds1x2.away >= 1.01,
+  )
+
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
@@ -635,6 +690,7 @@ export function ChannelPage() {
   const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
+  const [standingsModalOpen, setStandingsModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
   const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
@@ -1375,6 +1431,33 @@ export function ChannelPage() {
     setLivePanelOpen(false)
   }
 
+  const channelStandingsContent = (scrollMaxClassName?: string) =>
+    standingsLeagueId ? (
+      <LiveMatchStandingsPanel
+        leagueId={standingsLeagueId}
+        rows={displayedStandingsRows}
+        homeTeamId={match?.home.id}
+        awayTeamId={match?.away.id}
+        loading={standingsLoading}
+        error={standingsError}
+        dataSourceLabel={standingsSourceLabel}
+        projectedLive={status === 'live'}
+        light={L}
+        scrollMaxClassName={scrollMaxClassName}
+      />
+    ) : (
+      <p className={cn('text-xs font-semibold', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
+        Classement disponible pour Ligue 1, Premier League, LaLiga, Serie A et Bundesliga.
+      </p>
+    )
+
+  const openStandingsPopup = () => setStandingsModalOpen(true)
+
+  const kickoffHeaderChipClass = cn(
+    'inline-flex shrink-0 items-center rounded-lg border px-2 py-0.5 text-[10px] font-semibold tabular-nums',
+    L ? 'border-sky-300/70 bg-sky-50 text-[#023458]' : 'border-sky-300/40 bg-[#102f4d]/80 text-sky-100',
+  )
+
   if (waitingRouteResolution) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-[#03172a] p-4">
@@ -1385,12 +1468,28 @@ export function ChannelPage() {
     )
   }
 
+  if (!match) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[#03172a] p-4">
+        <div className="max-w-sm rounded-xl border border-[#2f5f8f] bg-[#0b2440] px-4 py-3 text-center text-sm font-semibold text-sky-100">
+          Aucun match disponible pour le moment.
+          <Link to="/" className="mt-2 block text-cyan-300 hover:underline">
+            Retour à l&apos;accueil
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       ref={pageScrollRef}
-      className={`tf-channel-live relative flex h-full w-full flex-col overflow-y-auto bg-[#03172a] p-3 pb-24 md:pb-4 lg:p-4 ${
-        isLight ? 'tf-channel-live-light' : ''
-      }`}
+      className={cn(
+        'tf-channel-live relative flex min-h-0 w-full flex-1 flex-col bg-[#03172a]',
+        isUpcoming
+          ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-3'
+          : 'max-md:overflow-y-auto p-3 pb-24 md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
+      )}
       style={
         {
           '--tf-home-color': homeToneColor,
@@ -1407,9 +1506,11 @@ export function ChannelPage() {
       <div className="pointer-events-none absolute left-4 top-3 z-0 h-20 w-20 rounded-full blur-2xl" style={{ backgroundColor: `color-mix(in srgb, ${homeToneColor} 28%, transparent)` }} />
       <div className="pointer-events-none absolute right-6 top-4 z-0 h-20 w-20 rounded-full blur-2xl" style={{ backgroundColor: `color-mix(in srgb, ${awayToneColor} 28%, transparent)` }} />
       <header
-        className={`relative z-10 overflow-hidden rounded-xl border p-3 shadow-[0_14px_30px_rgba(2,8,18,0.33),inset_0_1px_0_rgba(125,211,252,0.16)] ${
-          isLight ? 'border-[#8fb2d3] bg-[#f6fbff]' : 'border-[#2f5f8f] bg-[#0b2440]'
-        }`}
+        className={cn(
+          'relative z-10 shrink-0 overflow-hidden rounded-xl border shadow-[0_14px_30px_rgba(2,8,18,0.33),inset_0_1px_0_rgba(125,211,252,0.16)]',
+          isUpcoming ? 'p-2.5' : 'p-3',
+          isLight ? 'border-[#8fb2d3] bg-[#f6fbff]' : 'border-[#2f5f8f] bg-[#0b2440]',
+        )}
         style={
           L
             ? status === 'live'
@@ -1443,44 +1544,76 @@ export function ChannelPage() {
         ) : null}
         <div className="flex flex-col gap-1 md:hidden">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
-              <Link
-                to={match?.home.id ? clubPathForId(match.home.id) : '#'}
-                title={homeName}
-                className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
-                  L ? 'text-[#052032]' : 'text-white'
-                }`}
-              >
-                {homeHeaderLabel}
-              </Link>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
+                <Link
+                  to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+                  title={homeName}
+                  className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
+                    L ? 'text-[#052032]' : 'text-white'
+                  }`}
+                >
+                  {homeHeaderLabel}
+                </Link>
+              </div>
+              {isUpcoming ? (
+                <p className={`truncate pl-11 text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
+                  {homeFullName}
+                </p>
+              ) : null}
             </div>
-            <p className={`px-1 text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
-              {homeScore} - {awayScore}
-            </p>
-            <div className="flex min-w-0 items-center justify-end gap-1.5">
-              <Link
-                to={match?.away.id ? clubPathForId(match.away.id) : '#'}
-                title={awayName}
-                className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
-                  L ? 'text-[#052032]' : 'text-white'
-                }`}
-              >
-                {awayHeaderLabel}
-              </Link>
-              <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+            <div className="flex flex-col items-center gap-0.5 px-1">
+              {isUpcoming ? (
+                <span
+                  className={`rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${
+                    L ? 'border-sky-300/70 bg-sky-50 text-[#023458]' : 'border-sky-300/35 bg-[#102f4d]/75 text-sky-100'
+                  }`}
+                >
+                  VS
+                </span>
+              ) : null}
+              <p className={`text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
+                {homeScore} - {awayScore}
+              </p>
+            </div>
+            <div className="flex min-w-0 flex-col items-end gap-0.5">
+              <div className="flex min-w-0 items-center justify-end gap-1.5">
+                <Link
+                  to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                  title={awayName}
+                  className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
+                    L ? 'text-[#052032]' : 'text-white'
+                  }`}
+                >
+                  {awayHeaderLabel}
+                </Link>
+                <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+              </div>
+              {isUpcoming ? (
+                <p className={`truncate pr-11 text-right text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
+                  {awayFullName}
+                </p>
+              ) : null}
             </div>
             <div />
-            <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
-              {status === 'live' ? (
-                <span className="inline-flex items-center justify-center gap-1">
-                  <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
-                  {timerText}
+            <div className="flex flex-col items-center gap-1">
+              <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
+                {status === 'live' ? (
+                  <span className="inline-flex items-center justify-center gap-1">
+                    <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
+                    {timerText}
+                  </span>
+                ) : (
+                  timerText
+                )}
+              </p>
+              {isUpcoming ? (
+                <span className={kickoffHeaderChipClass} title={`Coup d'envoi ${kickoffLabel}`}>
+                  Coup d&apos;envoi · {kickoffLabel}
                 </span>
-              ) : (
-                timerText
-              )}
-            </p>
+              ) : null}
+            </div>
             <div />
             {status === 'live' || status === 'finished' ? (
               <>
@@ -1491,33 +1624,71 @@ export function ChannelPage() {
             ) : null}
           </div>
         </div>
-        <div className="hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[auto_auto_auto] items-start gap-x-3 gap-y-0.5 sm:gap-4 md:grid">
-          <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 justify-self-start">
-            <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
-            <Link
-              to={match?.home.id ? clubPathForId(match.home.id) : '#'}
-              title={homeName}
-              className={`truncate text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
-            >
-              {homeHeaderLabel}
-            </Link>
+        <div
+          className={cn(
+            'hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-3 gap-y-0.5 sm:gap-4 md:grid',
+            isUpcoming ? 'grid-rows-[auto_auto]' : 'grid-rows-[auto_auto_auto]',
+          )}
+        >
+          <div className="col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5 justify-self-start">
+            <div className="flex min-w-0 items-center gap-3">
+              <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
+              <Link
+                to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+                title={homeName}
+                className={`truncate text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+              >
+                {homeHeaderLabel}
+              </Link>
+            </div>
+            {isUpcoming ? (
+              <p
+                className={`max-w-[min(100%,14rem)] truncate pl-[3.25rem] text-xs font-bold leading-tight ${
+                  L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                }`}
+                title={homeFullName}
+              >
+                {homeFullName}
+              </p>
+            ) : null}
           </div>
-          <div className="col-start-2 row-start-1 flex flex-col items-center justify-self-center self-start pt-0.5 text-center">
+          <div className="col-start-2 row-start-1 flex flex-col items-center justify-self-center self-start gap-1 pt-0.5 text-center">
+            {isUpcoming ? (
+              <span
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-black uppercase tracking-wide ${
+                  L ? 'border-sky-300/70 bg-sky-50 text-[#023458]' : 'border-sky-300/35 bg-[#102f4d]/75 text-sky-100'
+                }`}
+              >
+                VS
+              </span>
+            ) : null}
             <p className={`text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
               {homeScore} - {awayScore}
             </p>
           </div>
-          <div className="col-start-3 row-start-1 flex min-w-0 items-center justify-end gap-3 justify-self-end">
-            <Link
-              to={match?.away.id ? clubPathForId(match.away.id) : '#'}
-              title={awayName}
-              className={`truncate text-right text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
-            >
-              {awayHeaderLabel}
-            </Link>
-            <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+          <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end">
+            <div className="flex min-w-0 items-center justify-end gap-3">
+              <Link
+                to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                title={awayName}
+                className={`truncate text-right text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+              >
+                {awayHeaderLabel}
+              </Link>
+              <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+            </div>
+            {isUpcoming ? (
+              <p
+                className={`max-w-[min(100%,14rem)] truncate pr-[3.25rem] text-right text-xs font-bold leading-tight ${
+                  L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                }`}
+                title={awayFullName}
+              >
+                {awayFullName}
+              </p>
+            ) : null}
           </div>
-          <div className="col-start-2 row-start-2 flex justify-center">
+          <div className="col-start-2 row-start-2 flex flex-col items-center gap-1">
             <p className={`text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
               {status === 'live' ? (
                 <span className="inline-flex items-center gap-1">
@@ -1528,6 +1699,11 @@ export function ChannelPage() {
                 timerText
               )}
             </p>
+            {isUpcoming ? (
+              <span className={kickoffHeaderChipClass} title={`Coup d'envoi ${kickoffLabel}`}>
+                Coup d&apos;envoi · {kickoffLabel}
+              </span>
+            ) : null}
           </div>
           {status === 'live' || status === 'finished' ? (
             <>
@@ -1540,216 +1716,300 @@ export function ChannelPage() {
             </>
           ) : null}
         </div>
-        {status === 'upcoming' ? (
-          <div
-            className={`mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border p-2.5 ${
-              L ? 'border-slate-200 bg-white/90 shadow-sm' : 'border-[#3a6690]/55 bg-[#0a2238]/70'
-            }`}
-          >
-            <div
-              className="rounded-md px-2 py-2 text-center"
-              style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${homeToneColor} 34%, transparent), transparent)` }}
-            >
-              <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">Domicile</p>
-              <p className="mt-0.5 truncate text-sm font-extrabold text-sky-50">{homeFullName}</p>
-            </div>
-            <div
-              className={`rounded-md border px-2 py-1 text-[11px] font-black uppercase tracking-wide ${
-                L
-                  ? 'border-sky-300/70 bg-sky-50 text-[#023458]'
-                  : 'border-sky-300/35 bg-[#102f4d]/75 text-sky-100'
-              }`}
-            >
-              VS
-            </div>
-            <div
-              className="rounded-md px-2 py-2 text-center"
-              style={{ background: `linear-gradient(225deg, color-mix(in srgb, ${awayToneColor} 34%, transparent), transparent)` }}
-            >
-              <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">Extérieur</p>
-              <p className="mt-0.5 truncate text-sm font-extrabold text-sky-50">{awayFullName}</p>
-            </div>
-          </div>
-        ) : null}
       </header>
 
       <main
-        className={`relative z-10 mt-2 grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[0.5fr_2.5fr_0.5fr] md:items-stretch ${
-          status === 'upcoming' ? 'gap-1.5' : 'gap-2'
-        }`}
+        className={cn(
+          'relative z-10 mt-2 grid min-h-0 flex-1 grid-cols-1 md:items-stretch md:overflow-hidden',
+          isUpcoming
+            ? 'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(14.5rem,0.95fr)] md:gap-2.5'
+            : 'gap-2 md:grid-cols-[0.5fr_2.5fr_0.5fr]',
+        )}
       >
-        <div className="tf-live-col hidden min-w-0 space-y-1.5 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:flex-col">
-          <Card className="tf-card-prematch !p-3">
-            <div className="flex items-center justify-between gap-2">
-              <SectionTitle>Avant-match</SectionTitle>
-              <button className="shrink-0 rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-semibold text-[#0a223a] transition hover:bg-gray-100">
-                {status === 'live' ? 'En direct' : `Coup d’envoi ${kickoffLabel}`}
-              </button>
-            </div>
-            <div className="mt-1.5 space-y-1">
-              {status === 'live' && tacticalRows.length > 0 ? (
-                tacticalRows.slice(0, 4).map((row) => (
-                  <div
-                    key={`prematch-live-${row.label}`}
-                    className="tf-live-soft-surface flex items-center justify-between rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-xs"
+        <div
+          className={cn(
+            'tf-live-col tf-live-col-side hidden min-w-0 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:min-h-0 md:flex-col md:[scrollbar-width:thin]',
+            isUpcoming ? 'space-y-2 p-2 md:overflow-y-auto' : 'space-y-3 p-2 md:overflow-y-auto',
+          )}
+        >
+          {isUpcoming ? (
+            <>
+              <Card className="tf-card-prematch shrink-0 !p-2.5">
+                <SectionTitle>Avant-match</SectionTitle>
+                <div className="mt-2 space-y-1.5">
+                  <SideEncartRow
+                    label="Ouverture tchat"
+                    value={
+                      chatLocked
+                        ? chatCountdownText
+                          ? `dans ${chatCountdownText}`
+                          : '—'
+                        : 'ouverte'
+                    }
+                  />
+                  <SideEncartRow
+                    label="Cotes 1N2"
+                    value={
+                      oddsReady
+                        ? oddsMeta.source === 'talkfoot'
+                          ? 'Talk Foot'
+                          : 'disponibles'
+                        : oddsLoading
+                          ? 'chargement…'
+                          : 'calcul…'
+                    }
+                  />
+                </div>
+                {standingsLeagueId ? (
+                  <button
+                    type="button"
+                    onClick={openStandingsPopup}
+                    className="mt-2 w-full rounded-lg border border-cyan-300/45 bg-cyan-500/12 px-2.5 py-2 text-xs font-bold text-cyan-50 transition hover:bg-cyan-500/22"
                   >
-                    <span className="font-bold text-white">{row.home}</span>
-                    <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-sky-200/80">
-                      {row.label}
-                    </span>
-                    <span className="font-bold text-white">{row.away}</span>
-                  </div>
-                ))
-              ) : status === 'upcoming' ? (
-                <div className="grid grid-cols-1 gap-1">
-                  <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-[11px]">
-                    <span className="text-sky-200/75">Ouverture tchat: </span>
-                    <span className="font-bold text-white">{chatLocked ? `dans ${chatCountdownText}` : 'ouverte'}</span>
-                  </div>
-                  <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-[11px]">
-                    <span className="text-sky-200/75">Cotes 1N2: </span>
-                    <span className="font-bold text-white">
-                      {oddsReady ? 'disponibles' : oddsLoading ? 'chargement' : 'ouverture imminente'}
-                    </span>
-                  </div>
-                  <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-1.5 text-[11px]">
-                    <span className="text-sky-200/75">Compositions: </span>
-                    <span className="font-bold text-white">{hasAnyLineup ? 'publiées' : 'en attente'}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-2 text-center text-[11px] font-semibold text-sky-100/85">
-                  Aucune stat exploitable pour le moment.
-                </div>
-              )}
-            </div>
-          </Card>
+                    Voir le classement
+                  </button>
+                ) : null}
+              </Card>
 
-          <Card className="tf-card-info !p-3 border border-[#3d78aa]/55 bg-[#10263f]">
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
-            <SectionTitle>Infos générales</SectionTitle>
-            <div className="mt-2 grid grid-cols-2 gap-1">
-              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
-                <p className="text-[10px] leading-none text-sky-200/80">Compétition</p>
-                <p className="mt-1 truncate text-[12px] font-extrabold leading-tight text-white">
-                  {match?.competition.shortName ?? match?.competition.name ?? 'Ligue 1'}
-                </p>
-              </div>
-              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
-                <p className="text-[10px] leading-none text-sky-200/80">Coup d’envoi</p>
-                <p className="mt-1 text-[12px] font-extrabold leading-tight text-white">{kickoffLabel}</p>
-              </div>
-              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
-                <p className="text-[10px] leading-none text-sky-200/80">Statut</p>
-                <p className="mt-1 text-[12px] font-extrabold leading-tight text-white">
-                  {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
-                </p>
-              </div>
-              <div className="tf-live-soft-surface rounded-lg bg-[#11263d] px-2 py-1.5">
-                <p className="text-[10px] leading-none text-sky-200/80">Minute</p>
-                <p className="mt-1 text-[12px] font-extrabold leading-tight text-white">
-                  {status === 'live' ? `${liveDisplayedMinute}'` : '—'}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="tf-card-community !p-3 border border-[#5f4be2]/45 bg-[#14253c]">
-            <SectionTitle>En direct · Matchs</SectionTitle>
-            {liveMatches.length > 1 ? (
-              <div className="mt-2">
-                <select
-                  value={selectedLiveMatchId}
-                  onChange={(e) => setSelectedLiveMatchId(e.target.value)}
-                  className="w-full rounded-lg border border-[#2a5a84] bg-[#0a1f35] px-2 py-1.5 text-xs font-semibold text-sky-50 outline-none focus:border-[#4f7ea8]"
-                >
-                  {liveMatches.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.home.shortName} vs {m.away.shortName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            <div className="mt-1.5">
-              {selectedLiveMatch ? (
-                <MatchRow
-                  home={selectedLiveMatch.home.shortName}
-                  away={selectedLiveMatch.away.shortName}
-                  homeScore={selectedLiveMatch.score?.home ?? 0}
-                  awayScore={selectedLiveMatch.score?.away ?? 0}
+              <Card className="tf-card-info shrink-0 !p-2.5 border border-[#3d78aa]/55 bg-[#10263f]">
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-1"
+                  style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }}
                 />
-              ) : (
-                <div className="tf-live-soft-surface rounded-lg bg-[#0a1f35]/70 px-2 py-2 text-center text-[11px] font-semibold text-sky-100/85">
-                  Aucun autre match en direct
+                <SectionTitle>Infos générales</SectionTitle>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <SideInfoCell label="Compétition">
+                    {match?.competition.shortName ?? match?.competition.name ?? '—'}
+                  </SideInfoCell>
+                  <SideInfoCell label="Coup d’envoi">{kickoffLabel}</SideInfoCell>
+                  <SideInfoCell label="Statut">À venir</SideInfoCell>
+                  <SideInfoCell label="Composition">
+                    {hasAnyLineup ? 'Publiée' : '—'}
+                  </SideInfoCell>
                 </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
-              }}
-              disabled={!selectedLiveMatch}
-              className="mt-1.5 w-full rounded-lg border border-[#2a5a84] bg-white px-3 py-1 text-[11px] font-bold text-[#0a223a] transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Rejoindre le live
-            </button>
-          </Card>
+              </Card>
 
-          <Card className="tf-card-tribune !p-3 md:flex md:flex-1 md:flex-col">
-            <SectionTitle>Tribune supporters</SectionTitle>
-            <div className="tf-tribune-canvas mt-1 relative h-[68px] overflow-hidden rounded-lg border border-[#3b7fb1]/45 bg-[#050d17] md:h-auto md:min-h-[94px] md:flex-1">
-              <div
-                className="tf-tribune-canvas-bg absolute inset-0"
-                style={{
-                  background: `
+              <Card className="tf-card-community shrink-0 !p-2.5 border border-[#5f4be2]/45 bg-[#14253c]">
+                <SectionTitle>En direct · Matchs</SectionTitle>
+                {liveMatches.length > 0 ? (
+                  <div className="mt-2">
+                    <select
+                      value={selectedLiveMatchId}
+                      onChange={(e) => setSelectedLiveMatchId(e.target.value)}
+                      className="w-full rounded-lg border border-[#4a7faa]/60 bg-[#0c2d4a] px-2.5 py-2 text-xs font-semibold text-white outline-none focus:border-cyan-300/60"
+                    >
+                      {liveMatches.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.home.shortName} vs {m.away.shortName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div className="mt-2">
+                  {selectedLiveMatch ? (
+                    <MatchRow
+                      home={selectedLiveMatch.home.shortName}
+                      away={selectedLiveMatch.away.shortName}
+                      homeScore={selectedLiveMatch.score?.home ?? 0}
+                      awayScore={selectedLiveMatch.score?.away ?? 0}
+                    />
+                  ) : (
+                    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-2.5 py-2.5 text-center text-xs font-semibold leading-snug text-sky-100">
+                      Aucun autre match en direct
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
+                  }}
+                  disabled={!selectedLiveMatch}
+                  className="mt-2 w-full rounded-lg border border-[#4a7faa]/55 bg-[#1a3d5c] px-2.5 py-2 text-xs font-bold text-sky-100 transition hover:bg-[#234d6d] disabled:cursor-not-allowed disabled:border-[#3a5a78]/50 disabled:bg-[#0a1f35] disabled:text-sky-200/45"
+                >
+                  Rejoindre le live
+                </button>
+              </Card>
+
+              <Card className="tf-card-tribune shrink-0 !p-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <SectionTitle>Tribune</SectionTitle>
+                    <p className="mt-1 truncate text-xs font-bold text-white">
+                      {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Neutres'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTribuneModalOpen(true)}
+                    className="shrink-0 rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-extrabold text-[#06242a] transition hover:bg-[#2be0c6]"
+                  >
+                    Carte du stade
+                  </button>
+                </div>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card className="tf-card-prematch !p-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <SectionTitle>Avant-match</SectionTitle>
+                  {status === 'live' ? (
+                    <span className="shrink-0 rounded-lg border border-rose-400/60 bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-100">
+                      En direct
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-2.5 space-y-2">
+                  {status === 'live' && tacticalRows.length > 0 ? (
+                    tacticalRows.slice(0, 4).map((row) => (
+                      <div
+                        key={`prematch-live-${row.label}`}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2 text-xs"
+                      >
+                        <span className="font-bold text-white">{row.home}</span>
+                        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-sky-100/90">
+                          {row.label}
+                        </span>
+                        <span className="font-bold text-white">{row.away}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2.5 text-center text-xs font-semibold text-sky-100">
+                      Aucune stat exploitable pour le moment.
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              <Card className="tf-card-info !p-3.5 border border-[#3d78aa]/55 bg-[#10263f]">
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-1"
+                  style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }}
+                />
+                <SectionTitle>Infos générales</SectionTitle>
+                <div className="mt-2.5 grid grid-cols-2 gap-2">
+                  <SideInfoCell label="Compétition">
+                    {match?.competition.shortName ?? match?.competition.name ?? 'Ligue 1'}
+                  </SideInfoCell>
+                  <SideInfoCell label="Coup d’envoi">{kickoffLabel}</SideInfoCell>
+                  <SideInfoCell label="Statut">
+                    {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
+                  </SideInfoCell>
+                  <SideInfoCell label="Minute">{status === 'live' ? `${liveDisplayedMinute}'` : '—'}</SideInfoCell>
+                </div>
+              </Card>
+
+              <Card className="tf-card-community !p-3.5 border border-[#5f4be2]/45 bg-[#14253c]">
+                <SectionTitle>En direct · Matchs</SectionTitle>
+                {liveMatches.length > 1 ? (
+                  <div className="mt-2.5">
+                    <select
+                      value={selectedLiveMatchId}
+                      onChange={(e) => setSelectedLiveMatchId(e.target.value)}
+                      className="w-full rounded-lg border border-[#4a7faa]/60 bg-[#0c2d4a] px-2.5 py-2 text-xs font-semibold text-white outline-none focus:border-cyan-300/60"
+                    >
+                      {liveMatches.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.home.shortName} vs {m.away.shortName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div className="mt-2">
+                  {selectedLiveMatch ? (
+                    <MatchRow
+                      home={selectedLiveMatch.home.shortName}
+                      away={selectedLiveMatch.away.shortName}
+                      homeScore={selectedLiveMatch.score?.home ?? 0}
+                      awayScore={selectedLiveMatch.score?.away ?? 0}
+                    />
+                  ) : (
+                    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-3 text-center text-xs font-semibold leading-snug text-sky-100">
+                      Aucun autre match en direct
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
+                  }}
+                  disabled={!selectedLiveMatch}
+                  className="mt-2 w-full rounded-lg border border-[#4a7faa]/55 bg-[#1a3d5c] px-3 py-2 text-xs font-bold text-sky-100 transition hover:bg-[#234d6d] disabled:cursor-not-allowed disabled:border-[#3a5a78]/50 disabled:bg-[#0a1f35] disabled:text-sky-200/45"
+                >
+                  Rejoindre le live
+                </button>
+              </Card>
+
+              <Card className="tf-card-tribune shrink-0 md:flex md:flex-1 md:flex-col !p-3.5">
+                <SectionTitle>Tribune supporters</SectionTitle>
+                <div className="tf-tribune-canvas relative mt-1.5 h-[68px] overflow-hidden rounded-lg border border-[#3b7fb1]/45 bg-[#050d17] md:h-auto md:min-h-[88px] md:flex-1">
+                  <div
+                    className="tf-tribune-canvas-bg absolute inset-0"
+                    style={{
+                      background: `
                     radial-gradient(ellipse 120% 70% at 50% -10%, rgba(255,255,255,0.14), transparent 46%),
                     radial-gradient(circle at 12% 32%, ${homeColor}55, transparent 35%),
                     radial-gradient(circle at 88% 32%, ${awayColor}55, transparent 35%),
                     linear-gradient(180deg, #0c1a2a 0%, #07111c 55%, #040911 100%)
                   `,
-                }}
-              />
-              <div className="tf-tribune-overlay absolute inset-[4%] rounded-[16px] border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent" />
-              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[58px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/12" />
-              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[44px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/10" />
-              <div
-                className="absolute left-1/2 top-[52%] h-[30px] w-[48%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-cyan-200/35"
-                style={{
-                  background: `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 26%, #0a3b5e) 0%, #0b4b73 45%, color-mix(in srgb, ${awayColor} 24%, #0a3b5e) 100%)`,
-                }}
-              />
-              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[30px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" />
-              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[8px] w-[8px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
-              <div className="tf-tribune-label absolute left-[7%] top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wide text-sky-100/80">Virage</div>
-              <div className="tf-tribune-label absolute right-[7%] top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-wide text-sky-100/80">Parcage</div>
-              <div className="tf-tribune-footer absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent pb-1 pt-4 text-center text-[8px] font-black uppercase tracking-[0.24em] text-white/70">
-                Plan stade
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setTribuneModalOpen(true)}
-              className="mt-1 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-1 text-[11px] font-extrabold text-[#06242a] shadow-sm transition hover:bg-[#2be0c6]"
-            >
-              Ouvrir la carte du stade
-            </button>
-            <p className="mt-0.5 text-[10px] font-semibold text-sky-200/80">
-              Tribune actuelle · {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Aucune'}
-              {status === 'live' ? ' · messages filtrés par zone' : ''}
-            </p>
-          </Card>
+                    }}
+                  />
+                  <div className="tf-tribune-overlay absolute inset-[4%] rounded-[16px] border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent" />
+                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[58px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/12" />
+                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[44px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/10" />
+                  <div
+                    className="absolute left-1/2 top-[52%] h-[30px] w-[48%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-cyan-200/35"
+                    style={{
+                      background: `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 26%, #0a3b5e) 0%, #0b4b73 45%, color-mix(in srgb, ${awayColor} 24%, #0a3b5e) 100%)`,
+                    }}
+                  />
+                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[30px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" />
+                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[8px] w-[8px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+                  <div className="tf-tribune-label absolute left-[7%] top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-wide text-white/90">
+                    Virage
+                  </div>
+                  <div className="tf-tribune-label absolute right-[7%] top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-wide text-white/90">
+                    Parcage
+                  </div>
+                  <div className="tf-tribune-footer absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent pb-1 pt-4 text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/85">
+                    Plan stade
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTribuneModalOpen(true)}
+                  className="mt-2 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-xs font-extrabold text-[#06242a] shadow-sm transition hover:bg-[#2be0c6]"
+                >
+                  Ouvrir la carte du stade
+                </button>
+                <p className="mt-1.5 text-[11px] font-semibold leading-snug text-sky-100/90">
+                  Tribune actuelle · {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Aucune'}
+                  {status === 'live' ? ' · messages filtrés par zone' : ''}
+                </p>
+              </Card>
+            </>
+          )}
         </div>
 
-        <div className="tf-live-col min-w-0 space-y-2 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col">
+        <div
+          className={cn(
+            'tf-live-col tf-live-col-center min-w-0 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col',
+            isUpcoming
+              ? 'space-y-2 md:min-h-0 md:overflow-hidden'
+              : 'space-y-2 md:overflow-y-auto md:[scrollbar-width:thin]',
+          )}
+        >
           {showLiveChat ? (
           <Card
-            className={`tf-card-chat relative shrink-0 ${
-              animationsOpen || livePanelOpen ? '!overflow-visible' : 'overflow-hidden'
-            } ${
-              status === 'upcoming' ? 'min-h-[220px] md:min-h-[260px]' : 'min-h-[280px] md:min-h-[360px]'
-            }`}
+            className={cn(
+              'tf-card-chat relative',
+              animationsOpen || livePanelOpen ? '!overflow-visible' : 'overflow-hidden',
+              isUpcoming ? 'min-h-0 md:flex md:min-h-0 md:flex-1 md:flex-col' : 'shrink-0 min-h-[280px] md:min-h-[360px]',
+            )}
             style={
               status === 'live'
                 ? {
@@ -1826,15 +2086,20 @@ export function ChannelPage() {
               </div>
             ) : null}
             <div
-              className={`tf-chat-scroll mt-1.5 space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)] ${
-                status === 'upcoming' ? 'h-[160px] sm:h-[180px] md:h-[min(42vh,380px)]' : 'h-[200px] sm:h-[240px] md:h-[min(52vh,480px)]'
-              }`}
+              className={cn(
+                'tf-chat-scroll mt-1.5 space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
+                isUpcoming
+                  ? 'h-[min(28dvh,190px)] sm:h-[min(32dvh,210px)] md:min-h-0 md:flex-1 md:h-auto md:max-h-none'
+                  : 'h-[200px] sm:h-[240px] md:h-[min(52vh,480px)]',
+              )}
             >
               {chatLocked ? (
                 <div
-                  className={`flex h-full min-h-[150px] items-center justify-center rounded-lg border p-3 text-center ${
-                    L ? 'border-slate-200 bg-white/95 shadow-sm' : 'border-[#3a6690]/60 bg-[#0c2339]/80'
-                  }`}
+                  className={cn(
+                    'flex h-full items-center justify-center rounded-lg border p-3 text-center',
+                    isUpcoming ? 'min-h-[88px]' : 'min-h-[150px]',
+                    L ? 'border-slate-200 bg-white/95 shadow-sm' : 'border-[#3a6690]/60 bg-[#0c2339]/80',
+                  )}
                 >
                   <div>
                     <p className="text-xs font-black uppercase tracking-wide text-sky-100">
@@ -2074,11 +2339,8 @@ export function ChannelPage() {
           </Card>
           ) : null}
 
-          <Card
-            className={`tf-card-live shrink-0 md:max-h-[min(260px,34vh)] md:overflow-hidden ${
-              status === 'upcoming' ? 'md:min-h-[120px]' : 'md:min-h-[140px]'
-            }`}
-          >
+          {!isUpcoming ? (
+          <Card className="tf-card-live shrink-0 md:min-h-[140px] md:max-h-[min(260px,34vh)] md:overflow-hidden">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:justify-between md:gap-2">
               <SectionTitle>Live</SectionTitle>
@@ -2227,73 +2489,63 @@ export function ChannelPage() {
               </div>
             )}
           </Card>
+          ) : null}
 
-          <Card className="tf-card-feed hidden shrink-0 md:block md:max-h-[min(380px,42vh)] md:overflow-hidden">
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-1"
-              style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }}
-            />
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <SectionTitle>Match</SectionTitle>
-              <div className="inline-flex rounded-md bg-[#0a1f35]/80 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setDesktopFeedTab('actions')}
-                  className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
-                    desktopFeedTab === 'actions'
-                      ? 'bg-sky-300/25 text-sky-50'
-                      : 'text-sky-200/70 hover:text-sky-50'
-                  }`}
-                >
-                  Actions
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDesktopFeedTab('classement')}
-                  className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
-                    desktopFeedTab === 'classement'
-                      ? 'bg-sky-300/25 text-sky-50'
-                      : 'text-sky-200/70 hover:text-sky-50'
-                  }`}
-                >
-                  Classement
-                </button>
+          {!isUpcoming ? (
+            <Card className="tf-card-feed hidden shrink-0 md:block md:max-h-[min(380px,42vh)] md:overflow-hidden">
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 h-1"
+                style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }}
+              />
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <SectionTitle>Match</SectionTitle>
+                <div className="inline-flex rounded-md bg-[#0a1f35]/80 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setDesktopFeedTab('actions')}
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
+                      desktopFeedTab === 'actions'
+                        ? 'bg-sky-300/25 text-sky-50'
+                        : 'text-sky-200/70 hover:text-sky-50'
+                    }`}
+                  >
+                    Actions
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDesktopFeedTab('classement')}
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
+                      desktopFeedTab === 'classement'
+                        ? 'bg-sky-300/25 text-sky-50'
+                        : 'text-sky-200/70 hover:text-sky-50'
+                    }`}
+                  >
+                    Classement
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="max-h-[min(320px,36vh)] overflow-y-auto pr-0.5 [scrollbar-width:thin]">
-              {desktopFeedTab === 'actions' ? (
-                <MatchHighlights
-                  items={smTimelineHighlights}
-                  activeId={latestHighlight?.id}
-                  variant="channel"
-                />
-              ) : standingsLeagueId ? (
-                <LiveMatchStandingsPanel
-                  leagueId={standingsLeagueId}
-                  rows={displayedStandingsRows}
-                  homeTeamId={match?.home.id}
-                  awayTeamId={match?.away.id}
-                  loading={standingsLoading}
-                  error={standingsError}
-                  dataSourceLabel={standingsSourceLabel}
-                  projectedLive={status === 'live'}
-                  light={L}
-                />
-              ) : (
-                <p className="text-xs font-semibold text-sky-200/80">
-                  Classement live disponible pour Ligue 1, Premier League, LaLiga, Serie A et Bundesliga.
-                </p>
-              )}
-            </div>
-          </Card>
+              <div className="max-h-[min(320px,36vh)] overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+                {desktopFeedTab === 'actions' ? (
+                  <MatchHighlights
+                    items={smTimelineHighlights}
+                    activeId={latestHighlight?.id}
+                    variant="channel"
+                  />
+                ) : (
+                  channelStandingsContent()
+                )}
+              </div>
+            </Card>
+          ) : null}
         </div>
 
-        <div className="tf-live-col hidden min-w-0 space-y-2 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:flex-col">
-          <Card
-            className={`tf-card-lineup border-fuchsia-400/45 bg-[#1e2336] ${
-              status === 'upcoming' ? 'md:min-h-[250px]' : 'md:min-h-[300px]'
-            }`}
-          >
+        <div
+          className={cn(
+            'tf-live-col tf-live-col-side hidden min-w-0 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:min-h-0 md:flex-col md:overflow-y-auto md:[scrollbar-width:thin]',
+            'space-y-2',
+          )}
+        >
+          <Card className="tf-card-lineup shrink-0 border-fuchsia-400/45 bg-[#1e2336] md:min-h-0">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex items-center justify-between gap-2">
               <SectionTitle>Compositions</SectionTitle>
@@ -2341,7 +2593,10 @@ export function ChannelPage() {
               </div>
             </div>
             <div
-              className="tf-lineup-pitch relative mt-1.5 h-[250px] overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]"
+              className={cn(
+                'tf-lineup-pitch relative mt-2 overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
+                isUpcoming ? 'h-[200px] md:h-[min(28vh,200px)]' : 'h-[250px] md:h-[min(34vh,250px)]',
+              )}
               style={{
                 background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
               }}
@@ -2363,11 +2618,12 @@ export function ChannelPage() {
           </Card>
 
           <Card
-            className={`tf-card-bet-shell md:flex md:flex-1 md:flex-col !p-0 bg-transparent shadow-none ${
-              status === 'upcoming' ? 'md:min-h-[180px]' : 'md:min-h-[220px]'
-            }`}
+            className={cn(
+              'tf-card-bet-shell shrink-0 !p-0 bg-transparent shadow-none md:flex md:flex-col',
+              isUpcoming ? 'md:min-h-[200px]' : 'md:min-h-[180px] md:flex-1',
+            )}
           >
-            <div className="md:flex-1">
+            <div className={isUpcoming ? '' : 'md:flex-1'}>
               {isFinished ? (
                 <div className="rounded-lg border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-3 text-sm font-semibold text-sky-100">
                   Paris fermés: le match est terminé.
@@ -2379,9 +2635,12 @@ export function ChannelPage() {
                   bookOdds1x2={odds1x2}
                   bookOddsOverUnder25={oddsOverUnder25}
                   bookOddsLoading={oddsLoading}
+                  oddsSource={oddsMeta.source}
+                  teamAttackIndices={attackIndices}
                   compact
                   liveScore={{ home: homeScore, away: awayScore }}
                   liveMinute={liveDisplayedMinute}
+                  liveStatRows={liveStatRows}
                   lineupScorers={lineupScorerPicks}
                   scoredButeurs={scoredButeurSlugs}
                 />
@@ -2451,7 +2710,13 @@ export function ChannelPage() {
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => setMobileMatchTab(tab)}
+                    onClick={() => {
+                      if (tab === 'classement' && isUpcoming) {
+                        setStandingsModalOpen(true)
+                        return
+                      }
+                      setMobileMatchTab(tab)
+                    }}
                     className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold ${
                       mobileMatchTab === tab ? chSheetTabActive : chSheetTabIdle
                     }`}
@@ -2521,25 +2786,8 @@ export function ChannelPage() {
                 />
               </div>
             ) : null}
-            {mobilePanel === 'match' && mobileMatchTab === 'classement' ? (
-              <div className="max-h-[58vh] overflow-y-auto pr-0.5">
-                {standingsLeagueId ? (
-                  <LiveMatchStandingsPanel
-                    leagueId={standingsLeagueId}
-                    rows={displayedStandingsRows}
-                    homeTeamId={match?.home.id}
-                    awayTeamId={match?.away.id}
-                    loading={standingsLoading}
-                    error={standingsError}
-                    dataSourceLabel={standingsSourceLabel}
-                    projectedLive={status === 'live'}
-                  />
-                ) : (
-                  <p className="text-xs font-semibold text-sky-200/80">
-                    Classement live : Big 5 uniquement (L1, EPL, LaLiga, Serie A, Bundesliga).
-                  </p>
-                )}
-              </div>
+            {mobilePanel === 'match' && mobileMatchTab === 'classement' && !isUpcoming ? (
+              <div className="max-h-[58vh] overflow-y-auto pr-0.5">{channelStandingsContent()}</div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'compo' ? (
               <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-0.5">
@@ -2595,9 +2843,12 @@ export function ChannelPage() {
                     bookOdds1x2={odds1x2}
                     bookOddsOverUnder25={oddsOverUnder25}
                     bookOddsLoading={oddsLoading}
+                    oddsSource={oddsMeta.source}
+                    teamAttackIndices={attackIndices}
                     compact
                     liveScore={{ home: homeScore, away: awayScore }}
                     liveMinute={liveDisplayedMinute}
+                    liveStatRows={liveStatRows}
                     lineupScorers={lineupScorerPicks}
                     scoredButeurs={scoredButeurSlugs}
                   />
@@ -2624,6 +2875,45 @@ export function ChannelPage() {
                 </button>
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {standingsModalOpen ? (
+        <div
+          className="fixed inset-0 z-[91] flex items-center justify-center p-3 sm:p-4"
+          data-no-swipe="true"
+          data-tf-modal="true"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Classement avant-match"
+        >
+          <button
+            type="button"
+            className={L ? 'absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]' : 'absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]'}
+            onClick={() => setStandingsModalOpen(false)}
+            aria-label="Fermer le classement"
+          />
+          <div
+            className={cn(
+              'relative z-10 flex w-full max-w-lg flex-col rounded-2xl border p-4 shadow-2xl',
+              L ? 'border-slate-200 bg-white' : 'border-[#5d7cff]/45 bg-[#0c2b48]',
+            )}
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2">
+              <h3 className={cn('text-sm font-bold', L ? 'text-[#023458]' : 'text-sky-100')}>
+                Classement · {match?.competition.shortName ?? match?.competition.name ?? 'Compétition'}
+              </h3>
+              <button type="button" onClick={() => setStandingsModalOpen(false)} className={chSheetGhostBtn}>
+                Fermer
+              </button>
+            </div>
+            <p className={cn('mt-1 shrink-0 text-[11px]', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
+              Contexte avant le coup d&apos;envoi — défilement dans cette fenêtre uniquement.
+            </p>
+            <div className="mt-3 min-h-0">
+              {channelStandingsContent('max-h-[min(62dvh,440px)]')}
+            </div>
           </div>
         </div>
       ) : null}

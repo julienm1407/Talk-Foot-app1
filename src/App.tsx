@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AdsenseScriptLoader } from './components/ads/AdsenseScriptLoader'
 import { AppShell } from './layout/AppShell'
 import { CalendarPage } from './pages/Calendar'
 import { ChannelPage } from './pages/Channel'
@@ -65,7 +66,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <AdsenseScriptLoader />
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
@@ -156,5 +159,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   )
 }

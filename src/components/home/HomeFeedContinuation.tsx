@@ -102,6 +102,7 @@ export function HomeFeedContinuation({
   wrapClassName,
   /** Hub 3 colonnes : le fil occupe toute la largeur utile de la colonne centrale (sans `max-w-tf-content`). */
   fullWidth = false,
+  contentReady = true,
 }: {
   idPrefix: string
   displayMatches: Match[]
@@ -115,6 +116,7 @@ export function HomeFeedContinuation({
   team: HomeFeedTeamHint
   wrapClassName?: string
   fullWidth?: boolean
+  contentReady?: boolean
 }) {
   const { appearance } = useAppearance()
   const isLight = appearance === 'light'
@@ -248,6 +250,7 @@ export function HomeFeedContinuation({
             brand="Partenaire carrousel"
             body="Entre le carrousel des matchs et le fil actus / top commentaires."
             imageSeed="home-carousel-feed"
+            contentReady={contentReady}
           />
         </div>
 

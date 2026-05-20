@@ -70,9 +70,12 @@ export function BetWidget({
   bookOdds1x2 = null,
   bookOddsOverUnder25 = null,
   bookOddsLoading = false,
+  oddsSource = 'talkfoot',
+  teamAttackIndices = null,
   compact = false,
   liveScore = null,
   liveMinute = null,
+  liveStatRows = [],
   lineupScorers = [],
   scoredButeurs = [],
 }: {
@@ -80,7 +83,11 @@ export function BetWidget({
   bookOdds1x2?: SmBookOdds1x2 | null
   bookOddsOverUnder25?: SmBookOddsOverUnder25 | null
   bookOddsLoading?: boolean
+  /** Origine des cotes affichées (moteur Talk Foot par défaut). */
+  oddsSource?: 'talkfoot' | 'fallback'
+  teamAttackIndices?: { home: number; away: number } | null
   compact?: boolean
+  liveStatRows?: { key: string; home: number; away: number }[]
   liveScore?: { home: number; away: number } | null
   liveMinute?: number | null
   lineupScorers?: {
@@ -150,18 +157,26 @@ export function BetWidget({
   const minuteLive = Math.max(0, liveMinute ?? match.minute ?? 0)
 
   /** Cotes affichées / prise de pari : book (ou synthèse) hors live ; ajustement dynamique en live. */
+  const liveStatExtras = useMemo(() => {
+    const row = (key: string) => liveStatRows.find((r) => r.key === key)
+    const red = row('redcards') ?? row('red_cards')
+    const sot = row('shots_on_target') ?? row('shotsontarget')
+    return {
+      homeRedCards: red?.home ?? 0,
+      awayRedCards: red?.away ?? 0,
+      homeShotsOnTarget: sot?.home ?? 0,
+      awayShotsOnTarget: sot?.away ?? 0,
+    }
+  }, [liveStatRows])
+
   const x12Displayed = useMemo((): SmBookOdds1x2 | null => {
     if (!x12Resolved) return null
     if (!isLive) return x12Resolved
-    return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive)
-  }, [x12Resolved, isLive, scoreHome, scoreAway, minuteLive])
+    return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive, liveStatExtras)
+  }, [x12Resolved, isLive, scoreHome, scoreAway, minuteLive, liveStatExtras])
 
-  const usedBook1x2 = Boolean(
-    bookOdds1x2 &&
-      bookOdds1x2.home >= 1.01 &&
-      bookOdds1x2.draw >= 1.01 &&
-      bookOdds1x2.away >= 1.01,
-  )
+  const oddsSourceLabel =
+    oddsSource === 'talkfoot' ? 'Cotes Talk Foot' : 'Cotes estimées'
 
   const scorerPicksSplit = useMemo(() => {
     if (!x12Resolved) return { home: [] as ScorerPickRow[], away: [] as ScorerPickRow[] }
@@ -185,6 +200,12 @@ export function BetWidget({
         label: p.name,
         odds: anytimeScorerOdds(p.name, p.side, x12Resolved, already, meta, {
           liveMinute: isLive ? minuteLive : undefined,
+          teamAttackIndex:
+            teamAttackIndices == null
+              ? undefined
+              : p.side === 'home'
+                ? teamAttackIndices.home
+                : teamAttackIndices.away,
         }),
         disabled: already,
       }
@@ -199,7 +220,7 @@ export function BetWidget({
       }
     }
     return { home, away }
-  }, [lineupScorers, scoredButeurs, x12Resolved, isLive, minuteLive])
+  }, [lineupScorers, scoredButeurs, x12Resolved, isLive, minuteLive, teamAttackIndices])
 
   const scorerPicksTotal = scorerPicksSplit.home.length + scorerPicksSplit.away.length
 
@@ -335,10 +356,8 @@ export function BetWidget({
             {!compact ? (
               <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-sky-200/70">
                 {isLive
-                  ? `1N2 ajusté au score (${scoreHome}–${scoreAway}, ${minuteLive}′).`
-                  : usedBook1x2
-                    ? '1N2 + buteur.'
-                    : '1N2 estimé en attendant l’API.'}{' '}
+                  ? `1N2 live (${scoreHome}–${scoreAway}, ${minuteLive}′) · ${oddsSourceLabel}.`
+                  : `${oddsSourceLabel} · 1N2 + buteur.`}{' '}
                 Clique une cote puis valide.
               </span>
             ) : (

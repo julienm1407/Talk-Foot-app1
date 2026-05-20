@@ -24,6 +24,8 @@ import {
 import { cn } from '../utils/cn'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
+import { AdSlot } from '../components/ui/AdSlot'
+import { EditorialProse } from '../components/ads/EditorialProse'
 
 /** Lisibles sur panneau clair (jour) et sur verre sombre (nuit). */
 function articleTagClass(tag: string, light: boolean): string {
@@ -418,6 +420,30 @@ export function ArticlePage() {
                       <p key={`${article.id}-p-${i}`}>{p}</p>
                     ))}
                   </div>
+                  <div className="mt-8 max-w-[65ch]">
+                    <AdSlot
+                      compact
+                      tone="navy"
+                      brand="Partenaire Talk Foot"
+                      body="Annonce affichée après le corps de l’article."
+                      imageSeed="article-inline"
+                      contentReady
+                    />
+                  </div>
+                  <EditorialProse
+                    light={isLight}
+                    className={cn(
+                      'mt-8 max-w-[65ch]',
+                      isLight
+                        ? 'border-tf-dark/10 bg-white/80'
+                        : 'border-white/12 bg-white/[0.04]',
+                    )}
+                    title="À propos de cet article"
+                    paragraphs={[
+                      `Cet article est publié sur Talk Foot dans la rubrique « ${article.tag} ». Il s’inscrit dans une ligne éditoriale dédiée au football professionnel : analyse, contexte de match et liens vers les salons live de la communauté.`,
+                      'Les fonctionnalités interactives (chat en direct, débats, groupes supporters) sont accessibles après connexion. Les pages de navigation pure ou les écrans de match plein écran ne contiennent pas de publicité.',
+                    ]}
+                  />
                 </div>
               </article>
 

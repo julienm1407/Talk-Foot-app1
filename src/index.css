@@ -715,6 +715,94 @@ html[data-tf-appearance='light'] .tf-channel-shell {
   border-color: rgba(92, 146, 191, 0.45) !important;
 }
 
+/* Pré-match tablette+ : hauteur cadrée, scroll par colonne (pas de scroll page) */
+@media (min-width: 768px) {
+  .tf-channel-live.tf-channel-upcoming {
+    overflow: hidden;
+  }
+
+  .tf-channel-live.tf-channel-upcoming > header {
+    flex-shrink: 0;
+  }
+
+  .tf-channel-live.tf-channel-upcoming > main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-live-col-side,
+  .tf-channel-live.tf-channel-upcoming .tf-live-col-center {
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-live-col-side {
+    overflow-y: auto;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-live-col-center {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-card-chat {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 12rem;
+    overflow: hidden;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-card-chat > .relative.z-10 {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-chat-scroll {
+    flex: 1 1 auto;
+    min-height: 10rem;
+    height: auto !important;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-card-tribune,
+  .tf-channel-live.tf-channel-upcoming .tf-card-bet-shell {
+    flex-shrink: 0;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-live-col-side .tf-live-card {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .tf-channel-live.tf-channel-upcoming .tf-live-col-side .tf-live-card h3 {
+    font-size: 0.8125rem;
+  }
+}
+
+/* Colonne latérale salon : contrastes lisibles (évite labels trop fades) */
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-col-side .tf-live-card {
+  color: #e8f4ff;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-live-col-side .tf-live-card h3 {
+  color: #f0f8ff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-col-side .rounded-lg.border {
+  border-color: rgba(2, 52, 88, 0.18) !important;
+  background: #f4f9ff !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-col-side .rounded-lg.border p {
+  color: #023458 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-col-side .rounded-lg.border p:first-child {
+  color: rgba(2, 52, 88, 0.72) !important;
+}
+
 html[data-tf-appearance='light'] .tf-panel input,
 html[data-tf-appearance='light'] .tf-panel textarea,
 html[data-tf-appearance='light'] .tf-panel select {

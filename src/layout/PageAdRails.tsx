@@ -1,4 +1,6 @@
+import { useLocation } from 'react-router-dom'
 import { AdSlot } from '../components/ui/AdSlot'
+import { isEditorialAdsRoute } from '../config/adsPolicy'
 import { cn } from '../utils/cn'
 
 type CenterMax = 'content' | 'ultra'
@@ -19,14 +21,17 @@ export function PageAdRails({
   centerMax?: CenterMax
 }) {
   const centerClass = centerMax === 'ultra' ? 'max-w-tf-ultra' : 'max-w-tf-content'
+  const { pathname } = useLocation()
+  /** Rails latéraux avec pubs Google uniquement sur pages éditoriales ; sinon contenu seul. */
+  const showSideRails = variant === 'rails' && isEditorialAdsRoute(pathname)
 
-  if (variant === 'centerOnly') {
+  if (variant === 'centerOnly' || !showSideRails) {
     return (
       <div
         className={cn(
           'mx-auto flex w-full min-w-0 flex-col',
           centerClass,
-          'md:h-full md:min-h-0 md:flex-1 md:overflow-hidden',
+          variant === 'centerOnly' ? 'md:h-full md:min-h-0 md:flex-1 md:overflow-hidden' : undefined,
         )}
       >
         {children}

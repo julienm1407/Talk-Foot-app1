@@ -48,9 +48,9 @@ export function AppShell() {
           <div
             className={cn(
               'tf-channel-shell mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
-              /* Mobile : tout le live défile comme une page (doigt haut/bas). Desktop : hauteur cadrée, pas de scroll outer. */
-              'min-h-0 max-lg:touch-pan-y max-lg:overflow-y-auto max-lg:overscroll-y-contain max-lg:[-webkit-overflow-scrolling:touch]',
-              'lg:min-h-0 lg:overflow-hidden',
+              /* Téléphone : scroll page. Tablette+ : hauteur cadrée, scroll dans les colonnes du salon. */
+              'min-h-0 max-md:touch-pan-y max-md:overflow-y-auto max-md:overscroll-y-contain max-md:[-webkit-overflow-scrolling:touch]',
+              'md:min-h-0 md:overflow-hidden',
               mainBottomPadChannel,
               isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',
             )}

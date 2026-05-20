@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
+import { AdSlot } from '../components/ui/AdSlot'
+import { EditorialProse } from '../components/ads/EditorialProse'
 
 export function DebateDetailPage() {
   const { debateId } = useParams()
@@ -83,6 +85,24 @@ export function DebateDetailPage() {
           </div>
         </div>
       </header>
+
+      <EditorialProse
+        title="Contexte du débat"
+        className="border-orange-200/35 bg-orange-50/50"
+        paragraphs={[
+          `Ce fil rassemble les arguments des supporters autour de « ${debate.title} ». Les extraits ci-dessous proviennent de la communauté Talk Foot ; la discussion complète se poursuit dans le salon de groupe associé.`,
+          'Talk Foot propose des débats modérés, des sondages et des salons live par match. Les pages de simple navigation (liste des débats, calendrier, connexion) restent sans publicité.',
+        ]}
+      />
+
+      <AdSlot
+        compact
+        tone="navy"
+        brand="Talk Foot"
+        body="Espace partenaire sur la page débat."
+        imageSeed="debate-inline"
+        contentReady
+      />
 
       <Card className="p-5 sm:p-6" elevation="soft">
         <h2 className="font-display text-sm font-black uppercase tracking-[0.18em] text-tf-grey">

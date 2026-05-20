@@ -1,22 +1,17 @@
 import type { Highlight } from '../data/highlights'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../api/sportMonks'
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n))
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
-}
+import {
+  adjust1x2OddsForLiveInternal,
+  adjustOverUnder25ForLiveInternal,
+  anytimeScorerOddsFromEngine,
+  impliedProbsFromDecimalOdds,
+} from '../odds/internalOddsEngine'
+import type { LiveOddsContext } from '../odds/types'
 
 /** Probabilités « dé-vig » simples (partage proportionnel des implied). */
 export function impliedProbs1x2(o: SmBookOdds1x2): { pH: number; pD: number; pA: number } {
-  const iH = 1 / o.home
-  const iD = 1 / o.draw
-  const iA = 1 / o.away
-  const s = iH + iD + iA
-  if (!Number.isFinite(s) || s <= 0) return { pH: 0.42, pD: 0.28, pA: 0.3 }
-  return { pH: iH / s, pD: iD / s, pA: iA / s }
+  const p = impliedProbsFromDecimalOdds(o)
+  return { pH: p.pHome, pD: p.pDraw, pA: p.pAway }
 }
 
 /**
@@ -28,33 +23,14 @@ export function adjust1x2OddsForLive(
   homeGoals: number,
   awayGoals: number,
   minute: number,
+  liveExtras?: Omit<LiveOddsContext, 'minute' | 'homeGoals' | 'awayGoals'>,
 ): SmBookOdds1x2 {
-  const { pH, pD, pA } = impliedProbs1x2(prematch)
-  const d = homeGoals - awayGoals
-  const tau = clamp((minute + 8) / 96, 0.1, 1)
-  const k = 0.95 + 0.85 * tau
-  const sh = Math.exp(k * d)
-  const sa = Math.exp(-k * d)
-  let pH2 = pH * sh
-  let pA2 = pA * sa
-  let pD2 = pD * Math.exp(-0.42 * Math.abs(d) * tau)
-  if (d === 0 && minute >= 55) {
-    const lateTie = clamp((minute - 55) / 40, 0, 1)
-    pD2 *= Math.exp(-2.4 * lateTie * tau)
-    pH2 *= 1 + 0.12 * lateTie
-    pA2 *= 1 + 0.12 * lateTie
-  }
-  const sum = pH2 + pD2 + pA2
-  pH2 /= sum
-  pD2 /= sum
-  pA2 /= sum
-  const overround = 1.048
-  const toDec = (p: number) => round2(1 / clamp(p * overround, 0.018, 0.92))
-  return {
-    home: clamp(toDec(pH2), 1.02, 80),
-    draw: clamp(toDec(pD2), 1.02, 80),
-    away: clamp(toDec(pA2), 1.02, 80),
-  }
+  return adjust1x2OddsForLiveInternal(prematch, {
+    minute,
+    homeGoals,
+    awayGoals,
+    ...liveExtras,
+  })
 }
 
 /** Cotes Over/Under 2,5 ajustées au score et au temps restant. */
@@ -63,36 +39,7 @@ export function adjustOverUnder25ForLive(
   totalGoals: number,
   minute: number,
 ): SmBookOddsOverUnder25 {
-  const iOver = 1 / prematch.over
-  const iUnder = 1 / prematch.under
-  const s = iOver + iUnder
-  let pOver = s > 0 ? iOver / s : 0.5
-  let pUnder = s > 0 ? iUnder / s : 0.5
-  const tau = clamp((minute + 6) / 98, 0.08, 1)
-  const goalsNeededForOver = Math.max(0, 3 - totalGoals)
-  if (goalsNeededForOver === 0) {
-    pOver = 0.99
-    pUnder = 0.01
-  } else if (goalsNeededForOver >= 3) {
-    const timeLeft = clamp(1 - tau, 0.05, 0.95)
-    pOver *= Math.exp(-2.2 * timeLeft)
-    pUnder = 1 - pOver
-  } else {
-    const urgency = clamp((minute - 20) / 75, 0, 1) * goalsNeededForOver
-    pOver *= Math.exp(-1.15 * urgency * tau)
-    pUnder = 1 - pOver
-  }
-  const norm = pOver + pUnder
-  if (norm > 0) {
-    pOver /= norm
-    pUnder /= norm
-  }
-  const overround = 1.05
-  const toDec = (p: number) => round2(1 / clamp(p * overround, 0.02, 0.92))
-  return {
-    over: clamp(toDec(pOver), 1.02, 50),
-    under: clamp(toDec(pUnder), 1.02, 50),
-  }
+  return adjustOverUnder25ForLiveInternal(prematch, totalGoals, minute)
 }
 
 export function slugScorer(name: string): string {
@@ -357,23 +304,6 @@ export function scorerPositionTier(formationPosition?: number): 'gk' | 'def' | '
 }
 
 /** Plus le facteur est bas, plus la cote décimale est basse (attaquant favori). */
-function scorerPositionOddsFactor(tier: 'def' | 'mid' | 'fwd'): number {
-  switch (tier) {
-    case 'fwd':
-      return 0.62
-    case 'mid':
-      return 0.94
-    case 'def':
-      return 1.32
-  }
-}
-
-function hashNameSeed(name: string): number {
-  let h = 0
-  for (let i = 0; i < name.length; i += 1) h = (h * 31 + name.charCodeAt(i)) >>> 0
-  return h || 1
-}
-
 /**
  * Cote buteur « anytime » : poste (attaquant < milieu < défenseur ; **gardien = 100**),
  * difficulté du match (favori vs outsider), micro-étalement sur le nom.
@@ -384,40 +314,24 @@ export function anytimeScorerOdds(
   anchor1x2: SmBookOdds1x2,
   alreadyScored: boolean,
   meta?: ScorerLineupMeta | null,
-  opts?: { liveMinute?: number },
+  opts?: { liveMinute?: number; teamAttackIndex?: number },
 ): number {
-  if (alreadyScored) return 1.01
-  const tier = scorerPositionTier(meta?.formationPosition)
-  /** Gardien : buteur extrêmement rare → cote fixe symbolique. */
-  if (tier === 'gk') return 100
+  const probs = impliedProbs1x2(anchor1x2)
+  const attackFallback =
+    side === 'home'
+      ? Math.round(probs.pH * 70 + probs.pA * 15 + 15)
+      : Math.round(probs.pA * 70 + probs.pH * 15 + 15)
+  const attack = opts?.teamAttackIndex ?? attackFallback
 
-  const { pH, pD, pA } = impliedProbs1x2(anchor1x2)
-  const pTeam = side === 'home' ? pH : pA
-  const pOpp = side === 'home' ? pA : pH
-  /** Écart de niveau : positif si notre équipe nettement au-dessus (cotes faciles pour les buteurs). */
-  const favGap = clamp(pTeam - pOpp, -0.38, 0.58)
-  /** Adversaire dangereux même si on reste favori (ex. Bayern à l’extérieur du PSG) → cotes buteur plus hautes. */
-  const oppThreat = clamp(pOpp / clamp(pTeam + 0.12, 0.1, 0.92), 0.22, 3.4)
-
-  let base = 7.4 - 8.6 * favGap + 1.35 * oppThreat - 1.1 * pTeam - 0.28 * pD
-  base = clamp(base, 2.05, 13.8)
-
-  let odds = base * scorerPositionOddsFactor(tier)
-
-  const h = hashNameSeed(name)
-  const micro = 0.94 + ((h % 19) / 19) * 0.12
-  odds *= micro
-
-  const min = tier === 'def' ? 5.8 : tier === 'mid' ? 3.4 : 2.05
-  const max = tier === 'def' ? 38 : tier === 'mid' ? 22 : 14
-  odds = clamp(odds, min, max)
-
-  const minLive = typeof opts?.liveMinute === 'number' && Number.isFinite(opts.liveMinute) ? opts.liveMinute : null
-  if (minLive != null && minLive > 55) {
-    const late = clamp((minLive - 55) / 35, 0, 1)
-    const squeeze = 1 - late * (tier === 'fwd' ? 0.1 : tier === 'mid' ? 0.06 : 0.04)
-    odds *= squeeze
-  }
-
-  return round2(clamp(odds, min, max))
+  return anytimeScorerOddsFromEngine(
+    {
+      name,
+      side,
+      isStarter: true,
+      formationPosition: meta?.formationPosition,
+    },
+    attack,
+    alreadyScored,
+    { liveMinute: opts?.liveMinute },
+  )
 }

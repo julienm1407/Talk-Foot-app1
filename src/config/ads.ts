@@ -1,7 +1,9 @@
 /**
  * Publicités display (Google AdSense) — optionnel via variables d’environnement.
- * Sans client + au moins un slot (ou VITE_ADSENSE_SLOT_DEFAULT), l’app garde les encarts mock.
+ * Sans client + au moins un slot (ou VITE_ADSENSE_SLOT_DEFAULT sur l’accueil), l’app garde les encarts mock.
+ * Les annonces live sont limitées aux routes « éditoriales » — voir `adsPolicy.ts`.
  */
+import { placementMayUseDefaultSlot, shouldShowLiveAdPlacement } from './adsPolicy'
 
 function trimEnv(v: unknown): string | undefined {
   if (typeof v !== 'string') return undefined
@@ -44,6 +46,10 @@ const PLACEMENT_TO_ENV_KEY: Record<string, string> = {
   'ad-stream': 'VITE_ADSENSE_SLOT_HOME_STREAM',
   'home-left-mid': 'VITE_ADSENSE_SLOT_HOME_LEFT',
   'home-right-mid': 'VITE_ADSENSE_SLOT_HOME_RIGHT',
+  'article-inline': 'VITE_ADSENSE_SLOT_ARTICLE_INLINE',
+  'article-mid': 'VITE_ADSENSE_SLOT_ARTICLE_INLINE',
+  'debate-inline': 'VITE_ADSENSE_SLOT_DEBATE_INLINE',
+  'club-inline': 'VITE_ADSENSE_SLOT_CLUB_INLINE',
 }
 
 export function getAdsenseSlotForPlacement(placementKey: string): string | undefined {
@@ -52,10 +58,17 @@ export function getAdsenseSlotForPlacement(placementKey: string): string | undef
     const slot = env(key)
     if (slot) return slot
   }
-  return env('VITE_ADSENSE_SLOT_DEFAULT')
+  if (placementMayUseDefaultSlot(placementKey)) {
+    return env('VITE_ADSENSE_SLOT_DEFAULT')
+  }
+  return undefined
 }
 
-export function getLiveAdsenseUnit(placementKey: string): { client: string; slot: string } | null {
+export function getLiveAdsenseUnit(
+  placementKey: string,
+  pathname?: string,
+): { client: string; slot: string } | null {
+  if (pathname && !shouldShowLiveAdPlacement(placementKey, pathname)) return null
   const client = getAdsenseClient()
   const slot = getAdsenseSlotForPlacement(placementKey)
   if (!client || !slot) return null

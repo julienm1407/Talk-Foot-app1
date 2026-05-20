@@ -1,6 +1,9 @@
+import { useLocation } from 'react-router-dom'
 import { Card } from './Card'
+import { AdSenseDisclosure } from '../ads/AdSenseDisclosure'
 import { AdsenseDisplayUnit } from '../ads/AdsenseDisplayUnit'
 import { getLiveAdsenseUnit } from '../../config/ads'
+import { shouldServeLiveAdsense } from '../../config/adsPolicy'
 import { cn } from '../../utils/cn'
 
 export function AdSlot({
@@ -12,6 +15,8 @@ export function AdSlot({
   compact,
   /** Colonne latérale type skyscraper (desktop). */
   variant = 'default',
+  /** Ne pas afficher de pub Google tant que le contenu principal n’est pas chargé. */
+  contentReady = true,
   className,
 }: {
   title?: string
@@ -21,10 +26,14 @@ export function AdSlot({
   imageSeed?: string
   compact?: boolean
   variant?: 'default' | 'rail'
+  contentReady?: boolean
   className?: string
 }) {
+  const { pathname } = useLocation()
   const placementKey = imageSeed
-  const live = getLiveAdsenseUnit(placementKey)
+  const liveUnit = getLiveAdsenseUnit(placementKey, pathname)
+  const live =
+    liveUnit && shouldServeLiveAdsense(pathname, { contentReady }) ? liveUnit : null
 
   const gradient =
     tone === 'navy'
@@ -40,6 +49,7 @@ export function AdSlot({
         className={cn('overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm', className)}
         aria-label="Publicité"
       >
+        <AdSenseDisclosure className="py-1" />
         <AdsenseDisplayUnit
           client={live.client}
           slot={live.slot}
@@ -52,14 +62,17 @@ export function AdSlot({
 
   if (live) {
     return (
-      <Card elevation="none" className={cn('overflow-hidden', className)}>
-        <AdsenseDisplayUnit
-          client={live.client}
-          slot={live.slot}
-          format="auto"
-          className={cn('w-full max-w-full', compact ? 'min-h-[72px]' : 'min-h-[100px]')}
-        />
-      </Card>
+      <div className={cn('space-y-1', className)} role="complementary" aria-label="Publicité">
+        <AdSenseDisclosure />
+        <Card elevation="none" className="overflow-hidden">
+          <AdsenseDisplayUnit
+            client={live.client}
+            slot={live.slot}
+            format="auto"
+            className={cn('w-full max-w-full', compact ? 'min-h-[72px]' : 'min-h-[100px]')}
+          />
+        </Card>
+      </div>
     )
   }
 

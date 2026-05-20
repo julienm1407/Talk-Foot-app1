@@ -39,6 +39,9 @@ interface ImportMetaEnv {
   readonly VITE_ADSENSE_SLOT_HOME_STREAM?: string
   readonly VITE_ADSENSE_SLOT_HOME_LEFT?: string
   readonly VITE_ADSENSE_SLOT_HOME_RIGHT?: string
+  readonly VITE_ADSENSE_SLOT_ARTICLE_INLINE?: string
+  readonly VITE_ADSENSE_SLOT_DEBATE_INLINE?: string
+  readonly VITE_ADSENSE_SLOT_CLUB_INLINE?: string
 }
 
 interface ImportMeta {

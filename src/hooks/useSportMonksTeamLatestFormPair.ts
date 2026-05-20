@@ -12,15 +12,15 @@ function vnToWlForm(strip: Array<'V' | 'N' | 'D'>): FormResult[] {
  * Repli « forme » comme sur la fiche club : `GET /teams/{id}` + `latest` (derniers matchs terminés).
  * Utilisé seulement si les tendances fixture + lineups n’ont pas fourni de bandeau W/D/L.
  */
-export function useSportMonksTeamLatestFormPair(match: Match, enabled: boolean) {
+export function useSportMonksTeamLatestFormPair(match: Match | null, enabled: boolean) {
   const [form, setForm] = useState<{ home: FormResult[]; away: FormResult[] } | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const hSm = match.home.sportMonksTeamId
-  const aSm = match.away.sportMonksTeamId
+  const hSm = match?.home.sportMonksTeamId
+  const aSm = match?.away.sportMonksTeamId
 
   useEffect(() => {
-    if (!enabled || hSm == null || aSm == null) {
+    if (!match || !enabled || hSm == null || aSm == null) {
       setForm(null)
       setLoading(false)
       return
@@ -57,7 +57,7 @@ export function useSportMonksTeamLatestFormPair(match: Match, enabled: boolean) 
     return () => {
       cancelled = true
     }
-  }, [enabled, hSm, aSm, match.away.id, match.home.id, match.id])
+  }, [enabled, hSm, aSm, match?.away.id, match?.home.id, match?.id])
 
   return { teamPairForm: form, teamPairFormLoading: loading }
 }

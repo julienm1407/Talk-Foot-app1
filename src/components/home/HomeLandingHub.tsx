@@ -100,8 +100,8 @@ export function HomeLandingHub({
               )}
             >
               {compact
-                ? 'Match, Groupes, Classement : une entrée par rubrique.'
-                : 'Match, Groupes et Classement : tout le site depuis cette carte.'}
+                ? 'Salons live, débats, actus foot et tribunes : le hub des supporters en un seul endroit.'
+                : 'Suivez les matchs en direct, rejoignez les tribunes, lisez les actus et participez aux débats — Talk Foot centralise l’expérience supporter autour du football.'}
             </p>
             <p
               className={cn(

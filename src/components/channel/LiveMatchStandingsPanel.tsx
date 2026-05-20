@@ -14,6 +14,7 @@ export function LiveMatchStandingsPanel({
   dataSourceLabel,
   projectedLive,
   light,
+  scrollMaxClassName,
 }: {
   leagueId: string
   rows: LeagueStandingRow[]
@@ -24,6 +25,8 @@ export function LiveMatchStandingsPanel({
   dataSourceLabel?: string
   projectedLive?: boolean
   light?: boolean
+  /** Hauteur max du tableau (ex. popup pré-match). */
+  scrollMaxClassName?: string
 }) {
   const theme = competitionThemes[leagueId]
 
@@ -76,7 +79,8 @@ export function LiveMatchStandingsPanel({
       ) : null}
       <div
         className={cn(
-          'max-h-[min(42vh,320px)] overflow-auto rounded-lg border',
+          'overflow-auto rounded-lg border',
+          scrollMaxClassName ?? 'max-h-[min(42vh,320px)]',
           light ? 'border-slate-200 bg-white' : 'border-[#3a6690]/55 bg-[#0a1f35]/85',
         )}
       >

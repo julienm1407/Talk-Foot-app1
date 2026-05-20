@@ -35,6 +35,7 @@ import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { getSportMonksTokenSource } from '../utils/apiTokens'
 import { HomeSiteSearch, type HomeSiteSearchHandle } from '../components/search/HomeSiteSearch'
 import { SearchTrends12h } from '../components/search/SearchTrends12h'
+import { HomeEditorialIntro } from '../components/ads/HomeEditorialIntro'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -142,6 +143,7 @@ export function HomePage() {
 
   const wideHomeBelowFold = (
     <>
+      <HomeEditorialIntro />
       <section className={cn('w-full', trendsShell)} aria-label="Débats tendances">
         <TrendingDebatesSection debates={trendingDebates} variant="band" />
       </section>
@@ -154,6 +156,7 @@ export function HomePage() {
             brand="Matchday sponsor"
             body="Sous le hub — fil d’actualité et conversations."
             imageSeed="home-under-hero-desktop"
+            contentReady={!loading}
           />
         </div>
         <HomeFeedContinuation
@@ -168,6 +171,7 @@ export function HomePage() {
           supporterFocusUi={supporterFocusUi}
           clubFocusLabel={clubFocusLabel}
           team={team}
+          contentReady={!loading}
         />
       </div>
     </>
@@ -269,6 +273,7 @@ export function HomePage() {
         onCreateGroup={() => setCreateOpen(true)}
       />
       <FavoritesEncart className="mx-auto max-w-tf-content" />
+      <HomeEditorialIntro />
       <div className="mx-auto w-full max-w-tf-content space-y-6 sm:space-y-8">
         {supporterTintActive && team ? (
           <div
@@ -406,6 +411,7 @@ export function HomePage() {
               brand="Matchday sponsor"
               body="Sous le débat du jour dans la colonne principale."
               imageSeed="home-under-hero"
+              contentReady={!loading}
             />
           </div>
           </div>
@@ -427,6 +433,7 @@ export function HomePage() {
         supporterFocusUi={supporterFocusUi}
         clubFocusLabel={clubFocusLabel}
         team={team}
+        contentReady={!loading}
       />
       </div>
 
