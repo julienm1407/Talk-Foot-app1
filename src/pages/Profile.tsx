@@ -1,5 +1,5 @@
 import { currentUser } from '../data/users'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
@@ -81,6 +81,7 @@ function profileNavLink(appearance: Appearance) {
 
 export function ProfilePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { user: authUser, logout } = useAuth()
@@ -126,6 +127,19 @@ export function ProfilePage() {
     const wonBets = bets.filter((b) => b.status === 'won').map((b) => b.id)
     if (wonBets.length) creditWonBets(wonBets)
   }, [bets, creditWonBets])
+
+  const firstLiveMatch = useMemo(
+    () => matches.find((m) => m.status === 'live') ?? null,
+    [matches],
+  )
+
+  useEffect(() => {
+    if (location.hash !== '#paris') return
+    const t = window.setTimeout(() => {
+      document.getElementById('paris')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
+    return () => window.clearTimeout(t)
+  }, [location.hash, location.pathname])
 
   const handleLogout = () => {
     logout()
@@ -348,6 +362,16 @@ export function ProfilePage() {
             className={cn('snap-start', profileNavLink(appearance), TF_FOCUS_VISIBLE)}
           >
             {label}
+            {id === 'paris' && bets.length > 0 ? (
+              <span
+                className={cn(
+                  'ml-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full px-1 text-[9px] font-black tabular-nums',
+                  L ? 'bg-emerald-600 text-white' : 'bg-emerald-400 text-emerald-950',
+                )}
+              >
+                {betsView.open.length || bets.length}
+              </span>
+            ) : null}
           </a>
         ))}
       </nav>
@@ -860,7 +884,11 @@ export function ProfilePage() {
                   {betsView.lastOpen.map((b) => {
                     const m = betsView.matchLine(b.matchId)
                     return (
-                      <div key={b.id} className="p-3">
+                      <Link
+                        key={b.id}
+                        to={`/channel/${b.matchId}`}
+                        className={cn('block p-3 transition', L ? 'hover:bg-slate-50/80' : 'hover:bg-white/5')}
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate text-xs font-black text-tf-app-fg">{m.title}</div>
@@ -870,10 +898,9 @@ export function ProfilePage() {
                               </div>
                             ) : null}
                             <div className="mt-2 text-xs font-bold text-tf-app-fg">
-                              {betsView.marketLabel(b.market)} •{' '}
-                              {betsView.selectionLabel(b, b.matchId)} • {b.stake}j • x
-                              {b.odds.toFixed(2).replace('.', ',')}
+                              {betsView.selectionLabel(b, b.matchId)} • {b.stake}j
                             </div>
+                            <div className="mt-1 text-[11px] font-semibold text-blue-500">Ouvrir le match →</div>
                           </div>
                           <Badge
                             className={
@@ -885,7 +912,7 @@ export function ProfilePage() {
                             En cours
                           </Badge>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>
@@ -939,7 +966,11 @@ export function ProfilePage() {
                               label: 'Annulé',
                             }
                     return (
-                      <div key={b.id} className="p-3">
+                      <Link
+                        key={b.id}
+                        to={`/channel/${b.matchId}`}
+                        className={cn('block p-3 transition', L ? 'hover:bg-slate-50/80' : 'hover:bg-white/5')}
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate text-xs font-black text-tf-app-fg">{m.title}</div>
@@ -949,13 +980,13 @@ export function ProfilePage() {
                               </div>
                             ) : null}
                             <div className="mt-2 text-xs font-bold text-tf-app-fg">
-                              {betsView.marketLabel(b.market)} •{' '}
                               {betsView.selectionLabel(b, b.matchId)} • {b.stake}j
                             </div>
+                            <div className="mt-1 text-[11px] font-semibold text-blue-500">Ouvrir le match →</div>
                           </div>
                           <Badge className={statusBadge.cls}>{statusBadge.label}</Badge>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>
@@ -967,8 +998,38 @@ export function ProfilePage() {
             </div>
           </div>
         ) : (
-          <div className="mt-3 text-sm font-semibold text-tf-app-muted">
-            Pas encore de paris. Lance un match live et tente un prono.
+          <div
+            className={cn(
+              'mt-4 rounded-3xl border border-dashed p-5 text-center',
+              L ? 'border-slate-200/90 bg-slate-50/60' : 'border-white/15 bg-white/[0.04]',
+            )}
+          >
+            <p className="text-sm font-black text-tf-app-fg">Aucun pari pour l’instant</p>
+            <p className="mt-2 text-sm font-semibold text-tf-app-muted">
+              Ouvre un match en direct, choisis un prono (1N2, buteur, over…), puis valide — tu le retrouveras ici.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Link
+                to="/match"
+                className={cn(
+                  'inline-flex min-h-11 items-center justify-center rounded-2xl border-2 border-tf-cta-hover/40 bg-tf-cta px-5 text-sm font-black text-white shadow-tf-cta transition hover:bg-tf-cta-hover',
+                  TF_FOCUS_VISIBLE,
+                )}
+              >
+                Voir les matchs
+              </Link>
+              {firstLiveMatch ? (
+                <Link
+                  to={`/channel/${firstLiveMatch.id}`}
+                  className={cn(
+                    'inline-flex min-h-11 items-center justify-center rounded-2xl border border-tf-dark bg-white/95 px-5 text-sm font-bold text-tf-dark shadow-tf-elev-1 transition hover:bg-tf-electric-soft',
+                    TF_FOCUS_VISIBLE,
+                  )}
+                >
+                  Parier sur {firstLiveMatch.home.shortName} — {firstLiveMatch.away.shortName}
+                </Link>
+              ) : null}
+            </div>
           </div>
         )}
       </Card>

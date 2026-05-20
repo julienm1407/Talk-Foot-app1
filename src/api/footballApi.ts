@@ -2,6 +2,7 @@
  * Référentiel Big 5 + mapping noms d’équipes (SportMonks, etc.) → ids internes Talk Foot.
  * L’ancienne intégration API-Football a été retirée : uniquement SportMonks pour les matchs.
  */
+import { SPORTMONKS_TEAM_ID_BY_CLUB_ID } from '../data/sportMonksKnownTeamIds'
 export const LEAGUE_IDS: Record<string, number> = {
   'ligue-1': 61,
   laliga: 140,
@@ -93,7 +94,10 @@ function normalize(s: string): string {
 
 const NAME_TO_ID: Record<string, string> = {
   parissaintgermain: 'psg',
-  paris: 'psg',
+  parissaintgermainfc: 'psg',
+  parissg: 'psg',
+  parisfootballclub: 'parisfc',
+  parisfc: 'parisfc',
   olympiquedemarseille: 'om',
   marseille: 'om',
   asmonaco: 'monaco',
@@ -132,7 +136,6 @@ const NAME_TO_ID: Record<string, string> = {
   saintsetienne: 'stetienne',
   saintsaintetienne: 'stetienne',
   stetienne: 'stetienne',
-  parisfc: 'parisfc',
   realmadrid: 'rma',
   rma: 'rma',
   fcbarcelona: 'fcb',
@@ -260,4 +263,21 @@ const NAME_TO_ID: Record<string, string> = {
 export function apiNameToOurId(name: string): string {
   const key = normalize(name)
   return NAME_TO_ID[key] ?? key.slice(0, 8)
+}
+
+/** Id interne Talk Foot depuis le `participant_id` SportMonks (prioritaire sur le nom API). */
+export function clubIdFromSportMonksTeamId(sportMonksTeamId: number | undefined): string | undefined {
+  if (sportMonksTeamId == null) return undefined
+  for (const [clubId, smId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
+    if (smId === sportMonksTeamId) return clubId
+  }
+  return undefined
+}
+
+/** Résout l’id club : d’abord SportMonks, sinon nom API (évite Paris FC → PSG). */
+export function resolveTalkFootClubId(opts: {
+  apiName: string
+  sportMonksTeamId?: number
+}): string {
+  return clubIdFromSportMonksTeamId(opts.sportMonksTeamId) ?? apiNameToOurId(opts.apiName)
 }

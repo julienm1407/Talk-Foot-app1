@@ -22,6 +22,7 @@ import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { cn } from '../../utils/cn'
 import { TokenGlyph } from '../ui/TokenGlyph'
+import { MesParisEncart } from '../bet/MesParisEncart'
 
 /** Petites offres mockées pour le rail hub (évite le vide visuel sous les tribunes). */
 const RAIL_BOUTIQUE_OFFERS = [
@@ -145,6 +146,8 @@ export function HomeMonEspacePanel({
             ›
           </span>
         </Link>
+
+        <MesParisEncart compact={slim} />
 
         <div>
           <p className={cn('px-1 text-[10px] font-black uppercase tracking-[0.18em]', hubCaps)}>

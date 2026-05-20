@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useCarouselSwipe } from '../../hooks/useCarouselSwipe'
 import { clubPathForId } from '../../utils/clubRoute'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
@@ -99,6 +100,13 @@ export function LiveMatchHero({
   /** But plein encart : masquer quasi tout le HUD match derrière */
   const goalFullTakeover = burst?.kind === 'goal'
   const crestSize = compact ? 40 : spotlight ? 56 : 60
+  const carouselSwipeEnabled = Boolean(carousel && carousel.count > 1)
+  const { swipeHandlers } = useCarouselSwipe({
+    enabled: carouselSwipeEnabled,
+    index: carousel?.index ?? 0,
+    count: carousel?.count ?? 1,
+    onSelect: carousel?.onSelect ?? (() => {}),
+  })
   const minHero = compact
     ? 'min-h-[108px] sm:min-h-[118px]'
     : spotlight
@@ -123,6 +131,7 @@ export function LiveMatchHero({
         fillColumnHeight && 'flex h-full min-h-0 flex-col',
         className,
       )}
+      {...(carouselSwipeEnabled ? { 'data-no-swipe': true } : {})}
     >
       <div className="tf-live-encart-halo" aria-hidden />
       <div className="tf-live-encart-halo-ring" aria-hidden />
@@ -133,8 +142,10 @@ export function LiveMatchHero({
             'border-white/15 shadow-[0_28px_90px_rgba(0,0,0,0.62)] ring-1 ring-rose-500/25',
           fillColumnHeight && 'flex h-full min-h-0 flex-1 flex-col',
           rimClass,
+          carouselSwipeEnabled && 'touch-pan-y cursor-grab active:cursor-grabbing',
         )}
         aria-label="Match en direct mis en avant"
+        {...swipeHandlers}
       >
       <div
         className={cn(
@@ -447,12 +458,18 @@ export function LiveMatchHero({
       {carousel && carousel.count > 1 ? (
         <div
           className={cn(
-            'flex shrink-0 justify-end gap-1.5 border-t border-white/5 bg-[#050d14]/90',
+            'flex shrink-0 items-center justify-between gap-2 border-t border-white/5 bg-[#050d14]/90',
             compact ? 'px-3 py-1.5' : spotlight ? 'px-3 py-1.5 sm:px-4' : 'px-4 py-2.5',
           )}
-          role="tablist"
-          aria-label="Choisir le match en direct affiché"
         >
+          <p className="text-[10px] font-semibold text-sky-200/65" aria-hidden>
+            Glisse ↔
+          </p>
+          <div
+            className="flex justify-end gap-1.5"
+            role="tablist"
+            aria-label="Choisir le match en direct affiché"
+          >
           {Array.from({ length: carousel.count }, (_, i) => (
             <button
               key={i}
@@ -467,6 +484,7 @@ export function LiveMatchHero({
               aria-label={`Match live ${i + 1}`}
             />
           ))}
+          </div>
         </div>
       ) : null}
       </section>

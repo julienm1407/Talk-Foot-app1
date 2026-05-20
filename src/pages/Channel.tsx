@@ -27,6 +27,7 @@ import type { Message, ReactionType, MatchTribuneZone } from '../types/chat'
 import type { Highlight } from '../data/highlights'
 import {
   extractCurrentGoalsFromSmFixture,
+  extractLiveGoalDisplayRowsFromSmFixture,
   extractLiveMinuteFromSmFixture,
   highlightFullscreenDedupeKey,
   liveClockPausedFromSmFixture,
@@ -143,13 +144,13 @@ function compactPlayerLabel(name: string) {
   return candidate.slice(0, 10)
 }
 
-/** Buteurs sous le camp concerné (timeline SM). */
+/** Buteurs uniquement, sous le camp qui a marqué. */
 function LiveHeaderScorers({
   goals,
   align,
   light,
 }: {
-  goals: { name: string; minute: number; assistName?: string }[]
+  goals: { name: string; minute: number }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -157,40 +158,22 @@ function LiveHeaderScorers({
   return (
     <ul
       className={cn(
-        'mt-1.5 flex w-full flex-col gap-1',
+        'mt-1 flex w-full flex-col gap-0.5',
         align === 'right' ? 'items-end text-right' : 'items-start text-left',
       )}
+      aria-label={align === 'right' ? 'Buteurs extérieur' : 'Buteurs domicile'}
     >
       {goals.map((g, i) => (
         <li
           key={`${g.name}-${g.minute}-${i}`}
           className={cn(
-            'flex max-w-[min(100%,14rem)] items-center gap-1.5 rounded-md border px-1.5 py-0.5 text-[10px] font-bold leading-tight sm:max-w-[min(100%,18rem)] sm:text-[11px]',
-            light
-              ? 'border-emerald-500/40 bg-emerald-50/95 text-[#064e3b] shadow-sm'
-              : 'border-cyan-400/30 bg-[#071f36]/95 text-cyan-50 shadow-[0_2px_8px_rgba(0,0,0,0.25)]',
-            'flex-row',
+            'flex max-w-[min(100%,11rem)] items-baseline gap-1 text-[10px] font-bold leading-tight sm:max-w-[min(100%,14rem)] sm:text-[11px]',
+            align === 'right' ? 'flex-row-reverse' : 'flex-row',
+            light ? 'text-emerald-800' : 'text-cyan-100',
           )}
         >
-          <span className="shrink-0 text-[11px] leading-none sm:text-xs" aria-hidden>
-            ⚽
-          </span>
-          <span className="min-w-0 flex-1 truncate">
-            {g.assistName ? (
-              <>
-                {g.name}
-                <span className="font-semibold opacity-90"> ({g.assistName})</span>
-              </>
-            ) : (
-              g.name
-            )}
-          </span>
-          <span
-            className={cn(
-              'shrink-0 tabular-nums',
-              light ? 'text-emerald-900/90' : 'text-cyan-200/95',
-            )}
-          >
+          <span className="min-w-0 truncate">{g.name}</span>
+          <span className={cn('shrink-0 tabular-nums opacity-90', light ? 'text-emerald-900/75' : 'text-cyan-200/80')}>
             {`${g.minute}'`}
           </span>
         </li>
@@ -427,7 +410,6 @@ export function ChannelPage() {
   const chSheetTabIdle = L
     ? 'border-slate-200 bg-slate-100 text-[#2a4f68]'
     : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-200/80'
-  const chSoftRow = L ? 'rounded-md bg-slate-100 px-2 py-1 text-xs' : 'rounded-md bg-[#0a1f35]/70 px-2 py-1 text-xs'
   const chInfoCell = L ? 'rounded-md bg-slate-100 px-2 py-1.5 text-[#0a223a]' : 'rounded-md bg-[#0a1f35]/70 px-2 py-1.5 text-sky-100'
   const chLineupTabActive = L
     ? 'border-sky-400 bg-sky-100 text-[#023458]'
@@ -514,6 +496,26 @@ export function ChannelPage() {
   }, [match?.id, liveSnapshot?.score?.home, liveSnapshot?.score?.away, match?.score?.home, match?.score?.away, initialHomeScore, initialAwayScore])
   const homeScore = displayScore.home
   const awayScore = displayScore.away
+  const goalTeamHints = useMemo(
+    () =>
+      match
+        ? {
+            home: {
+              shortName: match.home.shortName,
+              name: match.home.name,
+              sportMonksTeamId: match.home.sportMonksTeamId,
+            },
+            away: {
+              shortName: match.away.shortName,
+              name: match.away.name,
+              sportMonksTeamId: match.away.sportMonksTeamId,
+            },
+          }
+        : null,
+    [match],
+  )
+  const homeHeaderLabel = match?.home.shortName ?? homeName
+  const awayHeaderLabel = match?.away.shortName ?? awayName
   const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? 'channel-demo-match')
@@ -883,11 +885,13 @@ export function ChannelPage() {
       const side = h.side ?? detectHighlightSide(raw)
       const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
-      const goalRow = parseLiveGoalRowsFromHighlights(
-        [h],
-        match?.home.shortName ?? homeName,
-        match?.away.shortName ?? awayName,
-      )[0]
+      const goalRow =
+        goalTeamHints
+          ? parseLiveGoalRowsFromHighlights([h], goalTeamHints.home, goalTeamHints.away, {
+              home: homeScore,
+              away: awayScore,
+            })[0]
+          : undefined
       const scorer = h.scorerName?.trim() || goalRow?.name
       const assist = h.assistName?.trim() || goalRow?.assistName
       const delayMs = index * 900
@@ -1011,37 +1015,50 @@ export function ChannelPage() {
 
   const scoredButeurSlugs = useMemo(
     () =>
-      extractScorerEventsFromHighlights(
-        smTimelineHighlights,
-        match?.home.shortName ?? homeName,
-        match?.away.shortName ?? awayName,
-      ),
-    [smTimelineHighlights, match?.home.shortName, homeName, match?.away.shortName, awayName],
+      goalTeamHints
+        ? extractScorerEventsFromHighlights(smTimelineHighlights, goalTeamHints.home, goalTeamHints.away)
+        : [],
+    [smTimelineHighlights, goalTeamHints],
   )
 
-  const liveGoalDisplayRows = useMemo(
-    () =>
-      match && (status === 'live' || status === 'finished')
-        ? parseLiveGoalRowsFromHighlights(
-            smTimelineHighlights,
-            match.home.shortName ?? homeName,
-            match.away.shortName ?? awayName,
-          )
-        : [],
-    [smTimelineHighlights, status, match, homeName, awayName],
-  )
+  const liveGoalDisplayRows = useMemo(() => {
+    if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
+    const scoreHint = { home: homeScore, away: awayScore }
+    const fromTimeline = parseLiveGoalRowsFromHighlights(
+      smTimelineHighlights,
+      goalTeamHints.home,
+      goalTeamHints.away,
+      scoreHint,
+    )
+    if (fromTimeline.length > 0) return fromTimeline
+    const fromEvents = extractLiveGoalDisplayRowsFromSmFixture(
+      liveBundleFixture,
+      goalTeamHints.home,
+      goalTeamHints.away,
+      scoreHint,
+    )
+    return fromEvents
+  }, [
+    smTimelineHighlights,
+    status,
+    match,
+    goalTeamHints,
+    homeScore,
+    awayScore,
+    liveBundleFixture,
+  ])
   const headerHomeScorers = useMemo(
     () =>
       liveGoalDisplayRows
         .filter((r) => r.side === 'home')
-        .map(({ name, minute, assistName }) => ({ name, minute, assistName })),
+        .map(({ name, minute }) => ({ name, minute })),
     [liveGoalDisplayRows],
   )
   const headerAwayScorers = useMemo(
     () =>
       liveGoalDisplayRows
         .filter((r) => r.side === 'away')
-        .map(({ name, minute, assistName }) => ({ name, minute, assistName })),
+        .map(({ name, minute }) => ({ name, minute })),
     [liveGoalDisplayRows],
   )
 
@@ -1057,11 +1074,17 @@ export function ChannelPage() {
     const runSettle = () => {
       if (settledFinishedMatchRef.current === mid) return
       settledFinishedMatchRef.current = mid
-      const scorerEvents = extractScorerEventsFromHighlights(
-        timelineHighlightsRef.current,
-        hs,
-        aw,
-      ).map((e) => ({ side: e.side, slug: e.slug }))
+      const scorerEvents = goalTeamHints
+        ? extractScorerEventsFromHighlights(
+            timelineHighlightsRef.current,
+            goalTeamHints.home,
+            goalTeamHints.away,
+          ).map((e) => ({ side: e.side, slug: e.slug }))
+        : extractScorerEventsFromHighlights(
+            timelineHighlightsRef.current,
+            { shortName: hs, name: hs },
+            { shortName: aw, name: aw },
+          ).map((e) => ({ side: e.side, slug: e.slug }))
       betting.settleMatchResult(
         { home: fh, away: fa },
         { scorerEvents, forMatchId: mid },
@@ -1081,6 +1104,7 @@ export function ChannelPage() {
     awayScore,
     homeName,
     awayName,
+    goalTeamHints,
     betting.settleMatchResult,
   ])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
@@ -1233,17 +1257,17 @@ export function ChannelPage() {
     const red = pick(['redcards', 'red_cards'])
     const saves = pick(['saves'])
     return [
-      possessionRow ? { label: 'Possession %', home: possessionRow.home, away: possessionRow.away } : null,
-      shotsTotal ? { label: 'Tirs', home: shotsTotal.home, away: shotsTotal.away } : null,
-      shotsOnTarget ? { label: 'Tirs cadrés', home: shotsOnTarget.home, away: shotsOnTarget.away } : null,
-      dangerous ? { label: 'Att. dangereuses', home: dangerous.home, away: dangerous.away } : null,
-      corners ? { label: 'Corners', home: corners.home, away: corners.away } : null,
-      fouls ? { label: 'Fautes', home: fouls.home, away: fouls.away } : null,
-      offsides ? { label: 'Hors-jeu', home: offsides.home, away: offsides.away } : null,
-      yellow ? { label: 'Cartons jaunes', home: yellow.home, away: yellow.away } : null,
-      red ? { label: 'Cartons rouges', home: red.home, away: red.away } : null,
-      saves ? { label: 'Arrêts', home: saves.home, away: saves.away } : null,
-    ].filter(Boolean) as Array<{ label: string; home: number; away: number }>
+      possessionRow ? { key: 'possession', label: 'Possession %', home: possessionRow.home, away: possessionRow.away } : null,
+      shotsTotal ? { key: 'shots', label: 'Tirs', home: shotsTotal.home, away: shotsTotal.away } : null,
+      shotsOnTarget ? { key: 'shots_on_target', label: 'Tirs cadrés', home: shotsOnTarget.home, away: shotsOnTarget.away } : null,
+      dangerous ? { key: 'dangerous_attacks', label: 'Att. dangereuses', home: dangerous.home, away: dangerous.away } : null,
+      corners ? { key: 'corners', label: 'Corners', home: corners.home, away: corners.away } : null,
+      fouls ? { key: 'fouls', label: 'Fautes', home: fouls.home, away: fouls.away } : null,
+      offsides ? { key: 'offsides', label: 'Hors-jeu', home: offsides.home, away: offsides.away } : null,
+      yellow ? { key: 'yellow_cards', label: 'Cartons jaunes', home: yellow.home, away: yellow.away } : null,
+      red ? { key: 'red_cards', label: 'Cartons rouges', home: red.home, away: red.away } : null,
+      saves ? { key: 'saves', label: 'Arrêts', home: saves.home, away: saves.away } : null,
+    ].filter(Boolean) as Array<{ key: string; label: string; home: number; away: number }>
   }, [liveStatRows, possessionRow])
   const dangerousRow = useMemo(
     () => liveStatRows.find((r) => r.key === 'dangerous_attacks') ?? null,
@@ -1417,76 +1441,83 @@ export function ChannelPage() {
             />
           </div>
         ) : null}
-        <div className="flex flex-col gap-2 md:hidden">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <TeamLogoLink clubId={match?.home.id} label={homeName} logoUrl={match?.home.logoUrl} />
-                <Link
-                  to={match?.home.id ? clubPathForId(match.home.id) : '#'}
-                  className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
-                    L ? 'text-[#052032]' : 'text-white'
-                  }`}
-                >
-                  {homeName}
-                </Link>
-              </div>
-              {status === 'live' || status === 'finished' ? (
-                <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
-              ) : null}
-            </div>
-            <div className="min-w-0 text-right">
-              <div className="flex min-w-0 items-center justify-end gap-2">
-                <Link
-                  to={match?.away.id ? clubPathForId(match.away.id) : '#'}
-                  className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
-                    L ? 'text-[#052032]' : 'text-white'
-                  }`}
-                >
-                  {awayName}
-                </Link>
-                <TeamLogoLink clubId={match?.away.id} label={awayName} logoUrl={match?.away.logoUrl} />
-              </div>
-              {status === 'live' || status === 'finished' ? (
-                <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
-              ) : null}
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <p className={`text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
-              {homeScore} - {awayScore}
-            </p>
-          </div>
-          <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
-            {status === 'live' ? (
-              <span className="inline-flex items-center justify-center gap-1">
-                <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
-                {timerText}
-              </span>
-            ) : (
-              timerText
-            )}
-          </p>
-        </div>
-        <div className="hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:gap-4 md:grid">
-          <div className="flex min-w-0 flex-col gap-1 justify-self-start">
-            <div className="flex min-w-0 items-center gap-3">
-              <TeamLogoLink clubId={match?.home.id} label={homeName} logoUrl={match?.home.logoUrl} />
+        <div className="flex flex-col gap-1 md:hidden">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
               <Link
                 to={match?.home.id ? clubPathForId(match.home.id) : '#'}
-                className={`truncate text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+                title={homeName}
+                className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
+                  L ? 'text-[#052032]' : 'text-white'
+                }`}
               >
-                {homeName}
+                {homeHeaderLabel}
               </Link>
             </div>
+            <p className={`px-1 text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
+              {homeScore} - {awayScore}
+            </p>
+            <div className="flex min-w-0 items-center justify-end gap-1.5">
+              <Link
+                to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                title={awayName}
+                className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
+                  L ? 'text-[#052032]' : 'text-white'
+                }`}
+              >
+                {awayHeaderLabel}
+              </Link>
+              <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+            </div>
+            <div />
+            <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
+              {status === 'live' ? (
+                <span className="inline-flex items-center justify-center gap-1">
+                  <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
+                  {timerText}
+                </span>
+              ) : (
+                timerText
+              )}
+            </p>
+            <div />
             {status === 'live' || status === 'finished' ? (
-              <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
+              <>
+                <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
+                <div />
+                <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
+              </>
             ) : null}
           </div>
-          <div className="flex flex-col items-center justify-self-center self-start pt-0.5 text-center">
+        </div>
+        <div className="hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[auto_auto_auto] items-start gap-x-3 gap-y-0.5 sm:gap-4 md:grid">
+          <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 justify-self-start">
+            <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
+            <Link
+              to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+              title={homeName}
+              className={`truncate text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+            >
+              {homeHeaderLabel}
+            </Link>
+          </div>
+          <div className="col-start-2 row-start-1 flex flex-col items-center justify-self-center self-start pt-0.5 text-center">
             <p className={`text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
               {homeScore} - {awayScore}
             </p>
+          </div>
+          <div className="col-start-3 row-start-1 flex min-w-0 items-center justify-end gap-3 justify-self-end">
+            <Link
+              to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+              title={awayName}
+              className={`truncate text-right text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
+            >
+              {awayHeaderLabel}
+            </Link>
+            <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+          </div>
+          <div className="col-start-2 row-start-2 flex justify-center">
             <p className={`text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
               {status === 'live' ? (
                 <span className="inline-flex items-center gap-1">
@@ -1498,20 +1529,16 @@ export function ChannelPage() {
               )}
             </p>
           </div>
-          <div className="flex min-w-0 flex-col items-end gap-1 justify-self-end">
-            <div className="flex min-w-0 items-center justify-end gap-3">
-              <Link
-                to={match?.away.id ? clubPathForId(match.away.id) : '#'}
-                className={`truncate text-right text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
-              >
-                {awayName}
-              </Link>
-              <TeamLogoLink clubId={match?.away.id} label={awayName} logoUrl={match?.away.logoUrl} />
-            </div>
-            {status === 'live' || status === 'finished' ? (
-              <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
-            ) : null}
-          </div>
+          {status === 'live' || status === 'finished' ? (
+            <>
+              <div className="col-start-1 row-start-3 justify-self-start">
+                <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
+              </div>
+              <div className="col-start-3 row-start-3 justify-self-end">
+                <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
+              </div>
+            </>
+          ) : null}
         </div>
         {status === 'upcoming' ? (
           <div
@@ -2092,13 +2119,13 @@ export function ChannelPage() {
                   </div>
                   {possessionRow && possessionRatioHome != null ? (
                     <div className="space-y-0.5 px-0.5">
-                      <div className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-wide text-sky-200/90">
+                      <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-wide text-sky-100">
                         <span>Possession</span>
                         <span className="tabular-nums text-sky-50">
                           {Math.round(possessionRow.home)}% – {Math.round(possessionRow.away)}%
                         </span>
                       </div>
-                      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-black/35">
+                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/40 ring-1 ring-white/10">
                         <div
                           className="absolute inset-y-0 left-0 rounded-l-full bg-sky-400/90 transition-[width] duration-700"
                           style={{ width: `${possessionRatioHome * 100}%` }}
@@ -2107,13 +2134,13 @@ export function ChannelPage() {
                     </div>
                   ) : null}
                   {pitchStatPills.length > 0 ? (
-                    <div className="-mx-0.5 flex max-w-full gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+                    <div className="-mx-0.5 flex max-w-full gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
                       {pitchStatPills.map((row) => (
                         <span
                           key={row.label}
-                          className="tf-live-stat-pill shrink-0 rounded-md border border-white/12 bg-[#0a1828]/95 px-2 py-0.5 text-[9px] font-bold text-sky-100 shadow-sm"
+                          className="tf-live-stat-pill shrink-0 rounded-md border border-white/18 bg-[#0a1828]/95 px-2.5 py-1 text-[10px] font-black text-sky-50 shadow-sm"
                         >
-                          <span className="text-sky-300/90">{row.label}</span>{' '}
+                          <span className="text-sky-200">{row.label}</span>{' '}
                           <span className="tabular-nums text-white">{row.home}</span>
                           <span className="text-sky-400/75">-</span>
                           <span className="tabular-nums text-white">{row.away}</span>
@@ -2289,7 +2316,7 @@ export function ChannelPage() {
                       : undefined
                   }
                 >
-                  {teamShortChip(homeName)}
+                  {match?.home.shortName ?? teamShortChip(homeName)}
                 </button>
                 <button
                   type="button"
@@ -2309,7 +2336,7 @@ export function ChannelPage() {
                       : undefined
                   }
                 >
-                  {teamShortChip(awayName)}
+                  {match?.away.shortName ?? teamShortChip(awayName)}
                 </button>
               </div>
             </div>
@@ -2435,12 +2462,42 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {tacticalRows.slice(0, 6).map((row, i) => (
-                  <div key={`mobile-stat-${i}`} className={`flex items-center justify-between ${chSoftRow}`}>
-                    <span className="font-bold text-white">{row.home}</span>
-                    <span className="text-sky-200/80">{row.label}</span>
-                    <span className="font-bold text-white">{row.away}</span>
+                  <div key={`mobile-stat-${i}`} className="rounded-lg border border-white/12 bg-[#0a1f35]/80 px-2.5 py-2">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="text-sm font-black tabular-nums text-white">{row.home}</span>
+                      <span className="text-[11px] font-bold text-sky-100">{row.label}</span>
+                      <span className="text-sm font-black tabular-nums text-white">{row.away}</span>
+                    </div>
+                    <div className="relative h-2 overflow-hidden rounded-full bg-black/35 ring-1 ring-white/10">
+                      <div
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500/90 to-emerald-400/70"
+                        style={{
+                          width: `${Math.max(
+                            8,
+                            Math.round(
+                              (((row.home ?? 0) + (row.away ?? 0)) > 0
+                                ? (row.home / ((row.home ?? 0) + (row.away ?? 0))) * 100
+                                : 50),
+                            ),
+                          )}%`,
+                        }}
+                      />
+                      <div
+                        className="absolute inset-y-0 right-0 bg-gradient-to-l from-rose-500/90 to-rose-400/70"
+                        style={{
+                          width: `${Math.max(
+                            8,
+                            Math.round(
+                              (((row.home ?? 0) + (row.away ?? 0)) > 0
+                                ? (row.away / ((row.home ?? 0) + (row.away ?? 0))) * 100
+                                : 50),
+                            ),
+                          )}%`,
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2497,7 +2554,7 @@ export function ChannelPage() {
                       lineupSide === 'home' ? chLineupTabActive : chLineupTabIdle
                     }`}
                   >
-                    {teamShortChip(homeName)} · {homeName}
+                    {match?.home.shortName ?? teamShortChip(homeName)} · {homeName}
                   </button>
                   <button
                     type="button"
@@ -2509,7 +2566,7 @@ export function ChannelPage() {
                       lineupSide === 'away' ? chLineupTabActive : chLineupTabIdle
                     }`}
                   >
-                    {teamShortChip(awayName)} · {awayName}
+                    {match?.away.shortName ?? teamShortChip(awayName)} · {awayName}
                   </button>
                 </div>
                 <p className="text-[10px] font-semibold text-sky-200/80">

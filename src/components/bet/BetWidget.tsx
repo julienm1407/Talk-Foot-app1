@@ -12,7 +12,6 @@ import { useBetting } from '../../hooks/useBetting'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../../api/sportMonks'
 import {
   adjust1x2OddsForLive,
-  adjustOverUnder25ForLive,
   anytimeScorerOdds,
   scorerLineupMatchesScoredGoal,
   slugScorer,
@@ -55,21 +54,6 @@ function synthetic1x2ForMatch(match: Match): SmBookOdds1x2 {
     return Math.round(clamp(1 / implied, 1.2, 25) * 100) / 100
   }
   return { home: toOdd(pHome), draw: toOdd(pDraw), away: toOdd(pAway) }
-}
-
-function syntheticOu25ForMatch(match: Match): SmBookOddsOverUnder25 {
-  const seed = hashMatchSeed(match)
-  const s = seeded01(seed + 41)
-  const lambda = 2.55 + (s - 0.5) * 0.7
-  const exp = Math.exp(-lambda)
-  const pUnder = exp * (1 + lambda + (lambda * lambda) / 2)
-  const pOver = clamp(1 - pUnder, 0.2, 0.8)
-  const overround = 1.05
-  const toOdd = (p: number) => {
-    const implied = clamp(p * overround, 0.02, 0.92)
-    return Math.round(clamp(1 / implied, 1.2, 20) * 100) / 100
-  }
-  return { over: toOdd(pOver), under: toOdd(1 - pOver) }
 }
 
 type ScorerPickRow = {
@@ -122,6 +106,7 @@ export function BetWidget({
     cancelBet: (betId: string) => void
   }
 }) {
+  void bookOddsOverUnder25
   const fallback = useBetting(match.id)
   const { wallet, openBets, matchBets, placeBet, cancelBet: _cancelBet, stats } = betting ?? fallback
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -132,7 +117,9 @@ export function BetWidget({
     label: string
     odds: number
   }>(null)
-  const [notice, setNotice] = useState<null | { tone: 'ok' | 'err'; text: string }>(null)
+  const [notice, setNotice] = useState<null | { tone: 'ok' | 'err'; text: string; href?: string }>(
+    null,
+  )
 
   const isUpcoming = match.status === 'upcoming'
 
@@ -156,15 +143,6 @@ export function BetWidget({
   const x12Ready = Boolean(x12Resolved)
   const x12OddsPending = Boolean(match.sportMonksFixtureId && bookOddsLoading && !x12Ready)
   const x12UnavailableLabel = x12OddsPending ? 'Chargement…' : 'Estimé'
-  const ou25Ready = Boolean(
-    bookOddsOverUnder25 &&
-      bookOddsOverUnder25.over >= 1.01 &&
-      bookOddsOverUnder25.under >= 1.01,
-  )
-  const ou25Resolved = useMemo(() => {
-    if (ou25Ready && bookOddsOverUnder25) return bookOddsOverUnder25
-    return syntheticOu25ForMatch(match)
-  }, [ou25Ready, bookOddsOverUnder25, match])
 
   const isLive = match.status === 'live'
   const scoreHome = liveScore?.home ?? match.score?.home ?? 0
@@ -177,12 +155,6 @@ export function BetWidget({
     if (!isLive) return x12Resolved
     return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive)
   }, [x12Resolved, isLive, scoreHome, scoreAway, minuteLive])
-
-  const ou25Displayed = useMemo(() => {
-    if (!isLive) return ou25Resolved
-    const totalGoals = scoreHome + scoreAway
-    return adjustOverUnder25ForLive(ou25Resolved, totalGoals, minuteLive)
-  }, [ou25Resolved, isLive, scoreHome, scoreAway, minuteLive])
 
   const usedBook1x2 = Boolean(
     bookOdds1x2 &&
@@ -252,29 +224,6 @@ export function BetWidget({
           { id: 'away' as const, label: match.away.shortName, odds: x12?.away ?? 0 },
         ],
       },
-      {
-        id: 'over25' as const,
-        label: '+2,5 buts',
-        enabled: !isLive || scoreHome + scoreAway < 3,
-        picks: [
-          { id: 'over' as const, label: 'Over', odds: ou25Displayed.over },
-          { id: 'under' as const, label: 'Under', odds: ou25Displayed.under },
-        ],
-      },
-      {
-        id: 'exact_score' as const,
-        label: 'Score exact',
-        enabled: isUpcoming,
-        picks: [
-          { id: '10' as const, label: '1–0', odds: 6.5 },
-          { id: '20' as const, label: '2–0', odds: 8.5 },
-          { id: '21' as const, label: '2–1', odds: 7.5 },
-          { id: '11' as const, label: '1–1', odds: 6.8 },
-          { id: '01' as const, label: '0–1', odds: 6.5 },
-          { id: '12' as const, label: '1–2', odds: 7.5 },
-          { id: '00' as const, label: '0–0', odds: 9.0 },
-        ],
-      },
     ]
 
     if (scorerPicksTotal > 0 && (isUpcoming || isLive)) {
@@ -297,7 +246,6 @@ export function BetWidget({
     isUpcoming,
     match.away.shortName,
     match.home.shortName,
-    ou25Displayed,
     scorerPicksSplit,
     scorerPicksTotal,
     x12Displayed,
@@ -349,7 +297,12 @@ export function BetWidget({
       setNotice({ tone: 'err', text: 'Pas assez de jetons.' })
       return
     }
-    setNotice({ tone: 'ok', text: 'Pari activé.' })
+    const selectionText = pending.label.replace(/^1N2\s·\s/, '')
+    setNotice({
+      tone: 'ok',
+      text: `✅ Pari validé : ${selectionText}`,
+      href: '/profile#paris',
+    })
     setPending(null)
     window.setTimeout(() => {
       setNotice(null)
@@ -382,11 +335,11 @@ export function BetWidget({
             {!compact ? (
               <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-sky-200/70">
                 {isLive
-                  ? `Cotes 1N2 ajustées au score (${scoreHome}–${scoreAway}, ${minuteLive}′).`
+                  ? `1N2 ajusté au score (${scoreHome}–${scoreAway}, ${minuteLive}′).`
                   : usedBook1x2
-                    ? 'Cotes type bookmaker (SportMonks) + autres marchés.'
-                    : 'Cotes estimées en attendant les grilles API.'}{' '}
-                Mise rapide ou détail ci-dessous.
+                    ? '1N2 + buteur.'
+                    : '1N2 estimé en attendant l’API.'}{' '}
+                Clique une cote puis valide.
               </span>
             ) : (
               <span className="mt-0.5 block text-[10px] font-semibold text-sky-200/70">Mise rapide</span>
@@ -400,7 +353,7 @@ export function BetWidget({
               aria-expanded={sheetOpen}
               className="shrink-0 rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
             >
-              Ouvrir
+              Parier
             </button>
           ) : null}
         </div>
@@ -426,7 +379,7 @@ export function BetWidget({
               aria-expanded={sheetOpen}
               className="min-h-11 w-full shrink-0 rounded-xl border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:min-h-0 sm:w-auto sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
             >
-              Ouvrir
+              Parier
             </button>
           ) : null}
         </div>
@@ -499,14 +452,20 @@ export function BetWidget({
                 {x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : x12UnavailableLabel}
               </span>
             </button>
-            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              <span className="block text-[10px] font-bold text-sky-200">+2,5</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Displayed.over)}</span>
-            </div>
-            <div className="tf-bet-soft tf-bet-mini rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              <span className="block text-[10px] font-bold text-sky-200">-2,5</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{fmtOdds(ou25Displayed.under)}</span>
-            </div>
+            <Link
+              to="/profile#paris"
+              className="tf-bet-soft tf-bet-mini block rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-left text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-300/70 hover:bg-[#153a5c]"
+            >
+              <span className="block text-[10px] font-bold text-sky-200">Mes paris</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{openBets.length}</span>
+            </Link>
+            <Link
+              to="/profile#paris"
+              className="tf-bet-soft tf-bet-mini block rounded-lg border border-emerald-400/45 bg-[#12344f] px-2 py-1.5 text-left text-[11px] font-bold text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-emerald-300/70 hover:bg-[#18435f]"
+            >
+              <span className="block text-[10px] font-bold text-emerald-200">Validés</span>
+              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-emerald-100">{settled.length}</span>
+            </Link>
           </div>
         ) : null}
 
@@ -522,29 +481,13 @@ export function BetWidget({
             <span>Résolus: {settled.length}</span>
           </div>
           <Link
-            to="/profile"
+            to="/profile#paris"
             className="text-xs font-bold text-cyan-300 hover:text-cyan-200"
           >
-            Profil →
+            Mes paris →
           </Link>
         </div>
-        {compact ? (
-          <div className="tf-bet-soft tf-bet-momentum rounded-xl border border-[#496f91]/40 bg-[#11263f]/86 px-2.5 py-2.5">
-            <div className="flex items-center justify-between text-[10px] font-semibold text-sky-200/80">
-              <span>Momentum pronos</span>
-              <span className="text-violet-200">{Math.min(99, 52 + openBets.length * 6)}%</span>
-            </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#1a3a57]/80">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-violet-300"
-                style={{ width: `${Math.min(100, 52 + openBets.length * 6)}%` }}
-              />
-            </div>
-            <p className="mt-1.5 text-[10px] font-semibold text-sky-100/75">
-              Activité live: {openBets.length > 0 ? 'marchés chauds' : 'ouverture prudente'}
-            </p>
-          </div>
-        ) : null}
+        {compact ? null : null}
       </div>
 
       {sheetOpen ? (
@@ -706,7 +649,15 @@ export function BetWidget({
                       : 'border border-rose-200 bg-rose-50 text-rose-800',
                   )}
                 >
-                  {notice.text}
+                  <div>{notice.text}</div>
+                  {notice.href ? (
+                    <Link
+                      to={notice.href}
+                      className="mt-2 inline-block text-xs font-black text-emerald-700 underline-offset-2 hover:underline"
+                    >
+                      Voir mes paris →
+                    </Link>
+                  ) : null}
                 </div>
               ) : null}
 

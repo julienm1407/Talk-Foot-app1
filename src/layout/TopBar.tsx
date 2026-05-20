@@ -21,8 +21,6 @@ import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
 import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
-import { HomeSiteSearch, type HomeSiteSearchHandle } from '../components/search/HomeSiteSearch'
-import { SearchTrends12h } from '../components/search/SearchTrends12h'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -69,7 +67,6 @@ export function TopBar() {
   const pm = usePrivateMessagesUi()
   const inboxWrapRef = useRef<HTMLDivElement>(null)
   const dmWrapRef = useRef<HTMLDivElement>(null)
-  const mobileSearchRef = useRef<HomeSiteSearchHandle>(null)
   const dmOpt = useDirectMessagesOptional()
   const dmThreads = dmOpt?.directThreads ?? mockDirectThreads
   const dmUnread = useMemo(
@@ -116,8 +113,6 @@ export function TopBar() {
           'relative mx-auto grid w-full min-w-0 max-w-tf-content items-center gap-x-2 gap-y-1.5 px-2 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
           /* <700px : logo + actions ; ≥700px : 3 colonnes symétriques pour centrer vraiment la nav */
           'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
-          /* Mobile : 2e ligne = recherche (masquée ≥ md, présente sur le hub desktop) */
-          'grid-rows-[auto_auto] md:grid-rows-1',
         )}
       >
         <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
@@ -337,35 +332,6 @@ export function TopBar() {
               {profileTheme.label}
             </span>
           </NavLink>
-        </div>
-
-        <div
-          className={cn(
-            'col-span-2 row-start-2 w-full min-w-0 space-y-2 md:hidden',
-            'rounded-xl border p-2.5 shadow-sm',
-            L
-              ? 'border-tf-electric/25 bg-white/95 ring-1 ring-tf-electric/10'
-              : 'border-sky-400/20 bg-[#0a1e36]/95 ring-1 ring-sky-400/15',
-          )}
-        >
-          <p
-            className={cn(
-              'text-[10px] font-black uppercase tracking-[0.18em]',
-              L ? 'text-tf-electric-deep' : 'text-sky-200/90',
-            )}
-          >
-            Rechercher
-          </p>
-          <HomeSiteSearch
-            ref={mobileSearchRef}
-            inputId="topbar-mobile-site-search"
-            className="w-full [&_input]:min-h-[2.75rem] [&_input]:text-base"
-          />
-          <SearchTrends12h
-            className="w-full min-w-0"
-            maxTerms={3}
-            onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
-          />
         </div>
       </div>
       <div

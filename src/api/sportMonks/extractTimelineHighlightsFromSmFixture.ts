@@ -4,7 +4,10 @@ import {
   compactScorerDisplayName,
   parseGoalAssistFromText,
   parseGoalScorerName,
+  parseLiveGoalRowsFromHighlights,
   slugScorer,
+  type LiveGoalDisplayRow,
+  type LiveGoalTeamHints,
 } from '../../utils/liveFootballOdds'
 import type { SmFixture, SmFixtureEventRow } from './types'
 import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
@@ -317,4 +320,35 @@ export function extractTimelineHighlightsFromSmFixture(
     return (a.order ?? 0) - (b.order ?? 0)
   })
   return merged.length > MAX_ROWS ? merged.slice(-MAX_ROWS) : merged
+}
+
+/** Buteurs + minute directement depuis les événements SM (repli si la timeline commentaires ne suffit pas). */
+export function extractLiveGoalDisplayRowsFromSmFixture(
+  fixture: SmFixture | null | undefined,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+  scoreHint?: { home: number; away: number },
+): LiveGoalDisplayRow[] {
+  if (!fixture) return []
+  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+  const rows: Highlight[] = []
+  for (const ev of fixture.events ?? []) {
+    const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+    if (!eventDevLooksLikeGoal(dev.toUpperCase())) continue
+    const minute = displayMinute(ev)
+    const side = sideFromParticipant(ev.participant_id, homeId, awayId)
+    const scorerName = scorerFromEvent(ev)
+    if (!scorerName) continue
+    rows.push({
+      id: `sm-event-goal-${ev.id ?? minute}`,
+      matchId: 'direct',
+      minute,
+      type: 'But',
+      title: scorerName,
+      detail: `${minute}' · ${scorerName}`,
+      ...(side ? { side } : {}),
+      scorerName,
+    })
+  }
+  return parseLiveGoalRowsFromHighlights(rows, home, away, scoreHint)
 }

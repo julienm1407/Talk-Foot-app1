@@ -119,6 +119,7 @@ function team(
 export const teams = {
   'ligue-1': [
     team('psg', 'Paris Saint-Germain', 'PSG'),
+    team('parisfc', 'Paris FC', 'PFC'),
     team('om', 'Olympique de Marseille', 'OM'),
     team('monaco', 'AS Monaco', 'ASM'),
     team('nice', 'OGC Nice', 'NIC'),

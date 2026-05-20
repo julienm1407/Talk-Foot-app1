@@ -36,8 +36,8 @@ function scoreBlob(blob: string, queryNorm: string, words: string[]): number {
 }
 
 const STATIC_PAGES: { title: string; subtitle: string; href: string; kw: string }[] = [
-  { title: 'Match', subtitle: 'Live, planning & salons', href: '/match', kw: 'match agenda matchs live direct programme ligue coupe calendrier' },
-  { title: 'Match', subtitle: 'Matchs par jour et par ligue', href: '/match', kw: 'match calendrier planning date programme agenda' },
+  { title: 'Match', subtitle: 'Live, planning & salons', href: '/match', kw: 'match agenda matchs live direct programme ligue coupe calendrier prochain prochain match' },
+  { title: 'Match', subtitle: 'Matchs par jour et par ligue', href: '/match', kw: 'match calendrier planning date programme agenda prochains matchs' },
   { title: 'Groupes & tribunes', subtitle: 'Salons de supporters', href: '/groups', kw: 'groupe tribune salon communauté' },
   { title: 'Débats', subtitle: 'Discussions tendance', href: '/debates', kw: 'débat discussion topic' },
   { title: 'Classements', subtitle: 'Paris & ligues', href: '/rankings', kw: 'classement ranking ligue paris' },
@@ -83,14 +83,14 @@ export function runSiteSearch(
   }
 
   for (const c of ALL_CLUBS_CATALOG) {
-    const blob = normalize([c.name, c.shortName, c.id, c.leagueName, 'club hub tribune supporters'].join(' '))
+    const blob = normalize([c.name, c.shortName, c.id, c.leagueName, 'club hub tribune supporters historique palmares page club calendrier prochains matchs'].join(' '))
     const sc = scoreBlob(blob, queryNorm, words)
     if (sc > 0) {
       out.push({
         kind: 'club',
         id: c.id,
         title: c.name,
-        subtitle: `${c.shortName} · ${c.leagueName}`,
+        subtitle: `${c.shortName} · ${c.leagueName} · historique & prochains matchs`,
         href: clubPathForId(c.id),
         score: sc + 1,
       })

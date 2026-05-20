@@ -190,18 +190,50 @@ export function parseGoalScorerName(raw: string): string | null {
   return null
 }
 
-function guessSideFromText(
+/** Indices pour rattacher un but au bon camp (sigle, nom, id SM). */
+export type LiveGoalTeamHints = {
+  shortName: string
+  name: string
+  sportMonksTeamId?: number
+}
+
+function guessSideFromTeams(
   text: string,
-  homeShort: string,
-  awayShort: string,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
 ): 'home' | 'away' | null {
-  const t = text.toLowerCase()
-  const h = homeShort.toLowerCase()
-  const a = awayShort.toLowerCase()
-  const hasH = h.length >= 2 && t.includes(h)
-  const hasA = a.length >= 2 && t.includes(a)
-  if (hasH && !hasA) return 'home'
-  if (hasA && !hasH) return 'away'
+  const raw = text
+  const t = raw.toLowerCase()
+
+  if (/\b(psg|paris\s*saint|saint[\s-]?germain)\b/i.test(raw)) {
+    if (away.sportMonksTeamId === 591 || away.shortName.toUpperCase() === 'PSG') return 'away'
+    if (home.sportMonksTeamId === 591 || home.shortName.toUpperCase() === 'PSG') return 'home'
+  }
+  if (/\b(paris\s*fc|paris\s*football|football\s*club)\b/i.test(raw)) {
+    if (home.sportMonksTeamId === 4508) return 'home'
+    if (away.sportMonksTeamId === 4508) return 'away'
+  }
+
+  const needles: { side: 'home' | 'away'; needle: string }[] = []
+  for (const s of [home.name, home.shortName]) {
+    const n = s.trim().toLowerCase()
+    if (n.length >= 3) needles.push({ side: 'home', needle: n })
+  }
+  for (const s of [away.name, away.shortName]) {
+    const n = s.trim().toLowerCase()
+    if (n.length >= 3) needles.push({ side: 'away', needle: n })
+  }
+  needles.sort((a, b) => b.needle.length - a.needle.length)
+
+  let hitH = false
+  let hitA = false
+  for (const { side, needle } of needles) {
+    if (!t.includes(needle)) continue
+    if (side === 'home') hitH = true
+    else hitA = true
+  }
+  if (hitH && !hitA) return 'home'
+  if (hitA && !hitH) return 'away'
   return null
 }
 
@@ -219,11 +251,14 @@ export type LiveGoalDisplayRow = {
  */
 export function parseLiveGoalRowsFromHighlights(
   highlights: Highlight[],
-  homeShort: string,
-  awayShort: string,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+  scoreHint?: { home: number; away: number },
 ): LiveGoalDisplayRow[] {
   const out: LiveGoalDisplayRow[] = []
   const seen = new Set<string>()
+  const pendingNoSide: Omit<LiveGoalDisplayRow, 'side'>[] = []
+
   for (const h of highlights) {
     if (h.type !== 'But') continue
     const raw = `${h.title ?? ''} ${h.detail ?? ''}`
@@ -233,23 +268,41 @@ export function parseLiveGoalRowsFromHighlights(
       parseGoalScorerName(String(h.detail ?? '')) ||
       parseGoalScorerName(String(h.title ?? ''))
     if (!name) continue
-    const side = h.side ?? guessSideFromText(raw, homeShort, awayShort)
-    if (!side) continue
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
     const slug = slugScorer(name)
     if (!slug) continue
-    const assistRaw = h.assistName?.trim() || parseGoalAssistFromText(raw) || undefined
-    const assistName = assistRaw ? compactScorerDisplayName(assistRaw) : undefined
+    const displayName = compactScorerDisplayName(name)
+    const side = h.side ?? guessSideFromTeams(raw, home, away)
+    if (!side) {
+      pendingNoSide.push({ name: displayName, minute })
+      continue
+    }
     const key = `${side}:${slug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({
-      side,
-      name: compactScorerDisplayName(name),
-      minute,
-      ...(assistName ? { assistName } : {}),
-    })
+    out.push({ side, name: displayName, minute })
   }
+
+  if (pendingNoSide.length && scoreHint) {
+    const homeGoals = out.filter((r) => r.side === 'home').length
+    const awayGoals = out.filter((r) => r.side === 'away').length
+    const homeMissing = Math.max(0, scoreHint.home - homeGoals)
+    const awayMissing = Math.max(0, scoreHint.away - awayGoals)
+    for (const row of pendingNoSide) {
+      let side: 'home' | 'away' | null = null
+      if (homeMissing > 0 && awayMissing === 0) side = 'home'
+      else if (awayMissing > 0 && homeMissing === 0) side = 'away'
+      else if (homeMissing > 0 && awayMissing > 0 && pendingNoSide.length === 1) {
+        side = awayMissing >= homeMissing ? 'away' : 'home'
+      }
+      if (!side) continue
+      const key = `${side}:${slugScorer(row.name)}:${row.minute}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({ side, name: row.name, minute: row.minute })
+    }
+  }
+
   out.sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))
   return out
 }
@@ -257,8 +310,8 @@ export function parseLiveGoalRowsFromHighlights(
 /** Buteurs déduits des moments forts (pour règlement faux-argent). */
 export function extractScorerEventsFromHighlights(
   highlights: Highlight[],
-  homeShort: string,
-  awayShort: string,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
 ): { side: 'home' | 'away'; slug: string; name: string }[] {
   const out: { side: 'home' | 'away'; slug: string; name: string }[] = []
   const seen = new Set<string>()
@@ -273,7 +326,7 @@ export function extractScorerEventsFromHighlights(
     if (!name) continue
     const slug = slugScorer(name)
     if (!slug) continue
-    const side = h.side ?? guessSideFromText(raw, homeShort, awayShort)
+    const side = h.side ?? guessSideFromTeams(raw, home, away)
     if (!side) continue
     const key = `${side}:${slug}`
     if (seen.has(key)) continue

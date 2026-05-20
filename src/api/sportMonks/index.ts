@@ -68,7 +68,11 @@ export {
   extractLiveFixtureStatistics,
   type LiveFixtureStatRow,
 } from './extractLiveFixtureStatistics'
-export { extractTimelineHighlightsFromSmFixture, highlightFullscreenDedupeKey } from './extractTimelineHighlightsFromSmFixture'
+export {
+  extractLiveGoalDisplayRowsFromSmFixture,
+  extractTimelineHighlightsFromSmFixture,
+  highlightFullscreenDedupeKey,
+} from './extractTimelineHighlightsFromSmFixture'
 export {
   extractTeamSeasonStatisticsFromSmPayload,
   type TeamSeasonStatRow,

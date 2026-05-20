@@ -12,7 +12,7 @@ import { HomeLeftColumn } from '../components/home/HomeLeftColumn'
 import { HomeRightColumn } from '../components/home/HomeRightColumn'
 import { DebateOfTheDayCard } from '../components/home/DebateOfTheDayCard'
 import { TrendingDebatesSection } from '../components/home/TrendingDebatesSection'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveEncartSimulation } from '../hooks/useLiveEncartSimulation'
 import { cn } from '../utils/cn'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
@@ -33,6 +33,8 @@ import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { ThemeArrivalHint } from '../components/ui/ThemeArrivalHint'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { getSportMonksTokenSource } from '../utils/apiTokens'
+import { HomeSiteSearch, type HomeSiteSearchHandle } from '../components/search/HomeSiteSearch'
+import { SearchTrends12h } from '../components/search/SearchTrends12h'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -105,6 +107,7 @@ export function HomePage() {
       .map((id) => ALL_CLUBS_BY_ID[id]?.shortName ?? id)
       .join(' · ')
   }, [favoriteClubIds])
+  const mobileSearchRef = useRef<HomeSiteSearchHandle>(null)
 
   const supporterFocusUi = Boolean(supporterTintActive && team && favoriteClubIds.length > 0)
 
@@ -231,6 +234,34 @@ export function HomePage() {
 
       <div className="md:hidden space-y-6 sm:space-y-8">
       <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
+      <section
+        className={cn(
+          'mx-auto w-full max-w-tf-content rounded-2xl border p-2.5',
+          appearance === 'light'
+            ? 'border-tf-electric/20 bg-white/95 shadow-sm'
+            : 'border-sky-400/20 bg-[#0a1e36]/95 ring-1 ring-sky-400/10',
+        )}
+        aria-label="Recherche rapide"
+      >
+        <p
+          className={cn(
+            'mb-1 text-[10px] font-black uppercase tracking-[0.16em]',
+            appearance === 'light' ? 'text-tf-electric-deep' : 'text-sky-200/90',
+          )}
+        >
+          Rechercher
+        </p>
+        <HomeSiteSearch
+          ref={mobileSearchRef}
+          inputId="home-mobile-search"
+          className="w-full [&_input]:min-h-[2.35rem] [&_input]:text-sm"
+        />
+        <SearchTrends12h
+          className="mt-1.5 w-full min-w-0"
+          maxTerms={2}
+          onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
+        />
+      </section>
       <HomeLandingHub
         appearance={appearance}
         className={cn('mx-auto w-full max-w-tf-content', hubGlassPanel(appearance))}
