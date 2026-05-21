@@ -41,6 +41,8 @@ export function GroupTifoPanel({
     boardH,
     notice,
     clearNotice,
+    loading,
+    isShared,
   } = useMatchTifoPixels(activeId)
 
   const [color, setColor] = useState(palette[3]!)
@@ -73,7 +75,7 @@ export function GroupTifoPanel({
     >
       <div className="flex items-center justify-between gap-2">
         <div className={cn('text-[10px] font-black uppercase tracking-[0.2em]', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
-          Tifo pixel
+          Tifo pixel{isShared ? ' · communautaire' : ''}
         </div>
         <span
           className={cn(
@@ -131,6 +133,12 @@ export function GroupTifoPanel({
         </p>
       ) : null}
 
+      {loading ? (
+        <p className={cn('mt-2 text-[11px] font-semibold', L ? 'text-tf-grey/70' : 'text-sky-200/70')}>
+          Chargement du tifo…
+        </p>
+      ) : null}
+
       <div
         className={cn(
           'mt-3 overflow-x-auto rounded-xl border p-1.5 shadow-inner',
@@ -169,7 +177,7 @@ export function GroupTifoPanel({
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  placePixel(x, y, color)
+                  void placePixel(x, y, color)
                 }}
                 aria-label={`Pixel ${x + 1} ${y + 1}`}
               />
