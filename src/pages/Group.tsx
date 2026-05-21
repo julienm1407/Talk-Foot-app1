@@ -28,7 +28,7 @@ import { upsertCloudSupporterGroup } from '../lib/supabase/supporterGroupsRegist
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import type { Message, User } from '../types/chat'
-import { useMessageLikes } from '../hooks/useMessageLikes'
+import { useSupporterGroupMessageLikesSync } from '../hooks/useSupporterGroupMessageLikesSync'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { cn } from '../utils/cn'
 import { buildGroupThreadSeed, debatePreviewUsersById, groupThreadMatchId } from '../utils/groupThreadMessages'
@@ -454,7 +454,12 @@ export function GroupPage() {
     mergeRemoteGroupMessages,
   ])
 
-  const messageLikes = useMessageLikes()
+  const groupMessageLikes = useSupporterGroupMessageLikesSync({
+    groupId: group?.id ?? '',
+    groupName: group?.name ?? 'Salon',
+    enabled: groupCloudChatEnabled,
+    actorDisplayName: authUser?.displayName,
+  })
   const feedRef = useAutoScroll<HTMLDivElement>([displayMessages.length])
 
   const tryCloudGroupThenLocal = useCallback(
@@ -1346,15 +1351,20 @@ export function GroupPage() {
               messages={displayMessages}
               usersById={usersById}
               selfUserId={selfChatUserId}
-              getLikes={messageLikes.getLikes}
-              hasLiked={(id) => messageLikes.hasLiked(id, selfChatUserId)}
-              onToggleLike={(m) => {
-                if (messageLikes.hasLiked(m.id, 'me')) {
-                  messageLikes.unlike(m.id)
-                } else {
-                  messageLikes.like(m.id, m, null, usersById[m.userId] ?? null)
-                }
-              }}
+              getLikes={(id) =>
+                isUuidMessageId(id) ? groupMessageLikes.getLikeState(id).likes : 0
+              }
+              hasLiked={(id) =>
+                isUuidMessageId(id) ? groupMessageLikes.getLikeState(id).likedByMe : false
+              }
+              onToggleLike={
+                groupMessageLikes.isConfigured
+                  ? (m) => {
+                      if (!isUuidMessageId(m.id)) return
+                      void groupMessageLikes.toggleLike(m.id)
+                    }
+                  : undefined
+              }
             />
             <div className="h-3" />
           </div>

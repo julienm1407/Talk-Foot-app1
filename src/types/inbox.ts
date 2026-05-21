@@ -26,4 +26,15 @@ export type InboxFriendItem = {
   createdAtLabel: string
 }
 
-export type InboxItem = InboxNewsItem | InboxInviteItem | InboxFriendItem
+export type InboxLikeItem = {
+  kind: 'like'
+  id: string
+  title: string
+  body: string
+  href: string
+  actorDisplayName?: string
+  createdAtLabel: string
+  createdAtMs: number
+}
+
+export type InboxItem = InboxNewsItem | InboxInviteItem | InboxFriendItem | InboxLikeItem

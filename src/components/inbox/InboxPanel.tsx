@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import type { UseInboxReturn } from '../../hooks/useInbox'
-import type { InboxFriendItem, InboxInviteItem, InboxNewsItem } from '../../types/inbox'
+import type { InboxFriendItem, InboxInviteItem, InboxLikeItem, InboxNewsItem } from '../../types/inbox'
 
 function UnreadDot({ show }: { show: boolean }) {
   if (!show) return null
@@ -42,6 +42,12 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
   const subtleBorder = L ? 'border-tf-dark/10' : 'border-white/10'
 
   const onOpenNews = (n: InboxNewsItem) => {
+    markRead(n.id)
+    onClose()
+    navigate(n.href)
+  }
+
+  const onOpenLike = (n: InboxLikeItem) => {
     markRead(n.id)
     onClose()
     navigate(n.href)
@@ -119,6 +125,43 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
           <p className={cn('px-4 py-8 text-center text-sm font-semibold', muted)}>Rien pour l’instant.</p>
         ) : (
           <>
+            {byKind.likes.length > 0 ? (
+              <section aria-label="Likes sur tes messages">
+                <SectionTitle className={muted}>Likes & salons</SectionTitle>
+                <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
+                  {byKind.likes.map((n) => (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => onOpenLike(n)}
+                        className={cn(
+                          'flex w-full gap-2 px-3 py-3 text-left transition max-md:min-h-[3.25rem] md:py-2.5',
+                          rowHover,
+                        )}
+                      >
+                        <UnreadDot show={!isRead(n.id)} />
+                        <div className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              'inline-block rounded-md px-1.5 py-px text-[9px] font-black uppercase',
+                              L ? 'bg-rose-100 text-rose-800' : 'bg-rose-500/20 text-rose-200',
+                            )}
+                          >
+                            ♥ Like
+                          </span>
+                          <p className="mt-1 text-xs font-black leading-snug">{n.title}</p>
+                          <p className={cn('mt-0.5 line-clamp-2 text-[11px] font-semibold leading-snug', muted)}>
+                            {n.body}
+                          </p>
+                          <p className={cn('mt-1 text-[10px] font-bold', muted)}>{n.createdAtLabel}</p>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             {byKind.news.length > 0 ? (
               <section aria-label="Top actus">
                 <SectionTitle className={muted}>Top actus</SectionTitle>
