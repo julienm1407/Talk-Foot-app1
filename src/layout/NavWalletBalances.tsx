@@ -10,6 +10,7 @@ function formatBalance(n: number): string {
   return String(Math.round(n))
 }
 
+/** Jetons + médailles — une seule pastille pour éviter le chevauchement dans la nav. */
 export function NavWalletBalances({ className }: { className?: string }) {
   const { appearance } = useAppearance()
   const { wallet } = useWallet()
@@ -17,51 +18,56 @@ export function NavWalletBalances({ className }: { className?: string }) {
   const tokens = formatBalance(wallet.tokens)
   const medals = formatBalance(wallet.medals)
 
-  const pill = cn(
-    'inline-flex min-w-0 items-center gap-1 rounded-xl border px-1.5 py-1 transition sm:gap-1.5 sm:px-2 sm:py-1.5',
-    L
-      ? 'border-tf-dark/12 bg-white/95 text-tf-dark shadow-sm hover:border-tf-dark/22 hover:bg-white'
-      : 'border-white/15 bg-white/[0.08] text-white hover:border-white/25 hover:bg-white/[0.12]',
-  )
-
-  const label = cn(
-    'text-[8px] font-black uppercase leading-none tracking-wide max-[479px]:sr-only min-[480px]:text-[9px]',
-    L ? 'text-tf-grey/80' : 'text-sky-200/75',
-  )
-
-  const value = cn(
-    'text-[13px] font-black tabular-nums leading-none sm:text-sm min-[700px]:text-[15px]',
-  )
-
   return (
-    <div
-      className={cn('flex min-w-0 shrink-0 items-center gap-1 sm:gap-1.5', className)}
+    <Link
+      to="/profile#monnaie"
+      className={cn(
+        'inline-flex shrink-0 items-center gap-2 rounded-xl border px-2 py-1 transition sm:gap-2.5 sm:px-2.5 sm:py-1.5',
+        L
+          ? 'border-tf-dark/12 bg-white/95 text-tf-dark shadow-sm hover:border-tf-dark/22 hover:bg-white'
+          : 'border-white/15 bg-white/[0.08] text-white hover:border-white/25 hover:bg-white/[0.12]',
+        className,
+      )}
+      title={`${wallet.tokens} jetons · ${wallet.medals} médailles`}
       aria-label={`${wallet.tokens} jetons, ${wallet.medals} médailles`}
     >
-      <Link
-        to="/profile#monnaie"
-        className={pill}
-        title={`${wallet.tokens} jetons — paris et animations`}
-      >
-        <TokenGlyph className="size-4 shrink-0 sm:size-[1.125rem]" variant={L ? 'solid' : 'onDark'} />
-        <span className="flex min-w-0 flex-col items-start leading-tight">
-          <span className={label}>Jetons</span>
-          <span className={value}>{tokens}</span>
+      <span className="inline-flex items-center gap-1 whitespace-nowrap">
+        <TokenGlyph
+          className="size-4 shrink-0 sm:size-[1.125rem]"
+          variant={L ? 'solid' : 'onDark'}
+        />
+        <span className="flex flex-col items-start leading-none">
+          <span
+            className={cn(
+              'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
+              L ? 'text-emerald-800/75' : 'text-emerald-200/80',
+            )}
+          >
+            Jetons
+          </span>
+          <span className="text-[13px] font-black tabular-nums sm:text-sm">{tokens}</span>
         </span>
-      </Link>
-      <Link
-        to="/profile#monnaie"
-        className={pill}
-        title={`${wallet.medals} médailles — boutique`}
-      >
+      </span>
+      <span
+        className={cn('h-7 w-px shrink-0 sm:h-8', L ? 'bg-tf-dark/12' : 'bg-white/20')}
+        aria-hidden
+      />
+      <span className="inline-flex items-center gap-1 whitespace-nowrap">
         <span className="text-sm leading-none sm:text-base" aria-hidden>
           🏅
         </span>
-        <span className="flex min-w-0 flex-col items-start leading-tight">
-          <span className={label}>Médailles</span>
-          <span className={value}>{medals}</span>
+        <span className="flex flex-col items-start leading-none">
+          <span
+            className={cn(
+              'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
+              L ? 'text-amber-900/75' : 'text-amber-200/85',
+            )}
+          >
+            Médailles
+          </span>
+          <span className="text-[13px] font-black tabular-nums sm:text-sm">{medals}</span>
         </span>
-      </Link>
-    </div>
+      </span>
+    </Link>
   )
 }

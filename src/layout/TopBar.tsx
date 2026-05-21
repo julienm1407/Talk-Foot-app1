@@ -113,7 +113,7 @@ export function TopBar() {
         className={cn(
           'relative mx-auto grid w-full min-w-0 max-w-tf-content items-center gap-x-2 gap-y-1.5 px-2 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
           /* <700px : logo + actions ; ≥700px : 3 colonnes symétriques pour centrer vraiment la nav */
-          'grid-cols-[minmax(0,1fr)_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
+          'grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[700px]:grid-rows-1',
         )}
       >
         <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
@@ -152,7 +152,7 @@ export function TopBar() {
 
           <p
             className={cn(
-              'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[480px]:block sm:text-[11px]',
+              'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[900px]:block sm:text-[11px]',
               L ? 'text-tf-dark/90' : 'text-white/92',
             )}
             title="Talk Foot — le réseau foot en continu"
@@ -200,12 +200,13 @@ export function TopBar() {
 
         <div
           className={cn(
-            'relative col-start-2 row-start-1 flex min-w-0 max-w-full flex-wrap items-center justify-end gap-x-1 gap-y-1 sm:gap-x-2 sm:gap-y-1.5',
-            'min-[700px]:col-start-3 min-[700px]:flex-nowrap min-[700px]:justify-end min-[700px]:gap-x-2 min-[700px]:gap-y-0 md:gap-x-3',
+            'relative col-start-2 row-start-1 flex min-w-0 max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto overscroll-x-contain sm:gap-1.5',
+            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            'min-[700px]:col-start-3 min-[700px]:max-w-none md:gap-2',
           )}
         >
           <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
-          <NavWalletBalances />
+          <NavWalletBalances className="hidden min-[700px]:inline-flex" />
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
               type="button"
@@ -325,15 +326,19 @@ export function TopBar() {
               aria-label="Mon avatar in-app"
             />
             <span
-              className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[420px]:inline-flex min-[420px]:px-1.5 min-[420px]:text-[10px] sm:px-2 sm:py-1 sm:text-[11px] md:text-xs"
+              className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[860px]:inline-flex min-[860px]:px-1.5 min-[860px]:text-[10px]"
               title={`Niveau ${profile.level}`}
             >
               Niv. {profile.level}
             </span>
-            <span className="hidden max-w-[3.5rem] truncate min-[480px]:inline-block min-[480px]:max-w-[4.25rem] md:max-w-[7rem] lg:max-w-none">
+            <span className="hidden max-w-[3.5rem] truncate min-[900px]:inline-block md:max-w-[7rem] lg:max-w-none">
               {profileTheme.label}
             </span>
           </NavLink>
+        </div>
+
+        <div className="col-span-2 row-start-2 flex justify-end pt-0.5 min-[700px]:hidden">
+          <NavWalletBalances />
         </div>
       </div>
       <div
