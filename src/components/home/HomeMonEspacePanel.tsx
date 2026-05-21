@@ -23,6 +23,7 @@ import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { cn } from '../../utils/cn'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { MesParisEncart } from '../bet/MesParisEncart'
+import { resolveClubCatalogLogoUrl } from '../../utils/catalogLogos'
 
 /** Petites offres mockées pour le rail hub (évite le vide visuel sous les tribunes). */
 const RAIL_BOUTIQUE_OFFERS = [
@@ -162,7 +163,13 @@ export function HomeMonEspacePanel({
               favoriteClubs.slice(0, slim ? 4 : 6).map((club) => (
                 <li key={club.id}>
                   <Link to={clubPathForId(club.id)} className={favRow} title={`Hub ${club.name}`}>
-                    <ClubCrest id={club.id} shortName={club.shortName} colors={club.colors} size={slim ? 24 : 28} />
+                    <ClubCrest
+                      id={club.id}
+                      shortName={club.shortName}
+                      colors={club.colors}
+                      logoUrl={resolveClubCatalogLogoUrl(club.id) ?? undefined}
+                      size={slim ? 24 : 28}
+                    />
                     <span className="truncate">{club.shortName}</span>
                   </Link>
                 </li>

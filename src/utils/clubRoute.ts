@@ -11,6 +11,7 @@ const SLUG_ALIASES: Record<string, string> = {
   'manchester-city': 'mci',
   'real-madrid': 'rma',
   'barca': 'fcb',
+  liverpool: 'liv',
 }
 
 const ID_PREFERRED_SLUG: Partial<Record<string, string>> = {
@@ -19,6 +20,7 @@ const ID_PREFERRED_SLUG: Partial<Record<string, string>> = {
   mci: 'manchester-city',
   rma: 'real-madrid',
   fcb: 'barca',
+  liv: 'liverpool',
 }
 
 export function resolveClubIdFromSlug(slug: string): string | null {

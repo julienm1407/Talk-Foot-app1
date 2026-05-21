@@ -1,5 +1,6 @@
 import type { Match, Team } from '../../types/match'
 import { COMP_NAMES, inferTalkFootCompIdFromSmLeague, resolveTalkFootClubId } from '../footballApi'
+import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { teams, teamColors } from '../../data/teams'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 
@@ -226,10 +227,11 @@ function getTeam(
   logoUrl?: string,
 ): Team {
   const ourId = resolveTalkFootClubId({ apiName, sportMonksTeamId })
+  const resolvedLogo = resolveTeamLogoUrl(ourId, { apiLogoUrl: logoUrl, sportMonksTeamId })
   const compTeams = teams[compId as keyof typeof teams]
   const sm = {
     ...(sportMonksTeamId != null ? { sportMonksTeamId } : {}),
-    ...(logoUrl ? { logoUrl } : {}),
+    ...(resolvedLogo ? { logoUrl: resolvedLogo } : {}),
   }
   if (!compTeams) {
     return {

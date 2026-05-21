@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
-import { ensureSupabaseAuthenticatedSession } from '../lib/supabase/ensureSession'
+import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
@@ -115,7 +115,7 @@ export function useSupporterGroupChannelSync(options: {
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
 
-      const session = await ensureSupabaseAuthenticatedSession(sb)
+      const session = await ensureTalkFootSupabaseSession(sb)
       if (!session) return { ok: false as const, error: 'no_session' }
 
       const body = msg.text ?? ''
@@ -167,7 +167,7 @@ export function useSupporterGroupChannelSync(options: {
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const run = async () => {
-      const session = await ensureSupabaseAuthenticatedSession(sb)
+      const session = await ensureTalkFootSupabaseSession(sb)
       if (!session || cancelled) return
       await syncRealtimeAuth(sb)
 
@@ -264,7 +264,7 @@ export function useSupporterGroupChannelSync(options: {
       if (!isSupabaseConfigured() || !groupId || !channelId) return { ok: false, error: 'no_config' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false, error: 'no_client' }
-      const session = await ensureSupabaseAuthenticatedSession(sb)
+      const session = await ensureTalkFootSupabaseSession(sb)
       if (!session) return { ok: false, error: 'no_session' }
 
       const { data, error } = await sb

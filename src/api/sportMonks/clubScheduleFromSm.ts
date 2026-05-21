@@ -1,8 +1,15 @@
+import { clubIdFromSportMonksTeamId } from '../footballApi'
+import { findTeamById } from '../../data/teamLookup'
 import type { Match } from '../../types/match'
 import type { SmFixture } from './types'
 import { smFixtureToMatch } from './transformSportMonksToMatch'
 
-type CrestFallback = { id: string; shortName: string; colors: { primary: string; secondary: string } }
+type CrestFallback = {
+  id: string
+  shortName: string
+  colors: { primary: string; secondary: string }
+  sportMonksTeamId?: number
+}
 
 function weAreHome(m: Match, clubOurId: string, smTeamId?: number): boolean {
   if (m.home.id === clubOurId) return true
@@ -40,17 +47,15 @@ function fixtureFromScheduleRow(row: unknown): SmFixture | null {
   return null
 }
 
-function participantLogoFromFixture(fx: SmFixture, participantSmId: number | undefined): string | undefined {
-  if (participantSmId == null) return undefined
-  const p = fx.participants?.find((x) => typeof x.id === 'number' && x.id === participantSmId)
-  const raw = p?.image_path ?? p?.logo_path
-  if (typeof raw !== 'string') return undefined
-  const trimmed = raw.trim()
-  return trimmed ? trimmed : undefined
-}
-
 function crestFromTeam(t: Match['home']): CrestFallback {
-  return { id: t.id, shortName: t.shortName, colors: t.colors }
+  const id = clubIdFromSportMonksTeamId(t.sportMonksTeamId) ?? (findTeamById(t.id) ? t.id : t.id)
+  const catalog = findTeamById(id)
+  return {
+    id,
+    shortName: catalog?.shortName ?? t.shortName,
+    colors: catalog?.colors ?? t.colors,
+    sportMonksTeamId: t.sportMonksTeamId,
+  }
 }
 
 export type TeamScheduleFixtureRow = {
@@ -191,8 +196,8 @@ export function findLastFinishedClubMatchFromTeamLatest(
     scoreLine: `${m.score.home}-${m.score.away}`,
     homeName: home.name,
     awayName: away.name,
-    homeLogoUrl: participantLogoFromFixture(first.fixture, home.sportMonksTeamId),
-    awayLogoUrl: participantLogoFromFixture(first.fixture, away.sportMonksTeamId),
+    homeLogoUrl: home.logoUrl,
+    awayLogoUrl: away.logoUrl,
     homeCrest: crestFromTeam(home),
     awayCrest: crestFromTeam(away),
   }
@@ -246,8 +251,8 @@ export function findNextClubMatchFromTeamUpcoming(
     matchday: formatScheduleRoundLabel(first.roundName),
     homeName: home.name,
     awayName: away.name,
-    homeLogoUrl: participantLogoFromFixture(first.fixture, home.sportMonksTeamId),
-    awayLogoUrl: participantLogoFromFixture(first.fixture, away.sportMonksTeamId),
+    homeLogoUrl: home.logoUrl,
+    awayLogoUrl: away.logoUrl,
     homeCrest: crestFromTeam(home),
     awayCrest: crestFromTeam(away),
   }
@@ -297,8 +302,8 @@ export function findNextClubMatchFromSchedule(
     matchday: formatScheduleRoundLabel(first.roundName),
     homeName: home.name,
     awayName: away.name,
-    homeLogoUrl: participantLogoFromFixture(first.fixture, home.sportMonksTeamId),
-    awayLogoUrl: participantLogoFromFixture(first.fixture, away.sportMonksTeamId),
+    homeLogoUrl: home.logoUrl,
+    awayLogoUrl: away.logoUrl,
     homeCrest: crestFromTeam(home),
     awayCrest: crestFromTeam(away),
   }

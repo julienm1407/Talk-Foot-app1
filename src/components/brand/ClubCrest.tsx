@@ -1,7 +1,10 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clubPathForId } from '../../utils/clubRoute'
+import { clubPathForId, resolveClubIdFromSlug } from '../../utils/clubRoute'
 import { cn } from '../../utils/cn'
-import { CLUB_OFFICIAL_LOGO_BY_ID } from '../../data/clubOfficialLogoUrls'
+import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
+import { sportMonksTeamLogoUrl, sportMonksTeamLogoUrlForClubId } from '../../data/sportMonksLogoUrls'
+import { SafeLogoImg } from '../fan/SafeLogoImg'
 
 function hash(s: string) {
   let h = 2166136261
@@ -45,17 +48,35 @@ export function ClubCrest({
       : variant === 1
         ? `linear-gradient(135deg, ${colors.primary}, ${colors.primary}), radial-gradient(18px 18px at 70% 30%, ${colors.secondary}aa, transparent 60%)`
         : `linear-gradient(135deg, ${colors.primary}, ${colors.secondary}), repeating-linear-gradient(135deg, rgba(255,255,255,0.22) 0 8px, rgba(255,255,255,0) 8px 16px)`
-  const sportMonksFallbackLogoUrl =
-    typeof sportMonksTeamId === 'number' && Number.isFinite(sportMonksTeamId)
-      ? `https://images.sportmonks.com/images/soccer/teams/${sportMonksTeamId}.png`
-      : undefined
-  const resolvedLogoUrl = logoUrl?.trim() || CLUB_OFFICIAL_LOGO_BY_ID[id] || sportMonksFallbackLogoUrl
+  const catalogId = resolveClubIdFromSlug(id) ?? id.trim().toLowerCase()
+  const primaryLogoUrl = resolveTeamLogoUrl(catalogId, {
+    apiLogoUrl: logoUrl,
+    sportMonksTeamId,
+  })
+  const cdnFallbackUrl = useMemo(() => {
+    if (sportMonksTeamId != null) return sportMonksTeamLogoUrl(sportMonksTeamId)
+    return sportMonksTeamLogoUrlForClubId(catalogId)
+  }, [sportMonksTeamId, catalogId])
+
+  const [logoStage, setLogoStage] = useState<'primary' | 'cdn' | 'failed'>('primary')
+  useEffect(() => {
+    setLogoStage('primary')
+  }, [primaryLogoUrl, cdnFallbackUrl, catalogId])
+
+  const activeLogoUrl =
+    logoStage === 'cdn' && cdnFallbackUrl && cdnFallbackUrl !== primaryLogoUrl
+      ? cdnFallbackUrl
+      : logoStage === 'failed'
+        ? null
+        : primaryLogoUrl
+
+  const showMonogram = !activeLogoUrl
 
   const openClub = (ev?: { preventDefault?: () => void; stopPropagation?: () => void }) => {
     if (!clickable) return
     ev?.preventDefault?.()
     ev?.stopPropagation?.()
-    navigate(clubPathForId(id))
+    navigate(clubPathForId(catalogId))
   }
 
   return (
@@ -68,7 +89,7 @@ export function ClubCrest({
       style={{
         width: size,
         height: size,
-        background: resolvedLogoUrl ? 'radial-gradient(circle at 50% 30%, #ffffff, #edf4ff)' : bg,
+        background: activeLogoUrl ? 'transparent' : bg,
         border: `1px solid ${ring}`,
       }}
       role={clickable ? 'link' : undefined}
@@ -84,13 +105,24 @@ export function ClubCrest({
           : undefined
       }
     >
-      {!resolvedLogoUrl ? <div className="absolute inset-0 bg-gradient-to-t from-black/18 to-transparent" /> : null}
-      {resolvedLogoUrl ? (
-        <img
-          src={resolvedLogoUrl}
+      {showMonogram ? <div className="absolute inset-0 bg-gradient-to-t from-black/18 to-transparent" /> : null}
+      {activeLogoUrl ? (
+        <SafeLogoImg
+          key={activeLogoUrl}
+          src={activeLogoUrl}
           alt={`Logo ${shortName}`}
-          className="relative h-[78%] w-[78%] object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
-          loading="lazy"
+          className="relative mx-auto h-[88%] w-[88%] object-contain object-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+          onError={() => {
+            if (
+              logoStage === 'primary' &&
+              cdnFallbackUrl &&
+              cdnFallbackUrl !== primaryLogoUrl
+            ) {
+              setLogoStage('cdn')
+              return
+            }
+            setLogoStage('failed')
+          }}
         />
       ) : (
         <div
@@ -100,13 +132,15 @@ export function ClubCrest({
           {shortName}
         </div>
       )}
-      <div
-        className="pointer-events-none absolute -right-3 -top-3 size-10 rounded-full"
-        style={{
-          background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.55), transparent 60%)`,
-          opacity: 0.55,
-        }}
-      />
+      {activeLogoUrl ? (
+        <div
+          className="pointer-events-none absolute -right-3 -top-3 size-10 rounded-full"
+          style={{
+            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.55), transparent 60%)`,
+            opacity: 0.55,
+          }}
+        />
+      ) : null}
     </div>
   )
 }

@@ -1,19 +1,18 @@
 import bvbLogo from '../assets/logos/Borussia_Dortmund_logo.svg'
 import bayernLogo from '../assets/logos/FC_Bayern_München_logo_(2024).svg'
 import interLogo from '../assets/logos/FC_Internazionale_Milano_2021.svg'
-import juveLogo from '../assets/logos/Juventus_FC_-_pictogram_black_(Italy,_2017).svg'
-import liverpoolLogo from '../assets/logos/Liverpool_logo.svg'
-import psgLogo from '../assets/logos/Logo_Paris_SG_1992.svg'
+import psgCrest from '../assets/logos/Paris_Saint-Germain_crest.svg'
 import omLogo from '../assets/logos/Olympique_Marseille_logo.svg'
 
 /**
  * Logos clubs (bundles locaux + Wikimedia) — utilisés quand SportMonks n’a pas d’id équipe.
  */
 export const CLUB_OFFICIAL_LOGO_BY_ID: Readonly<Record<string, string>> = {
-  psg: psgLogo,
+  psg: psgCrest,
+  'paris-sg': psgCrest,
   om: omLogo,
-  liv: liverpoolLogo,
-  che: 'https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg',
+  liv: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
+  liverpool: 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg',
   ars: 'https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg',
   mci: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg',
   mun: 'https://upload.wikimedia.org/wikipedia/en/7/7a/Manchester_United_FC_crest.svg',
@@ -28,7 +27,6 @@ export const CLUB_OFFICIAL_LOGO_BY_ID: Readonly<Record<string, string>> = {
   bilbao: 'https://upload.wikimedia.org/wikipedia/en/9/98/Athletic_Bilbao_logo.svg',
   valencia: 'https://upload.wikimedia.org/wikipedia/en/c/ce/Valencia_CF_logo.svg',
   inter: interLogo,
-  juve: juveLogo,
   milan: 'https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_AC_Milan.svg',
   napoli: 'https://upload.wikimedia.org/wikipedia/commons/2/2d/SSC_Neapel.svg',
   roma: 'https://upload.wikimedia.org/wikipedia/en/f/f7/AS_Roma_logo_%282017%29.svg',
@@ -42,10 +40,55 @@ export const CLUB_OFFICIAL_LOGO_BY_ID: Readonly<Record<string, string>> = {
   leipzig: 'https://upload.wikimedia.org/wikipedia/en/0/04/RB_Leipzig_2014_logo.svg',
   frankfurt: 'https://upload.wikimedia.org/wikipedia/en/0/04/Eintracht_Frankfurt_logo.svg',
   wolfsburg: 'https://upload.wikimedia.org/wikipedia/en/f/f3/VfL_Wolfsburg_logo.svg',
+  parisfc: 'https://upload.wikimedia.org/wikipedia/en/0/07/Paris_FC_logo.svg',
   monaco: 'https://upload.wikimedia.org/wikipedia/en/5/58/AS_Monaco_FC.svg',
   lyon: 'https://upload.wikimedia.org/wikipedia/en/c/c6/Olympique_Lyonnais_logo.svg',
   lille: 'https://upload.wikimedia.org/wikipedia/en/6/6d/Lille_OSC_logo.svg',
   lens: 'https://upload.wikimedia.org/wikipedia/en/2/2c/RC_Lens_logo.svg',
   rennes: 'https://upload.wikimedia.org/wikipedia/en/9/9e/Stade_Rennais_FC.svg',
   nice: 'https://upload.wikimedia.org/wikipedia/en/8/8d/OGC_Nice_logo.svg',
+  brest: 'https://upload.wikimedia.org/wikipedia/en/0/0f/Stade_Brestois_29_logo.svg',
+  nantes: 'https://upload.wikimedia.org/wikipedia/en/5/5c/FC_Nantes_logo.svg',
+  strasbourg: 'https://upload.wikimedia.org/wikipedia/en/8/80/RC_Strasbourg_Alsace_logo.svg',
+  montpellier: 'https://upload.wikimedia.org/wikipedia/en/9/9e/Montpellier_HSC_logo.svg',
+  reims: 'https://upload.wikimedia.org/wikipedia/en/1/1f/Stade_de_Reims_logo.svg',
+  toulouse: 'https://upload.wikimedia.org/wikipedia/en/2/20/Toulouse_FC_logo.svg',
+  lorient: 'https://upload.wikimedia.org/wikipedia/en/3/3f/FC_Lorient_logo.svg',
+  lehavre: 'https://upload.wikimedia.org/wikipedia/en/5/5e/Le_Havre_AC_logo.svg',
+  metz: 'https://upload.wikimedia.org/wikipedia/en/6/6d/FC_Metz_2021_logo.svg',
+  auxerre: 'https://upload.wikimedia.org/wikipedia/en/5/51/AJ_Auxerre_logo.svg',
+  angers: 'https://upload.wikimedia.org/wikipedia/en/5/5c/Angers_SCO_logo.svg',
+  stetienne: 'https://upload.wikimedia.org/wikipedia/en/3/3c/AS_Saint-%C3%89tienne_logo.svg',
+  sociedad: 'https://upload.wikimedia.org/wikipedia/en/f/f1/Real_Sociedad_logo.svg',
+  getafe: 'https://upload.wikimedia.org/wikipedia/en/4/46/Getafe_CF_logo.svg',
+  osasuna: 'https://upload.wikimedia.org/wikipedia/en/0/0e/CA_Osasuna_logo.svg',
+  mallorca: 'https://upload.wikimedia.org/wikipedia/en/2/2d/RCD_Mallorca_logo.svg',
+  alaves: 'https://upload.wikimedia.org/wikipedia/en/2/2e/Deportivo_Alav%C3%A9s_logo.svg',
+  celta: 'https://upload.wikimedia.org/wikipedia/en/1/12/RC_Celta_de_Vigo_logo.svg',
+  rayo: 'https://upload.wikimedia.org/wikipedia/en/8/85/Rayo_Vallecano_logo.svg',
+  whu: 'https://upload.wikimedia.org/wikipedia/en/c/c2/West_Ham_United_FC_logo.svg',
+  bha: 'https://upload.wikimedia.org/wikipedia/en/f/fd/Brighton_%26_Hove_Albion_logo.svg',
+  brentford: 'https://upload.wikimedia.org/wikipedia/en/2/2a/Brentford_FC_crest.svg',
+  fulham: 'https://upload.wikimedia.org/wikipedia/en/e/eb/Fulham_FC_%28shield%29.svg',
+  wolves: 'https://upload.wikimedia.org/wikipedia/en/f/fc/Wolverhampton_Wanderers.svg',
+  bournemouth: 'https://upload.wikimedia.org/wikipedia/en/e/e5/AFC_Bournemouth.svg',
+  forest: 'https://upload.wikimedia.org/wikipedia/en/e/e5/Nottingham_Forest_F.C._logo.svg',
+  saints: 'https://upload.wikimedia.org/wikipedia/en/c/c9/FC_Southampton.svg',
+  leicester: 'https://upload.wikimedia.org/wikipedia/en/2/2d/Leicester_City_crest.svg',
+  everton: 'https://upload.wikimedia.org/wikipedia/en/7/7c/Everton_FC_logo.svg',
+  genoa: 'https://upload.wikimedia.org/wikipedia/en/4/4c/Genoa_CFC_logo.svg',
+  monza: 'https://upload.wikimedia.org/wikipedia/en/f/f5/AC_Monza_logo.svg',
+  cagliari: 'https://upload.wikimedia.org/wikipedia/en/9/9c/Cagliari_Calcio_logo.svg',
+  empoli: 'https://upload.wikimedia.org/wikipedia/en/0/0a/Empoli_FC_logo.svg',
+  freiburg: 'https://upload.wikimedia.org/wikipedia/en/6/6d/SC_Freiburg_logo.svg',
+  hoffenheim: 'https://upload.wikimedia.org/wikipedia/en/0/0f/TSG_1899_Hoffenheim_logo.svg',
+  union: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/1._FC_Union_Berlin_Logo.svg',
+  stuttgart: 'https://upload.wikimedia.org/wikipedia/en/6/6d/VfB_Stuttgart_1893_logo.svg',
+  augsburg: 'https://upload.wikimedia.org/wikipedia/en/c/c5/FC_Augsburg_logo.svg',
+  mainz: 'https://upload.wikimedia.org/wikipedia/en/9/9e/1._FSV_Mainz_05_logo.svg',
+  bremen: 'https://upload.wikimedia.org/wikipedia/en/b/be/SV_Werder_Bremen_logo.svg',
+  gladbach: 'https://upload.wikimedia.org/wikipedia/commons/8/81/Borussia_M%C3%B6nchengladbach_logo.svg',
+  bochum: 'https://upload.wikimedia.org/wikipedia/en/1/15/VfL_Bochum_logo.svg',
+  heidenheim: 'https://upload.wikimedia.org/wikipedia/en/9/9a/1._FC_Heidenheim_1846_logo.svg',
+  koln: 'https://upload.wikimedia.org/wikipedia/en/5/53/1._FC_K%C3%B6ln_logo.svg',
 }

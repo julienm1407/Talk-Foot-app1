@@ -5,7 +5,7 @@ import type { SupporterGroup } from '../../types/group'
 import type { GroupAccessLevel } from '../../utils/groupAccess'
 import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
-import { sportMonksTeamLogoUrlForClubId } from '../../data/sportMonksLogoUrls'
+import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { CLUB_OFFICIAL_LOGO_BY_ID } from '../../data/clubOfficialLogoUrls'
 
 const kindLabel: Record<NonNullable<SupporterGroup['groupKind']>, string> = {
@@ -42,7 +42,7 @@ function ClubLogoBackdrop({
 }) {
   const mainClubId = group.fanTags?.clubIds?.[0]
   if (!mainClubId) return null
-  const logoUrl = apiLogoUrl ?? sportMonksTeamLogoUrlForClubId(mainClubId) ?? CLUB_OFFICIAL_LOGO_BY_ID[mainClubId]
+  const logoUrl = resolveTeamLogoUrl(mainClubId, { apiLogoUrl }) ?? CLUB_OFFICIAL_LOGO_BY_ID[mainClubId]
   if (!logoUrl) return null
   return (
     <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[46%] overflow-hidden" aria-hidden="true">
@@ -303,7 +303,7 @@ export function GroupCard({
               className={cn('flex items-center justify-between gap-2 text-[10px] font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}
             >
               <span>{group.intensity}% ambiance</span>
-              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Communauté'}</span>
+              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Salon communautaire'}</span>
             </div>
           ) : null}
 
@@ -454,7 +454,7 @@ export function GroupCard({
               )}
             >
               <span className="tabular-nums">{group.intensity}% ambiance</span>
-              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Communauté'}</span>
+              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Salon communautaire'}</span>
             </div>
             <span
               className={cn(
@@ -579,7 +579,7 @@ export function GroupCard({
             {group.intensity}% ambiance
           </Badge>
           <div className={cn('text-xs font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}>
-            {group.createdBy === 'me' ? 'Ton groupe' : 'Communauté'}
+            {group.createdBy === 'me' ? 'Ton groupe' : 'Salon communautaire'}
           </div>
           <span
             className={cn(

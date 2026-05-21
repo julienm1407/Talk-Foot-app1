@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { starterGroups } from '../data/groups'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
@@ -8,6 +8,8 @@ import {
   upsertCloudSupporterGroup,
 } from '../lib/supabase/supporterGroupsRegistry'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
+import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import type { SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
 
@@ -50,6 +52,8 @@ export function useSupporterGroups() {
   const [custom, setCustom] = useState<SupporterGroup[]>([])
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>([])
   const [cloudGroups, setCloudGroups] = useState<SupporterGroup[]>([])
+  const [supabaseActorId, setSupabaseActorId] = useState<string | null>(null)
+  const cloudRefreshSeq = useRef(0)
 
   /** Chaque compte a son propre stockage local (évite qu’un nouveau compte hérite des salons du précédent). */
   useEffect(() => {
@@ -86,33 +90,65 @@ export function useSupporterGroups() {
     [userId],
   )
 
-  useEffect(() => {
+  const refreshCloudGroups = useCallback(async () => {
     if (!isSupabaseConfigured() || !userId) return
     const sb = getSupabaseBrowserClient()
     if (!sb) return
-    let cancelled = false
-    void (async () => {
-      const [membersRes, cloud] = await Promise.all([
-        sb.from('supporter_group_members').select('group_id').eq('user_id', userId),
-        fetchCloudSupporterGroups(sb),
-      ])
-      if (cancelled) return
-      if (cloud.length) setCloudGroups(cloud)
+    const seq = ++cloudRefreshSeq.current
+    const session = await ensureTalkFootSupabaseSession(sb)
+    if (!session || seq !== cloudRefreshSeq.current) return
+    await syncRealtimeAuth(sb)
+    setSupabaseActorId(session.user.id)
 
-      const { data, error } = membersRes
-      if (error) return
+    const viewer = {
+      supabaseUserId: session.user.id,
+      clerkUserId: isClerkAuthMode() ? userId : null,
+    }
 
+    const [membersRes, cloud] = await Promise.all([
+      sb.from('supporter_group_members').select('group_id').eq('user_id', session.user.id),
+      fetchCloudSupporterGroups(sb, viewer),
+    ])
+    if (seq !== cloudRefreshSeq.current) return
+    setCloudGroups(cloud)
+
+    const { data, error } = membersRes
+    if (!error) {
       const cloudJoined = (data ?? [])
         .map((row) => row?.group_id)
         .filter((id): id is string => typeof id === 'string' && id.length > 0)
-
       setJoinedGroupIds(cloudJoined)
       persistJoined(cloudJoined)
-    })()
-    return () => {
-      cancelled = true
     }
   }, [userId, persistJoined])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !userId) {
+      setCloudGroups([])
+      setSupabaseActorId(null)
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    let cancelled = false
+    void refreshCloudGroups().then(() => {
+      if (cancelled) return
+    })
+    const channel = sb
+      .channel(`supporter_groups_registry:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'supporter_groups' },
+        () => {
+          void refreshCloudGroups()
+        },
+      )
+      .subscribe()
+    return () => {
+      cancelled = true
+      void sb.removeChannel(channel)
+    }
+  }, [userId, refreshCloudGroups])
 
   const joinGroup = useCallback(
     (id: string) => {
@@ -182,12 +218,28 @@ export function useSupporterGroups() {
       })
       const sb = getSupabaseBrowserClient()
       if (sb && isSupabaseConfigured()) {
-        void upsertCloudSupporterGroup(sb, next, userId)
-        void upsertCloudGroupMembership(sb, id)
+        void (async () => {
+          const session = await ensureTalkFootSupabaseSession(sb)
+          if (!session) {
+            console.error('[Talk Foot] Création groupe : session Supabase indisponible.')
+            return
+          }
+          setSupabaseActorId(session.user.id)
+          const ownerClerkId = isClerkAuthMode() ? userId : null
+          const reg = await upsertCloudSupporterGroup(
+            sb,
+            next,
+            session.user.id,
+            ownerClerkId,
+          )
+          if (!reg.ok) return
+          await upsertCloudGroupMembership(sb, id)
+          await refreshCloudGroups()
+        })()
       }
       return next
     },
-    [userId, persistCustom, persistJoined],
+    [userId, persistCustom, persistJoined, refreshCloudGroups],
   )
 
   const byId = useCallback(
@@ -225,10 +277,20 @@ export function useSupporterGroups() {
         const next = [...prev]
         next[idx] = nextGroup
         persistCustom(next)
+        const updated = next[idx]
+        const sb = getSupabaseBrowserClient()
+        if (sb && isSupabaseConfigured() && supabaseActorId) {
+          void upsertCloudSupporterGroup(
+            sb,
+            updated,
+            supabaseActorId,
+            isClerkAuthMode() ? userId : null,
+          )
+        }
         return next
       })
     },
-    [persistCustom],
+    [persistCustom, supabaseActorId, userId],
   )
 
   return {
@@ -240,5 +302,6 @@ export function useSupporterGroups() {
     joinGroup,
     leaveGroup,
     isJoined,
+    refreshCloudGroups,
   }
 }

@@ -387,8 +387,18 @@ function ClubSeasonSnapshotBlock({
     awayName: string
     homeLogoUrl?: string
     awayLogoUrl?: string
-    homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
-    awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+    homeCrest: {
+      id: string
+      shortName: string
+      colors: { primary: string; secondary: string }
+      sportMonksTeamId?: number
+    }
+    awayCrest: {
+      id: string
+      shortName: string
+      colors: { primary: string; secondary: string }
+      sportMonksTeamId?: number
+    }
   } | null
   seasonStatsRows?: TeamSeasonStatRow[] | null
   seasonStatsHint?: string | null
@@ -481,23 +491,16 @@ function ClubSeasonSnapshotBlock({
           <div className="mt-2 rounded-xl border border-violet-300/15 bg-black/25 px-3 py-3">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
               <div className="flex min-w-0 items-center gap-2">
-                {clubLastMatch.homeLogoUrl ? (
-                  <img
-                    src={clubLastMatch.homeLogoUrl}
-                    alt={`Logo ${clubLastMatch.homeName}`}
-                    className="h-8 w-8 shrink-0 rounded-full border border-white/20 bg-white object-contain p-0.5"
-                    loading="lazy"
-                  />
-                ) : (
-                  <ClubCrest
-                    id={clubLastMatch.homeCrest.id}
-                    shortName={clubLastMatch.homeCrest.shortName}
-                    colors={clubLastMatch.homeCrest.colors}
-                    size={32}
-                    clickable={false}
-                    className="shrink-0 !rounded-full"
-                  />
-                )}
+                <ClubCrest
+                  id={clubLastMatch.homeCrest.id}
+                  shortName={clubLastMatch.homeCrest.shortName}
+                  colors={clubLastMatch.homeCrest.colors}
+                  logoUrl={clubLastMatch.homeLogoUrl}
+                  sportMonksTeamId={clubLastMatch.homeCrest.sportMonksTeamId}
+                  size={32}
+                  clickable={false}
+                  className="shrink-0 !rounded-full"
+                />
                 <p className="truncate text-xs font-black text-sky-50">{clubLastMatch.homeName}</p>
               </div>
               <p className="text-lg font-black leading-none text-amber-200 sm:text-xl">
@@ -505,23 +508,16 @@ function ClubSeasonSnapshotBlock({
               </p>
               <div className="flex min-w-0 items-center justify-end gap-2">
                 <p className="truncate text-right text-xs font-black text-sky-50">{clubLastMatch.awayName}</p>
-                {clubLastMatch.awayLogoUrl ? (
-                  <img
-                    src={clubLastMatch.awayLogoUrl}
-                    alt={`Logo ${clubLastMatch.awayName}`}
-                    className="h-8 w-8 shrink-0 rounded-full border border-white/20 bg-white object-contain p-0.5"
-                    loading="lazy"
-                  />
-                ) : (
-                  <ClubCrest
-                    id={clubLastMatch.awayCrest.id}
-                    shortName={clubLastMatch.awayCrest.shortName}
-                    colors={clubLastMatch.awayCrest.colors}
-                    size={32}
-                    clickable={false}
-                    className="shrink-0 !rounded-full"
-                  />
-                )}
+                <ClubCrest
+                  id={clubLastMatch.awayCrest.id}
+                  shortName={clubLastMatch.awayCrest.shortName}
+                  colors={clubLastMatch.awayCrest.colors}
+                  logoUrl={clubLastMatch.awayLogoUrl}
+                  sportMonksTeamId={clubLastMatch.awayCrest.sportMonksTeamId}
+                  size={32}
+                  clickable={false}
+                  className="shrink-0 !rounded-full"
+                />
               </div>
             </div>
           </div>
@@ -662,8 +658,18 @@ export function ClubPageGrid({
     awayName: string
     homeLogoUrl?: string
     awayLogoUrl?: string
-    homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
-    awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+    homeCrest: {
+      id: string
+      shortName: string
+      colors: { primary: string; secondary: string }
+      sportMonksTeamId?: number
+    }
+    awayCrest: {
+      id: string
+      shortName: string
+      colors: { primary: string; secondary: string }
+      sportMonksTeamId?: number
+    }
   } | null
   /** Noms sur le terrain alignés sur `squads/teams` (filtre stats saison optionnel). */
   squadFromSportMonks?: boolean

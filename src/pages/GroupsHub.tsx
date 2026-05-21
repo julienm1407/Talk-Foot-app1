@@ -242,7 +242,8 @@ export function GroupsHubPage() {
               className="mt-2 rounded-2xl"
             />
             <p className="mt-2 text-xs font-semibold text-tf-grey">
-              Même principe que les hashtags des salons publics : tape un ou plusieurs mots-clés.
+              Même principe que les hashtags des salons publics : tape un ou plusieurs mots-clés. Les groupes créés par
+              d’autres supporters apparaissent ici en <strong className="text-tf-dark">Salon communautaire</strong>.
             </p>
           </Card>
           <Card className="space-y-3 p-4 sm:p-5" elevation="soft">

@@ -52,7 +52,15 @@ function moodFromForm(form: Array<'V' | 'N' | 'D'>): { score: number; label: str
   return { score, label }
 }
 
-export function ClubPageHero({ team, data }: { team: Team; data: ClubPageMock }) {
+export function ClubPageHero({
+  team,
+  data,
+  sportMonksTeamId,
+}: {
+  team: Team
+  data: ClubPageMock
+  sportMonksTeamId?: number
+}) {
   const [sticky, setSticky] = useState(false)
   const heroEndRef = useRef<HTMLDivElement>(null)
   const { favoriteClubIds, setFavoriteClubIds } = useFanPreferences()
@@ -200,6 +208,7 @@ export function ClubPageHero({ team, data }: { team: Team; data: ClubPageMock })
               id={team.id}
               shortName={team.shortName}
               colors={team.colors}
+              sportMonksTeamId={sportMonksTeamId}
               size={88}
               className="!rounded-[1.4rem] shadow-lg ring-1 ring-white/20"
             />
@@ -222,45 +231,31 @@ export function ClubPageHero({ team, data }: { team: Team; data: ClubPageMock })
                 </p>
                 <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    {data.upcoming.homeLogoUrl ? (
-                      <img
-                        src={data.upcoming.homeLogoUrl}
-                        alt={`Logo ${homeName}`}
-                        className="h-7 w-7 shrink-0 rounded-full border border-white/20 bg-white object-contain p-0.5"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <ClubCrest
-                        id={homeCrest.id}
-                        shortName={homeCrest.shortName}
-                        colors={homeCrest.colors}
-                        size={28}
-                        clickable={false}
-                        className="shrink-0 !rounded-full"
-                      />
-                    )}
+                    <ClubCrest
+                      id={homeCrest.id}
+                      shortName={homeCrest.shortName}
+                      colors={homeCrest.colors}
+                      logoUrl={data.upcoming.homeLogoUrl}
+                      sportMonksTeamId={homeCrest.sportMonksTeamId}
+                      size={28}
+                      clickable={false}
+                      className="shrink-0 !rounded-full"
+                    />
                     <span className="truncate text-sm font-black text-sky-50 sm:text-[15px]">{homeName}</span>
                   </div>
                   <span className="text-xs font-black uppercase tracking-wide text-sky-200/85">vs</span>
                   <div className="flex min-w-0 items-center justify-end gap-1.5">
                     <span className="truncate text-right text-sm font-black text-sky-50 sm:text-[15px]">{awayName}</span>
-                    {data.upcoming.awayLogoUrl ? (
-                      <img
-                        src={data.upcoming.awayLogoUrl}
-                        alt={`Logo ${awayName}`}
-                        className="h-7 w-7 shrink-0 rounded-full border border-white/20 bg-white object-contain p-0.5"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <ClubCrest
-                        id={awayCrest.id}
-                        shortName={awayCrest.shortName}
-                        colors={awayCrest.colors}
-                        size={28}
-                        clickable={false}
-                        className="shrink-0 !rounded-full"
-                      />
-                    )}
+                    <ClubCrest
+                      id={awayCrest.id}
+                      shortName={awayCrest.shortName}
+                      colors={awayCrest.colors}
+                      logoUrl={data.upcoming.awayLogoUrl}
+                      sportMonksTeamId={awayCrest.sportMonksTeamId}
+                      size={28}
+                      clickable={false}
+                      className="shrink-0 !rounded-full"
+                    />
                   </div>
                 </div>
               </div>

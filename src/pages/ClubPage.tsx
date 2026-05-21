@@ -100,8 +100,18 @@ export function ClubPage() {
           awayName: string
           homeLogoUrl?: string
           awayLogoUrl?: string
-          homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
-          awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+          homeCrest: {
+            id: string
+            shortName: string
+            colors: { primary: string; secondary: string }
+            sportMonksTeamId?: number
+          }
+          awayCrest: {
+            id: string
+            shortName: string
+            colors: { primary: string; secondary: string }
+            sportMonksTeamId?: number
+          }
         })
       | null
     formStrip: Array<'V' | 'N' | 'D'> | null
@@ -468,7 +478,7 @@ export function ClubPage() {
         data.matchMode && 'ring-1 ring-rose-500/10',
       )}
     >
-      <ClubPageHero team={team} data={data} />
+      <ClubPageHero team={team} data={data} sportMonksTeamId={smTeamId} />
       <ClubDataBar
         data={data}
         onOpenInfo={() => setInfoOpen(true)}

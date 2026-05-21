@@ -63,8 +63,18 @@ export type ClubPageMock = {
     awayName?: string
     homeLogoUrl?: string
     awayLogoUrl?: string
-    homeCrest?: { id: string; shortName: string; colors: { primary: string; secondary: string } }
-    awayCrest?: { id: string; shortName: string; colors: { primary: string; secondary: string } }
+    homeCrest?: {
+      id: string
+      shortName: string
+      colors: { primary: string; secondary: string }
+      sportMonksTeamId?: number
+    }
+    awayCrest?: {
+      id: string
+      shortName: string
+      colors: { primary: string; secondary: string }
+      sportMonksTeamId?: number
+    }
   }
   /** 5 dernières (V/N/D) */
   formStrip: Array<'V' | 'N' | 'D'>

@@ -40,6 +40,7 @@ import {
 } from '../api/sportMonks'
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
+import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
   extractScorerEventsFromHighlights,
   formatGoalScorerLabel,
@@ -254,12 +255,18 @@ function TeamLogoLink({
   clubId,
   label,
   logoUrl,
+  sportMonksTeamId,
 }: {
   clubId?: string
   label: string
   logoUrl?: string
+  sportMonksTeamId?: number
 }) {
-  const inner = <TeamLogo label={label} logoUrl={logoUrl} />
+  const resolved =
+    clubId != null
+      ? resolveTeamLogoUrl(clubId, { apiLogoUrl: logoUrl, sportMonksTeamId }) ?? logoUrl
+      : logoUrl
+  const inner = <TeamLogo label={label} logoUrl={resolved} />
   if (!clubId) return inner
   return (
     <Link
@@ -1546,7 +1553,12 @@ export function ChannelPage() {
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5">
             <div className="flex min-w-0 flex-col gap-0.5">
               <div className="flex min-w-0 items-center gap-1.5">
-                <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
+                <TeamLogoLink
+                  clubId={match?.home.id}
+                  label={homeHeaderLabel}
+                  logoUrl={match?.home.logoUrl}
+                  sportMonksTeamId={match?.home.sportMonksTeamId}
+                />
                 <Link
                   to={match?.home.id ? clubPathForId(match.home.id) : '#'}
                   title={homeName}
@@ -1588,7 +1600,12 @@ export function ChannelPage() {
                 >
                   {awayHeaderLabel}
                 </Link>
-                <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+                <TeamLogoLink
+                  clubId={match?.away.id}
+                  label={awayHeaderLabel}
+                  logoUrl={match?.away.logoUrl}
+                  sportMonksTeamId={match?.away.sportMonksTeamId}
+                />
               </div>
               {isUpcoming ? (
                 <p className={`truncate pr-11 text-right text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
@@ -1632,7 +1649,12 @@ export function ChannelPage() {
         >
           <div className="col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5 justify-self-start">
             <div className="flex min-w-0 items-center gap-3">
-              <TeamLogoLink clubId={match?.home.id} label={homeHeaderLabel} logoUrl={match?.home.logoUrl} />
+              <TeamLogoLink
+                clubId={match?.home.id}
+                label={homeHeaderLabel}
+                logoUrl={match?.home.logoUrl}
+                sportMonksTeamId={match?.home.sportMonksTeamId}
+              />
               <Link
                 to={match?.home.id ? clubPathForId(match.home.id) : '#'}
                 title={homeName}
@@ -1675,7 +1697,12 @@ export function ChannelPage() {
               >
                 {awayHeaderLabel}
               </Link>
-              <TeamLogoLink clubId={match?.away.id} label={awayHeaderLabel} logoUrl={match?.away.logoUrl} />
+              <TeamLogoLink
+                clubId={match?.away.id}
+                label={awayHeaderLabel}
+                logoUrl={match?.away.logoUrl}
+                sportMonksTeamId={match?.away.sportMonksTeamId}
+              />
             </div>
             {isUpcoming ? (
               <p
