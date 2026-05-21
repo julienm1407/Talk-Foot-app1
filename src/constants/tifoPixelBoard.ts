@@ -20,3 +20,8 @@ export function tifoPixelKey(x: number, y: number) {
 export function tifoTodayKeyUtc() {
   return new Date().toISOString().slice(0, 10)
 }
+
+/** Clé locale : une grille tifo par groupe + match. */
+export function tifoBoardScopeKey(groupId: string, matchId: string) {
+  return `${groupId}::${matchId}`
+}

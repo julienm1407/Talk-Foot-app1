@@ -1113,9 +1113,11 @@ export function GroupPage() {
               Tifo pixel (match)
             </summary>
             <GroupTifoPanel
+              groupId={group.id}
               matches={matches}
               groupClubId={groupMainClubId}
               groupClubLabel={groupMainClubLabel ?? undefined}
+              isGroupAdmin={group.createdBy === 'me'}
             />
           </details>
         </Card>

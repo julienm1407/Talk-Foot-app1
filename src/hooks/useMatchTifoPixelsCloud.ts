@@ -15,6 +15,7 @@ import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 
 const TIFO_PIXEL_BROADCAST = 'match_tifo_pixel'
+const TIFO_PIXEL_DELETE_BROADCAST = 'match_tifo_pixel_delete'
 const TIFO_POLL_MS = 3500
 
 type PixelBoard = Record<string, string>
@@ -23,6 +24,11 @@ type PixelRow = {
   x: number
   y: number
   color: string
+}
+
+type TifoScope = {
+  groupId: string
+  matchId: string
 }
 
 function rowsToPixels(rows: PixelRow[]): PixelBoard {
@@ -45,14 +51,33 @@ function rowFromPayload(row: unknown): PixelRow | null {
   return { x, y, color }
 }
 
-function broadcastPayloadToRow(payload: unknown, matchId: string): PixelRow | null {
-  if (!payload || typeof payload !== 'object') return null
+function payloadMatchesScope(payload: unknown, scope: TifoScope): boolean {
+  if (!payload || typeof payload !== 'object') return false
   const p = payload as Record<string, unknown>
-  if (p.match_id !== matchId) return null
+  return p.group_id === scope.groupId && p.match_id === scope.matchId
+}
+
+function broadcastPayloadToRow(payload: unknown, scope: TifoScope): PixelRow | null {
+  if (!payloadMatchesScope(payload, scope)) return null
+  const p = payload as Record<string, unknown>
   return rowFromPayload({ x: p.x, y: p.y, color: p.color })
 }
 
-export function useMatchTifoPixelsCloud(matchId: string | null) {
+function broadcastDeleteToCell(payload: unknown, scope: TifoScope): { x: number; y: number } | null {
+  if (!payloadMatchesScope(payload, scope)) return null
+  const p = payload as Record<string, unknown>
+  const x = typeof p.x === 'number' ? p.x : Number(p.x)
+  const y = typeof p.y === 'number' ? p.y : Number(p.y)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return { x, y }
+}
+
+export function useMatchTifoPixelsCloud(options: {
+  groupId: string
+  matchId: string | null
+  isGroupAdmin: boolean
+}) {
+  const { groupId, matchId, isGroupAdmin } = options
   const [pixels, setPixels] = useState<PixelBoard>({})
   const [remaining, setRemaining] = useState(TIFO_MAX_PER_USER_DAY)
   const [notice, setNotice] = useState<string | null>(null)
@@ -62,14 +87,27 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
     null,
   )
 
+  const scope: TifoScope | null = groupId && matchId ? { groupId, matchId } : null
+
+  const clearPixel = useCallback((x: number, y: number) => {
+    const key = tifoPixelKey(x, y)
+    setPixels((prev) => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }, [])
+
   const refreshUsage = useCallback(
     async (sb: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>, uid: string) => {
-      if (!matchId) return
+      if (!scope) return
       const { data, error } = await sb
         .from('match_tifo_pixel_usage')
         .select('placement_count')
         .eq('user_id', uid)
-        .eq('match_id', matchId)
+        .eq('group_id', scope.groupId)
+        .eq('match_id', scope.matchId)
         .eq('usage_date', tifoTodayKeyUtc())
         .maybeSingle()
       if (error && import.meta.env.DEV) {
@@ -78,16 +116,17 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
       const used = typeof data?.placement_count === 'number' ? data.placement_count : 0
       setRemaining(Math.max(0, TIFO_MAX_PER_USER_DAY - used))
     },
-    [matchId],
+    [scope],
   )
 
   const refreshBoard = useCallback(
     async (sb: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>) => {
-      if (!matchId) return
+      if (!scope) return
       const { data, error } = await sb
         .from('match_tifo_pixels')
         .select('x, y, color')
-        .eq('match_id', matchId)
+        .eq('group_id', scope.groupId)
+        .eq('match_id', scope.matchId)
         .limit(10000)
       if (error) {
         if (import.meta.env.DEV) console.warn('[Talk Foot] match_tifo_pixels fetch:', error.message)
@@ -95,13 +134,15 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
       }
       setPixels(rowsToPixels((data ?? []) as PixelRow[]))
     },
-    [matchId],
+    [scope],
   )
 
   useEffect(() => {
-    if (!matchId || !isSupabaseConfigured()) {
-      setPixels({})
-      setRemaining(TIFO_MAX_PER_USER_DAY)
+    setPixels({})
+    setRemaining(TIFO_MAX_PER_USER_DAY)
+    setNotice(null)
+
+    if (!scope || !isSupabaseConfigured()) {
       setLoading(false)
       channelRef.current = null
       return
@@ -131,14 +172,18 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
         return
       }
 
-      const matchFilter = postgresChangesEqFilter('match_id', matchId)
+      const groupFilter = postgresChangesEqFilter('group_id', scope.groupId)
       const channel = sb
-        .channel(`match_tifo:${matchId}`, {
+        .channel(`match_tifo:${scope.groupId}:${scope.matchId}`, {
           config: { broadcast: { self: true } },
         })
         .on('broadcast', { event: TIFO_PIXEL_BROADCAST }, (msg) => {
-          const row = broadcastPayloadToRow(msg.payload, matchId)
+          const row = broadcastPayloadToRow(msg.payload, scope)
           if (row) applyPixel(row)
+        })
+        .on('broadcast', { event: TIFO_PIXEL_DELETE_BROADCAST }, (msg) => {
+          const cell = broadcastDeleteToCell(msg.payload, scope)
+          if (cell) clearPixel(cell.x, cell.y)
         })
         .on(
           'postgres_changes',
@@ -146,9 +191,10 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
             event: 'INSERT',
             schema: 'public',
             table: 'match_tifo_pixels',
-            filter: matchFilter,
+            filter: groupFilter,
           },
-          (payload: RealtimePostgresChangesPayload<PixelRow>) => {
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+            if (payload.new && (payload.new as Record<string, unknown>).match_id !== scope.matchId) return
             const row = rowFromPayload(payload.new)
             if (row) applyPixel(row)
           },
@@ -159,11 +205,28 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
             event: 'UPDATE',
             schema: 'public',
             table: 'match_tifo_pixels',
-            filter: matchFilter,
+            filter: groupFilter,
           },
-          (payload: RealtimePostgresChangesPayload<PixelRow>) => {
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+            if (payload.new && (payload.new as Record<string, unknown>).match_id !== scope.matchId) return
             const row = rowFromPayload(payload.new)
             if (row) applyPixel(row)
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'match_tifo_pixels',
+            filter: groupFilter,
+          },
+          (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+            const old = payload.old as Record<string, unknown> | undefined
+            if (!old || old.match_id !== scope.matchId) return
+            const x = typeof old.x === 'number' ? old.x : Number(old.x)
+            const y = typeof old.y === 'number' ? old.y : Number(old.y)
+            if (Number.isFinite(x) && Number.isFinite(y)) clearPixel(x, y)
           },
         )
         .subscribe((status) => {
@@ -195,11 +258,11 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
         channelRef.current = null
       }
     }
-  }, [matchId, refreshBoard, refreshUsage])
+  }, [scope, refreshBoard, refreshUsage, clearPixel])
 
   const placePixel = useCallback(
     async (x: number, y: number, color: string) => {
-      if (!matchId) return false
+      if (!scope) return false
       setNotice(null)
       if (x < 0 || x >= TIFO_BOARD_W || y < 0 || y >= TIFO_BOARD_H) return false
       if (remaining <= 0) {
@@ -224,7 +287,8 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
       setRemaining((r) => Math.max(0, r - 1))
 
       const { error } = await sb.rpc('place_match_tifo_pixel', {
-        p_match_id: matchId,
+        p_group_id: scope.groupId,
+        p_match_id: scope.matchId,
         p_x: x,
         p_y: y,
         p_color: color,
@@ -253,7 +317,13 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
         void ch.send({
           type: 'broadcast',
           event: TIFO_PIXEL_BROADCAST,
-          payload: { match_id: matchId, x, y, color },
+          payload: {
+            group_id: scope.groupId,
+            match_id: scope.matchId,
+            x,
+            y,
+            color,
+          },
         })
       }
 
@@ -261,12 +331,70 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
       void refreshUsage(sb, session.user.id)
       return true
     },
-    [matchId, remaining, pixels, refreshBoard, refreshUsage],
+    [scope, remaining, pixels, refreshBoard, refreshUsage],
+  )
+
+  const deletePixelAsAdmin = useCallback(
+    async (x: number, y: number) => {
+      if (!scope || !isGroupAdmin) return false
+      setNotice(null)
+      const key = tifoPixelKey(x, y)
+      if (!pixels[key]) return false
+
+      const sb = getSupabaseBrowserClient()
+      if (!sb || !isSupabaseConfigured()) return false
+
+      const session = await ensureTalkFootSupabaseSession(sb)
+      if (!session) {
+        setNotice('Session indisponible — réessaie dans un instant.')
+        return false
+      }
+      await syncRealtimeAuth(sb)
+
+      const { error } = await sb.rpc('delete_match_tifo_pixel_admin', {
+        p_group_id: scope.groupId,
+        p_match_id: scope.matchId,
+        p_x: x,
+        p_y: y,
+      })
+
+      if (error) {
+        const msg = error.message ?? ''
+        if (msg.includes('not_group_owner')) {
+          setNotice('Seul le propriétaire du groupe peut supprimer des pixels.')
+        } else {
+          setNotice('Suppression impossible pour le moment.')
+          if (import.meta.env.DEV) console.warn('[Talk Foot] delete_match_tifo_pixel_admin:', msg)
+        }
+        return false
+      }
+
+      clearPixel(x, y)
+
+      const ch = channelRef.current
+      if (ch) {
+        void ch.send({
+          type: 'broadcast',
+          event: TIFO_PIXEL_DELETE_BROADCAST,
+          payload: {
+            group_id: scope.groupId,
+            match_id: scope.matchId,
+            x,
+            y,
+          },
+        })
+      }
+
+      void refreshBoard(sb)
+      return true
+    },
+    [scope, isGroupAdmin, pixels, clearPixel, refreshBoard],
   )
 
   return {
     pixels,
     placePixel,
+    deletePixelAsAdmin,
     remaining,
     palette: [...TIFO_DEFAULT_PALETTE],
     boardW: TIFO_BOARD_W,
@@ -275,5 +403,6 @@ export function useMatchTifoPixelsCloud(matchId: string | null) {
     clearNotice: () => setNotice(null),
     loading,
     isShared: true,
+    isGroupAdmin,
   }
 }

@@ -4,14 +4,20 @@ import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
 import { useAppearance } from '../../contexts/AppearanceContext'
 
+const EMPTY_CELL = '#eef2f6'
+
 export function GroupTifoPanel({
+  groupId,
   matches,
   groupClubId,
   groupClubLabel,
+  isGroupAdmin,
 }: {
+  groupId: string
   matches: Match[]
   groupClubId?: string | null
   groupClubLabel?: string
+  isGroupAdmin: boolean
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
@@ -25,6 +31,7 @@ export function GroupTifoPanel({
   }, [matches, groupClubId])
 
   const [matchId, setMatchId] = useState<string | null>(() => candidates[0]?.id ?? null)
+  const [moderationMode, setModerationMode] = useState(false)
 
   const activeId = matchId && candidates.some((m) => m.id === matchId) ? matchId : candidates[0]?.id ?? null
 
@@ -32,9 +39,15 @@ export function GroupTifoPanel({
     const first = candidates[0]?.id ?? null
     if (first && !matchId) setMatchId(first)
   }, [candidates, matchId])
+
+  useEffect(() => {
+    setModerationMode(false)
+  }, [groupId, activeId])
+
   const {
     pixels,
     placePixel,
+    deletePixelAsAdmin,
     remaining,
     palette,
     boardW,
@@ -43,7 +56,11 @@ export function GroupTifoPanel({
     clearNotice,
     loading,
     isShared,
-  } = useMatchTifoPixels(activeId)
+  } = useMatchTifoPixels({
+    groupId,
+    matchId: activeId,
+    isGroupAdmin,
+  })
 
   const [color, setColor] = useState(palette[3]!)
 
@@ -64,6 +81,9 @@ export function GroupTifoPanel({
     )
   }
 
+  const gridLine = L ? 'bg-slate-300/90' : 'bg-slate-600/80'
+  const cellDefault = L ? 'bg-slate-100' : 'bg-slate-800/90'
+
   return (
     <div
       className={cn(
@@ -73,9 +93,9 @@ export function GroupTifoPanel({
           : 'border-white/15 bg-gradient-to-b from-slate-900/70 to-[#0b1220]/95',
       )}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className={cn('text-[10px] font-black uppercase tracking-[0.2em]', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
-          Tifo pixel{isShared ? ' · communautaire' : ''}
+          Tifo pixel{isShared ? ' · ce salon' : ''}
         </div>
         <span
           className={cn(
@@ -86,6 +106,33 @@ export function GroupTifoPanel({
           {remaining} px restants aujourd’hui
         </span>
       </div>
+
+      {isGroupAdmin ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setModerationMode((v) => !v)}
+            className={cn(
+              'rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wide transition',
+              moderationMode
+                ? L
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-rose-500 text-white'
+                : L
+                  ? 'border border-tf-grey-pastel/60 bg-white text-tf-grey'
+                  : 'border border-white/20 bg-slate-900/60 text-sky-100',
+            )}
+          >
+            {moderationMode ? 'Modération active' : 'Modérer le tifo'}
+          </button>
+          {moderationMode ? (
+            <span className={cn('text-[10px] font-semibold', L ? 'text-rose-700' : 'text-rose-300')}>
+              Clique un pixel coloré pour le supprimer
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       <label className={cn('mt-2 block text-[10px] font-black uppercase tracking-wide', L ? 'text-tf-grey/70' : 'text-sky-200/75')}>
         Match cible
       </label>
@@ -110,22 +157,24 @@ export function GroupTifoPanel({
         ))}
       </select>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {palette.map((c) => (
-          <button
-            key={c}
-            type="button"
-            title={c}
-            className={cn(
-              'size-7 rounded-lg border-2 transition',
-              color === c ? 'border-tf-dark ring-2 ring-tf-electric/30' : 'border-white ring-1 ring-black/10',
-            )}
-            style={{ backgroundColor: c }}
-            onClick={() => setColor(c)}
-            aria-label={`Couleur ${c}`}
-          />
-        ))}
-      </div>
+      {!moderationMode ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {palette.map((c) => (
+            <button
+              key={c}
+              type="button"
+              title={c}
+              className={cn(
+                'size-7 rounded-lg border-2 transition',
+                color === c ? 'border-tf-dark ring-2 ring-tf-electric/30' : 'border-white ring-1 ring-black/10',
+              )}
+              style={{ backgroundColor: c }}
+              onClick={() => setColor(c)}
+              aria-label={`Couleur ${c}`}
+            />
+          ))}
+        </div>
+      ) : null}
 
       {notice ? (
         <p className={cn('mt-2 text-[11px] font-semibold', L ? 'text-amber-700' : 'text-amber-300')}>
@@ -147,10 +196,7 @@ export function GroupTifoPanel({
         data-no-swipe="true"
       >
         <div
-          className={cn(
-            'inline-grid gap-0 p-px',
-            L ? 'border border-slate-200/80 bg-slate-100' : 'border border-white/15 bg-slate-950/80',
-          )}
+          className={cn('inline-grid gap-px p-px', gridLine)}
           style={{
             gridTemplateColumns: `repeat(${boardW}, minmax(0, 10px))`,
             gridTemplateRows: `repeat(${boardH}, minmax(0, 10px))`,
@@ -162,24 +208,38 @@ export function GroupTifoPanel({
             const x = i % boardW
             const y = (i / boardW) | 0
             const k = `${x},${y}`
-            const fill = pixels[k] ?? '#eef2f6'
+            const painted = pixels[k]
+            const fill = painted ?? EMPTY_CELL
+            const isPainted = Boolean(painted)
             return (
               <button
                 key={k}
                 type="button"
                 className={cn(
-                  'h-2.5 w-2.5 min-h-[10px] min-w-[10px] border p-0 transition hover:z-[1] hover:ring-2 hover:ring-tf-electric/50',
-                  L
-                    ? 'border-slate-300/60 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]'
-                    : 'border-white/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]',
+                  'h-2.5 w-2.5 min-h-[10px] min-w-[10px] p-0 transition',
+                  !painted && cellDefault,
+                  moderationMode && isPainted
+                    ? 'hover:ring-2 hover:ring-rose-500/80'
+                    : 'hover:z-[1] hover:ring-2 hover:ring-tf-electric/50',
+                  moderationMode && !isPainted && 'cursor-default opacity-70',
                 )}
-                style={{ backgroundColor: fill }}
+                style={painted ? { backgroundColor: fill } : undefined}
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
-                  void placePixel(x, y, color)
+                  if (moderationMode && isGroupAdmin) {
+                    if (isPainted) void deletePixelAsAdmin(x, y)
+                    return
+                  }
+                  if (!moderationMode) void placePixel(x, y, color)
                 }}
-                aria-label={`Pixel ${x + 1} ${y + 1}`}
+                aria-label={
+                  moderationMode
+                    ? isPainted
+                      ? `Supprimer le pixel ${x + 1} ${y + 1}`
+                      : `Pixel vide ${x + 1} ${y + 1}`
+                    : `Pixel ${x + 1} ${y + 1}`
+                }
               />
             )
           })}
