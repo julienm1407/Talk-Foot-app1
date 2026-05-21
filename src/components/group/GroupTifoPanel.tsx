@@ -4,7 +4,7 @@ import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
 import { useAppearance } from '../../contexts/AppearanceContext'
 
-const EMPTY_CELL = '#eef2f6'
+const CELL_PX = 11
 
 export function GroupTifoPanel({
   groupId,
@@ -81,8 +81,8 @@ export function GroupTifoPanel({
     )
   }
 
-  const gridLine = L ? 'bg-slate-300/90' : 'bg-slate-600/80'
-  const cellDefault = L ? 'bg-slate-100' : 'bg-slate-800/90'
+  const emptyFill = L ? '#eef2f6' : '#1e293b'
+  const gridBorder = L ? 'border-slate-400/75' : 'border-slate-500/90'
 
   return (
     <div
@@ -182,24 +182,31 @@ export function GroupTifoPanel({
         </p>
       ) : null}
 
-      {loading ? (
-        <p className={cn('mt-2 text-[11px] font-semibold', L ? 'text-tf-grey/70' : 'text-sky-200/70')}>
-          Chargement du tifo…
-        </p>
-      ) : null}
-
       <div
         className={cn(
-          'mt-3 overflow-x-auto rounded-xl border p-1.5 shadow-inner',
+          'relative mt-3 overflow-x-auto rounded-xl border p-1.5 shadow-inner',
           L ? 'border-tf-grey-pastel/50 bg-white' : 'border-white/15 bg-slate-900/80',
         )}
         data-no-swipe="true"
       >
+        {loading ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center rounded-xl bg-black/10 backdrop-blur-[1px]"
+            aria-hidden
+          >
+            <span className={cn('rounded-lg px-2 py-1 text-[10px] font-bold', L ? 'bg-white/90 text-tf-grey' : 'bg-slate-900/90 text-sky-100')}>
+              Sync…
+            </span>
+          </div>
+        ) : null}
         <div
-          className={cn('inline-grid gap-px p-px', gridLine)}
+          className={cn(
+            'inline-grid gap-0 border p-0',
+            L ? 'border-slate-400/80 bg-slate-200/50' : 'border-slate-500/80 bg-slate-700/40',
+          )}
           style={{
-            gridTemplateColumns: `repeat(${boardW}, minmax(0, 10px))`,
-            gridTemplateRows: `repeat(${boardH}, minmax(0, 10px))`,
+            gridTemplateColumns: `repeat(${boardW}, ${CELL_PX}px)`,
+            gridTemplateRows: `repeat(${boardH}, ${CELL_PX}px)`,
           }}
           role="img"
           aria-label="Grille tifo collaborative"
@@ -209,21 +216,28 @@ export function GroupTifoPanel({
             const y = (i / boardW) | 0
             const k = `${x},${y}`
             const painted = pixels[k]
-            const fill = painted ?? EMPTY_CELL
+            const fill = painted ?? emptyFill
             const isPainted = Boolean(painted)
             return (
               <button
                 key={k}
                 type="button"
                 className={cn(
-                  'h-2.5 w-2.5 min-h-[10px] min-w-[10px] p-0 transition',
-                  !painted && cellDefault,
+                  'box-border p-0 transition',
+                  gridBorder,
+                  'border-[0.5px]',
                   moderationMode && isPainted
-                    ? 'hover:ring-2 hover:ring-rose-500/80'
-                    : 'hover:z-[1] hover:ring-2 hover:ring-tf-electric/50',
-                  moderationMode && !isPainted && 'cursor-default opacity-70',
+                    ? 'hover:ring-1 hover:ring-rose-500 hover:ring-inset'
+                    : 'hover:brightness-110 hover:ring-1 hover:ring-tf-electric/60 hover:ring-inset',
+                  moderationMode && !isPainted && 'cursor-default opacity-60',
                 )}
-                style={painted ? { backgroundColor: fill } : undefined}
+                style={{
+                  width: CELL_PX,
+                  height: CELL_PX,
+                  minWidth: CELL_PX,
+                  minHeight: CELL_PX,
+                  backgroundColor: fill,
+                }}
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
