@@ -20,9 +20,19 @@ function playerNameFromScorerSlug(slug: string): string {
   return last.charAt(0).toUpperCase() + last.slice(1)
 }
 
+/** Nom affiché du club (nom complet, pas le sigle type ATA). */
+function teamDisplayName(team: Match['home'] | undefined, fallback: string): string {
+  if (!team) return fallback
+  const full = team.name?.trim()
+  if (full) return full
+  return team.shortName?.trim() || fallback
+}
+
 export function getBetPickTitle(bet: Bet, match: Match | null): string {
-  const home = match?.home.shortName ?? 'Domicile'
-  const away = match?.away.shortName ?? 'Extérieur'
+  const homeShort = match?.home.shortName ?? 'Domicile'
+  const awayShort = match?.away.shortName ?? 'Extérieur'
+  const homeFull = teamDisplayName(match?.home, 'Domicile')
+  const awayFull = teamDisplayName(match?.away, 'Extérieur')
   const sel = bet.selection
 
   if (bet.market === 'anytime_scorer' && typeof sel === 'string' && sel.startsWith('scor:')) {
@@ -30,9 +40,9 @@ export function getBetPickTitle(bet: Bet, match: Match | null): string {
     return `${playerNameFromScorerSlug(slug)} Buteur`
   }
   if (bet.market === 'result_1x2') {
-    if (sel === 'home') return `${home} · 1N2`
-    if (sel === 'away') return `${away} · 1N2`
-    if (sel === 'draw') return 'Match nul · 1N2'
+    if (sel === 'home') return homeFull
+    if (sel === 'away') return awayFull
+    if (sel === 'draw') return 'Match nul'
   }
   if (bet.market === 'over25') {
     return sel === 'over' ? '+2,5 buts · Over' : '+2,5 buts · Under'
@@ -44,13 +54,13 @@ export function getBetPickTitle(bet: Bet, match: Match | null): string {
     return `Score exact ${score}`
   }
   if (bet.market === 'next_goal') {
-    if (sel === 'home') return `Prochain but · ${home}`
-    if (sel === 'away') return `Prochain but · ${away}`
+    if (sel === 'home') return `Prochain but · ${homeShort}`
+    if (sel === 'away') return `Prochain but · ${awayShort}`
     return 'Prochain but'
   }
   if (bet.market === 'first_goal') {
-    if (sel === 'home') return `1er but · ${home}`
-    if (sel === 'away') return `1er but · ${away}`
+    if (sel === 'home') return `1er but · ${homeShort}`
+    if (sel === 'away') return `1er but · ${awayShort}`
     return '1er but'
   }
   return marketShortLabel(bet.market)
@@ -128,4 +138,55 @@ export function betMatchesFilter(b: Bet, tab: BetFilterTab): boolean {
 export function getBetMarketHint(bet: Bet): string | null {
   if (bet.market === 'anytime_scorer') return null
   return marketShortLabel(bet.market)
+}
+
+/** Équipe / choix sur lequel le pari a été placé (affiché sous « Résultat »). */
+export function getBetPickedOutcomeLabel(bet: Bet, match: Match | null): string {
+  const home = teamDisplayName(match?.home, 'Domicile')
+  const away = teamDisplayName(match?.away, 'Extérieur')
+  const sel = bet.selection
+
+  if (bet.market === 'result_1x2') {
+    if (sel === 'home') return home
+    if (sel === 'away') return away
+    if (sel === 'draw') return 'Match nul'
+  }
+  if (bet.market === 'next_goal' || bet.market === 'first_goal') {
+    if (sel === 'home') return home
+    if (sel === 'away') return away
+  }
+  if (bet.market === 'anytime_scorer' && typeof sel === 'string' && sel.startsWith('scor:')) {
+    const slug = sel.slice(sel.lastIndexOf(':') + 1)
+    return playerNameFromScorerSlug(slug)
+  }
+  if (bet.market === 'over25') {
+    return sel === 'over' ? 'Plus de 2,5 buts' : 'Moins de 2,5 buts'
+  }
+  if (bet.market === 'exact_score') {
+    const s = String(sel)
+    const score =
+      s.length === 2 && /^\d\d$/.test(s) ? `${s[0]}-${s[1]}` : s.replace(/(\d)(\d)/, '$1-$2')
+    return `Score ${score}`
+  }
+  return getBetPickTitle(bet, match)
+}
+
+export function getBetFinalVerdict(bet: Bet): {
+  label: string
+  tone: 'won' | 'lost'
+} | null {
+  if (bet.status === 'won') return { label: 'Pari gagnant', tone: 'won' }
+  if (bet.status === 'lost') return { label: 'Pari perdant', tone: 'lost' }
+  return null
+}
+
+/** Côté équipe parié (1N2 / prochain but) pour surligner le score. */
+export function getBetPickedSide(bet: Bet): 'home' | 'away' | 'draw' | null {
+  const sel = bet.selection
+  if (sel === 'home' || sel === 'away' || sel === 'draw') return sel
+  if (typeof sel === 'string' && sel.startsWith('scor:')) {
+    const side = sel.split(':')[1]
+    if (side === 'home' || side === 'away') return side
+  }
+  return null
 }
