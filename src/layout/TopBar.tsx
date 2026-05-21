@@ -111,12 +111,12 @@ export function TopBar() {
     >
       <div
         className={cn(
-          'relative mx-auto grid w-full min-w-0 max-w-tf-content items-center gap-x-2 gap-y-1.5 px-2 py-2 sm:gap-x-3 sm:gap-y-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
-          /* <700px : logo + actions ; ≥700px : 3 colonnes symétriques pour centrer vraiment la nav */
-          'grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_auto] min-[700px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] min-[700px]:grid-rows-1',
+          'relative mx-auto w-full min-w-0 max-w-tf-content px-2 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
+          'flex flex-col gap-1.5 min-[700px]:gap-2',
         )}
       >
-        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
+        <div className="flex min-w-0 items-center gap-2 min-[700px]:gap-3">
+        <div className="flex min-w-0 flex-[1_1_0%] items-center gap-1 sm:gap-2 md:gap-3">
           <Link
             to="/"
             onClick={(e) => {
@@ -162,12 +162,12 @@ export function TopBar() {
         </div>
 
         <nav
-          className="hidden min-w-0 justify-self-stretch min-[700px]:col-start-2 min-[700px]:row-start-1 min-[700px]:block min-[700px]:justify-self-center"
+          className="hidden shrink-0 min-[700px]:block"
           aria-label="Primary"
         >
           <div
             className={cn(
-              'mx-auto w-full max-w-full rounded-[22px] border p-1 backdrop-blur-md min-[700px]:max-w-[min(100%,32rem)]',
+              'rounded-[22px] border p-1 backdrop-blur-md',
               L
                 ? 'border-tf-dark/12 bg-tf-white shadow-sm ring-1 ring-tf-dark/[0.04]'
                 : 'border-white/12 bg-black/25 shadow-sm ring-1 ring-white/10',
@@ -200,13 +200,13 @@ export function TopBar() {
 
         <div
           className={cn(
-            'relative col-start-2 row-start-1 flex min-w-0 max-w-full flex-nowrap items-center justify-end gap-1 overflow-x-auto overscroll-x-contain sm:gap-1.5',
+            'relative ml-auto flex min-w-0 flex-[1_1_0%] flex-nowrap items-center justify-end gap-1 overflow-x-auto overscroll-x-contain sm:gap-1.5',
             '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-            'min-[700px]:col-start-3 min-[700px]:max-w-none md:gap-2',
+            'min-[700px]:ml-0 md:gap-2',
           )}
         >
           <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
-          <NavWalletBalances className="hidden min-[700px]:inline-flex" />
+          <NavWalletBalances className="hidden min-[700px]:inline-flex" compact />
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
               type="button"
@@ -336,9 +336,10 @@ export function TopBar() {
             </span>
           </NavLink>
         </div>
+        </div>
 
-        <div className="col-span-2 row-start-2 flex justify-end pt-0.5 min-[700px]:hidden">
-          <NavWalletBalances />
+        <div className="flex justify-end min-[700px]:hidden">
+          <NavWalletBalances compact={false} />
         </div>
       </div>
       <div
