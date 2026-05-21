@@ -596,6 +596,8 @@ export function GroupPage() {
     channel.id === 'general' &&
     debate != null &&
     (debate.salonAccess ?? 'public') === 'public'
+  const isPublicGroupKind = (group.groupKind ?? 'public') === 'public'
+  const salonAccessBadgeOpen = isPublicDebateInGeneral || isPublicGroupKind
   const canWriteInSalon =
     accessLevel !== 'readonly' && (isGroupMember || isPublicDebateInGeneral)
   const groupMainClubId = group.fanTags?.clubIds?.[0] ?? null
@@ -624,13 +626,17 @@ export function GroupPage() {
         <span
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-black shadow-sm',
-            isPublicDebateInGeneral
+            salonAccessBadgeOpen
               ? 'border-emerald-200/90 bg-emerald-50/95 text-emerald-900'
               : 'border-violet-200/90 bg-violet-50/95 text-violet-900',
           )}
         >
-          <span aria-hidden>{isPublicDebateInGeneral ? '🟢' : '🔒'}</span>
-          {isPublicDebateInGeneral ? 'Débat ouvert (général)' : 'Groupe privé'}
+          <span aria-hidden>{salonAccessBadgeOpen ? '🟢' : '🔒'}</span>
+          {isPublicDebateInGeneral
+            ? 'Débat ouvert (général)'
+            : isPublicGroupKind
+              ? 'Salon public'
+              : 'Groupe privé'}
         </span>
         {isSupabaseConfigured() && (!authUser || authUser.isAnonymous) ? (
           <Link
@@ -871,7 +877,11 @@ export function GroupPage() {
                     : 'border-white/15 bg-slate-900/70 text-sky-100',
                 )}
               >
-                {group.createdBy === 'me' ? 'Ton groupe' : 'Groupe public'}
+                {group.createdBy === 'me'
+                  ? 'Ton groupe'
+                  : isPublicGroupKind
+                    ? 'Salon public'
+                    : 'Salon privé'}
               </Badge>
               {group.createdBy !== 'me' && !isJoined(group.id) ? (
                 <Button
