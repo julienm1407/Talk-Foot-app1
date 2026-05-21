@@ -122,6 +122,7 @@ export function ProfilePage() {
   const { wallet } = useWallet()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useUserBets()
+  const profilePseudo = authUser?.displayName?.trim() || currentUser.username || 'Supporteur'
 
   useEffect(() => {
     const wonBets = bets.filter((b) => b.status === 'won').map((b) => b.id)
@@ -326,11 +327,10 @@ export function ProfilePage() {
             Profil
           </div>
           <h1 className="font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-3xl">
-            {authUser?.displayName ?? currentUser.username}
+            {profilePseudo}
           </h1>
           <p className="text-sm font-semibold text-tf-app-muted">
-            {authUser?.email ? <span className="break-all">{authUser.email} • </span> : null}
-            Badges, paris, progression et paramètres
+            Pseudo affiché sur les salons et le live · Badges, paris, progression et paramètres
           </p>
         </div>
         <Button
@@ -778,7 +778,7 @@ export function ProfilePage() {
           ))}
         </nav>
         <div id="profil-photo" className="scroll-mt-28 sm:scroll-mt-4">
-          <ProfilePhotoSection usernameLabel={authUser?.displayName ?? currentUser.username} />
+          <ProfilePhotoSection usernameLabel={profilePseudo} />
         </div>
 
         <div id="profil-look" className="scroll-mt-28 space-y-3 sm:scroll-mt-4 sm:space-y-4">
@@ -793,7 +793,7 @@ export function ProfilePage() {
         <div className="mb-1 text-[11px] font-black tracking-[0.18em] text-tf-app-muted">PRÉDICTIONS</div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <div className="text-base font-black text-tf-app-fg">@{currentUser.username}</div>
+            <div className="text-base font-black text-tf-app-fg">{profilePseudo}</div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {badges.slice(0, 2).map((b) => (
                 <Badge

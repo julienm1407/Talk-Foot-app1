@@ -92,13 +92,13 @@ export function EditProfileModal({
           Modifier le profil
         </h2>
         <p className="mt-1 text-sm font-medium text-tf-grey">
-          Nom d&apos;affichage et mot de passe (compte email uniquement)
+          Pseudo et mot de passe (compte email uniquement)
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
             <label htmlFor="edit-displayName" className="mb-1 block text-xs font-bold text-tf-grey">
-              Nom d&apos;affichage
+              Pseudo
             </label>
             <Input
               id="edit-displayName"
