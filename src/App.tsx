@@ -146,7 +146,7 @@ export default function App() {
             </RequireAuthRoute>
           }
         />
-        <Route path="mes-paris" element={<Navigate to="/profile#paris" replace />} />
+        <Route path="mes-paris" element={<Navigate to="/pronostic" replace />} />
         <Route
           path="settings/donnees"
           element={

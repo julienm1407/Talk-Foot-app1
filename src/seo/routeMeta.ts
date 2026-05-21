@@ -42,9 +42,9 @@ const MATCH: RouteSeoConfig = {
 }
 
 const PRONOSTIC: RouteSeoConfig = {
-  title: `Pronostics & paris live — ${SITE_NAME}`,
+  title: `Mes paris & pronostics — ${SITE_NAME}`,
   description:
-    'Pronostics et paris entre supporters : ouvre le salon live du match en cours et joue tes paris Talk Foot.',
+    'Retrouve tes paris en cours, gagnés ou perdus, ton solde de jetons et accède au salon live pour parier.',
   robots: 'noindex, nofollow',
 }
 

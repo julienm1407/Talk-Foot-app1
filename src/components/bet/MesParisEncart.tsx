@@ -14,7 +14,7 @@ export function MesParisEncart({ className, compact = false }: { className?: str
 
   return (
     <Link
-      to="/profile#paris"
+      to="/pronostic"
       className={cn(
         'flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 outline-none transition',
         TF_FOCUS_VISIBLE,

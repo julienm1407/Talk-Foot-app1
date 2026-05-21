@@ -322,7 +322,7 @@ export function BetWidget({
     setNotice({
       tone: 'ok',
       text: `✅ Pari validé : ${selectionText}`,
-      href: '/profile#paris',
+      href: '/pronostic',
     })
     setPending(null)
     window.setTimeout(() => {
@@ -472,14 +472,14 @@ export function BetWidget({
               </span>
             </button>
             <Link
-              to="/profile#paris"
+              to="/pronostic"
               className="tf-bet-soft tf-bet-mini block rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-left text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-300/70 hover:bg-[#153a5c]"
             >
               <span className="block text-[10px] font-bold text-sky-200">Mes paris</span>
               <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{openBets.length}</span>
             </Link>
             <Link
-              to="/profile#paris"
+              to="/pronostic"
               className="tf-bet-soft tf-bet-mini block rounded-lg border border-emerald-400/45 bg-[#12344f] px-2 py-1.5 text-left text-[11px] font-bold text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-emerald-300/70 hover:bg-[#18435f]"
             >
               <span className="block text-[10px] font-bold text-emerald-200">Validés</span>
@@ -500,7 +500,7 @@ export function BetWidget({
             <span>Résolus: {settled.length}</span>
           </div>
           <Link
-            to="/profile#paris"
+            to="/pronostic"
             className="text-xs font-bold text-cyan-300 hover:text-cyan-200"
           >
             Mes paris →
