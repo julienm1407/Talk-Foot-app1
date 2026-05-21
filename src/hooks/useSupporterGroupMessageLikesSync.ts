@@ -89,18 +89,25 @@ export function useSupporterGroupMessageLikesSync(options: {
       if (!sb) return
       const { data: msg } = await sb
         .from('supporter_group_channel_messages')
-        .select('user_id, channel_id')
+        .select('user_id, channel_id, body, metadata')
         .eq('id', messageId)
         .maybeSingle()
       const authorId = msg?.user_id
       const uid = viewerIdRef.current
       if (!authorId || !uid || authorId === uid) return
+      const meta =
+        msg?.metadata && typeof msg.metadata === 'object' && !Array.isArray(msg.metadata)
+          ? (msg.metadata as Record<string, unknown>)
+          : null
+      const textBody = typeof msg?.body === 'string' ? msg.body.trim() : ''
+      const messagePreview = textBody || (typeof meta?.gifUrl === 'string' ? '[GIF]' : '')
       await createMessageLikeInboxNotification(sb, {
         recipientSupabaseId: authorId,
         actorDisplayName: likerDisplayName,
         groupId,
         groupName,
         messageId,
+        messagePreview,
         channelId: typeof msg?.channel_id === 'string' ? msg.channel_id : undefined,
       })
     },

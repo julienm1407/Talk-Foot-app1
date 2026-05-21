@@ -12,6 +12,14 @@ type InboxRow = {
   created_at: string
 }
 
+/** Extrait court du message liké (stocké dans `body` de la notif). */
+export function truncateMessagePreview(text: string, max = 140): string {
+  const t = text.replace(/\s+/g, ' ').trim()
+  if (!t) return ''
+  if (t.length <= max) return t
+  return `${t.slice(0, max - 1)}…`
+}
+
 function formatInboxTime(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return 'À l’instant'
@@ -29,7 +37,7 @@ function rowToInboxItem(row: InboxRow): InboxLikeItem {
     kind: 'like',
     id: row.id,
     title: row.title,
-    body: row.body,
+    messagePreview: row.body,
     href: row.href,
     actorDisplayName: row.actor_display_name ?? undefined,
     createdAtLabel: formatInboxTime(row.created_at),
@@ -66,17 +74,19 @@ export async function createMessageLikeInboxNotification(
     groupId: string
     groupName: string
     messageId: string
+    messagePreview: string
     channelId?: string
   },
 ): Promise<void> {
   const href = opts.channelId
     ? `/group/${opts.groupId}?channel=${encodeURIComponent(opts.channelId)}`
     : `/group/${opts.groupId}`
+  const preview = truncateMessagePreview(opts.messagePreview)
   const { error } = await sb.from('inbox_notifications').insert({
     recipient_supabase_id: opts.recipientSupabaseId,
     kind: 'message_like',
-    title: 'Like sur ton message',
-    body: `${opts.actorDisplayName} a aimé ton message dans ${opts.groupName}`,
+    title: `${opts.actorDisplayName} a aimé votre message`,
+    body: preview || `Message dans ${opts.groupName}`,
     href,
     actor_display_name: opts.actorDisplayName,
     group_id: opts.groupId,

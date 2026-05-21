@@ -150,9 +150,18 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                             ♥ Like
                           </span>
                           <p className="mt-1 text-xs font-black leading-snug">{n.title}</p>
-                          <p className={cn('mt-0.5 line-clamp-2 text-[11px] font-semibold leading-snug', muted)}>
-                            {n.body}
-                          </p>
+                          {n.messagePreview ? (
+                            <p
+                              className={cn(
+                                'mt-1.5 line-clamp-3 rounded-lg border px-2 py-1.5 text-[11px] font-medium leading-snug',
+                                L
+                                  ? 'border-slate-200/90 bg-slate-50 text-slate-700'
+                                  : 'border-white/10 bg-white/5 text-slate-200',
+                              )}
+                            >
+                              {n.messagePreview}
+                            </p>
+                          ) : null}
                           <p className={cn('mt-1 text-[10px] font-bold', muted)}>{n.createdAtLabel}</p>
                         </div>
                       </button>

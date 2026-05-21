@@ -29,8 +29,10 @@ export type InboxFriendItem = {
 export type InboxLikeItem = {
   kind: 'like'
   id: string
+  /** Ex. « Julien a aimé votre message » */
   title: string
-  body: string
+  /** Extrait du message liké */
+  messagePreview: string
   href: string
   actorDisplayName?: string
   createdAtLabel: string
