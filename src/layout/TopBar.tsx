@@ -21,6 +21,7 @@ import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
 import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
+import { NavWalletBalances } from './NavWalletBalances'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -204,6 +205,7 @@ export function TopBar() {
           )}
         >
           <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
+          <NavWalletBalances />
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
               type="button"
