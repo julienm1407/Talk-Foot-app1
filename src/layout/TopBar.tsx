@@ -42,6 +42,8 @@ export function TopBar() {
       return L ? 'hover:bg-tf-nav-groups/[0.09]' : 'hover:bg-tf-nav-groups/18'
     if (section === 'rankings')
       return L ? 'hover:bg-tf-nav-rankings/[0.1]' : 'hover:bg-tf-nav-rankings/18'
+    if (section === 'pronostic')
+      return L ? 'hover:bg-tf-cta/[0.1]' : 'hover:bg-tf-cta/18'
     return L ? 'hover:bg-sky-500/[0.08]' : 'hover:bg-sky-400/14'
   }
 
@@ -55,6 +57,7 @@ export function TopBar() {
       section === 'matches' && (L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/60'),
       section === 'groups' && (L ? 'ring-tf-nav-groups/50' : 'ring-tf-nav-groups/60'),
       section === 'rankings' && (L ? 'ring-tf-nav-rankings/50' : 'ring-tf-nav-rankings/60'),
+      section === 'pronostic' && (L ? 'ring-tf-cta/45' : 'ring-tf-cta/55'),
       section === 'home' && (L ? 'ring-tf-dark/28' : 'ring-sky-300/35'),
     )
   }
@@ -176,7 +179,11 @@ export function TopBar() {
             <div className="flex w-full min-w-0 max-w-full gap-0.5 overflow-x-auto px-0.5 py-0.5 [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {TOP_NAV_ROUTES.map(({ to, end, section }) => {
                 const th = getAppSectionTheme(section)
-                const active = isRouteActiveForSection(section, location.pathname)
+                const active = isRouteActiveForSection(
+                  section,
+                  location.pathname,
+                  location.hash,
+                )
                 return (
                   <NavLink
                     key={to}

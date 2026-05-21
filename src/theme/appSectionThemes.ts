@@ -10,6 +10,7 @@ export type AppSectionId =
   | 'home'
   | 'matches'
   | 'calendar'
+  | 'pronostic'
   | 'groups'
   | 'group'
   | 'rankings'
@@ -110,6 +111,14 @@ const NAV_RANKINGS: SectionNavTheme = {
   arrowHover: 'group-hover:text-tf-nav-rankings',
 }
 
+/** Pronostics / paris live (salon match) */
+const NAV_PRONOSTIC: SectionNavTheme = {
+  active: 'bg-tf-white text-tf-dark shadow-sm ring-2 ring-tf-cta/45',
+  inactiveHover: 'hover:bg-tf-electric-soft hover:text-tf-dark',
+  focus: 'focus-visible:ring-tf-cta/50',
+  arrowHover: 'group-hover:text-tf-cta',
+}
+
 /** Bandeau sous header : bleu structure + fin trait de section */
 const stripeHome = 'h-1 bg-tf-dark'
 const stripeMatch =
@@ -118,6 +127,8 @@ const stripeGroups =
   'h-1 bg-tf-dark shadow-[inset_0_-2px_0_0_rgba(108,92,231,0.88)]'
 const stripeRankings =
   'h-1 bg-tf-dark shadow-[inset_0_-2px_0_0_rgba(0,184,148,0.9)]'
+const stripePronostic =
+  'h-1 bg-tf-dark shadow-[inset_0_-2px_0_0_rgba(255,59,59,0.85)]'
 
 export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   home: {
@@ -155,6 +166,18 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
       borderBottomClass: 'border-tf-nav-match/25',
     },
     nav: NAV_MATCH,
+  },
+  pronostic: {
+    id: 'pronostic',
+    label: 'Pronostic',
+    hint: 'Paris & pronos live',
+    shellStripe: stripePronostic,
+    encart: ENCART_LIVE,
+    page: {
+      eyebrowClass: 'text-tf-dark font-black',
+      borderBottomClass: 'border-tf-cta/25',
+    },
+    nav: NAV_PRONOSTIC,
   },
   groups: {
     id: 'groups',
@@ -285,19 +308,30 @@ export function getAppSectionTheme(section: AppSectionId): SectionTheme {
 }
 
 /**
- * État actif de la nav à 4 entrées : entrée Match ⊃ page Match + salons live ;
- * Groupes ⊃ tribunes + débats.
+ * État actif de la nav : Match = calendrier ; Pronostic = paris live (salon + mes paris).
  */
-export function isRouteActiveForSection(section: AppSectionId, pathname: string): boolean {
+export function isRouteActiveForSection(
+  section: AppSectionId,
+  pathname: string,
+  hash = '',
+): boolean {
   const p = pathname || '/'
+  const h = hash || ''
   if (section === 'home') return p === '/' || p === ''
   if (section === 'matches') {
     return (
       p.startsWith('/matches') ||
       p.startsWith('/calendar') ||
       p.startsWith('/agenda') ||
-      p.startsWith('/match') ||
-      p.startsWith('/channel/')
+      p.startsWith('/match')
+    )
+  }
+  if (section === 'pronostic') {
+    return (
+      p.startsWith('/pronostic') ||
+      p.startsWith('/channel/') ||
+      p.startsWith('/mes-paris') ||
+      (p.startsWith('/profile') && (h === '#paris' || h.startsWith('#paris')))
     )
   }
   if (section === 'groups') {
@@ -319,23 +353,25 @@ export function getAppSectionFromPath(pathname: string): AppSectionId {
   if (p.startsWith('/calendar')) return 'calendar'
   if (p.startsWith('/agenda')) return 'calendar'
   if (p.startsWith('/match')) return 'calendar'
+  if (p.startsWith('/pronostic')) return 'pronostic'
   if (p.startsWith('/groups')) return 'groups'
   if (p.startsWith('/group/')) return 'group'
   if (p.startsWith('/rankings')) return 'rankings'
   if (p.startsWith('/debates') || p.startsWith('/debate/')) return 'debates'
   if (p.startsWith('/profile')) return 'profile'
   if (p.startsWith('/channel/') && /\/stade\/?$/.test(p)) return 'stade'
-  if (p.startsWith('/channel/')) return 'channel'
+  if (p.startsWith('/channel/')) return 'pronostic'
   if (p.startsWith('/boutique')) return 'boutique'
   if (p.startsWith('/videos')) return 'videos'
   if (p.startsWith('/article/')) return 'default'
   return 'default'
 }
 
-/** Arborescence officielle : 4 entrées (le reste via la home ou sous-pages). */
+/** Arborescence officielle : 5 entrées (le reste via la home ou sous-pages). */
 export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId }[] = [
   { to: '/', end: true, section: 'home' },
   { to: '/match', end: true, section: 'matches' },
+  { to: '/pronostic', section: 'pronostic' },
   { to: '/groups', section: 'groups' },
   { to: '/rankings', section: 'rankings' },
 ]
@@ -343,6 +379,7 @@ export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId 
 export const BOTTOM_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId; icon: string }[] = [
   { to: '/', end: true, section: 'home', icon: '🏟️' },
   { to: '/match', end: true, section: 'matches', icon: '⚽' },
+  { to: '/pronostic', section: 'pronostic', icon: '🎯' },
   { to: '/groups', section: 'groups', icon: '👥' },
   { to: '/rankings', section: 'rankings', icon: '🏆' },
 ]

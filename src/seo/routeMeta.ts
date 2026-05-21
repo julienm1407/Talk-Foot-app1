@@ -41,6 +41,13 @@ const MATCH: RouteSeoConfig = {
     'Calendrier des matchs, directs commentés, salons par rencontre et ambiance live sur Talk Foot.',
 }
 
+const PRONOSTIC: RouteSeoConfig = {
+  title: `Pronostics & paris live — ${SITE_NAME}`,
+  description:
+    'Pronostics et paris entre supporters : ouvre le salon live du match en cours et joue tes paris Talk Foot.',
+  robots: 'noindex, nofollow',
+}
+
 const GROUPS: RouteSeoConfig = {
   title: `Groupes & salons supporters — ${SITE_NAME}`,
   description:
@@ -128,6 +135,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/login') return LOGIN
   if (pathname === '/match' || pathname === '/matches' || pathname === '/agenda' || pathname === '/calendar')
     return MATCH
+  if (pathname === '/pronostic') return PRONOSTIC
   if (pathname === '/groups') return GROUPS
   if (pathname === '/debates') return DEBATES
   if (pathname.startsWith('/debate/')) return DEBATE_DETAIL

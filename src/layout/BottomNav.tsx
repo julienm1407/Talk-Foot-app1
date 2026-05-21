@@ -22,10 +22,14 @@ export function BottomNav() {
       )}
       aria-label="Bottom navigation"
     >
-      <div className="mx-auto grid w-full max-w-tf-content grid-cols-4 gap-0.5 px-1 py-1.5">
+      <div className="mx-auto grid w-full max-w-tf-content grid-cols-5 gap-0.5 px-1 py-1.5">
         {BOTTOM_NAV_ROUTES.map(({ to, end, section, icon }) => {
           const th = getAppSectionTheme(section)
-          const active = isRouteActiveForSection(section, location.pathname)
+          const active = isRouteActiveForSection(
+            section,
+            location.pathname,
+            location.hash,
+          )
           return (
             <NavLink
               key={to}
@@ -47,6 +51,8 @@ export function BottomNav() {
                         (L ? 'ring-tf-nav-groups/50' : 'ring-tf-nav-groups/55'),
                       section === 'rankings' &&
                         (L ? 'ring-tf-nav-rankings/50' : 'ring-tf-nav-rankings/55'),
+                      section === 'pronostic' &&
+                        (L ? 'ring-tf-cta/50' : 'ring-tf-cta/55'),
                     )
                   : cn(
                       L ? 'text-tf-app-muted hover:text-tf-app-fg' : 'text-sky-200/92 hover:text-white',

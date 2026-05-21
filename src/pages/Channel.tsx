@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { clubPathForId } from '../utils/clubRoute'
 import { useMatches } from '../contexts/MatchesContext'
@@ -472,6 +472,7 @@ export function ChannelPage() {
     : 'rounded border border-[#5f81a1] px-1.5 py-0.5 text-[10px] font-bold text-sky-100'
   const navigate = useNavigate()
   const { matchId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user: authUser } = useAuth()
   const selfUserId = authUser?.id ?? null
   const { matches, loading } = useMatches()
@@ -699,6 +700,7 @@ export function ChannelPage() {
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
   const [standingsModalOpen, setStandingsModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
+  const betCardRef = useRef<HTMLDivElement | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
   const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
   const [animationsOpen, setAnimationsOpen] = useState(false)
@@ -753,6 +755,24 @@ export function ChannelPage() {
   })
   const chatBottomRef = useRef<HTMLDivElement | null>(null)
   const pageScrollRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('paris') !== '1' || !match) return
+    setMobilePanel('paris')
+    const scrollTimer = window.setTimeout(() => {
+      betCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 150)
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('paris')
+        return next
+      },
+      { replace: true },
+    )
+    return () => window.clearTimeout(scrollTimer)
+  }, [searchParams, match?.id, setSearchParams])
+
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [filteredChatMessages.length])
@@ -2644,6 +2664,7 @@ export function ChannelPage() {
             </div>
           </Card>
 
+          <div ref={betCardRef} id="tf-channel-paris" className="scroll-mt-4">
           <Card
             className={cn(
               'tf-card-bet-shell shrink-0 !p-0 bg-transparent shadow-none md:flex md:flex-col',
@@ -2678,6 +2699,7 @@ export function ChannelPage() {
               )}
             </div>
           </Card>
+          </div>
         </div>
       </main>
 

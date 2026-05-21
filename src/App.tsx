@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AdsenseScriptLoader } from './components/ads/AdsenseScriptLoader'
 import { AppShell } from './layout/AppShell'
 import { CalendarPage } from './pages/Calendar'
+import { PronosticHubPage } from './pages/PronosticHub'
 import { ChannelPage } from './pages/Channel'
 import { ChannelStadiumPage } from './pages/ChannelStadium'
 import { GroupPage } from './pages/Group'
@@ -126,6 +127,14 @@ export default function App() {
           }
         />
         <Route path="match" element={<CalendarPage />} />
+        <Route
+          path="pronostic"
+          element={
+            <RequireAuthRoute>
+              <PronosticHubPage />
+            </RequireAuthRoute>
+          }
+        />
         <Route path="agenda" element={<Navigate to="/match" replace />} />
         <Route path="calendar" element={<Navigate to="/match" replace />} />
         <Route path="boutique" element={<BoutiquePage />} />
