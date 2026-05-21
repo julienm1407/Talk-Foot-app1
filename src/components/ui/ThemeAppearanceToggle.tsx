@@ -30,21 +30,19 @@ export function ThemeAppearanceToggle({
           ? 'border-tf-dark/14 bg-tf-dark/[0.06]'
           : 'border-white/15 bg-black/30'
 
-  const segBase =
-    'inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[14px] outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400/50'
+  const segBase = minimal
+    ? 'inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-[15px] leading-none outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400/50 sm:size-8 sm:text-base'
+    : 'inline-flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[14px] outline-none transition focus-visible:ring-2 focus-visible:ring-sky-400/50'
 
   const segBar =
     'min-h-9 px-2 text-[10px] font-black uppercase tracking-wide sm:min-h-10 sm:px-2.5 sm:text-[11px]'
-
-  const segMinimal =
-    'size-8 shrink-0 rounded-lg text-[15px] leading-none sm:size-8 sm:text-base'
 
   return (
     <div
       role="group"
       aria-label="Ambiance d’affichage : jour ou nuit stade"
       className={cn(
-        'inline-flex border p-0.5',
+        'inline-flex shrink-0 border p-0.5',
         minimal ? 'rounded-xl' : 'rounded-2xl',
         track,
         className,
@@ -57,7 +55,7 @@ export function ThemeAppearanceToggle({
         title="Mode jour"
         className={cn(
           segBase,
-          minimal ? segMinimal : segBar,
+          !minimal && segBar,
           L
             ? minimal
               ? 'bg-tf-white/95 text-tf-dark shadow-none ring-1 ring-tf-dark/10'
@@ -77,7 +75,7 @@ export function ThemeAppearanceToggle({
         title="Nuit stade"
         className={cn(
           segBase,
-          minimal ? segMinimal : segBar,
+          !minimal && segBar,
           !L
             ? minimal
               ? 'bg-white/12 text-white ring-1 ring-white/15'

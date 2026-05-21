@@ -30,7 +30,7 @@ export function TopBar() {
   const location = useLocation()
   const L = appearance === 'light'
   const navPillBase = cn(
-    'tf-nav-pill shrink-0 rounded-[18px] px-2 py-1.5 text-center text-[12px] font-black outline-none transition active:scale-[0.97] sm:px-2.5 sm:py-2 min-[860px]:text-[13px]',
+    'tf-nav-pill shrink-0 rounded-[18px] px-1.5 py-1.5 text-center text-[11px] font-black outline-none transition active:scale-[0.97] min-[900px]:px-2 min-[900px]:text-[12px] sm:py-2 min-[1100px]:px-2.5 min-[1100px]:text-[13px]',
     L ? 'text-tf-app-muted hover:text-tf-app-fg' : 'text-sky-200/92 hover:text-white',
   )
 
@@ -115,8 +115,8 @@ export function TopBar() {
           'flex flex-col gap-1.5 min-[700px]:gap-2',
         )}
       >
-        <div className="flex min-w-0 items-center gap-2 min-[700px]:gap-3">
-        <div className="flex min-w-0 flex-[1_1_0%] items-center gap-1 sm:gap-2 md:gap-3">
+        <div className="grid w-full min-w-0 grid-cols-[auto_1fr] items-center gap-2 min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[700px]:gap-3 lg:gap-4">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
           <Link
             to="/"
             onClick={(e) => {
@@ -152,7 +152,7 @@ export function TopBar() {
 
           <p
             className={cn(
-              'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[900px]:block sm:text-[11px]',
+              'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[1180px]:block sm:text-[11px]',
               L ? 'text-tf-dark/90' : 'text-white/92',
             )}
             title="Talk Foot — le réseau foot en continu"
@@ -162,18 +162,18 @@ export function TopBar() {
         </div>
 
         <nav
-          className="hidden shrink-0 min-[700px]:block"
+          className="col-span-2 hidden min-w-0 min-[700px]:col-span-1 min-[700px]:block"
           aria-label="Primary"
         >
           <div
             className={cn(
-              'rounded-[22px] border p-1 backdrop-blur-md',
+              'mx-auto w-full max-w-full min-w-0 rounded-[22px] border p-1 backdrop-blur-md',
               L
                 ? 'border-tf-dark/12 bg-tf-white shadow-sm ring-1 ring-tf-dark/[0.04]'
                 : 'border-white/12 bg-black/25 shadow-sm ring-1 ring-white/10',
             )}
           >
-            <div className="flex max-w-full gap-0.5 overflow-x-auto px-0.5 py-0.5 [-webkit-overflow-scrolling:touch]">
+            <div className="flex w-full min-w-0 max-w-full gap-0.5 overflow-x-auto px-0.5 py-0.5 [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {TOP_NAV_ROUTES.map(({ to, end, section }) => {
                 const th = getAppSectionTheme(section)
                 const active = isRouteActiveForSection(section, location.pathname)
@@ -200,13 +200,14 @@ export function TopBar() {
 
         <div
           className={cn(
-            'relative ml-auto flex min-w-0 flex-[1_1_0%] flex-nowrap items-center justify-end gap-1 overflow-x-auto overscroll-x-contain sm:gap-1.5',
-            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-            'min-[700px]:ml-0 md:gap-2',
+            'col-start-2 row-start-1 flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-2.5',
+            'min-[700px]:col-start-3 min-[700px]:row-start-1 min-[700px]:pl-2 min-[700px]:ml-1 lg:pl-3 lg:gap-3',
+            L ? 'min-[700px]:border-l min-[700px]:border-tf-dark/10' : 'min-[700px]:border-l min-[700px]:border-white/10',
           )}
         >
-          <ThemeAppearanceToggle variant="headerMinimal" className="shrink-0" />
-          <NavWalletBalances className="hidden min-[700px]:inline-flex" compact />
+          <ThemeAppearanceToggle variant="headerMinimal" className="relative z-[1]" />
+          <NavWalletBalances className="relative z-[1] hidden min-[1180px]:inline-flex" compact />
+          <div className="relative z-[1] flex items-center gap-1 sm:gap-1.5">
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
               type="button"
@@ -302,8 +303,8 @@ export function TopBar() {
           <NavLink
             to="/profile"
             className={cn(
-              'tf-nav-pill inline-flex max-w-full min-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-2xl border px-1.5 py-1 text-xs font-semibold outline-none',
-              'min-[420px]:gap-1.5 min-[420px]:px-2 min-[420px]:py-1.5 min-[420px]:text-sm sm:gap-2 sm:px-2.5 sm:py-2 md:px-3 min-[700px]:gap-2 min-[700px]:px-2.5 min-[700px]:py-2',
+              'tf-nav-pill inline-flex shrink-0 items-center gap-1 rounded-2xl border px-1.5 py-1 text-xs font-semibold outline-none',
+              'min-[480px]:gap-1.5 min-[480px]:px-2 min-[480px]:py-1.5 sm:gap-2 sm:px-2.5 sm:py-2',
               profileTheme.nav.focus,
               profileActive
                 ? cn(
@@ -326,19 +327,20 @@ export function TopBar() {
               aria-label="Mon avatar in-app"
             />
             <span
-              className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[860px]:inline-flex min-[860px]:px-1.5 min-[860px]:text-[10px]"
+              className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[1280px]:inline-flex min-[1280px]:px-1.5 min-[1280px]:text-[10px]"
               title={`Niveau ${profile.level}`}
             >
               Niv. {profile.level}
             </span>
-            <span className="hidden max-w-[3.5rem] truncate min-[900px]:inline-block md:max-w-[7rem] lg:max-w-none">
+            <span className="hidden max-w-[3.5rem] truncate min-[1280px]:inline-block md:max-w-[7rem] lg:max-w-none">
               {profileTheme.label}
             </span>
           </NavLink>
+          </div>
         </div>
         </div>
 
-        <div className="flex justify-end min-[700px]:hidden">
+        <div className="flex justify-end pt-0.5 min-[1180px]:hidden">
           <NavWalletBalances compact={false} />
         </div>
       </div>
