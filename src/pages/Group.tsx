@@ -247,6 +247,8 @@ export function GroupPage() {
       (debate.salonAccess ?? 'public') === 'public',
   )
 
+  const isPublicGroup = (group?.groupKind ?? 'public') === 'public'
+
   const skipCloudMemberUpsert = Boolean(
     isOpenPublicDebateSalon && group && group.createdBy !== 'me' && !isJoined(group.id),
   )
@@ -256,8 +258,20 @@ export function GroupPage() {
     isSupabaseConfigured() &&
     Boolean(authUser && !authUser.isAnonymous) &&
     Boolean(
-      group && (group.createdBy === 'me' || isJoined(group.id) || isOpenPublicDebateSalon),
+      group &&
+        (group.createdBy === 'me' ||
+          isJoined(group.id) ||
+          isPublicGroup ||
+          isOpenPublicDebateSalon),
     )
+
+  /** Groupe public : adhésion locale + Supabase pour « Mes groupes » et cohérence RLS membre. */
+  useEffect(() => {
+    if (!group || !authUser?.id || authUser.isAnonymous) return
+    if (!isPublicGroup) return
+    if (isJoined(group.id)) return
+    joinGroup(group.id)
+  }, [group?.id, isPublicGroup, authUser?.id, authUser?.isAnonymous, isJoined, joinGroup])
 
   const { publishMessage: publishGroupChannelMessage, loadOlderMessages: loadOlderCloudMessages } =
     useSupporterGroupChannelSync({
@@ -439,6 +453,7 @@ export function GroupPage() {
           debateId: channel.id === 'general' ? (debate?.id ?? null) : null,
           groupScarf: msg.groupScarf,
           tfPublicDebate: isOpenPublicDebateSalon,
+          displayName: authUser?.displayName,
         })
         if (r.ok) {
           setMessagesByThread((prev) => {
@@ -456,6 +471,10 @@ export function GroupPage() {
           setGroupChatModerationHint(MODERATION_REFUSED_MESSAGE_FR)
           return
         }
+        setGroupChatModerationHint(
+          'Message non envoyé au salon partagé. Recharge la page ou réessaie dans quelques secondes.',
+        )
+        return
       }
       setMessagesByThread((prev) => ({
         ...prev,
@@ -470,6 +489,7 @@ export function GroupPage() {
       publishGroupChannelMessage,
       isOpenPublicDebateSalon,
       debate?.id,
+      authUser?.displayName,
     ],
   )
 
@@ -481,7 +501,14 @@ export function GroupPage() {
         debate != null &&
         channel.id === 'general' &&
         (debate.salonAccess ?? 'public') === 'public'
-      if (!openDebateToAll && group.createdBy !== 'me' && !isJoined(group.id)) return
+      if (
+        !openDebateToAll &&
+        group.createdBy !== 'me' &&
+        !isJoined(group.id) &&
+        (group.groupKind ?? 'public') !== 'public'
+      ) {
+        return
+      }
       const msg: Message = {
         id: `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         matchId: groupThreadMatchId(group.id, channel.id),
@@ -502,7 +529,14 @@ export function GroupPage() {
         debate != null &&
         channel.id === 'general' &&
         (debate.salonAccess ?? 'public') === 'public'
-      if (!openDebateToAll && group.createdBy !== 'me' && !isJoined(group.id)) return
+      if (
+        !openDebateToAll &&
+        group.createdBy !== 'me' &&
+        !isJoined(group.id) &&
+        (group.groupKind ?? 'public') !== 'public'
+      ) {
+        return
+      }
       const msg: Message = {
         id: `msg-scarf-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         matchId: groupThreadMatchId(group.id, channel.id),

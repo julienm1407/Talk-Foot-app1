@@ -109,6 +109,8 @@ export function useSupporterGroupChannelSync(options: {
           channelId: string
           debateId?: string | null
           tfPublicDebate?: boolean
+          /** Pseudo affiché (ex. profil Clerk) si la session Supabase anonyme n’a pas de metadata. */
+          displayName?: string
         },
     ) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
@@ -133,7 +135,8 @@ export function useSupporterGroupChannelSync(options: {
         metadata.debate_id = msg.debateId.trim()
       }
 
-      const displayName = displayNameFromSession(session.user)
+      const displayName =
+        msg.displayName?.trim() || displayNameFromSession(session.user)
 
       const { data, error } = await sb
         .from('supporter_group_channel_messages')
@@ -164,6 +167,7 @@ export function useSupporterGroupChannelSync(options: {
     if (!sb) return
 
     let cancelled = false
+    const mountId = Date.now()
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const run = async () => {
@@ -215,7 +219,7 @@ export function useSupporterGroupChannelSync(options: {
 
       const groupFilter = postgresChangesEqFilter('group_id', groupId)
       const channel = sb
-        .channel(`group_ch:${groupId}:${channelId}`)
+        .channel(`group_ch:${groupId}:${channelId}:${mountId}`)
         .on(
           'postgres_changes',
           {
