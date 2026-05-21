@@ -21,9 +21,12 @@ import {
   type SupporterGroupRemoteMeta,
   type SupporterGroupRemoteOrigin,
 } from '../hooks/useSupporterGroupChannelSync'
+import { channelsForSupporterGroup } from '../data/defaultGroupChannels'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
+import { upsertCloudSupporterGroup } from '../lib/supabase/supporterGroupsRegistry'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import type { Message, User } from '../types/chat'
 import { useMessageLikes } from '../hooks/useMessageLikes'
 import { useAutoScroll } from '../hooks/useAutoScroll'
@@ -79,6 +82,25 @@ export function GroupPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [groupId])
+
+  /** Répare les groupes créés avant la colonne `channels` : persiste les salons par défaut en cloud. */
+  useEffect(() => {
+    if (!group || group.createdBy !== 'me' || !isSupabaseConfigured() || !authUser?.id) return
+    const channels = channelsForSupporterGroup(group.channels)
+    if (channels.length === 0) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    void (async () => {
+      const session = await ensureTalkFootSupabaseSession(sb)
+      if (!session) return
+      await upsertCloudSupporterGroup(
+        sb,
+        { ...group, channels },
+        session.user.id,
+        isClerkAuthMode() ? authUser.id : null,
+      )
+    })()
+  }, [group?.id, group?.createdBy, authUser?.id])
   const groupRef = useRef<SupporterGroup | null>(null)
   groupRef.current = group
 

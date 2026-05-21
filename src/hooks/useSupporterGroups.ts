@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { channelsForSupporterGroup } from '../data/defaultGroupChannels'
 import { starterGroups } from '../data/groups'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { deleteCloudGroupMembership, upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
@@ -68,13 +69,21 @@ export function useSupporterGroups() {
     setCustom(readJsonArray(customGroupsKeyForUser(userId), isSupporterGroupArray))
   }, [userId])
 
+  const enrichChannels = useCallback(
+    (g: SupporterGroup): SupporterGroup => ({
+      ...g,
+      channels: channelsForSupporterGroup(g.channels),
+    }),
+    [],
+  )
+
   const groups = useMemo(() => {
     const byId = new Map<string, SupporterGroup>()
-    for (const g of starterGroups) byId.set(g.id, g)
-    for (const g of cloudGroups) byId.set(g.id, g)
-    for (const g of custom) byId.set(g.id, g)
+    for (const g of starterGroups) byId.set(g.id, enrichChannels(g))
+    for (const g of cloudGroups) byId.set(g.id, enrichChannels(g))
+    for (const g of custom) byId.set(g.id, enrichChannels(g))
     return Array.from(byId.values()).sort((a, b) => b.intensity - a.intensity)
-  }, [custom, cloudGroups])
+  }, [custom, cloudGroups, enrichChannels])
 
   const persistJoined = useCallback(
     (ids: string[]) => {

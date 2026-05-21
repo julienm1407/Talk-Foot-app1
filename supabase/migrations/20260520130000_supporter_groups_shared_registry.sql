@@ -170,4 +170,10 @@ begin
   ) then
     alter publication supabase_realtime add table public.supporter_groups;
   end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'supporter_group_channel_messages'
+  ) then
+    alter publication supabase_realtime add table public.supporter_group_channel_messages;
+  end if;
 end$$;

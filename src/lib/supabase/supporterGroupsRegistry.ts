@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { channelsForSupporterGroup } from '../../data/defaultGroupChannels'
 import type { SupporterChannel, SupporterGroup } from '../../types/group'
 
 type GroupRow = {
@@ -39,7 +40,7 @@ function rowToGroup(row: GroupRow, viewer?: CloudGroupViewer): SupporterGroup {
     (viewer?.clerkUserId != null &&
       row.owner_clerk_id != null &&
       row.owner_clerk_id === viewer.clerkUserId)
-  const channels = parseChannels(row.channels)
+  const channels = channelsForSupporterGroup(parseChannels(row.channels))
   return {
     id: row.id,
     name: row.name,
@@ -49,7 +50,7 @@ function rowToGroup(row: GroupRow, viewer?: CloudGroupViewer): SupporterGroup {
     theme: row.theme ?? { primary: '#0ea5e9', secondary: '#0369a1', background: 'clean' },
     members: 1,
     intensity: 50,
-    channels: channels.length ? channels : [],
+    channels,
     createdBy: isMine ? 'me' : 'system',
     createdAt: row.created_at,
     groupKind: (row.group_kind as SupporterGroup['groupKind']) ?? 'public',
@@ -97,7 +98,7 @@ export async function upsertCloudSupporterGroup(
       hashtags: group.hashtags ?? [],
       fan_tags: group.fanTags ?? null,
       theme: group.theme,
-      channels: group.channels ?? [],
+      channels: channelsForSupporterGroup(group.channels),
       owner_id: ownerSupabaseId,
       owner_clerk_id: ownerClerkId ?? null,
       created_at: group.createdAt,
