@@ -54,6 +54,8 @@ export function useSupporterGroups() {
   const [cloudGroups, setCloudGroups] = useState<SupporterGroup[]>([])
   const [supabaseActorId, setSupabaseActorId] = useState<string | null>(null)
   const cloudRefreshSeq = useRef(0)
+  const refreshCloudGroupsRef = useRef<() => Promise<void>>(async () => {})
+  const realtimeMountSeq = useRef(0)
 
   /** Chaque compte a son propre stockage local (évite qu’un nouveau compte hérite des salons du précédent). */
   useEffect(() => {
@@ -123,6 +125,10 @@ export function useSupporterGroups() {
   }, [userId, persistJoined])
 
   useEffect(() => {
+    refreshCloudGroupsRef.current = refreshCloudGroups
+  }, [refreshCloudGroups])
+
+  useEffect(() => {
     if (!isSupabaseConfigured() || !userId) {
       setCloudGroups([])
       setSupabaseActorId(null)
@@ -130,25 +136,38 @@ export function useSupporterGroups() {
     }
     const sb = getSupabaseBrowserClient()
     if (!sb) return
+
+    const mountId = ++realtimeMountSeq.current
     let cancelled = false
-    void refreshCloudGroups().then(() => {
-      if (cancelled) return
-    })
-    const channel = sb
-      .channel(`supporter_groups_registry:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'supporter_groups' },
-        () => {
-          void refreshCloudGroups()
-        },
-      )
-      .subscribe()
+    let channel: ReturnType<typeof sb.channel> | null = null
+
+    const run = async () => {
+      await refreshCloudGroupsRef.current()
+      if (cancelled || mountId !== realtimeMountSeq.current) return
+
+      channel = sb
+        .channel(`supporter_groups_registry:${userId}:${mountId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'supporter_groups' },
+          () => {
+            void refreshCloudGroupsRef.current()
+          },
+        )
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] supporter_groups realtime:', status)
+          }
+        })
+    }
+
+    void run()
+
     return () => {
       cancelled = true
-      void sb.removeChannel(channel)
+      if (channel) void sb.removeChannel(channel)
     }
-  }, [userId, refreshCloudGroups])
+  }, [userId])
 
   const joinGroup = useCallback(
     (id: string) => {
