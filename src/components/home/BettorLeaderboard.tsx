@@ -10,7 +10,7 @@ export function BettorLeaderboard({
   extended,
 }: {
   embedded?: boolean
-  /** Page classements : plus de lignes + stats perso */
+  /** Page pronostic (onglet classement) : plus de lignes + stats perso */
   extended?: boolean
 }) {
   const { top12, top250, myRank, myEntry, totalActive } = useLeaderboard()

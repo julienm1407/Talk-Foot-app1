@@ -26,6 +26,10 @@ import {
 } from '../utils/time'
 import { useKickoffScheduledRefetch } from '../hooks/useKickoffScheduledRefetch'
 import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
+import {
+  readMatchesSessionCache,
+  writeMatchesSessionCache,
+} from '../utils/matchesSessionCache'
 
 /** Appels `leagues/date` par vague pour compléter le calendrier (surtout matchs à venir). */
 const LEAGUES_DATE_BATCH = 10
@@ -71,8 +75,9 @@ type MatchesContextValue = {
 const MatchesContext = createContext<MatchesContextValue | null>(null)
 
 export function MatchesProvider({ children }: { children: React.ReactNode }) {
-  const [matches, setMatches] = useState<Match[]>([])
-  const [loading, setLoading] = useState(true)
+  const cachedOnMount = useMemo(() => readMatchesSessionCache(), [])
+  const [matches, setMatches] = useState<Match[]>(() => cachedOnMount)
+  const [loading, setLoading] = useState(() => cachedOnMount.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
   const [tokenRev, setTokenRev] = useState(0)
@@ -140,6 +145,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
           .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
         if (baseList.length > 0) {
           setMatches(baseList)
+          writeMatchesSessionCache(baseList)
           setError(null)
         } else if (silent) {
           /* poll silencieux : ne pas vider une liste déjà correcte */
@@ -206,8 +212,13 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    void fetchMatches()
-  }, [fetchMatches, tokenRev])
+    const run = () => void fetchMatches()
+    if (cachedOnMount.length > 0) {
+      const id = window.setTimeout(run, 0)
+      return () => window.clearTimeout(id)
+    }
+    run()
+  }, [fetchMatches, tokenRev, cachedOnMount.length])
 
   const silentRefetch = useCallback(() => void fetchMatches({ silent: true }), [fetchMatches])
 

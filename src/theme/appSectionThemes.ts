@@ -170,7 +170,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   pronostic: {
     id: 'pronostic',
     label: 'Pronostic',
-    hint: 'Paris & pronos live',
+    hint: 'Paris & classement',
     shellStripe: stripePronostic,
     encart: ENCART_LIVE,
     page: {
@@ -206,7 +206,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   rankings: {
     id: 'rankings',
     label: 'Classement',
-    hint: 'Parieurs & ligues',
+    hint: 'Ligues & forme',
     shellStripe: stripeRankings,
     encart: ENCART_RANKINGS,
     page: {

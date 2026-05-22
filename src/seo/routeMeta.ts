@@ -50,7 +50,7 @@ const MATCH: RouteSeoConfig = {
 const PRONOSTIC: RouteSeoConfig = {
   title: `Mes paris & pronostics — ${SITE_NAME}`,
   description:
-    'Retrouve tes paris en cours, gagnés ou perdus, ton solde de jetons et accède au salon live pour parier.',
+    'Retrouve tes paris, ton solde de jetons, le classement des parieurs et accède au salon live pour parier.',
   robots: 'noindex, nofollow',
 }
 
@@ -66,8 +66,8 @@ const DEBATES: RouteSeoConfig = {
 }
 
 const RANKINGS: RouteSeoConfig = {
-  title: `Classements & parieurs — ${SITE_NAME}`,
-  description: 'Classements, défis entre fans et suivi de forme des équipes du Big 5 et des championnats suivis.',
+  title: `Classements championnats — ${SITE_NAME}`,
+  description: 'Classements du Big 5, analyses de forme et tableaux SportMonks des championnats suivis.',
 }
 
 const BOUTIQUE: RouteSeoConfig = {

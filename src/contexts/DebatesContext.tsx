@@ -96,7 +96,8 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    void refresh()
+    const id = window.setTimeout(() => void refresh(), 0)
+    return () => window.clearTimeout(id)
   }, [refresh])
 
   /** Reclassement périodique pour refléter les nouveaux messages dans les débats de groupe. */

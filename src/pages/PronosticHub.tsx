@@ -1,8 +1,11 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BetSlipCard } from '../components/bet/BetSlipCard'
+import { BettorLeaderboard } from '../components/home/BettorLeaderboard'
 import { PronoStatsPanel } from '../components/pronostic/PronoStatsPanel'
 import { FictionalBettingNotice } from '../components/legal/FictionalBettingNotice'
+import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniRank'
+import { Card } from '../components/ui/Card'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useMatches } from '../contexts/MatchesContext'
@@ -24,16 +27,28 @@ const TABS: { id: BetFilterTab; label: string }[] = [
   { id: 'lost', label: 'Perdus' },
 ]
 
+type HubView = 'paris' | 'classement'
+
 /**
- * Hub « Pronostic » : mes paris, jetons et accès rapide au salon live.
+ * Hub « Pronostic » : mes paris, jetons, classement parieurs et accès salon live.
  */
 export function PronosticHubPage() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+  const [searchParams, setSearchParams] = useSearchParams()
+  const hubView: HubView = searchParams.get('vue') === 'classement' ? 'classement' : 'paris'
   const [bets] = useUserBets()
   const { wallet } = useWallet()
   const { matches } = useMatches()
   const [tab, setTab] = useState<BetFilterTab>('all')
+
+  const setHubView = (view: HubView) => {
+    if (view === 'classement') {
+      setSearchParams({ vue: 'classement' }, { replace: true })
+    } else {
+      setSearchParams({}, { replace: true })
+    }
+  }
 
   const matchesById = useMemo(() => new Map(matches.map((m) => [m.id, m])), [matches])
   const liveMatch = useMemo(() => matches.find((m) => m.status === 'live') ?? null, [matches])
@@ -95,7 +110,7 @@ export function PronosticHubPage() {
         uppercaseTitle={false}
         eyebrow="Pronostic"
         title="Mes paris & jetons"
-        description="Tous tes paris en un coup d’œil — en cours, gagnés ou perdus — avec le score live du match."
+        description="Tes paris, ton solde de jetons et le classement des meilleurs parieurs Talk Foot."
         actions={
           liveMatch ? (
             <Link
@@ -120,6 +135,37 @@ export function PronosticHubPage() {
         }
       />
 
+      <div
+        className="flex flex-col gap-2 sm:flex-row sm:flex-wrap"
+        role="tablist"
+        aria-label="Sections pronostic"
+      >
+        <HubTabButton
+          active={hubView === 'paris'}
+          onClick={() => setHubView('paris')}
+          label="Mes paris"
+          L={L}
+        />
+        <HubTabButton
+          active={hubView === 'classement'}
+          onClick={() => setHubView('classement')}
+          label="Classement parieurs"
+          L={L}
+        />
+      </div>
+
+      {hubView === 'classement' ? (
+        <section className="space-y-4" aria-label="Classement des parieurs">
+          <FriendsParieurMiniRank />
+          <Card className="p-5 sm:p-6" elevation="soft">
+            <p className="mb-4 text-[10px] font-black uppercase tracking-wider text-tf-grey">
+              Classement global
+            </p>
+            <BettorLeaderboard extended />
+          </Card>
+        </section>
+      ) : (
+        <>
       <FictionalBettingNotice />
       <PronoStatsPanel />
 
@@ -191,7 +237,40 @@ export function PronosticHubPage() {
       ) : (
         <EmptyBets tab={tab} liveMatch={liveMatch} L={L} />
       )}
+        </>
+      )}
     </div>
+  )
+}
+
+function HubTabButton({
+  active,
+  onClick,
+  label,
+  L,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  L: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        'min-h-11 flex-1 rounded-2xl px-4 py-2.5 text-center text-xs font-black transition sm:min-h-0 sm:flex-none sm:px-6 sm:text-sm',
+        active
+          ? 'bg-tf-cta text-white shadow-tf-cta'
+          : L
+            ? 'bg-tf-dark/[0.06] text-tf-dark hover:bg-tf-dark/10'
+            : 'bg-white/10 text-sky-100/90 hover:bg-white/14',
+      )}
+    >
+      {label}
+    </button>
   )
 }
 

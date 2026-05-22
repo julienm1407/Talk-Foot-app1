@@ -78,10 +78,10 @@ export function UserRankCard() {
 
       <div className="mt-3">
         <Link
-          to="/"
+          to="/pronostic?vue=classement"
           className="text-xs font-bold text-tf-app-fg underline decoration-tf-app-muted/60 underline-offset-2 hover:opacity-85"
         >
-          Voir le classement complet sur l'accueil →
+          Voir le classement complet →
         </Link>
       </div>
     </Card>

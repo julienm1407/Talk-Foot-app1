@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DirectMessagesProvider } from '../contexts/DirectMessagesContext'
 import { PrivateMessagesUiProvider } from '../contexts/PrivateMessagesUiContext'
 import { BottomNav } from './BottomNav'
@@ -56,7 +57,9 @@ export function AppShell() {
               isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',
             )}
           >
-            <Outlet />
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         ) : isHome ? (
           <div
@@ -70,7 +73,9 @@ export function AppShell() {
             )}
           >
             <PageAdRails variant="centerOnly" centerMax="ultra">
-              <Outlet />
+              <ErrorBoundary key={location.pathname}>
+                <Outlet />
+              </ErrorBoundary>
             </PageAdRails>
           </div>
         ) : (
@@ -83,7 +88,9 @@ export function AppShell() {
           >
             <PageAdRails>
               <div className="tf-panel rounded-tf-3xl p-tf-4 sm:p-tf-6">
-                <Outlet />
+                <ErrorBoundary key={location.pathname}>
+                  <Outlet />
+                </ErrorBoundary>
               </div>
             </PageAdRails>
           </div>

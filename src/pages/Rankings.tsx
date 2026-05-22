@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Card } from '../components/ui/Card'
-import { BettorLeaderboard } from '../components/home/BettorLeaderboard'
 import { competitionThemes } from '../data/competitionThemes'
 import {
   BIG_FIVE_LEAGUE_IDS,
@@ -14,19 +13,18 @@ import { PointsVsRecentFormChart } from '../components/rankings/PointsVsRecentFo
 import { RankingsCrossMatrix } from '../components/rankings/RankingsCrossMatrix'
 import { cn } from '../utils/cn'
 import { SectionIntro } from '../components/ui/SectionIntro'
-import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniRank'
 import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { Link } from 'react-router-dom'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
-type MainTab = 'parieurs' | 'ligues' | 'forme'
+type MainTab = 'ligues' | 'forme'
 
 export function RankingsPage() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const [mainTab, setMainTab] = useState<MainTab>('parieurs')
+  const [mainTab, setMainTab] = useState<MainTab>('ligues')
   const [leagueId, setLeagueId] = useState<BigFiveLeagueId>('ligue-1')
   const reducedMotion = useReducedMotion()
 
@@ -70,13 +68,19 @@ export function RankingsPage() {
         titleAs="h1"
         uppercaseTitle={false}
         eyebrow="Classements"
-        title="Parieurs · Big 5 · Forme des équipes"
+        title="Big 5 · Forme des équipes"
+        description="Classements des championnats et analyses de forme. Le classement des parieurs est sur l’onglet Pronostic."
       />
 
+      <p className="rounded-2xl border border-tf-electric/25 bg-tf-electric-soft/35 px-4 py-3 text-sm font-semibold text-tf-dark">
+        Classement des parieurs (points, victoires) :{' '}
+        <Link to="/pronostic?vue=classement" className="font-black text-tf-cta underline-offset-2 hover:underline">
+          Pronostic → Classement parieurs
+        </Link>
+        .
+      </p>
+
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" role="tablist" aria-label="Sections classements">
-        <button type="button" className={tabClass('parieurs')} onClick={() => setMainTab('parieurs')}>
-          Parieurs
-        </button>
         <button type="button" className={tabClass('ligues')} onClick={() => setMainTab('ligues')}>
           5 grands championnats
         </button>
@@ -86,23 +90,6 @@ export function RankingsPage() {
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
-        {mainTab === 'parieurs' ? (
-          <motion.div
-            key="tab-parieurs"
-            className="space-y-4"
-            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-            animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
-            exit={reducedMotion ? {} : { opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-          >
-            <FriendsParieurMiniRank />
-            <Card className="p-5 sm:p-6" elevation="soft">
-              <p className="mb-4 text-[10px] font-black uppercase tracking-wider text-tf-grey">Classement global</p>
-              <BettorLeaderboard extended />
-            </Card>
-          </motion.div>
-        ) : null}
-
         {mainTab === 'ligues' ? (
           <motion.div
             key="tab-ligues"

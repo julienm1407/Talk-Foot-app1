@@ -426,7 +426,7 @@ export function HomeFeedContinuation({
             Live & agenda
           </Link>
           <Link
-            to="/rankings"
+            to="/pronostic?vue=classement"
             className={cn(
               'tf-interactive-press inline-flex min-h-11 items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-[11px] font-black leading-tight sm:min-h-10 sm:text-xs',
               isLight
@@ -435,7 +435,7 @@ export function HomeFeedContinuation({
             )}
           >
             <span aria-hidden>🎯</span>
-            Classement bets
+            Classement parieurs
           </Link>
         </div>
       </nav>

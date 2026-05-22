@@ -23,7 +23,8 @@ import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bann
 import { changeDisplayNameCloud } from '../lib/supabase/displayName'
 
 type CloudUserStateValue = {
-  ready: true
+  /** Profil cloud chargé (évite d’écraser le serveur avant hydratation). */
+  syncReady: boolean
   app: UserAppStateV1
   /** True tant que le compte Google/Apple n’a pas validé pseudo + infos perso. */
   oauthNeedsProfile: boolean
@@ -191,11 +192,11 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       setApp((prev) => {
         const next = fn(prev)
         appRef.current = next
-        scheduleSave()
+        if (ready) scheduleSave()
         return next
       })
     },
-    [scheduleSave],
+    [scheduleSave, ready],
   )
 
   const patchFanPreferences = useCallback(
@@ -216,9 +217,9 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
     (v: boolean) => {
       setOnboardingCompleteCol(v)
       ocRef.current = v
-      scheduleSave()
+      if (ready) scheduleSave()
     },
-    [scheduleSave],
+    [scheduleSave, ready],
   )
 
   const completeOauthProfile = useCallback(
@@ -267,7 +268,7 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
 
   const value = useMemo<CloudUserStateValue>(
     () => ({
-      ready: true,
+      syncReady: ready,
       oauthNeedsProfile,
       app: {
         ...app,
@@ -278,24 +279,24 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       setOnboardingComplete,
       completeOauthProfile,
     }),
-    [app, oauthNeedsProfile, patchApp, patchFanPreferences, setOnboardingComplete, completeOauthProfile],
+    [ready, app, oauthNeedsProfile, patchApp, patchFanPreferences, setOnboardingComplete, completeOauthProfile],
   )
 
   if (!user?.id) {
     return <>{children}</>
   }
 
-  if (!ready) {
-    return (
-      <div className="relative flex min-h-dvh flex-col items-center justify-center gap-3 p-6">
-        <div className="tf-page-backdrop" aria-hidden />
-        <p className="relative text-sm font-semibold text-tf-grey">Synchronisation de ton compte…</p>
-      </div>
-    )
-  }
-
   return (
     <CloudUserStateContext.Provider value={value}>
+      {!ready ? (
+        <div
+          className="border-b border-sky-200/80 bg-sky-50/95 px-4 py-1.5 text-center text-[11px] font-bold text-sky-950"
+          role="status"
+          aria-live="polite"
+        >
+          Synchronisation du compte…
+        </div>
+      ) : null}
       {loadError ? (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-bold text-amber-950">
           Cloud partiellement indisponible ({loadError}). Tes changements peuvent ne pas être enregistrés.
