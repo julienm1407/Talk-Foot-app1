@@ -7,14 +7,41 @@ import { DebateMessagePreview } from '../debate/DebateMessagePreview'
 
 export function DebateOfTheDayCard({
   debate,
+  loading = false,
   hubCompact = false,
   className,
 }: {
-  debate: Debate
+  debate: Debate | null
+  loading?: boolean
   /** Encart rail desktop hub : plus court, sans aperçu du fil */
   hubCompact?: boolean
   className?: string
 }) {
+  if (loading) {
+    return (
+      <Card className={cn('px-4 py-8 text-center text-sm font-semibold text-tf-grey', className)}>
+        Chargement du débat du jour…
+      </Card>
+    )
+  }
+
+  if (!debate) {
+    return (
+      <Card className={cn('border-dashed px-4 py-8 text-center', className)} elevation="soft">
+        <p className="text-sm font-black text-tf-dark">Pas de débat du jour</p>
+        <p className="mt-2 text-xs font-semibold text-tf-grey">
+          Les débats avec le plus d’activité apparaîtront ici.
+        </p>
+        <Link
+          to="/debates"
+          className="mt-4 inline-flex rounded-xl border border-tf-dark/15 px-4 py-2 text-xs font-black text-tf-dark"
+        >
+          Explorer les débats
+        </Link>
+      </Card>
+    )
+  }
+
   const previews = hubCompact ? [] : debate.previewMessages.slice(0, 2)
   const participants = debate.activeParticipants ?? []
 

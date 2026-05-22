@@ -15,15 +15,38 @@ export function NewsFeed({
   items,
   personalized,
   supporterClubShort,
+  loading,
   /** Dans la carte FEED home : pas de 2e carte ni bandeau titre (évite le vide). */
   embedded,
 }: {
   items: NewsItem[]
   personalized?: boolean
   supporterClubShort?: string | null
+  loading?: boolean
   embedded?: boolean
 }) {
   const focus = supporterClubShort?.trim()
+
+  if (loading) {
+    const shell = embedded
+      ? 'rounded-2xl border border-slate-200/70 bg-white/95 px-4 py-8 text-center text-sm font-semibold text-slate-600'
+      : 'px-6 py-10 text-center text-sm font-semibold text-slate-600'
+    return <div className={shell}>Chargement des actus…</div>
+  }
+
+  if (items.length === 0) {
+    const shell = embedded
+      ? 'rounded-2xl border border-dashed border-slate-200/80 bg-slate-50/80 px-4 py-10 text-center'
+      : 'px-6 py-10 text-center'
+    return (
+      <div className={shell}>
+        <p className="text-sm font-black text-slate-900">Pas encore d’actu</p>
+        <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">
+          Les articles publiés sur Talk Foot apparaîtront ici dès qu’ils seront en ligne.
+        </p>
+      </div>
+    )
+  }
 
   const list = (
     <div className="divide-y divide-slate-200/80">
@@ -105,10 +128,10 @@ export function NewsFeed({
             </div>
             <div className="text-sm font-semibold text-slate-700 sm:text-base">
               {focus
-                ? `Priorité aux actus de ta ligue et de ${focus} (mock) — le fil reste ouvert.`
+                ? `Priorité aux actus de ta ligue et de ${focus}.`
                 : personalized
-                  ? 'Filtré et trié selon ta ligue et ton club (mock).'
-                  : 'Des vraies sensations “journalistiques” (mock).'}
+                  ? 'Filtré et trié selon ta ligue et ton club.'
+                  : 'Articles publiés sur Talk Foot.'}
             </div>
           </div>
         </div>

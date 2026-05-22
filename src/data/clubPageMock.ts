@@ -1,5 +1,5 @@
 import type { Team } from '../types/match'
-import { buildClubPageMock } from './clubPageGenerator'
+import { ALL_CLUBS_BY_ID } from './allClubsCatalog'
 
 export type ClubSquadNode = {
   id: string
@@ -90,7 +90,50 @@ export type ClubPageMock = {
   hubPulse: { label: string; value: string; sub?: string }[]
 }
 
-/** Contenu riche, déterministe par `team.id` (voir `clubPageGenerator.ts`). */
+/** Coquille vide : données SM + groupes/débats réels remplissent la page (plus de générateur mock). */
+export function buildEmptyClubPageShell(team: Team): ClubPageMock {
+  const meta = ALL_CLUBS_BY_ID[team.id]
+  const leagueLabel = meta?.leagueName ?? '—'
+  return {
+    heroTag: team.shortName,
+    matchMode: false,
+    onFire: false,
+    popularityLabel: 'Communauté Talk Foot',
+    liveMsgPerMin: '0',
+    openRooms: 0,
+    activitySpike: '—',
+    globalRank: '—',
+    topFan: { name: '—', handle: '@—', seed: team.id },
+    squad: [],
+    hotPlayerId: '',
+    debates: [],
+    shop: [],
+    stats: [],
+    topFans: [],
+    mvpTitle: 'MVP saison',
+    trophies: [],
+    infoSummary: {
+      coach: '—',
+      stadium: '—',
+      nextOpponent: 'À venir (calendrier SM)',
+    },
+    upcoming: {
+      league: leagueLabel,
+      matchday: '',
+      opponent: '—',
+      kickoff: '—',
+      venue: 'dom',
+      homeName: team.name,
+      awayName: '—',
+    },
+    formStrip: [],
+    tableSnapshot: { position: '—', points: '—', line: 'Classement SportMonks' },
+    shopWallet: { balance: '—', owned: '0' },
+    hubPulse: [],
+  }
+}
+
+/** @deprecated Utiliser `buildEmptyClubPageShell`. */
 export function getClubPageMock(team: Team): ClubPageMock {
-  return buildClubPageMock(team)
+  return buildEmptyClubPageShell(team)
 }

@@ -1,4 +1,4 @@
-import { TRENDING_HASHTAGS } from '../../data/trendingHashtags'
+import { useTrendingHashtags } from '../../hooks/useTrendingHashtags'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
@@ -30,7 +30,9 @@ export function SearchTrends12h({
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const items = TRENDING_HASHTAGS.slice(0, maxTerms)
+  const items = useTrendingHashtags(maxTerms)
+
+  if (items.length === 0) return null
 
   return (
     <div

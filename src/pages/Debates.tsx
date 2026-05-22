@@ -1,12 +1,12 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
-import { getAllDebates } from '../data/debates'
+import { useDebates } from '../contexts/DebatesContext'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { cn } from '../utils/cn'
 
 export function DebatesPage() {
-  const all = getAllDebates()
+  const { debates: all, loading } = useDebates()
 
   return (
     <div className="space-y-6">
@@ -17,6 +17,24 @@ export function DebatesPage() {
         eyebrow="Débats"
         title="Tribunes & polémiques"
       />
+
+      {loading ? (
+        <p className="text-sm font-semibold text-tf-grey">Chargement des débats…</p>
+      ) : all.length === 0 ? (
+        <Card elevation="soft" className="border-dashed p-8 text-center">
+          <p className="font-black text-tf-dark">Aucun débat pour le moment</p>
+          <p className="mt-2 text-sm font-semibold text-tf-grey">
+            Rejoins un groupe et lance un sujet dans le salon Général — les compteurs participants et messages
+            sont calculés en temps réel.
+          </p>
+          <Link
+            to="/groups"
+            className="mt-4 inline-flex rounded-2xl bg-tf-dark px-5 py-2.5 text-sm font-black text-white"
+          >
+            Groupes supporters
+          </Link>
+        </Card>
+      ) : null}
 
       <ul className="space-y-4" role="list">
         {all.map((d) => {

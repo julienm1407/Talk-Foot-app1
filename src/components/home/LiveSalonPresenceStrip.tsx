@@ -4,6 +4,7 @@ import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { Avatar } from '../ui/Avatar'
 import { cn } from '../../utils/cn'
+import { useLiveMatchSalonStats } from '../../hooks/useLiveMatchSalonStats'
 import { getLiveSalonPresenceSnapshot, liveSalonActiveSeeds } from '../../utils/liveSalonPresence'
 
 const heatFillByTier = {
@@ -47,10 +48,18 @@ export function LiveSalonPresenceStrip({
     [simulation, minute, score],
   )
 
-  const snap = useMemo(
-    () => getLiveSalonPresenceSnapshot(match, simForPresence, tick),
-    [match, simForPresence, tick],
-  )
+  const realStats = useLiveMatchSalonStats(match.id)
+  const snap = useMemo(() => {
+    const base = getLiveSalonPresenceSnapshot(match, simForPresence, tick)
+    if (realStats) {
+      return {
+        ...base,
+        viewers: realStats.participantsCount,
+        messages: realStats.messagesCount,
+      }
+    }
+    return { ...base, viewers: 0, messages: 0 }
+  }, [match, simForPresence, tick, realStats])
 
   const actifs = useMemo(() => liveSalonActiveSeeds(match.id), [match.id])
   const heatPulse = snap.intensity >= 72

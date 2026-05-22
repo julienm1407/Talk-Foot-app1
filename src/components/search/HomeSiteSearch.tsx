@@ -11,8 +11,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useMatches } from '../../contexts/MatchesContext'
 import { useSupporterGroups } from '../../hooks/useSupporterGroups'
-import { getAllDebates } from '../../data/debates'
-import { mockNews } from '../../data/news'
+import { useDebates } from '../../contexts/DebatesContext'
+import { useArticles } from '../../contexts/ArticlesContext'
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { kindLabel, runSiteSearch, type SiteSearchResult } from '../../utils/siteSearch'
@@ -39,6 +39,7 @@ export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchPro
   const L = appearance === 'light'
   const { matches } = useMatches()
   const { groups } = useSupporterGroups()
+  const { articles } = useArticles()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -61,16 +62,16 @@ export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchPro
     [],
   )
 
-  const debates = useMemo(() => getAllDebates(), [])
+  const { debates } = useDebates()
 
   const results = useMemo(() => {
     return runSiteSearch(query, {
       matches,
       groups,
       debates,
-      news: mockNews,
+      news: articles,
     })
-  }, [query, matches, groups, debates])
+  }, [query, matches, groups, debates, articles])
 
   useEffect(() => {
     setHighlight(0)

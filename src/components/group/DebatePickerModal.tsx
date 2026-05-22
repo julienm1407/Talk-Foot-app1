@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
-import { getAllDebates } from '../../data/debates'
 import type { Debate } from '../../data/debates'
+import { useDebates } from '../../contexts/DebatesContext'
 import { containsBannedWord } from '../../utils/bannedWords'
 import { cn } from '../../utils/cn'
 
@@ -41,9 +41,11 @@ export function DebatePickerModal({
     setFormError(null)
   }, [open])
 
+  const { debates: catalogDebates } = useDebates()
+
   if (!open) return null
 
-  const catalog = getAllDebates()
+  const catalog = catalogDebates
 
   const submitCreate = () => {
     setFormError(null)

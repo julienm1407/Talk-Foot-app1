@@ -77,7 +77,33 @@ export function PrivacyPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">3. Finalités & base légale</h2>
+            <h2 className="font-display text-lg font-black">3. Données réelles et simulations</h2>
+            <p className="text-sm font-medium leading-relaxed opacity-90">
+              Talk Foot distingue clairement ce qui provient de services réels et ce qui relève du jeu ou de la démo :
+            </p>
+            <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
+              <li>
+                <strong>Réel</strong> : articles publiés en base, messages de salons live et de groupes (Supabase),
+                débats avec compteurs participants/messages agrégés, amis et messages privés synchronisés, effectifs
+                adhérents aux groupes, statistiques de présence sur un salon live lorsque des messages existent.
+              </li>
+              <li>
+                <strong>Données sportives</strong> : calendriers, scores, compositions et classements via SportMonks
+                (selon ta clé API / configuration).
+              </li>
+              <li>
+                <strong>Simulation / jeu</strong> : jetons et médailles de navigation, paris entre supporters (cotes
+                internes, gains fictifs), boutique cosmétique, récompenses quotidiennes — sans enjeu financier réel.
+              </li>
+              <li>
+                <strong>Absence de donnée</strong> : si aucun article ou débat n’est publié, l’interface affiche un
+                état vide explicite plutôt que du contenu inventé.
+              </li>
+            </ul>
+          </section>
+
+          <section className="mt-8 space-y-3">
+            <h2 className="font-display text-lg font-black">4. Finalités & base légale</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Fournir les fonctionnalités que tu demandes (compte, personnalisation, jeu, boutique locale). Base
               légale : exécution d&apos;une relation d&apos;utilisation de l&apos;service et, le cas échéant, ton
@@ -86,7 +112,7 @@ export function PrivacyPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">4. Durée de conservation</h2>
+            <h2 className="font-display text-lg font-black">5. Durée de conservation</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Tant que tu ne les supprimes pas (fonction « Supprimer mes données » dans le profil) ou que tu ne vides
               pas le stockage du navigateur. Aucun serveur Talk Foot n&apos;est impliqué pour ces données locales dans
@@ -95,7 +121,7 @@ export function PrivacyPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">5. Tes droits (RGPD)</h2>
+            <h2 className="font-display text-lg font-black">6. Tes droits (RGPD)</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Tu peux <strong>exporter</strong> une copie des données stockées localement et{' '}
               <strong>supprimer</strong> l&apos;ensemble des données Talk Foot sur cet appareil depuis la page Profil.
@@ -105,7 +131,7 @@ export function PrivacyPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">6. Cookies & traceurs</h2>
+            <h2 className="font-display text-lg font-black">7. Cookies & traceurs</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Pas de cookies publicitaires tiers dans cette version. Un bandeau t&apos;informe du stockage local
               nécessaire au fonctionnement ; tu peux refuser en ne poursuivant pas l&apos;utilisation (certaines
@@ -114,7 +140,7 @@ export function PrivacyPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">7. Sécurité</h2>
+            <h2 className="font-display text-lg font-black">8. Sécurité</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Les mots de passe des comptes email sont hachés sur l&apos;appareil. Toute donnée locale peut être lue sur
               un poste compromis : utilise un appareil de confiance et, en production, privilégie une authentification

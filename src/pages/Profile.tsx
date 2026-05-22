@@ -1,25 +1,21 @@
 import { currentUser } from '../data/users'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
-import { mockPredictions } from '../data/predictions'
-import { useMemo, useEffect, useState } from 'react'
-import { formatKickoff } from '../utils/time'
+import { useMemo, useEffect } from 'react'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
 import { AvatarEditor } from '../components/profile/AvatarEditor'
 import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
 import { CharacterLayerStudio } from '../components/profile/CharacterLayerStudio'
-import { EditProfileModal } from '../components/profile/EditProfileModal'
 import { UserRankCard } from '../components/profile/UserRankCard'
+import { usePronoStats } from '../hooks/usePronoStats'
 import { useUserBets } from '../hooks/useUserBets'
 import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
-import type { Bet } from '../types/bet'
-import { useMatches } from '../contexts/MatchesContext'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
@@ -62,11 +58,8 @@ const PROFILE_SOMMAIRE: { id: string; label: string }[] = [
   { id: 'supporter', label: 'Club' },
   { id: 'classement', label: 'Rang' },
   { id: 'apparence', label: 'Apparence' },
-  { id: 'stats-pronos', label: 'Stats' },
-  { id: 'paris', label: 'Paris' },
   { id: 'badges-pronos', label: 'Badges' },
   { id: 'progression', label: 'Paliers' },
-  { id: 'historique-pronos', label: 'Historique' },
 ]
 
 function profileNavLink(appearance: Appearance) {
@@ -81,11 +74,9 @@ function profileNavLink(appearance: Appearance) {
 
 export function ProfilePage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { user: authUser, logout } = useAuth()
-  const { matches } = useMatches()
   const {
     favoriteLeagueId,
     favoriteClubIds,
@@ -118,8 +109,8 @@ export function ProfilePage() {
       return { id, meta, team }
     })
     .filter((x) => Boolean(x.meta && x.team))
-  const [editOpen, setEditOpen] = useState(false)
   const { wallet } = useWallet()
+  const { badges, progress } = usePronoStats()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useUserBets()
   const profilePseudo = authUser?.displayName?.trim() || currentUser.username || 'Supporteur'
@@ -129,188 +120,10 @@ export function ProfilePage() {
     if (wonBets.length) creditWonBets(wonBets)
   }, [bets, creditWonBets])
 
-  const firstLiveMatch = useMemo(
-    () => matches.find((m) => m.status === 'live') ?? null,
-    [matches],
-  )
-
-  useEffect(() => {
-    if (location.hash !== '#paris') return
-    const t = window.setTimeout(() => {
-      document.getElementById('paris')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 120)
-    return () => window.clearTimeout(t)
-  }, [location.hash, location.pathname])
-
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
   }
-
-  const predictions = useMemo(() => {
-    return [...mockPredictions].sort(
-      (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
-    )
-  }, [])
-
-  const betsView = useMemo(() => {
-    const matchesById = new Map(matches.map((m) => [m.id, m]))
-    const open = bets.filter((b) => b.status === 'open')
-    const settled = bets.filter((b) => b.status !== 'open')
-    const lastOpen = open.slice(0, 8)
-    const lastSettled = settled.slice(0, 12)
-
-    const marketLabel = (m: Bet['market']) => {
-      if (m === 'next_goal') return 'Prochaine équipe à marquer'
-      if (m === 'first_goal') return 'Première équipe à marquer'
-      if (m === 'result_1x2') return '1N2'
-      if (m === 'over25') return '+2,5 buts'
-      if (m === 'exact_score') return 'Score exact'
-      if (m === 'anytime_scorer') return 'Buteur'
-      return m
-    }
-    const selectionLabel = (b: Bet, matchId: string) => {
-      const match = matchesById.get(matchId)
-      const home = match?.home.shortName ?? 'HOME'
-      const away = match?.away.shortName ?? 'AWAY'
-      const s = b.selection
-      if (s === 'home') return home
-      if (s === 'away') return away
-      if (s === 'draw') return 'Nul'
-      if (s === 'over') return 'Over'
-      if (s === 'under') return 'Under'
-      if (typeof s === 'string' && s.startsWith('scor:')) {
-        const slug = s.slice(s.lastIndexOf(':') + 1)
-        const pretty = slug.replace(/-/g, ' ')
-        return pretty ? `Buteur · ${pretty}` : 'Buteur'
-      }
-      return s
-    }
-
-    const matchLine = (matchId: string) => {
-      const m = matchesById.get(matchId)
-      if (!m) return { title: 'Match inconnu', sub: '' }
-      return {
-        title: `${m.home.shortName} — ${m.away.shortName}`,
-        sub: `${m.competition.shortName} • ${formatKickoff(m.kickoffAt)}`,
-      }
-    }
-
-    return { open, settled, lastOpen, lastSettled, marketLabel, selectionLabel, matchLine }
-  }, [bets, matches])
-
-  const stats = useMemo(() => {
-    const total = predictions.length
-    const decided = predictions.filter((p) => p.outcome !== 'pending')
-    const won = decided.filter((p) => p.outcome === 'won').length
-    const accuracy = decided.length ? Math.round((won / decided.length) * 100) : 0
-    const points = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0)
-
-    let streak = 0
-    for (const p of predictions) {
-      if (p.outcome !== 'won') break
-      streak += 1
-    }
-
-    const byComp = new Map<string, { name: string; count: number }>()
-    for (const p of predictions) {
-      const key = p.match.competition.id
-      const existing = byComp.get(key)
-      if (existing) existing.count += 1
-      else byComp.set(key, { name: p.match.competition.name, count: 1 })
-    }
-    const fav = Array.from(byComp.values()).sort((a, b) => b.count - a.count)[0]
-
-    return { total, decided: decided.length, won, accuracy, points, streak, fav }
-  }, [predictions])
-
-  const badges = useMemo(() => {
-    const b: Array<{
-      kind:
-        | 'starter'
-        | 'beta'
-        | 'predictor'
-        | 'accuracy'
-        | 'streak'
-        | 'league'
-      label: string
-      hint: string
-      tone?: 'neutral' | 'live' | 'upcoming'
-      className?: string
-    }> = []
-
-    b.push({
-      kind: 'starter',
-      label: 'Supporter',
-      hint: 'Compte de départ',
-      tone: 'neutral',
-    })
-    b.push({
-      kind: 'beta',
-      label: 'Beta',
-      hint: 'Accès anticipé',
-      tone: 'upcoming',
-    })
-
-    if (stats.total >= 5)
-      b.push({
-        kind: 'predictor',
-        label: 'Pronostiqueur',
-        hint: '5 pronos enregistrés',
-        className: L
-          ? 'border-blue-200 bg-blue-50 text-blue-700'
-          : 'border-blue-400/30 bg-blue-950/50 text-sky-200',
-      })
-
-    if (stats.accuracy >= 60)
-      b.push({
-        kind: 'accuracy',
-        label: `Précision ${stats.accuracy}%`,
-        hint: 'Bon taux de réussite',
-        className: L
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-          : 'border-emerald-400/30 bg-emerald-950/45 text-emerald-200',
-      })
-
-    if (stats.streak >= 2)
-      b.push({
-        kind: 'streak',
-        label: `Série x${stats.streak}`,
-        hint: 'Victoires consécutives',
-        className: L
-          ? 'border-amber-200 bg-amber-50 text-amber-800'
-          : 'border-amber-400/30 bg-amber-950/45 text-amber-200',
-      })
-
-    if (stats.fav)
-      b.push({
-        kind: 'league',
-        label: `Fan de ${stats.fav.name}`,
-        hint: 'Compétition la plus pronostiquée',
-        className: L
-          ? 'border-slate-200/80 bg-slate-50 text-slate-800'
-          : 'border-white/10 bg-white/[0.06] text-sky-200/95',
-      })
-
-    return b
-  }, [stats, L])
-
-  const progress = useMemo(() => {
-    const nextPredictor = 10
-    const predictorPct = Math.round((Math.min(stats.total, nextPredictor) / nextPredictor) * 100)
-
-    const nextAcc = 75
-    const accPct = Math.round((Math.min(stats.accuracy, nextAcc) / nextAcc) * 100)
-
-    const nextStreak = 5
-    const streakPct = Math.round((Math.min(stats.streak, nextStreak) / nextStreak) * 100)
-
-    return {
-      predictor: { label: 'Niveau pronos', cur: stats.total, next: nextPredictor, pct: predictorPct },
-      accuracy: { label: 'Précision', cur: stats.accuracy, next: nextAcc, pct: accPct },
-      streak: { label: 'Série', cur: stats.streak, next: nextStreak, pct: streakPct },
-    }
-  }, [stats])
 
   const pr = getAppSectionTheme('profile')
 
@@ -330,7 +143,7 @@ export function ProfilePage() {
             {profilePseudo}
           </h1>
           <p className="text-sm font-semibold text-tf-app-muted">
-            Pseudo affiché sur les salons et le live · Badges, paris, progression et paramètres
+            Affiché sur les salons et le live · Badges, progression et paramètres
           </p>
         </div>
         <Button
@@ -362,16 +175,6 @@ export function ProfilePage() {
             className={cn('snap-start', profileNavLink(appearance), TF_FOCUS_VISIBLE)}
           >
             {label}
-            {id === 'paris' && bets.length > 0 ? (
-              <span
-                className={cn(
-                  'ml-1 inline-flex min-w-[1.1rem] items-center justify-center rounded-full px-1 text-[9px] font-black tabular-nums',
-                  L ? 'bg-emerald-600 text-white' : 'bg-emerald-400 text-emerald-950',
-                )}
-              >
-                {betsView.open.length || bets.length}
-              </span>
-            ) : null}
           </a>
         ))}
       </nav>
@@ -789,251 +592,6 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <Card id="stats-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
-        <div className="mb-1 text-[11px] font-black tracking-[0.18em] text-tf-app-muted">PRÉDICTIONS</div>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="text-base font-black text-tf-app-fg">{profilePseudo}</div>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              {badges.slice(0, 2).map((b) => (
-                <Badge
-                  key={b.label}
-                  tone={b.tone ?? 'neutral'}
-                  className={b.className}
-                  title={b.hint}
-                >
-                  {b.label}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <Button
-            variant="soft"
-            className="w-full rounded-2xl sm:w-auto"
-            onClick={() => setEditOpen(true)}
-            aria-label="Modifier le profil"
-          >
-            Modifier
-          </Button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
-          <Stat label="Pronos" value={`${stats.total}`} hint="Au total" />
-          <Stat
-            label="Précision"
-            value={`${stats.accuracy}%`}
-            hint={`${stats.won}/${stats.decided} validés`}
-          />
-          <Stat label="Série" value={`x${stats.streak}`} hint="Victoires d’affilée" />
-          <Stat label="Points" value={`${stats.points}`} hint="Score pronos" />
-        </div>
-      </Card>
-
-      <Card id="paris" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
-          <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">MES PARIS</div>
-            <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
-              En cours & validés
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-tf-app-muted">
-            <Badge
-              className={cn(
-                'text-tf-app-fg',
-                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-              )}
-            >
-              En cours: {betsView.open.length}
-            </Badge>
-            <Badge
-              className={cn(
-                'text-tf-app-fg',
-                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-              )}
-            >
-              Validés: {betsView.settled.length}
-            </Badge>
-          </div>
-        </div>
-
-        {bets.length ? (
-          <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-black text-tf-app-fg">En cours</div>
-                <Badge
-                  className={
-                    L
-                      ? 'border-blue-200 bg-blue-50 text-blue-700'
-                      : 'border-blue-400/35 bg-blue-950/50 text-sky-200'
-                  }
-                >
-                  {betsView.open.length}
-                </Badge>
-              </div>
-              {betsView.lastOpen.length ? (
-                <div
-                  className={cn(
-                    'mt-3 divide-y overflow-hidden rounded-2xl border',
-                    profileIncard(appearance),
-                    L ? 'divide-slate-200/60' : 'divide-white/10',
-                  )}
-                >
-                  {betsView.lastOpen.map((b) => {
-                    const m = betsView.matchLine(b.matchId)
-                    return (
-                      <Link
-                        key={b.id}
-                        to={`/channel/${b.matchId}`}
-                        className={cn('block p-3 transition', L ? 'hover:bg-slate-50/80' : 'hover:bg-white/5')}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-tf-app-fg">{m.title}</div>
-                            {m.sub ? (
-                              <div className="mt-0.5 text-[11px] font-semibold text-tf-app-muted">
-                                {m.sub}
-                              </div>
-                            ) : null}
-                            <div className="mt-2 text-xs font-bold text-tf-app-fg">
-                              {betsView.selectionLabel(b, b.matchId)} • {b.stake}j
-                            </div>
-                            <div className="mt-1 text-[11px] font-semibold text-blue-500">Ouvrir le match →</div>
-                          </div>
-                          <Badge
-                            className={
-                              L
-                                ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                : 'border-blue-400/35 bg-blue-950/50 text-sky-200'
-                            }
-                          >
-                            En cours
-                          </Badge>
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="mt-3 text-sm font-semibold text-tf-app-muted">Aucun pari en cours.</div>
-              )}
-            </div>
-
-            <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-black text-tf-app-fg">Validés</div>
-                <Badge
-                  className={cn(
-                    'text-tf-app-fg',
-                    L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-                  )}
-                >
-                  {betsView.settled.length}
-                </Badge>
-              </div>
-              {betsView.lastSettled.length ? (
-                <div
-                  className={cn(
-                    'mt-3 divide-y overflow-hidden rounded-2xl border',
-                    profileIncard(appearance),
-                    L ? 'divide-slate-200/60' : 'divide-white/10',
-                  )}
-                >
-                  {betsView.lastSettled.map((b) => {
-                    const m = betsView.matchLine(b.matchId)
-                    const statusBadge =
-                      b.status === 'won'
-                        ? {
-                            cls: L
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                              : 'border-emerald-500/30 bg-emerald-950/45 text-emerald-200',
-                            label: `Gagné +${b.payout ?? 0}`,
-                          }
-                        : b.status === 'lost'
-                          ? {
-                              cls: L
-                                ? 'border-rose-200 bg-rose-50 text-rose-800'
-                                : 'border-rose-500/30 bg-rose-950/45 text-rose-200',
-                              label: 'Perdu',
-                            }
-                          : {
-                              cls: cn(
-                                'text-tf-app-fg',
-                                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-                              ),
-                              label: 'Annulé',
-                            }
-                    return (
-                      <Link
-                        key={b.id}
-                        to={`/channel/${b.matchId}`}
-                        className={cn('block p-3 transition', L ? 'hover:bg-slate-50/80' : 'hover:bg-white/5')}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-xs font-black text-tf-app-fg">{m.title}</div>
-                            {m.sub ? (
-                              <div className="mt-0.5 text-[11px] font-semibold text-tf-app-muted">
-                                {m.sub}
-                              </div>
-                            ) : null}
-                            <div className="mt-2 text-xs font-bold text-tf-app-fg">
-                              {betsView.selectionLabel(b, b.matchId)} • {b.stake}j
-                            </div>
-                            <div className="mt-1 text-[11px] font-semibold text-blue-500">Ouvrir le match →</div>
-                          </div>
-                          <Badge className={statusBadge.cls}>{statusBadge.label}</Badge>
-                        </div>
-                      </Link>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="mt-3 text-sm font-semibold text-tf-app-muted">
-                  Aucun pari validé pour le moment.
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div
-            className={cn(
-              'mt-4 rounded-3xl border border-dashed p-5 text-center',
-              L ? 'border-slate-200/90 bg-slate-50/60' : 'border-white/15 bg-white/[0.04]',
-            )}
-          >
-            <p className="text-sm font-black text-tf-app-fg">Aucun pari pour l’instant</p>
-            <p className="mt-2 text-sm font-semibold text-tf-app-muted">
-              Ouvre un match en direct, choisis un prono (1N2, buteur, over…), puis valide — tu le retrouveras ici.
-            </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Link
-                to="/match"
-                className={cn(
-                  'inline-flex min-h-11 items-center justify-center rounded-2xl border-2 border-tf-cta-hover/40 bg-tf-cta px-5 text-sm font-black text-white shadow-tf-cta transition hover:bg-tf-cta-hover',
-                  TF_FOCUS_VISIBLE,
-                )}
-              >
-                Voir les matchs
-              </Link>
-              {firstLiveMatch ? (
-                <Link
-                  to={`/channel/${firstLiveMatch.id}`}
-                  className={cn(
-                    'inline-flex min-h-11 items-center justify-center rounded-2xl border border-tf-dark bg-white/95 px-5 text-sm font-bold text-tf-dark shadow-tf-elev-1 transition hover:bg-tf-electric-soft',
-                    TF_FOCUS_VISIBLE,
-                  )}
-                >
-                  Parier sur {firstLiveMatch.home.shortName} — {firstLiveMatch.away.shortName}
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        )}
-      </Card>
-
       <Card id="badges-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div>
@@ -1119,112 +677,6 @@ export function ProfilePage() {
         </div>
       </Card>
 
-      <Card id="historique-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
-          <div>
-            <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">HISTORIQUE</div>
-            <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
-              Prédictions récentes
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            className="h-10 w-full rounded-2xl sm:w-auto"
-            aria-label="Voir plus (placeholder)"
-          >
-            Voir plus
-          </Button>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {predictions.map((p) => (
-            <div key={p.id} className={cn('rounded-3xl p-4', profileIncard(appearance))}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-black text-tf-app-fg">
-                      {p.match.home.shortName} – {p.match.away.shortName}
-                    </div>
-                    <Badge
-                      className={
-                        p.outcome === 'won'
-                          ? L
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border-emerald-500/30 bg-emerald-950/50 text-emerald-200'
-                          : p.outcome === 'lost'
-                            ? L
-                              ? 'border-rose-200 bg-rose-50 text-rose-700'
-                              : 'border-rose-500/30 bg-rose-950/50 text-rose-200'
-                            : cn(
-                                'text-tf-app-fg',
-                                L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-                              )
-                      }
-                    >
-                      {p.outcome === 'won' ? 'Gagné' : p.outcome === 'lost' ? 'Perdu' : 'En attente'}
-                    </Badge>
-                    <Badge tone="upcoming" title={p.match.competition.name}>
-                      {p.match.competition.shortName}
-                    </Badge>
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-tf-app-muted">
-                    Coup d’envoi {formatKickoff(p.match.kickoffAt)}
-                  </div>
-                </div>
-
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
-                  <Badge
-                    className={cn(
-                      'text-tf-app-fg',
-                      L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-                    )}
-                    title="Score prédit"
-                  >
-                    Prono {p.predictedScore.home}-{p.predictedScore.away}
-                  </Badge>
-                  <Badge
-                    className={cn(
-                      'text-tf-app-fg',
-                      L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-                    )}
-                    title="Score réel (si dispo)"
-                  >
-                    Réel {p.actualScore ? `${p.actualScore.home}-${p.actualScore.away}` : '—'}
-                  </Badge>
-                  <Badge
-                    className={
-                      p.points > 0
-                        ? L
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                          : 'border-emerald-500/30 bg-emerald-950/45 text-emerald-200'
-                        : cn(
-                            'text-tf-app-fg',
-                            L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/8',
-                          )
-                    }
-                    title="Points gagnés"
-                  >
-                    +{p.points}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
-    </div>
-  )
-}
-
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
-  const { appearance } = useAppearance()
-  return (
-    <div className={cn('rounded-3xl p-4', profileIncard(appearance))}>
-      <div className="text-xs font-semibold tracking-wide text-tf-app-muted">{label}</div>
-      <div className="mt-1 font-display text-2xl font-black tracking-tight text-tf-app-fg">{value}</div>
-      <div className="mt-1 text-xs font-semibold text-tf-app-muted">{hint}</div>
     </div>
   )
 }

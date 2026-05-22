@@ -1,7 +1,7 @@
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useMatches } from '../../contexts/MatchesContext'
-import type { SupporterGroup } from '../../types/group'
+import type { GroupActivePresence, SupporterGroup } from '../../types/group'
 import type { GroupAccessLevel } from '../../utils/groupAccess'
 import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
@@ -67,19 +67,48 @@ function ClubLogoBackdrop({
   )
 }
 
-function ActiveSupportersFacepile({ size, light }: { size: 'md' | 'sm'; light: boolean }) {
+function ActiveSupportersFacepile({
+  size,
+  light,
+  online,
+  participants,
+}: {
+  size: 'md' | 'sm'
+  light: boolean
+  online: number
+  participants: GroupActivePresence[]
+}) {
   const avatarCls =
     size === 'sm' ? 'size-6 ring-1 ring-white/90' : 'size-7 ring-1 ring-white/90 shadow-sm'
   const labelCls = size === 'sm' ? 'text-[11px] leading-tight' : 'text-xs leading-snug'
+  const shown = participants.slice(0, 4)
+
+  if (online <= 0 && shown.length === 0) return null
+
+  const label =
+    online > 0
+      ? `${online.toLocaleString('fr-FR')} en ligne`
+      : shown.length > 0
+        ? 'Soutiens actifs'
+        : 'Soutiens en ligne'
+
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-      <div className="flex shrink-0 -space-x-1.5 sm:-space-x-2" aria-hidden>
-        {(['A', 'B', 'C', 'D'] as const).map((seed, i) => (
-          <Avatar key={i} seed={seed} accent="violet" className={avatarCls} alt="" />
-        ))}
-      </div>
+      {shown.length > 0 ? (
+        <div className="flex shrink-0 -space-x-1.5 sm:-space-x-2" aria-hidden>
+          {shown.map((p) => (
+            <Avatar
+              key={p.userId}
+              seed={p.avatarSeed}
+              accent={p.accent}
+              className={avatarCls}
+              alt={p.displayName}
+            />
+          ))}
+        </div>
+      ) : null}
       <span className={cn('min-w-0 font-semibold', light ? 'text-slate-600' : 'text-tf-app-muted', labelCls)}>
-        Soutiens en ligne
+        {label}
       </span>
     </div>
   )
@@ -238,8 +267,16 @@ export function GroupCard({
           {railDense ? (
             <>
               <div className="flex flex-wrap items-center gap-1">
-                <Badge className={cn('px-1.5 py-0.5', hotBadgeC)}>🔥 {online.toLocaleString('fr-FR')} en ligne</Badge>
-                <Badge className={cn('px-1.5 py-0.5', msgBadgeC)}>📈 +{msgs}</Badge>
+                {online > 0 ? (
+                  <Badge className={cn('px-1.5 py-0.5', hotBadgeC)}>
+                    🔥 {online.toLocaleString('fr-FR')} en ligne
+                  </Badge>
+                ) : null}
+                {msgs > 0 ? (
+                  <Badge className={cn('px-1.5 py-0.5', msgBadgeC)}>
+                    📈 {msgs.toLocaleString('fr-FR')} msg
+                  </Badge>
+                ) : null}
                 <Badge className={cn('px-1.5 py-0.5', kindBadgeC)}>{kindLabel[kind]}</Badge>
               </div>
               {group.motto ? (
@@ -257,18 +294,20 @@ export function GroupCard({
                       : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
                   )}
                 >
-                  🔥 {online} en ligne
+                  {online > 0 ? `🔥 ${online.toLocaleString('fr-FR')} en ligne` : 'Salon calme'}
                 </Badge>
-                <Badge
-                  className={cn(
-                    'px-2 py-0.5 text-[10px]',
-                    L
-                      ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
-                      : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
-                  )}
-                >
-                  📈 +{msgs}
-                </Badge>
+                {msgs > 0 ? (
+                  <Badge
+                    className={cn(
+                      'px-2 py-0.5 text-[10px]',
+                      L
+                        ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
+                        : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+                    )}
+                  >
+                    📈 {msgs.toLocaleString('fr-FR')} msg
+                  </Badge>
+                ) : null}
                 <Badge
                   className={cn(
                     'px-2 py-0.5 text-[10px]',
@@ -283,7 +322,12 @@ export function GroupCard({
                 « {group.motto} »
               </p>
 
-              <ActiveSupportersFacepile size="sm" light={L} />
+              <ActiveSupportersFacepile
+                size="sm"
+                light={L}
+                online={online}
+                participants={group.activePresence ?? []}
+              />
             </>
           )}
 
@@ -359,26 +403,30 @@ export function GroupCard({
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            <Badge
-              className={cn(
-                'text-[11px] font-bold leading-tight sm:text-xs',
-                L
-                  ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
-                  : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
-              )}
-            >
-              🔥 {online} en ligne
-            </Badge>
-            <Badge
-              className={cn(
-                'text-[11px] font-bold leading-tight sm:text-xs',
-                L
-                  ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
-                  : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
-              )}
-            >
-              📈 +{msgs} msg
-            </Badge>
+            {online > 0 ? (
+              <Badge
+                className={cn(
+                  'text-[11px] font-bold leading-tight sm:text-xs',
+                  L
+                    ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
+                    : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
+                )}
+              >
+                🔥 {online.toLocaleString('fr-FR')} en ligne
+              </Badge>
+            ) : null}
+            {msgs > 0 ? (
+              <Badge
+                className={cn(
+                  'text-[11px] font-bold leading-tight sm:text-xs',
+                  L
+                    ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
+                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+                )}
+              >
+                📈 {msgs.toLocaleString('fr-FR')} msg
+              </Badge>
+            ) : null}
             <Badge
               className={cn(
                 'text-[11px] font-bold sm:text-xs',
@@ -390,7 +438,12 @@ export function GroupCard({
           </div>
 
           <div className="min-h-0">
-            <ActiveSupportersFacepile size="md" light={L} />
+            <ActiveSupportersFacepile
+              size="md"
+              light={L}
+              online={online}
+              participants={group.activePresence ?? []}
+            />
           </div>
 
           <p className={cn('line-clamp-2 text-xs font-semibold leading-snug sm:text-sm', bodyC)}>« {group.motto} »</p>
@@ -489,24 +542,28 @@ export function GroupCard({
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge
-              className={cn(
-                L
-                  ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
-                  : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
-              )}
-            >
-              🔥 {online} en ligne
-            </Badge>
-            <Badge
-              className={cn(
-                L
-                  ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
-                  : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
-              )}
-            >
-              📈 +{msgs} messages aujourd’hui
-            </Badge>
+            {online > 0 ? (
+              <Badge
+                className={cn(
+                  L
+                    ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
+                    : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
+                )}
+              >
+                🔥 {online.toLocaleString('fr-FR')} en ligne
+              </Badge>
+            ) : null}
+            {msgs > 0 ? (
+              <Badge
+                className={cn(
+                  L
+                    ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
+                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+                )}
+              >
+                📈 {msgs.toLocaleString('fr-FR')} msg aujourd’hui
+              </Badge>
+            ) : null}
             <Badge
               className={cn(
                 L ? 'border-slate-200 bg-white/90 text-slate-800' : 'border-white/10 bg-white/[0.08] text-sky-100',

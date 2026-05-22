@@ -5,7 +5,8 @@ import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { formatKickoff } from '../../utils/time'
 import { themeForCompetition } from '../../data/competitionThemes'
-import { formatHubDayLabel, hubFansK, HubStripLive } from './HubMatchEncart'
+import { formatHubDayLabel, HubStripLive } from './HubMatchEncart'
+import { SalonAudienceFooter } from './SalonAudienceFooter'
 
 /**
  * Carte « À l’affiche » / calendrier : **live** = strip stade global (`HubStripLive`) ; **à venir** = dégradé clubs ; **terminé** = variante débrief.
@@ -19,7 +20,6 @@ export function MatchSpotlightCard({
   liveMirror?: LiveMirrorForCard
   className?: string
 }) {
-  const fans = hubFansK(match)
   const comp = themeForCompetition(match.competition.id)
   const h = match.home.colors.primary
   const h2 = match.home.colors.secondary
@@ -199,9 +199,10 @@ export function MatchSpotlightCard({
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-white/10 bg-[#050a12]/92 px-4 py-3.5 backdrop-blur-sm">
-        <span className="truncate text-xs font-semibold text-white/65">
-          {(fans * 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k fans · {match.competition.shortName}
-        </span>
+        <SalonAudienceFooter
+          match={match}
+          className="truncate text-xs font-semibold text-white/65"
+        />
         <span className="shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-2 text-xs font-black text-white shadow-md transition group-hover:from-sky-400 group-hover:to-blue-500">
           Voir le salon
         </span>

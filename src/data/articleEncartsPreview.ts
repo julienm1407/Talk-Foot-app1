@@ -182,30 +182,17 @@ export function stadeReactionSplits(articleId: string): ReactionSplit[] {
 
 export type DebateSnippet = { id: string; title: string; likes: number; hot?: boolean }
 
-export function debateSnippetsForArticle(article: NewsItem): DebateSnippet[] {
-  const t = article.title.toLowerCase()
-  if (t.includes('ligue') || t.includes('psg') || t.includes('om') || t.includes('derby')) {
-    return [
-      { id: 'd1', title: 'Derby : arbitrage ou attitude ? Les tops commentaires', likes: 892, hot: true },
-      { id: 'd2', title: 'L1 : qui tient le milieu sur les gros chocs ?', likes: 534 },
-    ]
-  }
-  if (t.includes('premier') || t.includes('pressing') || t.includes('epl')) {
-    return [
-      { id: 'd1', title: 'EPL : pressing haut = overrated ? Les contre-arguments', likes: 721, hot: true },
-      { id: 'd2', title: 'City vs Liverpool : qui impose le rythme en live ?', likes: 498 },
-    ]
-  }
-  if (t.includes('mercato') || t.includes('serie')) {
-    return [
-      { id: 'd1', title: 'Mercato Serie A : piste commune, rumeurs croisées', likes: 612, hot: true },
-      { id: 'd2', title: 'Transferts : comment filtrer le bruit sur Talk Foot ?', likes: 301 },
-    ]
-  }
-  return [
-    { id: 'd1', title: 'Talk Foot : votre feature live préférée ?', likes: 445, hot: true },
-    { id: 'd2', title: 'Stade virtuel vs salon classique : le match des formats', likes: 318 },
-  ]
+export function debateSnippetsForArticle(
+  _article: NewsItem,
+  debates: { id: string; title: string; messagesCount: number; trending?: boolean }[] = [],
+): DebateSnippet[] {
+  if (!debates.length) return []
+  return debates.slice(0, 2).map((d) => ({
+    id: d.id,
+    title: d.title,
+    likes: d.messagesCount,
+    hot: d.trending,
+  }))
 }
 
 export type BetVolumeSlice = { label: string; pct: number; color: string }

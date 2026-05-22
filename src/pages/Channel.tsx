@@ -28,6 +28,7 @@ import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiv
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { useLiveMatchMessageLikesSync } from '../hooks/useLiveMatchMessageLikesSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
+import { useLiveMatchSalonStats } from '../hooks/useLiveMatchSalonStats'
 import type { Message, ReactionType, MatchTribuneZone } from '../types/chat'
 import type { Highlight } from '../data/highlights'
 import {
@@ -1407,7 +1408,11 @@ export function ChannelPage() {
     [],
   )
   const fxActiveCount = activePaidFx ? 1 : 0
-  const viewersDisplay = 'N/D'
+  const liveSalonStats = useLiveMatchSalonStats(match?.id)
+  const viewersDisplay =
+    liveSalonStats != null
+      ? liveSalonStats.participantsCount.toLocaleString('fr-FR')
+      : '0'
 
   const triggerPaidAnimation = async (
     anim: PaidAnimation,

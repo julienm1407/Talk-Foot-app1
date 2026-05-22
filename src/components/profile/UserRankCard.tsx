@@ -7,8 +7,9 @@ import { cn } from '../../utils/cn'
 export function UserRankCard() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const { myRank, myEntry } = useLeaderboard()
-  const rankPercent = Math.min(100, Math.round((myRank / 250) * 100))
+  const { myRank, myEntry, totalActive } = useLeaderboard()
+  const pool = Math.max(1, totalActive)
+  const rankPercent = Math.min(100, Math.round((myRank / pool) * 100))
 
   return (
     <Card id="classement" className="scroll-mt-4 p-4 sm:p-5" elevation="soft">
@@ -63,7 +64,7 @@ export function UserRankCard() {
 
         <div className="flex-1 min-w-[160px]">
           <div className="flex items-center justify-between text-[10px] font-bold text-tf-app-muted">
-            <span>Top 250</span>
+            <span>{totalActive > 0 ? `${totalActive} parieur${totalActive > 1 ? 's' : ''} actifs` : 'Classement'}</span>
             <span>Tu es dans le top {rankPercent}%</span>
           </div>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-tf-grey-pastel/40">

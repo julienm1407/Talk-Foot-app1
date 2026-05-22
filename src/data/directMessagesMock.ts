@@ -22,16 +22,17 @@ const friendDmThreads: DirectThread[] = mockFriendUsers
     unread: false,
   }))
 
-export const mockDirectThreads: DirectThread[] = [
-  {
-    id: TALKFOOT_BOT_DM_THREAD_ID,
-    peer: talkFootBotUser,
-    lastPreview: 'Bienvenue sur Talk Foot — je suis là pour te montrer les fonctions utiles.',
-    lastAtLabel: 'À l’instant',
-    unread: true,
-  },
-  ...friendDmThreads,
-]
+/** Fil assistant Talk Foot (seul thread conservé hors amis cloud). */
+export const coachDirectThread: DirectThread = {
+  id: TALKFOOT_BOT_DM_THREAD_ID,
+  peer: talkFootBotUser,
+  lastPreview: 'Bienvenue sur Talk Foot — je suis là pour te montrer les fonctions utiles.',
+  lastAtLabel: 'À l’instant',
+  unread: true,
+}
+
+/** @deprecated Ne plus utiliser en prod — amis fictifs retirés. */
+export const mockDirectThreads: DirectThread[] = [coachDirectThread, ...friendDmThreads]
 
 export type DirectMessageLine = {
   id: string

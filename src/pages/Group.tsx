@@ -11,7 +11,7 @@ import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { getGroupAccess } from '../utils/groupAccess'
 import { isRivalClub } from '../data/fanRivals'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
-import { getDebateById } from '../data/debates'
+import { useDebates } from '../contexts/DebatesContext'
 import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
@@ -31,7 +31,12 @@ import type { Message, User } from '../types/chat'
 import { useSupporterGroupMessageLikesSync } from '../hooks/useSupporterGroupMessageLikesSync'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { cn } from '../utils/cn'
-import { buildGroupThreadSeed, debatePreviewUsersById, groupThreadMatchId } from '../utils/groupThreadMessages'
+import {
+  buildGroupSalonBotUser,
+  buildGroupThreadSeed,
+  debatePreviewUsersById,
+  groupThreadMatchId,
+} from '../utils/groupThreadMessages'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { EditGroupModal } from '../components/group/EditGroupModal'
 import { DebatePickerModal } from '../components/group/DebatePickerModal'
@@ -76,7 +81,15 @@ export function GroupPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const debateFromQuery = searchParams.get('debate')
 
-  const { byId, joinGroup, leaveGroup, isJoined, updateGroup, joinedGroupIds } = useSupporterGroups()
+  const {
+    byId,
+    joinGroup,
+    leaveGroup,
+    isJoined,
+    updateGroup,
+    joinedGroupIds,
+    refreshGroupActivity,
+  } = useSupporterGroups()
   const { matches } = useMatches()
   const group = groupId ? byId(groupId) : null
   useEffect(() => {
@@ -134,9 +147,10 @@ export function GroupPage() {
   )
   const { customForGroup, addCustomDebate } = useCustomGroupDebates(group?.id)
 
+  const { getDebateById: resolveDebate, refresh: refreshDebates } = useDebates()
   const debate =
     debateFromQuery && group
-      ? getDebateById(debateFromQuery, customForGroup)
+      ? resolveDebate(debateFromQuery) ?? customForGroup.find((d) => d.id === debateFromQuery)
       : undefined
 
   const {
@@ -208,7 +222,7 @@ export function GroupPage() {
           if (!g || !ch) return prev
           const d = debateRef.current
           const seed = buildGroupThreadSeed(
-            g.id,
+            g,
             ch.id,
             ch.name,
             d && ch.id === 'general' ? d : null,
@@ -353,7 +367,7 @@ export function GroupPage() {
       const prevList = prev[threadKey] ?? []
       const cloudOnly = prevList.filter((m) => isUuidMessageId(m.id))
       const seed = buildGroupThreadSeed(
-        group.id,
+        group,
         channel.id,
         channel.name,
         debate && channel.id === 'general' ? debate : null,
@@ -377,12 +391,18 @@ export function GroupPage() {
     [debate],
   )
 
+  const groupSalonBot = useMemo(
+    () => (group ? buildGroupSalonBotUser(group) : null),
+    [group],
+  )
+
   const usersById = useMemo(() => {
     const base: Record<string, User> = {
       ...Object.fromEntries(chatPersonasPool.map((u) => [u.id, u])),
       [currentUser.id]: currentUser,
       ...debateUsers,
     }
+    if (groupSalonBot) base[groupSalonBot.id] = groupSalonBot
     const meClub = favoriteClubIds[0]
     if (meClub && base.me && !base.me.fanClubId) {
       base.me = { ...base.me, fanClubId: meClub }
@@ -399,12 +419,13 @@ export function GroupPage() {
       }
     }
     return base
-  }, [debateUsers, favoriteClubIds, authUser])
+  }, [debateUsers, favoriteClubIds, authUser, groupSalonBot])
 
   const visibleMessages = useMemo(() => {
     if (!virageMode || favoriteClubIds.length === 0) return messages
     return messages.filter((m) => {
       if (m.userId === selfChatUserId) return true
+      if (m.userId.startsWith('group-bot:')) return true
       // Messages cloud (Postgres) : le filtre Virage ne doit jamais les masquer
       // (évite les cas où authorDisplayName est absent ou vide côté client).
       if (isUuidMessageId(m.id)) return true
@@ -492,6 +513,10 @@ export function GroupPage() {
                 .slice(-MAX_GROUP_CHANNEL_MESSAGES),
             }
           })
+          if (channel.id === 'general' && debate?.id) {
+            void refreshDebates()
+          }
+          refreshGroupActivity()
           return
         }
         if (r.error === 'moderation') {
@@ -517,6 +542,8 @@ export function GroupPage() {
       isOpenPublicDebateSalon,
       debate?.id,
       authUser?.displayName,
+      refreshDebates,
+      refreshGroupActivity,
     ],
   )
 
@@ -719,7 +746,7 @@ export function GroupPage() {
                   </div>
                   <div className={cn('mt-0.5 text-sm font-semibold', L ? 'text-tf-grey/70' : 'text-sky-200/80')}>
                     {group.location ? `${group.location} • ` : ''}
-                    {group.members} membres • {group.intensity}% ambiance
+                    {group.members.toLocaleString('fr-FR')} membres • {group.intensity}% ambiance
                   </div>
                 </div>
               </div>
@@ -1180,64 +1207,63 @@ export function GroupPage() {
                   {channel?.description}
                 </div>
               </div>
-              <div className="flex w-full flex-wrap items-center gap-1.5 pt-1 sm:w-auto sm:justify-end sm:gap-2 sm:pt-0">
-                {preferencesComplete && favoriteClubIds.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setVirageMode(!virageMode)}
-                    className={cn(
-                      'shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[10px] font-black transition sm:px-3 sm:text-[11px]',
-                      virageMode
-                        ? 'border-tf-dark bg-tf-dark text-white'
-                        : L
-                          ? 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20'
-                          : 'border-white/15 bg-slate-900/70 text-sky-100 hover:bg-slate-900/90',
-                    )}
-                    title={LIVE_FIL_EQUIPE_COEUR.title}
-                  >
-                    {virageMode ? `✓ ${LIVE_FIL_EQUIPE_COEUR.labelOn}` : LIVE_FIL_EQUIPE_COEUR.label}
-                  </button>
-                ) : null}
-                <Badge
-                  className={cn(
-                    'shrink-0 whitespace-nowrap',
-                    L ? 'border-tf-dark/15 bg-tf-night/[0.06] text-tf-dark' : 'border-white/15 bg-slate-900/70 text-sky-100',
-                  )}
-                >
-                  Live
-                </Badge>
+              <div className="flex w-full flex-col gap-2.5 pt-1 sm:w-auto sm:min-w-[min(100%,18rem)] sm:items-stretch sm:pt-0">
                 {channel?.id === 'general' ? (
-                  <>
-                    <Button
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className={cn(
+                      'w-full shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black tracking-tight',
+                      'shadow-[0_8px_28px_rgba(255,59,59,0.32)] ring-2 ring-white/20',
+                      !L && 'border-orange-400/45 hover:shadow-[0_10px_32px_rgba(255,59,59,0.4)]',
+                    )}
+                    onClick={() => setDebatePickerOpen(true)}
+                  >
+                    <span aria-hidden className="text-base leading-none">
+                      {debateFromQuery ? '↻' : '🗣️'}
+                    </span>
+                    {debateFromQuery ? 'Changer le débat du salon' : 'Débat du salon'}
+                  </Button>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+                  {preferencesComplete && favoriteClubIds.length > 0 ? (
+                    <button
                       type="button"
-                      variant="soft"
-                      className="shrink-0 whitespace-nowrap rounded-2xl px-2.5 py-1.5 text-[10px] font-black sm:px-3 sm:text-[11px]"
-                      onClick={() => setDebatePickerOpen(true)}
-                    >
-                      {debateFromQuery ? 'Changer le débat' : 'Débat du salon'}
-                    </Button>
-                    {debateFromQuery ? (
-                      <button
-                        type="button"
-                        className={cn(
-                          'shrink-0 whitespace-nowrap rounded-2xl border px-2.5 py-1.5 text-[10px] font-bold transition sm:px-3 sm:text-[11px]',
-                          L
+                      onClick={() => setVirageMode(!virageMode)}
+                      className={cn(
+                        'shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[10px] font-black transition sm:px-3 sm:text-[11px]',
+                        virageMode
+                          ? 'border-tf-dark bg-tf-dark text-white'
+                          : L
                             ? 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20'
                             : 'border-white/15 bg-slate-900/70 text-sky-100 hover:bg-slate-900/90',
-                        )}
-                        onClick={() => {
-                          setSearchParams((prev) => {
-                            const next = new URLSearchParams(prev)
-                            next.delete('debate')
-                            return next
-                          })
-                        }}
-                      >
-                        Détacher
-                      </button>
-                    ) : null}
-                  </>
-                ) : null}
+                      )}
+                      title={LIVE_FIL_EQUIPE_COEUR.title}
+                    >
+                      {virageMode ? `✓ ${LIVE_FIL_EQUIPE_COEUR.labelOn}` : LIVE_FIL_EQUIPE_COEUR.label}
+                    </button>
+                  ) : null}
+                  {channel?.id === 'general' && debateFromQuery ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        'shrink-0 whitespace-nowrap rounded-2xl border px-2.5 py-1.5 text-[10px] font-bold transition sm:px-3 sm:text-[11px]',
+                        L
+                          ? 'border-tf-grey-pastel/60 bg-white text-tf-grey hover:bg-tf-grey-pastel/20'
+                          : 'border-white/15 bg-slate-900/70 text-sky-100 hover:bg-slate-900/90',
+                      )}
+                      onClick={() => {
+                        setSearchParams((prev) => {
+                          const next = new URLSearchParams(prev)
+                          next.delete('debate')
+                          return next
+                        })
+                      }}
+                    >
+                      Détacher
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
 

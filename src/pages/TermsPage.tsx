@@ -57,7 +57,19 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">2. Creation de compte</h2>
+            <h2 className="font-display text-lg font-black">2. Donnees reelles et simulations</h2>
+            <p className="text-sm font-medium leading-relaxed opacity-90">
+              L&apos;application affiche des indicateurs communautaires calcules a partir de messages et membres reels
+              (groupes, debats, salons live) lorsque Supabase est configure. Les paris, jetons, medailles et articles de
+              boutique sont des mecaniques de jeu sans valeur monetaire reelle. Les contenus editoriaux (actus) ne sont
+              affiches que s&apos;ils sont publies en base ; sinon un message &quot;pas encore d&apos;actu&quot; ou
+              &quot;pas de debat&quot; est montre. Les donnees match proviennent de fournisseurs sportifs tiers et
+              peuvent etre incompletes ou retardees.
+            </p>
+          </section>
+
+          <section className="mt-8 space-y-3">
+            <h2 className="font-display text-lg font-black">3. Creation de compte</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Tu es responsable des informations de ton compte et de l&apos;usage qui en est fait. Tu dois fournir des
               informations exactes et ne pas usurper l&apos;identite d&apos;un tiers.
@@ -65,7 +77,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">3. Regles de conduite</h2>
+            <h2 className="font-display text-lg font-black">4. Regles de conduite</h2>
             <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
               <li>Respect des autres utilisateurs : pas d&apos;insultes, harcelement, haine ou discrimination.</li>
               <li>Pas de contenus illicites, trompeurs, diffamatoires ou portant atteinte aux droits de tiers.</li>
@@ -74,7 +86,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">4. Contenus utilisateurs</h2>
+            <h2 className="font-display text-lg font-black">5. Contenus utilisateurs</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Tu restes responsable des messages, pseudos, images et contenus que tu publies. Talk Foot peut moderer,
               masquer ou supprimer un contenu qui ne respecte pas ces conditions.
@@ -82,7 +94,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">5. Disponibilite et limitations</h2>
+            <h2 className="font-display text-lg font-black">6. Disponibilite et limitations</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Le service est fourni &quot;en l&apos;etat&quot;, sans garantie de disponibilite continue ni d&apos;absence
               d&apos;erreur. Les donnees sportives et contenus tiers peuvent comporter des delais ou inexactitudes.
@@ -90,7 +102,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">6. Propriete intellectuelle</h2>
+            <h2 className="font-display text-lg font-black">7. Propriete intellectuelle</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Les elements visuels, techniques et editoriaux de Talk Foot restent proteges. Toute reutilisation
               substantielle sans autorisation est interdite.
@@ -98,7 +110,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">7. Donnees personnelles</h2>
+            <h2 className="font-display text-lg font-black">8. Donnees personnelles</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Le traitement des donnees personnelles est detaille dans la{' '}
               <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
@@ -109,7 +121,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">8. Suspension / suppression de compte</h2>
+            <h2 className="font-display text-lg font-black">9. Suspension / suppression de compte</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               En cas de non-respect des regles, Talk Foot peut restreindre temporairement ou supprimer l&apos;acces au
               service, avec ou sans avertissement selon la gravite.
@@ -117,7 +129,7 @@ export function TermsPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">9. Contact</h2>
+            <h2 className="font-display text-lg font-black">10. Contact</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Contact editeur / support : a renseigner avant mise en production publique (email ou formulaire legal).
             </p>

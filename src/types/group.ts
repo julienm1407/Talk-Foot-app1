@@ -48,6 +48,14 @@ export type GroupFanTags = {
   clubIds: string[]
 }
 
+/** Soutien actif sur le salon (facepile — auteurs réels des 30 dernières minutes). */
+export type GroupActivePresence = {
+  userId: string
+  displayName: string
+  avatarSeed: string
+  accent: 'violet' | 'emerald' | 'rose' | 'amber'
+}
+
 /** Communauté de supporters : on dit « groupe de supporters », pas « serveur ». */
 export type SupporterGroup = {
   id: string
@@ -63,9 +71,10 @@ export type SupporterGroup = {
   createdAt: string
   /** Salons rattachés à des clubs / ligues (personnalisation & restrictions) */
   fanTags?: GroupFanTags
-  /** Stats mock (UI engagement) */
   onlineNow?: number
   messagesToday?: number
+  /** Avatars réels des supporters actifs (RPC get_group_active_presence). */
+  activePresence?: GroupActivePresence[]
   /** public = ouvert, private = sur invitation, club = rattaché tribune */
   groupKind?: 'public' | 'private' | 'club'
   /**

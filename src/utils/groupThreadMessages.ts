@@ -4,6 +4,28 @@ import type { User } from '../types/chat'
 
 const ACCENTS: User['accent'][] = ['violet', 'emerald', 'rose', 'amber']
 
+export type GroupSalonBotSource = {
+  id: string
+  name: string
+  emoji: string
+}
+
+export function groupSalonBotUserId(groupId: string) {
+  return `group-bot:${groupId}`
+}
+
+/** Bot de bienvenue propre au groupe (pas de faux supporter PSG/OM dans un salon Bayern, etc.). */
+export function buildGroupSalonBotUser(group: GroupSalonBotSource): User {
+  return {
+    id: groupSalonBotUserId(group.id),
+    username: `${group.emoji} ${group.name}`,
+    avatarSeed: `salon-bot-${group.id}`,
+    accent: 'amber',
+    isGroupSalonBot: true,
+    tagline: 'Assistant du salon',
+  }
+}
+
 export function groupThreadMatchId(groupId: string, channelId: string) {
   return `group:${groupId}:${channelId}`
 }
@@ -25,29 +47,30 @@ export function debatePreviewUsersById(debate: Debate): Record<string, User> {
 }
 
 export function buildGroupThreadSeed(
-  groupId: string,
+  group: GroupSalonBotSource,
   channelId: string,
   channelName: string,
   debate: Debate | null,
 ): Message[] {
-  const matchId = groupThreadMatchId(groupId, channelId)
+  const matchId = groupThreadMatchId(group.id, channelId)
+  const botId = groupSalonBotUserId(group.id)
   const now = Date.now()
   const out: Message[] = []
 
   if (channelId === 'general') {
     out.push({
-      id: `seed-welcome-${groupId}`,
+      id: `seed-welcome-${group.id}`,
       matchId,
-      userId: 'u-1',
-      text: `Bienvenue dans « ${channelName} » — réagis au débat du moment ou lance un sujet.`,
+      userId: botId,
+      text: `Bienvenue sur ${group.name} ! Tu es dans « ${channelName} » — présente-toi, réagis au débat du moment ou lance un sujet.`,
       createdAt: now - 180_000,
     })
   } else {
     out.push({
-      id: `seed-ch-${groupId}-${channelId}`,
+      id: `seed-ch-${group.id}-${channelId}`,
       matchId,
-      userId: 'u-3',
-      text: `Fil « ${channelName} » : mercato, compos, vannes…`,
+      userId: botId,
+      text: `Bienvenue dans « ${channelName} » sur ${group.name}. Mercato, compos, ambiance…`,
       createdAt: now - 90_000,
     })
   }

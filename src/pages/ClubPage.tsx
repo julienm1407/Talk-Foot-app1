@@ -16,11 +16,13 @@ import {
   lastFiveFormFromTeamSchedule,
   overlayClubSquadWithSmPlayers,
 } from '../api/sportMonks'
-import { getClubPageMock } from '../data/clubPageMock'
+import { buildEmptyClubPageShell } from '../data/clubPageMock'
+import { useDebates } from '../contexts/DebatesContext'
 import type { ClubPageMock } from '../data/clubPageMock'
 import { getExternalClubReadingLinks } from '../data/clubRelatedLinks'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
-import { mockNews, newsItemHasArticlePage } from '../data/news'
+import { newsItemHasArticlePage, type NewsItem } from '../data/news'
+import { useArticles } from '../contexts/ArticlesContext'
 import type { SmSquadPlayerRow, TeamSeasonStatRow } from '../api/sportMonks'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
@@ -93,6 +95,7 @@ export function ClubPage() {
   const { pathname } = useLocation()
   const [infoOpen, setInfoOpen] = useState(false)
   const { sportMonksTeamIdByClubId } = useMatches()
+  const { articles: publishedArticles } = useArticles()
   const [smScheduleUi, setSmScheduleUi] = useState<{
     upcoming:
       | (ClubPageMock['upcoming'] & {
@@ -170,7 +173,8 @@ export function ClubPage() {
     return findTeamById(id)
   }, [clubSlug])
 
-  const dataBase = useMemo(() => (team ? getClubPageMock(team) : null), [team])
+  const { debates: allDebates } = useDebates()
+  const dataBase = useMemo(() => (team ? buildEmptyClubPageShell(team) : null), [team])
 
   const smTeamId = team
     ? sportMonksTeamIdByClubId[team.id] ?? SPORTMONKS_TEAM_ID_BY_CLUB_ID[team.id]
@@ -376,6 +380,15 @@ export function ClubPage() {
     }
   }, [team, smTeamId, smSeasonIdOverride, smSeasonIdFromFixtures, smTokenTick])
 
+  const { groups } = useSupporterGroups()
+  const clubGroups = useMemo(
+    () => (team ? getGroupsForClubPage(team.id, groups, 6) : []),
+    [team, groups],
+  )
+  const salonChannelCount = useMemo(
+    () => (team ? countSalonChannelsForClub(team.id, groups) : 0),
+    [team, groups],
+  )
   const data = useMemo(() => {
     if (!dataBase) return null
     let out: ClubPageMock = { ...dataBase }
@@ -392,24 +405,27 @@ export function ClubPage() {
         squadFromSportMonks: true,
       }
     }
+    out = { ...out, openRooms: salonChannelCount }
+    const clubDebates = allDebates
+      .filter((d) => clubGroups.some((g) => g.id === d.groupId))
+      .slice(0, 4)
+      .map((d) => ({
+        id: d.id,
+        title: d.title,
+        yesPct: 50,
+        comments: d.messagesCount,
+        isLive: d.trending ?? false,
+      }))
+    if (clubDebates.length) out = { ...out, debates: clubDebates }
     return out
-  }, [dataBase, smScheduleUi, smSquadPlayers])
-  const { groups } = useSupporterGroups()
-  const clubGroups = useMemo(
-    () => (team ? getGroupsForClubPage(team.id, groups, 6) : []),
-    [team, groups],
-  )
-  const salonChannelCount = useMemo(
-    () => (team ? countSalonChannelsForClub(team.id, groups) : 0),
-    [team, groups],
-  )
+  }, [dataBase, smScheduleUi, smSquadPlayers, salonChannelCount, allDebates, clubGroups])
   const clubReadingLinks = useMemo<
     Array<{ id: string; title: string; excerpt: string; url: string; source: string; internal: boolean }>
   >(() => {
     if (!team) return []
     const teamLeagueId = ALL_CLUBS_BY_ID[team.id]?.leagueId ?? null
 
-    const toInternal = (n: (typeof mockNews)[number]) => ({
+    const toInternal = (n: NewsItem & { slug: string }) => ({
         id: n.id,
         title: n.title,
         excerpt: n.excerpt,
@@ -418,22 +434,25 @@ export function ClubPage() {
         internal: true as const,
     })
 
-    const byClub = mockNews
-      .filter((n) => newsItemHasArticlePage(n) && n.clubIds?.includes(team.id))
+    const byClub = publishedArticles
+      .filter((n): n is NewsItem & { slug: string } => newsItemHasArticlePage(n) && !!n.clubIds?.includes(team.id))
       .map(toInternal)
 
-    const byLeague = mockNews
+    const byLeague = publishedArticles
       .filter(
-        (n) =>
+        (n): n is NewsItem & { slug: string } =>
           newsItemHasArticlePage(n) &&
           !n.clubIds?.length &&
           !!teamLeagueId &&
-          n.leagueIds?.includes(teamLeagueId),
+          !!n.leagueIds?.includes(teamLeagueId),
       )
       .map(toInternal)
 
-    const generic = mockNews
-      .filter((n) => newsItemHasArticlePage(n) && !n.clubIds?.length && !n.leagueIds?.length)
+    const generic = publishedArticles
+      .filter(
+        (n): n is NewsItem & { slug: string } =>
+          newsItemHasArticlePage(n) && !n.clubIds?.length && !n.leagueIds?.length,
+      )
       .map(toInternal)
 
     const internal = [...byClub, ...byLeague, ...generic]
@@ -453,7 +472,7 @@ export function ClubPage() {
     }))
 
     return [...internal, ...external]
-  }, [team])
+  }, [team, publishedArticles])
 
   usePageSeo(
     pathname,

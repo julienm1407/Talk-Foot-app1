@@ -330,8 +330,7 @@ export function isRouteActiveForSection(
     return (
       p.startsWith('/pronostic') ||
       p.startsWith('/channel/') ||
-      p.startsWith('/mes-paris') ||
-      (p.startsWith('/profile') && (h === '#paris' || h.startsWith('#paris')))
+      p.startsWith('/mes-paris')
     )
   }
   if (section === 'groups') {
@@ -343,6 +342,7 @@ export function isRouteActiveForSection(
     )
   }
   if (section === 'rankings') return p.startsWith('/rankings')
+  if (section === 'boutique') return p.startsWith('/boutique')
   return false
 }
 
@@ -374,6 +374,7 @@ export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId 
   { to: '/pronostic', section: 'pronostic' },
   { to: '/groups', section: 'groups' },
   { to: '/rankings', section: 'rankings' },
+  { to: '/boutique', section: 'boutique' },
 ]
 
 export const BOTTOM_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId; icon: string }[] = [

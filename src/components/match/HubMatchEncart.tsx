@@ -11,14 +11,11 @@ export { formatHubDayLabel }
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
+import { SalonAudienceFooter } from './SalonAudienceFooter'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
   'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=75&auto=format&fit=crop'
-
-export function hubFansK(m: Match) {
-  return 8 + (m.home.shortName.length + m.away.shortName.length) * 0.42
-}
 
 export function HubMatchProgressBar({
   minute,
@@ -122,7 +119,6 @@ export function HubStripLive({
   const minute = sim ? sim.minute : linearMinute
   const sc = sim ? sim.score : match.score ?? { home: 0, away: 0 }
   const bump = sim?.bumpSide ?? null
-  const fans = hubFansK(match)
   const rim = liveRimClass(sim?.rim ?? null)
   const featured = layout === 'featured'
   const imgBand =
@@ -270,9 +266,10 @@ export function HubStripLive({
             visualSize === 'compact' ? 'py-2' : 'py-2.5',
           )}
         >
-          <span className="truncate text-[11px] font-semibold text-sky-100/85">
-            {(fans * 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}k fans
-          </span>
+          <SalonAudienceFooter
+            match={match}
+            className="truncate text-[11px] font-semibold text-sky-100/85"
+          />
           <span
             className={cn(
               'shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition group-hover:from-sky-400 group-hover:to-blue-500',

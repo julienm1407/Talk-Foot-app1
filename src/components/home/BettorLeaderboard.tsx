@@ -13,9 +13,10 @@ export function BettorLeaderboard({
   /** Page classements : plus de lignes + stats perso */
   extended?: boolean
 }) {
-  const { top12, top250, myRank, myEntry } = useLeaderboard()
+  const { top12, top250, myRank, myEntry, totalActive } = useLeaderboard()
   const { profile } = useProfile()
   const rows = extended ? top250.slice(0, 40) : top12
+  const titleCount = extended ? totalActive : Math.min(totalActive, 12)
 
   return (
     <div
@@ -27,14 +28,18 @@ export function BettorLeaderboard({
     >
       <div className="flex items-end justify-between gap-2">
         <h3 className="text-sm font-black tracking-tight text-tf-dark">
-          {extended ? 'Classement des parieurs' : 'Top 250 parieurs'}
+          {extended
+            ? 'Classement des parieurs'
+            : titleCount > 0
+              ? `Top ${titleCount} parieur${titleCount > 1 ? 's' : ''}`
+              : 'Classement parieurs'}
         </h3>
-        <span className="text-[10px] font-bold text-tf-grey">Classement live</span>
+        <span className="text-[10px] font-bold text-tf-grey">Paris réels</span>
       </div>
       <p className="mt-0.5 text-[11px] font-medium text-tf-grey">
         {extended
-          ? 'Pronos + paris gagnants (mock) — top 40 affichés'
-          : 'Meilleurs pronostiqueurs'}
+          ? 'Comptes ayant au moins un pari enregistré — top 40 affichés'
+          : 'Parieurs actifs sur Talk Foot'}
       </p>
 
       {extended ? (
@@ -56,6 +61,12 @@ export function BettorLeaderboard({
         </div>
       ) : null}
 
+      {rows.length === 0 ? (
+        <p className="mt-4 rounded-xl border border-dashed border-tf-grey-pastel/60 bg-tf-ice/50 px-3 py-4 text-center text-xs font-semibold text-tf-grey">
+          Aucun parieur actif pour l&apos;instant. Place un pari depuis un salon live pour apparaître au
+          classement.
+        </p>
+      ) : (
       <ol
         className={cn(
           'mt-3 space-y-1.5',
@@ -68,7 +79,7 @@ export function BettorLeaderboard({
             key={e.userId}
             className={cn(
               'flex items-center gap-2 rounded-xl px-2 py-1.5',
-              e.userId === 'me' && 'bg-emerald-50/80 ring-1 ring-emerald-200/60',
+              e.userId === myEntry.userId && 'bg-emerald-50/80 ring-1 ring-emerald-200/60',
             )}
           >
             <span
@@ -79,7 +90,7 @@ export function BettorLeaderboard({
             >
               {e.rank}
             </span>
-            {e.userId === 'me' ? (
+            {e.userId === myEntry.userId ? (
               <ProfileCharacterThumb
                 profile={profile}
                 size="sm"
@@ -106,6 +117,7 @@ export function BettorLeaderboard({
           </li>
         ))}
       </ol>
+      )}
 
       <div className="mt-3 flex items-center justify-between border-t border-tf-grey-pastel/40 pt-3">
         <span className="text-[10px] font-medium text-tf-grey">

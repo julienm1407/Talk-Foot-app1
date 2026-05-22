@@ -1,6 +1,10 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { getDebateById } from '../data/debates'
-import { findCustomDebateById } from '../utils/customGroupDebatesStorage'
+import { useDebates } from '../contexts/DebatesContext'
+import { useEffect, useState } from 'react'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { fetchDebateById } from '../lib/supabase/debates'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import type { Debate } from '../data/debates'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
@@ -11,9 +15,55 @@ import { EditorialProse } from '../components/ads/EditorialProse'
 
 export function DebateDetailPage() {
   const { debateId } = useParams()
-  const debate = debateId
-    ? getDebateById(debateId) ?? findCustomDebateById(debateId)
-    : undefined
+  const { getDebateById, refresh } = useDebates()
+  const [debate, setDebate] = useState<Debate | undefined>(
+    debateId ? getDebateById(debateId) : undefined,
+  )
+  const [loading, setLoading] = useState(Boolean(debateId && !debate))
+
+  useEffect(() => {
+    if (!debateId) {
+      setDebate(undefined)
+      setLoading(false)
+      return
+    }
+    const cached = getDebateById(debateId)
+    if (cached) {
+      setDebate(cached)
+      setLoading(false)
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      setDebate(undefined)
+      setLoading(false)
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) {
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    void fetchDebateById(sb, debateId).then((row) => {
+      if (!cancelled) {
+        setDebate(row)
+        setLoading(false)
+        if (row) void refresh()
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [debateId, getDebateById, refresh])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center">
+        <p className="text-sm font-semibold text-tf-grey">Chargement du débat…</p>
+      </div>
+    )
+  }
 
   if (!debate) {
     return <Navigate to="/debates" replace />

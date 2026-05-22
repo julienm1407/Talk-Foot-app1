@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { buildInboxSeed } from '../data/inboxSeed'
+import { useArticles } from '../contexts/ArticlesContext'
 import type { InboxItem, InboxLikeItem } from '../types/inbox'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import {
@@ -25,7 +26,8 @@ export function useInbox() {
   const [likeNotifs, setLikeNotifs] = useState<InboxLikeItem[]>([])
   const recipientRef = useRef<string | null>(null)
 
-  const seed = useMemo(() => buildInboxSeed(), [])
+  const { articles } = useArticles()
+  const seed = useMemo(() => buildInboxSeed(articles), [articles])
 
   const refreshLikeNotifs = useCallback(async () => {
     if (!isSupabaseConfigured() || !authUser?.id || authUser.isAnonymous) {

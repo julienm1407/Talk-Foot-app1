@@ -19,6 +19,11 @@ export function filterNewsForFan(
     return { item: n, score }
   })
 
-  boosted.sort((a, b) => b.score - a.score || a.item.minutesAgo - b.item.minutesAgo)
+  boosted.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    const ta = a.item.publishedAt ? new Date(a.item.publishedAt).getTime() : 0
+    const tb = b.item.publishedAt ? new Date(b.item.publishedAt).getTime() : 0
+    return tb - ta
+  })
   return boosted.map((x) => x.item)
 }

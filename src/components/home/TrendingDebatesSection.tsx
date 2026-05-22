@@ -8,13 +8,37 @@ import { DebateMessagePreview } from '../debate/DebateMessagePreview'
 
 export function TrendingDebatesSection({
   debates,
+  loading = false,
   variant = 'default',
 }: {
   debates: Debate[]
+  loading?: boolean
   /** `band` : encart pleine largeur sur l’accueil (fond déjà porté par le parent). */
   variant?: 'default' | 'band'
 }) {
-  if (debates.length === 0) return null
+  if (loading) {
+    return (
+      <section className="rounded-2xl border border-dashed border-orange-200/50 bg-orange-50/30 px-4 py-8 text-center text-sm font-semibold text-slate-600">
+        Chargement des débats…
+      </section>
+    )
+  }
+  if (debates.length === 0) {
+    return (
+      <section className="rounded-2xl border border-dashed border-orange-200/50 bg-orange-50/30 px-4 py-8 text-center">
+        <p className="text-sm font-black text-slate-900">Pas encore de débat publié</p>
+        <p className="mt-2 text-xs font-semibold text-slate-600">
+          Lance un sujet dans un groupe ou attends qu’un débat officiel soit en ligne.
+        </p>
+        <Link
+          to="/groups"
+          className="mt-4 inline-flex rounded-xl bg-tf-dark px-4 py-2 text-xs font-black text-white"
+        >
+          Voir les groupes
+        </Link>
+      </section>
+    )
+  }
 
   const { appearance } = useAppearance()
   const L = appearance === 'light'

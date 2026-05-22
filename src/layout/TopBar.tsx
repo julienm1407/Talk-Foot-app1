@@ -13,7 +13,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { InboxPanel } from '../components/inbox/InboxPanel'
 import { PrivateMessagesPanel } from '../components/messages/PrivateMessagesPanel'
-import { mockDirectThreads } from '../data/directMessagesMock'
+import { coachDirectThread } from '../data/directMessagesMock'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { useInbox } from '../hooks/useInbox'
 import { useIsBelowXl } from '../hooks/useIsBelowXl'
@@ -30,7 +30,7 @@ export function TopBar() {
   const location = useLocation()
   const L = appearance === 'light'
   const navPillBase = cn(
-    'tf-nav-pill shrink-0 rounded-[18px] px-1.5 py-1.5 text-center text-[11px] font-black outline-none transition active:scale-[0.97] min-[900px]:px-2 min-[900px]:text-[12px] sm:py-2 min-[1100px]:px-2.5 min-[1100px]:text-[13px]',
+    'tf-nav-pill inline-flex h-8 shrink-0 items-center justify-center rounded-[16px] px-2 text-center text-[11px] font-black leading-none outline-none transition active:scale-[0.97] min-[900px]:h-8 min-[900px]:px-2.5 min-[900px]:text-[12px] min-[1100px]:px-3 min-[1100px]:text-[13px]',
     L ? 'text-tf-app-muted hover:text-tf-app-fg' : 'text-sky-200/92 hover:text-white',
   )
 
@@ -44,6 +44,8 @@ export function TopBar() {
       return L ? 'hover:bg-tf-nav-rankings/[0.1]' : 'hover:bg-tf-nav-rankings/18'
     if (section === 'pronostic')
       return L ? 'hover:bg-tf-cta/[0.1]' : 'hover:bg-tf-cta/18'
+    if (section === 'boutique')
+      return L ? 'hover:bg-amber-500/[0.1]' : 'hover:bg-amber-400/18'
     return L ? 'hover:bg-sky-500/[0.08]' : 'hover:bg-sky-400/14'
   }
 
@@ -58,6 +60,7 @@ export function TopBar() {
       section === 'groups' && (L ? 'ring-tf-nav-groups/50' : 'ring-tf-nav-groups/60'),
       section === 'rankings' && (L ? 'ring-tf-nav-rankings/50' : 'ring-tf-nav-rankings/60'),
       section === 'pronostic' && (L ? 'ring-tf-cta/45' : 'ring-tf-cta/55'),
+      section === 'boutique' && (L ? 'ring-amber-400/45' : 'ring-amber-300/40'),
       section === 'home' && (L ? 'ring-tf-dark/28' : 'ring-sky-300/35'),
     )
   }
@@ -72,7 +75,7 @@ export function TopBar() {
   const inboxWrapRef = useRef<HTMLDivElement>(null)
   const dmWrapRef = useRef<HTMLDivElement>(null)
   const dmOpt = useDirectMessagesOptional()
-  const dmThreads = dmOpt?.directThreads ?? mockDirectThreads
+  const dmThreads = dmOpt?.directThreads ?? [coachDirectThread]
   const dmUnread = useMemo(
     () => dmThreads.filter((t) => t.unread && !dmOpt?.visitedIds.includes(t.id)).length,
     [dmOpt?.visitedIds, dmThreads],
@@ -113,12 +116,9 @@ export function TopBar() {
       )}
     >
       <div
-        className={cn(
-          'relative mx-auto w-full min-w-0 max-w-tf-content px-2 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3',
-          'flex flex-col gap-1.5 min-[700px]:gap-2',
-        )}
+        className="relative mx-auto w-full min-w-0 max-w-tf-content px-2 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3"
       >
-        <div className="grid w-full min-w-0 grid-cols-[auto_1fr] items-center gap-2 min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[700px]:gap-3 lg:gap-4">
+        <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[700px]:gap-3 lg:gap-4">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
           <Link
             to="/"
@@ -165,18 +165,18 @@ export function TopBar() {
         </div>
 
         <nav
-          className="col-span-2 hidden min-w-0 min-[700px]:col-span-1 min-[700px]:block"
+          className="hidden min-w-0 w-full min-[700px]:flex min-[700px]:items-center min-[700px]:justify-center"
           aria-label="Primary"
         >
           <div
             className={cn(
-              'mx-auto w-full max-w-full min-w-0 rounded-[22px] border p-1 backdrop-blur-md',
+              'inline-flex h-10 max-w-full min-h-10 min-w-0 items-center rounded-[22px] border p-1 backdrop-blur-md',
               L
                 ? 'border-tf-dark/12 bg-tf-white shadow-sm ring-1 ring-tf-dark/[0.04]'
                 : 'border-white/12 bg-black/25 shadow-sm ring-1 ring-white/10',
             )}
           >
-            <div className="flex w-full min-w-0 max-w-full gap-0.5 overflow-x-auto px-0.5 py-0.5 [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="mx-auto flex h-full max-w-full min-w-0 items-center justify-center gap-0.5 overflow-x-auto px-0.5 [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {TOP_NAV_ROUTES.map(({ to, end, section }) => {
                 const th = getAppSectionTheme(section)
                 const active = isRouteActiveForSection(
@@ -207,13 +207,12 @@ export function TopBar() {
 
         <div
           className={cn(
-            'col-start-2 row-start-1 flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-2.5',
-            'min-[700px]:col-start-3 min-[700px]:row-start-1 min-[700px]:pl-2 min-[700px]:ml-1 lg:pl-3 lg:gap-3',
+            'flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2 min-[700px]:pl-2 min-[700px]:ml-1 lg:pl-3 lg:gap-2.5',
             L ? 'min-[700px]:border-l min-[700px]:border-tf-dark/10' : 'min-[700px]:border-l min-[700px]:border-white/10',
           )}
         >
           <ThemeAppearanceToggle variant="headerMinimal" className="relative z-[1]" />
-          <NavWalletBalances className="relative z-[1] hidden min-[1180px]:inline-flex" compact />
+          <NavWalletBalances className="relative z-[1] inline-flex max-[380px]:px-1.5 max-[380px]:py-1" compact />
           <div className="relative z-[1] flex items-center gap-1 sm:gap-1.5">
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
@@ -345,10 +344,6 @@ export function TopBar() {
           </NavLink>
           </div>
         </div>
-        </div>
-
-        <div className="flex justify-end pt-0.5 min-[1180px]:hidden">
-          <NavWalletBalances compact={false} />
         </div>
       </div>
       <div

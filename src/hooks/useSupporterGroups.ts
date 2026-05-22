@@ -8,10 +8,13 @@ import {
   fetchCloudSupporterGroups,
   upsertCloudSupporterGroup,
 } from '../lib/supabase/supporterGroupsRegistry'
+import { fetchGroupActivityStats } from '../lib/supabase/groupActivityStats'
+import { fetchGroupActivePresence } from '../lib/supabase/groupActivePresence'
+import { fetchSupporterGroupMemberCounts } from '../lib/supabase/groupMemberCounts'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
-import type { SupporterGroup } from '../types/group'
+import type { GroupActivePresence, SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
 
 function joinedKeyForUser(userId: string) {
@@ -53,9 +56,21 @@ export function useSupporterGroups() {
   const [custom, setCustom] = useState<SupporterGroup[]>([])
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>([])
   const [cloudGroups, setCloudGroups] = useState<SupporterGroup[]>([])
+  const [activityByGroupId, setActivityByGroupId] = useState<
+    Map<string, { messagesToday: number; onlineNow: number }>
+  >(() => new Map())
+  const [memberCountsByGroupId, setMemberCountsByGroupId] = useState<Map<string, number>>(
+    () => new Map(),
+  )
+  const [presenceByGroupId, setPresenceByGroupId] = useState<Map<string, GroupActivePresence[]>>(
+    () => new Map(),
+  )
   const [supabaseActorId, setSupabaseActorId] = useState<string | null>(null)
   const cloudRefreshSeq = useRef(0)
   const refreshCloudGroupsRef = useRef<() => Promise<void>>(async () => {})
+  const refreshMemberCountsRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
+  const refreshGroupPresenceRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
+  const rawGroupIdsRef = useRef<string[]>([])
   const realtimeMountSeq = useRef(0)
 
   /** Chaque compte a son propre stockage local (évite qu’un nouveau compte hérite des salons du précédent). */
@@ -77,13 +92,110 @@ export function useSupporterGroups() {
     [],
   )
 
-  const groups = useMemo(() => {
+  const rawGroups = useMemo(() => {
     const byId = new Map<string, SupporterGroup>()
     for (const g of starterGroups) byId.set(g.id, enrichChannels(g))
     for (const g of cloudGroups) byId.set(g.id, enrichChannels(g))
     for (const g of custom) byId.set(g.id, enrichChannels(g))
     return Array.from(byId.values()).sort((a, b) => b.intensity - a.intensity)
   }, [custom, cloudGroups, enrichChannels])
+
+  const refreshGroupActivity = useCallback(async (groupIds: string[]) => {
+    if (!groupIds.length) {
+      setActivityByGroupId(new Map())
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      setActivityByGroupId(new Map())
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    const map = await fetchGroupActivityStats(sb, groupIds)
+    setActivityByGroupId(map)
+  }, [])
+
+  const refreshGroupPresence = useCallback(async (groupIds: string[]) => {
+    if (!groupIds.length) {
+      setPresenceByGroupId(new Map())
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      setPresenceByGroupId(new Map())
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    const map = await fetchGroupActivePresence(sb, groupIds)
+    setPresenceByGroupId(map)
+  }, [])
+
+  const refreshMemberCounts = useCallback(async (groupIds: string[]) => {
+    if (!groupIds.length) {
+      setMemberCountsByGroupId(new Map())
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      setMemberCountsByGroupId(new Map())
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    const map = await fetchSupporterGroupMemberCounts(sb, groupIds)
+    setMemberCountsByGroupId(map)
+  }, [])
+
+  useEffect(() => {
+    refreshMemberCountsRef.current = refreshMemberCounts
+  }, [refreshMemberCounts])
+
+  useEffect(() => {
+    refreshGroupPresenceRef.current = refreshGroupPresence
+  }, [refreshGroupPresence])
+
+  useEffect(() => {
+    rawGroupIdsRef.current = rawGroups.map((g) => g.id)
+  }, [rawGroups])
+
+  useEffect(() => {
+    const ids = rawGroups.map((g) => g.id)
+    void refreshGroupActivity(ids)
+    void refreshMemberCounts(ids)
+    void refreshGroupPresence(ids)
+    const t = window.setInterval(() => {
+      void refreshGroupActivity(ids)
+      void refreshMemberCounts(ids)
+      void refreshGroupPresence(ids)
+    }, 45_000)
+    return () => window.clearInterval(t)
+  }, [rawGroups, refreshGroupActivity, refreshMemberCounts, refreshGroupPresence])
+
+  const resolveMemberCount = useCallback(
+    (g: SupporterGroup): number => {
+      if (isSupabaseConfigured()) {
+        const fromDb = memberCountsByGroupId.get(g.id)
+        if (fromDb != null) return fromDb
+        if (g.createdBy === 'me') return 1
+        return 0
+      }
+      if (g.createdBy === 'me') return 1
+      return joinedGroupIds.includes(g.id) ? 1 : 0
+    },
+    [memberCountsByGroupId, joinedGroupIds],
+  )
+
+  const groups = useMemo(() => {
+    return rawGroups.map((g) => {
+      const activity = activityByGroupId.get(g.id)
+      return {
+        ...g,
+        members: resolveMemberCount(g),
+        onlineNow: activity?.onlineNow ?? 0,
+        messagesToday: activity?.messagesToday ?? 0,
+        activePresence: presenceByGroupId.get(g.id) ?? [],
+      }
+    })
+  }, [rawGroups, activityByGroupId, presenceByGroupId, resolveMemberCount])
 
   const persistJoined = useCallback(
     (ids: string[]) => {
@@ -163,6 +275,15 @@ export function useSupporterGroups() {
             void refreshCloudGroupsRef.current()
           },
         )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'supporter_group_members' },
+          () => {
+            const ids = rawGroupIdsRef.current
+            void refreshMemberCountsRef.current(ids)
+            void refreshGroupPresenceRef.current(ids)
+          },
+        )
         .subscribe((status) => {
           if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
             console.warn('[Talk Foot] supporter_groups realtime:', status)
@@ -188,10 +309,15 @@ export function useSupporterGroups() {
       })
       const sb = getSupabaseBrowserClient()
       if (sb && isSupabaseConfigured()) {
-        void upsertCloudGroupMembership(sb, id)
+        void (async () => {
+          await upsertCloudGroupMembership(sb, id)
+          const ids = rawGroups.map((g) => g.id)
+          void refreshMemberCounts(ids)
+          void refreshGroupPresence(ids)
+        })()
       }
     },
-    [userId, persistJoined],
+    [userId, persistJoined, rawGroups, refreshMemberCounts, refreshGroupPresence],
   )
 
   const leaveGroup = useCallback(
@@ -204,10 +330,15 @@ export function useSupporterGroups() {
       })
       const sb = getSupabaseBrowserClient()
       if (sb && isSupabaseConfigured()) {
-        void deleteCloudGroupMembership(sb, id)
+        void (async () => {
+          await deleteCloudGroupMembership(sb, id)
+          const ids = rawGroups.map((g) => g.id)
+          void refreshMemberCounts(ids)
+          void refreshGroupPresence(ids)
+        })()
       }
     },
-    [userId, persistJoined],
+    [userId, persistJoined, rawGroups, refreshMemberCounts, refreshGroupPresence],
   )
 
   const isJoined = useCallback(
@@ -228,8 +359,8 @@ export function useSupporterGroups() {
         id,
         createdBy: 'me',
         createdAt: new Date().toISOString(),
-        onlineNow: g.onlineNow ?? 1,
-        messagesToday: g.messagesToday ?? 0,
+        onlineNow: 0,
+        messagesToday: 0,
         groupKind: g.groupKind ?? 'public',
         lastMessagePreview: g.lastMessagePreview ?? 'Nouveau groupe — dis bonjour !',
         hashtags: hashtags?.length ? hashtags : undefined,
@@ -321,6 +452,13 @@ export function useSupporterGroups() {
     [persistCustom, supabaseActorId, userId],
   )
 
+  const refreshGroupActivityNow = useCallback(() => {
+    const ids = rawGroups.map((g) => g.id)
+    void refreshGroupActivity(ids)
+    void refreshMemberCounts(ids)
+    void refreshGroupPresence(ids)
+  }, [rawGroups, refreshGroupActivity, refreshMemberCounts, refreshGroupPresence])
+
   return {
     groups,
     createGroup,
@@ -331,5 +469,6 @@ export function useSupporterGroups() {
     leaveGroup,
     isJoined,
     refreshCloudGroups,
+    refreshGroupActivity: refreshGroupActivityNow,
   }
 }

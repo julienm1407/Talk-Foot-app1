@@ -27,6 +27,8 @@ import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
 import { CloudUserStateGate } from './contexts/CloudUserStateContext'
 import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
+import { ArticlesProvider } from './contexts/ArticlesContext'
+import { DebatesProvider } from './contexts/DebatesContext'
 
 function RequireAuthRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
@@ -69,6 +71,8 @@ export default function App() {
   return (
     <>
       <AdsenseScriptLoader />
+      <ArticlesProvider>
+      <DebatesProvider>
       <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
@@ -168,6 +172,8 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+      </DebatesProvider>
+      </ArticlesProvider>
     </>
   )
 }

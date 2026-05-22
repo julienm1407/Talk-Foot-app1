@@ -7,7 +7,7 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useMatches } from '../../contexts/MatchesContext'
 import { useWallet } from '../../hooks/useWallet'
-import { mockFriendUsers } from '../../data/users'
+import { useCloudFriends } from '../../hooks/useCloudFriends'
 import { hubGlassPanel, hubPillLink } from '../../utils/hubSurface'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { teams } from '../../data/teams'
@@ -62,6 +62,8 @@ export function HomeMonEspacePanel({
   const displayLabel = authUser?.displayName ?? currentUser.username
   const { appearance } = useAppearance()
   const { claimDailyTokenBonus, dailyTokenBonusStatus } = useWallet()
+  const { acceptedPeers } = useCloudFriends()
+  const friendAvatars = useMemo(() => acceptedPeers.slice(0, 4), [acceptedPeers])
   const firstLiveMatch = useMemo(
     () => matches.find((m) => m.status === 'live') ?? null,
     [matches],
@@ -233,7 +235,7 @@ export function HomeMonEspacePanel({
               )}
             >
               <div className="flex shrink-0 pl-0.5" aria-hidden>
-                {mockFriendUsers.map((f, i) => (
+                {friendAvatars.map((f, i) => (
                   <Link
                     key={f.id}
                     to={`/user/${f.id}`}
@@ -242,9 +244,14 @@ export function HomeMonEspacePanel({
                       TF_FOCUS_VISIBLE,
                       i > 0 && '-ml-2',
                     )}
-                    title={`Profil ${f.username}`}
+                    title={`Profil ${f.displayName}`}
                   >
-                    <Avatar seed={f.avatarSeed} accent={f.accent} className="!size-8 !shadow-md" alt="" />
+                    <Avatar
+                      seed={f.id.replace(/-/g, '').slice(0, 12)}
+                      accent="violet"
+                      className="!size-8 !shadow-md"
+                      alt=""
+                    />
                   </Link>
                 ))}
               </div>

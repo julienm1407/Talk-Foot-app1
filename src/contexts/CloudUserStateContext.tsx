@@ -20,6 +20,7 @@ import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
+import { changeDisplayNameCloud } from '../lib/supabase/displayName'
 
 type CloudUserStateValue = {
   ready: true
@@ -229,13 +230,21 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       if (containsBannedWord(name) || (about && containsBannedWord(about))) {
         throw new Error(MODERATION_REFUSED_MESSAGE_FR)
       }
-      const { error: authErr } = await sb.auth.updateUser({ data: { display_name: name } })
+      const claimed = await changeDisplayNameCloud(sb, user.id, name)
+      if (!claimed.ok) {
+        const hint =
+          claimed.error === 'taken' && claimed.suggestions?.length
+            ? ` Suggestions : ${claimed.suggestions.join(', ')}`
+            : ''
+        throw new Error(`${claimed.message}${hint}`)
+      }
+      const { error: authErr } = await sb.auth.updateUser({ data: { display_name: claimed.displayName } })
       if (authErr) {
         console.error('[Talk Foot] Auth metadata:', authErr.message)
         throw new Error(authErr.message)
       }
       const scopedUpdate = profileEq(
-        sb.from('profiles').update({ display_name: name, oauth_profile_completed: true }),
+        sb.from('profiles').update({ oauth_profile_completed: true }),
         user.id,
       )
       const { error } = await scopedUpdate

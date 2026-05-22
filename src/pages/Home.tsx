@@ -1,6 +1,6 @@
 import { useMatches } from '../contexts/MatchesContext'
-import { mockNews } from '../data/news'
-import { debateOfTheDay, trendingDebates } from '../data/debates'
+import { useArticles } from '../contexts/ArticlesContext'
+import { useDebates } from '../contexts/DebatesContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { AdSlot } from '../components/ui/AdSlot'
@@ -41,6 +41,8 @@ export function HomePage() {
   const navigate = useNavigate()
   const { carouselMatches, matches, loading } = useMatches()
   const { groups, createGroup } = useSupporterGroups()
+  const { articles: publishedArticles, loading: articlesLoading } = useArticles()
+  const { debateOfTheDay, trendingDebates, loading: debatesLoading } = useDebates()
   const {
     favoriteLeagueId,
     favoriteClubIds,
@@ -78,8 +80,8 @@ export function HomePage() {
 
   /** Teinte supporter ≠ fil messages : seul le fil équipe de cœur (Profil) filtre chats / top com. */
   const personalizedNews = useMemo(
-    () => filterNewsForFan(mockNews, favoriteLeagueId, favoriteClubIds),
-    [favoriteClubIds, favoriteLeagueId],
+    () => filterNewsForFan(publishedArticles, favoriteLeagueId, favoriteClubIds),
+    [publishedArticles, favoriteClubIds, favoriteLeagueId],
   )
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -145,7 +147,7 @@ export function HomePage() {
     <>
       <HomeEditorialIntro />
       <section className={cn('w-full', trendsShell)} aria-label="Débats tendances">
-        <TrendingDebatesSection debates={trendingDebates} variant="band" />
+        <TrendingDebatesSection debates={trendingDebates} loading={debatesLoading} variant="band" />
       </section>
       <FavoritesEncart className="w-full" />
       <div className="w-full space-y-6 sm:space-y-8">
@@ -166,6 +168,7 @@ export function HomePage() {
           heroLiveMatch={heroLiveMatch}
           heroLiveSim={heroLiveSim}
           personalizedNews={personalizedNews}
+          articlesLoading={articlesLoading}
           feedTab={feedTab}
           setFeedTab={setFeedTab}
           supporterFocusUi={supporterFocusUi}
@@ -230,6 +233,7 @@ export function HomePage() {
             myCreatedGroups={myCreatedGroups}
             trendingDebates={trendingDebates}
             debateOfTheDay={debateOfTheDay}
+            debatesLoading={debatesLoading}
             onCreateTribune={() => setCreateOpen(true)}
             centerContinuation={wideHomeBelowFold}
           />
@@ -379,7 +383,7 @@ export function HomePage() {
               </Card>
             )}
             <div className="mt-5 space-y-4 sm:mt-6">
-              <DebateOfTheDayCard debate={debateOfTheDay} />
+              <DebateOfTheDayCard debate={debateOfTheDay} loading={debatesLoading} />
             </div>
           </div>
 
@@ -419,7 +423,7 @@ export function HomePage() {
       </div>
 
       <section className={cn('mx-auto w-full max-w-tf-content', trendsShell)} aria-label="Débats tendances">
-        <TrendingDebatesSection debates={trendingDebates} variant="band" />
+        <TrendingDebatesSection debates={trendingDebates} loading={debatesLoading} variant="band" />
       </section>
 
       <HomeFeedContinuation
@@ -428,6 +432,7 @@ export function HomePage() {
         heroLiveMatch={heroLiveMatch}
         heroLiveSim={heroLiveSim}
         personalizedNews={personalizedNews}
+        articlesLoading={articlesLoading}
         feedTab={feedTab}
         setFeedTab={setFeedTab}
         supporterFocusUi={supporterFocusUi}

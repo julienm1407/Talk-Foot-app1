@@ -3,8 +3,8 @@ import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { useAuth } from '../../contexts/AuthContext'
+import { useDisplayNameChange } from '../../hooks/useDisplayNameChange'
 import { isTalkFootOAuthProvider, oauthProviderDisplayName } from '../../config/oauthProviders'
-import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
 export function EditProfileModal({
   open,
@@ -13,8 +13,10 @@ export function EditProfileModal({
   open: boolean
   onClose: () => void
 }) {
-  const { user, updateProfile, changePassword } = useAuth()
+  const { user, changePassword } = useAuth()
+  const { applyChange, loading: nameLoading } = useDisplayNameChange()
   const [displayName, setDisplayName] = useState('')
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([])
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -45,11 +47,13 @@ export function EditProfileModal({
     let saved = false
 
     if (name !== (user?.displayName || '')) {
-      if (containsBannedWord(name)) {
-        setError(MODERATION_REFUSED_MESSAGE_FR)
+      const nameResult = await applyChange(name)
+      if (!nameResult.ok) {
+        setError(nameResult.message)
+        setNameSuggestions(nameResult.suggestions ?? [])
         return
       }
-      updateProfile(name)
+      setNameSuggestions([])
       saved = true
     }
 
@@ -104,11 +108,36 @@ export function EditProfileModal({
               id="edit-displayName"
               type="text"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => {
+                setDisplayName(e.target.value)
+                setNameSuggestions([])
+              }}
               placeholder="Ton pseudo"
               autoComplete="username"
+              maxLength={24}
               className="rounded-xl border-tf-grey-pastel/50"
             />
+            <p className="mt-1 text-[10px] font-medium text-tf-grey">
+              2 changements max. puis 14 jours d&apos;attente · pseudo unique
+            </p>
+            {nameSuggestions.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {nameSuggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-tf-dark"
+                    onClick={() => {
+                      setDisplayName(s)
+                      setNameSuggestions([])
+                      setError(null)
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {isEmailUser && (
@@ -194,8 +223,8 @@ export function EditProfileModal({
             >
               Annuler
             </Button>
-            <Button type="submit" variant="primary" className="flex-1 rounded-xl">
-              Enregistrer
+            <Button type="submit" variant="primary" className="flex-1 rounded-xl" disabled={nameLoading}>
+              {nameLoading ? '…' : 'Enregistrer'}
             </Button>
           </div>
         </form>

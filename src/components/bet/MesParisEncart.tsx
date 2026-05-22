@@ -4,7 +4,7 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
-/** Raccourci vers Profil → section Paris (en cours + validés). */
+/** Raccourci vers la page Pronostic (paris en cours + validés). */
 export function MesParisEncart({ className, compact = false }: { className?: string; compact?: boolean }) {
   const [bets] = useUserBets()
   const { appearance } = useAppearance()

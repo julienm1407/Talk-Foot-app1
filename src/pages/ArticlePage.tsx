@@ -1,14 +1,18 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveEncartSimulation } from '../hooks/useLiveEncartSimulation'
 import { HubStripLive } from '../components/match/HubMatchEncart'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useDebates } from '../contexts/DebatesContext'
 import {
   articlePreviewLiveMatch,
   debateSnippetsForArticle,
   getGroupDiscussPreviewsForArticle,
 } from '../data/articleEncartsPreview'
-import { footballImageUrl, getArticleBySlug } from '../data/news'
+import { footballImageUrl, type NewsItem } from '../data/news'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { fetchPublishedArticleBySlug } from '../lib/supabase/articles'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { useArticleSeo } from '../hooks/useArticleSeo'
 import { LogoMark } from '../layout/LogoMark'
 import {
@@ -69,8 +73,40 @@ function encartBlock(key: ArticleEncartKey) {
 export function ArticlePage() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const article = slug ? getArticleBySlug(slug) : undefined
+  const [article, setArticle] = useState<(NewsItem & { slug: string; body: string[] }) | undefined>()
+  const [articleLoading, setArticleLoading] = useState(true)
   const { user, isReady } = useAuth()
+  const { trendingDebates } = useDebates()
+
+  useEffect(() => {
+    if (!slug) {
+      setArticle(undefined)
+      setArticleLoading(false)
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      setArticle(undefined)
+      setArticleLoading(false)
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) {
+      setArticle(undefined)
+      setArticleLoading(false)
+      return
+    }
+    let cancelled = false
+    setArticleLoading(true)
+    void fetchPublishedArticleBySlug(sb, slug).then((row) => {
+      if (!cancelled) {
+        setArticle(row)
+        setArticleLoading(false)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
   const { appearance } = useAppearance()
   const isLight = appearance === 'light'
 
@@ -110,7 +146,7 @@ export function ArticlePage() {
   /** Filets de section : lisibles sur panneau jour / nuit */
   const articleDivider = isLight ? 'border-tf-dark/12' : 'border-white/14'
 
-  if (!isReady) {
+  if (!isReady || articleLoading) {
     return (
       <div className="relative flex min-h-dvh items-center justify-center">
         <div className="tf-page-backdrop" aria-hidden />
@@ -214,7 +250,10 @@ export function ArticlePage() {
   const appHome = user ? '/' : '/login'
 
   const groupDiscussPreviews = useMemo(() => getGroupDiscussPreviewsForArticle(article), [article])
-  const debateSnippets = useMemo(() => debateSnippetsForArticle(article), [article])
+  const debateSnippets = useMemo(
+    () => (article ? debateSnippetsForArticle(article, trendingDebates) : []),
+    [article, trendingDebates],
+  )
   const sidebarDebateSnippets = useMemo(() => debateSnippets.slice(0, 1), [debateSnippets])
   const sidebarGroupPreviews = useMemo(
     () =>

@@ -94,6 +94,7 @@ export function HomeFeedContinuation({
   heroLiveMatch,
   heroLiveSim,
   personalizedNews,
+  articlesLoading = false,
   feedTab,
   setFeedTab,
   supporterFocusUi,
@@ -109,6 +110,7 @@ export function HomeFeedContinuation({
   heroLiveMatch: Match | null
   heroLiveSim: LiveEncartSimulation
   personalizedNews: NewsItem[]
+  articlesLoading?: boolean
   feedTab: 'actu' | 'comments'
   setFeedTab: (t: 'actu' | 'comments') => void
   supporterFocusUi: boolean
@@ -331,6 +333,7 @@ export function HomeFeedContinuation({
                   <NewsFeed
                     embedded
                     items={personalizedNews}
+                    loading={articlesLoading}
                     personalized
                     supporterClubShort={supporterFocusUi ? clubFocusLabel : null}
                   />

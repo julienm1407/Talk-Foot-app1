@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { channelsForSupporterGroup } from '../../data/defaultGroupChannels'
 import type { SupporterChannel, SupporterGroup } from '../../types/group'
+import { fetchSupporterGroupMemberCounts } from './groupMemberCounts'
 
 type GroupRow = {
   id: string
@@ -34,7 +35,11 @@ function parseChannels(raw: unknown): SupporterChannel[] {
   )
 }
 
-function rowToGroup(row: GroupRow, viewer?: CloudGroupViewer): SupporterGroup {
+function rowToGroup(
+  row: GroupRow,
+  viewer?: CloudGroupViewer,
+  memberCount?: number,
+): SupporterGroup {
   const isMine =
     (viewer?.supabaseUserId != null && row.owner_id === viewer.supabaseUserId) ||
     (viewer?.clerkUserId != null &&
@@ -48,15 +53,15 @@ function rowToGroup(row: GroupRow, viewer?: CloudGroupViewer): SupporterGroup {
     motto: row.motto || '',
     location: row.location ?? undefined,
     theme: row.theme ?? { primary: '#0ea5e9', secondary: '#0369a1', background: 'clean' },
-    members: 1,
-    intensity: 50,
+    members: Math.max(1, memberCount ?? 1),
+    intensity: Math.min(100, Math.max(20, (memberCount ?? 1) * 4)),
     channels,
     createdBy: isMine ? 'me' : 'system',
     createdAt: row.created_at,
     groupKind: (row.group_kind as SupporterGroup['groupKind']) ?? 'public',
     hashtags: row.hashtags?.length ? row.hashtags : undefined,
     fanTags: row.fan_tags ?? undefined,
-    onlineNow: 1,
+    onlineNow: 0,
     messagesToday: 0,
     lastMessagePreview: 'Nouveau groupe — dis bonjour !',
   }
@@ -78,7 +83,12 @@ export async function fetchCloudSupporterGroups(
     return []
   }
   if (!data?.length) return []
-  return data.map((row) => rowToGroup(row as GroupRow, viewer))
+  const rows = data as GroupRow[]
+  const counts = await fetchSupporterGroupMemberCounts(
+    sb,
+    rows.map((r) => r.id),
+  )
+  return rows.map((row) => rowToGroup(row, viewer, counts.get(row.id)))
 }
 
 export async function upsertCloudSupporterGroup(

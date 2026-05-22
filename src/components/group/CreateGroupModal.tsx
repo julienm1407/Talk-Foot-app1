@@ -93,7 +93,7 @@ export function CreateGroupModal({
       location: location.trim() || undefined,
       motto: motto.trim() || 'On vit le foot ensemble.',
       theme: draftTheme,
-      members: Math.round(18 + Math.random() * 60),
+      members: 1,
       intensity,
       groupKind,
       hashtags: previewHashtags.length ? previewHashtags : undefined,
@@ -119,7 +119,7 @@ export function CreateGroupModal({
       ],
       createdBy: 'me',
       createdAt: new Date().toISOString(),
-      onlineNow: 1,
+      onlineNow: 0,
       messagesToday: 0,
       lastMessagePreview: 'Crée ton premier message…',
     }

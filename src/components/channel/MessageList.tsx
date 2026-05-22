@@ -16,6 +16,7 @@ function importance(u?: User, userId?: string, selfUserId = 'me') {
   if (!userId) return 'normal' as const
   if (userId === selfUserId) return 'me' as const
   if (!u) return 'normal' as const
+  if (u.isGroupSalonBot || u.isTalkFootBot) return 'bot' as const
   if (userId === 'u-1') return 'vip' as const
   if (userId === 'u-2') return 'mod' as const
   return 'normal' as const
@@ -23,6 +24,7 @@ function importance(u?: User, userId?: string, selfUserId = 'me') {
 
 function nameClass(kind: ReturnType<typeof importance>, accent?: string) {
   if (kind === 'me') return 'text-emerald-700'
+  if (kind === 'bot') return 'text-sky-700'
   if (kind === 'vip') return 'text-violet-700'
   if (kind === 'mod') return 'text-blue-700'
   if (accent === 'rose') return 'text-rose-700'
@@ -32,6 +34,7 @@ function nameClass(kind: ReturnType<typeof importance>, accent?: string) {
 
 function bubbleClass(kind: ReturnType<typeof importance>) {
   if (kind === 'me') return 'border-emerald-200/80 bg-emerald-50/70'
+  if (kind === 'bot') return 'border-sky-200/80 bg-sky-50/70'
   if (kind === 'vip') return 'border-violet-200/80 bg-violet-50/70'
   if (kind === 'mod') return 'border-blue-200/80 bg-blue-50/70'
   return 'border-slate-200/70 bg-white/70'
@@ -72,7 +75,8 @@ export function MessageList({
           hour: '2-digit',
           minute: '2-digit',
         })
-        const profileTo = m.userId === selfUserId ? '/profile' : `/user/${m.userId}`
+        const profileTo =
+          kind === 'bot' ? undefined : m.userId === selfUserId ? '/profile' : `/user/${m.userId}`
 
         return (
           <li
@@ -101,18 +105,34 @@ export function MessageList({
             />
             <div className="min-w-0 flex-1 pt-px">
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-                <Link
-                  to={profileTo}
-                  className={cn(
-                    'max-w-[42%] truncate text-sm font-bold sm:max-w-none',
-                    nameClass(kind, u?.accent),
-                    TF_FOCUS_VISIBLE,
-                    'rounded-sm',
-                  )}
-                >
-                  {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
-                </Link>
-                {u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
+                {profileTo ? (
+                  <Link
+                    to={profileTo}
+                    className={cn(
+                      'max-w-[42%] truncate text-sm font-bold sm:max-w-none',
+                      nameClass(kind, u?.accent),
+                      TF_FOCUS_VISIBLE,
+                      'rounded-sm',
+                    )}
+                  >
+                    {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
+                  </Link>
+                ) : (
+                  <span
+                    className={cn(
+                      'max-w-[42%] truncate text-sm font-bold sm:max-w-none',
+                      nameClass(kind, u?.accent),
+                    )}
+                  >
+                    {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
+                  </span>
+                )}
+                {kind === 'bot' && (
+                  <span className="rounded-full bg-sky-100 px-1.5 py-0.5 text-[9px] font-bold text-sky-700">
+                    BOT
+                  </span>
+                )}
+                {kind !== 'bot' && u?.fanClubId && ALL_CLUBS_BY_ID[u.fanClubId] ? (
                   <span className="inline-flex max-w-[28%] shrink-0 truncate rounded border border-slate-200/90 bg-slate-50 px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide text-slate-600 sm:max-w-[120px]">
                     {ALL_CLUBS_BY_ID[u.fanClubId].shortName}
                   </span>

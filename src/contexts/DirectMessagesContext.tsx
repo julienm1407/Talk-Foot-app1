@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useAuth } from './AuthContext'
 import { friendDmThreadId } from '../data/directMessageConstants'
-import { mockDirectThreads as staticMockThreads } from '../data/directMessagesMock'
+import { coachDirectThread } from '../data/directMessagesMock'
 import type { DirectThread } from '../data/directMessagesMock'
 import { useDirectMessages } from '../hooks/useDirectMessages'
 import { useCloudFriends } from '../hooks/useCloudFriends'
@@ -35,11 +35,10 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
   const cf = useCloudFriends()
 
   const directThreads = useMemo((): DirectThread[] => {
-    const bot =
-      staticMockThreads.find((t) => t.peer.isTalkFootBot) ?? staticMockThreads[0]
+    const bot = coachDirectThread
 
-    if (!cf.hasSupabaseFriends) {
-      return staticMockThreads
+    if (!isSupabaseConfigured() || !cf.hasSupabaseFriends) {
+      return [bot]
     }
     if (cf.loading) {
       return [bot]
@@ -52,9 +51,8 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
         username: p.displayName,
         avatarSeed: p.id.replace(/-/g, '').slice(0, 12),
         accent: 'violet',
-        isMockFriend: true,
       },
-      lastPreview: 'Messages synchronisés (Supabase)',
+      lastPreview: 'Ouvrir la conversation',
       lastAtLabel: '—',
       unread: false,
     }))

@@ -56,6 +56,7 @@ export function HomeDesktopExperience({
   myCreatedGroups,
   trendingDebates,
   debateOfTheDay,
+  debatesLoading = false,
   onCreateTribune,
   /** Suite de page dans la colonne centrale (tendances, favoris, fil…) */
   centerContinuation,
@@ -68,7 +69,8 @@ export function HomeDesktopExperience({
   /** Tribunes / groupes créés par l’utilisateur (stockage local) */
   myCreatedGroups: SupporterGroup[]
   trendingDebates: Debate[]
-  debateOfTheDay: Debate
+  debateOfTheDay: Debate | null
+  debatesLoading?: boolean
   onCreateTribune: () => void
   centerContinuation?: ReactNode
 }) {
@@ -344,7 +346,7 @@ export function HomeDesktopExperience({
           <h2 id="desk-debate-day-heading" className="sr-only">
             Débat du jour
           </h2>
-          <DebateOfTheDayCard debate={debateOfTheDay} />
+          <DebateOfTheDayCard debate={debateOfTheDay} loading={debatesLoading} />
         </section>
 
         <section aria-labelledby="desk-tribunes-heading" className="min-w-0">

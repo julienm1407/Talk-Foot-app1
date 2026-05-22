@@ -16,6 +16,8 @@ export type User = {
   isMockFriend?: boolean
   /** Assistant Talk Foot — premier contact MP, pas un faux profil joueur */
   isTalkFootBot?: boolean
+  /** Bot de bienvenue du salon groupe (style Discord), lié au groupe ouvert */
+  isGroupSalonBot?: boolean
   /** Club de cœur simulé (mode Virage / filtrage live) */
   fanClubId?: string
   /** Phrase courte sur la page profil vitrine */
