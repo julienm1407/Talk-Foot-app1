@@ -142,10 +142,7 @@ export function ProfilePage() {
           </div>
           <DisplayNameEditor />
           <p className="text-sm font-semibold text-tf-app-muted">
-            Affiché sur les salons et le live · 2 changements max. puis pause 14 jours · aussi sur{' '}
-            <Link to="/pronostic#stats-pronos" className="font-bold text-tf-cta hover:underline">
-              Pronostic
-            </Link>
+            Affiché sur les salons et le live · 2 changements max. puis pause de 14 jours
           </p>
         </div>
         <Button

@@ -107,6 +107,7 @@ export function recordEssentialConsent(): void {
         v: CONSENT_POLICY_VERSION,
         decidedAt: new Date().toISOString(),
         essentialLocal: true,
+        adsNoticeAck: true,
       }),
     )
   } catch {

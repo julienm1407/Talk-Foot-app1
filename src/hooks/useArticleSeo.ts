@@ -65,7 +65,7 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
     const rel = opts.canonicalPath.startsWith('/') ? opts.canonicalPath : `/${opts.canonicalPath}`
     const canonicalUrl = absolutePageUrl(rel)
     const origin = resolvedSiteOrigin()
-    const logoUrl = `${origin}${viteBasePath()}/favicon.svg`
+    const logoUrl = `${origin}${viteBasePath()}/logo-talk-foot.png`
 
     const prevTitle = document.title
     document.title = `${opts.title} | ${SITE_NAME}`
@@ -113,7 +113,7 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
         name: SITE_NAME,
         logo: {
           '@type': 'ImageObject',
-          url: logoUrl || `${viteBasePath()}/favicon.svg`,
+          url: logoUrl || `${viteBasePath()}/logo-talk-foot.png`,
         },
       },
       mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },

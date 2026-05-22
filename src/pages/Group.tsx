@@ -879,7 +879,8 @@ export function GroupPage() {
                         <div className="tf-moderation-bar-run h-1.5 origin-left rounded-full bg-gradient-to-r from-amber-300 to-amber-500" />
                       </div>
                       <p className="text-[10px] font-semibold text-amber-100/80">
-                        Démo : validation automatique dans ~{Math.round(DEMO_MODERATION_APPROVE_MS / 1000)}&nbsp;s
+                        Publication en cours de validation par l&apos;équipe Talk Foot (~
+                        {Math.round(DEMO_MODERATION_APPROVE_MS / 1000)}&nbsp;s)
                       </p>
                     </div>
                   </div>

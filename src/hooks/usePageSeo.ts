@@ -102,7 +102,9 @@ export function usePageSeo(pathname: string, config: PageSeoMode) {
 
     const base = viteBasePath()
     const logoUrl =
-      typeof window !== 'undefined' ? `${window.location.origin}${base}/favicon.svg` : `${base}/favicon.svg`
+      typeof window !== 'undefined'
+        ? `${window.location.origin}${base}/logo-talk-foot.png`
+        : `${base}/logo-talk-foot.png`
 
     upsertJsonLd({
       '@context': 'https://schema.org',

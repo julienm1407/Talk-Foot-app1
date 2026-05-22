@@ -15,7 +15,7 @@ export function HomeEditorialIntro() {
       paragraphs={[
         'Talk Foot regroupe les matchs en direct, les salons de discussion par tribune, les débats entre supporters et des analyses sur les championnats majeurs (Ligue 1, Premier League, Liga, Serie A, Bundesliga).',
         'Chaque rencontre dispose d’un fil de messages en temps réel, de compositions, de statistiques et d’espaces dédiés aux groupes. Les articles du site complètent l’expérience avec du contexte tactique et des liens vers les fonctionnalités communautaires.',
-        'Les pages utilitaires (connexion, paramètres, salons live plein écran) restent sans publicité afin de préserver une navigation fluide ; les annonces n’apparaissent que sur cette page d’accueil et sur les contenus éditoriaux (articles, fiches débat, hubs clubs).',
+        'Les pages utilitaires (connexion, paramètres, salons live plein écran) restent sans publicité afin de préserver une navigation fluide ; les annonces n’apparaissent que sur cette page d’accueil et sur les contenus éditoriaux (articles, fiches débat, hubs clubs). En savoir plus : page À propos, politique de confidentialité et conditions d’utilisation accessibles depuis le pied de page.',
       ]}
     />
   )

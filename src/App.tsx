@@ -21,6 +21,7 @@ import { ClubPage } from './pages/ClubPage'
 import { AdminPage } from './pages/AdminPage'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
+import { AboutPage } from './pages/AboutPage'
 import { DataSourcesSettingsPage } from './pages/DataSourcesSettings'
 import { useAuth } from './contexts/AuthContext'
 import { MatchesProvider } from './contexts/MatchesContext'
@@ -77,6 +78,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/terms" element={<TermsPage />} />
+      <Route path="/about" element={<AboutPage />} />
       <Route path="/article/:slug" element={<ArticlePage />} />
       <Route
         path="/"

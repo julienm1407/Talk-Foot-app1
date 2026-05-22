@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BetSlipCard } from '../components/bet/BetSlipCard'
 import { PronoStatsPanel } from '../components/pronostic/PronoStatsPanel'
+import { FictionalBettingNotice } from '../components/legal/FictionalBettingNotice'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useMatches } from '../contexts/MatchesContext'
@@ -119,6 +120,7 @@ export function PronosticHubPage() {
         }
       />
 
+      <FictionalBettingNotice />
       <PronoStatsPanel />
 
       <div

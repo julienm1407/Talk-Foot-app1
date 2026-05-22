@@ -57,7 +57,7 @@ export function isAdsenseBlockedRoute(pathname: string): boolean {
   if (p.startsWith('/channel')) return true
   if (p.startsWith('/group/')) return true
   if (p.startsWith('/login')) return true
-  if (p === '/privacy' || p === '/terms') return true
+  if (p === '/privacy' || p === '/terms' || p === '/about') return true
   if (p.startsWith('/admin')) return true
   if (p.startsWith('/settings')) return true
   if (p.startsWith('/user/')) return true

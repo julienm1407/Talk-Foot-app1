@@ -1,4 +1,3 @@
-import { DisplayNameEditor } from '../profile/DisplayNameEditor'
 import { useBettingHubStats } from '../../hooks/useBettingHubStats'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { cn } from '../../utils/cn'
@@ -24,7 +23,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint: stri
   )
 }
 
-/** Stats paris réels + pseudo — page Pronostic. */
+/** Stats paris réels — page Pronostic. */
 export function PronoStatsPanel() {
   const stats = useBettingHubStats()
   const { appearance } = useAppearance()
@@ -39,15 +38,12 @@ export function PronoStatsPanel() {
       )}
       aria-labelledby="prono-stats-heading"
     >
-      <div>
-        <div
-          className="mb-3 text-[11px] font-black tracking-[0.18em] text-tf-app-muted"
-          id="prono-stats-heading"
-        >
-          MON COMPTE PRONO
-        </div>
-        <DisplayNameEditor variant="compact" />
-      </div>
+      <h2
+        className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted"
+        id="prono-stats-heading"
+      >
+        MES STATS PRONOS
+      </h2>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <Stat label="Paris" value={`${stats.total}`} hint="Au total" />

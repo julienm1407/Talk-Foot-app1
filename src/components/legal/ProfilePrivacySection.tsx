@@ -5,10 +5,8 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 import { downloadPersonalDataExport, purgeAllTalkFootBrowserStorage } from '../../utils/privacyLocal'
 import { cn } from '../../utils/cn'
 import { MODERATION_POLICY_SUMMARY_FR } from '../../utils/bannedWords'
+import { LEGAL_CONTACT_EMAIL, legalContactMailto } from '../../constants/siteLegal'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
-
-const ABUSE_REPORT_MAIL =
-  'mailto:support@talkfoot.app?subject=Signalement%20abus%20Talk%20Foot&body=D%C3%A9cris%20le%20contenu%20ou%20l%27utilisateur%20concern%C3%A9%20%28capture%20si%20possible%29%20%3A%0A%0A'
 
 export function ProfilePrivacySection() {
   const { appearance } = useAppearance()
@@ -71,7 +69,10 @@ export function ProfilePrivacySection() {
           .
         </p>
         <a
-          href={ABUSE_REPORT_MAIL}
+          href={legalContactMailto(
+            'Signalement abus Talk Foot',
+            'Décris le contenu ou l’utilisateur concerné (capture si possible) :\n\n',
+          )}
           className={cn(
             'mt-3 inline-flex min-h-tf-touch items-center justify-center rounded-xl border px-4 py-2 text-xs font-black',
             L
@@ -79,7 +80,7 @@ export function ProfilePrivacySection() {
               : 'border-violet-400/40 bg-violet-900/50 text-violet-50 hover:bg-violet-900/70',
           )}
         >
-          Signaler un abus par email
+          Signaler un abus ({LEGAL_CONTACT_EMAIL})
         </a>
       </div>
 

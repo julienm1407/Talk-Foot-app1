@@ -1,163 +1,124 @@
 import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { useAppearance } from '../contexts/AppearanceContext'
-import { cn } from '../utils/cn'
-import { LogoMark } from '../layout/LogoMark'
-import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
+import { LegalPageShell } from '../components/legal/LegalPageShell'
+import { LEGAL_CONTACT_EMAIL, LEGAL_PUBLISHER_NAME, legalContactMailto } from '../constants/siteLegal'
 
-/**
- * Conditions d'utilisation Talk Foot (version informationnelle).
- * A faire valider / adapter par un juriste avant un usage production sensible.
- */
 export function TermsPage() {
-  const { user } = useAuth()
-  const { appearance } = useAppearance()
-  const L = appearance === 'light'
+  const section = 'mt-8 space-y-3'
+  const h2 = 'font-display text-lg font-black'
+  const p = 'text-sm font-medium leading-relaxed opacity-90'
+  const ul = 'list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90'
 
   return (
-    <div className="relative min-h-dvh">
-      <div className="tf-page-backdrop" aria-hidden />
-      <div className="absolute right-3 top-3 z-10 sm:right-5 sm:top-5">
-        <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
-      </div>
-      <div className="relative mx-auto max-w-2xl px-4 py-10 sm:py-14">
-        <div className="mb-8 flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold">
-          {user ? (
-            <Link to="/" className="text-tf-cta hover:underline">
-              ← Accueil
-            </Link>
-          ) : null}
-          <Link to="/login" className="text-tf-cta hover:underline">
-            {user ? 'Connexion (autre compte)' : '← Connexion'}
+    <LegalPageShell
+      title="Conditions d'utilisation"
+      intro={`En utilisant ${LEGAL_PUBLISHER_NAME}, tu acceptes les règles ci-dessous.`}
+    >
+      <section className={section}>
+        <h2 className={h2}>1. Objet</h2>
+        <p className={p}>
+          Talk Foot propose des contenus et fonctionnalités communautaires autour du football : actualités,
+          débats, groupes, salons live, pronostics à jetons fictifs. Le service peut évoluer.
+        </p>
+      </section>
+
+      <section className={section}>
+        <h2 className={h2}>2. Compte utilisateur</h2>
+        <p className={p}>
+          Tu es responsable de ton compte et de l&apos;exactitude des informations fournies. Le pseudo est unique et
+          peut être modifié dans la limite de 2 changements par période de 14 jours (voir Profil).
+        </p>
+      </section>
+
+      <section className={section}>
+        <h2 className={h2}>3. Paris & jetons</h2>
+        <p className={p}>
+          Les paris, jetons, médailles et récompenses sont une <strong>simulation de jeu</strong> sans valeur
+          monétaire réelle. Aucun dépôt, retrait ou gain financier n&apos;est possible. Talk Foot n&apos;est pas un
+          site de paris sportifs agréé.
+        </p>
+      </section>
+
+      <section className={section}>
+        <h2 className={h2}>4. Règles de conduite</h2>
+        <ul className={ul}>
+          <li>Respect des autres : pas d&apos;insultes, harcèlement, haine ou discrimination.</li>
+          <li>Pas de contenus illicites, trompeurs ou portant atteinte aux droits de tiers.</li>
+          <li>Pas de spam ni de perturbation technique du service.</li>
+        </ul>
+      </section>
+
+      <section id="ugc" className={`${section} scroll-mt-6`}>
+        <h2 className={h2}>5. Contenus utilisateurs (UGC)</h2>
+        <p className={p}>
+          Tu restes responsable des messages, pseudos, titres de débats et contenus publiés (salons live, groupes,
+          messages privés, débats).
+        </p>
+        <ul className={ul}>
+          <li>
+            <strong>Filtre automatique</strong> : insultes et propos haineux bloqués côté application et serveur.
+          </li>
+          <li>
+            <strong>Pas de liens</strong> dans les chats (URLs et domaines interdits).
+          </li>
+          <li>
+            <strong>Signalement</strong> : depuis la section Modération du{' '}
+            <Link to="/profile" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              profil
+            </Link>{' '}
+            ou par email à{' '}
+            <a
+              href={legalContactMailto('Signalement abus Talk Foot')}
+              className="font-bold text-tf-cta underline-offset-2 hover:underline"
+            >
+              {LEGAL_CONTACT_EMAIL}
+            </a>
+            .
+          </li>
+          <li>Talk Foot peut supprimer un contenu ou suspendre un compte en cas de manquement.</li>
+        </ul>
+      </section>
+
+      <section className={section}>
+        <h2 className={h2}>6. Contenus éditoriaux & publicité</h2>
+        <p className={p}>
+          Les articles et textes d&apos;accueil sont fournis par l&apos;éditeur. Des annonces Google AdSense peuvent
+          s&apos;afficher sur l&apos;accueil et certaines pages éditoriales ; les pages de chat live et de connexion
+          n&apos;en comportent pas.
+        </p>
+      </section>
+
+      <section className={section}>
+        <h2 className={h2}>7. Propriété intellectuelle</h2>
+        <p className={p}>
+          Les éléments de Talk Foot (marque, interface, textes éditoriaux) sont protégés. Les données sportives et
+          logos de clubs peuvent appartenir à des tiers.
+        </p>
+      </section>
+
+      <section className={section}>
+        <h2 className={h2}>8. Données personnelles</h2>
+        <p className={p}>
+          Voir la{' '}
+          <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+            politique de confidentialité
           </Link>
-        </div>
-        <div className="mb-6 flex justify-center">
-          <LogoMark variant="hero" className="max-w-[180px]" decorative />
-        </div>
-        <article
-          className={cn(
-            'rounded-3xl border p-6 shadow-sm sm:p-8',
-            L ? 'border-tf-dark/10 bg-white/95 text-tf-dark' : 'border-white/15 bg-tf-dark/90 text-slate-100',
-          )}
-        >
-          <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
-            Conditions d&apos;utilisation
-          </h1>
-          <p className="mt-2 text-sm font-medium opacity-80">
-            Derniere mise a jour : application Talk Foot (version locale / demo). Ce texte est informatif et ne
-            remplace pas un avis juridique.
-          </p>
+          .
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">1. Objet du service</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Talk Foot propose des contenus, discussions et fonctionnalites communautaires autour du football
-              (actualites, debats, groupes, simulations). Le service peut evoluer a tout moment.
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>9. Limitation de responsabilité</h2>
+        <p className={p}>
+          Service fourni « en l&apos;état ». Les scores et données sportives peuvent être retardés ou inexacts.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">2. Donnees reelles et simulations</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              L&apos;application affiche des indicateurs communautaires calcules a partir de messages et membres reels
-              (groupes, debats, salons live) lorsque Supabase est configure. Les paris, jetons, medailles et articles de
-              boutique sont des mecaniques de jeu sans valeur monetaire reelle. Les contenus editoriaux (actus) ne sont
-              affiches que s&apos;ils sont publies en base ; sinon un message &quot;pas encore d&apos;actu&quot; ou
-              &quot;pas de debat&quot; est montre. Les donnees match proviennent de fournisseurs sportifs tiers et
-              peuvent etre incompletes ou retardees.
-            </p>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">3. Creation de compte</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Tu es responsable des informations de ton compte et de l&apos;usage qui en est fait. Tu dois fournir des
-              informations exactes et ne pas usurper l&apos;identite d&apos;un tiers.
-            </p>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">4. Regles de conduite</h2>
-            <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
-              <li>Respect des autres utilisateurs : pas d&apos;insultes, harcelement, haine ou discrimination.</li>
-              <li>Pas de contenus illicites, trompeurs, diffamatoires ou portant atteinte aux droits de tiers.</li>
-              <li>Pas de spam, tentative de fraude, extraction abusive ou perturbation technique du service.</li>
-            </ul>
-          </section>
-
-          <section id="ugc" className="mt-8 space-y-3 scroll-mt-6">
-            <h2 className="font-display text-lg font-black">5. Contenus utilisateurs (UGC)</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Tu restes responsable des messages, pseudos, titres de debats, noms de groupes et autres contenus que tu
-              publies dans l&apos;application (salons live, groupes, messages prives, debats).
-            </p>
-            <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
-              <li>
-                <strong>Filtre automatique</strong> : insultes, vulgarite, propos haineux ou discriminatoires sont
-                bloques a la saisie (application) et a l&apos;enregistrement (serveur) via une liste de termes interdits.
-              </li>
-              <li>
-                <strong>Pas de liens dans les chats</strong> : URLs, sites web et domaines (http, www., exemple.com,
-                etc.) sont interdits dans les salons live, groupes et messages prives.
-              </li>
-              <li>
-                <strong>Signalement</strong> : depuis la section « Modération » de ton profil (email de signalement) ou
-                via le support editeur (coordonnees a renseigner avant publication publique).
-              </li>
-              <li>
-                <strong>Blocage / limitation</strong> : tu peux refuser une demande d&apos;ami ou contacter le support
-                pour limiter les interactions avec un utilisateur.
-              </li>
-              <li>
-                Talk Foot peut moderer, masquer ou supprimer un contenu et suspendre un compte en cas de non-respect
-                de ces regles.
-              </li>
-            </ul>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">6. Disponibilite et limitations</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Le service est fourni &quot;en l&apos;etat&quot;, sans garantie de disponibilite continue ni d&apos;absence
-              d&apos;erreur. Les donnees sportives et contenus tiers peuvent comporter des delais ou inexactitudes.
-            </p>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">7. Propriete intellectuelle</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Les elements visuels, techniques et editoriaux de Talk Foot restent proteges. Toute reutilisation
-              substantielle sans autorisation est interdite.
-            </p>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">8. Donnees personnelles</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Le traitement des donnees personnelles est detaille dans la{' '}
-              <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-                politique de confidentialite
-              </Link>
-              .
-            </p>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">9. Suspension / suppression de compte</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              En cas de non-respect des regles, Talk Foot peut restreindre temporairement ou supprimer l&apos;acces au
-              service, avec ou sans avertissement selon la gravite.
-            </p>
-          </section>
-
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">10. Contact</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Contact editeur / support : a renseigner avant mise en production publique (email ou formulaire legal).
-            </p>
-          </section>
-        </article>
-      </div>
-    </div>
+      <section className={section}>
+        <h2 className={h2}>10. Suspension</h2>
+        <p className={p}>
+          En cas de non-respect des présentes conditions, l&apos;accès peut être restreint ou supprimé.
+        </p>
+      </section>
+    </LegalPageShell>
   )
 }

@@ -1,175 +1,155 @@
 import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { useAppearance } from '../contexts/AppearanceContext'
-import { cn } from '../utils/cn'
-import { LogoMark } from '../layout/LogoMark'
-import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
+import { LegalPageShell } from '../components/legal/LegalPageShell'
+import { LEGAL_PUBLISHER_NAME, LEGAL_PUBLIC_SITE } from '../constants/siteLegal'
 
-/**
- * Informations à destination des utilisateurs (transparence RGPD).
- * À faire valider / adapter par un juriste si l’app traite des données réelles en production.
- */
 export function PrivacyPage() {
-  const { user } = useAuth()
-  const { appearance } = useAppearance()
-  const L = appearance === 'light'
+  const section = 'mt-8 space-y-3'
+  const h2 = 'font-display text-lg font-black'
+  const p = 'text-sm font-medium leading-relaxed opacity-90'
+  const ul = 'list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90'
 
   return (
-    <div className="relative min-h-dvh">
-      <div className="tf-page-backdrop" aria-hidden />
-      <div className="absolute right-3 top-3 z-10 sm:right-5 sm:top-5">
-        <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
-      </div>
-      <div className="relative mx-auto max-w-2xl px-4 py-10 sm:py-14">
-        <div className="mb-8 flex flex-wrap gap-x-4 gap-y-2 text-sm font-bold">
-          {user ? (
-            <Link to="/" className="text-tf-cta hover:underline">
-              ← Accueil
-            </Link>
-          ) : null}
-          <Link to="/login" className="text-tf-cta hover:underline">
-            {user ? 'Connexion (autre compte)' : '← Connexion'}
-          </Link>
-        </div>
-        <div className="mb-6 flex justify-center">
-          <LogoMark variant="hero" className="max-w-[180px]" decorative />
-        </div>
-        <article
-          className={cn(
-            'rounded-3xl border p-6 shadow-sm sm:p-8',
-            L ? 'border-tf-dark/10 bg-white/95 text-tf-dark' : 'border-white/15 bg-tf-dark/90 text-slate-100',
-          )}
-        >
-          <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
-            Confidentialité & données personnelles
-          </h1>
-          <p className="mt-2 text-sm font-medium opacity-80">
-            Dernière mise à jour : application Talk Foot (version locale / démo). Ce texte vise la transparence ; il ne
-            remplace pas un avis juridique.
-          </p>
+    <LegalPageShell
+      title="Confidentialité & données personnelles"
+      intro={`${LEGAL_PUBLISHER_NAME} (${LEGAL_PUBLIC_SITE}) explique comment tes données sont traitées lorsque tu utilises le site et l'application.`}
+    >
+      <section className={section}>
+        <h2 className={h2}>1. Responsable du traitement</h2>
+        <p className={p}>
+          Le service Talk Foot est édité sous le nom {LEGAL_PUBLISHER_NAME}. Pour exercer tes droits ou poser une
+          question relative aux données personnelles, utilise l&apos;adresse de contact indiquée en bas de page.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">1. Qui traite les données ?</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              L’application fonctionne pour l’essentiel dans ton navigateur. Les données que tu saisis (compte, profil,
-              préférences, paris locaux, etc.) sont enregistrées sur ton appareil via le stockage local du navigateur
-              (localStorage / sessionStorage), sauf mention contraire.
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>2. Données collectées</h2>
+        <ul className={ul}>
+          <li>
+            <strong>Compte</strong> : identifiant, email, pseudo, photo de profil (selon mode de connexion : Clerk,
+            Supabase ou stockage local sur l&apos;appareil).
+          </li>
+          <li>
+            <strong>Activité</strong> : préférences supporter, messages dans les salons (lorsque synchronisés),
+            participation aux groupes et débats, paris simulés à jetons, paramètres d&apos;affichage.
+          </li>
+          <li>
+            <strong>Technique</strong> : journaux serveur habituels (adresse IP, type de navigateur) pour la sécurité
+            et le fonctionnement du site.
+          </li>
+          <li>
+            <strong>Données sportives</strong> : requêtes vers des API tierces (ex. SportMonks) sans transmission de ton
+            identité personnelle lorsque cela est évitable.
+          </li>
+        </ul>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">2. Quelles données ?</h2>
-            <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
-              <li>
-                <strong>Compte</strong> : email et nom d&apos;affichage si tu crées un compte email ; une empreinte
-                dérivée du mot de passe (pas le mot de passe en clair) est stockée localement.
-              </li>
-              <li>
-                <strong>Activité dans l&apos;app</strong> : préférences supporter, avatar, historique de paris simulés,
-                groupes, messages locaux, etc.
-              </li>
-              <li>
-                <strong>API football</strong> : requêtes vers des fournisseurs tiers (ex. calendriers, résultats) —
-                consulte leur politique de confidentialité ; l’app peut transmettre des données techniques habituelles
-                (adresse IP côté réseau) sans les afficher dans l’interface.
-              </li>
-            </ul>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>3. Finalités</h2>
+        <ul className={ul}>
+          <li>Fournir les fonctionnalités du service (compte, chat, groupes, live).</li>
+          <li>Modérer les contenus publiés par les utilisateurs.</li>
+          <li>Mesurer l&apos;audience et afficher des publicités sur les pages éditoriales autorisées.</li>
+          <li>Améliorer la stabilité et la sécurité du site.</li>
+        </ul>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">3. Données réelles et simulations</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Talk Foot distingue clairement ce qui provient de services réels et ce qui relève du jeu ou de la démo :
-            </p>
-            <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
-              <li>
-                <strong>Réel</strong> : articles publiés en base, messages de salons live et de groupes (Supabase),
-                débats avec compteurs participants/messages agrégés, amis et messages privés synchronisés, effectifs
-                adhérents aux groupes, statistiques de présence sur un salon live lorsque des messages existent.
-              </li>
-              <li>
-                <strong>Données sportives</strong> : calendriers, scores, compositions et classements via SportMonks
-                (selon ta clé API / configuration).
-              </li>
-              <li>
-                <strong>Simulation / jeu</strong> : jetons et médailles de navigation, paris entre supporters (cotes
-                internes, gains fictifs), boutique cosmétique, récompenses quotidiennes — sans enjeu financier réel.
-              </li>
-              <li>
-                <strong>Absence de donnée</strong> : si aucun article ou débat n’est publié, l’interface affiche un
-                état vide explicite plutôt que du contenu inventé.
-              </li>
-            </ul>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>4. Base légale (RGPD)</h2>
+        <p className={p}>
+          Exécution du contrat / conditions d&apos;utilisation pour le cœur du service ; intérêt légitime pour la
+          sécurité et la modération ; consentement lorsque requis (cookies publicitaires non essentiels en Union
+          européenne).
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">4. Finalités & base légale</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Fournir les fonctionnalités que tu demandes (compte, personnalisation, jeu, boutique locale). Base
-              légale : exécution d&apos;une relation d&apos;utilisation de l&apos;service et, le cas échéant, ton
-              consentement pour les options qui le requièrent.
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>5. Hébergement & sous-traitants</h2>
+        <p className={p}>
+          Les données peuvent être traitées par des prestataires techniques (hébergement web, base de données
+          Supabase, authentification Clerk, Google pour la publicité AdSense le cas échéant). Leurs politiques
+          s&apos;appliquent en complément.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">5. Durée de conservation</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Tant que tu ne les supprimes pas (fonction « Supprimer mes données » dans le profil) ou que tu ne vides
-              pas le stockage du navigateur. Aucun serveur Talk Foot n&apos;est impliqué pour ces données locales dans
-              cette version démo.
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>6. Durée de conservation</h2>
+        <p className={p}>
+          Tant que ton compte est actif, puis suppression ou anonymisation selon les besoins légitimes. Tu peux
+          exporter ou supprimer les données stockées localement depuis la page Profil. Pour les données côté serveur,
+          contacte-nous.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">6. Tes droits (RGPD)</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Tu peux <strong>exporter</strong> une copie des données stockées localement et{' '}
-              <strong>supprimer</strong> l&apos;ensemble des données Talk Foot sur cet appareil depuis la page Profil.
-              Pour rectifier ton pseudo ou email (compte local), utilise les réglages du profil. Pour une réclamation,
-              tu peux contacter l&apos;autorité de protection des données de ton pays.
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>7. Tes droits</h2>
+        <p className={p}>
+          Accès, rectification, effacement, limitation, opposition et portabilité lorsque applicable. Réclamation
+          possible auprès de la CNIL ou de l&apos;autorité de ton pays.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">7. Cookies & traceurs</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Pas de cookies publicitaires tiers dans cette version. Un bandeau t&apos;informe du stockage local
-              nécessaire au fonctionnement ; tu peux refuser en ne poursuivant pas l&apos;utilisation (certaines
-              fonctions seront indisponibles).
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>8. Cookies & traceurs</h2>
+        <p className={p}>
+          <strong>Nécessaires au fonctionnement</strong> : stockage local (compte, préférences), sessions
+          d&apos;authentification.
+        </p>
+        <p className={p}>
+          <strong>Publicité Google AdSense</strong> : sur l&apos;accueil et certaines pages éditoriales (articles,
+          fiches débat/club), Google peut déposer des cookies pour diffuser et mesurer des annonces, personnaliser
+          celles-ci selon ta navigation. Tu peux gérer les préférences via{' '}
+          <a
+            href="https://adssettings.google.com"
+            className="font-bold text-tf-cta underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            les paramètres Google Ads
+          </a>{' '}
+          ou la page{' '}
+          <a
+            href="https://policies.google.com/technologies/ads"
+            className="font-bold text-tf-cta underline-offset-2 hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            technologies publicitaires Google
+          </a>
+          . Les salons live et chats de groupe n&apos;affichent pas de script publicitaire.
+        </p>
+        <p className={p}>
+          Un bandeau t&apos;informe lors de ta première visite ; tu peux refuser les traceurs non essentiels en ne
+          poursuivant pas l&apos;utilisation du site.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">8. Modération des contenus</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Les textes que tu envoies (chat live, groupes, messages privés, création de débat, pseudo) peuvent être
-              analysés par un filtre automatique côté application et côté base de données pour bloquer les contenus
-              interdits. En cas de blocage, le message n&apos;est pas enregistré. Tu peux signaler un abus ou bloquer un
-              utilisateur conformément aux conditions d&apos;utilisation.
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>9. Modération des contenus</h2>
+        <p className={p}>
+          Les messages peuvent être filtrés automatiquement (insultes, liens). En cas de blocage, le contenu n&apos;est
+          pas publié. Signalement possible depuis le profil ou par email.
+        </p>
+      </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">9. Sécurité</h2>
-            <p className="text-sm font-medium leading-relaxed opacity-90">
-              Les mots de passe des comptes email sont hachés sur l&apos;appareil. Toute donnée locale peut être lue sur
-              un poste compromis : utilise un appareil de confiance et, en production, privilégie une authentification
-              serveur sécurisée (HTTPS, sessions, etc.).
-            </p>
-          </section>
+      <section className={section}>
+        <h2 className={h2}>10. Sécurité</h2>
+        <p className={p}>
+          Connexion HTTPS, accès restreint aux bases de données, bonnes pratiques d&apos;authentification. Aucun système
+          n&apos;est invulnérable : utilise un mot de passe robuste et un appareil de confiance.
+        </p>
+      </section>
 
-          <p className="mt-10 text-xs font-medium opacity-70">
-            Contact éditeur : à renseigner avant mise en production publique (email ou formulaire).
-          </p>
-          <p className="mt-3 text-xs font-medium opacity-70">
-            Voir aussi les{' '}
-            <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-              conditions d&apos;utilisation
-            </Link>
-            .
-          </p>
-        </article>
-      </div>
-    </div>
+      <p className="mt-6 text-sm font-medium opacity-90">
+        Voir aussi les{' '}
+        <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+          conditions d&apos;utilisation
+        </Link>{' '}
+        et la page{' '}
+        <Link to="/about" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+          À propos
+        </Link>
+        .
+      </p>
+    </LegalPageShell>
   )
 }

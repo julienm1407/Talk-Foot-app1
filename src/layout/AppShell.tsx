@@ -10,6 +10,7 @@ import { OAuthProfileSetupModal } from '../components/auth/OAuthProfileSetupModa
 import { ActivityRouteLogger } from '../components/sync/ActivityRouteLogger'
 import { FanSetupBanner } from '../components/fan/FanSetupBanner'
 import { PageAdRails } from './PageAdRails'
+import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
 
 const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
@@ -89,6 +90,7 @@ export function AppShell() {
         )}
       </main>
 
+      <SiteLegalFooter compact={isChannel} className={isChannel ? 'max-md:pb-1' : undefined} />
       {!isChannel ? <BottomNav /> : null}
     </div>
     </PrivateMessagesUiProvider>

@@ -408,12 +408,16 @@ export function LoginPage() {
             )}
           </p>
           <p className="mt-3 text-center text-[11px] font-medium text-tf-grey">
+            <Link to="/about" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              À propos
+            </Link>{' '}
+            ·{' '}
             <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-              Confidentialité & données
+              Confidentialité
             </Link>{' '}
             ·{' '}
             <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-              Conditions d&apos;utilisation
+              CGU
             </Link>
           </p>
         </Card>
