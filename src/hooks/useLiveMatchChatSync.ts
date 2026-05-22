@@ -7,7 +7,7 @@ import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import type { Message, MatchTribuneZone } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
-import { validateOutgoingChatPayload } from '../utils/bannedWords'
+import { isSupabaseModerationError, validateOutgoingChatPayload } from '../utils/bannedWords'
 
 type LiveMsgRow = {
   id: string
@@ -122,6 +122,9 @@ export function useLiveMatchChatSync(options: {
         .single()
 
       if (error || !data) {
+        if (isSupabaseModerationError(error?.message)) {
+          return { ok: false as const, error: 'moderation' as const }
+        }
         return { ok: false as const, error: error?.message ?? 'insert_failed' }
       }
 

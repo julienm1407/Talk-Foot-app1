@@ -587,7 +587,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     (displayName: string) => {
       const name = displayName.trim()
       if (!name || !user) return
-      void user.update({ firstName: name, lastName: '' })
+      void user.update({ firstName: name, lastName: '', username: name })
     },
     [user],
   )

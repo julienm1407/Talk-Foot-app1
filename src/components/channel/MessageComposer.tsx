@@ -5,6 +5,7 @@ import { Input } from '../ui/Input'
 import { GifPicker } from '../chat/GifPicker'
 import { EmotePicker } from '../chat/EmotePicker'
 import { cn } from '../../utils/cn'
+import { moderateChatText, validateOutgoingChatPayload } from '../../utils/bannedWords'
 
 export type ScarfSendPayload = NonNullable<Message['groupScarf']>
 
@@ -39,6 +40,7 @@ export function MessageComposer({
   onSendScarf?: (payload: ScarfSendPayload) => void
 }) {
   const [text, setText] = useState('')
+  const [moderationHint, setModerationHint] = useState<string | null>(null)
   const [showGif, setShowGif] = useState(false)
   const [showEmote, setShowEmote] = useState(false)
   const [scarfOpen, setScarfOpen] = useState(false)
@@ -123,6 +125,16 @@ export function MessageComposer({
                           type="button"
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-800 hover:bg-violet-50"
                           onClick={() => {
+                            const scarfCheck = validateOutgoingChatPayload({
+                              text: '[Emote]',
+                              groupScarf: { text: s.text, groupName: s.groupName },
+                            })
+                            if (!scarfCheck.ok) {
+                              setModerationHint(scarfCheck.message)
+                              setScarfOpen(false)
+                              return
+                            }
+                            setModerationHint(null)
                             onSendScarf(s)
                             setScarfOpen(false)
                           }}
@@ -146,12 +158,24 @@ export function MessageComposer({
           ) : null}
         </div>
       ) : null}
+      {moderationHint ? (
+        <p className="mb-2 rounded-xl border border-rose-200/80 bg-rose-50/95 px-3 py-2 text-xs font-semibold text-rose-800">
+          {moderationHint}
+        </p>
+      ) : null}
       <form
         className="flex items-center gap-1.5 sm:gap-2"
         onSubmit={(e) => {
           e.preventDefault()
           if (!canSend) return
-          onSend(text.trim())
+          const trimmed = text.trim()
+          const check = moderateChatText(trimmed)
+          if (!check.ok) {
+            setModerationHint(check.message)
+            return
+          }
+          setModerationHint(null)
+          onSend(trimmed)
           setText('')
         }}
       >
@@ -203,7 +227,10 @@ export function MessageComposer({
         <Input
           id="message"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            if (moderationHint) setModerationHint(null)
+          }}
           placeholder={placeholder}
           autoComplete="off"
           className="flex-1 rounded-lg border-slate-200/80 bg-white/90 py-2 text-sm sm:rounded-xl sm:py-2.5 sm:text-base"

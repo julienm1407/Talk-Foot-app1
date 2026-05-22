@@ -6,7 +6,7 @@ import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import type { User } from '../../types/chat'
 import { useProfile } from '../../hooks/useProfile'
-import { MODERATION_REFUSED_MESSAGE_FR, containsBannedWord } from '../../utils/bannedWords'
+import { moderateChatText } from '../../utils/bannedWords'
 
 const SPEAK_DURATION_MS = 8000
 
@@ -50,8 +50,9 @@ export function LiveCommentator({
   const sendCommentary = useCallback(() => {
     const trimmed = commentText.trim()
     if (!trimmed) return
-    if (containsBannedWord(trimmed)) {
-      setModerationError(MODERATION_REFUSED_MESSAGE_FR)
+    const check = moderateChatText(trimmed)
+    if (!check.ok) {
+      setModerationError(check.message)
       return
     }
     setModerationError(null)

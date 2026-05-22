@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Debate, DebatePreviewMessage } from '../../data/debates'
+import { isSupabaseModerationError } from '../../utils/bannedWords'
 
 export type DebateStatsRow = {
   id: string
@@ -133,7 +134,10 @@ export type UpsertDebateInput = {
   salonAccess?: 'public' | 'members'
 }
 
-export async function upsertPublishedDebate(sb: SupabaseClient, input: UpsertDebateInput): Promise<boolean> {
+export async function upsertPublishedDebate(
+  sb: SupabaseClient,
+  input: UpsertDebateInput,
+): Promise<{ ok: true } | { ok: false; moderation?: boolean }> {
   const { error } = await sb.from('debates').upsert(
     {
       id: input.id,
@@ -149,7 +153,7 @@ export async function upsertPublishedDebate(sb: SupabaseClient, input: UpsertDeb
   )
   if (error) {
     console.error('[Talk Foot] upsert debate:', error.message)
-    return false
+    return { ok: false, moderation: isSupabaseModerationError(error.message) }
   }
-  return true
+  return { ok: true }
 }

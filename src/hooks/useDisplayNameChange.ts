@@ -7,6 +7,7 @@ import {
   type ChangeDisplayNameResult,
   type DisplayNameStatus,
 } from '../lib/supabase/displayName'
+import { ensureProfileForActor } from '../lib/supabase/profileActor'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
   formatDisplayNameCooldown,
@@ -139,6 +140,15 @@ export function useDisplayNameChange() {
           }
         }
         setLoading(true)
+        const ensured = await ensureProfileForActor(sb, user.id, user.displayName || name)
+        if (!ensured.ok) {
+          setLoading(false)
+          return {
+            ok: false,
+            error: 'profile_not_found',
+            message: ensured.message,
+          }
+        }
         const result = await changeDisplayNameCloud(sb, user.id, name)
         setLoading(false)
         if (result.ok) {

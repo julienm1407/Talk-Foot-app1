@@ -140,7 +140,17 @@ export function PrivacyPage() {
           </section>
 
           <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">8. Sécurité</h2>
+            <h2 className="font-display text-lg font-black">8. Modération des contenus</h2>
+            <p className="text-sm font-medium leading-relaxed opacity-90">
+              Les textes que tu envoies (chat live, groupes, messages privés, création de débat, pseudo) peuvent être
+              analysés par un filtre automatique côté application et côté base de données pour bloquer les contenus
+              interdits. En cas de blocage, le message n&apos;est pas enregistré. Tu peux signaler un abus ou bloquer un
+              utilisateur conformément aux conditions d&apos;utilisation.
+            </p>
+          </section>
+
+          <section className="mt-8 space-y-3">
+            <h2 className="font-display text-lg font-black">9. Sécurité</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
               Les mots de passe des comptes email sont hachés sur l&apos;appareil. Toute donnée locale peut être lue sur
               un poste compromis : utilise un appareil de confiance et, en production, privilégie une authentification

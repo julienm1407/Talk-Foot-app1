@@ -10,7 +10,7 @@ import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
 import { groupThreadMatchId } from '../utils/groupThreadMessages'
 import { displayNameFromSession } from './useLiveMatchChatSync'
-import { validateOutgoingChatPayload } from '../utils/bannedWords'
+import { isSupabaseModerationError, validateOutgoingChatPayload } from '../utils/bannedWords'
 
 type GroupMsgRow = {
   id: string
@@ -152,6 +152,9 @@ export function useSupporterGroupChannelSync(options: {
         .single()
 
       if (error || !data) {
+        if (isSupabaseModerationError(error?.message)) {
+          return { ok: false as const, error: 'moderation' as const }
+        }
         return { ok: false as const, error: error?.message ?? 'insert_failed' }
       }
 

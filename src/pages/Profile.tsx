@@ -25,6 +25,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
+import { DisplayNameEditor } from '../components/profile/DisplayNameEditor'
 import { useAppearance } from '../contexts/AppearanceContext'
 import type { Appearance } from '../contexts/AppearanceContext'
 import { LeagueMark } from '../components/brand/LeagueMark'
@@ -139,11 +140,12 @@ export function ProfilePage() {
           <div className={cn('text-[11px] font-black tracking-[0.18em]', pr.page.eyebrowClass)}>
             Profil
           </div>
-          <h1 className="font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-3xl">
-            {profilePseudo}
-          </h1>
+          <DisplayNameEditor />
           <p className="text-sm font-semibold text-tf-app-muted">
-            Affiché sur les salons et le live · Badges, progression et paramètres
+            Affiché sur les salons et le live · 2 changements max. puis pause 14 jours · aussi sur{' '}
+            <Link to="/pronostic#stats-pronos" className="font-bold text-tf-cta hover:underline">
+              Pronostic
+            </Link>
           </p>
         </div>
         <Button

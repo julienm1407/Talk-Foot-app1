@@ -7,7 +7,7 @@ import { cn } from '../../utils/cn'
 import { type DirectMessageLine, type DirectThread } from '../../data/directMessagesMock'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
-import { MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
+import { moderateChatText } from '../../utils/bannedWords'
 
 export function PrivateMessagesPanel({
   onClose,
@@ -217,10 +217,15 @@ function ThreadView({
   const submit = () => {
     const t = draft.trim()
     if (!t) return
+    const check = moderateChatText(t)
+    if (!check.ok) {
+      setModerationHint(check.message)
+      return
+    }
     setModerationHint(null)
     const ok = onSend(t)
     if (!ok) {
-      setModerationHint(MODERATION_REFUSED_MESSAGE_FR)
+      setModerationHint('Message non envoyé. Réessaie dans quelques secondes.')
       return
     }
     setDraft('')

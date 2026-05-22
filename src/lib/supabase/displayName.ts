@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { containsBannedWord } from '../../utils/bannedWords'
+import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 import {
   sanitizeDisplayNameInput,
   suggestAlternateDisplayNames,
@@ -133,6 +133,23 @@ export async function changeDisplayNameCloud(
       ok: false,
       error: 'invalid_length',
       message: 'Le pseudo doit contenir entre 2 et 24 caractères.',
+    }
+  }
+
+  if (err === 'banned') {
+    return {
+      ok: false,
+      error: 'banned',
+      message: MODERATION_REFUSED_MESSAGE_FR,
+    }
+  }
+
+  if (err === 'profile_not_found') {
+    return {
+      ok: false,
+      error: 'profile_not_found',
+      message:
+        'Profil cloud introuvable. Recharge la page (ou déconnecte-toi / reconnecte-toi) puis réessaie.',
     }
   }
 

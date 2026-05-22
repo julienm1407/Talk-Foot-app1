@@ -85,12 +85,34 @@ export function TermsPage() {
             </ul>
           </section>
 
-          <section className="mt-8 space-y-3">
-            <h2 className="font-display text-lg font-black">5. Contenus utilisateurs</h2>
+          <section id="ugc" className="mt-8 space-y-3 scroll-mt-6">
+            <h2 className="font-display text-lg font-black">5. Contenus utilisateurs (UGC)</h2>
             <p className="text-sm font-medium leading-relaxed opacity-90">
-              Tu restes responsable des messages, pseudos, images et contenus que tu publies. Talk Foot peut moderer,
-              masquer ou supprimer un contenu qui ne respecte pas ces conditions.
+              Tu restes responsable des messages, pseudos, titres de debats, noms de groupes et autres contenus que tu
+              publies dans l&apos;application (salons live, groupes, messages prives, debats).
             </p>
+            <ul className="list-inside list-disc space-y-2 text-sm font-medium leading-relaxed opacity-90">
+              <li>
+                <strong>Filtre automatique</strong> : insultes, vulgarite, propos haineux ou discriminatoires sont
+                bloques a la saisie (application) et a l&apos;enregistrement (serveur) via une liste de termes interdits.
+              </li>
+              <li>
+                <strong>Pas de liens dans les chats</strong> : URLs, sites web et domaines (http, www., exemple.com,
+                etc.) sont interdits dans les salons live, groupes et messages prives.
+              </li>
+              <li>
+                <strong>Signalement</strong> : depuis la section « Modération » de ton profil (email de signalement) ou
+                via le support editeur (coordonnees a renseigner avant publication publique).
+              </li>
+              <li>
+                <strong>Blocage / limitation</strong> : tu peux refuser une demande d&apos;ami ou contacter le support
+                pour limiter les interactions avec un utilisateur.
+              </li>
+              <li>
+                Talk Foot peut moderer, masquer ou supprimer un contenu et suspendre un compte en cas de non-respect
+                de ces regles.
+              </li>
+            </ul>
           </section>
 
           <section className="mt-8 space-y-3">

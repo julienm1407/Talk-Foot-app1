@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import type { Debate } from '../../data/debates'
 import { useDebates } from '../../contexts/DebatesContext'
-import { containsBannedWord } from '../../utils/bannedWords'
+import { MODERATION_REFUSED_MESSAGE_FR, moderateDebateInput } from '../../utils/bannedWords'
 import { mergeDebatesForGroup } from '../../utils/mergeGroupDebates'
 import { cn } from '../../utils/cn'
 
@@ -65,17 +65,14 @@ export function DebatePickerModal({
       setFormError('Titre trop long (120 max).')
       return
     }
-    if (containsBannedWord(t)) {
-      setFormError('Ce titre contient des propos inappropriés.')
+    const moderation = moderateDebateInput({ title: t, excerpt: excerpt.trim() || undefined })
+    if (!moderation.ok) {
+      setFormError(moderation.message || MODERATION_REFUSED_MESSAGE_FR)
       return
     }
     const ex = excerpt.trim()
     if (ex.length > 280) {
       setFormError('Description trop longue (280 max).')
-      return
-    }
-    if (ex && containsBannedWord(ex)) {
-      setFormError('La description contient des propos inappropriés.')
       return
     }
     const d = onPublishCustom({ title: t, excerpt: ex, accent })

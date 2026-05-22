@@ -4,7 +4,11 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { downloadPersonalDataExport, purgeAllTalkFootBrowserStorage } from '../../utils/privacyLocal'
 import { cn } from '../../utils/cn'
+import { MODERATION_POLICY_SUMMARY_FR } from '../../utils/bannedWords'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+
+const ABUSE_REPORT_MAIL =
+  'mailto:support@talkfoot.app?subject=Signalement%20abus%20Talk%20Foot&body=D%C3%A9cris%20le%20contenu%20ou%20l%27utilisateur%20concern%C3%A9%20%28capture%20si%20possible%29%20%3A%0A%0A'
 
 export function ProfilePrivacySection() {
   const { appearance } = useAppearance()
@@ -52,6 +56,33 @@ export function ProfilePrivacySection() {
         </Link>
         .
       </p>
+      <div
+        className={cn(
+          'mt-5 rounded-xl border p-3 sm:p-4',
+          L ? 'border-violet-200/80 bg-violet-50/40' : 'border-violet-400/25 bg-violet-950/30',
+        )}
+      >
+        <h3 className={cn('text-sm font-black', L ? 'text-tf-app-fg' : 'text-violet-100')}>Modération</h3>
+        <p className={cn('mt-1 text-xs font-medium leading-relaxed', L ? 'text-tf-app-muted' : 'text-violet-200/90')}>
+          {MODERATION_POLICY_SUMMARY_FR}{' '}
+          <Link to="/terms#ugc" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+            Charte UGC
+          </Link>
+          .
+        </p>
+        <a
+          href={ABUSE_REPORT_MAIL}
+          className={cn(
+            'mt-3 inline-flex min-h-tf-touch items-center justify-center rounded-xl border px-4 py-2 text-xs font-black',
+            L
+              ? 'border-violet-300 bg-white text-violet-950 hover:bg-violet-50'
+              : 'border-violet-400/40 bg-violet-900/50 text-violet-50 hover:bg-violet-900/70',
+          )}
+        >
+          Signaler un abus par email
+        </a>
+      </div>
+
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Button type="button" variant="soft" className="rounded-xl sm:min-w-0" onClick={() => downloadPersonalDataExport()}>
           Télécharger mes données (JSON)

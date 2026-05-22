@@ -41,6 +41,7 @@ import {
 } from '../api/sportMonks'
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
+import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/bannedWords'
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
   extractScorerEventsFromHighlights,
@@ -796,10 +797,20 @@ export function ChannelPage() {
     if (!match?.id) return
     const text = draft.trim()
     if (!text) return
+    const precheck = moderateChatText(text)
+    if (!precheck.ok) {
+      setAnimationNotice(precheck.message)
+      window.setTimeout(() => setAnimationNotice(null), 2800)
+      return
+    }
     const res = await publishMessage({ matchId: match.id, text, matchTribune: selectedTribune })
     if (!res.ok) {
-      setAnimationNotice("Impossible d'envoyer le message (sync cloud indisponible).")
-      window.setTimeout(() => setAnimationNotice(null), 1800)
+      setAnimationNotice(
+        res.error === 'moderation'
+          ? MODERATION_REFUSED_MESSAGE_FR
+          : "Impossible d'envoyer le message (sync cloud indisponible).",
+      )
+      window.setTimeout(() => setAnimationNotice(null), 2800)
       return
     }
     setDraft('')

@@ -10,7 +10,7 @@ import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { cloudPrivateThreadKey } from '../utils/cloudDmThread'
 import { useAuth } from '../contexts/AuthContext'
 import { useLocalStorageState } from './useLocalStorage'
-import { containsBannedWord } from '../utils/bannedWords'
+import { isSupabaseModerationError, moderateChatText } from '../utils/bannedWords'
 
 const KEY_MESSAGES = 'talkfoot.dm.userMessages.v1'
 const KEY_VISITED = 'talkfoot.dm.visitedThreads.v1'
@@ -233,7 +233,7 @@ export function useDirectMessages(activeUiThreadId: string | null, syncP2pThread
     (threadId: string, body: string): boolean => {
       const trimmed = body.trim()
       if (!trimmed) return false
-      if (containsBannedWord(trimmed)) return false
+      if (!moderateChatText(trimmed).ok) return false
 
       const ck = cloudPrivateThreadKey(threadId, myAuthId)
       const pushBotReply = () => {
@@ -269,6 +269,7 @@ export function useDirectMessages(activeUiThreadId: string | null, syncP2pThread
             .select('id, sender_id, body, created_at')
             .single()
           if (error || !data) {
+            if (isSupabaseModerationError(error?.message)) return
             const line: DirectMessageLine = {
               id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
               fromMe: true,

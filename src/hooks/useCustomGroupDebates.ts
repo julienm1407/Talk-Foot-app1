@@ -12,6 +12,7 @@ import {
   createCustomGroupDebateRecord,
   type CustomDebatesBucket,
 } from '../utils/customGroupDebatesStorage'
+import { moderateDebateInput } from '../utils/bannedWords'
 import { useLocalStorageState } from './useLocalStorage'
 
 const isBucket = (p: unknown): p is CustomDebatesBucket =>
@@ -38,6 +39,7 @@ export function useCustomGroupDebates(groupId: string | undefined) {
   const addCustomDebate = useCallback(
     (input: { title: string; excerpt: string; accent: string }): Debate | null => {
       if (!groupId) return null
+      if (!moderateDebateInput(input).ok) return null
       const debate = createCustomGroupDebateRecord(
         groupId,
         input,
@@ -54,7 +56,7 @@ export function useCustomGroupDebates(groupId: string | undefined) {
           void (async () => {
             const session = await ensureTalkFootSupabaseSession(sb)
             if (!session) return
-            const ok = await upsertPublishedDebate(sb, {
+            const res = await upsertPublishedDebate(sb, {
               id: debate.id,
               groupId: debate.groupId,
               title: debate.title,
@@ -62,7 +64,7 @@ export function useCustomGroupDebates(groupId: string | undefined) {
               accent: debate.accent,
               salonAccess: debate.salonAccess ?? 'members',
             })
-            if (ok) await refreshDebates()
+            if (res.ok) await refreshDebates()
           })()
         }
       } else {
