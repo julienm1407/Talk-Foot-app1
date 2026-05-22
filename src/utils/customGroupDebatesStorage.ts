@@ -31,8 +31,11 @@ export function createCustomGroupDebateRecord(
   username: string,
   fanClubId: string,
 ): Debate {
+  const ts = Date.now()
+  const now = new Date(ts).toISOString()
   return {
-    id: `d-c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    id: `d-c-${ts}-${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: now,
     title: input.title.trim().slice(0, 120),
     excerpt: input.excerpt.trim().slice(0, 280) || 'Débat lancé dans le salon.',
     groupId,

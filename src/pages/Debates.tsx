@@ -4,6 +4,7 @@ import { useDebates } from '../contexts/DebatesContext'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { cn } from '../utils/cn'
+import { DebateRankBadge } from '../components/debate/DebateRankBadge'
 
 export function DebatesPage() {
   const { debates: all, loading } = useDebates()
@@ -16,6 +17,7 @@ export function DebatesPage() {
         uppercaseTitle={false}
         eyebrow="Débats"
         title="Tribunes & polémiques"
+        description="Classement de tous les débats publiés — pas de minimum de messages : les plus actifs (ou les plus récents) en tête."
       />
 
       {loading ? (
@@ -61,11 +63,14 @@ export function DebatesPage() {
                   />
                   <div className="relative flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                      {d.trending ? (
-                        <span className="inline-flex rounded-full bg-white/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/35">
-                          🔥 Trending
-                        </span>
-                      ) : null}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {d.leaderboardRank ? <DebateRankBadge rank={d.leaderboardRank} /> : null}
+                        {d.trending ? (
+                          <span className="inline-flex rounded-full bg-white/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/35">
+                            🔥 Top 3
+                          </span>
+                        ) : null}
+                      </div>
                       <h2 className="mt-2 font-display text-xl font-black leading-[1.18] tracking-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.38),0_1px_2px_rgba(0,0,0,0.55)] sm:text-2xl sm:leading-[1.15]">
                         {d.title}
                       </h2>

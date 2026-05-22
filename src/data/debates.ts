@@ -38,16 +38,13 @@ export type Debate = {
   featured?: boolean
   /** Messages sur les dernières 24 h (classement « top débats »). */
   messages24h?: number
+  /** ISO — tie-break quand peu ou pas de messages. */
+  createdAt?: string
+  /** Position au classement global (1 = tête du top). */
+  leaderboardRank?: number
 }
 
-/** Tri par activité réelle : 24 h → total messages → participants. */
-export function rankDebatesByActivity(a: Debate, b: Debate): number {
-  const a24 = a.messages24h ?? 0
-  const b24 = b.messages24h ?? 0
-  if (b24 !== a24) return b24 - a24
-  if (b.messagesCount !== a.messagesCount) return b.messagesCount - a.messagesCount
-  return b.participantsCount - a.participantsCount
-}
+export { rankDebatesByActivity, applyDebateLeaderboardRanks } from '../utils/debateRanking'
 
 /** @deprecated Utiliser `useDebates()` — catalogue vide côté mock. */
 export function getAllDebates(): Debate[] {

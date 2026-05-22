@@ -50,11 +50,12 @@ export function debateRowToDebate(row: DebateStatsRow, previewMessages: DebatePr
     accent: row.accent,
     messagesCount: row.messages_count,
     participantsCount: row.participants_count,
-    trending: row.trending || row.messages_24h >= 5,
+    trending: false,
     salonAccess: row.salon_access,
     heroImageUrl: row.hero_image_url ?? undefined,
     featured: row.featured_rank === 1,
     messages24h: row.messages_24h,
+    createdAt: row.created_at,
     previewMessages,
   }
 }
@@ -67,6 +68,7 @@ export async function fetchDebatesWithStats(sb: SupabaseClient): Promise<Debate[
     )
     .order('messages_24h', { ascending: false })
     .order('messages_count', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(80)
   if (error || !data?.length) return []
 

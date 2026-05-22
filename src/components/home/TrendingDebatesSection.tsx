@@ -5,6 +5,7 @@ import { cn } from '../../utils/cn'
 import { getAppSectionTheme } from '../../theme/appSectionThemes'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { DebateMessagePreview } from '../debate/DebateMessagePreview'
+import { DebateRankBadge } from '../debate/DebateRankBadge'
 
 export function TrendingDebatesSection({
   debates,
@@ -96,10 +97,10 @@ export function TrendingDebatesSection({
               'sm:text-[1.65rem] lg:text-3xl',
             )}
           >
-            Tendances
+            Top débats
           </h2>
           <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-app-muted line-clamp-2 sm:line-clamp-none">
-            Ouvre un fil — même importance que le match.
+            Classement en direct — même avec peu de messages, chaque débat publié apparaît ici.
           </p>
         </div>
         <Link
@@ -148,11 +149,16 @@ export function TrendingDebatesSection({
                     aria-hidden
                   />
                   <div className="relative min-w-0">
-                    {d.trending ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/35 backdrop-blur-[2px]">
-                        🔥 Trending
-                      </span>
-                    ) : null}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {d.leaderboardRank ? (
+                        <DebateRankBadge rank={d.leaderboardRank} size="sm" />
+                      ) : null}
+                      {d.trending ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/35 backdrop-blur-[2px]">
+                          🔥 Top 3
+                        </span>
+                      ) : null}
+                    </div>
                     <h3 className="mt-2.5 font-display text-base font-black leading-[1.22] tracking-tight text-white sm:text-[1.0625rem] sm:leading-[1.2] [text-shadow:0_2px_14px_rgba(0,0,0,0.35),0_1px_2px_rgba(0,0,0,0.5)]">
                       {d.title}
                     </h3>

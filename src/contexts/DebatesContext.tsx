@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Debate } from '../data/debates'
-import { rankDebatesByActivity } from '../data/debates'
+import { applyDebateLeaderboardRanks } from '../data/debates'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { fetchDebatesWithStats } from '../lib/supabase/debates'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -44,22 +44,23 @@ function mergeCustomDebates(cloud: Debate[]): Debate[] {
       participantsCount: 0,
       messages24h: 0,
       trending: false,
+      createdAt: d.createdAt,
     })
   }
-  return Array.from(byId.values())
+  return applyDebateLeaderboardRanks(Array.from(byId.values()))
 }
 
-function pickDebateOfTheDay(all: Debate[]): Debate | null {
-  if (!all.length) return null
-  const featured = all.find((d) => d.featured)
+function pickDebateOfTheDay(ranked: Debate[]): Debate | null {
+  if (!ranked.length) return null
+  const featured = ranked.find((d) => d.featured)
   if (featured) return featured
-  return [...all].sort(rankDebatesByActivity)[0] ?? null
+  return ranked[0] ?? null
 }
 
-/** Meilleurs débats (y compris créés dans un groupe) selon l’activité mesurée en base. */
-function pickTrending(all: Debate[], debateOfTheDay: Debate | null): Debate[] {
-  const pool = debateOfTheDay ? all.filter((d) => d.id !== debateOfTheDay.id) : all
-  return [...pool].sort(rankDebatesByActivity).slice(0, TRENDING_TOP_N)
+/** Suite du classement (sans le débat du jour) — tous les débats publiés comptent, sans minimum. */
+function pickTrending(ranked: Debate[], debateOfTheDay: Debate | null): Debate[] {
+  const pool = debateOfTheDay ? ranked.filter((d) => d.id !== debateOfTheDay.id) : ranked
+  return pool.slice(0, TRENDING_TOP_N)
 }
 
 export function DebatesProvider({ children }: { children: ReactNode }) {
