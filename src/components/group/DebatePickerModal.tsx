@@ -1,22 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import type { Debate } from '../../data/debates'
 import { useDebates } from '../../contexts/DebatesContext'
 import { containsBannedWord } from '../../utils/bannedWords'
+import { mergeDebatesForGroup } from '../../utils/mergeGroupDebates'
 import { cn } from '../../utils/cn'
 
 type Tab = 'browse' | 'create'
 
 export function DebatePickerModal({
   open,
+  groupId,
   customForGroup,
   onClose,
   onPick,
   onPublishCustom,
 }: {
   open: boolean
+  groupId: string
   customForGroup: Debate[]
   onClose: () => void
   onPick: (debateId: string) => void
@@ -32,6 +35,13 @@ export function DebatePickerModal({
   const [accent, setAccent] = useState('#6366f1')
   const [formError, setFormError] = useState<string | null>(null)
 
+  const { debates: catalogDebates, refresh, loading } = useDebates()
+
+  const groupDebates = useMemo(
+    () => mergeDebatesForGroup(catalogDebates, customForGroup, groupId),
+    [catalogDebates, customForGroup, groupId],
+  )
+
   useEffect(() => {
     if (!open) return
     setTab('browse')
@@ -39,13 +49,10 @@ export function DebatePickerModal({
     setExcerpt('')
     setAccent('#6366f1')
     setFormError(null)
-  }, [open])
-
-  const { debates: catalogDebates } = useDebates()
+    void refresh()
+  }, [open, refresh])
 
   if (!open) return null
-
-  const catalog = catalogDebates
 
   const submitCreate = () => {
     setFormError(null)
@@ -123,7 +130,7 @@ export function DebatePickerModal({
                 Débat dans le groupe
               </h2>
               <p className="mt-1 text-xs font-semibold text-slate-600">
-                Lie un sujet du catalogue, reprends un tien, ou publie le tien.
+                Sujets publiés dans ce groupe — visibles par tous les membres.
               </p>
             </div>
             <Button variant="ghost" className="h-9 shrink-0 rounded-2xl" onClick={onClose}>
@@ -132,7 +139,7 @@ export function DebatePickerModal({
           </div>
 
           <div className="mt-4 flex gap-2">
-            {tabBtn('browse', 'Parcourir / lier')}
+            {tabBtn('browse', `Parcourir (${groupDebates.length})`)}
             {tabBtn('create', 'Publier le mien')}
           </div>
 
@@ -185,37 +192,16 @@ export function DebatePickerModal({
                 Publier et lier au salon
               </Button>
               <p className="text-[11px] font-semibold text-slate-500">
-                Enregistré sur cet appareil — lié à ce salon uniquement.
+                Partagé avec le groupe dès publication (base Talk Foot).
               </p>
             </div>
           ) : (
-            <div className="mt-4 max-h-[min(52vh,26rem)] space-y-4 overflow-y-auto pr-1">
-              {customForGroup.length > 0 ? (
-                <div>
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-violet-700">
-                    Tes sujets dans ce groupe
-                  </p>
-                  <ul className="space-y-2" role="list">
-                    {customForGroup.map((d) => (
-                      <li key={d.id}>
-                        <DebateRow
-                          debate={d}
-                          onSelect={() => {
-                            onPick(d.id)
-                            onClose()
-                          }}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              <div>
-                <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
-                  Catalogue Talk Foot
-                </p>
+            <div className="mt-4 max-h-[min(52vh,26rem)] space-y-3 overflow-y-auto pr-1">
+              {loading ? (
+                <p className="text-sm font-semibold text-slate-500">Chargement des débats…</p>
+              ) : groupDebates.length > 0 ? (
                 <ul className="space-y-2" role="list">
-                  {catalog.map((d) => (
+                  {groupDebates.map((d) => (
                     <li key={d.id}>
                       <DebateRow
                         debate={d}
@@ -227,7 +213,15 @@ export function DebatePickerModal({
                     </li>
                   ))}
                 </ul>
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-center">
+                  <p className="text-sm font-black text-slate-800">Aucun débat dans ce groupe</p>
+                  <p className="mt-2 text-xs font-semibold text-slate-600">
+                    Publie le tien ou demande à ton ami de le lier au salon général — il apparaîtra ici pour
+                    tout le monde.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </Card>
@@ -244,7 +238,12 @@ function DebateRow({ debate, onSelect }: { debate: Debate; onSelect: () => void 
       className="w-full rounded-2xl border border-slate-200/90 bg-white px-3 py-2.5 text-left transition hover:border-violet-300 hover:bg-violet-50/50"
     >
       <span className="line-clamp-2 text-sm font-black text-slate-900">{debate.title}</span>
-      <span className="mt-0.5 line-clamp-2 text-xs font-semibold text-slate-500">{debate.excerpt}</span>
+      <span className="mt-0.5 line-clamp-2 text-xs font-semibold text-slate-600">{debate.excerpt}</span>
+      {(debate.messagesCount ?? 0) > 0 ? (
+        <span className="mt-1 inline-block text-[10px] font-bold text-violet-700">
+          {debate.messagesCount} message{debate.messagesCount === 1 ? '' : 's'}
+        </span>
+      ) : null}
     </button>
   )
 }

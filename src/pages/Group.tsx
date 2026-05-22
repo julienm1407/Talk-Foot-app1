@@ -40,6 +40,8 @@ import {
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { EditGroupModal } from '../components/group/EditGroupModal'
 import { DebatePickerModal } from '../components/group/DebatePickerModal'
+import { LinkedDebateBanner } from '../components/group/LinkedDebateBanner'
+import { mergeDebatesForGroup } from '../utils/mergeGroupDebates'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { ShareButton } from '../components/ui/ShareButton'
 import type { SupporterChannel, SupporterGroup } from '../types/group'
@@ -147,10 +149,16 @@ export function GroupPage() {
   )
   const { customForGroup, addCustomDebate } = useCustomGroupDebates(group?.id)
 
-  const { getDebateById: resolveDebate, refresh: refreshDebates } = useDebates()
+  const { debates: cloudDebates, getDebateById: resolveDebate, refresh: refreshDebates } = useDebates()
+  const groupDebates = useMemo(
+    () => (group ? mergeDebatesForGroup(cloudDebates, customForGroup, group.id) : []),
+    [cloudDebates, customForGroup, group],
+  )
   const debate =
     debateFromQuery && group
-      ? resolveDebate(debateFromQuery) ?? customForGroup.find((d) => d.id === debateFromQuery)
+      ? groupDebates.find((d) => d.id === debateFromQuery) ??
+        resolveDebate(debateFromQuery) ??
+        customForGroup.find((d) => d.id === debateFromQuery)
       : undefined
 
   const {
@@ -191,6 +199,11 @@ export function GroupPage() {
     if (!group) return null
     return group.channels.find((c) => c.id === channelId) ?? group.channels[0]
   }, [channelId, group])
+
+  useEffect(() => {
+    if (!group || channel?.id !== 'general') return
+    void refreshDebates()
+  }, [group?.id, channel?.id, refreshDebates])
 
   const channelRef = useRef(channel)
   channelRef.current = channel
@@ -1222,7 +1235,11 @@ export function GroupPage() {
                     <span aria-hidden className="text-base leading-none">
                       {debateFromQuery ? '↻' : '🗣️'}
                     </span>
-                    {debateFromQuery ? 'Changer le débat du salon' : 'Débat du salon'}
+                    {debateFromQuery
+                      ? 'Changer le débat du salon'
+                      : groupDebates.length > 0
+                        ? `Débat du salon (${groupDebates.length})`
+                        : 'Débat du salon'}
                   </Button>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
@@ -1269,52 +1286,43 @@ export function GroupPage() {
 
             {debate && channel?.id === 'general' ? (
               <>
-                <div className="mt-3 hidden rounded-2xl border border-tf-dark/12 bg-gradient-to-r from-tf-night/[0.06] to-tf-ice/80 px-4 py-3 lg:mt-4 lg:block">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-tf-grey">
-                    Débat lié
-                  </p>
-                  <p className="mt-1 text-sm font-black text-tf-dark">{debate.title}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {debateFromQuery ? (
-                      <Link
-                        to={`/debate/${debateFromQuery}`}
-                        className="text-xs font-bold text-tf-electric-deep underline"
-                      >
-                        Voir la fiche débat
-                      </Link>
-                    ) : null}
-                    <span className="text-xs font-semibold text-tf-grey">
-                      · Messages ci-dessous dans le salon général
-                    </span>
-                  </div>
-                </div>
+                <LinkedDebateBanner
+                  debate={debate}
+                  debateId={debateFromQuery}
+                  className="mt-3 hidden lg:mt-4 lg:block"
+                />
                 <details
-                  className="mt-2 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/90 to-tf-ice/70 lg:hidden"
+                  className={cn(
+                    'mt-2 rounded-xl border lg:hidden',
+                    L ? 'border-tf-dark/12 bg-white' : 'border-white/15 bg-slate-950/90',
+                  )}
                   data-no-swipe="true"
                 >
                   <summary className="cursor-pointer list-none px-3 py-2.5 [&::-webkit-details-marker]:hidden">
-                    <p className="text-[9px] font-black uppercase tracking-[0.14em] text-tf-grey">
+                    <p
+                      className={cn(
+                        'text-[9px] font-black uppercase tracking-[0.14em]',
+                        L ? 'text-tf-app-muted' : 'text-sky-200/85',
+                      )}
+                    >
                       Débat lié — toucher pour déplier
                     </p>
-                    <p className="mt-0.5 line-clamp-2 text-xs font-black leading-snug text-tf-dark">{debate.title}</p>
-                    <p className="mt-1 text-[10px] font-bold text-tf-electric-deep">Détails + lien fiche</p>
+                    <p
+                      className={cn(
+                        'mt-0.5 line-clamp-2 text-xs font-black leading-snug',
+                        L ? 'text-tf-app-fg' : 'text-white',
+                      )}
+                    >
+                      {debate.title}
+                    </p>
                   </summary>
-                  <div className="space-y-2 border-t border-sky-200/50 px-3 py-2.5">
-                    <p className="text-xs font-semibold text-tf-grey/90">{debate.excerpt}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {debateFromQuery ? (
-                        <Link
-                          to={`/debate/${debateFromQuery}`}
-                          className="text-xs font-bold text-tf-electric-deep underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Voir la fiche débat
-                        </Link>
-                      ) : null}
-                      <span className="text-[11px] font-semibold text-tf-grey">
-                        Les messages restent dans ce salon.
-                      </span>
-                    </div>
+                  <div
+                    className={cn(
+                      'border-t px-3 py-2.5',
+                      L ? 'border-tf-dark/10' : 'border-white/10',
+                    )}
+                  >
+                    <LinkedDebateBanner debate={debate} debateId={debateFromQuery} className="!border-0 !bg-transparent !p-0 !shadow-none !ring-0" />
                   </div>
                 </details>
               </>
@@ -1473,6 +1481,7 @@ export function GroupPage() {
 
       <DebatePickerModal
         open={debatePickerOpen}
+        groupId={group.id}
         customForGroup={customForGroup}
         onClose={() => setDebatePickerOpen(false)}
         onPick={(debateId) => {
