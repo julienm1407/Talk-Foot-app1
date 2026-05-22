@@ -313,10 +313,9 @@ export function getAppSectionTheme(section: AppSectionId): SectionTheme {
 export function isRouteActiveForSection(
   section: AppSectionId,
   pathname: string,
-  hash = '',
+  _hash = '',
 ): boolean {
   const p = pathname || '/'
-  const h = hash || ''
   if (section === 'home') return p === '/' || p === ''
   if (section === 'matches') {
     return (
