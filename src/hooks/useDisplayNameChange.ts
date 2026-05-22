@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useUser } from '@clerk/clerk-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import {
@@ -9,7 +8,6 @@ import {
   type DisplayNameStatus,
 } from '../lib/supabase/displayName'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
-import { isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import {
   formatDisplayNameCooldown,
   sanitizeDisplayNameInput,
@@ -89,7 +87,6 @@ function isNameTakenLocal(name: string, userId: string): boolean {
 
 export function useDisplayNameChange() {
   const { user, updateProfile, refreshAuthUser } = useAuth()
-  const clerkUser = useUser()
   const [status, setStatus] = useState<DisplayNameStatus | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -145,11 +142,7 @@ export function useDisplayNameChange() {
         const result = await changeDisplayNameCloud(sb, user.id, name)
         setLoading(false)
         if (result.ok) {
-          if (isClerkAuthMode() && clerkUser.user) {
-            await clerkUser.user.update({ firstName: result.displayName, lastName: '' })
-          } else {
-            updateProfile(result.displayName)
-          }
+          updateProfile(result.displayName)
           await refreshAuthUser()
           await refreshStatus()
         }
@@ -217,7 +210,7 @@ export function useDisplayNameChange() {
         nextAllowedAt: nextSt.nextAllowedAt,
       }
     },
-    [user, updateProfile, refreshAuthUser, refreshStatus, clerkUser.user],
+    [user, updateProfile, refreshAuthUser, refreshStatus],
   )
 
   return {

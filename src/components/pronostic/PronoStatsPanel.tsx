@@ -1,6 +1,5 @@
-import { Badge } from '../ui/Badge'
 import { DisplayNameEditor } from '../profile/DisplayNameEditor'
-import { usePronoStats } from '../../hooks/usePronoStats'
+import { useBettingHubStats } from '../../hooks/useBettingHubStats'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { cn } from '../../utils/cn'
 
@@ -12,8 +11,8 @@ function Stat({ label, value, hint }: { label: string; value: string; hint: stri
       className={cn(
         'rounded-2xl border p-4',
         L
-          ? 'border-tf-dark/10 bg-tf-dark/[0.03]'
-          : 'border-white/10 bg-white/[0.05]',
+          ? 'border-tf-dark/10 bg-tf-dark/[0.04]'
+          : 'border-white/12 bg-white/[0.06]',
       )}
     >
       <div className="text-[10px] font-black uppercase tracking-wide text-tf-app-muted">{label}</div>
@@ -25,9 +24,9 @@ function Stat({ label, value, hint }: { label: string; value: string; hint: stri
   )
 }
 
-/** Stats pronos + pseudo modifiable — hub Pronostic uniquement. */
+/** Stats paris réels + pseudo — page Pronostic. */
 export function PronoStatsPanel() {
-  const { stats, badges } = usePronoStats()
+  const stats = useBettingHubStats()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
 
@@ -35,43 +34,30 @@ export function PronoStatsPanel() {
     <section
       id="stats-pronos"
       className={cn(
-        'scroll-mt-4 rounded-2xl border p-4 sm:p-5',
-        L
-          ? 'border-tf-dark/12 bg-white shadow-sm'
-          : 'border-white/12 bg-[#0d2135]/90 shadow-tf-elev-2',
+        'scroll-mt-4 space-y-4 border-t pt-5 sm:pt-6',
+        L ? 'border-tf-dark/10' : 'border-white/12',
       )}
       aria-labelledby="prono-stats-heading"
     >
-      <div className="mb-4 text-[11px] font-black tracking-[0.18em] text-tf-app-muted" id="prono-stats-heading">
-        PRÉDICTIONS
+      <div>
+        <div
+          className="mb-3 text-[11px] font-black tracking-[0.18em] text-tf-app-muted"
+          id="prono-stats-heading"
+        >
+          MON COMPTE PRONO
+        </div>
+        <DisplayNameEditor variant="compact" />
       </div>
 
-      <DisplayNameEditor />
-
-      {badges.length > 0 ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {badges.slice(0, 2).map((b) => (
-            <Badge
-              key={b.label}
-              tone={b.tone ?? 'neutral'}
-              className={b.className}
-              title={b.hint}
-            >
-              {b.label}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <Stat label="Pronos" value={`${stats.total}`} hint="Au total" />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        <Stat label="Paris" value={`${stats.total}`} hint="Au total" />
         <Stat
           label="Précision"
           value={`${stats.accuracy}%`}
-          hint={`${stats.won}/${stats.decided} validés`}
+          hint={stats.decided > 0 ? `${stats.won}/${stats.decided} gagnés` : 'Aucun pari validé'}
         />
-        <Stat label="Série" value={`x${stats.streak}`} hint="Victoires d’affilée" />
-        <Stat label="Points" value={`${stats.points}`} hint="Score pronos" />
+        <Stat label="Série" value={`x${stats.streak}`} hint="Gains d’affilée" />
+        <Stat label="Gains nets" value={`${stats.points}`} hint="Jetons gagnés (validés)" />
       </div>
     </section>
   )

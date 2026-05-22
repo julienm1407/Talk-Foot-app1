@@ -106,7 +106,12 @@ export function PronosticHubPage() {
           ) : (
             <Link
               to="/match"
-              className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-tf-dark/20 bg-white px-4 text-sm font-bold text-tf-dark shadow-sm transition hover:bg-tf-electric-soft"
+              className={cn(
+                'inline-flex min-h-10 items-center justify-center rounded-2xl border px-4 text-sm font-bold shadow-sm transition',
+                L
+                  ? 'border-tf-dark/20 bg-white text-tf-dark hover:bg-tf-electric-soft'
+                  : 'border-white/20 bg-white/10 text-white hover:bg-white/15',
+              )}
             >
               Voir les matchs
             </Link>

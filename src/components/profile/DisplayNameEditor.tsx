@@ -7,7 +7,13 @@ import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { useAppearance } from '../../contexts/AppearanceContext'
 
-export function DisplayNameEditor({ className }: { className?: string }) {
+export function DisplayNameEditor({
+  className,
+  variant = 'default',
+}: {
+  className?: string
+  variant?: 'default' | 'compact'
+}) {
   const { user } = useAuth()
   const { status, loading, applyChange, cooldownLabel } = useDisplayNameChange()
   const { appearance } = useAppearance()
@@ -47,13 +53,20 @@ export function DisplayNameEditor({ className }: { className?: string }) {
     }
   }
 
+  const nameClass =
+    variant === 'compact'
+      ? 'font-display text-lg font-black tracking-tight text-tf-app-fg sm:text-xl'
+      : 'font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-3xl'
+
   if (!editing) {
     return (
       <div className={cn('min-w-0', className)}>
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-3xl">
-            {displayName}
-          </h2>
+          {variant === 'compact' ? (
+            <span className={nameClass}>{displayName}</span>
+          ) : (
+            <h2 className={nameClass}>{displayName}</h2>
+          )}
           <button
             type="button"
             onClick={() => {
