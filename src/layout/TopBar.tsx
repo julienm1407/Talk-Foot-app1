@@ -22,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
 import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
 import { NavWalletBalances } from './NavWalletBalances'
+import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -67,6 +68,8 @@ export function TopBar() {
 
   const routeSection = getAppSectionFromPath(location.pathname)
   const stripeTheme = getAppSectionTheme(routeSection)
+  const season = useOptionalSeasonMode()
+  const isCdm = season?.isCdm2026 ?? false
   const profileTheme = getAppSectionTheme('profile')
   const profileActive = location.pathname.startsWith('/profile')
   const inbox = useInbox()
@@ -153,15 +156,32 @@ export function TopBar() {
             </div>
           </Link>
 
-          <p
-            className={cn(
-              'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[1180px]:block sm:text-[11px]',
-              L ? 'text-tf-dark/90' : 'text-white/92',
-            )}
-            title="Talk Foot — le réseau foot en continu"
-          >
-            Foot live, sans fin.
-          </p>
+          {isCdm ? (
+            <Link
+              to="/cdm"
+              title="Mode Coupe du Monde 2026 — accueil saison"
+              className="hidden items-center gap-1.5 rounded-full border px-2 py-1 font-display text-[10px] font-black uppercase tracking-[0.18em] shadow-sm transition hover:scale-[1.02] sm:inline-flex sm:text-[11px]"
+              style={{
+                background: 'linear-gradient(135deg, #06214a 0%, #0a2f5e 100%)',
+                color: '#f4c542',
+                borderColor: 'rgba(244,197,66,0.55)',
+                boxShadow: '0 0 0 1px rgba(244,197,66,0.25), 0 4px 12px rgba(6,33,74,0.35)',
+              }}
+            >
+              <span aria-hidden>★</span>
+              CDM 2026
+            </Link>
+          ) : (
+            <p
+              className={cn(
+                'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[1180px]:block sm:text-[11px]',
+                L ? 'text-tf-dark/90' : 'text-white/92',
+              )}
+              title="Talk Foot — le réseau foot en continu"
+            >
+              Foot live, sans fin.
+            </p>
+          )}
         </div>
 
         <nav
@@ -347,9 +367,19 @@ export function TopBar() {
         </div>
       </div>
       <div
-        className={cn('h-1 w-full opacity-95', stripeTheme.shellStripe)}
+        className={cn(
+          'h-1 w-full opacity-95',
+          isCdm
+            ? 'shadow-[inset_0_-2px_0_0_rgba(230,57,70,0.88)]'
+            : stripeTheme.shellStripe,
+        )}
+        style={
+          isCdm
+            ? { background: 'linear-gradient(90deg, #f4c542 0%, #ff7a45 55%, #e63946 100%)' }
+            : undefined
+        }
         aria-hidden
-        title={stripeTheme.label}
+        title={isCdm ? 'Coupe du Monde 2026' : stripeTheme.label}
       />
     </header>
   )

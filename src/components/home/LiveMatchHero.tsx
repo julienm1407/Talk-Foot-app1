@@ -292,6 +292,22 @@ export function LiveMatchHero({
             >
               {match.competition.shortName}
             </span>
+            {match.competition.id === 'wc-2026' ? (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md border font-black uppercase tracking-wide shadow-sm',
+                  compact ? 'px-1.5 py-0.5 text-[9px]' : 'px-2 py-1 text-[10px]',
+                )}
+                style={{
+                  background: 'linear-gradient(135deg, #06214a 0%, #0a2f5e 100%)',
+                  color: '#f4c542',
+                  borderColor: 'rgba(244,197,66,0.45)',
+                }}
+                title="Coupe du Monde 2026"
+              >
+                <span aria-hidden>★</span> CDM
+              </span>
+            ) : null}
           </div>
 
           <div

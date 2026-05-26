@@ -148,6 +148,15 @@ module.exports = {
           'c10-accent': 'var(--tf-c10-accent)',
           'c10-soft': 'var(--tf-c10-accent-soft)',
           'c10-glow': 'var(--tf-c10-accent-glow)',
+          /**
+           * Coupe du Monde 2026 — accents saisonniers.
+           * Doublon avec --tf-cdm-* dans design-tokens.css : à synchroniser
+           * si le designer fait évoluer la palette.
+           */
+          'cdm-gold': '#f4c542',
+          'cdm-pitch': '#16a34a',
+          'cdm-deep': '#06214a',
+          'cdm-red': '#d11414',
         },
       },
       keyframes: {

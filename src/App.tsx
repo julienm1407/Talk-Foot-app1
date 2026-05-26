@@ -20,7 +20,13 @@ import {
   DebatesPage,
   GroupPage,
   GroupsHubPage,
+  CdmHubPage,
+  CdmGroupsPage,
+  CdmBracketPage,
+  CdmStatsPage,
   HomePage,
+  NationPage,
+  NationsHubPage,
   ProfilePage,
   PronosticHubPage,
   RankingsPage,
@@ -32,6 +38,8 @@ import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
 import { CloudUserStateGate } from './contexts/CloudUserStateContext'
 import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
+import { SeasonModeProvider } from './contexts/SeasonModeContext'
+import { Cdm2026DataProvider } from './contexts/Cdm2026DataContext'
 import { AppShellProviders } from './providers/AppShellProviders'
 
 function RouteSuspense({ children }: { children: ReactNode }) {
@@ -96,15 +104,19 @@ export default function App() {
           path="/"
           element={
             <CloudUserStateGate>
-              <FanPreferencesProvider>
-                <MatchesProvider>
-                  <AppShellProviders>
-                    <MonEspaceDrawerProvider>
-                      <AppShell />
-                    </MonEspaceDrawerProvider>
-                  </AppShellProviders>
-                </MatchesProvider>
-              </FanPreferencesProvider>
+              <SeasonModeProvider>
+                <Cdm2026DataProvider>
+                  <FanPreferencesProvider>
+                    <MatchesProvider>
+                      <AppShellProviders>
+                        <MonEspaceDrawerProvider>
+                          <AppShell />
+                        </MonEspaceDrawerProvider>
+                      </AppShellProviders>
+                    </MatchesProvider>
+                  </FanPreferencesProvider>
+                </Cdm2026DataProvider>
+              </SeasonModeProvider>
             </CloudUserStateGate>
           }
         >
@@ -237,6 +249,54 @@ export default function App() {
             element={
               <RouteSuspense>
                 <ClubPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="cdm"
+            element={
+              <RouteSuspense>
+                <CdmHubPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="cdm/groupes"
+            element={
+              <RouteSuspense>
+                <CdmGroupsPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="cdm/bracket"
+            element={
+              <RouteSuspense>
+                <CdmBracketPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="cdm/stats"
+            element={
+              <RouteSuspense>
+                <CdmStatsPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="nations"
+            element={
+              <RouteSuspense>
+                <NationsHubPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="nation/:iso"
+            element={
+              <RouteSuspense>
+                <NationPage />
               </RouteSuspense>
             }
           />

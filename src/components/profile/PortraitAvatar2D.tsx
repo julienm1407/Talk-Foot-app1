@@ -331,7 +331,7 @@ export function PortraitAvatar2D({
         ) : (
           <div className="absolute inset-0 z-[2] flex items-end justify-center overflow-hidden pb-1 pt-14 sm:pb-2 sm:pt-16">
             <div
-              className="flex h-[118%] w-[122%] max-w-none origin-bottom scale-[1.14] items-end justify-center sm:scale-[1.18]"
+              className="relative flex h-[118%] w-[122%] max-w-none origin-bottom scale-[1.14] items-end justify-center sm:scale-[1.18]"
               style={{ transformOrigin: '50% 100%' }}
             >
               <CharacterAvatarSvg
@@ -343,6 +343,45 @@ export function PortraitAvatar2D({
                 pantsItemId={pantsId}
                 shoesItemId={shoesId}
               />
+              {kit?.jerseyVisual?.imageUrl ? (
+                <>
+                  {/* Maillot PNG officiel : posé sur le buste, evidé sur la zone tête */}
+                  <img
+                    src={kit.jerseyVisual.imageUrl}
+                    alt=""
+                    aria-hidden
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    style={{
+                      maskImage:
+                        'radial-gradient(ellipse 28% 22% at 50% 6%, transparent 70%, black 92%)',
+                      WebkitMaskImage:
+                        'radial-gradient(ellipse 28% 22% at 50% 6%, transparent 70%, black 92%)',
+                    }}
+                    className="pointer-events-none absolute left-1/2 top-[28%] w-[78%] -translate-x-1/2 select-none object-contain object-top drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)]"
+                  />
+                  {/* Re-rendu tête par-dessus pour rester devant le maillot */}
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      clipPath: 'inset(0 0 44% 0)',
+                      WebkitClipPath: 'inset(0 0 44% 0)',
+                    }}
+                    aria-hidden
+                  >
+                    <CharacterAvatarSvg
+                      look={look}
+                      jerseyOverride={kit?.jerseyVisual ?? null}
+                      supporterColors={null}
+                      variant="front"
+                      className="h-full w-full max-h-none max-w-none"
+                      pantsItemId={pantsId}
+                      shoesItemId={shoesId}
+                    />
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         )}

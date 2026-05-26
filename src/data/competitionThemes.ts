@@ -82,6 +82,15 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
     labelBg: 'bg-sky-100',
     labelText: 'text-sky-950',
   },
+  'wc-2026': {
+    id: 'wc-2026',
+    name: 'Coupe du Monde 2026',
+    shortName: 'CDM 26',
+    accent: '#06214a',
+    accent2: '#f4c542',
+    labelBg: 'bg-amber-100',
+    labelText: 'text-blue-950',
+  },
 }
 
 export function themeForCompetition(id: string | undefined) {

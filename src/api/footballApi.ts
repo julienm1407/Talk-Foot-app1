@@ -20,6 +20,7 @@ export const COMP_NAMES: Record<string, { name: string; shortName: string }> = {
   ucl: { name: 'Ligue des champions', shortName: 'C1' },
   uel: { name: 'Ligue Europa', shortName: 'EL' },
   uecl: { name: 'Ligue Europa Conf.', shortName: 'ECL' },
+  'wc-2026': { name: 'Coupe du Monde 2026', shortName: 'CDM' },
 }
 
 /**
@@ -36,6 +37,7 @@ export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
   2286: 'uel',
   1371: 'uecl',
   271: 'uecl',
+  5: 'wc-2026',
 }
 
 /** Ids ligue SportMonks pour `standings/live/leagues/{id}` (inverse de `SM_LEAGUE_ID_TO_COMP` Big 5). */
@@ -56,6 +58,7 @@ const LEAGUE_NAME_TO_COMP: [RegExp, string][] = [
   [/champions\s*league|uefa\s*champions|ligue\s*des\s*champions/i, 'ucl'],
   [/europa\s*league|ligue\s*europa(?!\s*conf)/i, 'uel'],
   [/conference\s*league|europa\s*conf/i, 'uecl'],
+  [/world\s*cup|coupe\s*du\s*monde|mundial|fifa\s*wc/i, 'wc-2026'],
 ]
 
 /** Mappe la ligue SportMonks → id compétition Talk Foot (thèmes, filtres calendrier). */

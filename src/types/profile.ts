@@ -34,9 +34,15 @@ export type AvatarItem = {
     stripeLight?: string
     /** Grille SVG pixel — silhouette maillot + couleurs (sans sponsor / logo) */
     pixelPreset?: PixelJerseyPresetId
+    /** Rendu image (PNG livré) : remplace le SVG vectoriel quand fourni. */
+    imageUrl?: string
   }
   /** Texte neutre du type d’inspiration (sans marque) */
   inspirationNote?: string
+  /** Collection — utilisée pour filtrer la boutique (mode CDM 2026, etc.) */
+  collection?: 'standard' | 'cdm2026'
+  /** Code nation ISO (alpha-3) si l’item est rattaché à une sélection nationale. */
+  nationIso?: string
 }
 
 export type AvatarIdentityItem = {

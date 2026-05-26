@@ -193,3 +193,82 @@ html:not([data-tf-appearance='light']) {
    */
   --tf-card-bg-light: var(--tf-c30-surface);
 }
+
+/**
+ * ╭─────────────────────────────────────────────╮
+ * │  Mode saison : Coupe du Monde 2026 (CDM)     │
+ * ╰─────────────────────────────────────────────╯
+ *
+ * Palette « stade mondial 26 » — bleu nuit FIFA, rouge stade, or trophée, vert pelouse.
+ * On surcharge les accents tout en gardant la marque (`--tf-brand-primary`).
+ *
+ * Activation : <html data-tf-season="cdm2026"> (posé par SeasonModeProvider).
+ */
+html[data-tf-season='cdm2026'] {
+  /* Identité CDM : rouge stade un poil plus chaud + glow doré */
+  --tf-brand-accent: #e63946;
+  --tf-brand-accent-hover: #c92d3a;
+  --tf-brand-accent-rgb: 230 57 70;
+
+  /* Or trophée + vert pelouse pour les accents secondaires */
+  --tf-cdm-gold: #f4c542;
+  --tf-cdm-gold-soft: rgba(244, 197, 66, 0.18);
+  --tf-cdm-pitch: #16a34a;
+  --tf-cdm-pitch-soft: rgba(22, 163, 74, 0.18);
+  --tf-cdm-sunset: #ff7a45;
+  --tf-cdm-deep: #06214a;
+
+  /* Repérage navigation — accents revus pour la saison */
+  --tf-nav-match: var(--tf-cdm-gold);
+  --tf-nav-groups: var(--tf-brand-accent);
+  --tf-nav-rankings: var(--tf-cdm-pitch);
+
+  /* Glow live légèrement plus généreux */
+  --tf-c10-accent-glow: rgba(230, 57, 70, 0.28);
+
+  /* Hero CDM : dégradé bleu nuit profond → bleu marine TF (jour & nuit) */
+  --tf-cdm-hero-bg:
+    radial-gradient(120% 100% at 12% 0%, rgba(244, 197, 66, 0.22) 0%, transparent 55%),
+    radial-gradient(120% 100% at 100% 100%, rgba(230, 57, 70, 0.28) 0%, transparent 60%),
+    linear-gradient(135deg, #06214a 0%, #0a2f5e 45%, #053258 100%);
+  --tf-cdm-hero-text: #ffffff;
+  --tf-cdm-hero-border: rgba(244, 197, 66, 0.32);
+}
+
+html[data-tf-season='cdm2026']:not([data-tf-appearance='light']) {
+  /* En nuit, la surface s'éclaire d'une touche bleu nuit FIFA */
+  --tf-c60-base: #04132a;
+  --tf-c60-mid: #061a36;
+  --tf-c60-deep: #030d1f;
+  --tf-c30-surface: #0c2244;
+  --tf-c30-surface-soft: #122c52;
+  --tf-c30-border: rgba(244, 197, 66, 0.18);
+}
+
+html[data-tf-season='cdm2026'][data-tf-appearance='light'] {
+  /* En jour, fond plus doux avec un voile or pour distinguer du mode standard */
+  --tf-c60-base: #fbf6ec;
+  --tf-c60-mid: #f5ecda;
+  --tf-c60-deep: #efe3c5;
+  --tf-c30-border: rgba(6, 33, 74, 0.14);
+}
+
+/* ─── Ambiance globale CDM : couche décorative fixée en pseudo-elem (n'affecte pas le scroll) ─── */
+html[data-tf-season='cdm2026']::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(50rem 28rem at 50% -8rem, var(--tf-cdm-gold-soft) 0%, transparent 70%),
+    radial-gradient(40rem 24rem at 100% 100%, rgba(230, 57, 70, 0.12) 0%, transparent 70%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='92' viewBox='0 0 80 92'><g fill='none' stroke='%23f4c542' stroke-width='1' stroke-opacity='0.07'><polygon points='40,4 73,23 73,69 40,88 7,69 7,23'/></g></svg>");
+  background-repeat: no-repeat, no-repeat, repeat;
+}
+
+/* Garantit que le contenu reste au-dessus de la couche décorative */
+html[data-tf-season='cdm2026'] body > * {
+  position: relative;
+  z-index: 1;
+}

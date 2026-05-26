@@ -20,6 +20,7 @@ export type { FanPreferencesStoredShape }
 
 const STORAGE_KEY = 'talkfoot.fanPreferences.v1'
 const MAX_FAVORITE_CLUBS = 3
+const MAX_FAVORITE_NATIONS = 5
 
 type StoredShape = FanPreferencesStoredShape
 
@@ -32,12 +33,24 @@ function normalizeClubIds(stored: StoredShape): string[] {
   return []
 }
 
+function normalizeNationIsos(stored: StoredShape): string[] {
+  const raw = stored.favoriteNationIsos
+  if (!Array.isArray(raw)) return []
+  return [
+    ...new Set(
+      raw.filter((v): v is string => typeof v === 'string' && v.length > 0).map((v) => v.toUpperCase()),
+    ),
+  ].slice(0, MAX_FAVORITE_NATIONS)
+}
+
 export type FanPreferencesState = {
   favoriteLeagueId: string | null
   /** Premier club (rétrocompat & teinte maillot) */
   favoriteClubId: string | null
   /** Jusqu’à 3 clubs dans la ligue favorite */
   favoriteClubIds: string[]
+  /** Sélections nationales suivies (ISO-3) */
+  favoriteNationIsos: string[]
   /** Onboarding terminé dès qu’une ligue favorite est choisie (clubs optionnels) */
   preferencesComplete: boolean
   hideRivalSalons: boolean
@@ -48,6 +61,10 @@ type FanPreferencesContextValue = FanPreferencesState & {
   setFavoriteLeagueId: (id: string | null) => void
   setFavoriteClubId: (id: string | null) => void
   setFavoriteClubIds: (ids: string[]) => void
+  setFavoriteNationIsos: (isos: string[]) => void
+  toggleFavoriteNation: (iso: string) => void
+  isNationFavorite: (iso: string) => boolean
+  maxFavoriteNations: number
   setHideRivalSalons: (v: boolean) => void
   setVirageMode: (v: boolean) => void
   completeOnboarding: (leagueId: string, clubIds: string[]) => void
@@ -79,6 +96,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       favoriteLeagueId: stored.favoriteLeagueId ?? null,
       favoriteClubId,
       favoriteClubIds,
+      favoriteNationIsos: normalizeNationIsos(stored),
       preferencesComplete: stored.preferencesComplete ?? false,
       hideRivalSalons: stored.hideRivalSalons ?? false,
       virageMode: stored.virageMode ?? false,
@@ -116,6 +134,15 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
           const id = next.favoriteClubId
           next.favoriteClubIds = id ? [id] : []
         }
+        if (next.favoriteNationIsos !== undefined) {
+          next.favoriteNationIsos = [
+            ...new Set(
+              (next.favoriteNationIsos ?? [])
+                .filter((v): v is string => typeof v === 'string' && v.length > 0)
+                .map((v) => v.toUpperCase()),
+            ),
+          ].slice(0, MAX_FAVORITE_NATIONS)
+        }
         return next
       }
       if (cloud) {
@@ -141,6 +168,29 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
         favoriteClubIds: [...new Set(ids.filter(Boolean))].slice(0, MAX_FAVORITE_CLUBS),
       }),
     [patch],
+  )
+  const setFavoriteNationIsos = useCallback(
+    (isos: string[]) =>
+      patch({
+        favoriteNationIsos: isos
+          .map((v) => v.toUpperCase())
+          .filter((v): v is string => typeof v === 'string' && v.length > 0),
+      }),
+    [patch],
+  )
+  const toggleFavoriteNation = useCallback(
+    (iso: string) => {
+      const code = iso.toUpperCase()
+      const current = state.favoriteNationIsos
+      const exists = current.includes(code)
+      const next = exists ? current.filter((c) => c !== code) : [code, ...current]
+      patch({ favoriteNationIsos: next.slice(0, MAX_FAVORITE_NATIONS) })
+    },
+    [patch, state.favoriteNationIsos],
+  )
+  const isNationFavorite = useCallback(
+    (iso: string) => state.favoriteNationIsos.includes(iso.toUpperCase()),
+    [state.favoriteNationIsos],
   )
   const setHideRivalSalons = useCallback(
     (v: boolean) => patch({ hideRivalSalons: v }),
@@ -183,6 +233,10 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       setFavoriteLeagueId,
       setFavoriteClubId,
       setFavoriteClubIds,
+      setFavoriteNationIsos,
+      toggleFavoriteNation,
+      isNationFavorite,
+      maxFavoriteNations: MAX_FAVORITE_NATIONS,
       setHideRivalSalons,
       setVirageMode,
       completeOnboarding,
@@ -196,6 +250,9 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       setFavoriteLeagueId,
       setFavoriteClubId,
       setFavoriteClubIds,
+      setFavoriteNationIsos,
+      toggleFavoriteNation,
+      isNationFavorite,
       setHideRivalSalons,
       setVirageMode,
       completeOnboarding,

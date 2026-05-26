@@ -36,6 +36,13 @@ import { getSportMonksTokenSource } from '../utils/apiTokens'
 import { HomeSiteSearch, type HomeSiteSearchHandle } from '../components/search/HomeSiteSearch'
 import { SearchTrends12h } from '../components/search/SearchTrends12h'
 import { HomeEditorialIntro } from '../components/ads/HomeEditorialIntro'
+import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
+import { CdmHomeHero } from '../components/cdm/CdmHomeHero'
+import { CdmTodayMatches } from '../components/cdm/CdmTodayMatches'
+import { CdmNationsRail } from '../components/cdm/CdmNationsRail'
+import { CdmHomeReminder } from '../components/cdm/CdmHomeReminder'
+import { FavoriteNationsHomeSection } from '../components/cdm/FavoriteNationsHomeSection'
+import { FavoriteNationsAlertBar } from '../components/cdm/FavoriteNationsAlertBar'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -51,6 +58,8 @@ export function HomePage() {
   } = useFanPreferences()
   const { supporterTintActive, team } = useSupporterTintMode()
   const { appearance } = useAppearance()
+  const season = useOptionalSeasonMode()
+  const isCdm = season?.isCdm2026 ?? false
 
   const accessPrefs = useMemo(
     () => ({
@@ -75,8 +84,19 @@ export function HomePage() {
 
   const activeGroupsRail = visibleGroups.slice(0, 2)
 
-  const displayMatches = carouselMatches
-  const displayMatchesFull = matches
+  /**
+   * En mode CDM 2026, on remplace les flux matchs nationaux par les seuls matchs
+   * Coupe du Monde (`competition.id === 'wc-2026'`). Pendant la fenêtre du Mondial,
+   * les championnats sont en pause — on ne veut pas montrer un encart vide.
+   */
+  const displayMatches = useMemo(
+    () => (isCdm ? carouselMatches.filter((m) => m.competition.id === 'wc-2026') : carouselMatches),
+    [carouselMatches, isCdm],
+  )
+  const displayMatchesFull = useMemo(
+    () => (isCdm ? matches.filter((m) => m.competition.id === 'wc-2026') : matches),
+    [matches, isCdm],
+  )
 
   /** Teinte supporter ≠ fil messages : seul le fil équipe de cœur (Profil) filtre chats / top com. */
   const personalizedNews = useMemo(
@@ -143,13 +163,38 @@ export function HomePage() {
   )
   const spanTwoCenter = 'min-w-0 md:col-span-2 md:col-start-1 md:row-start-1'
 
+  /**
+   * Bloc CDM 2026 complémentaire : matchs du jour + rail nations.
+   *
+   * Le hero CDM est affiché DANS le hub central (à la place des live championnats
+   * en mode CDM). Ici on ajoute juste le contenu enrichi autour.
+   */
+  const cdmTopBlockMobile = isCdm ? (
+    <div className="mx-auto w-full max-w-tf-content space-y-4">
+      <FavoriteNationsHomeSection />
+      <CdmTodayMatches />
+      <CdmNationsRail variant="tile" title="Sélections CDM" hint="Drapeau + fiche pays" />
+    </div>
+  ) : null
+
+  const cdmTopBlockDesktop = isCdm ? (
+    <div className="space-y-4">
+      <FavoriteNationsHomeSection />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <CdmTodayMatches />
+        <CdmNationsRail variant="tile" title="Sélections CDM" hint="Drapeau + fiche pays" />
+      </div>
+    </div>
+  ) : null
+
   const wideHomeBelowFold = (
     <>
+      {cdmTopBlockDesktop}
       <HomeEditorialIntro />
       <section className={cn('w-full', trendsShell)} aria-label="Débats tendances">
         <TrendingDebatesSection debates={trendingDebates} loading={debatesLoading} variant="band" />
       </section>
-      <FavoritesEncart className="w-full" />
+      {isCdm ? null : <FavoritesEncart className="w-full" />}
       <div className="w-full space-y-6 sm:space-y-8">
         <div className="tf-home-block rounded-[20px] p-3 sm:p-4 lg:rounded-2xl">
           <AdSlot
@@ -242,6 +287,11 @@ export function HomePage() {
 
       <div className="md:hidden space-y-6 sm:space-y-8">
       <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
+      {cdmTopBlockMobile ? (
+        <div className="mx-auto w-full max-w-tf-content px-3 sm:px-4">
+          {cdmTopBlockMobile}
+        </div>
+      ) : null}
       <section
         className={cn(
           'mx-auto w-full max-w-tf-content rounded-2xl border p-2.5',
@@ -270,13 +320,19 @@ export function HomePage() {
           onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
         />
       </section>
+      {isCdm ? (
+        <CdmHomeReminder className="mx-auto w-full max-w-tf-content" />
+      ) : null}
+      {isCdm ? (
+        <FavoriteNationsAlertBar className="mx-auto w-full max-w-tf-content" />
+      ) : null}
       <HomeLandingHub
         appearance={appearance}
         className={cn('mx-auto w-full max-w-tf-content', hubGlassPanel(appearance))}
         compact
         onCreateGroup={() => setCreateOpen(true)}
       />
-      <FavoritesEncart className="mx-auto max-w-tf-content" />
+      {isCdm ? null : <FavoritesEncart className="mx-auto max-w-tf-content" />}
       <HomeEditorialIntro />
       <div className="mx-auto w-full max-w-tf-content space-y-6 sm:space-y-8">
         {supporterTintActive && team ? (
@@ -372,6 +428,8 @@ export function HomePage() {
               </div>
             ) : upcomingSortedForHome.length > 0 ? (
               <HomeUpcomingHero matches={upcomingSortedForHome} />
+            ) : isCdm ? (
+              <CdmHomeHero />
             ) : (
               <Card className="border-dashed border-tf-grey-pastel/60 p-6 text-center sm:p-8" elevation="soft">
                 <p className="text-sm font-bold text-tf-grey">

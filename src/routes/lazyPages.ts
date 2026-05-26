@@ -54,3 +54,21 @@ export const AdminPage = lazy(() =>
 export const DataSourcesSettingsPage = lazy(() =>
   import('../pages/DataSourcesSettings').then((m) => ({ default: m.DataSourcesSettingsPage })),
 )
+export const NationPage = lazy(() =>
+  import('../pages/NationPage').then((m) => ({ default: m.NationPage })),
+)
+export const NationsHubPage = lazy(() =>
+  import('../pages/NationsHub').then((m) => ({ default: m.NationsHub })),
+)
+export const CdmHubPage = lazy(() =>
+  import('../pages/CdmHub').then((m) => ({ default: m.CdmHubPage })),
+)
+export const CdmGroupsPage = lazy(() =>
+  import('../pages/CdmGroups').then((m) => ({ default: m.CdmGroupsPage })),
+)
+export const CdmBracketPage = lazy(() =>
+  import('../pages/CdmBracket').then((m) => ({ default: m.CdmBracketPage })),
+)
+export const CdmStatsPage = lazy(() =>
+  import('../pages/CdmStats').then((m) => ({ default: m.CdmStatsPage })),
+)

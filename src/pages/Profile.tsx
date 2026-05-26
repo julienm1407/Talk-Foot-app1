@@ -25,6 +25,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
+import { SeasonAdminToggle } from '../components/admin/SeasonAdminToggle'
 import { DisplayNameEditor } from '../components/profile/DisplayNameEditor'
 import { useAppearance } from '../contexts/AppearanceContext'
 import type { Appearance } from '../contexts/AppearanceContext'
@@ -180,21 +181,24 @@ export function ProfilePage() {
 
       <div id="compte" className="scroll-mt-4 space-y-3 sm:space-y-4">
         {authUser?.isAdmin ? (
-          <Link
-            to="/admin"
-            className={cn(
-              TF_FOCUS_VISIBLE,
-              'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
-              L
-                ? 'border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-950 hover:border-amber-500/70 hover:shadow-md'
-                : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:border-amber-400/55 hover:shadow-md',
-            )}
-          >
-            <span>Administration du site</span>
-            <span aria-hidden className="text-lg">
-              →
-            </span>
-          </Link>
+          <>
+            <Link
+              to="/admin"
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
+                L
+                  ? 'border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-950 hover:border-amber-500/70 hover:shadow-md'
+                  : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:border-amber-400/55 hover:shadow-md',
+              )}
+            >
+              <span>Administration du site</span>
+              <span aria-hidden className="text-lg">
+                →
+              </span>
+            </Link>
+            <SeasonAdminToggle />
+          </>
         ) : null}
 
         <ProfilePrivacySection />

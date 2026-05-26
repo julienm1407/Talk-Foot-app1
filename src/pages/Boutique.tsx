@@ -28,6 +28,8 @@ import {
 } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
+import { CdmShopBanner } from '../components/cdm/CdmShopBanner'
+import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 
 export function BoutiquePage() {
   const { wallet, addMedals, spendMedals, spendTokens, claimDailyTokenBonus, dailyTokenBonusStatus } = useWallet()
@@ -46,6 +48,8 @@ export function BoutiquePage() {
   const dailyPrice = dailyOfferDiscountedCost(dailyItem)
   const shop = getAppSectionTheme('boutique')
   const dailyBonus = dailyTokenBonusStatus()
+  const season = useOptionalSeasonMode()
+  const isCdm = season?.isCdm2026 ?? false
 
   const catalogRows = useMemo(
     () => buildCatalogRows(catalogFilter, catalogSearch),
@@ -108,6 +112,7 @@ export function BoutiquePage() {
 
   return (
     <div className="space-y-8">
+      {isCdm ? <CdmShopBanner /> : null}
       <div
         className={cn(
           'relative overflow-hidden rounded-3xl border border-tf-dark/10 shadow-[0_24px_80px_rgba(1,30,51,0.12)]',

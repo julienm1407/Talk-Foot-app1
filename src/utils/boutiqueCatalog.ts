@@ -1,6 +1,6 @@
 import type { AvatarItem, MedalPack } from '../types/profile'
 import { baseAvatarItems, medalPacks } from '../data/shop'
-import { inspiredJerseyItems } from '../data/inspiredJerseys'
+import { cdm2026JerseyItems } from '../data/cdm2026Jerseys'
 
 export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'outfit_lower'
 
@@ -40,7 +40,7 @@ export function filterMedalPacksByQuery(query: string): MedalPack[] {
 
 export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogRow[] {
   const q = query.trim().toLowerCase()
-  let items = [...baseAvatarItems, ...inspiredJerseyItems]
+  let items = [...baseAvatarItems, ...cdm2026JerseyItems]
 
   if (filter === 'accessories') {
     items = items.filter((i) => i.slot === 'accessory')

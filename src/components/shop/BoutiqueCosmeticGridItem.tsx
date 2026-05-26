@@ -32,11 +32,21 @@ export function BoutiqueCosmeticGridItem({
   handleBuyCosmetic: (item: AvatarItem, currency: 'medals' | 'tokens', medalCost?: number) => void
 }) {
   const owned = ownsItem(item.id)
+  /**
+   * Pour les maillots officiels CDM 2026 (PNG photo-réaliste superposé sur
+   * l'avatar), on coupe l'animation flottante : le mouvement « lévite »
+   * donnait l'impression que le maillot vibrait au-dessus du personnage,
+   * et c'est précisément ce qu'on veut éviter pour un rendu produit propre.
+   */
+  const isPhotoJersey = Boolean(item.jerseyVisual?.imageUrl)
   return (
     <ShopRarityEncart rarity={item.rarity}>
       <div className="flex h-full min-h-0 flex-1 flex-col">
-        <div className="tf-boutique-3dwrap flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-          <div className="tf-boutique-float-target">
+        <div className={cn(
+          'flex min-h-0 flex-1 items-center justify-center overflow-hidden',
+          isPhotoJersey ? null : 'tf-boutique-3dwrap',
+        )}>
+          <div className={isPhotoJersey ? undefined : 'tf-boutique-float-target'}>
             <JerseyPreviewThumb item={item} size="showcase" />
           </div>
         </div>

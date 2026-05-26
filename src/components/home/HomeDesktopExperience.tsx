@@ -21,6 +21,10 @@ import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
 import { HomeSiteSearch, type HomeSiteSearchHandle } from '../search/HomeSiteSearch'
 import { SearchTrends12h } from '../search/SearchTrends12h'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
+import { CdmHomeReminder } from '../cdm/CdmHomeReminder'
+import { FavoriteNationsHomeSection } from '../cdm/FavoriteNationsHomeSection'
+import { FavoriteNationsAlertBar } from '../cdm/FavoriteNationsAlertBar'
+import { useOptionalSeasonMode } from '../../contexts/SeasonModeContext'
 
 function DesktopHubLiveStrip({
   match,
@@ -115,6 +119,8 @@ export function HomeDesktopExperience({
 
   const centerScrollRef = useRef<HTMLDivElement>(null)
   const homeSearchRef = useRef<HomeSiteSearchHandle>(null)
+  const cdmSeason = useOptionalSeasonMode()
+  const isCdm = cdmSeason?.isCdm2026 ?? false
   const [centerScrollFadeBottom, setCenterScrollFadeBottom] = useState(true)
 
   const syncCenterScrollFade = useCallback(() => {
@@ -190,6 +196,10 @@ export function HomeDesktopExperience({
             />
           </div>
         </div>
+
+        {isCdm ? <CdmHomeReminder /> : null}
+        {isCdm ? <FavoriteNationsAlertBar /> : null}
+        {isCdm ? <FavoriteNationsHomeSection /> : null}
 
         <section
           aria-labelledby="desk-matches-primary-heading"

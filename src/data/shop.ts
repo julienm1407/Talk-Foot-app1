@@ -1,5 +1,5 @@
 import type { AvatarItem, MedalPack } from '../types/profile'
-import { inspiredJerseyItems } from './inspiredJerseys'
+import { cdm2026JerseyItems } from './cdm2026Jerseys'
 
 /** Référence boutique : équivalent jetons pour un prix en médailles (hors promos). */
 export const TOKENS_PER_MEDAL = 200
@@ -185,8 +185,11 @@ export const baseAvatarItems: AvatarItem[] = [
   { id: 'acc-4', name: 'Fumigène virtuel', slot: 'accessory', emoji: '💨', cost: 40, rarity: 'epic', description: 'Effet tribune premium' },
 ]
 
-/** Équipement classique + maillots inspirés (personnalisables à l’achat) */
-export const avatarItems: AvatarItem[] = [...baseAvatarItems, ...inspiredJerseyItems]
+/** Équipement classique + collection officielle CDM 2026 (PNG). */
+export const avatarItems: AvatarItem[] = [
+  ...baseAvatarItems,
+  ...cdm2026JerseyItems,
+]
 
 /**
  * Packs de médailles — achat en euros (simulation CB).
