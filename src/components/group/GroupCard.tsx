@@ -7,6 +7,7 @@ import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { CLUB_OFFICIAL_LOGO_BY_ID } from '../../data/clubOfficialLogoUrls'
+import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 
 const kindLabel: Record<NonNullable<SupporterGroup['groupKind']>, string> = {
   public: 'Public',
@@ -143,6 +144,8 @@ export function GroupCard({
   const encart = variant === 'encart'
   const railDense = rail && dense
   const mainClubId = group.fanTags?.clubIds?.[0] ?? null
+  const mainClubName = mainClubId ? ALL_CLUBS_BY_ID[mainClubId]?.shortName ?? ALL_CLUBS_BY_ID[mainClubId]?.name : null
+  const countryLabel = group.fanTags?.countryLabels?.[0] ?? null
   const matched = mainClubId
     ? matches.find(
         (m) =>
@@ -261,6 +264,13 @@ export function GroupCard({
                   </>
                 )}
               </div>
+              {countryLabel || mainClubName ? (
+                <div className={cn('mt-1 text-[10px] font-bold', subC)}>
+                  {countryLabel ? `🌍 ${countryLabel}` : null}
+                  {countryLabel && mainClubName ? ' · ' : null}
+                  {mainClubName ? `⚽ ${mainClubName}` : null}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -399,6 +409,13 @@ export function GroupCard({
                 {group.location ? `${group.location} • ` : ''}
                 {group.members} membres
               </div>
+              {countryLabel || mainClubName ? (
+                <div className={cn('mt-1 line-clamp-1 text-[11px] font-bold', subC)}>
+                  {countryLabel ? `🌍 ${countryLabel}` : null}
+                  {countryLabel && mainClubName ? ' · ' : null}
+                  {mainClubName ? `⚽ ${mainClubName}` : null}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -538,6 +555,13 @@ export function GroupCard({
                 {group.location ? `${group.location} • ` : ''}
                 {group.members} membres
               </div>
+              {countryLabel || mainClubName ? (
+                <div className={cn('mt-1 truncate text-xs font-bold', subC)}>
+                  {countryLabel ? `🌍 ${countryLabel}` : null}
+                  {countryLabel && mainClubName ? ' · ' : null}
+                  {mainClubName ? `⚽ ${mainClubName}` : null}
+                </div>
+              ) : null}
             </div>
           </div>
 

@@ -14,6 +14,14 @@ export type NewsItem = {
   publishedAt?: string
   /** Paragraphes du corps — page article si présent avec slug */
   body?: string[]
+  /** Source markdown auteur (V1 éditeur). */
+  bodyMarkdown?: string
+  /** Visuel de couverture (optionnel). */
+  coverImageUrl?: string
+  /** Signature auteur (optionnel). */
+  authorName?: string
+  /** Date de dernière mise à jour ISO. */
+  updatedAt?: string
 }
 
 // Images football Unsplash — licence Unsplash (usage libre) https://unsplash.com/license

@@ -14,6 +14,9 @@ import {
 import { GroupCard } from './GroupCard'
 import { GROUP_THEME_PRESETS } from '../../data/groupThemePresets'
 import type { GroupTheme } from '../../types/group'
+import { ALL_CLUBS_CATALOG } from '../../data/allClubsCatalog'
+import type { ClubCatalogEntry } from '../../data/allClubsCatalog'
+import { CONFEDERATIONS, NATIONS } from '../../data/nations'
 
 export function CreateGroupModal({
   open,
@@ -42,6 +45,8 @@ export function CreateGroupModal({
   const [hashtags, setHashtags] = useState<string[]>([])
   const [tagDraft, setTagDraft] = useState('')
   const [tagError, setTagError] = useState<string | null>(null)
+  const [affiliationCountry, setAffiliationCountry] = useState('')
+  const [affiliationClubId, setAffiliationClubId] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -59,7 +64,51 @@ export function CreateGroupModal({
     setHashtags([])
     setTagDraft('')
     setTagError(null)
+    setAffiliationCountry('')
+    setAffiliationClubId('')
   }, [open])
+
+  const countrySuggestions = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...CONFEDERATIONS.map((c) => c.label),
+          ...NATIONS.map((n) => n.nameFr),
+          'International',
+          'Europe',
+          'Afrique',
+          'Asie',
+          'Amérique du Nord',
+          'Amérique du Sud',
+          'Moyen-Orient',
+          'Caraïbes',
+        ]),
+      ),
+    [],
+  )
+
+  const clubsByLeague = useMemo(() => {
+    const byLeague = new Map<string, { leagueName: string; clubs: ClubCatalogEntry[] }>()
+    for (const club of ALL_CLUBS_CATALOG) {
+      const found = byLeague.get(club.leagueId)
+      if (!found) {
+        byLeague.set(club.leagueId, { leagueName: club.leagueName, clubs: [club] })
+      } else {
+        found.clubs.push(club)
+      }
+    }
+    return Array.from(byLeague.values())
+      .map((entry) => ({
+        ...entry,
+        clubs: [...entry.clubs].sort((a, b) => a.name.localeCompare(b.name, 'fr')),
+      }))
+      .sort((a, b) => a.leagueName.localeCompare(b.leagueName, 'fr'))
+  }, [])
+
+  const selectedClub = useMemo(
+    () => ALL_CLUBS_CATALOG.find((club) => club.id === affiliationClubId) ?? null,
+    [affiliationClubId],
+  )
 
   const previewHashtags = useMemo(
     () => normalizeHashtagList([...hashtags, ...parseHashtagInput(tagDraft)]),
@@ -97,6 +146,14 @@ export function CreateGroupModal({
       intensity,
       groupKind,
       hashtags: previewHashtags.length ? previewHashtags : undefined,
+      fanTags:
+        selectedClub || affiliationCountry.trim()
+          ? {
+              leagueIds: selectedClub ? [selectedClub.leagueId] : [],
+              clubIds: selectedClub ? [selectedClub.id] : [],
+              countryLabels: affiliationCountry.trim() ? [affiliationCountry.trim()] : undefined,
+            }
+          : undefined,
       channels: [
         {
           id: 'general',
@@ -132,6 +189,8 @@ export function CreateGroupModal({
     motto,
     name,
     previewHashtags,
+    selectedClub,
+    affiliationCountry,
   ])
 
   if (!open) return null
@@ -241,6 +300,64 @@ export function CreateGroupModal({
             </div>
 
             <div className="mt-4 space-y-4">
+              <div>
+                <div className="text-sm font-black text-slate-900">Affiliation supporters</div>
+                <p className="mt-1 text-xs font-semibold text-slate-600">
+                  Tu peux rattacher ton groupe à un pays/zone (libre) et à un club de l’appli.
+                </p>
+                <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="create-group-country"
+                      className="text-xs font-bold text-slate-700/70"
+                    >
+                      Pays ou zone
+                    </label>
+                    <Input
+                      id="create-group-country"
+                      list="create-group-country-list"
+                      value={affiliationCountry}
+                      onChange={(e) => setAffiliationCountry(e.target.value)}
+                      placeholder="Ex : France, Maghreb, Europe…"
+                      className="mt-1"
+                    />
+                    <datalist id="create-group-country-list">
+                      {countrySuggestions.map((country) => (
+                        <option key={country} value={country} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="create-group-club"
+                      className="text-xs font-bold text-slate-700/70"
+                    >
+                      Club affilié (optionnel)
+                    </label>
+                    <select
+                      id="create-group-club"
+                      value={affiliationClubId}
+                      onChange={(e) => setAffiliationClubId(e.target.value)}
+                      className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900"
+                    >
+                      <option value="">Aucun club spécifique</option>
+                      {clubsByLeague.map((entry) => (
+                        <optgroup
+                          key={entry.leagueName}
+                          label={`${entry.leagueName} (${entry.clubs.length})`}
+                        >
+                          {entry.clubs.map((club) => (
+                            <option key={club.id} value={club.id}>
+                              {club.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <div className="text-sm font-black text-slate-900">Visibilité</div>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -503,6 +620,7 @@ export function CreateGroupModal({
                   }
                   const theme: GroupTheme = { primary, secondary, background }
                   if (accent.trim()) theme.accent = accent.trim()
+                  const cleanCountry = affiliationCountry.trim()
                   onCreate({
                     name: trimmedName,
                     emoji: (emoji.trim() || '🧢').slice(0, 8),
@@ -514,6 +632,14 @@ export function CreateGroupModal({
                     channels: draft.channels,
                     groupKind,
                     hashtags: finalTags.length > 0 ? finalTags : undefined,
+                    fanTags:
+                      selectedClub || cleanCountry
+                        ? {
+                            leagueIds: selectedClub ? [selectedClub.leagueId] : [],
+                            clubIds: selectedClub ? [selectedClub.id] : [],
+                            countryLabels: cleanCountry ? [cleanCountry] : undefined,
+                          }
+                        : undefined,
                   })
                   onClose()
                 }}

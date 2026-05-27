@@ -112,14 +112,14 @@ export function TopBar() {
   return (
     <header
       className={cn(
-        'tf-app-topbar relative sticky top-0 z-40 shrink-0 overflow-visible border-b backdrop-blur-md',
+        'tf-app-topbar relative sticky top-0 z-40 w-full min-w-0 shrink-0 overflow-visible border-b backdrop-blur-md',
         L
           ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-tf-elev-nav-light'
           : 'border-tf-dark-alt/40 bg-tf-dark shadow-tf-elev-nav-dark',
       )}
     >
       <div
-        className="relative mx-auto w-full min-w-0 max-w-tf-content px-2 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3"
+        className="relative mx-auto w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] py-2 sm:py-2.5 md:py-3"
       >
         <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[700px]:gap-3 lg:gap-4">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
@@ -368,7 +368,7 @@ export function TopBar() {
       </div>
       <div
         className={cn(
-          'h-1 w-full opacity-95',
+          'block h-1 w-full min-w-full opacity-95',
           isCdm
             ? 'shadow-[inset_0_-2px_0_0_rgba(230,57,70,0.88)]'
             : stripeTheme.shellStripe,

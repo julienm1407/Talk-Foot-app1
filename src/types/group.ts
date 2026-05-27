@@ -46,6 +46,8 @@ export type SupporterChannel = {
 export type GroupFanTags = {
   leagueIds: string[]
   clubIds: string[]
+  /** Libellés libres pour rattachement pays/zone (ex: France, Maghreb, Europe). */
+  countryLabels?: string[]
 }
 
 /** Soutien actif sur le salon (facepile — auteurs réels des 30 dernières minutes). */

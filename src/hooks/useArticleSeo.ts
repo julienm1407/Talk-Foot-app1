@@ -51,6 +51,7 @@ type ArticleSeoInput = {
   publishedAt: string
   modifiedAt?: string
   section?: string
+  authorName?: string
 }
 
 /**
@@ -107,7 +108,11 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
       image: [opts.ogImage],
       datePublished: opts.publishedAt,
       dateModified: opts.modifiedAt ?? opts.publishedAt,
-      author: { '@type': 'Organization', name: SITE_NAME },
+      creator: opts.authorName?.trim() || SITE_NAME,
+      author: {
+        '@type': 'Person',
+        name: opts.authorName?.trim() || SITE_NAME,
+      },
       publisher: {
         '@type': 'Organization',
         name: SITE_NAME,

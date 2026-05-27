@@ -30,6 +30,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { AdSlot } from '../components/ui/AdSlot'
 import { EditorialProse } from '../components/ads/EditorialProse'
+import { ArticleMarkdown } from '../components/article/ArticleMarkdown'
 
 /** Lisibles sur panneau clair (jour) et sur verre sombre (nuit). */
 function articleTagClass(tag: string, light: boolean): string {
@@ -129,9 +130,11 @@ export function ArticlePage() {
       title: article.title,
       description: article.excerpt,
       canonicalPath: `/article/${article.slug}`,
-      ogImage: footballImageUrl(article.id, 'og'),
+      ogImage: article.coverImageUrl || footballImageUrl(article.id, 'og'),
       publishedAt: article.publishedAt ?? new Date().toISOString(),
+      modifiedAt: article.updatedAt ?? article.publishedAt ?? new Date().toISOString(),
       section: article.tag,
+      authorName: article.authorName,
     }
   }, [article])
 
@@ -236,7 +239,7 @@ export function ArticlePage() {
     )
   }
 
-  const leadImageSrc = footballImageUrl(article.id, 'articleLead')
+  const leadImageSrc = article.coverImageUrl || footballImageUrl(article.id, 'articleLead')
   const published = article.publishedAt
     ? new Date(article.publishedAt)
     : new Date(Date.now() - article.minutesAgo * 60_000)
@@ -451,14 +454,29 @@ export function ArticlePage() {
                   <p className="mt-3 max-w-[65ch] text-sm font-semibold leading-relaxed text-tf-app-muted sm:text-base">
                     {article.excerpt}
                   </p>
+                  <p className="mt-2 text-xs font-bold text-tf-app-muted">
+                    Par {article.authorName || 'Talk Foot'}
+                  </p>
                 </header>
 
                 <div className={cn('mt-8 border-t pt-8', articleDivider)}>
-                  <div className="max-w-[65ch] space-y-6 text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]">
-                    {article.body.map((p, i) => (
-                      <p key={`${article.id}-p-${i}`}>{p}</p>
-                    ))}
-                  </div>
+                  {article.bodyMarkdown?.trim() ? (
+                    <ArticleMarkdown
+                      markdown={article.bodyMarkdown}
+                      className={cn(
+                        'tf-article-markdown max-w-[65ch] text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]',
+                        'prose prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:text-tf-app-fg',
+                        'prose-p:text-tf-app-fg prose-strong:text-tf-app-fg prose-li:text-tf-app-fg prose-a:text-sky-600 hover:prose-a:text-sky-500',
+                        'prose-table:block prose-table:w-full prose-table:overflow-x-auto prose-th:bg-slate-100/80 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:px-3 prose-td:py-2',
+                      )}
+                    />
+                  ) : (
+                    <div className="max-w-[65ch] space-y-6 text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]">
+                      {article.body.map((p, i) => (
+                        <p key={`${article.id}-p-${i}`}>{p}</p>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-8 max-w-[65ch]">
                     <AdSlot
                       compact

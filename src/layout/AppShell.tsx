@@ -33,7 +33,7 @@ export function AppShell() {
   return (
     <DirectMessagesProvider>
     <PrivateMessagesUiProvider>
-    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden [scrollbar-gutter:stable]">
+    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden">
       <SkipLink />
       <ActivityRouteLogger />
       <OAuthProfileSetupModal />
