@@ -1,5 +1,5 @@
 /**
- * Clubs rivaux (même ville / derby) — pour lecture seule ou masquage des salons.
+ * Clubs rivaux (même ville / derby) — pour lecture seule ou masquage des tribunes.
  * Clés = id équipe (teams.ts)
  */
 export const FAN_RIVAL_CLUB_IDS: Record<string, string[]> = {

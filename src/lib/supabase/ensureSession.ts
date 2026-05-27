@@ -6,7 +6,7 @@ function isAnonymousUser(user: User | null | undefined): boolean {
 
 /**
  * Compte réel Supabase (email / OAuth), pas l’accès anonyme.
- * Réservé aux salons membres, MP, etc.
+ * Réservé aux tribunes membres, MP, etc.
  */
 export async function ensureSupabaseAuthenticatedSession(
   sb: SupabaseClient,

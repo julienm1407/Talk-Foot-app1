@@ -63,7 +63,7 @@ export function BettorLeaderboard({
 
       {rows.length === 0 ? (
         <p className="mt-4 rounded-xl border border-dashed border-tf-grey-pastel/60 bg-tf-ice/50 px-3 py-4 text-center text-xs font-semibold text-tf-grey">
-          Aucun parieur actif pour l&apos;instant. Place un pari depuis un salon live pour apparaître au
+          Aucun parieur actif pour l&apos;instant. Place un pari depuis un tribune live pour apparaître au
           classement.
         </p>
       ) : (

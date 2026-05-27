@@ -37,7 +37,7 @@ export function createCustomGroupDebateRecord(
     id: `d-c-${ts}-${Math.random().toString(36).slice(2, 9)}`,
     createdAt: now,
     title: input.title.trim().slice(0, 120),
-    excerpt: input.excerpt.trim().slice(0, 280) || 'Débat lancé dans le salon.',
+    excerpt: input.excerpt.trim().slice(0, 280) || 'Débat lancé dans la tribune.',
     groupId,
     accent: input.accent.trim().slice(0, 20) || '#6366f1',
     salonAccess: 'members',
@@ -49,7 +49,7 @@ export function createCustomGroupDebateRecord(
         fanClubId,
         text:
           input.excerpt.trim().slice(0, 220) ||
-          'Le sujet est ouvert — donne ton avis dans le fil du salon.',
+          'Le sujet est ouvert — donne ton avis dans le fil de la tribune.',
       },
     ],
   }

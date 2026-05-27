@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { GROUP_SALON_BG_PRESETS } from '../data/groupSalonPresets'
 import type { SupporterGroup } from '../types/group'
 
-/** Style du fil + bordure pour la carte chat d’un salon groupe. */
+/** Style du fil + bordure pour la carte chat d’une tribune groupe. */
 export function getGroupSalonChatSurfaceStyles(
   group: SupporterGroup,
   opts?: { dark?: boolean },

@@ -394,7 +394,7 @@ export function MatchCard({
                 ? 'Rejoindre le live'
                 : match.status === 'upcoming'
                   ? "Voir l'avant-match"
-                  : 'Salon match'}
+                  : 'Tribune match'}
             </Link>
             {(isLive || match.status === 'upcoming') && (
               <ShareButton
@@ -402,7 +402,7 @@ export function MatchCard({
                 className="shrink-0"
                 path={channelTo}
                 title={`${match.home.shortName} – ${match.away.shortName}`}
-                text={`Salon Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
+                text={`Tribune Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
               />
             )}
           </div>

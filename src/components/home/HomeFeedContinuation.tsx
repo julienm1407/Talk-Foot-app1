@@ -81,7 +81,7 @@ function HomeResultPreviewCard({ match }: { match: Match }) {
           L ? 'text-sky-700 group-hover:text-sky-900' : 'text-sky-300/95 group-hover:text-white',
         )}
       >
-        Salon →
+        Tribune →
       </span>
     </Link>
   )
@@ -166,7 +166,7 @@ export function HomeFeedContinuation({
                 subtitle={
                   supporterFocusUi && team
                     ? `Autour de ${clubFocusLabel || team.shortName}.`
-                    : 'Live et prochains coups d’envoi — chaque carte ouvre le salon.'
+                    : 'Live et prochains coups d’envoi — chaque carte ouvre la tribune.'
                 }
                 liveMirror={
                   heroLiveMatch ? { matchId: heroLiveMatch.id, ...heroLiveSim } : undefined
@@ -387,7 +387,7 @@ export function HomeFeedContinuation({
         <div className="flex flex-wrap justify-center gap-2">
           <Link
             to="/groups"
-            title={supporterFocusUi && clubFocusLabel ? `Salons — focus ${clubFocusLabel}` : 'Groupes et salons'}
+            title={supporterFocusUi && clubFocusLabel ? `Tribunes — focus ${clubFocusLabel}` : 'Groupes et tribunes'}
             className={cn(
               'tf-interactive-press inline-flex min-h-11 max-w-full items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-[11px] font-black leading-tight sm:min-h-10 sm:text-xs',
               isLight

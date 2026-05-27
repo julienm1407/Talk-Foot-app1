@@ -1,4 +1,4 @@
-/** Fond de la zone de discussion des salons (couleur, image CSS preset, ou hériter du thème carte). */
+/** Fond de la zone de discussion des tribunes (couleur, image CSS preset, ou hériter du thème carte). */
 export type GroupSalonChatBackdrop =
   | { mode: 'inherit' }
   | { mode: 'solid'; color: string }
@@ -27,9 +27,9 @@ export type GroupTheme = {
   background: 'clean' | 'smoke' | 'stripe'
   /** Bordures / petits accents (optionnel, sinon dérivé du secondaire en UI) */
   accent?: string
-  /** Contour des cartes / liste des salons (hex). */
+  /** Contour des cartes / liste des tribunes (hex). */
   salonBoxBorder?: string
-  /** Fond derrière le fil de messages du salon. */
+  /** Fond derrière le fil de messages de la tribune. */
   salonChatBackdrop?: GroupSalonChatBackdrop
   /** Emojis rapides dans le composer (max 8 recommandé). */
   quickEmotes?: string[]
@@ -50,7 +50,7 @@ export type GroupFanTags = {
   countryLabels?: string[]
 }
 
-/** Soutien actif sur le salon (facepile — auteurs réels des 30 dernières minutes). */
+/** Soutien actif sur la tribune (facepile — auteurs réels des 30 dernières minutes). */
 export type GroupActivePresence = {
   userId: string
   displayName: string
@@ -71,7 +71,7 @@ export type SupporterGroup = {
   channels: SupporterChannel[]
   createdBy: 'system' | 'me'
   createdAt: string
-  /** Salons rattachés à des clubs / ligues (personnalisation & restrictions) */
+  /** Tribunes rattachées à des clubs / ligues (personnalisation & restrictions) */
   fanTags?: GroupFanTags
   onlineNow?: number
   messagesToday?: number
@@ -80,7 +80,7 @@ export type SupporterGroup = {
   /** public = ouvert, private = sur invitation, club = rattaché tribune */
   groupKind?: 'public' | 'private' | 'club'
   /**
-   * Centres d’intérêt (sans #, minuscules). Obligatoires pour un salon public
+   * Centres d’intérêt (sans #, minuscules). Obligatoires pour une tribune publique
    * afin que d’autres utilisateurs le retrouvent par recherche.
    */
   hashtags?: string[]

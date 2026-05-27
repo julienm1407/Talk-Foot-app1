@@ -44,7 +44,7 @@ export function TribuneShowcaseCard({
           : 'tf-card-hover',
         className,
       )}
-      aria-label={`Ouvrir le salon ${group.name}`}
+      aria-label={`Ouvrir la tribune ${group.name}`}
     >
       <GroupCard
         className="h-full min-h-0 w-full"

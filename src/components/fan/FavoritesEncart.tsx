@@ -118,7 +118,7 @@ export function FavoritesEncart({ className }: { className?: string }) {
       .slice(0, 6)
   }, [matches, favoriteClubIds, favoriteIdSet])
 
-  const favoriteSalons = useMemo(() => {
+  const favoriteTribunes = useMemo(() => {
     const joined = groups.filter((g) => isJoined(g.id) || g.createdBy === 'me')
     return sortGroupsByFanAffinity(joined, accessPrefs)
       .filter((g) => getGroupAccess(g, accessPrefs) !== 'hidden')
@@ -126,8 +126,8 @@ export function FavoritesEncart({ className }: { className?: string }) {
   }, [groups, isJoined, accessPrefs])
 
   const showMatchesBlock = favoriteClubIds.length > 0
-  const showSalonsBlock = favoriteSalons.length > 0
-  if (!showMatchesBlock && !showSalonsBlock) return null
+  const showTribunesBlock = favoriteTribunes.length > 0
+  if (!showMatchesBlock && !showTribunesBlock) return null
 
   const panelLight =
     'border border-tf-electric/18 bg-gradient-to-r from-tf-ice/90 via-white to-tf-electric-soft/35 shadow-sm'
@@ -198,13 +198,13 @@ export function FavoritesEncart({ className }: { className?: string }) {
         </section>
       ) : null}
 
-      {showSalonsBlock ? (
+      {showTribunesBlock ? (
         <section
           className={cn(
             'overflow-hidden rounded-xl px-2 py-2 sm:rounded-2xl sm:px-3 sm:py-2.5',
             L ? panelLight : panelDark,
           )}
-          aria-label="Tes salons suivis"
+          aria-label="Tes tribunes suivis"
         >
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
             <span
@@ -213,10 +213,10 @@ export function FavoritesEncart({ className }: { className?: string }) {
                 L ? 'text-slate-500' : 'text-tf-app-muted',
               )}
             >
-              Salons
+              Tribunes
             </span>
             <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-              {favoriteSalons.map((g) => (
+              {favoriteTribunes.map((g) => (
                 <Link
                   key={g.id}
                   to={`/group/${g.id}`}

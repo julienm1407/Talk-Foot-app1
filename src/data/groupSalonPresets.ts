@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 
-/** Arrière-plans prédéfinis pour la zone chat des salons groupe (démo). */
+/** Arrière-plans prédéfinis pour la zone chat des tribunes groupe (démo). */
 export const GROUP_SALON_BG_PRESETS: Record<string, { label: string; style: CSSProperties }> = {
   night_stadium: {
     label: 'Stade de nuit',
@@ -24,7 +24,7 @@ export const GROUP_SALON_BG_PRESETS: Record<string, { label: string; style: CSSP
     },
   },
   club_lounge: {
-    label: 'Salon club',
+    label: 'Tribune club',
     style: {
       background:
         'linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1e293b 100%)',

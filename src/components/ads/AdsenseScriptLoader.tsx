@@ -7,7 +7,7 @@ const SCRIPT_ATTR = 'data-tf-adsense-loader'
 
 /**
  * Charge le script AdSense uniquement sur les pages à contenu éditorial (accueil, articles).
- * Évite les violations « annonces sans contenu d’éditeur » sur salon / login / navigation.
+ * Évite les violations « annonces sans contenu d’éditeur » sur tribune / login / navigation.
  */
 export function AdsenseScriptLoader() {
   const { pathname } = useLocation()

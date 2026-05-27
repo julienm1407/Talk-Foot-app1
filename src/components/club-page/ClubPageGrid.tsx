@@ -213,7 +213,7 @@ function ClubDebatesBlock({
                   href="/groups"
                   className="mt-2 inline-flex min-h-tf-touch items-center text-xs font-black text-rose-200/95 underline-offset-2 hover:underline"
                 >
-                  Rejoindre le salon
+                  Rejoindre la tribune
                 </a>
               ) : null}
             </li>
@@ -812,7 +812,7 @@ export function ClubPageGrid({
             }}
           >
             <ClubEncartTitle
-              kicker="Salon supporters"
+              kicker="Tribune supporters"
               kickerClass="text-violet-200/90"
               subtitle={`Mêmes cartes qu’au hub — ancrées sur ${team.shortName}.`}
             >

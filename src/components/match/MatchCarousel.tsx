@@ -193,7 +193,7 @@ export function MatchCarousel({
             {title}
           </h2>
           <p className="max-w-2xl text-[15px] font-medium leading-relaxed text-tf-app-muted sm:text-base">
-            {subtitle || 'Matchs en direct et à venir — ouvre un salon pour suivre le live.'}
+            {subtitle || 'Matchs en direct et à venir — ouvre une tribune pour suivre le live.'}
           </p>
         </div>
 

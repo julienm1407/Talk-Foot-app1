@@ -26,7 +26,7 @@ export function DebatesPage() {
         <Card elevation="soft" className="border-dashed p-8 text-center">
           <p className="font-black text-tf-dark">Aucun débat pour le moment</p>
           <p className="mt-2 text-sm font-semibold text-tf-grey">
-            Rejoins un groupe et lance un sujet dans le salon Général — les compteurs participants et messages
+            Rejoins un groupe et lance un sujet dans la tribune Général — les compteurs participants et messages
             sont calculés en temps réel.
           </p>
           <Link
@@ -94,7 +94,7 @@ export function DebatesPage() {
                         to={`/group/${d.groupId}?debate=${encodeURIComponent(d.id)}`}
                         className="tf-interactive-press rounded-2xl bg-white px-5 py-2.5 text-center text-sm font-black text-tf-dark shadow-md transition hover:bg-orange-50"
                       >
-                        Écrire au salon
+                        Écrire dans la tribune
                       </Link>
                       <Link
                         to={`/debate/${d.id}`}

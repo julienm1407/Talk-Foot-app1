@@ -63,7 +63,7 @@ export function StadeDashboardRichBody({
         <div className="flex items-end justify-between gap-2">
           <div>
             <p className="text-[9px] font-black uppercase tracking-wider text-teal-800">
-              Momentum salon
+              Momentum tribune
             </p>
             <p className="mt-0.5 text-lg font-black tabular-nums text-tf-dark">{series[series.length - 1]}%</p>
           </div>

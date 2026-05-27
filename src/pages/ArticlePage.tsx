@@ -447,7 +447,7 @@ export function ArticlePage() {
                         />
                         <EncartChrome theme={liveEnc.chrome} badge={liveEnc.label} hint={liveEnc.hint}>
                           <p className="mt-1 font-display text-base font-black leading-tight text-tf-dark sm:text-lg">
-                            Salon live
+                            Tribune live
                           </p>
                         </EncartChrome>
                       </div>
@@ -466,7 +466,7 @@ export function ArticlePage() {
                         )}
                       >
                         <span className="text-xs font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] sm:text-sm">
-                          Entrer dans le salon →
+                          Entrer dans la tribune →
                         </span>
                       </div>
                     </Link>
@@ -549,7 +549,7 @@ export function ArticlePage() {
                     )}
                     title="À propos de cet article"
                     paragraphs={[
-                      `Cet article est publié sur Talk Foot dans la rubrique « ${article.tag} ». Il s’inscrit dans une ligne éditoriale dédiée au football professionnel : analyse, contexte de match et liens vers les salons live de la communauté.`,
+                      `Cet article est publié sur Talk Foot dans la rubrique « ${article.tag} ». Il s’inscrit dans une ligne éditoriale dédiée au football professionnel : analyse, contexte de match et liens vers les tribunes live de la communauté.`,
                       'Les fonctionnalités interactives (chat en direct, débats, groupes supporters) sont accessibles après connexion. Les pages de navigation pure ou les écrans de match plein écran ne contiennent pas de publicité.',
                     ]}
                   />
@@ -590,7 +590,7 @@ export function ArticlePage() {
                 <div className={cn(G.wrap, 'relative overflow-hidden rounded-2xl p-3 sm:p-4')}>
                   <EncartChrome theme={G.chrome} badge={G.label} hint={G.hint}>
                     <p className="mt-1.5 font-display text-sm font-black text-tf-dark">Groupes</p>
-                    <p className="mt-0.5 text-[10px] font-semibold text-tf-grey">Un salon sur ce thème.</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-tf-grey">Une tribune sur ce thème.</p>
                     <GroupsDiscussRichBody previews={sidebarGroupPreviews} groupPath={toGroup} />
                     <Link to={toGroups} className={cn('mt-3 block w-full text-center', G.pillButton)}>
                       Hub →
@@ -694,7 +694,7 @@ export function ArticlePage() {
                           isLight ? 'text-sky-950' : 'text-sky-100',
                         )}
                       >
-                        Matchs & salons
+                        Matchs & tribunes
                       </p>
                       <p className="truncate text-[9px] font-semibold text-tf-app-muted">Calendrier complet</p>
                     </div>
@@ -748,7 +748,7 @@ export function ArticlePage() {
                 )}
               >
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-white/90">Calendrier</span>
-                <span className="block text-sm font-black text-white">Tous les matchs & salons</span>
+                <span className="block text-sm font-black text-white">Tous les matchs & tribunes</span>
               </Link>
             </section>
 

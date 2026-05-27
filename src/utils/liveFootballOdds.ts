@@ -184,7 +184,7 @@ function guessSideFromTeams(
   return null
 }
 
-/** Buts affichables (salon live : nom + minute sous le bon camp). */
+/** Buts affichables (tribune live : nom + minute sous le bon camp). */
 export type LiveGoalDisplayRow = {
   side: 'home' | 'away'
   name: string

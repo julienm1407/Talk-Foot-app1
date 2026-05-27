@@ -109,7 +109,7 @@ export function CdmTodayMatches() {
                   </div>
                 ) : (
                   <div className="text-xs font-black uppercase tracking-wide text-tf-cdm-gold">
-                    Salon →
+                    Tribune →
                   </div>
                 )}
               </Link>

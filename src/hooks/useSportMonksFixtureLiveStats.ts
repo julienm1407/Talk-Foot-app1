@@ -19,7 +19,7 @@ const LIVE_POLL_MS = 12_000
 export function useSportMonksFixtureLiveStats(
   sportMonksFixtureId: number | undefined,
   matchStatus: 'upcoming' | 'live' | 'finished',
-  /** Identifiant salon (`Match.id`) pour la timeline « Moments forts ». */
+  /** Identifiant tribune (`Match.id`) pour la timeline « Moments forts ». */
   channelMatchId?: string,
 ) {
   const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, matchStatus)

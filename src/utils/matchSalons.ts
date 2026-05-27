@@ -7,7 +7,7 @@ export type MatchSalonPick = {
 }
 
 /**
- * Salons dont les fanTags recoupent les équipes du match, ou la compétition (sans club ciblé).
+ * Tribunes dont les fanTags recoupent les équipes du match, ou la compétition (sans club ciblé).
  */
 export function salonsForMatch(
   match: Match,

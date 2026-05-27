@@ -19,7 +19,7 @@ export function MessageComposer({
   placeholder = 'Écrire un message…',
   /** Zone Chill live : texte uniquement (pas GIF / emotes). */
   richMedia = true,
-  /** Emotes rapides (salons groupe / perso). */
+  /** Emotes rapides (tribunes groupe / perso). */
   quickEmotes,
   onQuickEmote,
   /** Écharpes des groupes rejoints — envoi dans le chat. */

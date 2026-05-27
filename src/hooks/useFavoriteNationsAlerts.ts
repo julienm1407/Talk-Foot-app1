@@ -95,7 +95,7 @@ export function useFavoriteNationsAlerts() {
           offsetMin <= 5
             ? `⚽ Coup d'envoi imminent — ${nationLabel}`
             : `★ ${nationLabel} joue dans ${offsetMin} min`
-        const body = `${item.match.home.name} vs ${item.match.away.name} · Salon Talk Foot ouvert.`
+        const body = `${item.match.home.name} vs ${item.match.away.name} · Tribune Talk Foot ouvert.`
         try {
           const n = new Notification(title, {
             body,

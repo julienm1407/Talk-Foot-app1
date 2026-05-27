@@ -29,7 +29,7 @@ export type AuthUser = {
   provider: 'email' | TalkFootOauthProviderId | 'oauth'
   avatarUrl?: string
   isAdmin?: boolean
-  /** Session Supabase « invité » (sans email / OAuth) — pas d’accès salons membres synchronisés. */
+  /** Session Supabase « invité » (sans email / OAuth) — pas d’accès tribunes membres synchronisés. */
   isAnonymous?: boolean
 }
 

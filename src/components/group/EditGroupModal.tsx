@@ -258,7 +258,7 @@ export function EditGroupModal({
           </div>
 
           <div className="mt-5 border-t border-slate-200/80 pt-4">
-            <div className="text-sm font-black text-slate-900">Fond du chat salon</div>
+            <div className="text-sm font-black text-slate-900">Fond du chat tribune</div>
             <p className="mt-1 text-[11px] font-semibold text-slate-500">
               Derrière les messages : couleur unie, visuel prédéfini, ou même style que la carte (hériter).
             </p>
@@ -308,7 +308,7 @@ export function EditGroupModal({
 
           <div className="mt-4">
             <label className="text-xs font-bold text-slate-700/70">
-              Contour des boîtes salon (hex, optionnel)
+              Contour des boîtes tribune (hex, optionnel)
             </label>
             <Input
               value={salonBoxBorder}
@@ -333,7 +333,7 @@ export function EditGroupModal({
           <div className="mt-4 border-t border-slate-200/80 pt-4">
             <div className="text-sm font-black text-slate-900">Écharpe du groupe</div>
             <p className="mt-1 text-[11px] font-semibold text-slate-500">
-              Les membres peuvent l’envoyer dans le live et les salons (démo).
+              Les membres peuvent l’envoyer dans le live et les tribunes (démo).
             </p>
             <Input
               value={scarfLabel}

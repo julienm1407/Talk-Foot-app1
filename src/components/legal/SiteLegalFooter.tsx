@@ -12,7 +12,7 @@ export function SiteLegalFooter({
   compact = false,
 }: {
   className?: string
-  /** Salon live : une ligne plus courte */
+  /** Tribune live : une ligne plus courte */
   compact?: boolean
 }) {
   const { appearance } = useAppearance()
@@ -60,7 +60,7 @@ export function SiteLegalFooter({
           {!compact ? (
             <>
               {' '}
-              · Paris entre supporters (jetons fictifs, sans argent réel). Les salons de discussion n&apos;affichent
+              · Paris entre supporters (jetons fictifs, sans argent réel). Les tribunes de discussion n&apos;affichent
               pas de publicité.
             </>
           ) : null}

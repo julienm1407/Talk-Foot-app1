@@ -156,7 +156,7 @@ export function DebateOfTheDayCard({
                 'bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800',
               )}
             >
-              ✍️ Écrire dans le salon
+              ✍️ Écrire dans la tribune
             </Link>
             <Link
               to={`/debate/${debate.id}`}

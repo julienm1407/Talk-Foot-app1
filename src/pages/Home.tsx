@@ -342,9 +342,9 @@ export function HomePage() {
           >
             Mode supporter actif : couleurs & titres autour de{' '}
             <span className="font-black">{clubFocusLabel || team.name}</span>. Les matchs et actus restent
-            larges — pour filtrer les messages (live, salons, top com.), utilise le{' '}
+            larges — pour filtrer les messages (live, tribunes, top com.), utilise le{' '}
             <strong className="font-black">{LIVE_FIL_EQUIPE_COEUR.label}</strong> dans Profil (pas les zones Virage /
-            Chill du live, ni un salon groupe).
+            Chill du live, ni une tribune groupe).
           </div>
         ) : null}
 
@@ -358,7 +358,7 @@ export function HomePage() {
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <label
               className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"
-              title="Ex. masquer le salon OM si ton club de cœur est le PSG"
+              title="Ex. masquer la tribune OM si ton club de cœur est le PSG"
             >
               <input
                 type="checkbox"
@@ -366,7 +366,7 @@ export function HomePage() {
                 onChange={(e) => setHideRivalSalons(e.target.checked)}
                 className="size-4 rounded border-tf-grey-pastel"
               />
-              <span className="leading-snug">Masquer salons rivaux</span>
+              <span className="leading-snug">Masquer tribunes rivales</span>
             </label>
             <Button
               variant="primary"

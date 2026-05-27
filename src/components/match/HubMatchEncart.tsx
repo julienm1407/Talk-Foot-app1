@@ -581,7 +581,7 @@ export function HubStripUpcoming({
               {match.competition.shortName}
             </span>
             <span className="shrink-0 rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 px-3 py-1.5 text-xs font-black text-white shadow-[0_4px_18px_rgba(14,165,233,0.38)] transition group-hover:from-sky-400 group-hover:to-blue-500 group-hover:shadow-[0_6px_22px_rgba(14,165,233,0.45)]">
-              Voir le salon
+              Voir la tribune
             </span>
           </div>
         </div>
@@ -762,7 +762,7 @@ export function HubStripUpcoming({
                 : 'rounded-xl px-4 py-1.5 text-xs shadow-[0_4px_16px_rgba(14,165,233,0.35)]',
           )}
         >
-          Voir le salon
+          Voir la tribune
         </span>
       </div>
     </Link>
@@ -821,7 +821,7 @@ export function HubStripFinished({ match, className }: { match: Match; className
       <div className="flex items-center justify-between gap-2 rounded-b-2xl border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
         <span className="line-clamp-1 text-[11px] font-bold text-sky-100/90">{match.competition.shortName}</span>
         <span className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-black text-white transition group-hover:bg-white/15">
-          Salon
+          Tribune
         </span>
       </div>
     </Link>

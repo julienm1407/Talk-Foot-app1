@@ -423,10 +423,10 @@ export function CalendarPage() {
                 >
                   <span className="md:hidden">
                     Fais défiler la liste horizontale pour voir les {liveFeatured.length} matchs, puis touche un
-                    salon pour entrer.
+                    tribune pour entrer.
                   </span>
                   <span className="hidden md:inline">
-                    {liveFeatured.length} rencontres en cours — choisis un match pour ouvrir le salon live.
+                    {liveFeatured.length} rencontres en cours — choisis un match pour ouvrir le tribune live.
                   </span>
                 </p>
               ) : null}

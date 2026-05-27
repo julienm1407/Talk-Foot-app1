@@ -328,7 +328,7 @@ export function StadiumTribunes({
               accès par invitation ou abonnement (à venir).
             </li>
             <li>
-              · <strong className="text-tf-dark">Salons vocaux</strong> : demande de parole, modérateurs valident qui
+              · <strong className="text-tf-dark">Tribunes vocaux</strong> : demande de parole, modérateurs valident qui
               prend la parole.
             </li>
             <li>
@@ -344,7 +344,7 @@ export function StadiumTribunes({
   )
 }
 
-/** Encart sur le live : salon tribune groupe ou zone classique. */
+/** Encart sur le live : tribune groupe ou zone classique. */
 export function StadiumModeEncart({
   matchId,
   activeTribune,
@@ -374,13 +374,13 @@ export function StadiumModeEncart({
     >
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tf-grey">
-          {groupMode ? 'Salon tribune' : 'Stade digital'}
+          {groupMode ? 'Tribune' : 'Stade digital'}
         </p>
         <p className="mt-0.5 text-xs font-black leading-snug text-tf-dark sm:mt-1 sm:text-sm">
           {groupMode ? (
             <>
               <span aria-hidden>{stadiumGroupEmoji ?? '🏟️'}</span> {stadiumGroupLabel} — chat réservé aux présents
-              dans ce salon.
+              dans cette tribune.
             </>
           ) : (
             <>

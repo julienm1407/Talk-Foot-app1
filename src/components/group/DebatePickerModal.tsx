@@ -122,7 +122,7 @@ export function DebatePickerModal({
         <Card className="relative max-h-[min(88vh,36rem)] overflow-hidden p-4 sm:max-h-[min(85vh,40rem)] sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Salon général</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Tribune général</p>
               <h2 id="debate-picker-title" className="mt-1 text-lg font-black text-slate-900">
                 Débat dans le groupe
               </h2>
@@ -186,7 +186,7 @@ export function DebatePickerModal({
                 className="w-full rounded-2xl font-black"
                 onClick={submitCreate}
               >
-                Publier et lier au salon
+                Publier et lier à la tribune
               </Button>
               <p className="text-[11px] font-semibold text-slate-500">
                 Partagé avec le groupe dès publication (base Talk Foot).
@@ -214,7 +214,7 @@ export function DebatePickerModal({
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-center">
                   <p className="text-sm font-black text-slate-800">Aucun débat dans ce groupe</p>
                   <p className="mt-2 text-xs font-semibold text-slate-600">
-                    Publie le tien ou demande à ton ami de le lier au salon général — il apparaîtra ici pour
+                    Publie le tien ou demande à ton ami de le lier à la tribune générale — il apparaîtra ici pour
                     tout le monde.
                   </p>
                 </div>

@@ -321,7 +321,7 @@ export const starterGroups: SupporterGroup[] = [
     messagesToday: 0,
     groupKind: 'club',
     hashtags: ['strasbourg', 'rcsa', 'meinau', 'ligue1'],
-    lastMessagePreview: 'RCSA : jeu posé ou transitions — le salon tranche',
+    lastMessagePreview: 'RCSA : jeu posé ou transitions — la tribune tranche',
   },
   {
     id: 'g-violet-tfc',
@@ -366,7 +366,7 @@ export const starterGroups: SupporterGroup[] = [
     name: 'Culers Digital',
     emoji: '🔷',
     location: 'Barcelone · Montjuïc',
-    motto: 'Més que un club — aussi un salon qui ne dort jamais.',
+    motto: 'Més que un club — aussi une tribune qui ne dort jamais.',
     theme: { ...tc('fcb'), background: 'stripe' },
     members: 0,
     intensity: 89,
@@ -397,7 +397,7 @@ export const starterGroups: SupporterGroup[] = [
     messagesToday: 0,
     groupKind: 'club',
     hashtags: ['atleti', 'atletico', 'laliga', 'cholismo'],
-    lastMessagePreview: 'Bloc bas + transitions : le plan Simeone version salon',
+    lastMessagePreview: 'Bloc bas + transitions : le plan Simeone version tribune',
   },
   {
     id: 'g-canoniers-north',
@@ -435,7 +435,7 @@ export const starterGroups: SupporterGroup[] = [
     messagesToday: 0,
     groupKind: 'public',
     hashtags: ['chelsea', 'che', 'epl', 'cfc'],
-    lastMessagePreview: 'Transition défense → attaque : le salon freeze-frame',
+    lastMessagePreview: 'Transition défense → attaque : la tribune freeze-frame',
   },
   {
     id: 'g-trafford-reds',
@@ -477,7 +477,7 @@ export const starterGroups: SupporterGroup[] = [
   },
   {
     id: 'g-bianconeri-salon',
-    name: 'Salon Bianconero',
+    name: 'Tribune Bianconero',
     emoji: '🦓',
     location: 'Turin · Allianz Stadium',
     motto: 'Fino alla fine — même pour un match nul frustrant.',
@@ -511,7 +511,7 @@ export const starterGroups: SupporterGroup[] = [
     messagesToday: 0,
     groupKind: 'public',
     hashtags: ['bayern', 'bundesliga', 'fcbayern', 'mia san mia'],
-    lastMessagePreview: 'Kimmich en 6 ou latéral ? Le salon tranche avant coup d’envoi',
+    lastMessagePreview: 'Kimmich en 6 ou latéral ? La tribune tranche avant coup d’envoi',
   },
   {
     id: 'g-gelbe-wand-bvb',

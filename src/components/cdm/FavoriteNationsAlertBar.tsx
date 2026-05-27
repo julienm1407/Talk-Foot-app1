@@ -8,7 +8,7 @@ import { cn } from '../../utils/cn'
 /**
  * Bandeau in-app pour les nations favorites : affiche le prochain match dans
  * les 24h, propose d'activer les notifications navigateur et le lien direct
- * vers le salon match. Invisible si aucun favori ou aucun match imminent.
+ * vers la tribune match. Invisible si aucun favori ou aucun match imminent.
  */
 export function FavoriteNationsAlertBar({ className }: { className?: string }) {
   const { favoriteNationIsos } = useFanPreferences()
@@ -84,7 +84,7 @@ export function FavoriteNationsAlertBar({ className }: { className?: string }) {
           to={`/channel/${encodeURIComponent(next.match.id)}`}
           className="inline-flex min-h-tf-touch items-center justify-center rounded-full bg-tf-cdm-gold px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-tf-cdm-deep shadow-tf-elev-1 transition hover:bg-tf-cdm-gold/90"
         >
-          {isLive ? 'Rejoindre le live →' : 'Voir le salon →'}
+          {isLive ? 'Rejoindre le live →' : 'Voir la tribune →'}
         </Link>
       </div>
     </aside>

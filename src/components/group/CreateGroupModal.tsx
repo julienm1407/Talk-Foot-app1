@@ -231,7 +231,7 @@ export function CreateGroupModal({
               Créer un groupe
             </div>
             <div className="mt-1 text-xs font-semibold leading-snug text-slate-700/70 sm:text-sm">
-              Thème, salons, couleurs — sans logos officiels.
+              Thème, tribunes, couleurs — sans logos officiels.
             </div>
           </div>
 
@@ -371,7 +371,7 @@ export function CreateGroupModal({
                     }}
                     aria-pressed={groupKind === 'public'}
                   >
-                    Salon public
+                    Tribune publique
                   </Button>
                   <Button
                     type="button"
@@ -383,13 +383,13 @@ export function CreateGroupModal({
                     }}
                     aria-pressed={groupKind === 'private'}
                   >
-                    Salon privé
+                    Tribune privée
                   </Button>
                 </div>
                 <p className="mt-2 text-xs font-semibold text-slate-600">
                   {groupKind === 'public'
-                    ? 'Un salon public doit avoir au moins un hashtag : les personnes qui partagent les mêmes centres d’intérêt te retrouvent dans « Tous les salons ».'
-                    : 'Les hashtags restent optionnels sur un salon privé.'}
+                    ? 'Une tribune publique doit avoir au moins un hashtag : les personnes qui partagent les mêmes centres d’intérêt te retrouvent dans « Toutes les tribunes ».'
+                    : 'Les hashtags restent optionnels sur une tribune privée.'}
                 </p>
               </div>
 
@@ -454,7 +454,7 @@ export function CreateGroupModal({
             <div className="mt-4">
               <div className="text-sm font-black text-slate-900">Ambiance (démo)</div>
               <label className="mt-2 flex flex-col gap-2 text-xs font-bold text-slate-700/70 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                <span className="shrink-0">Intensité du salon</span>
+                <span className="shrink-0">Intensité de la tribune</span>
                 <input
                   type="range"
                   min={15}
@@ -589,7 +589,7 @@ export function CreateGroupModal({
                   setTagError(null)
                   const trimmedName = name.trim()
                   if (trimmedName.length < 2) {
-                    setNameError('Donne un nom d’au moins 2 caractères à ton salon.')
+                    setNameError('Donne un nom d’au moins 2 caractères à ta tribune.')
                     return
                   }
                   if (trimmedName.length > 80) {
@@ -606,7 +606,7 @@ export function CreateGroupModal({
                   ])
                   if (groupKind === 'public' && finalTags.length === 0) {
                     setTagError(
-                      'Ajoute au moins un hashtag pour que les autres trouvent ton salon public.',
+                      'Ajoute au moins un hashtag pour que les autres trouvent ta tribune publique.',
                     )
                     return
                   }
@@ -664,7 +664,7 @@ export function CreateGroupModal({
               </div>
             </div>
             <div className="mt-3 text-xs font-semibold leading-snug text-slate-700/70 sm:text-sm">
-              Après validation, tu es redirigé vers ton salon. Le groupe est sauvegardé dans ton navigateur (onglet
+              Après validation, tu es redirigé vers ta tribune. Le groupe est sauvegardé dans ton navigateur (onglet
               Groupes → Mes groupes).
             </div>
           </div>

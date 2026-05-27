@@ -448,7 +448,7 @@ export function LiveMatchHero({
                 to={`/channel/${match.id}`}
                 className="inline-flex min-h-tf-touch w-full min-w-0 max-w-full items-center justify-center rounded-lg bg-gradient-to-b from-emerald-500 to-teal-700 px-3 py-2 text-center text-[11px] font-black uppercase tracking-wide text-white shadow-[0_4px_18px_rgba(16,185,129,0.45)] ring-1 ring-white/15 transition hover:from-emerald-400 hover:to-teal-600 sm:w-auto sm:max-w-min sm:rounded-xl sm:px-5 sm:py-2 sm:text-xs sm:leading-tight sm:normal-case sm:tracking-normal"
               >
-                <span className="hidden sm:inline sm:whitespace-nowrap">Rejoindre le salon</span>
+                <span className="hidden sm:inline sm:whitespace-nowrap">Rejoindre la tribune</span>
                 <span className="sm:hidden">Rejoindre</span>
               </Link>
             </div>

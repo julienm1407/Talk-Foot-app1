@@ -44,7 +44,7 @@ export type SectionEncartTheme = {
   pathClass: string
   /** Lien texte secondaire (flèche, légende) */
   cta: string
-  /** Bandeau bas contrasté (ex. « Entrer dans le salon ») — prévu pour texte blanc */
+  /** Bandeau bas contrasté (ex. « Entrer dans la tribune ») — prévu pour texte blanc */
   ctaBar: string
   /** Bouton / lien bloc plein dans l’encart */
   pillButton: string
@@ -87,7 +87,7 @@ const NAV_HOME: SectionNavTheme = {
   arrowHover: 'group-hover:text-tf-dark',
 }
 
-/** 🟠 Matchs (+ page Match, salon live) */
+/** 🟠 Matchs (+ page Match, tribune live) */
 const NAV_MATCH: SectionNavTheme = {
   active: 'bg-tf-white text-tf-dark shadow-sm ring-2 ring-tf-nav-match/42',
   inactiveHover: 'hover:bg-tf-electric-soft hover:text-tf-dark',
@@ -95,7 +95,7 @@ const NAV_MATCH: SectionNavTheme = {
   arrowHover: 'group-hover:text-tf-nav-match',
 }
 
-/** 🟣 Groupes (+ débats, salons) */
+/** 🟣 Groupes (+ débats, tribunes) */
 const NAV_GROUPS: SectionNavTheme = {
   active: 'bg-tf-white text-tf-dark shadow-sm ring-2 ring-tf-nav-groups/42',
   inactiveHover: 'hover:bg-tf-electric-soft hover:text-tf-dark',
@@ -111,7 +111,7 @@ const NAV_RANKINGS: SectionNavTheme = {
   arrowHover: 'group-hover:text-tf-nav-rankings',
 }
 
-/** Pronostics / paris live (salon match) */
+/** Pronostics / paris live (tribune match) */
 const NAV_PRONOSTIC: SectionNavTheme = {
   active: 'bg-tf-white text-tf-dark shadow-sm ring-2 ring-tf-cta/45',
   inactiveHover: 'hover:bg-tf-electric-soft hover:text-tf-dark',
@@ -194,7 +194,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   group: {
     id: 'group',
     label: 'Groupe',
-    hint: 'Salon du groupe',
+    hint: 'Tribune du groupe',
     shellStripe: stripeGroups,
     encart: ENCART_GROUPS,
     page: {
@@ -244,7 +244,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   },
   channel: {
     id: 'channel',
-    label: 'Salon live',
+    label: 'Tribune live',
     hint: 'Match en direct',
     shellStripe: stripeMatch,
     encart: ENCART_LIVE,
@@ -308,7 +308,7 @@ export function getAppSectionTheme(section: AppSectionId): SectionTheme {
 }
 
 /**
- * État actif de la nav : Match = calendrier ; Pronostic = paris live (salon + mes paris).
+ * État actif de la nav : Match = calendrier ; Pronostic = paris live (tribune + mes paris).
  */
 export function isRouteActiveForSection(
   section: AppSectionId,

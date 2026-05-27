@@ -304,7 +304,7 @@ export function GroupCard({
                       : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
                   )}
                 >
-                  {online > 0 ? `🔥 ${online.toLocaleString('fr-FR')} en ligne` : 'Salon calme'}
+                  {online > 0 ? `🔥 ${online.toLocaleString('fr-FR')} en ligne` : 'Tribune calme'}
                 </Badge>
                 {msgs > 0 ? (
                   <Badge
@@ -357,7 +357,7 @@ export function GroupCard({
               className={cn('flex items-center justify-between gap-2 text-[10px] font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}
             >
               <span>{group.intensity}% ambiance</span>
-              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Salon communautaire'}</span>
+              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}</span>
             </div>
           ) : null}
 
@@ -524,7 +524,7 @@ export function GroupCard({
               )}
             >
               <span className="tabular-nums">{group.intensity}% ambiance</span>
-              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Salon communautaire'}</span>
+              <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}</span>
             </div>
             <span
               className={cn(
@@ -660,7 +660,7 @@ export function GroupCard({
             {group.intensity}% ambiance
           </Badge>
           <div className={cn('text-xs font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}>
-            {group.createdBy === 'me' ? 'Ton groupe' : 'Salon communautaire'}
+            {group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}
           </div>
           <span
             className={cn(

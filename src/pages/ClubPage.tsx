@@ -479,7 +479,7 @@ export function ClubPage() {
     team
       ? {
           title: `${team.name} — hub & communauté — ${SITE_NAME}`,
-          description: `Hub social ${team.shortName} : salons live, débats, voix, fans. Infos match en second plan.`,
+          description: `Hub social ${team.shortName} : tribunes live, débats, voix, fans. Infos match en second plan.`,
           robots: 'index, follow',
         }
       : 'skip',
@@ -504,7 +504,7 @@ export function ClubPage() {
         matchMode={data.matchMode}
         onFire={data.onFire}
         salonChannelCount={salonChannelCount}
-        salonsHubTo={`/groups?tab=discover&club=${encodeURIComponent(team.id)}`}
+        tribunesHubTo={`/groups?tab=discover&club=${encodeURIComponent(team.id)}`}
         salonClubName={team.shortName}
       />
       <div className="mx-auto max-w-tf-content px-[var(--tf-page-gutter)] py-4">
@@ -512,8 +512,8 @@ export function ClubPage() {
           title={`Hub ${team.shortName}`}
           className="border-white/10 bg-white/[0.04]"
           paragraphs={[
-            `Cette page présente le calendrier, la forme récente, l’effectif et les statistiques de saison de ${team.name}, ainsi que les salons et groupes supporters liés au club sur Talk Foot.`,
-            'Les données sportives proviennent de sources officielles lorsque disponibles. Les salons de match en direct et les écrans plein écran ne comportent pas de publicité.',
+            `Cette page présente le calendrier, la forme récente, l’effectif et les statistiques de saison de ${team.name}, ainsi que les tribunes et groupes supporters liés au club sur Talk Foot.`,
+            'Les données sportives proviennent de sources officielles lorsque disponibles. Les tribunes de match en direct et les écrans plein écran ne comportent pas de publicité.',
           ]}
         />
         <div className="mt-4">

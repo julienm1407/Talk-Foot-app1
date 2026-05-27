@@ -73,7 +73,7 @@ export function HomeRightColumn({
 
       <div className="rounded-2xl border border-tf-grey-pastel/40 bg-tf-white/90 p-4 shadow-sm">
         <h3 className="border-b border-tf-grey-pastel/45 pb-2 font-display text-sm font-black uppercase tracking-[0.18em] text-tf-dark">
-          Salons & tribunes
+          Tribunes
         </h3>
         <ul className="mt-3 space-y-2" role="list">
           {groups.map((g) => (

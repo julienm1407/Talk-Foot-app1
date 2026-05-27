@@ -37,25 +37,25 @@ const ABOUT: RouteSeoConfig = {
 
 const LOGIN: RouteSeoConfig = {
   title: `Connexion — ${SITE_NAME}`,
-  description: `Connecte-toi à ${SITE_NAME} pour accéder au live, aux salons supporters et à ton profil.`,
+  description: `Connecte-toi à ${SITE_NAME} pour accéder au live, aux tribunes supporters et à ton profil.`,
   robots: 'noindex, nofollow',
 }
 
 const MATCH: RouteSeoConfig = {
   title: `Matchs & agenda — ${SITE_NAME}`,
   description:
-    'Calendrier des matchs, directs commentés, salons par rencontre et ambiance live sur Talk Foot.',
+    'Calendrier des matchs, directs commentés, tribunes par rencontre et ambiance live sur Talk Foot.',
 }
 
 const PRONOSTIC: RouteSeoConfig = {
   title: `Mes paris & pronostics — ${SITE_NAME}`,
   description:
-    'Retrouve tes paris, ton solde de jetons, le classement des parieurs et accède au salon live pour parier.',
+    'Retrouve tes paris, ton solde de jetons, le classement des parieurs et accède à la tribune live pour parier.',
   robots: 'noindex, nofollow',
 }
 
 const GROUPS: RouteSeoConfig = {
-  title: `Groupes & salons supporters — ${SITE_NAME}`,
+  title: `Groupes & tribunes supporters — ${SITE_NAME}`,
   description:
     'Rejoins des tribunes virtuelles par club ou thème : discussions, débats et vie de groupe entre fans.',
 }
@@ -105,15 +105,15 @@ const ADMIN: RouteSeoConfig = {
 }
 
 const CHANNEL: RouteSeoConfig = {
-  title: `Salon live — ${SITE_NAME}`,
+  title: `Tribune live — ${SITE_NAME}`,
   description:
-    'Salon de match en direct : chat, réactions et ambiance stade. Connecte-toi pour participer au live Talk Foot.',
+    'Tribune de match en direct : chat, réactions et ambiance stade. Connecte-toi pour participer au live Talk Foot.',
   robots: 'noindex, nofollow',
 }
 
 const GROUP: RouteSeoConfig = {
   title: `Groupe supporter — ${SITE_NAME}`,
-  description: 'Salon de groupe Talk Foot : messages, débats et ambiance entre fans.',
+  description: 'Tribune de groupe Talk Foot : messages, débats et ambiance entre fans.',
   robots: 'noindex, nofollow',
 }
 

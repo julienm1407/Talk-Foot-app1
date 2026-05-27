@@ -73,7 +73,7 @@ export function useSupporterGroups() {
   const rawGroupIdsRef = useRef<string[]>([])
   const realtimeMountSeq = useRef(0)
 
-  /** Chaque compte a son propre stockage local (évite qu’un nouveau compte hérite des salons du précédent). */
+  /** Chaque compte a son propre stockage local (évite qu’un nouveau compte hérite des tribunes du précédent). */
   useEffect(() => {
     if (!userId) {
       setCustom([])

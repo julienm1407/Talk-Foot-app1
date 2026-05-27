@@ -9,7 +9,7 @@ export function pickTalkFootBotReply(userMessage: string): string {
     return 'Les paris : ouvre un match en direct, choisis un marché (1N2, buts…), règle ta mise en jetons. Tes tickets sont dans Profil.'
   }
   if (/groupe|salon|tribune/.test(t)) {
-    return 'Les salons : onglet Groupes pour rejoindre une tribune supporter. Depuis le live, tu peux filtrer par tribune.'
+    return 'Les tribunes : onglet Groupes pour rejoindre une tribune supporter. Depuis le live, tu peux filtrer par tribune.'
   }
   if (/classement|ranking|leader/.test(t)) {
     return 'Classements & défis : onglet Classements. Quand tu inviteras de vrais amis, vous pourrez comparer vos scores ici.'

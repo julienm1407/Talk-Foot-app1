@@ -140,8 +140,8 @@ export function DebateDetailPage() {
         title="Contexte du débat"
         className="border-orange-200/35 bg-orange-50/50"
         paragraphs={[
-          `Ce fil rassemble les arguments des supporters autour de « ${debate.title} ». Les extraits ci-dessous proviennent de la communauté Talk Foot ; la discussion complète se poursuit dans le salon de groupe associé.`,
-          'Talk Foot propose des débats modérés, des sondages et des salons live par match. Les pages de simple navigation (liste des débats, calendrier, connexion) restent sans publicité.',
+          `Ce fil rassemble les arguments des supporters autour de « ${debate.title} ». Les extraits ci-dessous proviennent de la communauté Talk Foot ; la discussion complète se poursuit dans la tribune de groupe associé.`,
+          'Talk Foot propose des débats modérés, des sondages et des tribunes live par match. Les pages de simple navigation (liste des débats, calendrier, connexion) restent sans publicité.',
         ]}
       />
 
@@ -166,12 +166,12 @@ export function DebateDetailPage() {
           ))}
         </ul>
         <p className="mt-4 text-xs font-semibold text-tf-grey">
-          La suite de la discussion se poursuit dans le salon groupe — réactions, sondages et modération.
+          La suite de la discussion se poursuit dans la tribune groupe — réactions, sondages et modération.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link to={`/group/${debate.groupId}?debate=${encodeURIComponent(debate.id)}`}>
             <Button variant="primary" className="tf-interactive-press rounded-2xl px-6 py-3 text-sm font-black">
-              💬 Écrire dans le salon
+              💬 Écrire dans la tribune
             </Button>
           </Link>
           <Link to="/debates">

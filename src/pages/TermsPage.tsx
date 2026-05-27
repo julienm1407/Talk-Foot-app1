@@ -17,7 +17,7 @@ export function TermsPage() {
         <h2 className={h2}>1. Objet</h2>
         <p className={p}>
           Talk Foot propose des contenus et fonctionnalités communautaires autour du football : actualités,
-          débats, groupes, salons live, pronostics à jetons fictifs. Le service peut évoluer.
+          débats, groupes, tribunes live, pronostics à jetons fictifs. Le service peut évoluer.
         </p>
       </section>
 
@@ -50,7 +50,7 @@ export function TermsPage() {
       <section id="ugc" className={`${section} scroll-mt-6`}>
         <h2 className={h2}>5. Contenus utilisateurs (UGC)</h2>
         <p className={p}>
-          Tu restes responsable des messages, pseudos, titres de débats et contenus publiés (salons live, groupes,
+          Tu restes responsable des messages, pseudos, titres de débats et contenus publiés (tribunes live, groupes,
           messages privés, débats).
         </p>
         <ul className={ul}>

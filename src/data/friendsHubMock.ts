@@ -51,7 +51,7 @@ export const mockFriendsActivity: FriendsActivityItem[] = [
     id: 'a2',
     type: 'live',
     actor: 'Nina92',
-    summary: 'A rejoint le salon live',
+    summary: 'A rejoint le tribune live',
     timeLabel: 'Il y a 34 min',
     href: '/match',
   },
@@ -103,7 +103,7 @@ export type MockBroncaSnapshot = {
 }
 
 export const mockBroncaSnapshot: MockBroncaSnapshot = {
-  matchLabel: 'Replay démo (salon)',
+  matchLabel: 'Replay démo (tribune)',
   leaderUsername: 'SarahGoal',
   friendsInSalon: 3,
   expiresInLabel: 'jusqu’à la fin du live',

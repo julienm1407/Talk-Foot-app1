@@ -68,7 +68,7 @@ export function HomeDesktopExperience({
   liveMatches: Match[]
   upcomingMatches: Match[]
   tribuneGroups: SupporterGroup[]
-  /** Tous les salons visibles (hors rivaux masqués) — pour le rail sans doublon avec la grille tribunes */
+  /** Toutes les tribunes visibles (hors rivaux masqués) — pour le rail sans doublon avec la grille tribunes */
   supporterGroupsPool: SupporterGroup[]
   /** Tribunes / groupes créés par l’utilisateur (stockage local) */
   myCreatedGroups: SupporterGroup[]
@@ -434,8 +434,8 @@ export function HomeDesktopExperience({
               )}
             >
               <h3 className="line-clamp-2 min-w-0 flex-1 pr-2 font-display text-xs font-black uppercase leading-tight tracking-[0.18em] text-tf-app-fg">
-                <span className="2xl:hidden">Salons</span>
-                <span className="hidden 2xl:inline">Salons à découvrir</span>
+                <span className="2xl:hidden">Tribunes</span>
+                <span className="hidden 2xl:inline">Tribunes à découvrir</span>
               </h3>
               <Link
                 to="/groups"

@@ -103,7 +103,7 @@ export function OAuthProfileSetupModal() {
               id="oauth-pseudo"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Ton pseudo sur les salons et le live"
+              placeholder="Ton pseudo sur les tribunes et le live"
               autoComplete="username"
               className="w-full rounded-xl border-tf-grey-pastel/50"
               maxLength={40}

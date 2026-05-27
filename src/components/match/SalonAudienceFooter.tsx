@@ -1,7 +1,7 @@
 import type { Match } from '../../types/match'
 import { useLiveMatchSalonStats } from '../../hooks/useLiveMatchSalonStats'
 
-/** Pied de carte match : spectateurs / messages réels du salon live (plus de « Xk fans » simulé). */
+/** Pied de carte match : spectateurs / messages réels du tribune live (plus de « Xk fans » simulé). */
 export function SalonAudienceFooter({
   match,
   className,
@@ -15,7 +15,7 @@ export function SalonAudienceFooter({
   if (stats && stats.participantsCount > 0) {
     label = `${stats.participantsCount.toLocaleString('fr-FR')} en ligne · ${stats.messagesCount.toLocaleString('fr-FR')} msg · ${match.competition.shortName}`
   } else if (stats) {
-    label = `Salon live · ${match.competition.shortName}`
+    label = `Tribune live · ${match.competition.shortName}`
   } else {
     label = match.competition.shortName
   }

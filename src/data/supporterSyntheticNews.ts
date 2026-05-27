@@ -16,7 +16,7 @@ export function syntheticClubNewsItems(
       tag: 'Breaking',
       minutesAgo: 2,
       title: `${base} : la semaine du club sur Talk Foot`,
-      excerpt: `Salons, live et réactions : tout tourne autour de ${name} tant que le mode supporter est activé sur ton profil.`,
+      excerpt: `Tribunes, live et réactions : tout tourne autour de ${name} tant que le mode supporter est activé sur ton profil.`,
       leagueIds,
       clubIds,
     },

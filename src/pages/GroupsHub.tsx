@@ -73,7 +73,7 @@ export function GroupsHubPage() {
     [sorted, accessPrefs],
   )
 
-  /** Filtre « depuis page club » : mêmes groupes que le compteur de salons. */
+  /** Filtre « depuis page club » : mêmes groupes que le compteur de tribunes. */
   const discoverVisibleForContext = useMemo(() => {
     if (!clubParam) return visibleDiscover
     const forClub = getAllGroupsForClub(clubParam, groups)
@@ -129,7 +129,7 @@ export function GroupsHubPage() {
         titleAs="h1"
         uppercaseTitle={false}
         eyebrow="Groupes"
-        title="Salons supporters"
+        title="Tribunes supporters"
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <Link
@@ -157,7 +157,7 @@ export function GroupsHubPage() {
         {tabBtn('mine', `Mes groupes${myGroups.length ? ` (${myGroups.length})` : ''}`)}
         {tabBtn(
           'discover',
-          `Tous les salons${discoverListCount ? ` (${discoverListCount})` : ''}`,
+          `Toutes les tribunes${discoverListCount ? ` (${discoverListCount})` : ''}`,
         )}
       </div>
 
@@ -175,13 +175,13 @@ export function GroupsHubPage() {
                 Aucun groupe pour l’instant
               </p>
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-tf-grey">
-                Ouvre un salon depuis <strong className="text-tf-dark">Tous les salons</strong>, puis utilise{' '}
-                <strong className="text-tf-dark">Rejoindre ce salon</strong> pour l’ajouter à{' '}
+                Ouvre une tribune depuis <strong className="text-tf-dark">Toutes les tribunes</strong>, puis utilise{' '}
+                <strong className="text-tf-dark">Rejoindre cette tribune</strong> pour l’ajouter à{' '}
                 <strong className="text-tf-dark">Mes groupes</strong>. Tu peux aussi créer le tien.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button variant="primary" className="rounded-2xl" onClick={() => setTab('discover')}>
-                  Parcourir les salons
+                  Parcourir les tribunes
                 </Button>
                 <Button variant="soft" className="rounded-2xl" onClick={() => setCreateOpen(true)}>
                   Créer un groupe
@@ -210,12 +210,12 @@ export function GroupsHubPage() {
       ) : (
         <section aria-labelledby="hub-discover-heading" className="space-y-4">
           <h2 id="hub-discover-heading" className="sr-only">
-            Tous les salons
+            Toutes les tribunes
           </h2>
           {clubParam && focusClub ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-4 py-3 sm:px-5">
               <p className="text-sm font-bold text-tf-dark">
-                Salons rattachés à <span className="text-violet-800">{focusClub.shortName}</span> — entre dans un
+                Tribunes rattachées à <span className="text-violet-800">{focusClub.shortName}</span> — entre dans un
                 fil pour le live
               </p>
               <button
@@ -242,14 +242,14 @@ export function GroupsHubPage() {
               className="mt-2 rounded-2xl"
             />
             <p className="mt-2 text-xs font-semibold text-tf-grey">
-              Même principe que les hashtags des salons publics : tape un ou plusieurs mots-clés. Les groupes créés par
-              d’autres supporters apparaissent ici en <strong className="text-tf-dark">Salon communautaire</strong>.
+              Même principe que les hashtags des tribunes publics : tape un ou plusieurs mots-clés. Les groupes créés par
+              d’autres supporters apparaissent ici en <strong className="text-tf-dark">Tribune communautaire</strong>.
             </p>
           </Card>
           <Card className="space-y-3 p-4 sm:p-5" elevation="soft">
             {interestFilter.trim() && discoverFiltered.length === 0 ? (
               <p className="py-6 text-center text-sm font-semibold text-tf-grey">
-                Aucun salon ne correspond à « {interestFilter.trim()} ». Essaie un autre hashtag
+                Aucune tribune ne correspond à « {interestFilter.trim()} ». Essaie un autre hashtag
                 ou efface la recherche.
               </p>
             ) : null}
@@ -258,7 +258,7 @@ export function GroupsHubPage() {
                 key={g.id}
                 to={`/group/${g.id}`}
                 className="group block tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
-                aria-label={`Ouvrir le salon ${g.name}`}
+                aria-label={`Ouvrir la tribune ${g.name}`}
               >
                 <GroupCard
                   group={g}

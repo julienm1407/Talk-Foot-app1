@@ -1,7 +1,7 @@
 import type { TribuneId } from './tribune'
 import type { AvatarCharacterLook } from './profile'
 
-/** Zone tribune du salon live canal (métadonnée `match_tribune` / `matchTribune`). */
+/** Zone tribune du canal live (métadonnée `match_tribune` / `matchTribune`). */
 export type MatchTribuneZone = 'home-ultras' | 'away-ultras' | 'analystes' | 'neutres'
 
 export type ReactionType = 'flare' | 'confetti' | 'goal' | 'rage'
@@ -16,7 +16,7 @@ export type User = {
   isMockFriend?: boolean
   /** Assistant Talk Foot — premier contact MP, pas un faux profil joueur */
   isTalkFootBot?: boolean
-  /** Bot de bienvenue du salon groupe (style Discord), lié au groupe ouvert */
+  /** Bot de bienvenue de la tribune groupe (style Discord), lié au groupe ouvert */
   isGroupSalonBot?: boolean
   /** Club de cœur simulé (mode Virage / filtrage live) */
   fanClubId?: string
@@ -40,7 +40,7 @@ export type Message = {
   tribune?: TribuneId
   /** Tribune live canal (domicile / parcage / analyse / neutre). Absent = fil « neutre » (analystes + neutres). */
   matchTribune?: MatchTribuneZone
-  /** Salon supporter (tribune groupe) — filtré sur le live quand une tribune groupe est active. */
+  /** Tribune supporter (tribune groupe) — filtré sur le live quand une tribune groupe est active. */
   supporterGroupId?: string
   /** Bloc écharpe d’un groupe (message visuel). */
   groupScarf?: {

@@ -6,7 +6,7 @@ export function isClerkAuthMode(): boolean {
 }
 
 /**
- * Session Supabase utilisable pour le registre groupes / salons.
+ * Session Supabase utilisable pour le registre groupes / tribunes.
  * Comptes Clerk : session anonyme Supabase (même navigateur) si pas de JWT OAuth Supabase.
  */
 export async function ensureTalkFootSupabaseSession(

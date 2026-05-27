@@ -44,7 +44,7 @@ export function MatchSalonsModal({
       <Card className="relative z-[1] flex max-h-[min(85vh,560px)] w-full max-w-md flex-col overflow-hidden border border-tf-grey-pastel/60 bg-tf-white/98 p-0 shadow-xl">
         <div className="shrink-0 border-b border-tf-grey-pastel/50 px-4 py-4 sm:px-5">
           <h2 className="font-display text-lg font-black tracking-tight text-tf-dark">
-            Salons du match
+            Tribunes du match
           </h2>
           <p className="mt-1 text-sm font-medium text-tf-grey">
             {match.home.shortName} — {match.away.shortName} · communautés liées aux équipes ou à la compétition
@@ -55,14 +55,14 @@ export function MatchSalonsModal({
           {picks.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-tf-grey-pastel/70 bg-tf-grey-pastel/15 px-4 py-6 text-center">
               <p className="text-sm font-bold text-tf-dark">
-                Aucun salon tagué pour ce match
+                Aucune tribune tagué pour ce match
               </p>
               <p className="mt-2 text-xs font-medium text-tf-grey">
                 Parcours les groupes pour rejoindre une tribune ou en créer une.
               </p>
               <Link to="/groups" onClick={onClose} className="mt-4 inline-flex">
                 <Button variant="primary" className="w-full sm:w-auto">
-                  Voir tous les salons
+                  Voir toutes les tribunes
                 </Button>
               </Link>
             </div>
@@ -106,7 +106,7 @@ export function MatchSalonsModal({
             </Button>
             <Link to="/groups" onClick={onClose} className="flex-1">
               <Button variant="soft" className="w-full">
-                Tous les salons
+                Toutes les tribunes
               </Button>
             </Link>
           </div>

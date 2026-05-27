@@ -75,7 +75,7 @@ export const GROUP_CLOUD_HISTORY_OLDER = 150
 export function useSupporterGroupChannelSync(options: {
   groupId: string
   channelId: string
-  /** Scope débat pour le salon `general` (null = fil général hors débat). */
+  /** Scope débat pour la tribune `general` (null = fil général hors débat). */
   debateId?: string | null
   enabled: boolean
   /** Visiteur sur débat public (général) : pas d’upsert membre, le serveur filtre via metadata.tf_public_debate. */
@@ -187,7 +187,7 @@ export function useSupporterGroupChannelSync(options: {
         }
         if (!memberOk.ok) {
           console.warn(
-            '[Talk Foot] Adhésion salon Supabase impossible — sans ligne dans supporter_group_members, la RLS cache les messages des autres. Détail:',
+            '[Talk Foot] Adhésion tribune Supabase impossible — sans ligne dans supporter_group_members, la RLS cache les messages des autres. Détail:',
             memberOk.error,
           )
         }

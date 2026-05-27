@@ -248,7 +248,7 @@ export function extractMatchLineupBundleFromFixture(
 }
 
 /**
- * Onze de départ par équipe (rétrocompat) — préfère la même logique que le salon avant-match.
+ * Onze de départ par équipe (rétrocompat) — préfère la même logique que la tribune avant-match.
  */
 export function extractStartingXisFromFixture(fixture: SmFixture | null | undefined): SmStartingXIs | null {
   return extractMatchLineupBundleFromFixture(fixture)?.starters ?? null

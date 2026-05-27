@@ -886,7 +886,7 @@ export function ChannelPage() {
     [],
   )
   const kickoffFxMatchIdRef = useRef<string | undefined>(undefined)
-  /** Coup d’envoi plein écran : une fois par salon + pas si on rejoint le live tard (évite F5 / navigation). */
+  /** Coup d’envoi plein écran : une fois par tribune + pas si on rejoint le live tard (évite F5 / navigation). */
   useEffect(() => {
     if (!match?.id) return
     if (status !== 'live') return

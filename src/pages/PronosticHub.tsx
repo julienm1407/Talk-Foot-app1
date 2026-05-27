@@ -30,7 +30,7 @@ const TABS: { id: BetFilterTab; label: string }[] = [
 type HubView = 'paris' | 'classement'
 
 /**
- * Hub « Pronostic » : mes paris, jetons, classement parieurs et accès salon live.
+ * Hub « Pronostic » : mes paris, jetons, classement parieurs et accès tribune live.
  */
 export function PronosticHubPage() {
   const { appearance } = useAppearance()

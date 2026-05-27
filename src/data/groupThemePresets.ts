@@ -1,4 +1,4 @@
-/** Palettes rapides pour création / édition de salons supporters. */
+/** Palettes rapides pour création / édition de tribunes supporters. */
 export const GROUP_THEME_PRESETS: {
   label: string
   primary: string

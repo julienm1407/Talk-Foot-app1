@@ -50,7 +50,7 @@ export function AppShell() {
           <div
             className={cn(
               'tf-channel-shell mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
-              /* Téléphone : scroll page. Tablette+ : hauteur cadrée, scroll dans les colonnes du salon. */
+              /* Téléphone : scroll page. Tablette+ : hauteur cadrée, scroll dans les colonnes de la tribune. */
               'min-h-0 max-md:touch-pan-y max-md:overflow-y-auto max-md:overscroll-y-contain max-md:[-webkit-overflow-scrolling:touch]',
               'md:min-h-0 md:overflow-hidden',
               mainBottomPadChannel,

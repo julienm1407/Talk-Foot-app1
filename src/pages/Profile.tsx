@@ -52,28 +52,6 @@ function profileIncard(appearance: Appearance) {
   )
 }
 
-const PROFILE_SOMMAIRE: { id: string; label: string }[] = [
-  { id: 'compte', label: 'Compte' },
-  { id: 'mode-virage', label: 'Chat' },
-  { id: 'boutique', label: 'Boutique' },
-  { id: 'monnaie', label: 'Niveau' },
-  { id: 'supporter', label: 'Club' },
-  { id: 'classement', label: 'Rang' },
-  { id: 'apparence', label: 'Apparence' },
-  { id: 'badges-pronos', label: 'Badges' },
-  { id: 'progression', label: 'Paliers' },
-]
-
-function profileNavLink(appearance: Appearance) {
-  const L = appearance === 'light'
-  return cn(
-    'inline-flex shrink-0 items-center justify-center rounded-full border px-2.5 py-1 text-[11px] font-bold tracking-tight transition',
-    L
-      ? 'border-tf-dark/10 bg-tf-white/60 text-tf-app-fg hover:border-tf-dark/18 hover:bg-white'
-      : 'border-white/12 bg-white/5 text-sky-200 hover:border-white/18 hover:bg-white/10',
-  )
-}
-
 export function ProfilePage() {
   const navigate = useNavigate()
   const { appearance } = useAppearance()
@@ -142,9 +120,7 @@ export function ProfilePage() {
             Profil
           </div>
           <DisplayNameEditor />
-          <p className="text-sm font-semibold text-tf-app-muted">
-            Affiché sur les salons et le live · 2 changements max. puis pause de 14 jours
-          </p>
+          <p className="text-sm font-semibold text-tf-app-muted">Nom visible sur le live et les tribunes.</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
           {authUser?.isAdmin ? (
@@ -177,24 +153,6 @@ export function ProfilePage() {
           </Button>
         </div>
       </header>
-
-      <nav
-        className={cn(
-          '-mx-1 flex snap-x snap-mandatory items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1',
-          '[scrollbar-width:thin] sm:mx-0 sm:flex-wrap sm:overflow-x-visible',
-        )}
-        aria-label="Aller à une section"
-      >
-        {PROFILE_SOMMAIRE.map(({ id, label }) => (
-          <a
-            key={id}
-            href={`#${id}`}
-            className={cn('snap-start', profileNavLink(appearance), TF_FOCUS_VISIBLE)}
-          >
-            {label}
-          </a>
-        ))}
-      </nav>
 
       <div id="compte" className="scroll-mt-4 space-y-3 sm:space-y-4">
         {authUser?.isAdmin ? (
@@ -256,13 +214,7 @@ export function ProfilePage() {
               <h2 className="font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
                 {LIVE_FIL_EQUIPE_COEUR.label}
               </h2>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-tf-app-muted">
-                Filtrer le chat par tes clubs favoris
-              </p>
-              <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-app-fg/90">
-                Active ce mode pour voir surtout les messages de supporters qui suivent au moins un de tes clubs
-                favoris.
-              </p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-tf-app-muted">Filtre live par clubs favoris</p>
               {!preferencesComplete || favoriteClubIds.length === 0 ? (
                 <p
                   className={cn(
@@ -272,12 +224,10 @@ export function ProfilePage() {
                       : 'border-amber-400/35 bg-amber-950/50 text-amber-100',
                   )}
                 >
-                  Action requise : ajoute d'abord un club favori via « Modifier ligue / clubs ».
+                  Ajoute un club favori pour activer ce filtre.
                 </p>
               ) : (
-                <p className="text-xs font-bold text-tf-app-muted">
-                  Clubs pris en compte : {clubsLabel}
-                </p>
+                <p className="text-xs font-bold text-tf-app-muted">Clubs : {clubsLabel}</p>
               )}
             </div>
 
@@ -339,7 +289,7 @@ export function ProfilePage() {
                 </span>
               </button>
               <p className="text-center text-[11px] font-bold text-tf-app-muted lg:max-w-[11rem] lg:text-left">
-                {virageMode ? 'Mode actif. Tu peux aussi le changer depuis un live.' : 'Action simple : clique sur Activer le fil.'}
+                {virageMode ? 'Fil actif' : 'Fil inactif'}
               </p>
             </div>
           </div>
@@ -379,30 +329,7 @@ export function ProfilePage() {
               >
                 BOUTIQUE
               </p>
-              <h2 className="font-display text-xl font-black text-tf-app-fg">
-                Drop maillots, emotes et packs supporters
-              </h2>
-              <p className={cn('text-sm font-semibold', L ? 'text-slate-700/90' : 'text-amber-50/85')}>
-                Personnalise ton style matchday avec les couleurs de ton club.
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <span
-                  className={cn(
-                    'rounded-full border px-2 py-0.5 text-[11px] font-black',
-                    L ? 'border-amber-300/70 bg-amber-100/85 text-amber-900' : 'border-amber-400/30 bg-amber-300/10 text-amber-200',
-                  )}
-                >
-                  Nouveautes
-                </span>
-                <span
-                  className={cn(
-                    'rounded-full border px-2 py-0.5 text-[11px] font-black',
-                    L ? 'border-rose-300/70 bg-rose-100/80 text-rose-900' : 'border-rose-400/30 bg-rose-300/10 text-rose-200',
-                  )}
-                >
-                  Editions club
-                </span>
-              </div>
+              <h2 className="font-display text-xl font-black text-tf-app-fg">Maillots, emotes et packs</h2>
             </div>
             <span
               className={cn(
@@ -496,12 +423,6 @@ export function ProfilePage() {
 
       <Card id="supporter" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
         <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">SUPPORTER</div>
-        <div className="mt-1 font-display text-lg font-black tracking-tight text-tf-app-fg">
-          Personnalise ton experience
-        </div>
-        <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-          Choisis 1 ligue + jusqu a 3 clubs. Active ensuite le {LIVE_FIL_EQUIPE_COEUR.label} pour filtrer les messages.
-        </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className={cn('rounded-2xl border px-4 py-3', profileIncard(appearance))}>
             <div className="text-xs font-bold text-tf-app-muted">Ligue favorite</div>
@@ -546,12 +467,6 @@ export function ProfilePage() {
           <Button variant="primary" className="w-full rounded-2xl sm:w-auto" onClick={openOnboarding}>
             Choisir ligue et clubs
           </Button>
-          <a
-            href="#mode-virage"
-            className="self-center text-center text-xs font-black text-tf-cta underline decoration-2 underline-offset-2 sm:px-2"
-          >
-            ↑ {LIVE_FIL_EQUIPE_COEUR.label} (réglage rapide)
-          </a>
           <label
             className={cn(
               'flex w-full cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-bold sm:w-auto',
@@ -565,7 +480,7 @@ export function ProfilePage() {
               onChange={(e) => setHideRivalSalons(e.target.checked)}
               className="size-4 rounded border-[color:var(--tf-c30-border)]"
             />
-            Masquer salons rivaux
+            Masquer tribunes rivales
           </label>
         </div>
       </Card>
@@ -577,29 +492,6 @@ export function ProfilePage() {
         <p className={cn('text-[11px] font-black tracking-[0.18em]', L ? 'text-tf-grey' : 'text-sky-200/80')}>
           APPARENCE & PERSONNALISATION
         </p>
-        <nav
-          className={cn(
-            '-mx-1 flex snap-x snap-mandatory items-center gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1',
-            '[scrollbar-width:thin] sm:mx-0 sm:hidden',
-          )}
-          aria-label="Sections apparence"
-        >
-          {(
-            [
-              ['profil-photo', 'Photo'],
-              ['profil-look', 'Mascotte'],
-              ['profil-avatar', 'Look Lego'],
-            ] as const
-          ).map(([id, label]) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              className={cn('snap-start', profileNavLink(appearance), TF_FOCUS_VISIBLE)}
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
         <div id="profil-photo" className="scroll-mt-28 sm:scroll-mt-4">
           <ProfilePhotoSection usernameLabel={profilePseudo} />
         </div>
@@ -613,14 +505,13 @@ export function ProfilePage() {
       </div>
 
       <Card id="badges-pronos" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+        <div>
           <div>
             <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">BADGES PRONOS</div>
             <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
               Tes badges
             </div>
           </div>
-          <div className="text-xs font-semibold text-tf-app-muted">{badges.length} badges</div>
         </div>
 
         <div className="mt-4 grid gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -634,7 +525,6 @@ export function ProfilePage() {
                 <BadgeIllustration kind={b.kind} />
                 <div className="min-w-0">
                   <div className="text-sm font-black text-tf-app-fg">{b.label}</div>
-                  <div className="mt-1 text-sm font-semibold text-tf-app-muted">{b.hint}</div>
                   <div className="mt-2">
                     <Badge tone={b.tone ?? 'neutral'} className={b.className}>
                       Débloqué
@@ -648,14 +538,13 @@ export function ProfilePage() {
       </Card>
 
       <Card id="progression" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+        <div>
           <div>
             <div className="text-[11px] font-black tracking-[0.18em] text-tf-app-muted">PROGRESSION</div>
             <div className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
               Prochains paliers
             </div>
           </div>
-          <div className="text-xs font-semibold text-tf-app-muted">Gagne des badges en jouant</div>
         </div>
 
         <div className="mt-4 space-y-2 sm:space-y-3">

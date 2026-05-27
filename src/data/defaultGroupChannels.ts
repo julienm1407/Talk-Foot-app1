@@ -1,6 +1,6 @@
 import type { SupporterChannel } from '../types/group'
 
-/** Salons par défaut d’un groupe créé via l’app (Général, Transferts, Pronos). */
+/** Tribunes par défaut d’un groupe créé via l’app (Général, Transferts, Pronos). */
 export const DEFAULT_SUPPORTER_GROUP_CHANNELS: SupporterChannel[] = [
   {
     id: 'general',

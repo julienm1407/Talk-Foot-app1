@@ -22,7 +22,7 @@ export function getGroupAccess(
   const fanClubs = prefs.favoriteClubIds
   const groupClubs = tags.clubIds
 
-  /** Même tribune qu’un de tes clubs → accès complet (évite PSG+OM → salon PSG en lecture seule). */
+  /** Même tribune qu’un de tes clubs → accès complet (évite PSG+OM → tribune PSG en lecture seule). */
   const sharesClubAffinity =
     fanClubs.length > 0 && groupClubs.some((gid) => fanClubs.includes(gid))
   if (sharesClubAffinity) {

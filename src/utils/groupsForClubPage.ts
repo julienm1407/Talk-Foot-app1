@@ -24,13 +24,13 @@ const sortByIntensity = (list: SupporterGroup[]) => [...list].sort((a, b) => b.i
 
 /**
  * Tous les groupes rattachés au club (même règles de priorité que l’encart,
- * sans limite de carte — comptage salons / liens hub).
+ * sans limite de carte — comptage tribunes / liens hub).
  */
 export function getAllGroupsForClub(teamId: string, allGroups: SupporterGroup[]): SupporterGroup[] {
   return sortByIntensity(pickGroupsForTeam(teamId, allGroups))
 }
 
-/** Nombre réel de salons = somme des canaux (chaque canal = un salon) sur ces groupes. */
+/** Nombre réel de tribunes = somme des canaux (chaque canal = une tribune) sur ces groupes. */
 export function countSalonChannelsForClub(teamId: string, allGroups: SupporterGroup[]): number {
   return getAllGroupsForClub(teamId, allGroups).reduce(
     (sum, g) => sum + (Array.isArray(g.channels) ? g.channels.length : 0),

@@ -71,7 +71,7 @@ export function LinkedDebateBanner({ debate, debateId, className }: Props) {
           )}
         >
           {debateId ? '· ' : ''}
-          Messages ci-dessous dans le salon général
+          Messages ci-dessous dans la tribune général
         </span>
       </div>
     </div>

@@ -71,7 +71,7 @@ export function LiveSalonPresenceStrip({
         'w-full min-w-0 max-w-full',
         compact ? 'space-y-1.5' : dense ? 'space-y-1' : 'space-y-2.5',
       )}
-      aria-label="Activité du salon live"
+      aria-label="Activité du tribune live"
     >
       <div className="flex flex-wrap items-center justify-between gap-1.5">
         <span
@@ -80,7 +80,7 @@ export function LiveSalonPresenceStrip({
             compact || dense ? 'text-[8px]' : 'text-[9px] sm:text-[10px]',
           )}
         >
-          Intensité salon
+          Intensité tribune
         </span>
         <span
           className={cn(

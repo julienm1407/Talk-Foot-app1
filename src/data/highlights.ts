@@ -15,5 +15,5 @@ export type Highlight = {
   assistName?: string
 }
 
-/** Plus de moments clés seed pour des matchs fictifs ; les vrais salons pourront s’enrichir via l’API. */
+/** Plus de moments clés seed pour des matchs fictifs ; les vrais tribunes pourront s’enrichir via l’API. */
 export const mockHighlights: Highlight[] = []

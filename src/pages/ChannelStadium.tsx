@@ -51,7 +51,7 @@ export function ChannelStadiumPage() {
           to={`/channel/${matchId}`}
           className="text-xs font-black text-tf-electric underline decoration-2 underline-offset-2 sm:text-sm"
         >
-          {match.status === 'live' ? '← Retour au live' : '← Retour au salon'}
+          {match.status === 'live' ? '← Retour au live' : '← Retour à la tribune'}
         </Link>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Link to={`/channel/${matchId}`}>
@@ -60,7 +60,7 @@ export function ChannelStadiumPage() {
                 ? 'Rejoindre le live'
                 : match.status === 'upcoming'
                   ? 'Avant-match'
-                  : 'Salon match'}
+                  : 'Tribune match'}
             </Button>
           </Link>
           {fromSalonEntry ? (
@@ -70,7 +70,7 @@ export function ChannelStadiumPage() {
               className="h-9 px-3 text-xs sm:h-10 sm:text-sm"
               onClick={() => setSalonModalOpen(true)}
             >
-              Salons du match
+              Tribunes du match
             </Button>
           ) : null}
         </div>

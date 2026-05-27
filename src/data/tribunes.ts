@@ -2,7 +2,7 @@ import type { TribuneId } from '../types/tribune'
 
 export const TRIBUNE_TAGLINE = 'TalkFoot — Le stade dans ta poche.'
 export const TRIBUNE_PROMISE =
-  'Choisis une zone d’ambiance pour le chat de ce match (salon de groupe = autre page).'
+  'Choisis une zone d’ambiance pour le chat de ce match (tribune de groupe = autre page).'
 
 /** Filtre Profil uniquement (pas de bouton doublon sur le live). */
 export const LIVE_FIL_EQUIPE_COEUR = {

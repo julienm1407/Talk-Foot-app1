@@ -25,7 +25,7 @@ function writeAll(store: Store) {
 }
 
 /**
- * Salon supporter « tribune » choisi sur le plan stade : filtre le chat live
+ * Tribune supporter « tribune » choisi sur le plan stade : filtre le chat live
  * pour ne montrer que les messages de ce groupe (démo locale).
  */
 export function useMatchStadiumGroup(matchId: string | undefined) {

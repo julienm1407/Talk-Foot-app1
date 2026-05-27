@@ -10,17 +10,17 @@ export function ClubDataBar({
   matchMode,
   onFire,
   salonChannelCount,
-  salonsHubTo,
+  tribunesHubTo,
   salonClubName,
 }: {
   data: ClubPageMock
   onOpenInfo: () => void
   matchMode: boolean
   onFire: boolean
-  /** Nombre réel de salons (canaux) côté groupes du club + fallback ligue. */
+  /** Nombre réel de tribunes (canaux) côté groupes du club + fallback ligue. */
   salonChannelCount: number
-  /** Lien vers le hub des salons (découverte) pour ce club. */
-  salonsHubTo: string
+  /** Lien vers le hub des tribunes (découverte) pour ce club. */
+  tribunesHubTo: string
   /** Pour l’accessibilité du lien. */
   salonClubName: string
 }) {
@@ -52,18 +52,18 @@ export function ClubDataBar({
 
           <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:gap-3">
             <Link
-              to={salonsHubTo}
+              to={tribunesHubTo}
               className={cn(
                 'block rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 transition',
                 'hover:border-rose-400/35 hover:bg-white/[0.07] focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/50',
                 TF_FOCUS_VISIBLE,
                 matchMode && 'ring-1 ring-rose-500/30',
               )}
-              aria-label={`Ouvrir les salons supporters de ${salonClubName} (${salonChannelCount} salon${salonChannelCount === 1 ? '' : 's'})`}
+              aria-label={`Ouvrir les tribunes supporters de ${salonClubName} (${salonChannelCount} tribune${salonChannelCount === 1 ? '' : 's'})`}
             >
-              <p className="text-[9px] font-black uppercase tracking-wider text-rose-200/90">Salons (live)</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-rose-200/90">Tribunes (live)</p>
               <p className="mt-0.5 text-sm font-black text-white">
-                {salonChannelCount} salon{salonChannelCount === 1 ? '' : 's'}
+                {salonChannelCount} tribune{salonChannelCount === 1 ? '' : 's'}
                 {salonChannelCount > 0 ? (
                   <span className="font-bold text-rose-100/90"> — voir</span>
                 ) : null}

@@ -419,7 +419,7 @@ export function buildClubPageMock(team: Team): ClubPageMock {
     hubPulse: [
       { label: 'Débats 24h', value: numFmt(800 + h % 1_200), sub: `+${5 + h % 12} %` },
       {
-        label: 'Salon vocal',
+        label: 'Tribune vocale',
         value: `${openRooms + 1} ouverts`,
         sub: `pic ${team.shortName}`,
       },

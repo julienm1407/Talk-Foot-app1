@@ -20,7 +20,7 @@ export function AboutPage() {
       <section className={section}>
         <h2 className={h2}>Notre mission</h2>
         <p className={p}>
-          Rassembler les supporters autour des matchs en direct : salons de discussion, débats, groupes, tribunes
+          Rassembler les supporters autour des matchs en direct : tribunes de discussion, débats, groupes, tribunes
           virtuelles et contenus éditoriaux sur les grands championnats européens.
         </p>
       </section>
@@ -37,7 +37,7 @@ export function AboutPage() {
       <section className={section}>
         <h2 className={h2}>Communauté & modération</h2>
         <p className={p}>
-          Les utilisateurs peuvent publier des messages dans les salons live, les groupes et les messages privés. Un
+          Les utilisateurs peuvent publier des messages dans les tribunes live, les groupes et les messages privés. Un
           filtre bloque insultes, propos haineux et liens externes dans les chats. Tu peux signaler un abus depuis ton{' '}
           <Link to="/profile" className="font-bold text-tf-cta underline-offset-2 hover:underline">
             profil
@@ -62,7 +62,7 @@ export function AboutPage() {
         <h2 className={h2}>Publicité</h2>
         <p className={p}>
           Des annonces Google AdSense peuvent apparaître sur l&apos;accueil et certaines pages éditoriales (articles,
-          fiches débat ou club). Les salons de match, chats de groupe et pages de connexion restent sans publicité pour
+          fiches débat ou club). Les tribunes de match, chats de groupe et pages de connexion restent sans publicité pour
           préserver l&apos;expérience utilisateur. Voir la{' '}
           <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
             politique de confidentialité

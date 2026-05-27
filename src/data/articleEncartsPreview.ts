@@ -4,7 +4,7 @@ import type { SupporterGroup } from '../types/group'
 import { starterGroups } from './groups'
 import { teams } from './teams'
 
-/** Id fictif réservé aux encarts article (pas un salon réel — les CTA pointent vers un vrai live si dispo). */
+/** Id fictif réservé aux encarts article (pas une tribune réel — les CTA pointent vers un vrai live si dispo). */
 export const ARTICLE_PREVIEW_MATCH_ID = 'article-encart-preview'
 
 /** Données visuelles pour la démo d’encart dans les articles (hors calendrier live). */
@@ -51,7 +51,7 @@ const GROUP_MESSAGES: Record<string, TopLikedMessage[]> = {
     {
       id: 'm3',
       author: 'VeloVoice',
-      text: 'Ambiance Talk Foot insane ce soir, ça chante dans le salon L1 🔥',
+      text: 'Ambiance Talk Foot insane ce soir, ça chante dans la tribune L1 🔥',
       likes: 267,
     },
   ],
@@ -71,7 +71,7 @@ const GROUP_MESSAGES: Record<string, TopLikedMessage[]> = {
     {
       id: 'm3',
       author: 'AuteuilRouge',
-      text: 'Le salon live est à 12 msg/s au dernier corner, jamais vu ça sur une amical.',
+      text: 'Le tribune live est à 12 msg/s au dernier corner, jamais vu ça sur une amical.',
       likes: 355,
     },
   ],

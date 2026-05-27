@@ -29,7 +29,7 @@ export function PrivacyPage() {
             Supabase ou stockage local sur l&apos;appareil).
           </li>
           <li>
-            <strong>Activité</strong> : préférences supporter, messages dans les salons (lorsque synchronisés),
+            <strong>Activité</strong> : préférences supporter, messages dans les tribunes (lorsque synchronisés),
             participation aux groupes et débats, paris simulés à jetons, paramètres d&apos;affichage.
           </li>
           <li>
@@ -115,7 +115,7 @@ export function PrivacyPage() {
           >
             technologies publicitaires Google
           </a>
-          . Les salons live et chats de groupe n&apos;affichent pas de script publicitaire.
+          . Les tribunes live et chats de groupe n&apos;affichent pas de script publicitaire.
         </p>
         <p className={p}>
           Un bandeau t&apos;informe lors de ta première visite ; tu peux refuser les traceurs non essentiels en ne

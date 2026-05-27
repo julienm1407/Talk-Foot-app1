@@ -76,7 +76,7 @@ function syntheticOverUnder25Odds(fixtureId: number, roundId?: number): SmBookOd
 /**
  * Cotes 1N2 — un bookmaker (`sportMonksOddsBookmakerId` / env).
  * 1) `GET /rounds/{roundId}` si `roundId` connu (match ou env).
- * 2) Sinon ou si pas de triplet : `GET /fixtures/{fixtureId}` avec `odds` (repli fiable sur le salon).
+ * 2) Sinon ou si pas de triplet : `GET /fixtures/{fixtureId}` avec `odds` (repli fiable sur la tribune).
  */
 export function useSportMonksRound1x2Odds(
   sportMonksFixtureId: number | undefined,

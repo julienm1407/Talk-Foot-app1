@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn'
 
 /**
  * Emplacements tribunes autour de la pelouse (vue plongeante type diffuse).
- * Ordre : nord, sud, ouest, est, coins NE/NW pour 5e et 6e salon — sans chevaucher l’ovale central.
+ * Ordre : nord, sud, ouest, est, coins NE/NW pour 5e et 6e tribune — sans chevaucher l’ovale central.
  */
 const TRIBUNE_SLOT_CLASS: readonly string[] = [
   'top-[2%] left-[11%] right-[11%] z-[12] h-[19%] rounded-b-[1.75rem] rounded-t-md',
@@ -216,7 +216,7 @@ export function StadiumSupporterPicker({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-800 shadow-sm ring-1 ring-slate-200/80">
                 <span className="size-1.5 animate-pulse rounded-full bg-red-500" aria-hidden />
-                Live · salons
+                Live · tribunes
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
                 {match.home.shortName} — {match.away.shortName}
@@ -229,7 +229,7 @@ export function StadiumSupporterPicker({
               Choisis ta tribune
             </h2>
             <p className="mt-1 max-w-xl text-sm font-semibold leading-snug text-slate-600">
-              Chaque carte est un salon supporter : le chat live ne montre que les personnes présentes dans la
+              Chaque carte est une tribune supporter : le chat live ne montre que les personnes présentes dans la
               tribune choisie.
             </p>
           </div>
@@ -262,7 +262,7 @@ export function StadiumSupporterPicker({
             <div className="min-w-0">
               {salonPicks.length === 0 ? (
                 <div className="rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm font-semibold text-amber-950">
-                  <p className="font-black">Aucun salon tagué pour ce match.</p>
+                  <p className="font-black">Aucune tribune tagué pour ce match.</p>
                   <p className="mt-2 text-xs leading-relaxed">
                     Crée ou rejoins un groupe depuis l’onglet Groupes, avec les bons hashtags / clubs.
                   </p>

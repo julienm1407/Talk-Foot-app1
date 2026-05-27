@@ -127,7 +127,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
           <>
             {byKind.likes.length > 0 ? (
               <section aria-label="Likes sur tes messages">
-                <SectionTitle className={muted}>Likes & salons</SectionTitle>
+                <SectionTitle className={muted}>Likes & tribunes</SectionTitle>
                 <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
                   {byKind.likes.map((n) => (
                     <li key={n.id}>

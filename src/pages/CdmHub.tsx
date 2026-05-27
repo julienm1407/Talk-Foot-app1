@@ -307,7 +307,7 @@ export function CdmHubPage() {
         {(
           [
             { title: 'Effectif officiel', body: 'Le 26 sélectionné(e)s, capitaine et sélectionneur.' },
-            { title: 'Tribune par nation', body: 'Un salon dédié aux supporters de chaque équipe.' },
+            { title: 'Tribune par nation', body: 'Une tribune dédié aux supporters de chaque équipe.' },
             { title: 'Classement parieurs CDM', body: 'Top parieurs filtrés sur la compétition.' },
           ] as const
         ).map((card) => (

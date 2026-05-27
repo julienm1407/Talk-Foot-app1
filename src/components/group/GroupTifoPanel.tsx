@@ -95,7 +95,7 @@ export function GroupTifoPanel({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className={cn('text-[10px] font-black uppercase tracking-[0.2em]', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
-          Tifo pixel{isShared ? ' · ce salon' : ''}
+          Tifo pixel{isShared ? ' · cette tribune' : ''}
         </div>
         <span
           className={cn(

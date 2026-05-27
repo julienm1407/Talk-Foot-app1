@@ -14,7 +14,7 @@ export function groupSalonBotUserId(groupId: string) {
   return `group-bot:${groupId}`
 }
 
-/** Bot de bienvenue propre au groupe (pas de faux supporter PSG/OM dans un salon Bayern, etc.). */
+/** Bot de bienvenue propre au groupe (pas de faux supporter PSG/OM dans une tribune Bayern, etc.). */
 export function buildGroupSalonBotUser(group: GroupSalonBotSource): User {
   return {
     id: groupSalonBotUserId(group.id),
@@ -22,7 +22,7 @@ export function buildGroupSalonBotUser(group: GroupSalonBotSource): User {
     avatarSeed: `salon-bot-${group.id}`,
     accent: 'amber',
     isGroupSalonBot: true,
-    tagline: 'Assistant du salon',
+    tagline: 'Assistant de la tribune',
   }
 }
 

@@ -23,7 +23,7 @@ export type Debate = {
   participantsCount: number
   trending?: boolean
   /**
-   * Écriture dans le salon « Général » quand ce débat est ouvert (`?debate=`).
+   * Écriture dans la tribune « Général » quand ce débat est ouvert (`?debate=`).
    * `public` (défaut) : comme sur l’accueil — tout le monde peut participer.
    * `members` : le groupe restreint l’écriture aux membres (débat interne).
    */

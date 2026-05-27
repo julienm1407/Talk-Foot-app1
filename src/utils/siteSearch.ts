@@ -36,9 +36,9 @@ function scoreBlob(blob: string, queryNorm: string, words: string[]): number {
 }
 
 const STATIC_PAGES: { title: string; subtitle: string; href: string; kw: string }[] = [
-  { title: 'Match', subtitle: 'Live, planning & salons', href: '/match', kw: 'match agenda matchs live direct programme ligue coupe calendrier prochain prochain match' },
+  { title: 'Match', subtitle: 'Live, planning & tribunes', href: '/match', kw: 'match agenda matchs live direct programme ligue coupe calendrier prochain prochain match' },
   { title: 'Match', subtitle: 'Matchs par jour et par ligue', href: '/match', kw: 'match calendrier planning date programme agenda prochains matchs' },
-  { title: 'Groupes & tribunes', subtitle: 'Salons de supporters', href: '/groups', kw: 'groupe tribune salon communauté' },
+  { title: 'Groupes & tribunes', subtitle: 'Tribunes de supporters', href: '/groups', kw: 'groupe tribune communauté' },
   { title: 'Débats', subtitle: 'Discussions tendance', href: '/debates', kw: 'débat discussion topic' },
   { title: 'Classement parieurs', subtitle: 'Top paris & points', href: '/pronostic?vue=classement', kw: 'classement parieur paris pronostic leaderboard' },
   { title: 'Classements ligues', subtitle: 'Big 5 & forme', href: '/rankings', kw: 'classement ranking ligue championnat' },

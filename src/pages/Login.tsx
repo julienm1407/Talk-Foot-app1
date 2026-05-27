@@ -214,7 +214,7 @@ export function LoginPage() {
               role="status"
               className="mt-6 rounded-xl border border-amber-200/80 bg-amber-50/95 p-3 text-xs font-semibold text-amber-950"
             >
-              ⚽ Le coup d&apos;envoi du salon est lancé : connecte-toi pour entrer sur le terrain et participer au
+              ⚽ Le coup d&apos;envoi de la tribune est lancé : connecte-toi pour entrer sur le terrain et participer au
               live avec les supporters.
             </div>
           )}

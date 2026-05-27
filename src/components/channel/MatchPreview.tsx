@@ -85,7 +85,7 @@ export function MatchPreview({
   trendsLoading: trendsHookLoading,
 }: {
   match: Match
-  /** Même source que le bandeau « Tendances » du salon (`extractSmRecentFormFromFixture` sur trends fixture). */
+  /** Même source que le bandeau « Tendances » de la tribune (`extractSmRecentFormFromFixture` sur trends fixture). */
   trendRecentForm?: { home: FormResult[]; away: FormResult[] } | null
   trendsLoading?: boolean
 }) {
@@ -229,10 +229,10 @@ export function MatchPreview({
             ? formSource === 'teams'
               ? 'Séquence comme sur la fiche club (derniers matchs terminés via API équipe).'
               : formSource === 'trends'
-                ? 'Séquence issue des tendances fixture (même flux que le bandeau Tendances du salon).'
+                ? 'Séquence issue des tendances fixture (même flux que le bandeau Tendances de la tribune).'
                 : 'Séquence issue des tendances embarquées avec les compos SportMonks.'
             : useSmApi
-              ? 'Aucune donnée « forme » sur ce match pour l’instant — le bandeau Tendances du salon peut quand même afficher d’autres signaux.'
+              ? 'Aucune donnée « forme » sur ce match pour l’instant — le bandeau Tendances de la tribune peut quand même afficher d’autres signaux.'
               : 'Illustration locale — branche SportMonks pour la vraie forme.'}
         </p>
         <div className="mt-3 flex justify-between gap-4">

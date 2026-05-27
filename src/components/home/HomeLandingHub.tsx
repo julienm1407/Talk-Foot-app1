@@ -100,7 +100,7 @@ export function HomeLandingHub({
               )}
             >
               {compact
-                ? 'Salons live, débats, actus foot et tribunes : le hub des supporters en un seul endroit.'
+                ? 'Tribunes live, débats, actus foot : le hub des supporters en un seul endroit.'
                 : 'Suivez les matchs en direct, rejoignez les tribunes, lisez les actus et participez aux débats — Talk Foot centralise l’expérience supporter autour du football.'}
             </p>
             <p
@@ -164,7 +164,7 @@ export function HomeLandingHub({
                 <span className="font-display text-tf-lg font-black tracking-tight sm:text-xl">Match</span>
               </div>
               <p className="mt-tf-1 w-full text-pretty text-tf-xs font-semibold leading-snug text-white/95 sm:text-tf-sm">
-                Lives, planning & salons — tout au même endroit
+                Lives, planning & tribunes — tout au même endroit
               </p>
             </div>
             <span

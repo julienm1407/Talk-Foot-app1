@@ -104,7 +104,7 @@ export function NationPage() {
             </h1>
             <p className="mt-3 max-w-xl text-sm font-medium text-white/85 sm:text-base">
               Suis le parcours de la sélection {nation.nameFr.toLowerCase()} pendant le Mondial 2026 —
-              calendrier, salons, classement et maillot officiel Talk Foot.
+              calendrier, tribunes, classement et maillot officiel Talk Foot.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <NationFavoriteButton
@@ -257,7 +257,7 @@ export function NationPage() {
             Tribune {nation.nameFr}
           </p>
           <p className="mt-1.5 leading-snug">
-            Un salon dédié aux supporters de cette sélection avec débats, pronos et chants.
+            Une tribune dédié aux supporters de cette sélection avec débats, pronos et chants.
           </p>
         </article>
       </section>

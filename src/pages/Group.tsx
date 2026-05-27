@@ -54,7 +54,7 @@ import { CLUB_OFFICIAL_LOGO_BY_ID } from '../data/clubOfficialLogoUrls'
 import { useAppearance } from '../contexts/AppearanceContext'
 
 const MAX_GROUP_CHANNELS = 14
-/** Plafond messages par salon (seed + cloud, après chargements « plus anciens »). */
+/** Plafond messages par tribune (seed + cloud, après chargements « plus anciens »). */
 const MAX_GROUP_CHANNEL_MESSAGES = 2000
 
 /** Démo : après enregistrement d’un média, passage automatique en « validé » pour montrer le flux. */
@@ -98,7 +98,7 @@ export function GroupPage() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [groupId])
 
-  /** Répare les groupes créés avant la colonne `channels` : persiste les salons par défaut en cloud. */
+  /** Répare les groupes créés avant la colonne `channels` : persiste les tribunes par défaut en cloud. */
   useEffect(() => {
     if (!group || group.createdBy !== 'me' || !isSupabaseConfigured() || !authUser?.id) return
     const channels = channelsForSupporterGroup(group.channels)
@@ -178,7 +178,7 @@ export function GroupPage() {
       })
     : 'full'
 
-  /** Pourquoi lecture seule : derby / rivalité détectée entre un de tes clubs et le salon. */
+  /** Pourquoi lecture seule : derby / rivalité détectée entre un de tes clubs et la tribune. */
   const readonlyRivalExplanation = useMemo(() => {
     if (accessLevel !== 'readonly' || !group?.fanTags?.clubIds?.length) return null
     for (const myId of favoriteClubIds) {
@@ -332,7 +332,7 @@ export function GroupPage() {
       onRemoteMessages: mergeRemoteGroupMessages,
     })
 
-  /** Ré-enregistre l’adhésion côté Supabase à l’ouverture du salon (répare un « Rejoindre » raté ou hors-ligne). */
+  /** Ré-enregistre l’adhésion côté Supabase à l’ouverture de la tribune (répare un « Rejoindre » raté ou hors-ligne). */
   useEffect(() => {
     if (!isSupabaseConfigured() || !group || !authUser?.id || authUser.isAnonymous) return
     if (!groupCloudChatEnabled || skipCloudMemberUpsert) return
@@ -348,7 +348,7 @@ export function GroupPage() {
     joinedGroupIds,
   ])
 
-  /** Dernier débat lié au salon « général » — pour re-seeder si ?debate= change. */
+  /** Dernier débat lié à la tribune « général » — pour re-seeder si ?debate= change. */
   const prevGeneralDebateRef = useRef<string | null | undefined>(undefined)
 
   const [personalizeOpen, setPersonalizeOpen] = useState(false)
@@ -490,7 +490,7 @@ export function GroupPage() {
 
   const groupMessageLikes = useSupporterGroupMessageLikesSync({
     groupId: group?.id ?? '',
-    groupName: group?.name ?? 'Salon',
+    groupName: group?.name ?? 'Tribune',
     enabled: groupCloudChatEnabled,
     actorDisplayName: authUser?.displayName,
   })
@@ -537,7 +537,7 @@ export function GroupPage() {
           return
         }
         setGroupChatModerationHint(
-          'Message non envoyé au salon partagé. Recharge la page ou réessaie dans quelques secondes.',
+          'Message non envoyé à la tribune partagée. Recharge la page ou réessaie dans quelques secondes.',
         )
         return
       }
@@ -624,7 +624,7 @@ export function GroupPage() {
           Groupe introuvable
         </div>
         <div className="mt-2 text-sm font-medium text-tf-grey">
-          Ce salon n’existe plus ou le lien est invalide.
+          Cette tribune n’existe plus ou le lien est invalide.
         </div>
       </Card>
     )
@@ -638,7 +638,7 @@ export function GroupPage() {
     (debate.salonAccess ?? 'public') === 'public'
   const isPublicGroupKind = (group.groupKind ?? 'public') === 'public'
   const salonAccessBadgeOpen = isPublicDebateInGeneral || isPublicGroupKind
-  const canWriteInSalon =
+  const canWriteInTribune =
     accessLevel !== 'readonly' && (isGroupMember || isPublicDebateInGeneral)
   const groupMainClubId = group.fanTags?.clubIds?.[0] ?? null
   const groupMainClubLabel = groupMainClubId ? ALL_CLUBS_BY_ID[groupMainClubId]?.name ?? groupMainClubId : null
@@ -675,7 +675,7 @@ export function GroupPage() {
           {isPublicDebateInGeneral
             ? 'Débat ouvert (général)'
             : isPublicGroupKind
-              ? 'Salon public'
+              ? 'Tribune publique'
               : 'Groupe privé'}
         </span>
         {isSupabaseConfigured() && (!authUser || authUser.isAnonymous) ? (
@@ -897,8 +897,8 @@ export function GroupPage() {
               <ShareButton
                 path={`/group/${group.id}`}
                 title={group.name}
-                text={`Rejoins-moi sur Talk Foot — salon « ${group.name} »`}
-                label="Partager le salon"
+                text={`Rejoins-moi sur Talk Foot — tribune « ${group.name} »`}
+                label="Partager la tribune"
               />
               <Link
                 to="/groups"
@@ -921,8 +921,8 @@ export function GroupPage() {
                 {group.createdBy === 'me'
                   ? 'Ton groupe'
                   : isPublicGroupKind
-                    ? 'Salon public'
-                    : 'Salon privé'}
+                    ? 'Tribune publique'
+                    : 'Tribune privée'}
               </Badge>
               {group.createdBy !== 'me' && !isJoined(group.id) ? (
                 <Button
@@ -930,7 +930,7 @@ export function GroupPage() {
                   className="rounded-2xl text-xs font-black"
                   onClick={() => joinGroup(group.id)}
                 >
-                  Rejoindre ce salon
+                  Rejoindre cette tribune
                 </Button>
               ) : null}
               {group.createdBy !== 'me' && isJoined(group.id) ? (
@@ -951,7 +951,7 @@ export function GroupPage() {
                 disabled={group.createdBy !== 'me'}
                 title={
                   group.createdBy !== 'me'
-                    ? 'Réservé aux salons que tu as créés toi-même'
+                    ? 'Réservé aux tribunes que tu as créés toi-même'
                     : 'Couleurs, slogan, intensité…'
                 }
                 onClick={() => {
@@ -986,7 +986,7 @@ export function GroupPage() {
               compact
               path={`/group/${group.id}`}
               title={group.name}
-              text={`Salon Talk Foot : ${group.name}`}
+              text={`Tribune Talk Foot : ${group.name}`}
             />
             {group.createdBy === 'me' ? (
               <Button
@@ -1053,7 +1053,7 @@ export function GroupPage() {
                   disabled={group.channels.length >= MAX_GROUP_CHANNELS}
                   title={
                     group.channels.length >= MAX_GROUP_CHANNELS
-                      ? `Maximum ${MAX_GROUP_CHANNELS} salons`
+                      ? `Maximum ${MAX_GROUP_CHANNELS} tribunes`
                       : undefined
                   }
                   onClick={() => {
@@ -1061,7 +1061,7 @@ export function GroupPage() {
                     setSalonFormOpen(true)
                   }}
                 >
-                  + Nouveau salon
+                  + Nouvelle tribune
                 </Button>
               ) : (
                 <form
@@ -1080,7 +1080,7 @@ export function GroupPage() {
                       return
                     }
                     if (group.channels.length >= MAX_GROUP_CHANNELS) {
-                      setNewSalonError(`Limite de ${MAX_GROUP_CHANNELS} salons atteinte.`)
+                      setNewSalonError(`Limite de ${MAX_GROUP_CHANNELS} tribunes atteinte.`)
                       return
                     }
                     const id = newChannelIdFromName(name)
@@ -1102,13 +1102,13 @@ export function GroupPage() {
                     setSalonFormOpen(false)
                   }}
                 >
-                  <div className={cn('text-xs font-black', L ? 'text-tf-dark' : 'text-sky-100')}>Créer un salon</div>
+                  <div className={cn('text-xs font-black', L ? 'text-tf-dark' : 'text-sky-100')}>Créer une tribune</div>
                   <Input
                     value={newSalonName}
                     onChange={(e) => setNewSalonName(e.target.value)}
-                    placeholder="Nom du salon"
+                    placeholder="Nom de la tribune"
                     className="text-sm"
-                    aria-label="Nom du nouveau salon"
+                    aria-label="Nom de la nouvelle tribune"
                   />
                   <Input
                     value={newSalonDesc}
@@ -1122,7 +1122,7 @@ export function GroupPage() {
                     onChange={(e) => setNewSalonEmoji(e.target.value)}
                     placeholder="Emoji"
                     className="text-sm"
-                    aria-label="Emoji du salon"
+                    aria-label="Emoji de la tribune"
                   />
                   {newSalonError ? (
                     <p className="text-xs font-semibold text-rose-600">{newSalonError}</p>
@@ -1210,7 +1210,7 @@ export function GroupPage() {
                     L ? 'text-tf-dark' : 'text-sky-50',
                   )}
                 >
-                  Salon — discussion
+                  Tribune — discussion
                 </div>
                 <div
                   className={cn(
@@ -1237,10 +1237,10 @@ export function GroupPage() {
                       {debateFromQuery ? '↻' : '🗣️'}
                     </span>
                     {debateFromQuery
-                      ? 'Changer le débat du salon'
+                      ? 'Changer le débat de la tribune'
                       : groupDebates.length > 0
-                        ? `Débat du salon (${groupDebates.length})`
-                        : 'Débat du salon'}
+                        ? `Débat de la tribune (${groupDebates.length})`
+                        : 'Débat de la tribune'}
                   </Button>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
@@ -1332,18 +1332,18 @@ export function GroupPage() {
 
           {accessLevel === 'readonly' ? (
             <div className="mx-4 mt-4 shrink-0 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950 sm:mx-5">
-              <p className="font-black text-amber-900">Lecture seule (salon « ennemi »)</p>
+              <p className="font-black text-amber-900">Lecture seule (tribune « ennemi »)</p>
               <p className="mt-2 leading-relaxed text-amber-900/95">
-                Ici, c’est volontaire : dans les <strong>groupes</strong>, un salon rattaché à un club{' '}
+                Ici, c’est volontaire : dans les <strong>groupes</strong>, une tribune rattachée à un club{' '}
                 <strong>rival</strong> de tes favoris (ex. derby) est en{' '}
                 <strong>consultation uniquement</strong>, pour éviter les débordements et le spam entre tribunes.
                 Sur un <strong>match live</strong>, tu peux toujours écrire : le{' '}
-                <strong>{LIVE_FIL_EQUIPE_COEUR.label}</strong> filtre ce que tu <em>vois</em> parmi ce salon (même
+                <strong>{LIVE_FIL_EQUIPE_COEUR.label}</strong> filtre ce que tu <em>vois</em> parmi cette tribune (même
                 logique que sur le live public), sans couper ton clavier.
               </p>
               {readonlyRivalExplanation ? (
                 <p className="mt-2 text-xs font-bold text-amber-800/90">
-                  Détecté : supporter {readonlyRivalExplanation.mine} dans un salon orienté{' '}
+                  Détecté : supporter {readonlyRivalExplanation.mine} dans une tribune orientée{' '}
                   {readonlyRivalExplanation.theirs}.
                 </p>
               ) : null}
@@ -1356,9 +1356,9 @@ export function GroupPage() {
                 type="search"
                 value={salonSearchQuery}
                 onChange={(e) => setSalonSearchQuery(e.target.value)}
-                placeholder="Rechercher dans ce salon…"
+                placeholder="Rechercher dans cette tribune…"
                 className="h-10 flex-1 rounded-xl border-tf-grey-pastel/80 text-sm font-semibold"
-                aria-label="Rechercher dans les messages du salon"
+                aria-label="Rechercher dans les messages de la tribune"
               />
               {salonSearchQuery.trim() ? (
                 <p className="text-center text-[11px] font-bold text-tf-grey sm:min-w-[7rem] sm:text-left">
@@ -1391,7 +1391,7 @@ export function GroupPage() {
             )}
             style={salonSurface?.backdrop}
             role="log"
-            aria-label="Messages du salon"
+            aria-label="Messages de la tribune"
             aria-live="polite"
           >
             <MessageList
@@ -1418,14 +1418,14 @@ export function GroupPage() {
 
           {accessLevel === 'readonly' ? (
             <div className="border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-4 py-4 text-center text-sm font-bold text-tf-grey sm:px-5">
-              Écriture désactivée sur ce salon (mode lecture seule).
+              Écriture désactivée sur cette tribune (mode lecture seule).
             </div>
-          ) : !canWriteInSalon ? (
+          ) : !canWriteInTribune ? (
             <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-gradient-to-b from-slate-50/95 to-tf-ice/90 px-4 py-4 sm:px-5">
               <p className="text-center text-sm font-bold text-tf-dark">
                 {debate && channel?.id === 'general' && debate.salonAccess === 'members'
                   ? 'Ce débat est réservé aux membres du groupe — rejoins pour participer.'
-                  : 'Tu n’as pas rejoint ce salon — lecture seule jusqu’à adhésion.'}
+                  : 'Tu n’as pas rejoint cette tribune — lecture seule jusqu’à adhésion.'}
               </p>
               <Button
                 type="button"
@@ -1448,7 +1448,7 @@ export function GroupPage() {
               ) : null}
               <MessageComposer
                 onSend={onSend}
-                placeholder={`Message dans ${channel?.name ?? 'le salon'}…`}
+                placeholder={`Message dans ${channel?.name ?? 'la tribune'}…`}
                 quickEmotes={quickEmotesList}
                 onQuickEmote={onSend}
                 scarfChoices={

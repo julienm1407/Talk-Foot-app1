@@ -1,7 +1,7 @@
 export const SITE_NAME = 'Talk Foot'
 
 export const SITE_DEFAULT_DESCRIPTION =
-  'Talk Foot — réseau social football en direct : salons de match, chat live, débats, tribunes virtuelles, paris entre supporters et actus L1, Premier League, Liga, Serie A, Bundesliga.'
+  'Talk Foot — réseau social football en direct : tribunes de match, chat live, débats, tribunes virtuelles, paris entre supporters et actus L1, Premier League, Liga, Serie A, Bundesliga.'
 
 /** Image Open Graph par défaut (Unsplash — licence Unsplash). */
 export const SITE_DEFAULT_OG_IMAGE =
