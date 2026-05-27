@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DirectMessagesProvider } from '../contexts/DirectMessagesContext'
 import { PrivateMessagesUiProvider } from '../contexts/PrivateMessagesUiContext'
@@ -24,6 +25,18 @@ export function AppShell() {
   const isHome = location.pathname === '/' || location.pathname === ''
   const isChannel = location.pathname.startsWith('/channel/')
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
+  const homeScrollRef = useRef<HTMLDivElement | null>(null)
+  const [homeFooterVisible, setHomeFooterVisible] = useState(false)
+
+  useEffect(() => {
+    if (isHome) setHomeFooterVisible(false)
+  }, [isHome, location.pathname])
+
+  const onHomeScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24
+    setHomeFooterVisible(atBottom)
+  }, [])
 
   useSwipeNavigate({
     enabled: !isChannel,
@@ -60,13 +73,17 @@ export function AppShell() {
             <ErrorBoundary key={location.pathname}>
               <Outlet />
             </ErrorBoundary>
+            <div className="mt-4">
+              <SiteLegalFooter compact className="rounded-t-2xl" />
+            </div>
           </div>
         ) : isHome ? (
           <div
+            ref={homeScrollRef}
+            onScroll={onHomeScroll}
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
-              /* Desktop : une seule zone scrollable (colonne centrale du hub), pas le conteneur page — sinon la grille ne borne pas la hauteur et le centre reste « coupé ». */
-              'md:flex md:min-h-0 md:flex-col md:overflow-hidden md:overscroll-none',
+              'md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:overscroll-y-contain',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-4 sm:pt-6',
               'max-md:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
               mainBottomPadHomeDesktop,
@@ -77,6 +94,11 @@ export function AppShell() {
                 <Outlet />
               </ErrorBoundary>
             </PageAdRails>
+            {homeFooterVisible ? (
+              <div className="mt-6">
+                <SiteLegalFooter className="md:hidden rounded-t-2xl" />
+              </div>
+            ) : null}
           </div>
         ) : (
           <div
@@ -93,11 +115,13 @@ export function AppShell() {
                 </ErrorBoundary>
               </div>
             </PageAdRails>
+            <div className="mt-5">
+              <SiteLegalFooter className="rounded-t-2xl" />
+            </div>
           </div>
         )}
       </main>
 
-      <SiteLegalFooter compact={isChannel} className={isChannel ? 'max-md:pb-1' : undefined} />
       {!isChannel ? <BottomNav /> : null}
     </div>
     </PrivateMessagesUiProvider>

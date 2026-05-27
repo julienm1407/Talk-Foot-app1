@@ -43,6 +43,7 @@ import { CdmNationsRail } from '../components/cdm/CdmNationsRail'
 import { CdmHomeReminder } from '../components/cdm/CdmHomeReminder'
 import { FavoriteNationsHomeSection } from '../components/cdm/FavoriteNationsHomeSection'
 import { FavoriteNationsAlertBar } from '../components/cdm/FavoriteNationsAlertBar'
+import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -221,6 +222,7 @@ export function HomePage() {
           team={team}
           contentReady={!loading}
         />
+        <SiteLegalFooter className="rounded-t-2xl" />
       </div>
     </>
   )
