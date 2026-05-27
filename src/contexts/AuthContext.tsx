@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { getSupabaseOAuthRedirectTo } from '../lib/supabase/oauthRedirect'
 import { logSiteActivity } from '../lib/activityLog'
+import { isCloudAdminEmail } from '../lib/supabase/adminUsers'
 import {
   isTalkFootOAuthProvider,
   type TalkFootOauthProviderId,
@@ -346,11 +347,22 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     const hydratedRef = { current: false }
 
-    const applySession = (session: Session | null) => {
+    const applySession = async (session: Session | null) => {
       if (cancelled) return
       hydratedRef.current = true
+      if (!session?.user) {
+        setState({
+          user: null,
+          isReady: true,
+        })
+        return
+      }
+      const mapped = mapSupabaseUser(session.user)
+      const cloudAdmin = await isCloudAdminEmail(sb, mapped.email)
+      const merged = cloudAdmin ? { ...mapped, isAdmin: true } : mapped
+      if (cancelled) return
       setState({
-        user: session?.user ? mapSupabaseUser(session.user) : null,
+        user: merged,
         isReady: true,
       })
     }
@@ -358,7 +370,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = sb.auth.onAuthStateChange((event, session) => {
-      applySession(session)
+      void applySession(session)
       if (event === 'SIGNED_IN' && session?.user) {
         void logSiteActivity('auth_sign_in', { metadata: { provider: session.user.app_metadata?.provider } })
       }
@@ -373,7 +385,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       if (cancelled || hydratedRef.current) return
       void sb.auth.getSession().then(({ data: { session } }) => {
         if (cancelled || hydratedRef.current) return
-        applySession(session)
+        void applySession(session)
       })
     }, 200)
 
