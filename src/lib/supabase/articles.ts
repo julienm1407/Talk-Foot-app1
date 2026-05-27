@@ -14,7 +14,9 @@ export type ArticleRow = {
   cover_image_url: string | null
   author_name: string | null
   published_at: string
-  status: string
+  status: 'draft' | 'review' | 'scheduled' | 'published' | string
+  scheduled_at: string | null
+  reviewed_by: string | null
   created_at: string
   updated_at: string
 }
@@ -37,7 +39,7 @@ export type AdminArticle = {
   title: string
   excerpt: string
   tag: NewsItem['tag']
-  status: 'draft' | 'published'
+  status: 'draft' | 'review' | 'scheduled' | 'published'
   bodyMarkdown: string
   bodyLegacy: string[]
   coverImageUrl?: string
@@ -47,6 +49,8 @@ export type AdminArticle = {
   publishedAt: string
   createdAt: string
   updatedAt: string
+  scheduledAt?: string
+  reviewedBy?: string
 }
 
 function minutesAgoFromIso(iso: string): number {
@@ -93,7 +97,14 @@ function toAdminArticle(row: ArticleRow): AdminArticle {
     title: row.title,
     excerpt: row.excerpt,
     tag: row.tag,
-    status: row.status === 'published' ? 'published' : 'draft',
+    status:
+      row.status === 'published'
+        ? 'published'
+        : row.status === 'review'
+          ? 'review'
+          : row.status === 'scheduled'
+            ? 'scheduled'
+            : 'draft',
     bodyMarkdown,
     bodyLegacy,
     coverImageUrl: row.cover_image_url ?? undefined,
@@ -103,6 +114,8 @@ function toAdminArticle(row: ArticleRow): AdminArticle {
     publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    scheduledAt: row.scheduled_at ?? undefined,
+    reviewedBy: row.reviewed_by ?? undefined,
   }
 }
 
@@ -151,9 +164,10 @@ export async function fetchPublishedArticles(sb: SupabaseClient): Promise<NewsIt
   const { data, error } = await sb
     .from('articles')
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .eq('status', 'published')
+    .lte('published_at', new Date().toISOString())
     .order('published_at', { ascending: false })
     .limit(100)
   if (error || !data?.length) return []
@@ -167,9 +181,10 @@ export async function fetchPublishedArticleBySlug(
   const { data, error } = await sb
     .from('articles')
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .eq('status', 'published')
+    .lte('published_at', new Date().toISOString())
     .eq('slug', slug)
     .maybeSingle()
   if (error || !data) return undefined
@@ -182,7 +197,7 @@ export async function listAdminArticles(sb: SupabaseClient): Promise<AdminArticl
   const { data, error } = await sb
     .from('articles')
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .order('updated_at', { ascending: false })
     .limit(200)
@@ -203,7 +218,7 @@ export async function createDraftArticle(
       published_at: new Date().toISOString(),
     })
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .single()
   if (error || !data) return null
@@ -221,7 +236,7 @@ export async function updateDraftArticle(
     .update(payload)
     .eq('id', id)
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .single()
   if (error || !data) return null
@@ -240,7 +255,7 @@ export async function publishArticle(
     })
     .eq('id', id)
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .single()
   if (error || !data) return null
@@ -256,7 +271,48 @@ export async function unpublishArticle(
     .update({ status: 'draft' })
     .eq('id', id)
     .select(
-      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, created_at, updated_at',
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
+    )
+    .single()
+  if (error || !data) return null
+  return toAdminArticle(data as ArticleRow)
+}
+
+export async function moveArticleToReview(
+  sb: SupabaseClient,
+  id: string,
+  reviewer?: string,
+): Promise<AdminArticle | null> {
+  const { data, error } = await sb
+    .from('articles')
+    .update({
+      status: 'review',
+      reviewed_by: reviewer?.trim() || null,
+    })
+    .eq('id', id)
+    .select(
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
+    )
+    .single()
+  if (error || !data) return null
+  return toAdminArticle(data as ArticleRow)
+}
+
+export async function scheduleArticle(
+  sb: SupabaseClient,
+  id: string,
+  isoDate: string,
+): Promise<AdminArticle | null> {
+  const { data, error } = await sb
+    .from('articles')
+    .update({
+      status: 'scheduled',
+      scheduled_at: isoDate,
+      published_at: isoDate,
+    })
+    .eq('id', id)
+    .select(
+      'id, slug, title, excerpt, tag, body, body_markdown, league_ids, club_ids, cover_image_url, author_name, published_at, status, scheduled_at, reviewed_by, created_at, updated_at',
     )
     .single()
   if (error || !data) return null

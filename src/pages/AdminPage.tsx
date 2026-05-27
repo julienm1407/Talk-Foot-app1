@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -9,7 +9,9 @@ import {
   createDraftArticle,
   deleteDraftArticle,
   listAdminArticles,
+  moveArticleToReview,
   publishArticle,
+  scheduleArticle,
   unpublishArticle,
   updateDraftArticle,
   type AdminArticle,
@@ -17,6 +19,26 @@ import {
 } from '../lib/supabase/articles'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { uploadArticleImage } from '../lib/supabase/articleMedia'
+import {
+  fetchArticleDashboardStats,
+  type ArticleDashboardStats,
+} from '../lib/supabase/articleAnalytics'
+import {
+  fetchCommentsForModeration,
+  moderateComment,
+  type ArticleComment,
+} from '../lib/supabase/articleComments'
+import {
+  fetchEditorialUsers,
+  upsertEditorialUser,
+  type EditorialRole,
+} from '../lib/supabase/editorialRoles'
+import {
+  createNewsletterCampaign,
+  fetchNewsletterCampaigns,
+  type NewsletterCampaign,
+} from '../lib/supabase/newsletter'
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
@@ -31,6 +53,8 @@ type FormState = {
   leagueIds: string
   clubIds: string
   bodyMarkdown: string
+  scheduledAt: string
+  reviewedBy: string
 }
 
 const EMPTY_FORM: FormState = {
@@ -43,6 +67,54 @@ const EMPTY_FORM: FormState = {
   leagueIds: '',
   clubIds: '',
   bodyMarkdown: '',
+  scheduledAt: '',
+  reviewedBy: '',
+}
+
+const ARTICLE_TEMPLATES: Array<{ id: string; label: string; markdown: string }> = [
+  {
+    id: 'debrief-match',
+    label: 'Débrief match',
+    markdown:
+      '## Contexte du match\n\nRappelle l’enjeu, la forme des équipes et les absences clés.\n\n## Temps forts\n\n- 1re période\n- 2e période\n- Tournant du match\n\n## Analyse tactique\n\nExplique les ajustements et les zones décisives.\n\n## Ce qu’il faut retenir\n\nTrois points concrets pour les supporters.',
+  },
+  {
+    id: 'rumeur-transfert',
+    label: 'Rumeur transfert',
+    markdown:
+      '## Ce que l’on sait\n\nSources, niveau de fiabilité et contexte du club.\n\n## Points de vigilance\n\nCe qui reste à confirmer.\n\n## Impact potentiel\n\nConséquences sportives et économiques.',
+  },
+  {
+    id: 'analyse-tactique',
+    label: 'Analyse tactique',
+    markdown:
+      '## Plan de jeu\n\nDécris le système et l’intention collective.\n\n## Clé côté ballon\n\nOrganisation offensive et circuits préférentiels.\n\n## Clé sans ballon\n\nPressing, bloc et gestion des transitions.\n\n## Conclusion\n\nCe que cela implique pour le prochain match.',
+  },
+]
+
+function computeSeoScore(form: FormState): { score: number; tips: string[] } {
+  let score = 0
+  const tips: string[] = []
+  const titleLen = form.title.trim().length
+  const excerptLen = form.excerpt.trim().length
+  const hasH2 = /(^|\n)##\s+/m.test(form.bodyMarkdown)
+  const hasImage = /!\[[^\]]*\]\([^)]+\)/.test(form.bodyMarkdown) || Boolean(form.coverImageUrl.trim())
+  const slugWords = form.slug.split('-').filter(Boolean).length
+
+  if (titleLen >= 35 && titleLen <= 68) score += 25
+  else tips.push('Titre conseillé entre 35 et 68 caractères.')
+  if (excerptLen >= 120 && excerptLen <= 180) score += 25
+  else tips.push('Extrait conseillé entre 120 et 180 caractères.')
+  if (form.slug.trim().length >= 8 && slugWords >= 3) score += 15
+  else tips.push('Slug plus descriptif (au moins 3 mots).')
+  if (hasH2) score += 15
+  else tips.push('Ajoute des sous-titres (##) pour structurer l’article.')
+  if (hasImage) score += 10
+  else tips.push('Ajoute une image de couverture ou une image dans le contenu.')
+  if (form.bodyMarkdown.trim().length >= 500) score += 10
+  else tips.push('Corps un peu court, vise au moins 500 caractères.')
+
+  return { score: Math.min(100, score), tips }
 }
 
 function slugify(value: string): string {
@@ -75,6 +147,8 @@ function formFromArticle(article: AdminArticle): FormState {
     leagueIds: article.leagueIds.join(', '),
     clubIds: article.clubIds.join(', '),
     bodyMarkdown: article.bodyMarkdown,
+    scheduledAt: article.scheduledAt ? article.scheduledAt.slice(0, 16) : '',
+    reviewedBy: article.reviewedBy ?? '',
   }
 }
 
@@ -101,6 +175,17 @@ export function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(true)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const markdownRef = useRef<HTMLTextAreaElement>(null)
+  const [dashboard, setDashboard] = useState<ArticleDashboardStats | null>(null)
+  const [commentsToModerate, setCommentsToModerate] = useState<ArticleComment[]>([])
+  const [editorialUsers, setEditorialUsers] = useState<Array<{ email: string; role: EditorialRole }>>([])
+  const [roleEmail, setRoleEmail] = useState('')
+  const [roleValue, setRoleValue] = useState<EditorialRole>('redacteur')
+  const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([])
+  const [campaignTitle, setCampaignTitle] = useState('')
+  const [campaignSubject, setCampaignSubject] = useState('')
+  const [campaignBody, setCampaignBody] = useState('')
 
   const sb = useMemo(() => getSupabaseBrowserClient(), [])
 
@@ -108,6 +193,14 @@ export function AdminPage() {
     () => articles.find((a) => a.id === selectedId) ?? null,
     [articles, selectedId],
   )
+  const seoAudit = useMemo(() => computeSeoScore(form), [form])
+
+  const statusLabel = useCallback((status: AdminArticle['status']) => {
+    if (status === 'published') return 'Publié'
+    if (status === 'review') return 'En relecture'
+    if (status === 'scheduled') return 'Planifié'
+    return 'Brouillon'
+  }, [])
 
   const canSave =
     form.title.trim().length >= 4 &&
@@ -124,6 +217,16 @@ export function AdminPage() {
     setLoading(true)
     const rows = await listAdminArticles(sb)
     setArticles(rows)
+    const stats = await fetchArticleDashboardStats(sb)
+    setDashboard(stats)
+    const [comments, roles, newsletter] = await Promise.all([
+      fetchCommentsForModeration(sb),
+      fetchEditorialUsers(sb),
+      fetchNewsletterCampaigns(sb),
+    ])
+    setCommentsToModerate(comments)
+    setEditorialUsers(roles)
+    setCampaigns(newsletter)
     setLoading(false)
   }, [sb])
 
@@ -204,6 +307,29 @@ export function AdminPage() {
     setStatus('saved')
   }
 
+  const moveCurrentToReview = async () => {
+    if (!sb || !form.id) return
+    const next = await moveArticleToReview(
+      sb,
+      form.id,
+      form.reviewedBy || user?.displayName || user?.email || undefined,
+    )
+    if (!next) return
+    setArticles((prev) => [next, ...prev.filter((x) => x.id !== next.id)])
+    setForm(formFromArticle(next))
+    setStatus('saved')
+  }
+
+  const scheduleCurrent = async () => {
+    if (!sb || !form.id || !form.scheduledAt) return
+    const iso = new Date(form.scheduledAt).toISOString()
+    const next = await scheduleArticle(sb, form.id, iso)
+    if (!next) return
+    setArticles((prev) => [next, ...prev.filter((x) => x.id !== next.id)])
+    setForm(formFromArticle(next))
+    setStatus('saved')
+  }
+
   const unpublishCurrent = async () => {
     if (!sb || !form.id) return
     const draft = await unpublishArticle(sb, form.id)
@@ -221,6 +347,74 @@ export function AdminPage() {
     setForm(EMPTY_FORM)
     setSelectedId(null)
     setStatus('idle')
+  }
+
+  const handleImageUpload = async (file: File | null) => {
+    if (!file || !sb) return
+    setUploadingImage(true)
+    const publicUrl = await uploadArticleImage(sb, file, form.slug || undefined)
+    setUploadingImage(false)
+    if (!publicUrl) {
+      setStatus('error')
+      setError('Import image impossible. Vérifie les policies storage et le bucket.')
+      return
+    }
+    const alt = (form.title || 'Illustration').trim()
+    const md = `\n\n![${alt}](${publicUrl})\n`
+    const textarea = markdownRef.current
+    if (!textarea) {
+      setForm((p) => ({ ...p, bodyMarkdown: `${p.bodyMarkdown}${md}` }))
+      return
+    }
+    const start = textarea.selectionStart ?? textarea.value.length
+    const end = textarea.selectionEnd ?? textarea.value.length
+    setForm((p) => ({
+      ...p,
+      bodyMarkdown: `${p.bodyMarkdown.slice(0, start)}${md}${p.bodyMarkdown.slice(end)}`,
+    }))
+  }
+
+  const hideComment = async (commentId: string) => {
+    if (!sb) return
+    const ok = await moderateComment(sb, { commentId, status: 'hidden', reason: 'Modération admin' })
+    if (!ok) return
+    setCommentsToModerate((prev) =>
+      prev.map((c) => (c.id === commentId ? { ...c, status: 'hidden' } : c)),
+    )
+  }
+
+  const publishComment = async (commentId: string) => {
+    if (!sb) return
+    const ok = await moderateComment(sb, { commentId, status: 'published' })
+    if (!ok) return
+    setCommentsToModerate((prev) =>
+      prev.map((c) => (c.id === commentId ? { ...c, status: 'published' } : c)),
+    )
+  }
+
+  const addEditorialRole = async () => {
+    if (!sb || !roleEmail.trim()) return
+    const ok = await upsertEditorialUser(sb, roleEmail.trim(), roleValue)
+    if (!ok) return
+    setRoleEmail('')
+    const roles = await fetchEditorialUsers(sb)
+    setEditorialUsers(roles)
+  }
+
+  const createCampaign = async () => {
+    if (!sb || !campaignTitle.trim() || !campaignSubject.trim()) return
+    const ok = await createNewsletterCampaign(sb, {
+      title: campaignTitle,
+      subject: campaignSubject,
+      contentMarkdown: campaignBody,
+      createdBy: user?.email ?? undefined,
+    })
+    if (!ok) return
+    setCampaignTitle('')
+    setCampaignSubject('')
+    setCampaignBody('')
+    const newsletter = await fetchNewsletterCampaigns(sb)
+    setCampaigns(newsletter)
   }
 
   return (
@@ -248,6 +442,123 @@ export function AdminPage() {
         {status === 'error' && 'Erreur de sauvegarde.'}
         {status === 'idle' && 'Crée un brouillon ou sélectionne un article pour éditer.'}
       </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card className="p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Vues 7 jours</p>
+          <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views7d ?? 0}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Vues 30 jours</p>
+          <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views30d ?? 0}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Clics CTA 30 jours</p>
+          <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.ctaClicks30d ?? 0}</p>
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <h2 className="font-display text-lg font-black text-tf-dark">Top articles (30 jours)</h2>
+        <div className="mt-3 space-y-2">
+          {dashboard?.topArticles30d?.length ? (
+            dashboard.topArticles30d.map((a) => (
+              <div key={a.articleId} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5">
+                <p className="line-clamp-1 text-sm font-bold text-slate-900">{a.title}</p>
+                <span className="text-xs font-black text-slate-600">{a.views} vues</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm font-semibold text-slate-500">Pas encore de données.</p>
+          )}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="p-4">
+          <h2 className="font-display text-lg font-black text-tf-dark">Rôles éditoriaux</h2>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto]">
+            <Input
+              value={roleEmail}
+              onChange={(e) => setRoleEmail(e.target.value)}
+              placeholder="email@exemple.com"
+            />
+            <select
+              value={roleValue}
+              onChange={(e) => setRoleValue(e.target.value as EditorialRole)}
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold"
+            >
+              <option value="redacteur">Rédacteur</option>
+              <option value="relecteur">Relecteur</option>
+              <option value="admin">Admin éditorial</option>
+            </select>
+            <Button variant="soft" className="rounded-xl" onClick={() => void addEditorialRole()}>
+              Ajouter
+            </Button>
+          </div>
+          <div className="mt-3 space-y-2">
+            {editorialUsers.map((u) => (
+              <div key={u.email} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <span className="text-sm font-semibold text-slate-800">{u.email}</span>
+                <span className="text-xs font-black text-slate-600">{u.role}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-4">
+          <h2 className="font-display text-lg font-black text-tf-dark">Newsletter</h2>
+          <div className="mt-3 space-y-2">
+            <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Titre campagne" />
+            <Input value={campaignSubject} onChange={(e) => setCampaignSubject(e.target.value)} placeholder="Objet email" />
+            <textarea
+              value={campaignBody}
+              onChange={(e) => setCampaignBody(e.target.value)}
+              className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+              placeholder="Contenu markdown"
+            />
+            <Button variant="soft" className="rounded-xl" onClick={() => void createCampaign()}>
+              Créer campagne
+            </Button>
+          </div>
+          <div className="mt-3 space-y-2">
+            {campaigns.map((c) => (
+              <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <p className="text-sm font-black text-slate-900">{c.title}</p>
+                <p className="text-xs font-semibold text-slate-500">{c.status}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <h2 className="font-display text-lg font-black text-tf-dark">Modération commentaires</h2>
+        <div className="mt-3 space-y-2">
+          {commentsToModerate.length === 0 ? (
+            <p className="text-sm font-semibold text-slate-500">Aucun commentaire à modérer.</p>
+          ) : (
+            commentsToModerate.map((c) => (
+              <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-black text-slate-700">
+                    {c.authorName} · {c.reportedCount} signalement(s) · {c.status}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void publishComment(c.id)}>
+                      Publier
+                    </Button>
+                    <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void hideComment(c.id)}>
+                      Masquer
+                    </Button>
+                  </div>
+                </div>
+                <p className="mt-1 text-sm font-medium text-slate-800">{c.body}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
 
       {error ? (
         <Card className="border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-900">{error}</Card>
@@ -280,7 +591,7 @@ export function AdminPage() {
                 }}
               >
                 <p className="line-clamp-1 text-sm font-black text-tf-dark">{a.title}</p>
-                <p className="mt-0.5 text-xs font-semibold text-tf-grey">{a.status === 'published' ? 'Publié' : 'Brouillon'}</p>
+                <p className="mt-0.5 text-xs font-semibold text-tf-grey">{statusLabel(a.status)}</p>
               </button>
             ))}
           </div>
@@ -345,7 +656,21 @@ export function AdminPage() {
             </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-bold text-slate-700/80">Contenu markdown</label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {ARTICLE_TEMPLATES.map((tpl) => (
+                  <Button
+                    key={tpl.id}
+                    type="button"
+                    variant="ghost"
+                    className="rounded-xl text-xs"
+                    onClick={() => setForm((p) => ({ ...p, bodyMarkdown: tpl.markdown }))}
+                  >
+                    Modèle : {tpl.label}
+                  </Button>
+                ))}
+              </div>
               <textarea
+                ref={markdownRef}
                 value={form.bodyMarkdown}
                 onChange={(e) => setForm((p) => ({ ...p, bodyMarkdown: e.target.value }))}
                 className="mt-1 min-h-[320px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900"
@@ -354,12 +679,73 @@ export function AdminPage() {
               <p id="admin-markdown-help" className="mt-1 text-xs font-semibold text-slate-500">
                 Supporte titres, listes, tableaux markdown et images URL.
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50">
+                  {uploadingImage ? 'Import...' : 'Importer une image'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null
+                      void handleImageUpload(file)
+                      e.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+                <span className="text-xs font-semibold text-slate-500">
+                  L’image est uploadée puis insérée automatiquement en markdown.
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700/80">Planifier (date/heure)</label>
+              <Input
+                type="datetime-local"
+                value={form.scheduledAt}
+                onChange={(e) => setForm((p) => ({ ...p, scheduledAt: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700/80">Relecteur (optionnel)</label>
+              <Input
+                value={form.reviewedBy}
+                onChange={(e) => setForm((p) => ({ ...p, reviewedBy: e.target.value }))}
+                className="mt-1"
+                placeholder="Nom de la relecture"
+              />
+            </div>
+            <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-black text-slate-900">Assistant SEO (FR)</p>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700">
+                  Score : {seoAudit.score}/100
+                </span>
+              </div>
+              <ul className="mt-2 space-y-1">
+                {seoAudit.tips.length === 0 ? (
+                  <li className="text-xs font-semibold text-emerald-700">Très bien : article bien optimisé pour la découverte SEO.</li>
+                ) : (
+                  seoAudit.tips.map((tip) => (
+                    <li key={tip} className="text-xs font-semibold text-slate-600">
+                      - {tip}
+                    </li>
+                  ))
+                )}
+              </ul>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="primary" className="rounded-xl" disabled={!canSave} onClick={() => void saveNow()}>
               Enregistrer
+            </Button>
+            <Button variant="soft" className="rounded-xl" disabled={!form.id} onClick={() => void moveCurrentToReview()}>
+              Envoyer en relecture
+            </Button>
+            <Button variant="soft" className="rounded-xl" disabled={!form.id || !form.scheduledAt} onClick={() => void scheduleCurrent()}>
+              Planifier
             </Button>
             {selected?.status === 'published' ? (
               <Button variant="soft" className="rounded-xl" onClick={() => void unpublishCurrent()}>

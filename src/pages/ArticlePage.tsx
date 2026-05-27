@@ -31,6 +31,16 @@ import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { AdSlot } from '../components/ui/AdSlot'
 import { EditorialProse } from '../components/ads/EditorialProse'
 import { ArticleMarkdown } from '../components/article/ArticleMarkdown'
+import { Input } from '../components/ui/Input'
+import { Button } from '../components/ui/Button'
+import { trackArticleEvent } from '../lib/supabase/articleAnalytics'
+import {
+  createArticleComment,
+  fetchPublishedComments,
+  reportArticleComment,
+  type ArticleComment,
+} from '../lib/supabase/articleComments'
+import { subscribeNewsletter } from '../lib/supabase/newsletter'
 
 /** Lisibles sur panneau clair (jour) et sur verre sombre (nuit). */
 function articleTagClass(tag: string, light: boolean): string {
@@ -76,6 +86,12 @@ export function ArticlePage() {
   const navigate = useNavigate()
   const [article, setArticle] = useState<(NewsItem & { slug: string; body: string[] }) | undefined>()
   const [articleLoading, setArticleLoading] = useState(true)
+  const [comments, setComments] = useState<ArticleComment[]>([])
+  const [commentAuthor, setCommentAuthor] = useState('')
+  const [commentBody, setCommentBody] = useState('')
+  const [commentState, setCommentState] = useState<'idle' | 'saving' | 'ok' | 'error'>('idle')
+  const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [newsletterState, setNewsletterState] = useState<'idle' | 'ok' | 'error'>('idle')
   const { user, isReady } = useAuth()
   const { trendingDebates } = useDebates()
 
@@ -139,6 +155,49 @@ export function ArticlePage() {
   }, [article])
 
   useArticleSeo(seoPayload)
+
+  useEffect(() => {
+    if (!article || !isSupabaseConfigured()) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    void trackArticleEvent(sb, article.id, 'view', 'article-page')
+    void fetchPublishedComments(sb, article.id).then((rows) => setComments(rows))
+  }, [article])
+
+  const submitComment = async () => {
+    if (!article || !commentAuthor.trim() || !commentBody.trim()) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    setCommentState('saving')
+    const ok = await createArticleComment(sb, {
+      articleId: article.id,
+      authorName: commentAuthor,
+      body: commentBody,
+      userId: user?.id,
+    })
+    if (!ok) {
+      setCommentState('error')
+      return
+    }
+    const rows = await fetchPublishedComments(sb, article.id)
+    setComments(rows)
+    setCommentBody('')
+    setCommentState('ok')
+  }
+
+  const reportComment = async (commentId: string) => {
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    await reportArticleComment(sb, { commentId, reason: 'Signalement utilisateur', reporterId: user?.id })
+  }
+
+  const submitNewsletter = async () => {
+    const sb = getSupabaseBrowserClient()
+    if (!sb || !newsletterEmail.trim()) return
+    const ok = await subscribeNewsletter(sb, newsletterEmail.trim())
+    setNewsletterState(ok ? 'ok' : 'error')
+    if (ok) setNewsletterEmail('')
+  }
 
   /** Page publique hors `MatchesProvider` : renvoie vers l’agenda (matchs réels après connexion). */
   const livePath = '/match'
@@ -240,9 +299,9 @@ export function ArticlePage() {
   }
 
   const leadImageSrc = article.coverImageUrl || footballImageUrl(article.id, 'articleLead')
-  const published = article.publishedAt
-    ? new Date(article.publishedAt)
-    : new Date(Date.now() - article.minutesAgo * 60_000)
+  const published = new Date(
+    article.publishedAt ?? article.updatedAt ?? '1970-01-01T00:00:00.000Z',
+  )
 
   const toLive = user ? livePath : loginWithNext(livePath)
   const toStade = user ? stadePath : loginWithNext(stadePath)
@@ -252,20 +311,13 @@ export function ArticlePage() {
   const toRankingsBets = user ? '/rankings' : loginWithNext('/rankings')
   const appHome = user ? '/' : '/login'
 
-  const groupDiscussPreviews = useMemo(() => getGroupDiscussPreviewsForArticle(article), [article])
-  const debateSnippets = useMemo(
-    () => (article ? debateSnippetsForArticle(article, trendingDebates) : []),
-    [article, trendingDebates],
-  )
-  const sidebarDebateSnippets = useMemo(() => debateSnippets.slice(0, 1), [debateSnippets])
-  const sidebarGroupPreviews = useMemo(
-    () =>
-      groupDiscussPreviews.slice(0, 1).map((g) => ({
-        ...g,
-        messages: g.messages.slice(0, 1),
-      })),
-    [groupDiscussPreviews],
-  )
+  const groupDiscussPreviews = getGroupDiscussPreviewsForArticle(article)
+  const debateSnippets = debateSnippetsForArticle(article, trendingDebates)
+  const sidebarDebateSnippets = debateSnippets.slice(0, 1)
+  const sidebarGroupPreviews = groupDiscussPreviews.slice(0, 1).map((g) => ({
+    ...g,
+    messages: g.messages.slice(0, 1),
+  }))
 
   const toGroup = (id: string) => (user ? `/group/${id}` : loginWithNext(`/group/${id}`))
 
@@ -698,6 +750,77 @@ export function ArticlePage() {
                 <span className="text-[10px] font-black uppercase tracking-[0.14em] text-white/90">Calendrier</span>
                 <span className="block text-sm font-black text-white">Tous les matchs & salons</span>
               </Link>
+            </section>
+
+            <section aria-label="Commentaires" className={cn('border-t pt-6 sm:pt-8', articleDivider)}>
+              <h2 className="font-display text-xl font-black text-tf-app-fg">Commentaires</h2>
+              <p className="mt-1 text-sm font-semibold text-tf-app-muted">
+                Réagis à l’article. Modération active pour garder un espace propre.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr_auto]">
+                <Input
+                  value={commentAuthor}
+                  onChange={(e) => setCommentAuthor(e.target.value)}
+                  placeholder="Ton nom"
+                />
+                <Input
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  placeholder="Ton commentaire"
+                />
+                <Button variant="soft" className="rounded-xl" onClick={() => void submitComment()}>
+                  Envoyer
+                </Button>
+              </div>
+              {commentState === 'ok' ? (
+                <p className="mt-2 text-xs font-semibold text-emerald-700">Commentaire publié.</p>
+              ) : null}
+              {commentState === 'error' ? (
+                <p className="mt-2 text-xs font-semibold text-rose-700">Publication impossible pour le moment.</p>
+              ) : null}
+
+              <div className="mt-4 space-y-2">
+                {comments.length === 0 ? (
+                  <p className="text-sm font-semibold text-tf-app-muted">Aucun commentaire pour le moment.</p>
+                ) : (
+                  comments.map((c) => (
+                    <div key={c.id} className={cn('rounded-xl border px-3 py-2', isLight ? 'border-slate-200 bg-white/85' : 'border-white/12 bg-white/5')}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-black text-tf-app-fg">{c.authorName}</p>
+                        <button
+                          type="button"
+                          className="text-[11px] font-bold text-amber-600 hover:underline"
+                          onClick={() => void reportComment(c.id)}
+                        >
+                          Signaler
+                        </button>
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-tf-app-fg">{c.body}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section aria-label="Newsletter" className={cn('border-t pt-6 sm:pt-8', articleDivider)}>
+              <h2 className="font-display text-xl font-black text-tf-app-fg">Newsletter Talk Foot</h2>
+              <p className="mt-1 text-sm font-semibold text-tf-app-muted">Reçois les meilleurs articles et débriefs chaque semaine.</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  value={newsletterEmail}
+                  onChange={(e) => setNewsletterEmail(e.target.value)}
+                  placeholder="ton@email.com"
+                />
+                <Button variant="soft" className="rounded-xl" onClick={() => void submitNewsletter()}>
+                  S’inscrire
+                </Button>
+              </div>
+              {newsletterState === 'ok' ? (
+                <p className="mt-2 text-xs font-semibold text-emerald-700">Inscription enregistrée.</p>
+              ) : null}
+              {newsletterState === 'error' ? (
+                <p className="mt-2 text-xs font-semibold text-rose-700">Inscription impossible pour le moment.</p>
+              ) : null}
             </section>
           </div>
         </div>
