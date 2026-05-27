@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 140" fill="none">
+  <g id="back"></g>
+  <g id="side"></g>
+  <g id="top">
+    <path fill="currentColor" d="M 27 28 C 33 14 67 14 73 28 C 67 23 33 23 27 28 Z"/>
+    <ellipse fill="currentColor" cx="38" cy="13" rx="4.5" ry="4"/>
+    <ellipse fill="currentColor" cx="50" cy="10.5" rx="5" ry="4.5"/>
+    <ellipse fill="currentColor" cx="62" cy="13" rx="4.5" ry="4"/>
+  </g>
+  <g id="front"></g>
+</svg>

@@ -50,7 +50,7 @@ export function Avatar2DComposer({ profile, className, size = 'profile' }: Props
             jerseyOverride={kit?.jerseyVisual ?? null}
             supporterColors={null}
             variant="front"
-            className="drop-shadow-[0_6px_14px_rgba(2,6,23,0.42)]"
+            className="drop-shadow-[0_2px_6px_rgba(2,6,23,0.2)]"
             pantsItemId={pantsId}
             shoesItemId={shoesId}
           />

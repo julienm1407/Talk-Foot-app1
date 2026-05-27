@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module '*.svg?raw' {
+  const content: string
+  export default content
+}
+
 /** Défini dans `vite.config.ts` — indique si `VITE_SPORTMONKS_TOKEN` était présent au moment du `vite build`. */
 declare const __TF_BUILD_HAS_SM_TOKEN__: boolean
 /** Build sur Vercel — le client peut utiliser le relais `/api/sm` + variables serveur. */

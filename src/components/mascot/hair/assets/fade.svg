@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 140" fill="none">
+  <g id="back"></g>
+  <g id="side">
+    <path fill="currentColor" d="M 23 31 C 21 40 25 47 31 44 L 30 35 Z"/>
+    <path fill="currentColor" d="M 77 31 C 79 40 75 47 69 44 L 70 35 Z"/>
+  </g>
+  <g id="top">
+    <path fill="currentColor" d="M 27 27 C 33 13 67 13 73 27 C 67 23 33 23 27 27 Z"/>
+  </g>
+  <g id="front"></g>
+</svg>

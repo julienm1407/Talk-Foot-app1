@@ -161,7 +161,7 @@ function buildRows(id: PixelJerseyPresetId): string[] {
   )
 }
 
-if (import.meta.env.DEV) {
+if (import.meta.env?.DEV) {
   MASK.forEach((line, i) => {
     if (line.length !== COLS) {
       console.error(

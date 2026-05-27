@@ -65,9 +65,9 @@ describe('avatarHeadZones', () => {
 
   it('beard chin probes stay in beard area', () => {
     for (const p of [
-      { x: 50, y: 71 },
-      { x: 42, y: 68 },
-      { x: 58, y: 68 },
+      { x: 50, y: 58 },
+      { x: 42, y: 55 },
+      { x: 58, y: 55 },
     ]) {
       assert.equal(isInBeardArea(p.x, p.y), true)
     }
@@ -76,7 +76,7 @@ describe('avatarHeadZones', () => {
   it('beard styles with chin hair use beard area', () => {
     for (const beard of BEARD_STYLES) {
       if (beard === 'none' || beard === 'moustache') continue
-      const y = beard === 'goatee' || beard === 'vanDyke' ? 71 : 68
+      const y = beard === 'goatee' || beard === 'vanDyke' ? 58 : 55
       assert.equal(isInBeardArea(50, y), true, `beard ${beard}`)
     }
   })

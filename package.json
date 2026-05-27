@@ -11,7 +11,8 @@
     "diag:bookmakers": "node scripts/diagnose-bookmakers.mjs",
     "preview": "vite preview",
     "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs",
-    "test:avatar-zones": "npx tsx --test src/components/profile/avatarHeadZones.test.ts"
+    "test:avatar-zones": "npx tsx --test src/components/profile/avatarHeadZones.test.ts",
+    "test:mascot": "npx vite-node --test src/components/mascot/mascotGallery.test.ts src/components/mascot/mascotAnchorRandom.test.ts src/components/mascot/hair/hairAssetParser.test.ts"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.6",

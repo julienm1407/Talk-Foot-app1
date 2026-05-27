@@ -477,7 +477,7 @@ export function CharacterLayerStudio() {
               Studio d’équipement
             </h2>
             <p className={cn('mt-1 max-w-xl text-sm font-medium', L ? 'text-slate-600' : 'text-sky-100/80')}>
-              Calques SVG superposés — mise à jour instantanée. Pas de 3D : simple, propre, prêt pour la boutique.
+              Mascotte TalkFoot — calques modulaires (corps, maillot, visage, barbe, cheveux). Conçue pour tous les maillots boutique.
             </p>
           </div>
           <Link to="/boutique">

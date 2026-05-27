@@ -1,0 +1,6 @@
+export type { HeadAnchorId, AnchorPlacement, ResolvedPlacement } from './placementTypes'
+export { getHeadAnchors, getAnchorPoint, resolvePlacement, placementTransform, localToWorld, worldProbesFromLocal } from './headAnchors'
+export { HEAD_SAFE_AREA, HEAD_SKULL, isInsideHeadSafeArea, isValidHairPoint, isInsideEyeZone, isInsideMouthZone } from './headSafeArea'
+export { HAIR_ASSEMBLIES as HAIR_STYLE_DEFINITIONS, getHairAssembly as getHairDefinition, hairStyleUsesBackLayer } from '../hair/hairAssemblies'
+export { BEARD_STYLE_DEFINITIONS, getBeardDefinition } from './beardPlacements'
+export { validateCharacterLook, validateHairStyle, validateBeardStyle } from './anchorCollision'

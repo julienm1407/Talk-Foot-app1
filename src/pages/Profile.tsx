@@ -570,7 +570,7 @@ export function ProfilePage() {
           {(
             [
               ['profil-photo', 'Photo'],
-              ['profil-look', 'Perso 3D'],
+              ['profil-look', 'Mascotte'],
               ['profil-avatar', 'Look Lego'],
             ] as const
           ).map(([id, label]) => (
