@@ -146,19 +146,36 @@ export function ProfilePage() {
             Affiché sur les salons et le live · 2 changements max. puis pause de 14 jours
           </p>
         </div>
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className={cn(
-            'shrink-0 self-start rounded-2xl sm:self-center',
-            L
-              ? 'text-rose-600 hover:bg-rose-50 hover:text-rose-700'
-              : 'text-rose-300 hover:bg-rose-950/45 hover:text-rose-200',
-          )}
-          aria-label="Se déconnecter"
-        >
-          Déconnexion
-        </Button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+          {authUser?.isAdmin ? (
+            <Link
+              to="/admin"
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'inline-flex items-center justify-center rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition',
+                L
+                  ? 'border-amber-400/60 bg-amber-50 text-amber-950 hover:bg-amber-100'
+                  : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:bg-amber-900/50',
+              )}
+              aria-label="Ouvrir l’administration"
+            >
+              Admin
+            </Link>
+          ) : null}
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className={cn(
+              'rounded-2xl',
+              L
+                ? 'text-rose-600 hover:bg-rose-50 hover:text-rose-700'
+                : 'text-rose-300 hover:bg-rose-950/45 hover:text-rose-200',
+            )}
+            aria-label="Se déconnecter"
+          >
+            Déconnexion
+          </Button>
+        </div>
       </header>
 
       <nav
