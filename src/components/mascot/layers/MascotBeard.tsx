@@ -1,4 +1,3 @@
-import React from 'react'
 import type { BeardStyle } from '../../../types/profile'
 import { getBeardDefinition } from '../anchors/beardPlacements'
 import { resolvePlacement } from '../anchors/headAnchors'

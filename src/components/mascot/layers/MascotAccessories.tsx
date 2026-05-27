@@ -1,4 +1,3 @@
-import React from 'react'
 import type { AvatarCharacterLook } from '../../../types/profile'
 import { getHeadAnchors } from '../anchors/headAnchors'
 

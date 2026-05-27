@@ -1,4 +1,3 @@
-import React from 'react'
 import { hairBehindOnlyClipPathD, headMaskPathD, headMaskRingPathD } from './headMask'
 
 export function HairClipDefs({ uid }: { uid: string }) {

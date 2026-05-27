@@ -1,4 +1,3 @@
-import React from 'react'
 import { MASCOT } from '../mascotGeometry'
 import { strokeSubtle } from '../mascotColors'
 

@@ -1,4 +1,3 @@
-import React from 'react'
 import type { AvatarCharacterLook, EyeShape, FaceExpression } from '../../../types/profile'
 import { getHeadAnchors } from '../anchors/headAnchors'
 import { mixHex } from '../mascotColors'

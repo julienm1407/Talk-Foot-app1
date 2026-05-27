@@ -1,4 +1,3 @@
-import React from 'react'
 import type { HairStyle } from '../../../types/profile'
 import { getHairAssembly } from '../hair/hairAssemblies'
 import type { HairPartClip, HairStack } from '../hair/hairAssemblyTypes'

@@ -1,4 +1,4 @@
-import React, { useId } from 'react'
+import { useId } from 'react'
 import type { AvatarCharacterLook } from '../../types/profile'
 import type { PixelJerseyPresetId } from '../../data/pixelJerseyPresets'
 import { cn } from '../../utils/cn'

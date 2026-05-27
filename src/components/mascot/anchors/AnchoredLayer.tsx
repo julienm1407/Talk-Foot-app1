@@ -1,4 +1,3 @@
-import React from 'react'
 import type { AnchorPlacement } from './placementTypes'
 import { placementTransform, resolvePlacement } from './headAnchors'
 import { strokeSubtle } from '../mascotColors'

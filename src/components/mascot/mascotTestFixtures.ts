@@ -1,28 +1,47 @@
 import type { AvatarCharacterLook, JerseyPattern } from '../../types/profile'
 import type { TorsoColors } from './layers/MascotJersey'
-import { inspiredJerseyItems } from '../../data/inspiredJerseys'
 
 /** Maillots de test (clubs / sélections — couleurs inspirées, sans logos). */
 export const MASCOT_JERSEY_GALLERY: { id: string; label: string; colors: TorsoColors }[] = [
   {
     id: 'psg',
     label: 'PSG',
-    colors: inspiredJerseyItems.find((j) => j.id === 'inspired-capital-rouge')!.jerseyVisual!,
+    colors: {
+      primary: '#051a5c',
+      secondary: '#e11d48',
+      pattern: 'vertical' as JerseyPattern,
+      stripeLight: '#ffffff',
+    },
   },
   {
     id: 'arsenal',
     label: 'Arsenal',
-    colors: inspiredJerseyItems.find((j) => j.id === 'inspired-manchester-rouge')!.jerseyVisual!,
+    colors: {
+      primary: '#c1121f',
+      secondary: '#ffffff',
+      pattern: 'solid' as JerseyPattern,
+      stripeLight: '#f8fafc',
+    },
   },
   {
     id: 'real',
     label: 'Real Madrid',
-    colors: inspiredJerseyItems.find((j) => j.id === 'inspired-iberique-blanc')!.jerseyVisual!,
+    colors: {
+      primary: '#ffffff',
+      secondary: '#f8fafc',
+      pattern: 'horizontal' as JerseyPattern,
+      stripeLight: '#e2e8f0',
+    },
   },
   {
     id: 'barca',
     label: 'Barça',
-    colors: inspiredJerseyItems.find((j) => j.id === 'inspired-catalan')!.jerseyVisual!,
+    colors: {
+      primary: '#1d4ed8',
+      secondary: '#b91c1c',
+      pattern: 'vertical' as JerseyPattern,
+      stripeLight: '#f59e0b',
+    },
   },
   {
     id: 'chelsea',

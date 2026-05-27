@@ -1,4 +1,3 @@
-import React from 'react'
 import type { JerseyPattern } from '../../../types/profile'
 import { PIXEL_JERSEY_PRESETS, type PixelJerseyPresetId } from '../../../data/pixelJerseyPresets'
 import { PixelJerseyPixelGroup } from '../../kit/PixelJerseySvg'
