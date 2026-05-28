@@ -4,28 +4,34 @@ const CATEGORY_ORDER: AvatarAssetCategory[] = [
   'body',
   'hair',
   'eyes',
+  'eyebrows',
   'nose',
   'mouth',
   'beard',
   'jerseys',
   'shorts',
+  'socks',
   'shoes',
+  'accessories',
 ]
 
 const categoryByFolder = new Map<AvatarAssetCategory, AvatarAssetCategory>([
   ['body', 'body'],
   ['hair', 'hair'],
   ['eyes', 'eyes'],
+  ['eyebrows', 'eyebrows'],
   ['nose', 'nose'],
   ['mouth', 'mouth'],
   ['beard', 'beard'],
   ['jerseys', 'jerseys'],
   ['shorts', 'shorts'],
+  ['socks', 'socks'],
   ['shoes', 'shoes'],
+  ['accessories', 'accessories'],
 ])
 
 const ASSET_MODULES = import.meta.glob<string>(
-  '/assets/{body,hair,eyes,nose,mouth,beard,jerseys,shorts,shoes}/*.png',
+  '/assets/{body,hair,eyes,eyebrows,nose,mouth,beard,jerseys,shorts,socks,shoes,accessories}/*.png',
   { eager: true, import: 'default' },
 )
 
@@ -34,12 +40,15 @@ function emptyAssetMap(): AvatarAssetMap {
     body: [],
     hair: [],
     eyes: [],
+    eyebrows: [],
     nose: [],
     mouth: [],
     beard: [],
     jerseys: [],
     shorts: [],
+    socks: [],
     shoes: [],
+    accessories: [],
   }
 }
 
@@ -107,12 +116,15 @@ export function createDefaultAvatarData(assetMap: AvatarAssetMap = avatarAssetMa
     body: firstAssetId(assetMap, 'body'),
     hair: firstAssetId(assetMap, 'hair'),
     eyes: firstAssetId(assetMap, 'eyes'),
+    eyebrows: firstAssetId(assetMap, 'eyebrows'),
     nose: firstAssetId(assetMap, 'nose'),
     mouth: firstAssetId(assetMap, 'mouth'),
     beard: firstAssetId(assetMap, 'beard'),
     jersey: firstAssetId(assetMap, 'jerseys'),
     shorts: firstAssetId(assetMap, 'shorts'),
+    socks: firstAssetId(assetMap, 'socks'),
     shoes: firstAssetId(assetMap, 'shoes'),
+    accessory: firstAssetId(assetMap, 'accessories'),
   }
 }
 
@@ -120,11 +132,14 @@ export const slotToCategory: Record<AvatarSlotKey, AvatarAssetCategory> = {
   body: 'body',
   hair: 'hair',
   eyes: 'eyes',
+  eyebrows: 'eyebrows',
   nose: 'nose',
   mouth: 'mouth',
   beard: 'beard',
   jersey: 'jerseys',
   shorts: 'shorts',
+  socks: 'socks',
   shoes: 'shoes',
+  accessory: 'accessories',
 }
 

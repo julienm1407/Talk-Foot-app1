@@ -95,11 +95,13 @@ export default function App() {
         <Route
           path="/article/:slug"
           element={
-            <AppShellProviders>
-              <RouteSuspense>
-                <ArticlePage />
-              </RouteSuspense>
-            </AppShellProviders>
+            <MatchesProvider>
+              <AppShellProviders>
+                <RouteSuspense>
+                  <ArticlePage />
+                </RouteSuspense>
+              </AppShellProviders>
+            </MatchesProvider>
           }
         />
         <Route

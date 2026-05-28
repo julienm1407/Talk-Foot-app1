@@ -2,7 +2,6 @@ import { useMemo } from 'react'
 import { useMessageLikes } from '../../hooks/useMessageLikes'
 import { Card } from '../ui/Card'
 import { Link } from 'react-router-dom'
-import { Avatar } from '../ui/Avatar'
 import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import { chatPersonasPool, currentUser } from '../../data/users'
 import { useProfile } from '../../hooks/useProfile'
@@ -62,7 +61,7 @@ export function TopCommentsFeed({
   const list = filtered.length === 0 ? (
     empty
   ) : (
-    <div className="divide-y divide-slate-200/80">
+    <div className="space-y-2.5 p-2 sm:space-y-3 sm:p-3">
       {filtered.map((c) => {
         const u = usersById[c.userId]
         return (
@@ -70,25 +69,20 @@ export function TopCommentsFeed({
             key={c.id}
             to={`/channel/${c.matchId}`}
             className={cn(
-              'flex gap-3 transition hover:bg-slate-50/80 sm:gap-4',
-              embedded ? 'px-4 py-3 sm:px-5' : 'px-5 py-4 sm:px-6',
+              'flex gap-3 rounded-xl border transition sm:gap-4',
+              embedded
+                ? 'px-3 py-2.5 sm:px-3.5 sm:py-3'
+                : 'px-5 py-4 sm:px-6',
+              'border-slate-200/80 bg-white/95 hover:border-slate-300 hover:bg-white',
+              'dark:border-white/12 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:bg-white/[0.06]',
             )}
           >
-            {c.userId === currentUser.id ? (
-              <ProfileCharacterThumb
-                profile={profile}
-                size="sm"
-                className="mt-0.5 !h-9 !w-9 !min-h-9 !min-w-9 shrink-0 self-start rounded-[20px] border-0 p-0 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10"
-                aria-label={u?.username ?? 'Moi'}
-              />
-            ) : (
-              <Avatar
-                seed={u?.avatarSeed ?? 'fan'}
-                accent={u?.accent ?? 'violet'}
-                alt={u?.username ?? ''}
-                className="mt-0.5 size-9 shrink-0 sm:size-10"
-              />
-            )}
+            <ProfileCharacterThumb
+              profile={profile}
+              size="sm"
+              className="mt-0.5 !h-9 !w-9 !min-h-9 !min-w-9 shrink-0 self-start rounded-[20px] border-0 p-0 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10"
+              aria-label={u?.username ?? 'Utilisateur'}
+            />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="text-xs font-bold text-slate-800 sm:text-sm">{c.username}</span>
@@ -99,7 +93,7 @@ export function TopCommentsFeed({
               <p className="mt-1 line-clamp-2 text-xs font-medium leading-snug text-slate-700 sm:text-sm">
                 {c.text}
               </p>
-              <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-rose-600 sm:mt-2 sm:text-xs">
+              <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-300 sm:mt-2 sm:text-xs">
                 <span aria-hidden>❤️</span>
                 <span>
                   {c.likes} like{c.likes > 1 ? 's' : ''}
@@ -114,8 +108,8 @@ export function TopCommentsFeed({
 
   if (embedded) {
     return (
-      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white/95 shadow-sm">
-        {filterHint ? <div className="border-b border-slate-200/60 px-4 py-2">{filterHint}</div> : null}
+      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-50/70 dark:border-white/12 dark:bg-white/[0.02]">
+        {filterHint ? <div className="border-b border-slate-200/60 px-4 py-2 dark:border-white/10">{filterHint}</div> : null}
         {list}
       </div>
     )

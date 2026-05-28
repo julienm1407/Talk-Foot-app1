@@ -4,8 +4,8 @@ import { HubStripLive } from '../components/match/HubMatchEncart'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDebates } from '../contexts/DebatesContext'
+import { useMatches } from '../contexts/MatchesContext'
 import {
-  articlePreviewLiveMatch,
   debateSnippetsForArticle,
   getGroupDiscussPreviewsForArticle,
 } from '../data/articleEncartsPreview'
@@ -94,6 +94,7 @@ export function ArticlePage() {
   const [newsletterState, setNewsletterState] = useState<'idle' | 'ok' | 'error'>('idle')
   const { user, isReady } = useAuth()
   const { trendingDebates } = useDebates()
+  const { matches } = useMatches()
 
   useEffect(() => {
     if (!slug) {
@@ -138,7 +139,19 @@ export function ArticlePage() {
     [],
   )
 
-  const articleLiveMirror = useLiveEncartSimulation(articlePreviewLiveMatch)
+  const featuredMatch = useMemo(() => {
+    const live = matches
+      .filter((m) => m.status === 'live')
+      .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))[0]
+    if (live) return live
+    const upcoming = matches
+      .filter((m) => m.status === 'upcoming')
+      .sort((a, b) => +new Date(a.kickoffAt) - +new Date(b.kickoffAt))[0]
+    return upcoming ?? null
+  }, [matches])
+  const articleLiveMirror = useLiveEncartSimulation(
+    featuredMatch?.status === 'live' ? featuredMatch : null,
+  )
 
   const seoPayload = useMemo(() => {
     if (!article) return null
@@ -407,9 +420,9 @@ export function ArticlePage() {
         <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-tf-electric to-cyan-400 opacity-95" aria-hidden />
       </header>
 
-      <main className="relative mx-auto w-full min-w-0 max-w-tf-article-body px-[var(--tf-page-gutter)] pb-10 pt-4 sm:pb-14 sm:pt-6">
+      <main className="relative mx-auto w-full min-w-0 max-w-tf-ultra px-[var(--tf-page-gutter)] pb-10 pt-4 sm:pb-14 sm:pt-6">
         <div className="tf-panel rounded-[22px] p-4 sm:rounded-[28px] sm:p-5 md:p-6">
-          <div className="mx-auto flex w-full min-w-0 max-w-tf-article-inner flex-col gap-8 sm:gap-10">
+          <div className="mx-auto flex w-full min-w-0 flex-col gap-8 sm:gap-10">
             {/* Ligne 1 : image ~30 % | live compact ~70 % */}
             <section aria-label="Illustration et match en direct">
               <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-10 lg:gap-5">
@@ -452,12 +465,20 @@ export function ArticlePage() {
                         </EncartChrome>
                       </div>
                       <div className="min-h-0 flex-1 overflow-hidden px-1 pb-1 pt-1 sm:px-2 sm:pb-2 sm:pt-1.5">
-                        <HubStripLive
-                          match={articlePreviewLiveMatch}
-                          liveMirror={articleLiveMirror}
-                          asLink={false}
-                          className="h-full min-h-[200px] min-w-0"
-                        />
+                        {featuredMatch ? (
+                          <HubStripLive
+                            match={featuredMatch}
+                            liveMirror={articleLiveMirror}
+                            asLink={false}
+                            className="h-full min-h-[200px] min-w-0"
+                          />
+                        ) : (
+                          <div className="flex h-full min-h-[200px] items-center justify-center rounded-xl border border-sky-200/60 bg-sky-50/70 p-4 text-center">
+                            <p className="text-sm font-bold text-sky-900">
+                              Aucun match live pour le moment. Ouvre le calendrier pour voir les prochains matchs.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div
                         className={cn(
@@ -500,10 +521,10 @@ export function ArticlePage() {
                       })}
                     </time>
                   </div>
-                  <h1 className="mt-4 max-w-[65ch] font-display text-2xl font-black leading-snug tracking-tight text-tf-app-fg sm:text-[1.85rem] sm:leading-[1.12] md:text-[2rem]">
+                  <h1 className="mt-4 max-w-none font-display text-2xl font-black leading-snug tracking-tight text-tf-app-fg sm:text-[1.85rem] sm:leading-[1.12] md:text-[2rem]">
                     {article.title}
                   </h1>
-                  <p className="mt-3 max-w-[65ch] text-sm font-semibold leading-relaxed text-tf-app-muted sm:text-base">
+                  <p className="mt-3 max-w-none text-sm font-semibold leading-relaxed text-tf-app-muted sm:text-base">
                     {article.excerpt}
                   </p>
                   <p className="mt-2 text-xs font-bold text-tf-app-muted">
@@ -516,20 +537,21 @@ export function ArticlePage() {
                     <ArticleMarkdown
                       markdown={article.bodyMarkdown}
                       className={cn(
-                        'tf-article-markdown max-w-[65ch] text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]',
+                        'tf-article-markdown max-w-none text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]',
                         'prose prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:text-tf-app-fg',
                         'prose-p:text-tf-app-fg prose-strong:text-tf-app-fg prose-li:text-tf-app-fg prose-a:text-sky-600 hover:prose-a:text-sky-500',
                         'prose-table:block prose-table:w-full prose-table:overflow-x-auto prose-th:bg-slate-100/80 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:px-3 prose-td:py-2',
+                        'prose-h2:mt-8 prose-h2:text-[1.35rem] prose-h2:leading-tight prose-h3:mt-6 prose-h3:text-[1.15rem]',
                       )}
                     />
                   ) : (
-                    <div className="max-w-[65ch] space-y-6 text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]">
+                    <div className="max-w-none space-y-6 text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]">
                       {article.body.map((p, i) => (
                         <p key={`${article.id}-p-${i}`}>{p}</p>
                       ))}
                     </div>
                   )}
-                  <div className="mt-8 max-w-[65ch]">
+                  <div className="mt-8 max-w-none">
                     <AdSlot
                       compact
                       tone="navy"
@@ -542,7 +564,7 @@ export function ArticlePage() {
                   <EditorialProse
                     light={isLight}
                     className={cn(
-                      'mt-8 max-w-[65ch]',
+                      'mt-8 max-w-none',
                       isLight
                         ? 'border-tf-dark/10 bg-white/80'
                         : 'border-white/12 bg-white/[0.04]',

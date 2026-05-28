@@ -58,6 +58,7 @@ export function HomeDesktopExperience({
   tribuneGroups,
   supporterGroupsPool,
   myCreatedGroups,
+  allDebates,
   trendingDebates,
   debateOfTheDay,
   debatesLoading = false,
@@ -72,6 +73,8 @@ export function HomeDesktopExperience({
   supporterGroupsPool: SupporterGroup[]
   /** Tribunes / groupes créés par l’utilisateur (stockage local) */
   myCreatedGroups: SupporterGroup[]
+  /** Tous les débats publiés, pour fallback si le flux tendance est vide. */
+  allDebates: Debate[]
   trendingDebates: Debate[]
   debateOfTheDay: Debate | null
   debatesLoading?: boolean
@@ -106,7 +109,12 @@ export function HomeDesktopExperience({
   /** Sous le live / encart « Prochains matchs » : 1 mise en avant + 2 bandeaux (comme le hero live + 2 à venir). */
   const headerUpcomingPrimary = upcomingSorted.slice(0, 3)
   const featuredLiveMatch = liveMatches[deskLiveIndex] ?? liveMatches[0]
-  const topDebates = trendingDebates.slice(0, 4)
+  const topDebates = useMemo(() => {
+    const trending = trendingDebates.slice(0, 4)
+    if (trending.length > 0) return trending
+    const withoutFeatured = debateOfTheDay ? allDebates.filter((d) => d.id !== debateOfTheDay.id) : allDebates
+    return withoutFeatured.slice(0, 4)
+  }, [trendingDebates, allDebates, debateOfTheDay])
   const tribunes = tribuneGroups.slice(0, 4)
 
   const railSpotlightMax = 4

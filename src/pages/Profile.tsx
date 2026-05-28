@@ -10,7 +10,6 @@ import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
 import { AvatarEditor } from '../components/profile/AvatarEditor'
 import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
-import { CharacterLayerStudio } from '../components/profile/CharacterLayerStudio'
 import { AvatarModularStudio } from '../components/profile/AvatarModularStudio'
 import { UserRankCard } from '../components/profile/UserRankCard'
 import { usePronoStats } from '../hooks/usePronoStats'
@@ -498,7 +497,6 @@ export function ProfilePage() {
         </div>
 
         <div id="profil-look" className="scroll-mt-28 space-y-3 sm:scroll-mt-4 sm:space-y-4">
-          <CharacterLayerStudio />
           <AvatarModularStudio />
         </div>
         <div id="profil-avatar" className="scroll-mt-28 sm:scroll-mt-4">

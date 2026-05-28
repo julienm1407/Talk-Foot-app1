@@ -50,7 +50,7 @@ export function HomePage() {
   const { carouselMatches, matches, loading } = useMatches()
   const { groups, createGroup } = useSupporterGroups()
   const { articles: publishedArticles, loading: articlesLoading } = useArticles()
-  const { debateOfTheDay, trendingDebates, loading: debatesLoading } = useDebates()
+  const { debates, debateOfTheDay, trendingDebates, loading: debatesLoading } = useDebates()
   const {
     favoriteLeagueId,
     favoriteClubIds,
@@ -106,7 +106,6 @@ export function HomePage() {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [feedTab, setFeedTab] = useState<'actu' | 'comments'>('comments')
   const [heroSlide, setHeroSlide] = useState(0)
 
   /** Hub : tous les matchs en direct renvoyés par SportMonks (ordre du carrousel). */
@@ -215,8 +214,6 @@ export function HomePage() {
           heroLiveSim={heroLiveSim}
           personalizedNews={personalizedNews}
           articlesLoading={articlesLoading}
-          feedTab={feedTab}
-          setFeedTab={setFeedTab}
           supporterFocusUi={supporterFocusUi}
           clubFocusLabel={clubFocusLabel}
           team={team}
@@ -278,6 +275,7 @@ export function HomePage() {
             tribuneGroups={visibleGroups.slice(0, 4)}
             supporterGroupsPool={visibleGroups}
             myCreatedGroups={myCreatedGroups}
+            allDebates={debates}
             trendingDebates={trendingDebates}
             debateOfTheDay={debateOfTheDay}
             debatesLoading={debatesLoading}
@@ -493,8 +491,6 @@ export function HomePage() {
         heroLiveSim={heroLiveSim}
         personalizedNews={personalizedNews}
         articlesLoading={articlesLoading}
-        feedTab={feedTab}
-        setFeedTab={setFeedTab}
         supporterFocusUi={supporterFocusUi}
         clubFocusLabel={clubFocusLabel}
         team={team}

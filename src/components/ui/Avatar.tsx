@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { cn } from '../../utils/cn'
-import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
 
 const accentMap: Record<string, string> = {
   violet: 'from-violet-400/70 to-violet-600/70',
@@ -33,9 +31,7 @@ function InitialFallback({
   )
 }
 
-/**
- * Avatar liste / messages : illustration DiceBear (léger, pas de lib lourde), repli initiale si l’image ne charge pas.
- */
+/** Avatar neutre temporaire (sans photo de profil). */
 export function Avatar({
   seed,
   accent = 'violet',
@@ -47,9 +43,6 @@ export function Avatar({
   className?: string
   alt?: string
 }) {
-  const [failed, setFailed] = useState(false)
-  const src = dicebearAvatarUrl(seed, 128)
-
   return (
     <div
       className={cn(
@@ -58,21 +51,7 @@ export function Avatar({
       )}
       aria-label={alt || undefined}
     >
-      {failed ? (
-        <InitialFallback seed={seed} accent={accent} />
-      ) : (
-        <img
-          src={src}
-          alt={alt}
-          width={128}
-          height={128}
-          loading="lazy"
-          decoding="async"
-          draggable={false}
-          className="size-full object-cover object-center"
-          onError={() => setFailed(true)}
-        />
-      )}
+      <InitialFallback seed={seed} accent={accent} />
     </div>
   )
 }

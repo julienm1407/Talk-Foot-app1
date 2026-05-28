@@ -210,6 +210,46 @@ function sanitizeRichHtml(html: string): string {
   }).trim()
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function plainTextToStructuredHtml(text: string): string {
+  const lines = text.split('\n')
+  const out: string[] = []
+  let paragraph: string[] = []
+  const flushParagraph = () => {
+    if (!paragraph.length) return
+    out.push(`<p>${paragraph.map((x) => escapeHtml(x)).join('<br />')}</p>`)
+    paragraph = []
+  }
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) {
+      flushParagraph()
+      continue
+    }
+    if (/^#{1,6}\s+/.test(line)) {
+      flushParagraph()
+      const level = Math.min(3, Math.max(2, (line.match(/^#+/)?.[0].length ?? 2)))
+      const title = line.replace(/^#{1,6}\s+/, '').trim()
+      out.push(`<h${level}>${escapeHtml(title)}</h${level}>`)
+      continue
+    }
+    if (/^\d+\.\s+/.test(line) || /^[A-ZÀ-Ý0-9][A-ZÀ-Ý0-9\s'’\-:!?]{8,}$/.test(line)) {
+      flushParagraph()
+      out.push(`<h2>${escapeHtml(line.replace(/^\d+\.\s+/, ''))}</h2>`)
+      continue
+    }
+    paragraph.push(line)
+  }
+  flushParagraph()
+  return out.join('')
+}
+
 function formFromArticle(article: AdminArticle): FormState {
   return {
     id: article.id,
@@ -526,10 +566,7 @@ export function AdminPage() {
     const incoming = html?.trim()
       ? sanitizeRichHtml(html)
       : sanitizeRichHtml(
-          text
-            .split(/\n{2,}/g)
-            .map((p) => `<p>${p.replace(/\n/g, '<br />')}</p>`)
-            .join(''),
+          plainTextToStructuredHtml(text),
         )
     if (!incoming) return
     document.execCommand('insertHTML', false, incoming)

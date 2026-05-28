@@ -4,13 +4,11 @@ import type { Match } from '../../types/match'
 import type { NewsItem } from '../../data/news'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { Card } from '../ui/Card'
-import { Button } from '../ui/Button'
 import { MatchCarousel } from '../match/MatchCarousel'
 import { NewsFeed } from './NewsFeed'
 import { TopCommentsFeed } from './TopCommentsFeed'
 import { BettorLeaderboard } from './BettorLeaderboard'
 import { AdSlot } from '../ui/AdSlot'
-import { SectionIntro } from '../ui/SectionIntro'
 import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
@@ -95,8 +93,6 @@ export function HomeFeedContinuation({
   heroLiveSim,
   personalizedNews,
   articlesLoading = false,
-  feedTab,
-  setFeedTab,
   supporterFocusUi,
   clubFocusLabel,
   team,
@@ -111,8 +107,6 @@ export function HomeFeedContinuation({
   heroLiveSim: LiveEncartSimulation
   personalizedNews: NewsItem[]
   articlesLoading?: boolean
-  feedTab: 'actu' | 'comments'
-  setFeedTab: (t: 'actu' | 'comments') => void
   supporterFocusUi: boolean
   clubFocusLabel: string
   team: HomeFeedTeamHint
@@ -246,6 +240,116 @@ export function HomeFeedContinuation({
           </Card>
         </section>
 
+        <section className="mt-3 min-w-0 sm:mt-4 lg:mt-5" aria-labelledby={pid('home-feed-heading')}>
+          <Card
+            className={cn(
+              'flex flex-col gap-5 border-2 p-4 ring-1 sm:gap-6 sm:p-6',
+              isLight
+                ? 'border-cyan-300/70 ring-cyan-300/45 bg-gradient-to-b from-white/95 via-white to-sky-50/65 shadow-[0_22px_56px_rgba(3,105,161,0.16)]'
+                : 'border-cyan-300/30 ring-cyan-300/25 bg-gradient-to-b from-[#071628]/95 via-[#081a30]/95 to-[#051120]/95 shadow-[0_26px_64px_rgba(0,0,0,0.5)]',
+            )}
+            elevation="soft"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className={cn('text-[11px] font-black uppercase tracking-[0.18em]', isLight ? 'text-sky-700' : 'text-sky-200/85')}>
+                  Feed Actus
+                </p>
+                <h2 id={pid('home-feed-heading')} className="mt-1 font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-[2rem]">
+                  {supporterFocusUi && clubFocusLabel ? `Actus ${clubFocusLabel}` : 'Actus'}
+                </h2>
+              </div>
+            </div>
+            <div
+              id={pid('home-feed-panel')}
+              className="flex min-w-0 flex-col gap-6"
+            >
+              <div className="min-w-0 flex-1">
+                <NewsFeed
+                  embedded
+                  items={personalizedNews}
+                  loading={articlesLoading}
+                  personalized
+                  supporterClubShort={supporterFocusUi ? clubFocusLabel : null}
+                />
+              </div>
+            </div>
+          </Card>
+        </section>
+
+        <section className="mt-5 min-w-0 sm:mt-6" aria-labelledby={pid('home-comments-heading')}>
+          <Card
+            className={cn(
+              'relative overflow-hidden border p-0',
+              isLight
+                ? 'border-slate-200/80 bg-white/95 shadow-[0_16px_44px_rgba(15,23,42,0.1)]'
+                : 'border-white/12 bg-[#0b1324]/92 shadow-[0_18px_50px_rgba(0,0,0,0.45)]',
+            )}
+            elevation="soft"
+          >
+            <div className={cn('relative z-[1] flex min-w-0 flex-col', isLight ? 'bg-white/65' : 'bg-white/[0.02]')}>
+              <div className={cn('border-b px-4 py-4 sm:px-6 sm:py-5', isLight ? 'border-slate-200/80' : 'border-white/10')}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className={cn('text-[10px] font-black uppercase tracking-[0.2em]', isLight ? 'text-slate-500' : 'text-slate-300')}>
+                      Communauté
+                    </p>
+                    <h3 id={pid('home-comments-heading')} className="mt-1 font-display text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
+                      Top commentaires
+                    </h3>
+                  </div>
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.15em]',
+                      isLight ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200',
+                    )}
+                  >
+                    Live
+                  </span>
+                </div>
+                <p className={cn('mt-2 text-xs font-semibold', isLight ? 'text-slate-600' : 'text-slate-300')}>
+                  Réactions en direct de la communauté.
+                </p>
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-5 px-4 py-4 sm:gap-6 sm:px-6 sm:py-5 xl:flex-row xl:items-start xl:gap-8">
+                <div
+                  className={cn(
+                    'min-w-0 flex-1 rounded-2xl border p-2 sm:p-3',
+                    isLight ? 'border-slate-200 bg-white shadow-sm' : 'border-white/14 bg-white/[0.04]',
+                  )}
+                >
+                  <TopCommentsFeed embedded />
+                </div>
+                <aside
+                  className={cn(
+                    'flex w-full shrink-0 flex-col gap-4 border-t pt-6 xl:w-80 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0',
+                    isLight ? 'border-slate-200/80' : 'border-white/12',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'rounded-2xl border p-3',
+                      isLight ? 'border-slate-200 bg-white shadow-sm' : 'border-white/14 bg-white/[0.04]',
+                    )}
+                  >
+                    <BettorLeaderboard embedded />
+                  </div>
+                  <div
+                    className={cn(
+                      'rounded-2xl border border-dashed p-4 text-center',
+                      isLight ? 'border-slate-300 bg-white/80 text-slate-600' : 'border-white/20 bg-white/[0.03] text-slate-300',
+                    )}
+                  >
+                    <p className="text-[11px] font-black uppercase tracking-[0.16em]">Emplacement sponsor</p>
+                    <p className="mt-1 text-xs font-semibold">Zone disponible pour pub réelle.</p>
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </Card>
+        </section>
+
         <div className="mt-5 sm:mt-6">
           <AdSlot
             tone="sky"
@@ -255,121 +359,6 @@ export function HomeFeedContinuation({
             contentReady={contentReady}
           />
         </div>
-
-        <section className="mt-6 min-w-0 lg:mt-8" aria-labelledby={pid('home-feed-heading')}>
-          <Card className="flex flex-col gap-5 p-4 sm:gap-6 sm:p-6" elevation="soft">
-            <SectionIntro
-              section="home"
-              titleId={pid('home-feed-heading')}
-              eyebrow="FEED"
-              title={
-                supporterFocusUi && clubFocusLabel
-                  ? `Actus ${clubFocusLabel} & communauté`
-                  : 'Actus & communauté'
-              }
-              description={
-                supporterFocusUi && team
-                  ? `Fil compatible ${clubFocusLabel || team.shortName} et commentaires du kop.`
-                  : 'Fil d’actus ou meilleurs commentaires des lives.'
-              }
-              actions={
-                <Link to="/groups" className="w-full sm:w-auto">
-                  <Button
-                    variant="soft"
-                    className="tf-interactive-press w-full rounded-2xl border-2 border-tf-dark/10 px-4 py-2.5 text-xs font-black uppercase tracking-wide sm:w-auto sm:py-2"
-                  >
-                    Toutes les tribunes
-                  </Button>
-                </Link>
-              }
-            />
-            <div
-              className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2"
-              role="tablist"
-              aria-label="Choisir le contenu du fil"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={feedTab === 'actu'}
-                id={pid('home-feed-tab-actu')}
-                aria-controls={pid('home-feed-panel')}
-                onClick={() => setFeedTab('actu')}
-                className={cn(
-                  'tf-interactive-press min-h-11 rounded-2xl px-3 py-2.5 text-center text-xs font-black sm:min-h-0 sm:px-4 sm:text-sm',
-                  feedTab === 'actu'
-                    ? 'bg-tf-dark text-tf-white shadow-sm'
-                    : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
-                )}
-              >
-                Actu
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={feedTab === 'comments'}
-                id={pid('home-feed-tab-comments')}
-                aria-controls={pid('home-feed-panel')}
-                onClick={() => setFeedTab('comments')}
-                className={cn(
-                  'tf-interactive-press min-h-11 rounded-2xl px-3 py-2.5 text-center text-xs font-black sm:min-h-0 sm:px-4 sm:text-sm',
-                  feedTab === 'comments'
-                    ? 'bg-tf-dark text-tf-white shadow-sm'
-                    : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
-                )}
-              >
-                <span className="hidden sm:inline">Top commentaires</span>
-                <span className="leading-tight sm:hidden">Top com.</span>
-              </button>
-            </div>
-            <div
-              id={pid('home-feed-panel')}
-              role="tabpanel"
-              aria-labelledby={feedTab === 'actu' ? pid('home-feed-tab-actu') : pid('home-feed-tab-comments')}
-              className={cn(
-                'flex min-w-0 flex-col gap-6',
-                feedTab === 'comments' && 'lg:flex-row lg:items-start lg:gap-8',
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                {feedTab === 'actu' ? (
-                  <NewsFeed
-                    embedded
-                    items={personalizedNews}
-                    loading={articlesLoading}
-                    personalized
-                    supporterClubShort={supporterFocusUi ? clubFocusLabel : null}
-                  />
-                ) : (
-                  <TopCommentsFeed embedded />
-                )}
-              </div>
-              {feedTab === 'comments' ? (
-                <aside className="flex w-full shrink-0 flex-col gap-4 border-t border-tf-dark/10 pt-6 lg:w-72 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 xl:w-80">
-                  <BettorLeaderboard embedded />
-                  <AdSlot
-                    tone="navy"
-                    brand="BetMock"
-                    body="Boost de cote — offre fictive pour visualiser une pub premium."
-                    imageSeed="ad-bet"
-                  />
-                  <AdSlot
-                    tone="blue"
-                    brand="Sponsor: UltraWear"
-                    body="Nouveau maillot 25/26 — placement publicitaire (mock)."
-                    imageSeed="ad-wear"
-                  />
-                  <AdSlot
-                    tone="sky"
-                    brand="Streaming+"
-                    body="Regarde le match en HD — emplacement pub (mock)."
-                    imageSeed="ad-stream"
-                  />
-                </aside>
-              ) : null}
-            </div>
-          </Card>
-        </section>
       </div>
 
       <nav
