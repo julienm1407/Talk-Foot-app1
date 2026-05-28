@@ -264,7 +264,9 @@ export function AdminPage() {
     }
     const created = await createDraftArticle(sb, draftInputFromForm(next))
     if (!created) {
-      setError('Impossible de créer le brouillon.')
+      setError(
+        'Impossible de créer le brouillon. Vérifie que ton compte est bien admin dans Supabase (table admin_users).',
+      )
       return
     }
     setArticles((prev) => [created, ...prev])
@@ -281,6 +283,9 @@ export function AdminPage() {
       const created = await createDraftArticle(sb, draftInputFromForm(form))
       if (!created) {
         setStatus('error')
+        setError(
+          'Sauvegarde refusée. Vérifie les droits admin de ton email dans Supabase (table admin_users).',
+        )
         return
       }
       setForm(formFromArticle(created))
@@ -292,6 +297,9 @@ export function AdminPage() {
     const updated = await updateDraftArticle(sb, form.id, draftInputFromForm(form))
     if (!updated) {
       setStatus('error')
+      setError(
+        'Sauvegarde refusée. Vérifie les droits admin de ton email dans Supabase (table admin_users).',
+      )
       return
     }
     setArticles((prev) => [updated, ...prev.filter((x) => x.id !== updated.id)])
@@ -409,10 +417,16 @@ export function AdminPage() {
       contentMarkdown: campaignBody,
       createdBy: user?.email ?? undefined,
     })
-    if (!ok) return
+    if (!ok) {
+      setError(
+        'Impossible de créer la campagne newsletter. Vérifie que ton email a les droits admin Supabase.',
+      )
+      return
+    }
     setCampaignTitle('')
     setCampaignSubject('')
     setCampaignBody('')
+    setError(null)
     const newsletter = await fetchNewsletterCampaigns(sb)
     setCampaigns(newsletter)
   }
@@ -434,7 +448,7 @@ export function AdminPage() {
           status === 'saving' && 'border-sky-300/80 bg-sky-50 text-sky-900',
           status === 'saved' && 'border-emerald-300/80 bg-emerald-50 text-emerald-900',
           status === 'error' && 'border-rose-300/80 bg-rose-50 text-rose-900',
-          status === 'idle' && 'border-slate-200/80 bg-white text-slate-700',
+          status === 'idle' && 'border-slate-200/80 bg-white text-slate-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200',
         )}
       >
         {status === 'saving' && 'Sauvegarde en cours...'}
@@ -445,15 +459,15 @@ export function AdminPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Vues 7 jours</p>
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 7 jours</p>
           <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views7d ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Vues 30 jours</p>
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 30 jours</p>
           <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views30d ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Clics CTA 30 jours</p>
+          <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Clics CTA 30 jours</p>
           <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.ctaClicks30d ?? 0}</p>
         </Card>
       </div>
@@ -463,13 +477,13 @@ export function AdminPage() {
         <div className="mt-3 space-y-2">
           {dashboard?.topArticles30d?.length ? (
             dashboard.topArticles30d.map((a) => (
-              <div key={a.articleId} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5">
-                <p className="line-clamp-1 text-sm font-bold text-slate-900">{a.title}</p>
-                <span className="text-xs font-black text-slate-600">{a.views} vues</span>
+              <div key={a.articleId} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
+                <p className="line-clamp-1 text-sm font-bold text-slate-900 dark:text-slate-100">{a.title}</p>
+                <span className="text-xs font-black text-slate-600 dark:text-slate-300">{a.views} vues</span>
               </div>
             ))
           ) : (
-            <p className="text-sm font-semibold text-slate-500">Pas encore de données.</p>
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Pas encore de données.</p>
           )}
         </div>
       </Card>
@@ -486,7 +500,7 @@ export function AdminPage() {
             <select
               value={roleValue}
               onChange={(e) => setRoleValue(e.target.value as EditorialRole)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold"
+              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             >
               <option value="redacteur">Rédacteur</option>
               <option value="relecteur">Relecteur</option>
@@ -498,9 +512,9 @@ export function AdminPage() {
           </div>
           <div className="mt-3 space-y-2">
             {editorialUsers.map((u) => (
-              <div key={u.email} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <span className="text-sm font-semibold text-slate-800">{u.email}</span>
-                <span className="text-xs font-black text-slate-600">{u.role}</span>
+              <div key={u.email} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{u.email}</span>
+                <span className="text-xs font-black text-slate-600 dark:text-slate-300">{u.role}</span>
               </div>
             ))}
           </div>
@@ -508,26 +522,38 @@ export function AdminPage() {
 
         <Card className="p-4">
           <h2 className="font-display text-lg font-black text-tf-dark">Newsletter</h2>
+          <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            Une <strong>campagne</strong> = un email groupé envoyé aux abonnés newsletter.
+            Cette zone sert aux emails marketing/infos, pas à publier un article.
+          </p>
           <div className="mt-3 space-y-2">
-            <Input value={campaignTitle} onChange={(e) => setCampaignTitle(e.target.value)} placeholder="Titre campagne" />
+            <Input
+              value={campaignTitle}
+              onChange={(e) => setCampaignTitle(e.target.value)}
+              placeholder="Nom interne de la campagne (ex: Coupe du monde 2026)"
+            />
             <Input value={campaignSubject} onChange={(e) => setCampaignSubject(e.target.value)} placeholder="Objet email" />
             <textarea
               value={campaignBody}
               onChange={(e) => setCampaignBody(e.target.value)}
-              className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-              placeholder="Contenu markdown"
+              className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              placeholder="Message email (markdown)"
             />
             <Button variant="soft" className="rounded-xl" onClick={() => void createCampaign()}>
-              Créer campagne
+              Créer le brouillon d'email
             </Button>
           </div>
           <div className="mt-3 space-y-2">
-            {campaigns.map((c) => (
-              <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-black text-slate-900">{c.title}</p>
-                <p className="text-xs font-semibold text-slate-500">{c.status}</p>
-              </div>
-            ))}
+            {campaigns.length === 0 ? (
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucune campagne créée.</p>
+            ) : (
+              campaigns.map((c) => (
+                <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                  <p className="text-sm font-black text-slate-900 dark:text-slate-100">{c.title}</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-300">Statut: {c.status}</p>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>
@@ -536,12 +562,12 @@ export function AdminPage() {
         <h2 className="font-display text-lg font-black text-tf-dark">Modération commentaires</h2>
         <div className="mt-3 space-y-2">
           {commentsToModerate.length === 0 ? (
-            <p className="text-sm font-semibold text-slate-500">Aucun commentaire à modérer.</p>
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucun commentaire à modérer.</p>
           ) : (
             commentsToModerate.map((c) => (
-              <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+              <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-black text-slate-700">
+                  <p className="text-xs font-black text-slate-700 dark:text-slate-300">
                     {c.authorName} · {c.reportedCount} signalement(s) · {c.status}
                   </p>
                   <div className="flex gap-2">
@@ -553,7 +579,7 @@ export function AdminPage() {
                     </Button>
                   </div>
                 </div>
-                <p className="mt-1 text-sm font-medium text-slate-800">{c.body}</p>
+                <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{c.body}</p>
               </div>
             ))
           )}
@@ -581,8 +607,8 @@ export function AdminPage() {
                 className={cn(
                   'w-full rounded-xl border p-2.5 text-left transition',
                   selectedId === a.id
-                    ? 'border-sky-300 bg-sky-50'
-                    : 'border-slate-200 bg-white hover:border-slate-300',
+                    ? 'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40'
+                    : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500',
                 )}
                 onClick={() => {
                   setSelectedId(a.id)
@@ -600,7 +626,7 @@ export function AdminPage() {
         <Card className="space-y-4 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80">Titre</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Titre</label>
               <Input
                 value={form.title}
                 onChange={(e) =>
@@ -614,15 +640,15 @@ export function AdminPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Slug</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Slug</label>
               <Input value={form.slug} onChange={(e) => setForm((p) => ({ ...p, slug: slugify(e.target.value) }))} className="mt-1" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Tag</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Tag</label>
               <select
                 value={form.tag}
                 onChange={(e) => setForm((p) => ({ ...p, tag: e.target.value as FormState['tag'] }))}
-                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold"
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               >
                 <option value="Breaking">Breaking</option>
                 <option value="Analyse">Analyse</option>
@@ -631,31 +657,31 @@ export function AdminPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80">Extrait</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Extrait</label>
               <textarea
                 value={form.excerpt}
                 onChange={(e) => setForm((p) => ({ ...p, excerpt: e.target.value }))}
-                className="mt-1 min-h-[70px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900"
+                className="mt-1 min-h-[70px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Auteur</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Auteur</label>
               <Input value={form.authorName} onChange={(e) => setForm((p) => ({ ...p, authorName: e.target.value }))} className="mt-1" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Image couverture (URL)</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Image couverture (URL)</label>
               <Input value={form.coverImageUrl} onChange={(e) => setForm((p) => ({ ...p, coverImageUrl: e.target.value }))} className="mt-1" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Ligues (CSV)</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Ligues (CSV)</label>
               <Input value={form.leagueIds} onChange={(e) => setForm((p) => ({ ...p, leagueIds: e.target.value }))} className="mt-1" placeholder="ligue-1,epl" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Clubs (CSV)</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Clubs (CSV)</label>
               <Input value={form.clubIds} onChange={(e) => setForm((p) => ({ ...p, clubIds: e.target.value }))} className="mt-1" placeholder="psg,om" />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80">Contenu markdown</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Contenu markdown</label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {ARTICLE_TEMPLATES.map((tpl) => (
                   <Button
@@ -673,14 +699,14 @@ export function AdminPage() {
                 ref={markdownRef}
                 value={form.bodyMarkdown}
                 onChange={(e) => setForm((p) => ({ ...p, bodyMarkdown: e.target.value }))}
-                className="mt-1 min-h-[320px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900"
+                className="mt-1 min-h-[320px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 aria-describedby="admin-markdown-help"
               />
-              <p id="admin-markdown-help" className="mt-1 text-xs font-semibold text-slate-500">
+              <p id="admin-markdown-help" className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Supporte titres, listes, tableaux markdown et images URL.
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50">
+                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
                   {uploadingImage ? 'Import...' : 'Importer une image'}
                   <input
                     type="file"
@@ -693,13 +719,13 @@ export function AdminPage() {
                     }}
                   />
                 </label>
-                <span className="text-xs font-semibold text-slate-500">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   L’image est uploadée puis insérée automatiquement en markdown.
                 </span>
               </div>
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Planifier (date/heure)</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Planifier (date/heure)</label>
               <Input
                 type="datetime-local"
                 value={form.scheduledAt}
@@ -708,7 +734,7 @@ export function AdminPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80">Relecteur (optionnel)</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Relecteur (optionnel)</label>
               <Input
                 value={form.reviewedBy}
                 onChange={(e) => setForm((p) => ({ ...p, reviewedBy: e.target.value }))}
@@ -716,10 +742,10 @@ export function AdminPage() {
                 placeholder="Nom de la relecture"
               />
             </div>
-            <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/70">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-black text-slate-900">Assistant SEO (FR)</p>
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700">
+                <p className="text-sm font-black text-slate-900 dark:text-slate-100">Assistant SEO (FR)</p>
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                   Score : {seoAudit.score}/100
                 </span>
               </div>
@@ -728,7 +754,7 @@ export function AdminPage() {
                   <li className="text-xs font-semibold text-emerald-700">Très bien : article bien optimisé pour la découverte SEO.</li>
                 ) : (
                   seoAudit.tips.map((tip) => (
-                    <li key={tip} className="text-xs font-semibold text-slate-600">
+                    <li key={tip} className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                       - {tip}
                     </li>
                   ))
@@ -765,9 +791,9 @@ export function AdminPage() {
           </div>
 
           {previewOpen ? (
-            <Card className="space-y-3 border-slate-200 bg-slate-50/70 p-4">
+            <Card className="space-y-3 border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/70">
               <h3 className="font-display text-lg font-black text-tf-dark">Aperçu live</h3>
-              <p className="text-sm font-semibold text-tf-grey">{form.excerpt || 'Aucun extrait.'}</p>
+              <p className="text-sm font-semibold text-tf-grey dark:text-slate-300">{form.excerpt || 'Aucun extrait.'}</p>
               <ArticleMarkdown
                 markdown={form.bodyMarkdown || '_Commence à écrire du markdown..._'}
                 className="prose prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-table:block prose-table:w-full"
@@ -781,7 +807,7 @@ export function AdminPage() {
         to="/profile"
         className={cn(
           TF_FOCUS_VISIBLE,
-          'inline-flex min-h-tf-touch items-center justify-center rounded-xl border border-tf-dark bg-white/95 px-5 py-3 text-sm font-semibold font-display text-tf-dark shadow-tf-elev-1 transition hover:bg-tf-electric-soft',
+          'inline-flex min-h-tf-touch items-center justify-center rounded-xl border border-tf-dark bg-white/95 px-5 py-3 text-sm font-semibold font-display text-tf-dark shadow-tf-elev-1 transition hover:bg-tf-electric-soft dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
         )}
       >
         Retour au profil

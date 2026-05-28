@@ -246,7 +246,12 @@ export function GroupCard({
                 )}
               >
                 {railDense ? (
-                  <span className="line-clamp-2 text-balance">{group.name}</span>
+                  <div className="flex items-start gap-1.5">
+                    <span className="min-w-0 flex-1 line-clamp-2 text-balance">{group.name}</span>
+                    <Badge className={cn('shrink-0 px-1.5 py-0.5 text-[9px] leading-none', kindBadgeC)}>
+                      {kindLabel[kind]}
+                    </Badge>
+                  </div>
                 ) : (
                   group.name
                 )}
@@ -287,7 +292,6 @@ export function GroupCard({
                     📈 {msgs.toLocaleString('fr-FR')} msg
                   </Badge>
                 ) : null}
-                <Badge className={cn('px-1.5 py-0.5', kindBadgeC)}>{kindLabel[kind]}</Badge>
               </div>
               {group.motto ? (
                 <p className={cn('line-clamp-1 text-[9px] font-semibold italic leading-tight', subC)}>« {group.motto} »</p>
