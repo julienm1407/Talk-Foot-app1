@@ -307,6 +307,19 @@ html[data-tf-appearance='light'] .tf-channel-live .tf-card-prematch::before {
   padding: 1rem 1.1rem;
 }
 
+.tf-md-text-sm {
+  font-size: 0.9em;
+}
+
+.tf-md-text-md {
+  font-size: 1em;
+}
+
+.tf-md-text-lg {
+  font-size: 1.16em;
+  line-height: 1.75;
+}
+
 html[data-tf-appearance='light'] .tf-channel-live .tf-card-info {
   background: #f4f9ff;
   border-color: rgba(88, 128, 166, 0.38);

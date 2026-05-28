@@ -326,7 +326,10 @@ export function HomeFeedContinuation({
               id={pid('home-feed-panel')}
               role="tabpanel"
               aria-labelledby={feedTab === 'actu' ? pid('home-feed-tab-actu') : pid('home-feed-tab-comments')}
-              className="flex min-w-0 flex-col gap-6 lg:flex-row lg:items-start lg:gap-8"
+              className={cn(
+                'flex min-w-0 flex-col gap-6',
+                feedTab === 'comments' && 'lg:flex-row lg:items-start lg:gap-8',
+              )}
             >
               <div className="min-w-0 flex-1">
                 {feedTab === 'actu' ? (
@@ -341,27 +344,29 @@ export function HomeFeedContinuation({
                   <TopCommentsFeed embedded />
                 )}
               </div>
-              <aside className="flex w-full shrink-0 flex-col gap-4 border-t border-tf-dark/10 pt-6 lg:w-72 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 xl:w-80">
-                <BettorLeaderboard embedded />
-                <AdSlot
-                  tone="navy"
-                  brand="BetMock"
-                  body="Boost de cote — offre fictive pour visualiser une pub premium."
-                  imageSeed="ad-bet"
-                />
-                <AdSlot
-                  tone="blue"
-                  brand="Sponsor: UltraWear"
-                  body="Nouveau maillot 25/26 — placement publicitaire (mock)."
-                  imageSeed="ad-wear"
-                />
-                <AdSlot
-                  tone="sky"
-                  brand="Streaming+"
-                  body="Regarde le match en HD — emplacement pub (mock)."
-                  imageSeed="ad-stream"
-                />
-              </aside>
+              {feedTab === 'comments' ? (
+                <aside className="flex w-full shrink-0 flex-col gap-4 border-t border-tf-dark/10 pt-6 lg:w-72 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0 xl:w-80">
+                  <BettorLeaderboard embedded />
+                  <AdSlot
+                    tone="navy"
+                    brand="BetMock"
+                    body="Boost de cote — offre fictive pour visualiser une pub premium."
+                    imageSeed="ad-bet"
+                  />
+                  <AdSlot
+                    tone="blue"
+                    brand="Sponsor: UltraWear"
+                    body="Nouveau maillot 25/26 — placement publicitaire (mock)."
+                    imageSeed="ad-wear"
+                  />
+                  <AdSlot
+                    tone="sky"
+                    brand="Streaming+"
+                    body="Regarde le match en HD — emplacement pub (mock)."
+                    imageSeed="ad-stream"
+                  />
+                </aside>
+              ) : null}
             </div>
           </Card>
         </section>

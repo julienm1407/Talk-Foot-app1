@@ -121,6 +121,9 @@ const STYLE_SNIPPETS: Array<{ id: string; label: string; markdown: string }> = [
   { id: 'space-sm', label: 'Espace court', markdown: '[[spacer-sm]]' },
   { id: 'space-md', label: 'Espace moyen', markdown: '[[spacer-md]]' },
   { id: 'space-lg', label: 'Espace large', markdown: '[[spacer-lg]]' },
+  { id: 'txt-sm', label: 'Texte petit', markdown: '[[txt-sm: Texte plus petit]]' },
+  { id: 'txt-md', label: 'Texte normal', markdown: '[[txt-md: Texte normal]]' },
+  { id: 'txt-lg', label: 'Texte grand', markdown: '[[txt-lg: Texte mis en valeur]]' },
 ]
 
 function computeSeoScore(form: FormState): { score: number; tips: string[] } {
@@ -478,6 +481,21 @@ export function AdminPage() {
   const insertLayoutTemplate = (markdown: string) => {
     const content = form.bodyMarkdown.trim()
     const next = content ? `${content}\n\n${markdown.trim()}` : markdown.trim()
+    setForm((p) => ({ ...p, bodyMarkdown: next }))
+  }
+
+  const wrapMarkdownSelection = (prefix: string, suffix = '', placeholder = 'texte') => {
+    const textarea = markdownRef.current
+    const source = form.bodyMarkdown
+    if (!textarea) {
+      setForm((p) => ({ ...p, bodyMarkdown: `${p.bodyMarkdown}${prefix}${placeholder}${suffix}` }))
+      return
+    }
+    const start = textarea.selectionStart ?? source.length
+    const end = textarea.selectionEnd ?? source.length
+    const selected = source.slice(start, end)
+    const content = selected || placeholder
+    const next = `${source.slice(0, start)}${prefix}${content}${suffix}${source.slice(end)}`
     setForm((p) => ({ ...p, bodyMarkdown: next }))
   }
 
@@ -841,6 +859,14 @@ export function AdminPage() {
                 ))}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="rounded-xl text-xs"
+                  onClick={() => wrapMarkdownSelection('**', '**')}
+                >
+                  Gras
+                </Button>
                 {STYLE_SNIPPETS.map((tpl) => (
                   <Button
                     key={tpl.id}
@@ -865,7 +891,7 @@ export function AdminPage() {
               </p>
               <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Raccourcis: `[[bloc-sm: ...]]`, `[[bloc-md: ...]]`, `[[bloc-lg: ...]]`, `[[spacer-sm]]`,
-                `[[spacer-md]]`, `[[spacer-lg]]`.
+                `[[spacer-md]]`, `[[spacer-lg]]`, `[[txt-sm: ...]]`, `[[txt-md: ...]]`, `[[txt-lg: ...]]`.
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">

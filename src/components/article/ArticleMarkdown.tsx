@@ -4,7 +4,7 @@ import { marked } from 'marked'
 
 marked.setOptions({
   gfm: true,
-  breaks: false,
+  breaks: true,
 })
 
 function withEditorShortcodes(markdown: string): string {
@@ -15,6 +15,9 @@ function withEditorShortcodes(markdown: string): string {
     .replace(/\[\[bloc-sm:([^\]]+)\]\]/g, '<div class="tf-md-block tf-md-block-sm"><p>$1</p></div>')
     .replace(/\[\[bloc-md:([^\]]+)\]\]/g, '<div class="tf-md-block tf-md-block-md"><p>$1</p></div>')
     .replace(/\[\[bloc-lg:([^\]]+)\]\]/g, '<div class="tf-md-block tf-md-block-lg"><p>$1</p></div>')
+    .replace(/\[\[txt-sm:([^\]]+)\]\]/g, '<span class="tf-md-text-sm">$1</span>')
+    .replace(/\[\[txt-md:([^\]]+)\]\]/g, '<span class="tf-md-text-md">$1</span>')
+    .replace(/\[\[txt-lg:([^\]]+)\]\]/g, '<span class="tf-md-text-lg">$1</span>')
 }
 
 function toSafeHtml(markdown: string): string {
