@@ -263,6 +263,50 @@ html[data-tf-appearance='light'] .tf-channel-live .tf-card-prematch::before {
   background: #7ea0c2;
 }
 
+/* Article markdown helpers (admin shortcodes). */
+.tf-md-spacer {
+  width: 100%;
+}
+
+.tf-md-spacer-sm {
+  height: 0.75rem;
+}
+
+.tf-md-spacer-md {
+  height: 1.5rem;
+}
+
+.tf-md-spacer-lg {
+  height: 2.25rem;
+}
+
+.tf-md-block {
+  border: 1px solid color-mix(in srgb, var(--tf-electric) 18%, transparent);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--tf-electric-soft) 35%, white);
+  padding: 0.75rem 0.9rem;
+}
+
+.tf-md-block p {
+  margin: 0;
+}
+
+.tf-md-block-sm {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.tf-md-block-md {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.tf-md-block-lg {
+  font-size: 1.06rem;
+  line-height: 1.7;
+  padding: 1rem 1.1rem;
+}
+
 html[data-tf-appearance='light'] .tf-channel-live .tf-card-info {
   background: #f4f9ff;
   border-color: rgba(88, 128, 166, 0.38);

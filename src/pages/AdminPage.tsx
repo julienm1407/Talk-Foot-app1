@@ -57,6 +57,13 @@ type FormState = {
   reviewedBy: string
 }
 
+type MarkdownImageToken = {
+  index: number
+  alt: string
+  url: string
+  raw: string
+}
+
 const EMPTY_FORM: FormState = {
   title: '',
   slug: '',
@@ -90,6 +97,30 @@ const ARTICLE_TEMPLATES: Array<{ id: string; label: string; markdown: string }> 
     markdown:
       '## Plan de jeu\n\nDécris le système et l’intention collective.\n\n## Clé côté ballon\n\nOrganisation offensive et circuits préférentiels.\n\n## Clé sans ballon\n\nPressing, bloc et gestion des transitions.\n\n## Conclusion\n\nCe que cela implique pour le prochain match.',
   },
+]
+
+const LAYOUT_TEMPLATES: Array<{ id: string; label: string; markdown: string }> = [
+  {
+    id: 'grid-2-images',
+    label: 'Grille 2 images',
+    markdown:
+      '## Galerie 2 colonnes\n\n| Image 1 | Image 2 |\n|---|---|\n| ![Image 1](https://) | ![Image 2](https://) |\n',
+  },
+  {
+    id: 'grid-3-highlights',
+    label: 'Grille 3 points clés',
+    markdown:
+      '## Points clés\n\n| Point 1 | Point 2 | Point 3 |\n|---|---|---|\n| Fait marquant | Fait marquant | Fait marquant |\n',
+  },
+]
+
+const STYLE_SNIPPETS: Array<{ id: string; label: string; markdown: string }> = [
+  { id: 'block-sm', label: 'Bloc petit', markdown: '[[bloc-sm: Texte compact pour un encadre.]]' },
+  { id: 'block-md', label: 'Bloc moyen', markdown: '[[bloc-md: Texte standard pour un encadre.]]' },
+  { id: 'block-lg', label: 'Bloc grand', markdown: '[[bloc-lg: Texte important mis en avant.]]' },
+  { id: 'space-sm', label: 'Espace court', markdown: '[[spacer-sm]]' },
+  { id: 'space-md', label: 'Espace moyen', markdown: '[[spacer-md]]' },
+  { id: 'space-lg', label: 'Espace large', markdown: '[[spacer-lg]]' },
 ]
 
 function computeSeoScore(form: FormState): { score: number; tips: string[] } {
@@ -135,6 +166,24 @@ function parseCsv(value: string): string[] {
     .filter(Boolean)
 }
 
+function extractMarkdownImages(markdown: string): MarkdownImageToken[] {
+  const re = /!\[([^\]]*)\]\(([^)\s]+)\)/g
+  const out: MarkdownImageToken[] = []
+  let match: RegExpExecArray | null = re.exec(markdown)
+  let index = 0
+  while (match) {
+    out.push({
+      index,
+      alt: (match[1] || '').trim(),
+      url: (match[2] || '').trim(),
+      raw: match[0],
+    })
+    index += 1
+    match = re.exec(markdown)
+  }
+  return out
+}
+
 function formFromArticle(article: AdminArticle): FormState {
   return {
     id: article.id,
@@ -176,6 +225,7 @@ export function AdminPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [previewOpen, setPreviewOpen] = useState(true)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingCoverImage, setUploadingCoverImage] = useState(false)
   const markdownRef = useRef<HTMLTextAreaElement>(null)
   const [dashboard, setDashboard] = useState<ArticleDashboardStats | null>(null)
   const [commentsToModerate, setCommentsToModerate] = useState<ArticleComment[]>([])
@@ -194,6 +244,7 @@ export function AdminPage() {
     [articles, selectedId],
   )
   const seoAudit = useMemo(() => computeSeoScore(form), [form])
+  const markdownImages = useMemo(() => extractMarkdownImages(form.bodyMarkdown), [form.bodyMarkdown])
 
   const statusLabel = useCallback((status: AdminArticle['status']) => {
     if (status === 'published') return 'Publié'
@@ -380,6 +431,54 @@ export function AdminPage() {
       ...p,
       bodyMarkdown: `${p.bodyMarkdown.slice(0, start)}${md}${p.bodyMarkdown.slice(end)}`,
     }))
+  }
+
+  const handleCoverImageUpload = async (file: File | null) => {
+    if (!file || !sb) return
+    setUploadingCoverImage(true)
+    const publicUrl = await uploadArticleImage(sb, file, form.slug || undefined)
+    setUploadingCoverImage(false)
+    if (!publicUrl) {
+      setStatus('error')
+      setError('Import image de couverture impossible. Vérifie les policies storage et le bucket.')
+      return
+    }
+    setForm((p) => ({ ...p, coverImageUrl: publicUrl }))
+    setError(null)
+  }
+
+  const removeMarkdownImageByIndex = (targetIndex: number) => {
+    let seen = -1
+    const nextBody = form.bodyMarkdown.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (raw) => {
+      seen += 1
+      return seen === targetIndex ? '' : raw
+    })
+    setForm((p) => ({ ...p, bodyMarkdown: nextBody.replace(/\n{3,}/g, '\n\n').trim() }))
+  }
+
+  const replaceMarkdownImageByIndex = async (targetIndex: number, file: File | null) => {
+    if (!file || !sb) return
+    const publicUrl = await uploadArticleImage(sb, file, form.slug || undefined)
+    if (!publicUrl) {
+      setStatus('error')
+      setError('Remplacement image impossible. Vérifie les policies storage et le bucket.')
+      return
+    }
+    let seen = -1
+    const nextBody = form.bodyMarkdown.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_raw, alt: string, _url: string) => {
+      seen += 1
+      if (seen !== targetIndex) return _raw
+      const safeAlt = (alt || form.title || 'Illustration').trim()
+      return `![${safeAlt}](${publicUrl})`
+    })
+    setForm((p) => ({ ...p, bodyMarkdown: nextBody }))
+    setError(null)
+  }
+
+  const insertLayoutTemplate = (markdown: string) => {
+    const content = form.bodyMarkdown.trim()
+    const next = content ? `${content}\n\n${markdown.trim()}` : markdown.trim()
+    setForm((p) => ({ ...p, bodyMarkdown: next }))
   }
 
   const hideComment = async (commentId: string) => {
@@ -671,6 +770,39 @@ export function AdminPage() {
             <div>
               <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Image couverture (URL)</label>
               <Input value={form.coverImageUrl} onChange={(e) => setForm((p) => ({ ...p, coverImageUrl: e.target.value }))} className="mt-1" />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                  {uploadingCoverImage ? 'Import...' : 'Uploader la couverture'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null
+                      void handleCoverImageUpload(file)
+                      e.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+                {form.coverImageUrl.trim() ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="rounded-xl text-xs"
+                    onClick={() => setForm((p) => ({ ...p, coverImageUrl: '' }))}
+                  >
+                    Retirer couverture
+                  </Button>
+                ) : null}
+              </div>
+              {form.coverImageUrl.trim() ? (
+                <img
+                  src={form.coverImageUrl}
+                  alt="Couverture"
+                  className="mt-2 h-24 w-full rounded-xl border border-slate-200 object-cover dark:border-slate-700"
+                  loading="lazy"
+                />
+              ) : null}
             </div>
             <div>
               <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Ligues (CSV)</label>
@@ -695,6 +827,32 @@ export function AdminPage() {
                   </Button>
                 ))}
               </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {LAYOUT_TEMPLATES.map((tpl) => (
+                  <Button
+                    key={tpl.id}
+                    type="button"
+                    variant="ghost"
+                    className="rounded-xl text-xs"
+                    onClick={() => insertLayoutTemplate(tpl.markdown)}
+                  >
+                    Grille : {tpl.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {STYLE_SNIPPETS.map((tpl) => (
+                  <Button
+                    key={tpl.id}
+                    type="button"
+                    variant="ghost"
+                    className="rounded-xl text-xs"
+                    onClick={() => insertLayoutTemplate(tpl.markdown)}
+                  >
+                    Style : {tpl.label}
+                  </Button>
+                ))}
+              </div>
               <textarea
                 ref={markdownRef}
                 value={form.bodyMarkdown}
@@ -704,6 +862,10 @@ export function AdminPage() {
               />
               <p id="admin-markdown-help" className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Supporte titres, listes, tableaux markdown et images URL.
+              </p>
+              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Raccourcis: `[[bloc-sm: ...]]`, `[[bloc-md: ...]]`, `[[bloc-lg: ...]]`, `[[spacer-sm]]`,
+                `[[spacer-md]]`, `[[spacer-lg]]`.
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
@@ -722,6 +884,59 @@ export function AdminPage() {
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   L’image est uploadée puis insérée automatiquement en markdown.
                 </span>
+              </div>
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                  Images detectees dans le texte
+                </p>
+                {markdownImages.length === 0 ? (
+                  <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Aucune image dans le markdown pour le moment.
+                  </p>
+                ) : (
+                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {markdownImages.map((img) => (
+                      <div
+                        key={`${img.index}-${img.url}`}
+                        className="rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900"
+                      >
+                        <img
+                          src={img.url}
+                          alt={img.alt || `Image ${img.index + 1}`}
+                          className="h-20 w-full rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                        <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                          {img.alt || `Image ${img.index + 1}`}
+                        </p>
+                        <p className="line-clamp-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">{img.url}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                            Remplacer
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0] ?? null
+                                void replaceMarkdownImageByIndex(img.index, file)
+                                e.currentTarget.value = ''
+                              }}
+                            />
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="rounded-lg px-2 py-1 text-[11px]"
+                            onClick={() => removeMarkdownImageByIndex(img.index)}
+                          >
+                            Supprimer
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div>
