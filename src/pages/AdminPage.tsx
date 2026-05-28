@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent } from 'react'
 import { Link } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -187,6 +188,28 @@ function extractMarkdownImages(markdown: string): MarkdownImageToken[] {
   return out
 }
 
+function sanitizeRichHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'p',
+      'br',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      'h2',
+      'h3',
+      'ul',
+      'ol',
+      'li',
+      'blockquote',
+      'a',
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+  }).trim()
+}
+
 function formFromArticle(article: AdminArticle): FormState {
   return {
     id: article.id,
@@ -230,6 +253,7 @@ export function AdminPage() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingCoverImage, setUploadingCoverImage] = useState(false)
   const markdownRef = useRef<HTMLTextAreaElement>(null)
+  const richEditorRef = useRef<HTMLDivElement>(null)
   const [dashboard, setDashboard] = useState<ArticleDashboardStats | null>(null)
   const [commentsToModerate, setCommentsToModerate] = useState<ArticleComment[]>([])
   const [editorialUsers, setEditorialUsers] = useState<Array<{ email: string; role: EditorialRole }>>([])
@@ -482,6 +506,33 @@ export function AdminPage() {
     const content = form.bodyMarkdown.trim()
     const next = content ? `${content}\n\n${markdown.trim()}` : markdown.trim()
     setForm((p) => ({ ...p, bodyMarkdown: next }))
+  }
+
+  const pasteRichTextAsHtml = () => {
+    const html = richEditorRef.current?.innerHTML ?? ''
+    const cleaned = sanitizeRichHtml(html)
+    if (!cleaned) return
+    setForm((p) => ({ ...p, bodyMarkdown: cleaned }))
+  }
+
+  const clearRichEditor = () => {
+    if (richEditorRef.current) richEditorRef.current.innerHTML = ''
+  }
+
+  const handlePasteInRichEditor = (e: ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const html = e.clipboardData.getData('text/html')
+    const text = e.clipboardData.getData('text/plain')
+    const incoming = html?.trim()
+      ? sanitizeRichHtml(html)
+      : sanitizeRichHtml(
+          text
+            .split(/\n{2,}/g)
+            .map((p) => `<p>${p.replace(/\n/g, '<br />')}</p>`)
+            .join(''),
+        )
+    if (!incoming) return
+    document.execCommand('insertHTML', false, incoming)
   }
 
   const wrapMarkdownSelection = (prefix: string, suffix = '', placeholder = 'texte') => {
@@ -832,6 +883,26 @@ export function AdminPage() {
             </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Contenu markdown</label>
+              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                  Mode simple: collage enrichi (Word / Google Docs)
+                </p>
+                <div
+                  ref={richEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onPaste={handlePasteInRichEditor}
+                  className="mt-2 min-h-[130px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button type="button" variant="soft" className="rounded-xl text-xs" onClick={pasteRichTextAsHtml}>
+                    Utiliser ce texte (HTML propre)
+                  </Button>
+                  <Button type="button" variant="ghost" className="rounded-xl text-xs" onClick={clearRichEditor}>
+                    Vider la zone
+                  </Button>
+                </div>
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {ARTICLE_TEMPLATES.map((tpl) => (
                   <Button
