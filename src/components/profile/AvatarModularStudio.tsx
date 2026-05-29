@@ -1,8 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
-import { avatarAssetMap, createDefaultAvatarData, findAssetById, slotToCategory } from '../../features/avatar2d/catalog'
-import type { AvatarAssetCategory, AvatarSlotKey, AvatarData } from '../../features/avatar2d/types'
+import { avatarAssetMap, findAssetById, slotToCategory } from '../../features/avatar2d/catalog'
+import type { AvatarAsset, AvatarAssetCategory, AvatarSlotKey } from '../../features/avatar2d/types'
+import {
+  resolveModularAvatarState,
+  type ModularColorizableSlot,
+  type ModularColorVariantKey,
+  type ModularSlotColors,
+} from '../../features/avatar2d/modularAvatarState'
+import { useProfile } from '../../hooks/useProfile'
+import { useOptionalCloudUserState } from '../../contexts/CloudUserStateContext'
+import { ModularAvatarCanvas, MODULAR_COLOR_VARIANTS } from './ModularAvatarCanvas'
+import type { AvatarData } from '../../features/avatar2d/types'
 
 const SLOT_ORDER: AvatarSlotKey[] = [
   'body',
@@ -36,19 +46,209 @@ const SLOT_LABELS: Record<AvatarSlotKey, string> = {
 
 const SKIN_PALETTE = ['#f7d8bf', '#e9c2a4', '#d7a783', '#bf8d67', '#9d6f4d', '#7f5639']
 
-type ColorVariantKey = 'default' | 'black' | 'brown' | 'blond' | 'auburn' | 'red' | 'blue' | 'green' | 'white'
-type ColorizableSlot = 'hair' | 'beard' | 'jersey' | 'shorts' | 'socks' | 'shoes' | 'accessory'
+type ColorVariantKey = ModularColorVariantKey
+type ColorizableSlot = ModularColorizableSlot
 
-const COLOR_VARIANTS: Record<ColorVariantKey, { label: string; filter: string }> = {
-  default: { label: 'Base', filter: 'none' },
-  black: { label: 'Noir', filter: 'brightness(0.42) contrast(1.2)' },
-  brown: { label: 'Brun', filter: 'sepia(0.72) saturate(1.2) hue-rotate(-12deg) brightness(0.9)' },
-  blond: { label: 'Blond', filter: 'sepia(0.92) saturate(1.55) hue-rotate(-6deg) brightness(1.08)' },
-  auburn: { label: 'Roux', filter: 'sepia(0.95) saturate(1.7) hue-rotate(-28deg) brightness(0.96)' },
-  red: { label: 'Rouge', filter: 'sepia(1) saturate(2.1) hue-rotate(-38deg) brightness(0.95)' },
-  blue: { label: 'Bleu', filter: 'sepia(0.9) saturate(1.8) hue-rotate(158deg) brightness(0.98)' },
-  green: { label: 'Vert', filter: 'sepia(0.95) saturate(1.65) hue-rotate(72deg) brightness(0.95)' },
-  white: { label: 'Blanc', filter: 'grayscale(1) brightness(1.35) contrast(0.92)' },
+const HAIR_DISPLAY_NAMES: Record<string, string> = {
+  'hair-hair-afro': 'Afro',
+  'hair-hair-braids': 'Tresses',
+  'hair-hair-buzzcut': 'Buzz cut',
+  'hair-hair-curly': 'Bouclés',
+  'hair-hair-fade': 'Dégradé',
+  'hair-hair-long': 'Mi-long',
+  'hair-hair-long-straight': 'Long lisse',
+  'hair-hair-long-wavy': 'Long ondulé',
+  'hair-hair-middlepart': 'Raie au milieu',
+  'hair-hair-ponytail': 'Chignon / queue',
+  'hair-hair-spiky': 'Spiky',
+}
+
+const BEARD_DISPLAY_NAMES: Record<string, string> = {
+  'beard-beard-3days': 'Barbe 3 jours',
+  'beard-beard-full': 'Barbe complète',
+  'beard-beard-goatee': 'Bouc',
+  'beard-beard-mustache': 'Moustache',
+  'beard-beard-short': 'Barbe courte',
+}
+
+const SHOES_DISPLAY_NAMES: Record<string, string> = {
+  'shoes-shoes-base': 'Crampons blancs (base)',
+  'shoes-shoes-bleu': 'Crampons bleu',
+  'shoes-shoes-rouge': 'Crampons rouge',
+  'shoes-shoes-jaune': 'Crampons jaune',
+  'shoes-shoes-vert': 'Crampons vert',
+}
+
+const EYES_DISPLAY_NAMES: Record<string, string> = {
+  'eyes-eyes-default-01': 'Yeux classiques',
+  'eyes-eyes-round-02': 'Yeux ronds',
+  'eyes-eyes-sharp-03': 'Yeux fins',
+  'eyes-eyes-sleepy-04': 'Yeux fatigués',
+}
+
+const NOSE_DISPLAY_NAMES: Record<string, string> = {
+  'nose-nose-big': 'Nez large',
+  'nose-nose-round': 'Nez rond',
+  'nose-nose-thin': 'Nez fin',
+  'nose-nose-small-light': 'Nez petit',
+}
+
+/** Option vide en tête de grille (aucun calque PNG). */
+const EMPTY_SLOT_OPTION: Partial<Record<AvatarSlotKey, { key: string; label: string }>> = {
+  hair: { key: 'hair-bald', label: 'Chauve' },
+  beard: { key: 'beard-none', label: 'Sans barbe' },
+}
+
+/** Grille toujours visible si peu d’options ; sinon panneau repliable. */
+const INLINE_GRID_MAX = 6
+
+function assetLabel(asset: AvatarAsset, slot: AvatarSlotKey): string {
+  if (slot === 'hair') return HAIR_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
+  if (slot === 'beard') return BEARD_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
+  if (slot === 'shoes') return SHOES_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
+  if (slot === 'eyes') return EYES_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
+  if (slot === 'nose') return NOSE_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
+  return asset.name || asset.fileName
+}
+
+function AssetTile({
+  label,
+  selected,
+  imageSrc,
+  onClick,
+}: {
+  label: string
+  selected: boolean
+  imageSrc?: string | null
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-xl border p-1.5 text-left transition',
+        selected
+          ? 'border-emerald-400/75 bg-emerald-500/15'
+          : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10',
+      )}
+    >
+      <div className="mb-1 flex aspect-square items-center justify-center rounded-lg bg-black/25 p-0.5">
+        {imageSrc ? (
+          <img src={imageSrc} alt="" className="h-full w-full object-contain" loading="lazy" />
+        ) : (
+          <span className="text-[9px] font-black uppercase tracking-wide text-white/40">—</span>
+        )}
+      </div>
+      <span className="line-clamp-2 block text-[10px] font-bold leading-tight text-white/85">{label}</span>
+    </button>
+  )
+}
+
+function ModularAssetPicker({
+  slot,
+  options,
+  value,
+  selectedAsset,
+  onPick,
+}: {
+  slot: AvatarSlotKey
+  options: AvatarAsset[]
+  value: string | null
+  selectedAsset: AvatarAsset | null | undefined
+  onPick: (id: string | null) => void
+}) {
+  const useCollapsible = options.length > INLINE_GRID_MAX
+  const [open, setOpen] = useState(!useCollapsible)
+
+  useEffect(() => {
+    setOpen(options.length <= INLINE_GRID_MAX)
+  }, [slot, options.length])
+
+  const emptyOpt = EMPTY_SLOT_OPTION[slot]
+  const currentLabel = value
+    ? selectedAsset
+      ? assetLabel(selectedAsset, slot)
+      : value
+    : (emptyOpt?.label ?? 'Aucun')
+
+  const grid = (
+    <div
+      className={cn(
+        'grid grid-cols-3 gap-2 sm:grid-cols-4',
+        useCollapsible && 'max-h-52 overflow-y-auto overscroll-contain [scrollbar-width:thin]',
+      )}
+    >
+      {emptyOpt ? (
+        <AssetTile
+          label={emptyOpt.label}
+          selected={!value}
+          onClick={() => {
+            onPick(null)
+            if (useCollapsible) setOpen(false)
+          }}
+        />
+      ) : null}
+      {options.map((asset) => (
+        <AssetTile
+          key={asset.id}
+          label={assetLabel(asset, slot)}
+          selected={value === asset.id}
+          imageSrc={asset.src}
+          onClick={() => {
+            onPick(asset.id)
+            if (useCollapsible) setOpen(false)
+          }}
+        />
+      ))}
+    </div>
+  )
+
+  if (!useCollapsible) {
+    return <div className="mt-2">{grid}</div>
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={cn(
+          'flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition',
+          open
+            ? 'border-emerald-400/50 bg-emerald-500/10'
+            : 'border-white/15 bg-black/25 hover:border-white/30 hover:bg-black/35',
+        )}
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-black/40 p-0.5">
+          {selectedAsset?.src ? (
+            <img
+              src={selectedAsset.src}
+              alt=""
+              className="max-h-full max-w-full object-contain"
+              loading="lazy"
+            />
+          ) : (
+            <span className="text-[9px] font-black uppercase text-white/35">—</span>
+          )}
+        </div>
+        <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">{currentLabel}</span>
+        <span
+          className={cn(
+            'shrink-0 text-lg font-black text-white/50 transition-transform',
+            open && 'rotate-180',
+          )}
+          aria-hidden
+        >
+          ▾
+        </span>
+      </button>
+      {open ? (
+        <div className="mt-2 rounded-xl border border-white/10 bg-black/20 p-2">{grid}</div>
+      ) : null}
+    </div>
+  )
 }
 
 const SLOT_COLOR_PRESETS: Record<ColorizableSlot, ColorVariantKey[]> = {
@@ -61,106 +261,53 @@ const SLOT_COLOR_PRESETS: Record<ColorizableSlot, ColorVariantKey[]> = {
   accessory: ['default', 'blue', 'red', 'green', 'white', 'black'],
 }
 
-function LayerImage({
-  src,
-  alt,
-  className,
-  filter,
-}: {
-  src: string
-  alt: string
-  className?: string
-  filter?: string
-}) {
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className={cn('pointer-events-none absolute left-0 top-0 h-auto w-auto max-w-none', className)}
-      style={{ filter }}
-      loading="lazy"
-    />
-  )
-}
-
-function SkinTintLayer({ maskSrc, skinTone }: { maskSrc: string; skinTone: string }) {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 opacity-55 mix-blend-multiply"
-      style={{
-        backgroundColor: skinTone,
-        WebkitMaskImage: `url(${maskSrc})`,
-        maskImage: `url(${maskSrc})`,
-        WebkitMaskRepeat: 'no-repeat',
-        maskRepeat: 'no-repeat',
-        WebkitMaskPosition: 'top left',
-        maskPosition: 'top left',
-        WebkitMaskSize: 'auto',
-        maskSize: 'auto',
-      }}
-    />
-  )
-}
-
 export function AvatarModularStudio() {
-  const [avatar, setAvatar] = useState<AvatarData>(() => createDefaultAvatarData())
+  const { profile, updateModularAvatar } = useProfile()
+  const cloud = useOptionalCloudUserState()
+  const modular = resolveModularAvatarState(profile.modularAvatar)
+  const avatar = modular.data
+  const slotColors = modular.slotColors
+
   const [activeSlot, setActiveSlot] = useState<AvatarSlotKey>('hair')
-  const [slotColors, setSlotColors] = useState<Record<ColorizableSlot, ColorVariantKey>>({
-    hair: 'default',
-    beard: 'default',
-    jersey: 'default',
-    shorts: 'default',
-    socks: 'default',
-    shoes: 'default',
-    accessory: 'default',
-  })
-  const [canvasSize, setCanvasSize] = useState({ width: 1024, height: 1024 })
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const saveHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activeCategory: AvatarAssetCategory = slotToCategory[activeSlot]
   const activeOptions = avatarAssetMap[activeCategory]
 
-  const selectedAssets = useMemo(
-    () => ({
-      body: findAssetById(avatarAssetMap, 'body', avatar.body),
-      hair: findAssetById(avatarAssetMap, 'hair', avatar.hair),
-      eyes: findAssetById(avatarAssetMap, 'eyes', avatar.eyes),
-      eyebrows: findAssetById(avatarAssetMap, 'eyebrows', avatar.eyebrows),
-      nose: findAssetById(avatarAssetMap, 'nose', avatar.nose),
-      mouth: findAssetById(avatarAssetMap, 'mouth', avatar.mouth),
-      beard: findAssetById(avatarAssetMap, 'beard', avatar.beard),
-      jersey: findAssetById(avatarAssetMap, 'jerseys', avatar.jersey),
-      shorts: findAssetById(avatarAssetMap, 'shorts', avatar.shorts),
-      socks: findAssetById(avatarAssetMap, 'socks', avatar.socks),
-      shoes: findAssetById(avatarAssetMap, 'shoes', avatar.shoes),
-      accessory: findAssetById(avatarAssetMap, 'accessories', avatar.accessory),
-    }),
-    [avatar],
+  const modularState = useMemo(() => ({ data: avatar, slotColors }), [avatar, slotColors])
+
+  const markSaved = useCallback(() => {
+    setSaveStatus('saved')
+    if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
+    saveHintTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2200)
+  }, [])
+
+  const patchModular = useCallback(
+    (updater: (prev: { data: AvatarData; slotColors: ModularSlotColors }) => {
+      data: AvatarData
+      slotColors: ModularSlotColors
+    }) => {
+      setSaveStatus('saving')
+      updateModularAvatar((prev) => {
+        const next = updater(prev)
+        return { data: next.data, slotColors: next.slotColors }
+      })
+      markSaved()
+    },
+    [updateModularAvatar, markSaved],
   )
 
   const applySlot = (slot: AvatarSlotKey, value: string | null) => {
-    setAvatar((prev) => ({ ...prev, [slot]: value }))
+    patchModular((prev) => ({ ...prev, data: { ...prev.data, [slot]: value } }))
   }
 
   useEffect(() => {
-    const refSrc =
-      selectedAssets.body?.src ??
-      selectedAssets.jersey?.src ??
-      selectedAssets.shorts?.src ??
-      selectedAssets.hair?.src ??
-      null
-    if (!refSrc) return
-    let cancelled = false
-    const img = new Image()
-    img.onload = () => {
-      if (cancelled) return
-      if (!img.naturalWidth || !img.naturalHeight) return
-      setCanvasSize({ width: img.naturalWidth, height: img.naturalHeight })
-    }
-    img.src = refSrc
     return () => {
-      cancelled = true
+      if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
+      void cloud?.flushAppSave?.()
     }
-  }, [selectedAssets.body?.src, selectedAssets.jersey?.src, selectedAssets.shorts?.src, selectedAssets.hair?.src])
+  }, [cloud])
 
   const randomizeAvatar = () => {
     const pick = (category: AvatarAssetCategory): string | null => {
@@ -169,41 +316,40 @@ export function AvatarModularStudio() {
       return options[Math.floor(Math.random() * options.length)]?.id ?? null
     }
 
-    setAvatar({
-      skinTone: SKIN_PALETTE[Math.floor(Math.random() * SKIN_PALETTE.length)] ?? '#e2c2a6',
-      body: pick('body'),
-      hair: pick('hair'),
-      eyes: pick('eyes'),
-      eyebrows: pick('eyebrows'),
-      nose: pick('nose'),
-      mouth: pick('mouth'),
-      beard: pick('beard'),
-      jersey: pick('jerseys'),
-      shorts: pick('shorts'),
-      socks: pick('socks'),
-      shoes: pick('shoes'),
-      accessory: pick('accessories'),
-    })
     const pickColor = (slot: ColorizableSlot): ColorVariantKey => {
       const presets = SLOT_COLOR_PRESETS[slot]
       return presets[Math.floor(Math.random() * presets.length)] ?? 'default'
     }
-    setSlotColors({
-      hair: pickColor('hair'),
-      beard: pickColor('beard'),
-      jersey: pickColor('jersey'),
-      shorts: pickColor('shorts'),
-      socks: pickColor('socks'),
-      shoes: pickColor('shoes'),
-      accessory: pickColor('accessory'),
-    })
+    patchModular(() => ({
+      data: {
+        skinTone: SKIN_PALETTE[Math.floor(Math.random() * SKIN_PALETTE.length)] ?? '#e2c2a6',
+        body: pick('body'),
+        hair: pick('hair'),
+        eyes: pick('eyes'),
+        eyebrows: pick('eyebrows'),
+        nose: pick('nose'),
+        mouth: pick('mouth'),
+        beard: pick('beard'),
+        jersey: pick('jerseys'),
+        shorts: pick('shorts'),
+        socks: pick('socks'),
+        shoes: pick('shoes'),
+        accessory: pick('accessories'),
+      },
+      slotColors: {
+        hair: pickColor('hair'),
+        beard: pickColor('beard'),
+        jersey: pickColor('jersey'),
+        shorts: pickColor('shorts'),
+        socks: pickColor('socks'),
+        shoes: pickColor('shoes'),
+        accessory: pickColor('accessory'),
+      },
+    }))
   }
 
   const slotValue = avatar[activeSlot]
-  const previewMax = 404
-  const canvasScale = Math.min(previewMax / canvasSize.width, previewMax / canvasSize.height)
-  const stageWidth = Math.max(120, Math.round(canvasSize.width * canvasScale))
-  const stageHeight = Math.max(120, Math.round(canvasSize.height * canvasScale))
+  const selectedAsset = findAssetById(avatarAssetMap, activeCategory, slotValue)
 
   return (
     <Card id="avatar-modulaire" className="scroll-mt-4 p-0 overflow-hidden" elevation="soft">
@@ -219,84 +365,34 @@ export function AvatarModularStudio() {
             Melange aleatoire
           </button>
         </div>
-        <p className="mt-1 text-sm font-semibold text-sky-100/75">Tu peux mixer chaque element pour obtenir un style unique.</p>
+        <p className="mt-1 text-sm font-semibold text-sky-100/75">
+          Tu peux mixer chaque element pour obtenir un style unique.
+        </p>
+        <p
+          className={cn(
+            'mt-2 text-[11px] font-bold',
+            saveStatus === 'saved' ? 'text-emerald-300' : 'text-sky-200/55',
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          {saveStatus === 'saving'
+            ? 'Enregistrement…'
+            : saveStatus === 'saved'
+              ? 'Avatar enregistre automatiquement'
+              : 'Sauvegarde automatique activee'}
+        </p>
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <section className="relative flex min-h-[540px] items-end justify-center border-b border-white/10 bg-[radial-gradient(circle_at_50%_20%,rgba(56,189,248,0.24),transparent_58%)] p-6 lg:border-b-0 lg:border-r">
+      <div className="grid gap-0 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)]">
+        <section className="relative flex min-h-[320px] items-end justify-center border-b border-white/10 bg-[radial-gradient(circle_at_50%_20%,rgba(56,189,248,0.24),transparent_58%)] p-4 sm:min-h-[420px] sm:p-6 lg:sticky lg:top-20 lg:z-[1] lg:max-h-[min(560px,calc(100dvh-6rem))] lg:min-h-[480px] lg:self-start lg:border-b-0 lg:border-r">
           <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:24px_24px]" />
-          <div
-            className="relative z-[1] overflow-hidden rounded-2xl border border-white/15 bg-black/20 shadow-[0_16px_50px_rgba(2,8,23,0.55)] backdrop-blur-sm"
-            style={{ width: stageWidth, height: stageHeight }}
-          >
-            <div
-              className="absolute left-0 top-0 origin-top-left"
-              style={{
-                width: canvasSize.width,
-                height: canvasSize.height,
-                transform: `scale(${canvasScale})`,
-              }}
-            >
-              {selectedAssets.body?.src ? <LayerImage src={selectedAssets.body.src} alt="Corps avatar" /> : null}
-              {selectedAssets.body?.src ? <SkinTintLayer maskSrc={selectedAssets.body.src} skinTone={avatar.skinTone} /> : null}
-              {selectedAssets.shorts?.src ? (
-                <LayerImage
-                  src={selectedAssets.shorts.src}
-                  alt="Short avatar"
-                  filter={COLOR_VARIANTS[slotColors.shorts].filter}
-                />
-              ) : null}
-              {selectedAssets.jersey?.src ? (
-                <LayerImage
-                  src={selectedAssets.jersey.src}
-                  alt="Maillot avatar"
-                  filter={COLOR_VARIANTS[slotColors.jersey].filter}
-                />
-              ) : null}
-              {selectedAssets.socks?.src ? (
-                <LayerImage
-                  src={selectedAssets.socks.src}
-                  alt="Chaussettes avatar"
-                  filter={COLOR_VARIANTS[slotColors.socks].filter}
-                />
-              ) : null}
-              {selectedAssets.shoes?.src ? (
-                <LayerImage
-                  src={selectedAssets.shoes.src}
-                  alt="Chaussures avatar"
-                  filter={COLOR_VARIANTS[slotColors.shoes].filter}
-                />
-              ) : null}
-              {selectedAssets.eyes?.src ? <LayerImage src={selectedAssets.eyes.src} alt="Yeux avatar" /> : null}
-              {selectedAssets.eyebrows?.src ? <LayerImage src={selectedAssets.eyebrows.src} alt="Sourcils avatar" /> : null}
-              {selectedAssets.nose?.src ? <LayerImage src={selectedAssets.nose.src} alt="Nez avatar" /> : null}
-              {selectedAssets.mouth?.src ? <LayerImage src={selectedAssets.mouth.src} alt="Bouche avatar" /> : null}
-              {selectedAssets.beard?.src ? (
-                <LayerImage
-                  src={selectedAssets.beard.src}
-                  alt="Barbe avatar"
-                  filter={COLOR_VARIANTS[slotColors.beard].filter}
-                />
-              ) : null}
-              {selectedAssets.hair?.src ? (
-                <LayerImage
-                  src={selectedAssets.hair.src}
-                  alt="Cheveux avatar"
-                  filter={COLOR_VARIANTS[slotColors.hair].filter}
-                />
-              ) : null}
-              {selectedAssets.accessory?.src ? (
-                <LayerImage
-                  src={selectedAssets.accessory.src}
-                  alt="Accessoire avatar"
-                  filter={COLOR_VARIANTS[slotColors.accessory].filter}
-                />
-              ) : null}
-            </div>
+          <div className="relative z-[1] flex items-end justify-center overflow-hidden rounded-2xl border border-white/15 bg-black/20 p-2 shadow-[0_16px_50px_rgba(2,8,23,0.55)] backdrop-blur-sm">
+            <ModularAvatarCanvas state={modularState} crop="full" previewMax={404} />
           </div>
         </section>
 
-        <section className="bg-gradient-to-b from-[#0c1829] to-[#050b14] p-4 sm:p-5">
+        <section className="bg-gradient-to-b from-[#0c1829] to-[#050b14] p-4 sm:p-5 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto lg:overscroll-contain">
           <div className="mb-4 flex flex-wrap gap-2">
             {SLOT_ORDER.map((slot) => (
               <button
@@ -322,7 +418,12 @@ export function AvatarModularStudio() {
                 <input
                   type="color"
                   value={avatar.skinTone}
-                  onChange={(e) => setAvatar((prev) => ({ ...prev, skinTone: e.target.value }))}
+                  onChange={(e) =>
+                    patchModular((prev) => ({
+                      ...prev,
+                      data: { ...prev.data, skinTone: e.target.value },
+                    }))
+                  }
                   className="h-10 w-14 cursor-pointer rounded border border-white/20 bg-transparent p-1"
                 />
                 <span className="text-xs font-semibold text-white/75">{avatar.skinTone}</span>
@@ -340,7 +441,10 @@ export function AvatarModularStudio() {
                       key={`${activeSlot}-${variant}`}
                       type="button"
                       onClick={() =>
-                        setSlotColors((prev) => ({ ...prev, [activeSlot as ColorizableSlot]: variant }))
+                        patchModular((prev) => ({
+                          ...prev,
+                          slotColors: { ...prev.slotColors, [activeSlot as ColorizableSlot]: variant },
+                        }))
                       }
                       className={cn(
                         'rounded-lg border px-2.5 py-1 text-[11px] font-bold transition',
@@ -349,7 +453,7 @@ export function AvatarModularStudio() {
                           : 'border-white/20 bg-white/5 text-white/75 hover:border-white/40 hover:bg-white/10',
                       )}
                     >
-                      {COLOR_VARIANTS[variant].label}
+                      {MODULAR_COLOR_VARIANTS[variant].label}
                     </button>
                   )
                 })}
@@ -357,50 +461,32 @@ export function AvatarModularStudio() {
             </div>
           ) : null}
 
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-black uppercase tracking-wide text-white/65">
-              Assets: {SLOT_LABELS[activeSlot]} ({activeOptions.length})
-            </p>
-            {slotValue ? (
-              <button
-                type="button"
-                onClick={() => applySlot(activeSlot, null)}
-                className="rounded-lg border border-white/20 px-2.5 py-1 text-[11px] font-bold text-white/75 hover:bg-white/10"
-              >
-                Aucun
-              </button>
-            ) : null}
-          </div>
+          {activeSlot !== 'body' ? (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+              <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-white/60">
+                {SLOT_LABELS[activeSlot]} ({activeOptions.length})
+              </p>
+              {activeOptions.length > INLINE_GRID_MAX ? (
+                <p className="mb-2 text-[10px] font-medium text-white/45">
+                  Ouvre le menu pour parcourir les visuels sans allonger la page.
+                </p>
+              ) : null}
 
-          {activeOptions.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.04] p-4 text-sm font-semibold text-white/60">
-              Aucun asset trouve dans `assets/{activeCategory}`.
+              {activeOptions.length === 0 ? (
+                <p className="text-sm font-semibold text-white/60">
+                  Aucun asset dans `assets/{activeCategory}`.
+                </p>
+              ) : (
+                <ModularAssetPicker
+                  slot={activeSlot}
+                  options={activeOptions}
+                  value={slotValue}
+                  selectedAsset={selectedAsset}
+                  onPick={(id) => applySlot(activeSlot, id)}
+                />
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {activeOptions.map((asset) => {
-                const selected = slotValue === asset.id
-                return (
-                  <button
-                    key={asset.id}
-                    type="button"
-                    onClick={() => applySlot(activeSlot, asset.id)}
-                    className={cn(
-                      'rounded-xl border p-2 text-left transition',
-                      selected
-                        ? 'border-emerald-400/75 bg-emerald-500/15'
-                        : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10',
-                    )}
-                  >
-                    <div className="mb-2 aspect-square rounded-lg bg-black/25 p-1">
-                      <img src={asset.src} alt={asset.name} className="h-full w-full object-contain" loading="lazy" />
-                    </div>
-                    <span className="line-clamp-2 block text-[11px] font-bold text-white/85">{asset.name || asset.fileName}</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          ) : null}
         </section>
       </div>
     </Card>

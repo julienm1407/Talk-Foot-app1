@@ -268,6 +268,7 @@ export function PortraitAvatar2D({
   }, [profile.characterLook, loadout.skinColor, loadout.eyeColor, loadout.hairColor])
   const kit = avatarItems.find((item) => item.id === loadout.kit)
   const pantsId = profile.equippedItems?.pants ?? 'pants-kit'
+  const pants = avatarItems.find((item) => item.id === pantsId)
   const shoesId = profile.equippedItems?.shoes ?? 'shoes-studs'
 
   const backdropId: PortraitBackdropId = profile.portraitBackdrop ?? 'tribune'
@@ -343,6 +344,17 @@ export function PortraitAvatar2D({
                 pantsItemId={pantsId}
                 shoesItemId={shoesId}
               />
+              {pants?.pantsVisual?.imageUrl ? (
+                <img
+                  src={pants.pantsVisual.imageUrl}
+                  alt=""
+                  aria-hidden
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  className="pointer-events-none absolute left-1/2 top-[52%] z-[3] w-[62%] -translate-x-1/2 select-none object-contain object-bottom drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)]"
+                />
+              ) : null}
               {kit?.jerseyVisual?.imageUrl ? (
                 <>
                   {/* Maillot PNG officiel : posé sur le buste, evidé sur la zone tête */}

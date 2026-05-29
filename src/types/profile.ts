@@ -1,4 +1,5 @@
 import type { PixelJerseyPresetId } from '../data/pixelJerseyPresets'
+import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
 
 export type AvatarSlot = 'scarf' | 'hat' | 'jersey' | 'accessory' | 'pants' | 'shoes'
 export type AvatarIdentitySlot = 'base' | 'eyes' | 'beard' | 'hair'
@@ -36,6 +37,18 @@ export type AvatarItem = {
     pixelPreset?: PixelJerseyPresetId
     /** Rendu image (PNG livré) : remplace le SVG vectoriel quand fourni. */
     imageUrl?: string
+    /** PNG recadré / zoomé pour la boutique (`*-boutique.png`), repli sur `imageUrl`. */
+    boutiqueImageUrl?: string
+  }
+  /** Shorts PNG (boutique / portrait). */
+  pantsVisual?: {
+    imageUrl?: string
+    boutiqueImageUrl?: string
+  }
+  /** Chaussures PNG (boutique). */
+  shoesVisual?: {
+    imageUrl?: string
+    boutiqueImageUrl?: string
   }
   /** Texte neutre du type d’inspiration (sans marque) */
   inspirationNote?: string
@@ -43,6 +56,12 @@ export type AvatarItem = {
   collection?: 'standard' | 'cdm2026'
   /** Code nation ISO (alpha-3) si l’item est rattaché à une sélection nationale. */
   nationIso?: string
+  /** Pack boutique : débloque ces `id` d’articles à l’achat (maillot + short, etc.). */
+  bundleIncludes?: string[]
+  /** Visuel pack unique (maillot + short sur une seule image). */
+  packVisual?: {
+    imageUrl?: string
+  }
 }
 
 export type AvatarIdentityItem = {
@@ -173,6 +192,8 @@ export type UserProfile = {
     eyeColor: string
     hairColor: string
   }
+  /** Créateur avatar modulaire (PNG) — source de vérité pour la vignette tête profil. */
+  modularAvatar?: ModularAvatarState
   premiumInventory?: {
     ownedItemIds: string[]
     equippedByCategory: { kit?: string; accessory?: string }

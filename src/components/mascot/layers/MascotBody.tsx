@@ -1,5 +1,6 @@
 import { MASCOT } from '../mascotGeometry'
 import { strokeSubtle } from '../mascotColors'
+import { usesPngShorts } from '../../../utils/pngKitItems'
 
 type Props = {
   skin: string
@@ -14,7 +15,7 @@ export function MascotBody({ skin, shortsFill, pantsItemId, shoesItemId, showHea
   const { cx, head, shorts, leg, legY, shoeH } = MASCOT
   const pants = pantsItemId || 'pants-kit'
   const shoes = shoesItemId || 'shoes-studs'
-  const showKitShorts = pants === 'pants-kit'
+  const showKitShorts = pants === 'pants-kit' && !usesPngShorts(pants)
 
   const pantsFill =
     pants === 'pants-jeans'

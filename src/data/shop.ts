@@ -1,24 +1,70 @@
 import type { AvatarItem, MedalPack } from '../types/profile'
+import { cdm2026BundleItems } from './cdm2026Bundles'
 import { cdm2026JerseyItems } from './cdm2026Jerseys'
+import { cdm2026ShortItems } from './cdm2026Shorts'
+import { STANDARD_SHOES_MEDALS } from './boutiqueEconomy'
+import { baseJerseyUrl, baseShortsUrl } from './nations'
 
-/** Référence boutique : équivalent jetons pour un prix en médailles (hors promos). */
-export const TOKENS_PER_MEDAL = 200
+export { TOKENS_PER_MEDAL, cosmeticTokenPrice, isCosmeticOwned } from './boutiqueEconomy'
 
-/** Écharpes, casquettes, maillots emoji, accessoires — sans la collection « inspirée » */
+const BASE_JERSEY_COLORS = [
+  { id: 'blanc', name: 'blanc', primary: '#f8fafc', secondary: '#e2e8f0' },
+  { id: 'bleu', name: 'bleu', primary: '#1d4ed8', secondary: '#1e3a8a' },
+  { id: 'jaune', name: 'jaune', primary: '#facc15', secondary: '#ca8a04' },
+  { id: 'rouge', name: 'rouge', primary: '#dc2626', secondary: '#991b1b' },
+] as const
+
+const baseJerseyItems: AvatarItem[] = BASE_JERSEY_COLORS.map((c) => ({
+  id: `kit-base-${c.id}`,
+  name: `Maillot base ${c.name}`,
+  slot: 'jersey',
+  emoji: '👕',
+  cost: 0,
+  rarity: 'common',
+  description: 'Maillot de départ — offert à tous les joueurs.',
+  collection: 'standard',
+  jerseyVisual: {
+    primary: c.primary,
+    secondary: c.secondary,
+    pattern: 'solid',
+    stripeLight: '#ffffff',
+    imageUrl: baseJerseyUrl(c.id),
+  },
+}))
+
+const baseShortItems: AvatarItem[] = BASE_JERSEY_COLORS.map((c) => ({
+  id: `pants-base-${c.id}`,
+  name: `Short base ${c.name}`,
+  slot: 'pants',
+  emoji: '🩳',
+  cost: 0,
+  rarity: 'common',
+  description: 'Short de départ — offert à tous les joueurs.',
+  collection: 'standard',
+  pantsVisual: {
+    imageUrl: baseShortsUrl(c.id),
+  },
+}))
+
+/** Écharpes, casquettes, maillots de base, accessoires */
 export const baseAvatarItems: AvatarItem[] = [
+  ...baseJerseyItems,
+  ...baseShortItems,
   {
     id: 'kit-default',
-    name: 'Maillot tribune (base)',
+    name: 'Maillot tribune (base blanc)',
     slot: 'jersey',
     emoji: '👕',
     cost: 0,
     rarity: 'common',
     description: 'Tenue d’origine — toujours disponible.',
+    collection: 'standard',
     jerseyVisual: {
-      primary: '#0f2744',
-      secondary: '#c8102e',
-      pattern: 'hechter',
-      stripeLight: '#f8fafc',
+      primary: '#f8fafc',
+      secondary: '#e2e8f0',
+      pattern: 'solid',
+      stripeLight: '#ffffff',
+      imageUrl: baseJerseyUrl('blanc'),
     },
   },
   {
@@ -86,30 +132,48 @@ export const baseAvatarItems: AvatarItem[] = [
   },
   {
     id: 'shoes-sneaker-white',
-    name: 'Baskets blanches',
+    name: 'Crampons standards blancs',
     slot: 'shoes',
     emoji: '👟',
-    cost: 24,
+    cost: STANDARD_SHOES_MEDALS,
     rarity: 'common',
-    description: 'Street & stade.',
+    description: 'Chaussures stade — collection standards.',
   },
   {
     id: 'shoes-sneaker-neon',
-    name: 'Baskets néon',
+    name: 'Crampons standards bleus',
     slot: 'shoes',
     emoji: '💠',
-    cost: 52,
-    rarity: 'rare',
-    description: 'Accents fluo.',
+    cost: STANDARD_SHOES_MEDALS,
+    rarity: 'common',
+    description: 'Chaussures stade — collection standards.',
   },
   {
     id: 'shoes-retro-gum',
-    name: 'Retro semelle gomme',
+    name: 'Crampons standards rouges',
     slot: 'shoes',
-    emoji: '🟤',
-    cost: 68,
-    rarity: 'epic',
-    description: 'Vintage terrasse.',
+    emoji: '🔴',
+    cost: STANDARD_SHOES_MEDALS,
+    rarity: 'common',
+    description: 'Chaussures stade — collection standards.',
+  },
+  {
+    id: 'shoes-sneaker-jaune',
+    name: 'Crampons standards jaunes',
+    slot: 'shoes',
+    emoji: '🟡',
+    cost: STANDARD_SHOES_MEDALS,
+    rarity: 'common',
+    description: 'Chaussures stade — collection standards.',
+  },
+  {
+    id: 'shoes-sneaker-vert',
+    name: 'Crampons standards verts',
+    slot: 'shoes',
+    emoji: '🟢',
+    cost: STANDARD_SHOES_MEDALS,
+    rarity: 'common',
+    description: 'Chaussures stade — collection standards.',
   },
   { id: 'scarf-1', name: 'Écharpe bleue', slot: 'scarf', emoji: '🔵', cost: 16, rarity: 'common', description: 'Écharpe aux couleurs du club' },
   { id: 'scarf-2', name: 'Écharpe rouge', slot: 'scarf', emoji: '🔴', cost: 40, rarity: 'rare', description: 'Écharpe passion' },
@@ -119,66 +183,6 @@ export const baseAvatarItems: AvatarItem[] = [
   { id: 'hat-2', name: 'Béret supporteur', slot: 'hat', emoji: '🎩', cost: 32, rarity: 'rare', description: 'Style stade' },
   { id: 'hat-3', name: 'Bonnet hiver', slot: 'hat', emoji: '🧶', cost: 60, rarity: 'epic', description: 'Matchs de décembre' },
   { id: 'hat-4', name: 'Couronne buteur', slot: 'hat', emoji: '👑', cost: 100, rarity: 'legendary', description: 'Prestige tribune' },
-  {
-    id: 'jersey-1',
-    name: 'Maillot domicile',
-    slot: 'jersey',
-    emoji: '👕',
-    cost: 32,
-    rarity: 'common',
-    description: 'Marine, bande centrale & parements — rendu type maillot pro.',
-    jerseyVisual: {
-      primary: '#0f2744',
-      secondary: '#c8102e',
-      pattern: 'hechter',
-      stripeLight: '#f8fafc',
-    },
-  },
-  {
-    id: 'jersey-2',
-    name: 'Maillot extérieur',
-    slot: 'jersey',
-    emoji: '💪',
-    cost: 100,
-    rarity: 'rare',
-    description: 'Blanc cassé & bandes horizontales.',
-    jerseyVisual: {
-      primary: '#f8fafc',
-      secondary: '#0ea5e9',
-      pattern: 'horizontal',
-      stripeLight: '#e2e8f0',
-    },
-  },
-  {
-    id: 'jersey-3',
-    name: 'Maillot third',
-    slot: 'jersey',
-    emoji: '🦁',
-    cost: 180,
-    rarity: 'epic',
-    description: 'Noir mesh technique, accents néon.',
-    jerseyVisual: {
-      primary: '#0f172a',
-      secondary: '#22d3ee',
-      pattern: 'kit_mesh',
-      stripeLight: '#e2e8f0',
-    },
-  },
-  {
-    id: 'jersey-4',
-    name: 'Maillot collector',
-    slot: 'jersey',
-    emoji: '🏆',
-    cost: 320,
-    rarity: 'legendary',
-    description: 'Rayures verticales premium or & minuit.',
-    jerseyVisual: {
-      primary: '#0f172a',
-      secondary: '#d4a574',
-      pattern: 'vertical',
-      stripeLight: '#fef3c7',
-    },
-  },
   { id: 'acc-1', name: 'Sifflet', slot: 'accessory', emoji: '📣', cost: 8, rarity: 'common', description: 'Mise en avant basique' },
   { id: 'acc-2', name: 'Drapeau', slot: 'accessory', emoji: '🚩', cost: 8, rarity: 'common', description: 'Petit drapeau de poche' },
   { id: 'acc-3', name: 'Mégaphone', slot: 'accessory', emoji: '📢', cost: 20, rarity: 'rare', description: 'Mettre un message en avant en live' },
@@ -189,6 +193,8 @@ export const baseAvatarItems: AvatarItem[] = [
 export const avatarItems: AvatarItem[] = [
   ...baseAvatarItems,
   ...cdm2026JerseyItems,
+  ...cdm2026ShortItems,
+  ...cdm2026BundleItems,
 ]
 
 /**
@@ -208,15 +214,15 @@ export const medalPacks: MedalPack[] = [
     id: 'medal-pack-499',
     name: 'Pack Tribune',
     tagline: 'Bon rapport € / 🏅',
-    medals: 55,
+    medals: 60,
     priceEur: '4,99 €',
-    flavor: 'Idéal pour une écharpe rare ou avancer vers un maillot.',
+    flavor: 'Idéal pour un short CDM ou avancer vers un maillot.',
   },
   {
     id: 'medal-pack-999',
     name: 'Pack Capitaine',
     tagline: 'Le plus choisi',
-    medals: 120,
+    medals: 130,
     priceEur: '9,99 €',
     popular: true,
     flavor: 'Équilibre entre budget et progression (maillots, packs rares).',
@@ -225,23 +231,23 @@ export const medalPacks: MedalPack[] = [
     id: 'medal-pack-1999',
     name: 'Pack Virage',
     tagline: 'Réserve sérieuse',
-    medals: 260,
+    medals: 280,
     priceEur: '19,99 €',
-    flavor: 'Pour viser épique / plusieurs pièces.',
+    flavor: 'Un maillot CDM + budget accessoires.',
   },
   {
     id: 'medal-pack-4999',
     name: 'Pack Ultras',
     tagline: 'Gros coffre',
-    medals: 700,
+    medals: 750,
     priceEur: '49,99 €',
-    flavor: 'Collectionneurs et tenues complètes haut de gamme.',
+    flavor: 'Plusieurs maillots ou packs tenue complète.',
   },
   {
     id: 'medal-pack-9999',
     name: 'Pack Légende',
     tagline: 'Maximum médailles',
-    medals: 1600,
+    medals: 1700,
     priceEur: '99,99 €',
     flavor: 'Top débit : légendaires et personnalisation poussée.',
   },
@@ -263,13 +269,6 @@ export function pickDailyOfferItem(): AvatarItem {
 /** Prix promo affiché (−12 % environ) — le coût catalogue reste `item.cost`. */
 export function dailyOfferDiscountedCost(item: AvatarItem): number {
   return Math.max(4, Math.round(item.cost * 0.88))
-}
-
-/**
- * Prix en jetons pour le même cosmétique (référence : 1 🏅 ≈ 200 jetons).
- */
-export function cosmeticTokenPrice(medalCost: number): number {
-  return Math.max(1, medalCost * TOKENS_PER_MEDAL)
 }
 
 export const xpPerLevel = (level: number): number => {

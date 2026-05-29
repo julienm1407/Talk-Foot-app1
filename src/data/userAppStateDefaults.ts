@@ -4,6 +4,11 @@ import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from './characterPresets'
 import { DEFAULT_WALLET } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { AVATAR_2D_DEFAULTS } from './avatar2dCatalog'
+import {
+  createDefaultModularAvatarState,
+  sanitizeModularAvatarState,
+  resolveModularAvatarState,
+} from '../features/avatar2d/modularAvatarState'
 
 export const defaultUserProfile: UserProfile = {
   level: 1,
@@ -24,6 +29,7 @@ export const defaultUserProfile: UserProfile = {
     ...AVATAR_2D_DEFAULTS.loadout,
     ...AVATAR_2D_DEFAULTS.colors,
   },
+  modularAvatar: createDefaultModularAvatarState(),
   premiumInventory: {
     ownedItemIds: [],
     equippedByCategory: {},
@@ -63,6 +69,9 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
               ...base.profile,
               ...incoming,
               characterLook: mergeCharacterLook(incoming.characterLook ?? base.profile.characterLook),
+              modularAvatar: sanitizeModularAvatarState(
+                resolveModularAvatarState(incoming.modularAvatar ?? base.profile.modularAvatar),
+              ),
             }
           })()
         : base.profile,

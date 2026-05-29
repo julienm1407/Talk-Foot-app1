@@ -16,6 +16,12 @@ import { defaultUserProfile } from '../data/userAppStateDefaults'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { resolveAvatarLoadout, styleCatalog } from '../data/avatar2dCatalog'
+import {
+  isModularAvatarState,
+  resolveModularAvatarState,
+  sanitizeModularAvatarState,
+  type ModularAvatarState,
+} from '../features/avatar2d/modularAvatarState'
 import { avatarItems } from '../data/shop'
 
 function catalogItemOwned(itemId: string, ownedItemIds: string[]): boolean {
@@ -63,6 +69,9 @@ function isUserProfileStored(p: unknown): boolean {
     return false
   }
   if (o.avatarLoadout != null && (typeof o.avatarLoadout !== 'object' || Array.isArray(o.avatarLoadout))) {
+    return false
+  }
+  if (o.modularAvatar != null && !isModularAvatarState(o.modularAvatar)) {
     return false
   }
   if (o.premiumInventory != null && (typeof o.premiumInventory !== 'object' || Array.isArray(o.premiumInventory))) {
@@ -304,6 +313,18 @@ export function useProfile() {
     [setProfileStore],
   )
 
+  const updateModularAvatar = useCallback(
+    (updater: (prev: ModularAvatarState) => ModularAvatarState) => {
+      setProfileStore((p) => ({
+        ...p,
+        modularAvatar: sanitizeModularAvatarState(
+          updater(resolveModularAvatarState(p.modularAvatar)),
+        ),
+      }))
+    },
+    [setProfileStore],
+  )
+
   const setProfilePhotoDataUrl = useCallback(
     (url: string | null) => {
       setProfileStore((p) => {
@@ -351,6 +372,7 @@ export function useProfile() {
       characterLook: mergeCharacterLook(profile.characterLook),
       jerseyCustomizations,
       avatarLoadout: resolveAvatarLoadout(profile),
+      modularAvatar: sanitizeModularAvatarState(resolveModularAvatarState(profile.modularAvatar)),
       premiumInventory: {
         ownedItemIds: Array.from(
           new Set([
@@ -383,6 +405,7 @@ export function useProfile() {
     updateCharacterLook,
     setJerseyCustomization,
     setProfilePhotoDataUrl,
+    updateModularAvatar,
     creditWonBets,
     ownsItem: (id: string) =>
       catalogItemOwned(id, Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []),

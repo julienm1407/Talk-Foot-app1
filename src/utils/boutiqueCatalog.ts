@@ -1,53 +1,41 @@
-import type { AvatarItem, MedalPack } from '../types/profile'
-import { baseAvatarItems, medalPacks } from '../data/shop'
+import type { AvatarItem } from '../types/profile'
+import { cdm2026BundleItems } from '../data/cdm2026Bundles'
 import { cdm2026JerseyItems } from '../data/cdm2026Jerseys'
+import { cdm2026ShortItems } from '../data/cdm2026Shorts'
+import { boutiqueShoeItems } from '../data/boutiqueShoes'
 
-export type CatalogFilter = 'all' | 'accessories' | 'kits' | 'outfit_lower'
+export type CatalogFilter = 'jerseys' | 'shorts' | 'packs' | 'shoes'
 
-export type CatalogSort = 'featured' | 'price_medals_asc' | 'price_medals_desc' | 'rarity_desc'
+export type CatalogSort = 'name_asc' | 'price_medals_asc' | 'price_medals_desc'
 
 export type CatalogRow = { kind: 'cosmetic'; item: AvatarItem }
 
-const RARITY_ORDER: Record<AvatarItem['rarity'], number> = {
-  common: 0,
-  rare: 1,
-  epic: 2,
-  legendary: 3,
-}
+const BOUTIQUE_ITEMS: AvatarItem[] = [
+  ...cdm2026JerseyItems,
+  ...cdm2026ShortItems,
+  ...cdm2026BundleItems,
+  ...boutiqueShoeItems,
+]
 
 function matchesQuery(item: AvatarItem, q: string): boolean {
   if (!q) return true
   const n = item.name.toLowerCase()
   const d = item.description?.toLowerCase() ?? ''
-  const note = item.inspirationNote?.toLowerCase() ?? ''
-  return n.includes(q) || d.includes(q) || note.includes(q)
-}
-
-function matchesPackQuery(pack: MedalPack, q: string): boolean {
-  if (!q) return true
-  return (
-    pack.name.toLowerCase().includes(q) ||
-    pack.tagline.toLowerCase().includes(q) ||
-    (pack.flavor?.toLowerCase().includes(q) ?? false)
-  )
-}
-
-/** Packs médailles (€) — vitrine séparée du catalogue cosmétiques. */
-export function filterMedalPacksByQuery(query: string): MedalPack[] {
-  const q = query.trim().toLowerCase()
-  return medalPacks.filter((p) => matchesPackQuery(p, q))
+  return n.includes(q) || d.includes(q)
 }
 
 export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogRow[] {
   const q = query.trim().toLowerCase()
-  let items = [...baseAvatarItems, ...cdm2026JerseyItems]
+  let items = BOUTIQUE_ITEMS
 
-  if (filter === 'accessories') {
-    items = items.filter((i) => i.slot === 'accessory')
-  } else if (filter === 'kits') {
-    items = items.filter((i) => i.slot === 'jersey')
-  } else if (filter === 'outfit_lower') {
-    items = items.filter((i) => i.slot === 'pants' || i.slot === 'shoes')
+  if (filter === 'jerseys') {
+    items = items.filter((i) => i.slot === 'jersey' && !i.bundleIncludes?.length)
+  } else if (filter === 'shorts') {
+    items = items.filter((i) => i.slot === 'pants')
+  } else if (filter === 'packs') {
+    items = items.filter((i) => i.bundleIncludes?.length)
+  } else {
+    items = items.filter((i) => i.slot === 'shoes')
   }
 
   items = items.filter((i) => matchesQuery(i, q))
@@ -55,20 +43,14 @@ export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogR
   return items.map((item) => ({ kind: 'cosmetic', item }))
 }
 
-function priceMedals(r: CatalogRow): number {
-  return r.item.cost
-}
-
 export function sortCatalogRows(rows: CatalogRow[], sort: CatalogSort): CatalogRow[] {
   const copy = [...rows]
   if (sort === 'price_medals_asc') {
-    copy.sort((a, b) => priceMedals(a) - priceMedals(b))
+    copy.sort((a, b) => a.item.cost - b.item.cost)
   } else if (sort === 'price_medals_desc') {
-    copy.sort((a, b) => priceMedals(b) - priceMedals(a))
-  } else if (sort === 'rarity_desc') {
-    copy.sort((a, b) => RARITY_ORDER[b.item.rarity] - RARITY_ORDER[a.item.rarity])
+    copy.sort((a, b) => b.item.cost - a.item.cost)
   } else {
-    copy.sort((a, b) => RARITY_ORDER[b.item.rarity] - RARITY_ORDER[a.item.rarity])
+    copy.sort((a, b) => a.item.name.localeCompare(b.item.name, 'fr'))
   }
   return copy
 }

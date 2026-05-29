@@ -1,131 +1,123 @@
 import { Button } from '../ui/Button'
 import { TokenGlyph } from '../ui/TokenGlyph'
-import { JerseyPreviewThumb } from './JerseyPreviewThumb'
-import {
-  ShopEncartContentPanel,
-  ShopRarityEncart,
-  shopEncartButtonClass,
-  shopEncartTokenButtonClass,
-} from './ShopRarityEncart'
+import { BoutiqueKitStudioPreview } from './BoutiqueKitStudioPreview'
+import { shopEncartButtonClass, shopEncartTokenButtonClass } from './ShopRarityEncart'
 import { cosmeticTokenPrice } from '../../data/shop'
 import type { AvatarItem, AvatarSlot } from '../../types/profile'
+import type { ShopRarity } from './ShopRarityEncart'
 import { cn } from '../../utils/cn'
 
 const SLOT_LABELS: Record<AvatarSlot, string> = {
   scarf: 'Écharpe',
-  hat: 'Casquette / chapeau',
+  hat: 'Casquette',
   jersey: 'Maillot',
   accessory: 'Accessoire',
-  pants: 'Bas',
+  pants: 'Short',
   shoes: 'Chaussures',
+}
+
+const RARITY_RING: Record<ShopRarity, string> = {
+  common: 'ring-cyan-400/50',
+  rare: 'ring-orange-400/50',
+  epic: 'ring-violet-400/55',
+  legendary: 'ring-amber-300/55',
+}
+
+function usesStudioPreview(item: AvatarItem): boolean {
+  return (
+    item.slot === 'shoes' ||
+    Boolean(item.bundleIncludes?.length) ||
+    item.slot === 'jersey' ||
+    item.slot === 'pants' ||
+    Boolean(item.jerseyVisual?.imageUrl) ||
+    Boolean(item.pantsVisual?.imageUrl)
+  )
 }
 
 export function BoutiqueCosmeticGridItem({
   item,
-  ownsItem,
-  openJerseyShop,
+  owned,
   handleBuyCosmetic,
 }: {
   item: AvatarItem
-  ownsItem: (id: string) => boolean
-  openJerseyShop: (item: AvatarItem, medalPrice?: number) => void
+  owned: boolean
   handleBuyCosmetic: (item: AvatarItem, currency: 'medals' | 'tokens', medalCost?: number) => void
 }) {
-  const owned = ownsItem(item.id)
-  /**
-   * Pour les maillots officiels CDM 2026 (PNG photo-réaliste superposé sur
-   * l'avatar), on coupe l'animation flottante : le mouvement « lévite »
-   * donnait l'impression que le maillot vibrait au-dessus du personnage,
-   * et c'est précisément ce qu'on veut éviter pour un rendu produit propre.
-   */
-  const isPhotoJersey = Boolean(item.jerseyVisual?.imageUrl)
+  const tokenPrice = cosmeticTokenPrice(item.cost)
+  const typeLabel = item.bundleIncludes?.length ? 'Pack maillot + short' : SLOT_LABELS[item.slot]
+  const studioCard = usesStudioPreview(item)
+
   return (
-    <ShopRarityEncart rarity={item.rarity}>
-      <div className="flex h-full min-h-0 flex-1 flex-col">
-        <div className={cn(
-          'flex min-h-0 flex-1 items-center justify-center overflow-hidden',
-          isPhotoJersey ? null : 'tf-boutique-3dwrap',
-        )}>
-          <div className={isPhotoJersey ? undefined : 'tf-boutique-float-target'}>
-            <JerseyPreviewThumb item={item} size="showcase" />
-          </div>
+    <article
+      className={cn(
+        'relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
+        RARITY_RING[item.rarity],
+        studioCard ? 'max-w-[300px]' : 'max-w-[220px]',
+      )}
+    >
+      {studioCard ? (
+        <div
+          className={cn(
+            'relative flex w-full flex-col items-center justify-end overflow-hidden',
+            'min-h-[300px] bg-[radial-gradient(circle_at_50%_16%,rgba(56,189,248,0.26),transparent_58%)]',
+            'px-2 pb-1 pt-5 sm:min-h-[340px] sm:px-3 sm:pt-6',
+          )}
+        >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />
+          <BoutiqueKitStudioPreview item={item} className="relative z-[1]" />
         </div>
-        <ShopEncartContentPanel className="mt-auto flex min-h-0 w-full max-h-[72%] flex-col gap-1 space-y-0 overflow-hidden px-2.5 py-1.5 sm:max-h-[58%] sm:px-3 sm:py-2.5">
-          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
-            <div
-              className="break-words font-display text-sm font-black leading-snug tracking-tight text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.6)] line-clamp-2 sm:text-[0.95rem]"
-              title={item.name}
-            >
-              {item.name}
-            </div>
-            <div className="truncate text-[10px] font-bold uppercase tracking-wider text-white/80 sm:text-[11px]">
-              {SLOT_LABELS[item.slot]}
-            </div>
-            {item.inspirationNote ? (
-              <p
-                className="break-words text-[10px] font-bold leading-snug text-amber-100 line-clamp-2 sm:text-[11px]"
-                title={item.inspirationNote}
-              >
-                {item.inspirationNote}
-              </p>
-            ) : null}
-            {item.description ? (
-              <p
-                className="break-words text-[10px] font-medium leading-snug text-white/75 line-clamp-2 sm:text-xs sm:line-clamp-3"
-                title={item.description}
-              >
-                {item.description}
-              </p>
-            ) : null}
-          </div>
-          <div className="shrink-0 space-y-2 border-t border-white/10 pt-2">
-            <div className="font-display text-xs font-black tabular-nums text-white sm:text-sm">
-              {item.cost} 🏅
-              <span className="mx-1 text-white/45">·</span>
-              <span className="inline-flex items-center gap-1 text-emerald-100">
-                {cosmeticTokenPrice(item.cost)}
-                <TokenGlyph variant="onDark" className="size-3.5 shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)] sm:size-4" />
+      ) : (
+        <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white p-3">
+          <span className="text-5xl" aria-hidden>
+            {item.emoji}
+          </span>
+        </div>
+      )}
+
+      <div className="shrink-0 border-t border-white/10 bg-[#050a12] px-2.5 py-2.5 sm:px-3 sm:py-3">
+        <div className="min-w-0 space-y-0.5">
+          <p
+            className="font-display text-[11px] font-black leading-snug text-white sm:text-xs"
+            title={item.name}
+          >
+            {item.emoji ? `${item.emoji} ` : null}
+            {item.name}
+          </p>
+          <p className="text-[9px] font-bold uppercase tracking-wide text-white/55 sm:text-[10px]">
+            {typeLabel}
+          </p>
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
+          <Button
+            variant="soft"
+            className={cn(shopEncartButtonClass(owned), 'min-h-9 px-1 text-[10px] sm:min-h-10 sm:text-xs')}
+            disabled={owned}
+            onClick={() => !owned && handleBuyCosmetic(item, 'medals')}
+          >
+            {owned ? 'Possédé' : (
+              <span className="tabular-nums">
+                {item.cost} <span aria-hidden>🏅</span>
               </span>
-            </div>
-            {item.jerseyVisual ? (
-              <Button
-                variant="soft"
-                className={cn(shopEncartButtonClass(owned), 'min-h-11 w-full')}
-                disabled={owned}
-                onClick={() => !owned && openJerseyShop(item)}
-              >
-                {owned ? 'Possédé' : 'Personnaliser'}
-              </Button>
-            ) : (
-              <div className="grid grid-cols-2 gap-1.5">
-                <Button
-                  variant="soft"
-                  className={cn(shopEncartButtonClass(owned), 'min-h-11 px-2 text-[10px] sm:text-[11px]')}
-                  disabled={owned}
-                  onClick={() => !owned && handleBuyCosmetic(item, 'medals')}
-                >
-                  {owned ? 'Possédé' : '🏅 Médailles'}
-                </Button>
-                <Button
-                  variant="soft"
-                  className={cn(shopEncartTokenButtonClass(owned), 'min-h-11 px-2 text-[10px] sm:text-[11px]')}
-                  disabled={owned}
-                  onClick={() => !owned && handleBuyCosmetic(item, 'tokens')}
-                >
-                  {owned ? (
-                    'Possédé'
-                  ) : (
-                    <span className="inline-flex items-center justify-center gap-1">
-                      <TokenGlyph variant="onDark" className="size-3.5 shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)] sm:size-4" />
-                      Jetons
-                    </span>
-                  )}
-                </Button>
-              </div>
             )}
-          </div>
-        </ShopEncartContentPanel>
+          </Button>
+          <Button
+            variant="soft"
+            className={cn(shopEncartTokenButtonClass(owned), 'min-h-9 px-1 text-[10px] sm:min-h-10 sm:text-xs')}
+            disabled={owned}
+            onClick={() => !owned && handleBuyCosmetic(item, 'tokens')}
+          >
+            {owned ? (
+              'Possédé'
+            ) : (
+              <span className="inline-flex items-center justify-center gap-0.5 tabular-nums">
+                {tokenPrice.toLocaleString('fr-FR')}
+                <TokenGlyph variant="onDark" className="size-3.5 shrink-0" />
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
-    </ShopRarityEncart>
+    </article>
   )
 }

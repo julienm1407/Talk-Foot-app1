@@ -74,17 +74,23 @@ function slugFromPath(path: string): string {
 export function buildAvatarAssetMap(): AvatarAssetMap {
   const map = emptyAssetMap()
 
-  for (const [path, src] of Object.entries(ASSET_MODULES)) {
-    const parts = path.split('/')
-    const folder = parts[2] as AvatarAssetCategory | undefined
-    const fileName = parts[3]
+  const assetPathRe =
+    /(?:^|\/)assets\/(body|hair|eyes|eyebrows|nose|mouth|beard|jerseys|shorts|socks|shoes|accessories)\/([^/?#]+\.png)$/i
 
-    if (!folder || !fileName) continue
+  for (const [path, src] of Object.entries(ASSET_MODULES)) {
+    const normalized = path.replace(/\\/g, '/')
+    const match = normalized.match(assetPathRe)
+    if (!match) continue
+
+    const folder = match[1] as AvatarAssetCategory
+    const fileName = match[2]
     const category = categoryByFolder.get(folder)
     if (!category) continue
 
+    const slugPath = `/assets/${folder}/${fileName.replace(/\.png$/i, '')}`
+
     map[category].push({
-      id: slugFromPath(path),
+      id: slugFromPath(slugPath),
       name: humanizeFileName(fileName),
       src,
       fileName,

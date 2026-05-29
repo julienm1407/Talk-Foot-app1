@@ -1,12 +1,13 @@
 import type { UserProfile } from '../../types/profile'
 import { cn } from '../../utils/cn'
-import { Avatar2DThumb } from './Avatar2DComposer'
+import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
+import { ModularAvatarHeadThumb } from './ModularAvatarCanvas'
 
 const PRESETS = {
-  sm: 'h-12 w-12 min-h-12 min-w-12',
-  md: 'h-16 w-16 min-h-16 min-w-16',
-  chat: 'h-[4.75rem] w-[4.75rem] min-h-[4.75rem] min-w-[4.75rem] sm:h-[5.25rem] sm:w-[5.25rem] sm:min-h-[5.25rem] sm:min-w-[5.25rem]',
-  lg: 'h-24 w-24 min-h-24 min-w-24 sm:h-28 sm:w-28',
+  sm: 40,
+  md: 56,
+  chat: 72,
+  lg: 96,
 } as const
 
 export function ProfileCharacterThumb({
@@ -21,18 +22,21 @@ export function ProfileCharacterThumb({
   className?: string
   'aria-label'?: string
 }) {
+  const thumbPx = PRESETS[size]
+  const modularState = resolveModularAvatarState(profile.modularAvatar)
+
   return (
     <div
       className={cn(
-        'relative shrink-0 overflow-hidden rounded-[22px] border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
-        PRESETS[size],
+        'relative shrink-0 overflow-hidden rounded-full border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
         className,
       )}
+      style={{ width: thumbPx, height: thumbPx, minWidth: thumbPx, minHeight: thumbPx }}
       role="img"
-      aria-label={ariaLabel ?? 'Mon personnage Talk Foot (avatar)'}
+      aria-label={ariaLabel ?? 'Photo de profil — tête de mon avatar modulaire'}
     >
-      <div className="absolute left-1/2 top-1 -translate-x-1/2">
-        <Avatar2DThumb profile={profile} />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <ModularAvatarHeadThumb state={modularState} size={thumbPx} />
       </div>
     </div>
   )

@@ -122,7 +122,7 @@ export function JerseyPurchaseModal({
 
         <div className="flex justify-center border-b border-tf-grey-pastel/30 bg-tf-grey-pastel/10 py-4">
           <div className="rounded-2xl border border-white bg-white p-3 shadow-md">
-            <JerseyPreviewThumb item={item} size="showcase" />
+            <JerseyPreviewThumb item={item} className="h-44 w-full max-w-[12rem]" />
           </div>
         </div>
 
@@ -182,17 +182,18 @@ export function JerseyPurchaseModal({
               ))}
             </div>
           </div>
-          <div className="space-y-1.5 rounded-xl bg-amber-50/80 px-3 py-2.5 text-sm font-bold text-amber-950">
-            <div className="flex items-center justify-between">
-              <span>Médailles (tarif normal)</span>
-              <span className="tabular-nums">
+          <div className="space-y-1 rounded-xl bg-amber-50/80 px-3 py-2.5 text-sm font-bold text-amber-950">
+            <div className="flex items-center justify-between tabular-nums">
+              <span>Médailles</span>
+              <span>
                 {priceMedals} <span aria-hidden>🏅</span>
               </span>
             </div>
-            <div className="flex items-center justify-between border-t border-amber-200/80 pt-1.5 text-emerald-900">
-              <span>Jetons (plus cher)</span>
-              <span className="inline-flex items-center gap-1 tabular-nums">
-                {priceTokens}
+            <p className="text-center text-[10px] font-black uppercase tracking-wider text-amber-800/80">ou</p>
+            <div className="flex items-center justify-between text-emerald-900 tabular-nums">
+              <span>Jetons</span>
+              <span className="inline-flex items-center gap-1">
+                {priceTokens.toLocaleString('fr-FR')}
                 <TokenGlyph className="size-[1em]" />
               </span>
             </div>

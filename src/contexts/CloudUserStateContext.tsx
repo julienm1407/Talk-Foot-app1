@@ -33,6 +33,8 @@ type CloudUserStateValue = {
   patchFanPreferences: (p: Partial<FanPreferencesStoredShape>) => void
   setOnboardingComplete: (v: boolean) => void
   completeOauthProfile: (displayName: string, aboutLine?: string) => Promise<void>
+  /** Force l’écriture cloud immédiate (ex. avant de quitter le studio avatar). */
+  flushAppSave: () => Promise<void>
 }
 
 const CloudUserStateContext = createContext<CloudUserStateValue | undefined>(undefined)
@@ -278,8 +280,9 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       patchFanPreferences,
       setOnboardingComplete,
       completeOauthProfile,
+      flushAppSave: flushSave,
     }),
-    [ready, app, oauthNeedsProfile, patchApp, patchFanPreferences, setOnboardingComplete, completeOauthProfile],
+    [ready, app, oauthNeedsProfile, patchApp, patchFanPreferences, setOnboardingComplete, completeOauthProfile, flushSave],
   )
 
   if (!user?.id) {
