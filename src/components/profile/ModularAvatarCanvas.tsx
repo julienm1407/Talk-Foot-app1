@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '../../utils/cn'
 import { avatarAssetMap, findAssetById } from '../../features/avatar2d/catalog'
-import type { AvatarAssetCategory, AvatarData } from '../../features/avatar2d/types'
+import type { AvatarData } from '../../features/avatar2d/types'
 import {
   resolveModularAvatarState,
   type ModularAvatarState,
   type ModularColorVariantKey,
   type ModularColorizableSlot,
-  type ModularSlotColors,
 } from '../../features/avatar2d/modularAvatarState'
 import type { BoutiqueGarmentShow } from '../../utils/boutiqueModularState'
 
