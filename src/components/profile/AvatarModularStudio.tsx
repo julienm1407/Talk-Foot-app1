@@ -175,8 +175,8 @@ function ModularAssetPicker({
   const grid = (
     <div
       className={cn(
-        'grid grid-cols-3 gap-2 sm:grid-cols-4',
-        useCollapsible && 'max-h-52 overflow-y-auto overscroll-contain [scrollbar-width:thin]',
+        'grid grid-cols-3 gap-2 max-sm:gap-1.5 sm:grid-cols-4',
+        useCollapsible && 'max-h-[min(50dvh,220px)] overflow-y-auto overscroll-contain sm:max-h-52 [scrollbar-width:thin]',
       )}
     >
       {emptyOpt ? (
@@ -270,7 +270,9 @@ export function AvatarModularStudio() {
 
   const [activeSlot, setActiveSlot] = useState<AvatarSlotKey>('hair')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [previewMax, setPreviewMax] = useState(280)
   const saveHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const previewWrapRef = useRef<HTMLDivElement>(null)
 
   const activeCategory: AvatarAssetCategory = slotToCategory[activeSlot]
   const activeOptions = avatarAssetMap[activeCategory]
@@ -308,6 +310,21 @@ export function AvatarModularStudio() {
       void cloud?.flushAppSave?.()
     }
   }, [cloud])
+
+  useEffect(() => {
+    const el = previewWrapRef.current
+    if (!el) return
+    const update = () => {
+      const w = el.clientWidth
+      const h = el.clientHeight
+      if (w < 1) return
+      setPreviewMax(Math.max(200, Math.min(404, Math.floor(Math.min(w, h || w) - 8))))
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const randomizeAvatar = () => {
     const pick = (category: AvatarAssetCategory): string | null => {
@@ -352,25 +369,29 @@ export function AvatarModularStudio() {
   const selectedAsset = findAssetById(avatarAssetMap, activeCategory, slotValue)
 
   return (
-    <Card id="avatar-modulaire" className="scroll-mt-4 p-0 overflow-hidden" elevation="soft">
-      <div className="border-b border-white/10 bg-gradient-to-r from-slate-900/95 to-[#111d32] px-5 py-4">
-        <p className="text-[11px] font-black tracking-[0.18em] text-sky-200/85">CREATEUR AVATAR 2D MODULAIRE</p>
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-display text-xl font-black text-white">Studio personnage temps reel</h3>
+    <Card id="avatar-modulaire" className="scroll-mt-4 overflow-hidden p-0" elevation="soft">
+      <div className="border-b border-white/10 bg-gradient-to-r from-slate-900/95 to-[#111d32] px-3 py-3 sm:px-5 sm:py-4">
+        <p className="text-[10px] font-black tracking-[0.14em] text-sky-200/85 sm:tracking-[0.18em]">
+          CREATEUR AVATAR 2D
+        </p>
+        <div className="mt-2 flex flex-col gap-2 sm:mt-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <h3 className="font-display text-base font-black leading-tight text-white sm:text-xl">
+            Studio personnage
+          </h3>
           <button
             type="button"
             onClick={randomizeAvatar}
-            className="rounded-xl border border-sky-300/35 bg-sky-500/20 px-3 py-2 text-xs font-black text-sky-50 transition hover:border-sky-200/60 hover:bg-sky-500/30"
+            className="w-full rounded-xl border border-sky-300/35 bg-sky-500/20 px-3 py-2.5 text-xs font-black text-sky-50 transition hover:border-sky-200/60 hover:bg-sky-500/30 sm:w-auto sm:py-2"
           >
-            Melange aleatoire
+            Mélange aléatoire
           </button>
         </div>
-        <p className="mt-1 text-sm font-semibold text-sky-100/75">
-          Tu peux mixer chaque element pour obtenir un style unique.
+        <p className="mt-1.5 hidden text-sm font-semibold text-sky-100/75 sm:block">
+          Tu peux mixer chaque élément pour obtenir un style unique.
         </p>
         <p
           className={cn(
-            'mt-2 text-[11px] font-bold',
+            'mt-1.5 text-[10px] font-bold sm:mt-2 sm:text-[11px]',
             saveStatus === 'saved' ? 'text-emerald-300' : 'text-sky-200/55',
           )}
           role="status"
@@ -379,40 +400,59 @@ export function AvatarModularStudio() {
           {saveStatus === 'saving'
             ? 'Enregistrement…'
             : saveStatus === 'saved'
-              ? 'Avatar enregistre automatiquement'
-              : 'Sauvegarde automatique activee'}
+              ? 'Avatar enregistré'
+              : 'Sauvegarde auto'}
         </p>
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)]">
-        <section className="relative flex min-h-[320px] items-end justify-center border-b border-white/10 bg-[radial-gradient(circle_at_50%_20%,rgba(56,189,248,0.24),transparent_58%)] p-4 sm:min-h-[420px] sm:p-6 lg:sticky lg:top-20 lg:z-[1] lg:max-h-[min(560px,calc(100dvh-6rem))] lg:min-h-[480px] lg:self-start lg:border-b-0 lg:border-r">
-          <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:24px_24px]" />
-          <div className="relative z-[1] flex items-end justify-center overflow-hidden rounded-2xl border border-white/15 bg-black/20 p-2 shadow-[0_16px_50px_rgba(2,8,23,0.55)] backdrop-blur-sm">
-            <ModularAvatarCanvas state={modularState} crop="full" previewMax={404} />
+      <div className="flex flex-col lg:grid lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] lg:gap-0">
+        <section
+          className={cn(
+            'relative z-20 flex shrink-0 items-end justify-center border-b border-white/10',
+            'bg-[radial-gradient(circle_at_50%_18%,rgba(56,189,248,0.28),transparent_55%)]',
+            'sticky top-0 px-3 py-3',
+            'min-h-[min(38dvh,240px)] max-h-[min(44dvh,280px)]',
+            'sm:static sm:min-h-[320px] sm:max-h-none sm:px-4 sm:py-4',
+            'lg:sticky lg:top-20 lg:z-[1] lg:max-h-[min(560px,calc(100dvh-6rem))] lg:min-h-[480px] lg:self-start lg:border-b-0 lg:border-r lg:px-6 lg:py-6',
+          )}
+        >
+          <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:20px_20px] sm:[background-size:24px_24px]" />
+          <div
+            ref={previewWrapRef}
+            className="relative z-[1] mx-auto flex w-full max-w-[min(100%,280px)] items-end justify-center sm:max-w-[340px] lg:max-w-none"
+          >
+            <div className="overflow-hidden rounded-2xl border border-white/15 bg-black/20 p-1.5 shadow-[0_12px_40px_rgba(2,8,23,0.55)] backdrop-blur-sm sm:p-2">
+              <ModularAvatarCanvas state={modularState} crop="full" previewMax={previewMax} />
+            </div>
           </div>
         </section>
 
-        <section className="bg-gradient-to-b from-[#0c1829] to-[#050b14] p-4 sm:p-5 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto lg:overscroll-contain">
-          <div className="mb-4 flex flex-wrap gap-2">
-            {SLOT_ORDER.map((slot) => (
-              <button
-                key={slot}
-                type="button"
-                onClick={() => setActiveSlot(slot)}
-                className={cn(
-                  'rounded-xl border px-3 py-2 text-xs font-black transition',
-                  activeSlot === slot
-                    ? 'border-emerald-400/70 bg-emerald-500/20 text-emerald-50'
-                    : 'border-white/10 bg-white/5 text-white/80 hover:border-white/25 hover:bg-white/10',
-                )}
-              >
-                {SLOT_LABELS[slot]}
-              </button>
-            ))}
+        <section className="min-h-0 bg-gradient-to-b from-[#0c1829] to-[#050b14] p-3 sm:p-5 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-white/50 lg:hidden">
+            Choisir une catégorie
+          </p>
+          <div className="-mx-3 mb-3 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:mb-4 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-max min-w-full gap-1.5 sm:w-auto sm:flex-wrap">
+              {SLOT_ORDER.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => setActiveSlot(slot)}
+                  className={cn(
+                    'shrink-0 snap-start rounded-xl border px-2.5 py-2 text-[11px] font-black transition sm:px-3 sm:text-xs',
+                    activeSlot === slot
+                      ? 'border-emerald-400/70 bg-emerald-500/25 text-emerald-50 shadow-[0_0_0_1px_rgba(52,211,153,0.35)]'
+                      : 'border-white/15 bg-white/10 text-white/90 hover:border-white/30 hover:bg-white/15',
+                  )}
+                >
+                  {SLOT_LABELS[slot]}
+                </button>
+              ))}
+            </div>
           </div>
 
           {activeSlot === 'body' ? (
-            <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="mb-3 rounded-xl border border-white/12 bg-white/[0.07] p-3 sm:mb-4">
               <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-white/60">Couleur de peau</p>
               <div className="flex items-center gap-2">
                 <input
@@ -431,7 +471,7 @@ export function AvatarModularStudio() {
             </div>
           ) : null}
           {(['hair', 'beard', 'jersey', 'shorts', 'socks', 'shoes', 'accessory'] as AvatarSlotKey[]).includes(activeSlot) ? (
-            <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3">
+            <div className="mb-3 rounded-xl border border-white/12 bg-white/[0.07] p-3 sm:mb-4">
               <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-white/60">Variante couleur</p>
               <div className="flex flex-wrap gap-1.5">
                 {SLOT_COLOR_PRESETS[activeSlot as ColorizableSlot].map((variant) => {
@@ -462,8 +502,8 @@ export function AvatarModularStudio() {
           ) : null}
 
           {activeSlot !== 'body' ? (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-white/60">
+            <div className="rounded-xl border border-white/12 bg-white/[0.07] p-3">
+              <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-white/70">
                 {SLOT_LABELS[activeSlot]} ({activeOptions.length})
               </p>
               {activeOptions.length > INLINE_GRID_MAX ? (
