@@ -11,6 +11,8 @@ import {
   AdminPage,
   ArticlePage,
   BoutiquePage,
+  BoutiqueMedalPacksPage,
+  BoutiquePurchaseSuccessPage,
   CalendarPage,
   ChannelPage,
   ChannelStadiumPage,
@@ -220,6 +222,22 @@ export default function App() {
             element={
               <RouteSuspense>
                 <BoutiquePage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="boutique/medailles"
+            element={
+              <RouteSuspense>
+                <BoutiqueMedalPacksPage />
+              </RouteSuspense>
+            }
+          />
+          <Route
+            path="boutique/achat-reussi"
+            element={
+              <RouteSuspense>
+                <BoutiquePurchaseSuccessPage />
               </RouteSuspense>
             }
           />

@@ -9,7 +9,7 @@ import { NATIONS, boutiqueShortsUrl, type Nation } from './nations'
 function buildShorts(nation: Nation): AvatarItem {
   return {
     id: `cdm2026-short-${nation.iso.toLowerCase()}`,
-    name: `${nation.nameFr} Short 2026`,
+    name: `Short ${nation.nameFr}`,
     slot: 'pants',
     emoji: nation.flag,
     cost: CDM_SHORT_MEDALS,

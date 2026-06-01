@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
 import { avatarAssetMap, findAssetById, slotToCategory } from '../../features/avatar2d/catalog'
@@ -13,6 +14,18 @@ import { useProfile } from '../../hooks/useProfile'
 import { useOptionalCloudUserState } from '../../contexts/CloudUserStateContext'
 import { ModularAvatarCanvas, MODULAR_COLOR_VARIANTS } from './ModularAvatarCanvas'
 import type { AvatarData } from '../../features/avatar2d/types'
+import {
+  boutiqueTabForModularCategory,
+  isModularAssetUnlocked,
+  isModularGarmentSlot,
+} from '../../utils/modularGarmentAccess'
+import { sortModularGarmentAssetsForStudio } from '../../utils/modularGarmentDisplayName'
+import {
+  consumeRecentStudioAsset,
+  peekRecentStudioAsset,
+  studioSlotForModularAssetId,
+} from '../../utils/boutiquePurchaseFlow'
+import { findBoutiqueCatalogItem } from '../../utils/boutiqueCatalog'
 
 const SLOT_ORDER: AvatarSlotKey[] = [
   'body',
@@ -24,9 +37,7 @@ const SLOT_ORDER: AvatarSlotKey[] = [
   'beard',
   'jersey',
   'shorts',
-  'socks',
   'shoes',
-  'accessory',
 ]
 
 const SLOT_LABELS: Record<AvatarSlotKey, string> = {
@@ -39,9 +50,9 @@ const SLOT_LABELS: Record<AvatarSlotKey, string> = {
   beard: 'Barbe',
   jersey: 'Maillot',
   shorts: 'Short',
-  socks: 'Chaussettes',
   shoes: 'Chaussures',
   accessory: 'Accessoire',
+  socks: 'Chaussettes',
 }
 
 const SKIN_PALETTE = ['#f7d8bf', '#e9c2a4', '#d7a783', '#bf8d67', '#9d6f4d', '#7f5639']
@@ -103,6 +114,7 @@ const EMPTY_SLOT_OPTION: Partial<Record<AvatarSlotKey, { key: string; label: str
 const INLINE_GRID_MAX = 6
 
 function assetLabel(asset: AvatarAsset, slot: AvatarSlotKey): string {
+  if (slot === 'jersey' || slot === 'shorts') return asset.name || asset.fileName
   if (slot === 'hair') return HAIR_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
   if (slot === 'beard') return BEARD_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
   if (slot === 'shoes') return SHOES_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
@@ -114,11 +126,13 @@ function assetLabel(asset: AvatarAsset, slot: AvatarSlotKey): string {
 function AssetTile({
   label,
   selected,
+  locked,
   imageSrc,
   onClick,
 }: {
   label: string
   selected: boolean
+  locked?: boolean
   imageSrc?: string | null
   onClick: () => void
 }) {
@@ -127,13 +141,28 @@ function AssetTile({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-xl border p-1.5 text-left transition',
-        selected
-          ? 'border-emerald-400/75 bg-emerald-500/15'
-          : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10',
+        'relative rounded-xl border p-1.5 text-left transition',
+        locked
+          ? 'border-amber-400/40 bg-amber-500/10 hover:border-amber-300/55'
+          : selected
+            ? 'border-emerald-400/75 bg-emerald-500/15'
+            : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10',
       )}
     >
-      <div className="mb-1 flex aspect-square items-center justify-center rounded-lg bg-black/25 p-0.5">
+      {locked ? (
+        <span
+          className="absolute right-1 top-1 z-[1] rounded-md bg-amber-500/90 px-1 py-0.5 text-[8px] font-black uppercase text-amber-950"
+          aria-hidden
+        >
+          Boutique
+        </span>
+      ) : null}
+      <div
+        className={cn(
+          'mb-1 flex aspect-square items-center justify-center rounded-lg bg-black/25 p-0.5',
+          locked && 'opacity-55 grayscale-[0.35]',
+        )}
+      >
         {imageSrc ? (
           <img src={imageSrc} alt="" className="h-full w-full object-contain" loading="lazy" />
         ) : (
@@ -141,22 +170,31 @@ function AssetTile({
         )}
       </div>
       <span className="line-clamp-2 block text-[10px] font-bold leading-tight text-white/85">{label}</span>
+      {locked ? (
+        <span className="mt-0.5 block text-[9px] font-bold text-amber-200/90">Voir la boutique →</span>
+      ) : null}
     </button>
   )
 }
 
 function ModularAssetPicker({
   slot,
+  garmentCategory,
   options,
   value,
   selectedAsset,
+  ownedItemIds,
   onPick,
+  onLockedPick,
 }: {
   slot: AvatarSlotKey
+  garmentCategory?: 'jerseys' | 'shorts' | 'shoes'
   options: AvatarAsset[]
   value: string | null
   selectedAsset: AvatarAsset | null | undefined
+  ownedItemIds: string[]
   onPick: (id: string | null) => void
+  onLockedPick: () => void
 }) {
   const useCollapsible = options.length > INLINE_GRID_MAX
   const [open, setOpen] = useState(!useCollapsible)
@@ -189,18 +227,28 @@ function ModularAssetPicker({
           }}
         />
       ) : null}
-      {options.map((asset) => (
-        <AssetTile
-          key={asset.id}
-          label={assetLabel(asset, slot)}
-          selected={value === asset.id}
-          imageSrc={asset.src}
-          onClick={() => {
-            onPick(asset.id)
-            if (useCollapsible) setOpen(false)
-          }}
-        />
-      ))}
+      {options.map((asset) => {
+        const locked = garmentCategory
+          ? !isModularAssetUnlocked(asset.id, garmentCategory, ownedItemIds)
+          : false
+        return (
+          <AssetTile
+            key={asset.id}
+            label={assetLabel(asset, slot)}
+            selected={value === asset.id}
+            locked={locked}
+            imageSrc={asset.src}
+            onClick={() => {
+              if (locked) {
+                onLockedPick()
+                return
+              }
+              onPick(asset.id)
+              if (useCollapsible) setOpen(false)
+            }}
+          />
+        )
+      })}
     </div>
   )
 
@@ -256,19 +304,25 @@ const SLOT_COLOR_PRESETS: Record<ColorizableSlot, ColorVariantKey[]> = {
   beard: ['default', 'black', 'brown', 'blond', 'auburn', 'white'],
   jersey: ['default'],
   shorts: ['default'],
-  socks: ['default', 'blue', 'red', 'green', 'white', 'black'],
   shoes: ['default'],
-  accessory: ['default', 'blue', 'red', 'green', 'white', 'black'],
 }
 
 export function AvatarModularStudio() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { profile, updateModularAvatar } = useProfile()
+  const purchaseFocusApplied = useRef(false)
   const cloud = useOptionalCloudUserState()
+  const ownedItemIds = useMemo(
+    () => (Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []),
+    [profile.ownedItemIds],
+  )
   const modular = resolveModularAvatarState(profile.modularAvatar)
   const avatar = modular.data
   const slotColors = modular.slotColors
 
   const [activeSlot, setActiveSlot] = useState<AvatarSlotKey>('hair')
+  const [purchaseBanner, setPurchaseBanner] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [previewMax, setPreviewMax] = useState(280)
   const saveHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -276,6 +330,20 @@ export function AvatarModularStudio() {
 
   const activeCategory: AvatarAssetCategory = slotToCategory[activeSlot]
   const activeOptions = avatarAssetMap[activeCategory]
+  const activeGarmentCategory = isModularGarmentSlot(activeCategory) ? activeCategory : undefined
+
+  const priorityStudioAsset =
+    searchParams.get('asset') ?? peekRecentStudioAsset()
+
+  const sortedActiveOptions = useMemo(() => {
+    if (!activeGarmentCategory) return activeOptions
+    return sortModularGarmentAssetsForStudio(
+      activeOptions,
+      activeGarmentCategory,
+      ownedItemIds,
+      priorityStudioAsset,
+    )
+  }, [activeOptions, activeGarmentCategory, ownedItemIds, priorityStudioAsset])
 
   const modularState = useMemo(() => ({ data: avatar, slotColors }), [avatar, slotColors])
 
@@ -300,9 +368,62 @@ export function AvatarModularStudio() {
     [updateModularAvatar, markSaved],
   )
 
+  const goToBoutiqueForCategory = useCallback(
+    (category: 'jerseys' | 'shorts' | 'shoes') => {
+      navigate(`/boutique?tab=${boutiqueTabForModularCategory(category)}`)
+    },
+    [navigate],
+  )
+
   const applySlot = (slot: AvatarSlotKey, value: string | null) => {
+    const cat = slotToCategory[slot]
+    if (value && isModularGarmentSlot(cat) && !isModularAssetUnlocked(value, cat, ownedItemIds)) {
+      goToBoutiqueForCategory(cat)
+      return
+    }
     patchModular((prev) => ({ ...prev, data: { ...prev.data, [slot]: value } }))
   }
+
+  useEffect(() => {
+    const purchasedId = searchParams.get('purchased')
+    if (!purchasedId) return
+    const bought = findBoutiqueCatalogItem(purchasedId)
+    if (bought) setPurchaseBanner(`${bought.name} acheté — retrouve-le ci-dessous, il est déjà équipé.`)
+    const next = new URLSearchParams(searchParams)
+    next.delete('purchased')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (purchaseFocusApplied.current) return
+    const fromUrl = searchParams.get('asset')
+    const assetId = fromUrl ?? consumeRecentStudioAsset()
+    if (!assetId) return
+
+    const slotParam = searchParams.get('slot')
+    const slot: AvatarSlotKey | null =
+      slotParam === 'jersey' || slotParam === 'shorts' || slotParam === 'shoes'
+        ? slotParam
+        : studioSlotForModularAssetId(assetId)
+    if (!slot) return
+
+    const cat = slotToCategory[slot]
+    if (!isModularGarmentSlot(cat) || !isModularAssetUnlocked(assetId, cat, ownedItemIds)) return
+
+    purchaseFocusApplied.current = true
+    setActiveSlot(slot)
+    updateModularAvatar((prev) => ({
+      ...prev,
+      data: { ...prev.data, [slot]: assetId },
+    }))
+
+    if (fromUrl) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('asset')
+      next.delete('slot')
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, ownedItemIds, updateModularAvatar, setSearchParams])
 
   useEffect(() => {
     return () => {
@@ -328,7 +449,11 @@ export function AvatarModularStudio() {
 
   const randomizeAvatar = () => {
     const pick = (category: AvatarAssetCategory): string | null => {
-      const options = avatarAssetMap[category]
+      const options = avatarAssetMap[category].filter((asset) =>
+        isModularGarmentSlot(category)
+          ? isModularAssetUnlocked(asset.id, category, ownedItemIds)
+          : true,
+      )
       if (!options.length) return null
       return options[Math.floor(Math.random() * options.length)]?.id ?? null
     }
@@ -349,18 +474,16 @@ export function AvatarModularStudio() {
         beard: pick('beard'),
         jersey: pick('jerseys'),
         shorts: pick('shorts'),
-        socks: pick('socks'),
+        socks: null,
         shoes: pick('shoes'),
-        accessory: pick('accessories'),
+        accessory: null,
       },
       slotColors: {
         hair: pickColor('hair'),
         beard: pickColor('beard'),
         jersey: pickColor('jersey'),
         shorts: pickColor('shorts'),
-        socks: pickColor('socks'),
         shoes: pickColor('shoes'),
-        accessory: pickColor('accessory'),
       },
     }))
   }
@@ -403,6 +526,11 @@ export function AvatarModularStudio() {
               ? 'Avatar enregistré'
               : 'Sauvegarde auto'}
         </p>
+        {purchaseBanner ? (
+          <p className="mt-2 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-[11px] font-bold text-emerald-100">
+            {purchaseBanner}
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col lg:grid lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] lg:gap-0">
@@ -470,7 +598,9 @@ export function AvatarModularStudio() {
               </div>
             </div>
           ) : null}
-          {(['hair', 'beard', 'jersey', 'shorts', 'socks', 'shoes', 'accessory'] as AvatarSlotKey[]).includes(activeSlot) ? (
+          {(['hair', 'beard', 'jersey', 'shorts', 'shoes'] as ColorizableSlot[]).includes(
+            activeSlot as ColorizableSlot,
+          ) ? (
             <div className="mb-3 rounded-xl border border-white/12 bg-white/[0.07] p-3 sm:mb-4">
               <p className="mb-2 text-[11px] font-black uppercase tracking-wide text-white/60">Variante couleur</p>
               <div className="flex flex-wrap gap-1.5">
@@ -501,6 +631,22 @@ export function AvatarModularStudio() {
             </div>
           ) : null}
 
+          {activeGarmentCategory ? (
+            <div className="mb-3 rounded-xl border border-amber-400/35 bg-amber-500/10 px-3 py-2.5 sm:mb-4">
+              <p className="text-[11px] font-bold leading-snug text-amber-50/95">
+                Cheveux, visage et couleurs : <span className="text-emerald-200">gratuits</span>. Maillots, shorts et
+                chaussures : uniquement les modèles de base sont gratuits (maillot/short blanc, bleu, jaune, rouge ·
+                crampons blancs).
+              </p>
+              <Link
+                to={`/boutique?tab=${boutiqueTabForModularCategory(activeGarmentCategory)}`}
+                className="mt-1.5 inline-block text-[11px] font-black text-amber-200 underline-offset-2 hover:text-amber-100 hover:underline"
+              >
+                Ouvrir la boutique →
+              </Link>
+            </div>
+          ) : null}
+
           {activeSlot !== 'body' ? (
             <div className="rounded-xl border border-white/12 bg-white/[0.07] p-3">
               <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-white/70">
@@ -519,10 +665,15 @@ export function AvatarModularStudio() {
               ) : (
                 <ModularAssetPicker
                   slot={activeSlot}
-                  options={activeOptions}
+                  garmentCategory={activeGarmentCategory}
+                  options={sortedActiveOptions}
                   value={slotValue}
                   selectedAsset={selectedAsset}
+                  ownedItemIds={ownedItemIds}
                   onPick={(id) => applySlot(activeSlot, id)}
+                  onLockedPick={() => {
+                    if (activeGarmentCategory) goToBoutiqueForCategory(activeGarmentCategory)
+                  }}
                 />
               )}
             </div>

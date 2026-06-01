@@ -36,6 +36,12 @@ export const VideosPage = lazy(() =>
 export const BoutiquePage = lazy(() =>
   import('../pages/Boutique').then((m) => ({ default: m.BoutiquePage })),
 )
+export const BoutiqueMedalPacksPage = lazy(() =>
+  import('../pages/BoutiqueMedalPacks').then((m) => ({ default: m.BoutiqueMedalPacksPage })),
+)
+export const BoutiquePurchaseSuccessPage = lazy(() =>
+  import('../pages/BoutiquePurchaseSuccess').then((m) => ({ default: m.BoutiquePurchaseSuccessPage })),
+)
 export const ProfilePage = lazy(() =>
   import('../pages/Profile').then((m) => ({ default: m.ProfilePage })),
 )

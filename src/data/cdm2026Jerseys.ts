@@ -9,12 +9,12 @@ import { NATIONS, boutiqueJerseyUrl, type Nation } from './nations'
 function buildJersey(nation: Nation): AvatarItem {
   return {
     id: `cdm2026-${nation.iso.toLowerCase()}`,
-    name: `${nation.nameFr} Home 2026`,
+    name: `Maillot ${nation.nameFr}`,
     slot: 'jersey',
     emoji: nation.flag,
     cost: CDM_JERSEY_MEDALS,
     rarity: 'epic',
-    description: `Maillot domicile ${nation.nameFr} — Coupe du Monde 2026.`,
+    description: `Maillot ${nation.nameFr} — Coupe du Monde 2026.`,
     inspirationNote: 'Collection officielle Talk Foot · CDM 2026',
     collection: 'cdm2026',
     nationIso: nation.iso,

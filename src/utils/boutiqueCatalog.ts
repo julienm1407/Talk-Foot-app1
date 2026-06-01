@@ -10,12 +10,16 @@ export type CatalogSort = 'name_asc' | 'price_medals_asc' | 'price_medals_desc'
 
 export type CatalogRow = { kind: 'cosmetic'; item: AvatarItem }
 
-const BOUTIQUE_ITEMS: AvatarItem[] = [
+export const BOUTIQUE_CATALOG_ITEMS: AvatarItem[] = [
   ...cdm2026JerseyItems,
   ...cdm2026ShortItems,
   ...cdm2026BundleItems,
   ...boutiqueShoeItems,
 ]
+
+export function findBoutiqueCatalogItem(itemId: string): AvatarItem | undefined {
+  return BOUTIQUE_CATALOG_ITEMS.find((i) => i.id === itemId)
+}
 
 function matchesQuery(item: AvatarItem, q: string): boolean {
   if (!q) return true
@@ -26,7 +30,7 @@ function matchesQuery(item: AvatarItem, q: string): boolean {
 
 export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogRow[] {
   const q = query.trim().toLowerCase()
-  let items = BOUTIQUE_ITEMS
+  let items = BOUTIQUE_CATALOG_ITEMS
 
   if (filter === 'jerseys') {
     items = items.filter((i) => i.slot === 'jersey' && !i.bundleIncludes?.length)
@@ -43,14 +47,32 @@ export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogR
   return items.map((item) => ({ kind: 'cosmetic', item }))
 }
 
+function freeFirstCmp(a: CatalogRow, b: CatalogRow): number {
+  const freeA = a.item.cost === 0 ? 0 : 1
+  const freeB = b.item.cost === 0 ? 0 : 1
+  return freeA - freeB
+}
+
 export function sortCatalogRows(rows: CatalogRow[], sort: CatalogSort): CatalogRow[] {
   const copy = [...rows]
   if (sort === 'price_medals_asc') {
-    copy.sort((a, b) => a.item.cost - b.item.cost)
+    copy.sort((a, b) => {
+      const free = freeFirstCmp(a, b)
+      if (free !== 0) return free
+      return a.item.cost - b.item.cost
+    })
   } else if (sort === 'price_medals_desc') {
-    copy.sort((a, b) => b.item.cost - a.item.cost)
+    copy.sort((a, b) => {
+      const free = freeFirstCmp(a, b)
+      if (free !== 0) return free
+      return b.item.cost - a.item.cost
+    })
   } else {
-    copy.sort((a, b) => a.item.name.localeCompare(b.item.name, 'fr'))
+    copy.sort((a, b) => {
+      const free = freeFirstCmp(a, b)
+      if (free !== 0) return free
+      return a.item.name.localeCompare(b.item.name, 'fr')
+    })
   }
   return copy
 }

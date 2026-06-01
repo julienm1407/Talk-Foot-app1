@@ -64,11 +64,8 @@ export function NationCard({
             <NationCrest nation={nation} size="lg" withRing />
           </div>
         )}
-        <div className="relative z-10 flex items-center gap-2 bg-black/35 px-3 py-2 backdrop-blur-sm">
-          <span className="text-base leading-none" aria-hidden>
-            {nation.flag}
-          </span>
-          <span className="truncate font-display text-sm font-black uppercase tracking-wide text-white">
+        <div className="relative z-10 bg-black/35 px-3 py-2 backdrop-blur-sm">
+          <span className="block truncate text-center font-display text-sm font-black uppercase tracking-wide text-white">
             {nation.nameFr}
           </span>
         </div>

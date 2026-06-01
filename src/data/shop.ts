@@ -16,7 +16,7 @@ const BASE_JERSEY_COLORS = [
 
 const baseJerseyItems: AvatarItem[] = BASE_JERSEY_COLORS.map((c) => ({
   id: `kit-base-${c.id}`,
-  name: `Maillot base ${c.name}`,
+  name: `Maillot ${c.name}`,
   slot: 'jersey',
   emoji: '👕',
   cost: 0,
@@ -34,7 +34,7 @@ const baseJerseyItems: AvatarItem[] = BASE_JERSEY_COLORS.map((c) => ({
 
 const baseShortItems: AvatarItem[] = BASE_JERSEY_COLORS.map((c) => ({
   id: `pants-base-${c.id}`,
-  name: `Short base ${c.name}`,
+  name: `Short ${c.name}`,
   slot: 'pants',
   emoji: '🩳',
   cost: 0,
@@ -135,9 +135,9 @@ export const baseAvatarItems: AvatarItem[] = [
     name: 'Crampons standards blancs',
     slot: 'shoes',
     emoji: '👟',
-    cost: STANDARD_SHOES_MEDALS,
+    cost: 0,
     rarity: 'common',
-    description: 'Chaussures stade — collection standards.',
+    description: 'Crampons blancs — offerts à tous les joueurs.',
   },
   {
     id: 'shoes-sneaker-neon',

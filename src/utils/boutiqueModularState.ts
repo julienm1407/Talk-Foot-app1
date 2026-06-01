@@ -16,7 +16,7 @@ export function resolveBoutiqueGarmentShow(item: AvatarItem): BoutiqueGarmentSho
 }
 
 /** IDs assets modulaires (`assets/jerseys/jersey_fra.png` → `jerseys-jersey-fra`). */
-function modularJerseyId(item: AvatarItem): string | null {
+export function modularJerseyId(item: AvatarItem): string | null {
   if (item.nationIso) return `jerseys-jersey-${item.nationIso.toLowerCase()}`
   const base = item.id.match(/^kit-base-(.+)$/)?.[1]
   if (base) return `jerseys-jersey-base-${base}`
@@ -25,7 +25,7 @@ function modularJerseyId(item: AvatarItem): string | null {
   return null
 }
 
-function modularShortsId(item: AvatarItem): string | null {
+export function modularShortsId(item: AvatarItem): string | null {
   if (item.id === 'pants-kit') return null
   if (item.nationIso) return `shorts-short-${item.nationIso.toLowerCase()}`
   const base = item.id.match(/^pants-base-(.+)$/)?.[1]
@@ -35,7 +35,7 @@ function modularShortsId(item: AvatarItem): string | null {
   return null
 }
 
-function modularShoesId(item: AvatarItem): string | null {
+export function modularShoesId(item: AvatarItem): string | null {
   const fromUrl = item.shoesVisual?.imageUrl?.match(/\/shoes\/shoes_([a-z]+)\.png/i)?.[1]
   if (fromUrl) return `shoes-shoes-${fromUrl === 'base' ? 'base' : fromUrl}`
   const legacy: Record<string, string> = {
@@ -46,6 +46,20 @@ function modularShoesId(item: AvatarItem): string | null {
     'shoes-sneaker-vert': 'shoes-shoes-vert',
   }
   return legacy[item.id] ?? null
+}
+
+/** Asset modulaire principal lié à un achat boutique (maillot, short ou chaussures). */
+export function shopItemToModularAssetId(item: AvatarItem): string | null {
+  if (item.slot === 'shoes') return modularShoesId(item)
+  if (item.slot === 'pants') return modularShortsId(item)
+  if (item.slot === 'jersey') return modularJerseyId(item)
+  if (item.bundleIncludes?.length) {
+    const jerseyShopId =
+      item.bundleIncludes.find((id) => !id.includes('short') && !id.includes('pack')) ??
+      item.bundleIncludes[0]
+    return modularJerseyId({ ...item, slot: 'jersey', id: jerseyShopId })
+  }
+  return null
 }
 
 /** État modulaire boutique (sans corps / visage). */

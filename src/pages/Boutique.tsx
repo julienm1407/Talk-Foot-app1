@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
@@ -19,6 +19,11 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
+import {
+  catalogTabForShopItem,
+  finishCosmeticPurchase,
+  validateMedalCosmeticPurchase,
+} from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'packs', label: 'Packs' },
@@ -27,10 +32,25 @@ const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'shoes', label: 'Chaussures' },
 ]
 
+const CATALOG_FILTERS = new Set<CatalogFilter>(['packs', 'jerseys', 'shorts', 'shoes'])
+
+function parseCatalogTab(raw: string | null): CatalogFilter | null {
+  if (!raw || !CATALOG_FILTERS.has(raw as CatalogFilter)) return null
+  return raw as CatalogFilter
+}
+
 export function BoutiquePage() {
+  const navigate = useNavigate()
   const { wallet, spendMedals, spendTokens } = useWallet()
   const { ownsItem, addOwnedItem } = useProfile()
-  const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>('packs')
+  const [searchParams] = useSearchParams()
+  const tabFromUrl = parseCatalogTab(searchParams.get('tab'))
+  const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>(() => tabFromUrl ?? 'packs')
+
+  useEffect(() => {
+    const next = parseCatalogTab(searchParams.get('tab'))
+    if (next) setCatalogFilter(next)
+  }, [searchParams])
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('name_asc')
   const [catalogSearch, setCatalogSearch] = useState('')
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
@@ -51,12 +71,21 @@ export function BoutiquePage() {
     window.setTimeout(() => setNotice(null), 2800)
   }
 
-  const handleBuyCosmetic = (item: AvatarItemType, currency: 'medals' | 'tokens') => {
-    const grantIds = item.bundleIncludes?.length ? item.bundleIncludes : [item.id]
-    if (isCosmeticOwned(item, ownsItem)) return
+  const redirectToMedalPacks = (item: AvatarItemType) => {
+    const tab = catalogTabForShopItem(item)
+    const returnTo = `/boutique?tab=${tab}`
+    const params = new URLSearchParams({
+      need: String(item.cost),
+      item: item.id,
+      return: returnTo,
+    })
+    navigate(`/boutique/medailles?${params.toString()}`)
+  }
 
-    const alreadyOwned = grantIds.filter((id) => ownsItem(id))
-    if (alreadyOwned.length > 0) {
+  const handleBuyCosmetic = (item: AvatarItemType, currency: 'medals' | 'tokens') => {
+    const validation = validateMedalCosmeticPurchase(item, ownsItem)
+    if (validation.status === 'already_owned') return
+    if (validation.status === 'partial_pack') {
       showNotice(
         'err',
         'Tu possèdes déjà une partie de ce pack — achète les pièces manquantes dans Maillots ou Shorts.',
@@ -67,24 +96,21 @@ export function BoutiquePage() {
     if (currency === 'medals') {
       const result = spendMedals(item.cost)
       if (!result.ok) {
-        showNotice('err', 'Pas assez de médailles pour cet article.')
+        if (result.insufficient) redirectToMedalPacks(item)
+        else showNotice('err', 'Paiement impossible — réessaie dans un instant.')
         return
       }
-    } else {
-      const tokenCost = cosmeticTokenPrice(item.cost)
-      const result = spendTokens(tokenCost)
-      if (!result.ok) {
-        showNotice('err', 'Pas assez de jetons — paris gagnés ou bonus quotidien.')
-        return
-      }
+      navigate(finishCosmeticPurchase(item, addOwnedItem))
+      return
     }
 
-    grantIds.forEach((id) => addOwnedItem(id))
-    const msg =
-      grantIds.length > 1
-        ? `${item.name} débloqué (maillot + short) ! Équipe-les dans ton profil.`
-        : `${item.name} débloqué ! Équipe-le dans ton profil.`
-    showNotice('ok', msg)
+    const tokenCost = cosmeticTokenPrice(item.cost)
+    const tokenResult = spendTokens(tokenCost)
+    if (!tokenResult.ok) {
+      showNotice('err', 'Pas assez de jetons — paris gagnés ou bonus quotidien.')
+      return
+    }
+    navigate(finishCosmeticPurchase(item, addOwnedItem))
   }
 
   const filterHint =
@@ -132,15 +158,24 @@ export function BoutiquePage() {
             </div>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap gap-2">
             <Link
-              to="/profile"
+              to="/boutique/medailles"
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'inline-flex min-h-tf-touch items-center justify-center rounded-2xl border border-amber-300/50 bg-amber-500/25 px-5 py-3 text-sm font-black text-amber-50 shadow-md transition hover:bg-amber-500/35',
+              )}
+            >
+              Acheter des médailles
+            </Link>
+            <Link
+              to="/profile#avatar-modulaire"
               className={cn(
                 TF_FOCUS_VISIBLE,
                 'inline-flex min-h-tf-touch items-center justify-center rounded-2xl border border-white/50 bg-white px-5 py-3 text-sm font-semibold font-display text-tf-dark shadow-md transition hover:bg-sky-50',
               )}
             >
-              Mon profil
+              Studio personnage
             </Link>
           </div>
         </div>

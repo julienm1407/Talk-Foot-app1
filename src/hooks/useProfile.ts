@@ -23,6 +23,7 @@ import {
   type ModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
 import { avatarItems } from '../data/shop'
+import { sanitizeModularGarmentAccess } from '../utils/modularGarmentAccess'
 
 function catalogItemOwned(itemId: string, ownedItemIds: string[]): boolean {
   if (ownedItemIds.includes(itemId)) return true
@@ -315,12 +316,17 @@ export function useProfile() {
 
   const updateModularAvatar = useCallback(
     (updater: (prev: ModularAvatarState) => ModularAvatarState) => {
-      setProfileStore((p) => ({
-        ...p,
-        modularAvatar: sanitizeModularAvatarState(
+      setProfileStore((p) => {
+        const owned = Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []
+        const next = sanitizeModularGarmentAccess(
           updater(resolveModularAvatarState(p.modularAvatar)),
-        ),
-      }))
+          owned,
+        )
+        return {
+          ...p,
+          modularAvatar: sanitizeModularAvatarState(next),
+        }
+      })
     },
     [setProfileStore],
   )
@@ -372,7 +378,12 @@ export function useProfile() {
       characterLook: mergeCharacterLook(profile.characterLook),
       jerseyCustomizations,
       avatarLoadout: resolveAvatarLoadout(profile),
-      modularAvatar: sanitizeModularAvatarState(resolveModularAvatarState(profile.modularAvatar)),
+      modularAvatar: sanitizeModularAvatarState(
+        sanitizeModularGarmentAccess(
+          resolveModularAvatarState(profile.modularAvatar),
+          Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
+        ),
+      ),
       premiumInventory: {
         ownedItemIds: Array.from(
           new Set([

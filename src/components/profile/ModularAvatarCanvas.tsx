@@ -79,9 +79,7 @@ function resolveSelectedAssets(avatar: AvatarData) {
     beard: findAssetById(avatarAssetMap, 'beard', avatar.beard),
     jersey: findAssetById(avatarAssetMap, 'jerseys', avatar.jersey),
     shorts: findAssetById(avatarAssetMap, 'shorts', avatar.shorts),
-    socks: findAssetById(avatarAssetMap, 'socks', avatar.socks),
     shoes: findAssetById(avatarAssetMap, 'shoes', avatar.shoes),
-    accessory: findAssetById(avatarAssetMap, 'accessories', avatar.accessory),
   }
 }
 
@@ -223,9 +221,6 @@ export function ModularAvatarCanvas({
       {!isHead && selectedAssets.jersey?.src ? (
         <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} />
       ) : null}
-      {!isHead && selectedAssets.socks?.src ? (
-        <LayerImage src={selectedAssets.socks.src} alt="" filter={filterFor('socks')} />
-      ) : null}
       {!isHead && selectedAssets.shoes?.src ? (
         <LayerImage src={selectedAssets.shoes.src} alt="" filter={filterFor('shoes')} />
       ) : null}
@@ -238,9 +233,6 @@ export function ModularAvatarCanvas({
       ) : null}
       {selectedAssets.hair?.src ? (
         <LayerImage src={selectedAssets.hair.src} alt="" filter={filterFor('hair')} />
-      ) : null}
-      {!isHead && selectedAssets.accessory?.src ? (
-        <LayerImage src={selectedAssets.accessory.src} alt="" filter={filterFor('accessory')} />
       ) : null}
     </>
   )

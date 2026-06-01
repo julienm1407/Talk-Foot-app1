@@ -12,14 +12,7 @@ export type ModularColorVariantKey =
   | 'green'
   | 'white'
 
-export type ModularColorizableSlot =
-  | 'hair'
-  | 'beard'
-  | 'jersey'
-  | 'shorts'
-  | 'socks'
-  | 'shoes'
-  | 'accessory'
+export type ModularColorizableSlot = 'hair' | 'beard' | 'jersey' | 'shorts' | 'shoes'
 
 export type ModularSlotColors = Record<ModularColorizableSlot, ModularColorVariantKey>
 
@@ -33,9 +26,7 @@ export const DEFAULT_MODULAR_SLOT_COLORS: ModularSlotColors = {
   beard: 'default',
   jersey: 'default',
   shorts: 'default',
-  socks: 'default',
   shoes: 'default',
-  accessory: 'default',
 }
 
 export function createDefaultModularAvatarState(): ModularAvatarState {
@@ -102,9 +93,9 @@ export function sanitizeModularAvatarState(state: ModularAvatarState): ModularAv
       beard: pick('beard', d.beard),
       jersey: pick('jerseys', d.jersey),
       shorts: pick('shorts', d.shorts),
-      socks: pick('socks', d.socks),
+      socks: null,
       shoes: pick('shoes', d.shoes),
-      accessory: pick('accessories', d.accessory),
+      accessory: null,
     },
     slotColors: { ...DEFAULT_MODULAR_SLOT_COLORS, ...state.slotColors },
   }

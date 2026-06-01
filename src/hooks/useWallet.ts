@@ -1,19 +1,19 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
-import { useLocalStorageState } from './useLocalStorage'
-import {
-  DEFAULT_WALLET,
-  normalizeWallet,
-  isWalletStored,
-  WALLET_STORAGE_KEY,
-} from '../utils/walletNormalize'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import {
+  configureWalletStore,
+  getWalletSnapshot,
+  patchWalletStore,
+  subscribeWallet,
+} from '../store/walletStore'
+import { normalizeWallet } from '../utils/walletNormalize'
 
-const DAILY_TOKEN_BONUS_AMOUNT = 35
-const DAILY_TOKEN_BONUS_HOUR = 10
+export const DAILY_TOKEN_BONUS_AMOUNT = 35
+export const DAILY_TOKEN_BONUS_HOUR = 10
 
-type DailyTokenBonusStatus = {
+export type DailyTokenBonusStatus = {
   amount: number
   canClaim: boolean
   alreadyClaimedToday: boolean
@@ -37,30 +37,47 @@ function nextDailyBonusWindow(now = new Date()): { claimDayKey: string; nextClai
   return { claimDayKey: toLocalDayKey(nextClaimAt), nextClaimAt }
 }
 
+function buildDailyBonusStatus(wallet: Wallet): DailyTokenBonusStatus {
+  const now = new Date()
+  const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
+  const alreadyClaimedToday = wallet.lastDailyTokenGrant === claimDayKey
+  return {
+    amount: DAILY_TOKEN_BONUS_AMOUNT,
+    canClaim: now >= nextClaimAt && !alreadyClaimedToday,
+    alreadyClaimedToday,
+    nextClaimAt,
+    claimDayKey,
+  }
+}
+
 export function useWallet() {
   const cloud = useOptionalCloudUserState()
   const persistLocal = !isSupabaseConfigured()
-  const [localRaw, setLocalRaw] = useLocalStorageState<Wallet>(
-    WALLET_STORAGE_KEY,
-    DEFAULT_WALLET,
-    isWalletStored,
-    { persist: persistLocal },
+  const useCloudWallet = cloud !== undefined
+
+  useEffect(() => {
+    configureWalletStore({ persist: persistLocal })
+  }, [persistLocal])
+
+  const localWallet = useSyncExternalStore(subscribeWallet, getWalletSnapshot, getWalletSnapshot)
+
+  const wallet = useMemo(
+    () => (useCloudWallet ? normalizeWallet(cloud.app.wallet) : localWallet),
+    [useCloudWallet, cloud?.app.wallet, localWallet],
   )
-  const raw = cloud !== undefined ? cloud.app.wallet : localRaw
-  const wallet = normalizeWallet(raw)
 
   const patchWallet = useCallback(
     (fn: (w: Wallet) => Wallet) => {
-      if (cloud) {
+      if (useCloudWallet) {
         cloud.patchApp((prev) => ({
           ...prev,
-          wallet: fn(normalizeWallet(prev.wallet)),
+          wallet: normalizeWallet(fn(normalizeWallet(prev.wallet))),
         }))
       } else {
-        setLocalRaw((prev) => fn(normalizeWallet(prev)))
+        patchWalletStore(fn)
       }
     },
-    [cloud, setLocalRaw],
+    [useCloudWallet, cloud],
   )
 
   const addTokens = useCallback(
@@ -91,32 +108,31 @@ export function useWallet() {
   )
 
   const spendMedals = useCallback(
-    (amount: number): { ok: boolean } => {
+    (amount: number): { ok: boolean; insufficient: boolean } => {
       let ok = false
+      let insufficient = false
       patchWallet((w) => {
-        if (w.medals < amount) return w
+        if (w.medals < amount) {
+          insufficient = true
+          return w
+        }
         ok = true
         return { ...w, medals: w.medals - amount }
       })
-      return { ok }
+      return { ok, insufficient }
     },
     [patchWallet],
   )
 
-  const dailyTokenBonusStatus = useCallback((): DailyTokenBonusStatus => {
-    const now = new Date()
-    const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
-    const alreadyClaimedToday = wallet.lastDailyTokenGrant === claimDayKey
-    return {
-      amount: DAILY_TOKEN_BONUS_AMOUNT,
-      canClaim: now >= nextClaimAt && !alreadyClaimedToday,
-      alreadyClaimedToday,
-      nextClaimAt,
-      claimDayKey,
-    }
-  }, [wallet.lastDailyTokenGrant])
+  const dailyBonus = useMemo(() => buildDailyBonusStatus(wallet), [wallet])
 
-  const claimDailyTokenBonus = useCallback((): { ok: boolean; amount?: number; reason?: string } => {
+  const dailyTokenBonusStatus = useCallback(() => dailyBonus, [dailyBonus])
+
+  const claimDailyTokenBonus = useCallback((): {
+    ok: boolean
+    amount?: number
+    reason?: string
+  } => {
     const now = new Date()
     const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
     let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
@@ -130,13 +146,19 @@ export function useWallet() {
         return w
       }
       out = { ok: true, amount: DAILY_TOKEN_BONUS_AMOUNT }
-      return { ...w, tokens: w.tokens + DAILY_TOKEN_BONUS_AMOUNT, lastDailyTokenGrant: claimDayKey }
+      return {
+        ...w,
+        tokens: w.tokens + DAILY_TOKEN_BONUS_AMOUNT,
+        lastDailyTokenGrant: claimDayKey,
+      }
     })
+    if (out.ok) void cloud?.flushAppSave?.()
     return out
-  }, [patchWallet])
+  }, [patchWallet, cloud])
 
   return {
     wallet,
+    dailyBonus,
     patchWallet,
     addTokens,
     spendTokens,
