@@ -131,6 +131,9 @@ export function HomeMonEspacePanel({
           <ProfileCharacterThumb
             profile={profile}
             size="sm"
+            framingMode="topbar"
+            headOffsetPx={-4}
+            headScale={1.55}
             className={cn(
               '!shrink-0 !rounded-full !border-0 p-0 ring-2 ring-white/25',
               slim ? '!h-9 !w-9 !min-h-9 !min-w-9' : '!h-10 !w-10 !min-h-10 !min-w-10',
