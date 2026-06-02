@@ -148,7 +148,7 @@ export function EditGroupModal({
           </div>
 
           <div className="mt-4">
-            <div className="text-sm font-black text-slate-900">Ambiance (démo)</div>
+            <div className="text-sm font-black text-slate-900">Ambiance</div>
             <label className="mt-2 flex items-center gap-3 text-xs font-bold text-slate-700/70">
               Intensité
               <input

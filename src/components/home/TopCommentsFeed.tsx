@@ -31,7 +31,9 @@ export function TopCommentsFeed({
       if (c.userId === currentUser.id) return true
       const u = usersById[c.userId]
       const fid = u?.fanClubId
-      return Boolean(fid && favoriteClubIds.includes(fid))
+      // Les auteurs cloud n'existent pas dans le pool local -> on garde le commentaire.
+      if (!fid) return true
+      return favoriteClubIds.includes(fid)
     })
   }, [topComments, virageMode, favoriteClubIds])
 

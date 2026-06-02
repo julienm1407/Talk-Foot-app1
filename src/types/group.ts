@@ -75,6 +75,7 @@ export type SupporterGroup = {
   fanTags?: GroupFanTags
   onlineNow?: number
   messagesToday?: number
+  reactionsToday?: number
   /** Avatars réels des supporters actifs (RPC get_group_active_presence). */
   activePresence?: GroupActivePresence[]
   /** public = ouvert, private = sur invitation, club = rattaché tribune */

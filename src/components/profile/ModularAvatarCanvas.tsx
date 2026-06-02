@@ -22,10 +22,9 @@ export const MODULAR_COLOR_VARIANTS: Record<ModularColorVariantKey, { label: str
   white: { label: 'Blanc', filter: 'grayscale(1) brightness(1.35) contrast(0.92)' },
 }
 
-/** Recadrage tête sur canvas 1024 (visage + cheveux, sans tenue). */
-const HEAD_CLIP_BOTTOM_PCT = 58
-const HEAD_ZOOM = 2.35
-const HEAD_TRANSFORM_ORIGIN = '50% 20%'
+/** Cadrage tête robuste (sans clipPath, pour éviter les rendus noirs). */
+const HEAD_ZOOM = 2.5
+const HEAD_TRANSFORM_ORIGIN = '50% 2%'
 
 function LayerImage({
   src,
@@ -238,7 +237,11 @@ export function ModularAvatarCanvas({
   )
 
   if (isHead && fitSize) {
-    const baseScale = (fitSize / canvasSize.width) * HEAD_ZOOM
+    const tinyThumb = fitSize < 40
+    const headZoom = tinyThumb ? 1.74 : HEAD_ZOOM
+    const transformOrigin = HEAD_TRANSFORM_ORIGIN
+    const baseScale = (fitSize / canvasSize.width) * headZoom
+    const topOffset = tinyThumb ? -9 : -12
     return (
       <div
         className={cn('relative overflow-hidden', className)}
@@ -250,19 +253,12 @@ export function ModularAvatarCanvas({
             width: canvasSize.width,
             height: canvasSize.height,
             marginLeft: -canvasSize.width / 2,
+            marginTop: topOffset,
             transform: `scale(${baseScale})`,
-            transformOrigin: HEAD_TRANSFORM_ORIGIN,
+            transformOrigin,
           }}
         >
-          <div
-            className="relative overflow-hidden"
-            style={{
-              width: canvasSize.width,
-              height: canvasSize.height,
-              clipPath: `inset(0 0 ${HEAD_CLIP_BOTTOM_PCT}% 0)`,
-              WebkitClipPath: `inset(0 0 ${HEAD_CLIP_BOTTOM_PCT}% 0)`,
-            }}
-          >
+          <div className="relative overflow-hidden" style={{ width: canvasSize.width, height: canvasSize.height }}>
             {layers}
           </div>
         </div>

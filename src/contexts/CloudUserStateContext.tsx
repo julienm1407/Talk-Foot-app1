@@ -142,12 +142,13 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         const { data: authPayload } = await sb.auth.getUser()
         const prov = authPayload.user?.app_metadata?.provider
         const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
+        const seededApp = defaultUserAppState()
         const insertPayload = isUuid(user.id)
           ? {
               id: user.id,
               display_name: user.email?.split('@')[0] ?? 'Supporter',
               onboarding_complete: false,
-              app_state: {},
+              app_state: seededApp,
               oauth_profile_completed: !oauthIncomplete,
               clerk_id: user.id,
             }
@@ -155,7 +156,7 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
               clerk_id: user.id,
               display_name: user.email?.split('@')[0] ?? 'Supporter',
               onboarding_complete: false,
-              app_state: {},
+              app_state: seededApp,
               oauth_profile_completed: !oauthIncomplete,
             }
         const { error: insErr } = await sb.from('profiles').insert(insertPayload)
@@ -172,16 +173,32 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
             setOauthNeedsProfile(false)
           }
         } else {
-          setApp(defaultUserAppState())
+          setApp(seededApp)
           setOnboardingCompleteCol(false)
           setOauthNeedsProfile(oauthIncomplete)
         }
         setReady(true)
         return
       }
-      setApp(mergeUserAppState(data.app_state))
+      const mergedApp = mergeUserAppState(data.app_state)
+      setApp(mergedApp)
       setOnboardingCompleteCol(Boolean(data.onboarding_complete))
       setOauthNeedsProfile(data.oauth_profile_completed === false)
+      // Auto-répare les anciens profils cloud incomplets pour garantir un avatar exploitable.
+      try {
+        const rawJson = JSON.stringify(data.app_state ?? {})
+        const mergedJson = JSON.stringify(mergedApp)
+        if (rawJson !== mergedJson) {
+          void profileEq(
+            sb.from('profiles').update({
+              app_state: mergedApp,
+            }),
+            user.id,
+          )
+        }
+      } catch {
+        // no-op: la session continue même si la normalisation échoue.
+      }
       setReady(true)
     })()
     return () => {

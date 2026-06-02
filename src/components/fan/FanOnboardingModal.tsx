@@ -271,16 +271,13 @@ export function FanOnboardingModal() {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-5 py-4">
-          {preferencesComplete ? (
-            <Button variant="ghost" className="rounded-2xl" onClick={closeOnboarding}>
-              Annuler
-            </Button>
-          ) : (
-            <span className="text-xs font-semibold text-slate-600">
-              Étape {step}/2 — ligue obligatoire, clubs libres
-            </span>
-          )}
+          <span className="text-xs font-semibold text-slate-600">
+            Étape {step}/2 — ligue obligatoire, clubs libres
+          </span>
           <div className="flex gap-2">
+            <Button variant="ghost" className="rounded-2xl" onClick={closeOnboarding}>
+              {preferencesComplete ? 'Annuler' : 'Plus tard'}
+            </Button>
             {step === 2 ? (
               <Button variant="soft" className="rounded-2xl" onClick={() => setStep(1)}>
                 Retour

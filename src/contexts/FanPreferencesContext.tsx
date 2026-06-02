@@ -224,8 +224,8 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
 
   const openOnboarding = useCallback(() => setOnboardingOpen(true), [])
   const closeOnboarding = useCallback(() => {
-    if (state.preferencesComplete) setOnboardingOpen(false)
-  }, [state.preferencesComplete])
+    setOnboardingOpen(false)
+  }, [])
 
   const value = useMemo(
     () => ({

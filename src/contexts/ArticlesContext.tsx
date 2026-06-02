@@ -57,6 +57,17 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(id)
   }, [refresh])
 
+  useEffect(() => {
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    const { data } = sb.auth.onAuthStateChange(() => {
+      void refresh()
+    })
+    return () => {
+      data.subscription.unsubscribe()
+    }
+  }, [refresh])
+
   const value = useMemo(
     () => ({ articles, loading, error, refresh }),
     [articles, loading, error, refresh],

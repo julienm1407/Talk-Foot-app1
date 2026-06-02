@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { UserProfile } from '../../types/profile'
 import { cn } from '../../utils/cn'
 import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
@@ -13,20 +14,52 @@ const PRESETS = {
 export function ProfileCharacterThumb({
   profile,
   size = 'md',
+  framingMode = 'auto',
+  headOffsetPx = 0,
+  headScale = 1,
   className,
   'aria-label': ariaLabel,
 }: {
   profile: UserProfile
   size?: keyof typeof PRESETS
+  framingMode?: 'auto' | 'topbar'
+  headOffsetPx?: number
+  headScale?: number
   peerFanClubId?: string | null
   className?: string
   'aria-label'?: string
 }) {
   const thumbPx = PRESETS[size]
   const modularState = resolveModularAvatarState(profile.modularAvatar)
+  const shellRef = useRef<HTMLDivElement>(null)
+  const [renderState, setRenderState] = useState({ shellSize: thumbPx, renderSize: thumbPx })
+
+  useEffect(() => {
+    const el = shellRef.current
+    if (!el) return
+    const update = () => {
+      const measured = Math.round(Math.min(el.clientWidth, el.clientHeight))
+      const shellSize = Math.max(16, measured || thumbPx)
+      const renderSize =
+        framingMode === 'topbar'
+          ? 40 // Base stable topbar framing.
+          : measured < 32
+            ? thumbPx
+            : shellSize
+      setRenderState({ shellSize, renderSize })
+    }
+    update()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [thumbPx, framingMode])
+
+  const scale = framingMode === 'topbar' ? renderState.shellSize / renderState.renderSize : 1
 
   return (
     <div
+      ref={shellRef}
       className={cn(
         'relative shrink-0 overflow-hidden rounded-full border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
         className,
@@ -36,7 +69,14 @@ export function ProfileCharacterThumb({
       aria-label={ariaLabel ?? 'Photo de profil — tête de mon avatar modulaire'}
     >
       <div className="absolute inset-0 flex items-center justify-center">
-        <ModularAvatarHeadThumb state={modularState} size={thumbPx} />
+        <div
+          style={{
+            transform: `translateY(${headOffsetPx}px) scale(${scale * headScale})`,
+            transformOrigin: 'center center',
+          }}
+        >
+          <ModularAvatarHeadThumb state={modularState} size={renderState.renderSize} />
+        </div>
       </div>
     </div>
   )

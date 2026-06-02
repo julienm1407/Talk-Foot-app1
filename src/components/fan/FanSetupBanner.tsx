@@ -1,12 +1,14 @@
 import { useLocation } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { Button } from '../ui/Button'
 
 /** Accueil uniquement : rappel si tu as quitté avant de finir (pas sur toutes les pages) */
 export function FanSetupBanner() {
   const { pathname } = useLocation()
+  const { user } = useAuth()
   const { preferencesComplete, onboardingOpen, openOnboarding } = useFanPreferences()
-  if (pathname !== '/' || preferencesComplete || onboardingOpen) return null
+  if (pathname !== '/' || preferencesComplete || onboardingOpen || user) return null
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-3 pt-3 sm:px-5">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
+import { useAuth } from '../contexts/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
   configureWalletStore,
@@ -12,6 +13,9 @@ import { normalizeWallet } from '../utils/walletNormalize'
 
 export const DAILY_TOKEN_BONUS_AMOUNT = 35
 export const DAILY_TOKEN_BONUS_HOUR = 10
+const DEV_ADMIN_DISPLAY_NAME = 'Dev TalkFoot 1'
+const DEV_ADMIN_TEST_MEDALS = 3000
+const DEV_ADMIN_EMAIL = 'mondetju1407@gmail.com'
 
 export type DailyTokenBonusStatus = {
   amount: number
@@ -51,6 +55,7 @@ function buildDailyBonusStatus(wallet: Wallet): DailyTokenBonusStatus {
 }
 
 export function useWallet() {
+  const { user } = useAuth()
   const cloud = useOptionalCloudUserState()
   const persistLocal = !isSupabaseConfigured()
   const useCloudWallet = cloud !== undefined
@@ -79,6 +84,18 @@ export function useWallet() {
     },
     [useCloudWallet, cloud],
   )
+
+  useEffect(() => {
+    if (!user?.id) return
+    const isDevAdmin =
+      user.displayName === DEV_ADMIN_DISPLAY_NAME ||
+      user.email?.toLowerCase() === DEV_ADMIN_EMAIL
+    if (!isDevAdmin) return
+    if (wallet.medals >= DEV_ADMIN_TEST_MEDALS) return
+
+    patchWallet((w) => ({ ...w, medals: DEV_ADMIN_TEST_MEDALS }))
+    void cloud?.flushAppSave?.()
+  }, [user?.id, user?.displayName, user?.email, wallet.medals, patchWallet, cloud])
 
   const addTokens = useCallback(
     (amount: number) => {

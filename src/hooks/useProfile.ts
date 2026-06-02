@@ -367,6 +367,8 @@ export function useProfile() {
         : {}
     return {
       ...profile,
+      // La photo perso est désactivée: l'identité visuelle provient du personnage Talk Foot.
+      profilePhotoDataUrl: undefined,
       level: computedLevel,
       ownedItemIds: Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
       equippedItems: (() => {

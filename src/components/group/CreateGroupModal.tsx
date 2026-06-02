@@ -36,7 +36,6 @@ export function CreateGroupModal({
   const [primary, setPrimary] = useState('#0b1b3a')
   const [secondary, setSecondary] = useState('#0ea5e9')
   const [accent, setAccent] = useState('')
-  const [intensity, setIntensity] = useState(72)
   const [background, setBackground] = useState<'clean' | 'smoke' | 'stripe'>(
     'smoke',
   )
@@ -57,7 +56,6 @@ export function CreateGroupModal({
     setPrimary('#0b1b3a')
     setSecondary('#0ea5e9')
     setAccent('')
-    setIntensity(72)
     setBackground('smoke')
     setNameError(null)
     setGroupKind('public')
@@ -143,7 +141,7 @@ export function CreateGroupModal({
       motto: motto.trim() || 'On vit le foot ensemble.',
       theme: draftTheme,
       members: 1,
-      intensity,
+      intensity: 12,
       groupKind,
       hashtags: previewHashtags.length ? previewHashtags : undefined,
       fanTags:
@@ -184,7 +182,6 @@ export function CreateGroupModal({
     draftTheme,
     emoji,
     groupKind,
-    intensity,
     location,
     motto,
     name,
@@ -452,19 +449,11 @@ export function CreateGroupModal({
             </div>
 
             <div className="mt-4">
-              <div className="text-sm font-black text-slate-900">Ambiance (démo)</div>
-              <label className="mt-2 flex flex-col gap-2 text-xs font-bold text-slate-700/70 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                <span className="shrink-0">Intensité de la tribune</span>
-                <input
-                  type="range"
-                  min={15}
-                  max={98}
-                  value={intensity}
-                  onChange={(e) => setIntensity(Number(e.target.value))}
-                  className="h-2 w-full min-w-0 sm:min-w-[140px] sm:flex-1"
-                />
-                <span className="shrink-0 tabular-nums text-slate-900">{intensity}%</span>
-              </label>
+              <div className="text-sm font-black text-slate-900">Ambiance</div>
+              <p className="mt-2 text-xs font-bold text-slate-700/70">
+                L’intensité de la tribune est calculée automatiquement selon l’activité réelle du
+                groupe (messages + réactions).
+              </p>
             </div>
 
             <div className="mt-4">
@@ -628,7 +617,7 @@ export function CreateGroupModal({
                     motto: (motto.trim() || 'On vit le foot ensemble.').slice(0, 200),
                     theme,
                     members: Math.max(1, draft.members),
-                    intensity,
+                    intensity: 12,
                     channels: draft.channels,
                     groupKind,
                     hashtags: finalTags.length > 0 ? finalTags : undefined,

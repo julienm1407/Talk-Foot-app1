@@ -536,9 +536,9 @@ export function AvatarModularStudio() {
       <div className="flex flex-col lg:grid lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] lg:gap-0">
         <section
           className={cn(
-            'relative z-20 flex shrink-0 items-end justify-center border-b border-white/10',
+            'relative z-0 flex shrink-0 items-end justify-center border-b border-white/10',
             'bg-[radial-gradient(circle_at_50%_18%,rgba(56,189,248,0.28),transparent_55%)]',
-            'sticky top-0 px-3 py-3',
+            'px-3 py-3',
             'min-h-[min(38dvh,240px)] max-h-[min(44dvh,280px)]',
             'sm:static sm:min-h-[320px] sm:max-h-none sm:px-4 sm:py-4',
             'lg:sticky lg:top-20 lg:z-[1] lg:max-h-[min(560px,calc(100dvh-6rem))] lg:min-h-[480px] lg:self-start lg:border-b-0 lg:border-r lg:px-6 lg:py-6',

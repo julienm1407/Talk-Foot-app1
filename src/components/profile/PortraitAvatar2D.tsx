@@ -255,7 +255,6 @@ export function PortraitAvatar2D({
 }) {
   const { appearance } = useAppearance()
   const light = appearance === 'light'
-  const hasRealPhoto = Boolean(profile.profilePhotoDataUrl)
   const loadout = resolveAvatarLoadout(profile)
   const look = useMemo(() => {
     const merged = mergeCharacterLook(profile.characterLook)
@@ -312,25 +311,7 @@ export function PortraitAvatar2D({
           )}
         />
 
-        {hasRealPhoto && profile.profilePhotoDataUrl ? (
-          <div className="absolute inset-0 z-[2] flex items-center justify-center p-4 pb-6 pt-10">
-            <div
-              className={cn(
-                'relative h-[min(68vw,280px)] w-[min(68vw,280px)] max-h-[280px] max-w-[280px] overflow-hidden rounded-full border-4 shadow-xl',
-                light ? 'border-white shadow-slate-400/30' : 'border-white/15 shadow-black/50',
-              )}
-            >
-              <img
-                src={profile.profilePhotoDataUrl}
-                alt=""
-                className="h-full w-full object-cover object-[50%_20%]"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="absolute inset-0 z-[2] flex items-end justify-center overflow-hidden pb-1 pt-14 sm:pb-2 sm:pt-16">
+        <div className="absolute inset-0 z-[2] flex items-end justify-center overflow-hidden pb-1 pt-14 sm:pb-2 sm:pt-16">
             <div
               className="relative flex h-[118%] w-[122%] max-w-none origin-bottom scale-[1.14] items-end justify-center sm:scale-[1.18]"
               style={{ transformOrigin: '50% 100%' }}
@@ -395,8 +376,7 @@ export function PortraitAvatar2D({
                 </>
               ) : null}
             </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )

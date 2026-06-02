@@ -1,7 +1,9 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useLocalStorageState } from './useLocalStorage'
 import type { Message, User } from '../types/chat'
 import type { Match } from '../types/match'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
 const LIKES_KEY = 'talkfoot.messageLikes.v1'
 const TOP_COMMENTS_KEY = 'talkfoot.topComments.v1'
@@ -19,41 +21,60 @@ export type TopComment = {
   createdAt: number
 }
 
-const defaultLikes: Record<string, LikeRecord> = {
-  'msg-2': {
-    count: 12,
-    userIds: ['u-1', 'u-2', 'u-3', 'u-4', 'u-5', 'a', 'b', 'c', 'd', 'e', 'f', 'g'],
-  },
-  'msg-d3': {
-    count: 8,
-    userIds: ['u-1', 'u-2', 'u-3', 'u-4', 'a', 'b', 'c', 'd'],
-  },
-}
-const defaultTop: TopComment[] = [
-  {
-    id: 'msg-2',
-    matchId: 'm-rma-fcb',
-    matchLabel: 'RMA - FCB',
-    userId: 'u-1',
-    username: 'UltraNuit',
-    text: 'Le stade est en feu, on entend tout même à la TV.',
-    likes: 12,
-    createdAt: Date.now() - 180_000,
-  },
-  {
-    id: 'msg-d3',
-    matchId: 'm-demo-live',
-    matchLabel: 'PSG - OM',
-    userId: 'u-4',
-    username: 'RagePress',
-    text: 'Quel but de #9 à la 23e, quelle frappe.',
-    likes: 8,
-    createdAt: Date.now() - 120_000,
-  },
-]
+const defaultLikes: Record<string, LikeRecord> = {}
+const defaultTop: TopComment[] = []
+const LEGACY_FAKE_COMMENT_IDS = new Set(['msg-2', 'msg-d3'])
 
 const isLikeRecordMap = (p: unknown) =>
   p !== null && typeof p === 'object' && !Array.isArray(p)
+
+type LiveLikeRow = {
+  message_id: string
+  user_id: string
+  live_match_messages: {
+    id: string
+    match_id: string
+    display_name: string
+    body: string
+    created_at: string
+  }[]
+}
+
+function toCloudTopComments(rows: LiveLikeRow[]): TopComment[] {
+  const byMessage = new Map<
+    string,
+    {
+      users: Set<string>
+      row: LiveLikeRow['live_match_messages'][number]
+    }
+  >()
+  for (const row of rows) {
+    const msg = row.live_match_messages?.[0]
+    if (!msg) continue
+    const existing = byMessage.get(row.message_id)
+    if (existing) {
+      existing.users.add(row.user_id)
+      continue
+    }
+    byMessage.set(row.message_id, {
+      users: new Set([row.user_id]),
+      row: msg,
+    })
+  }
+  return [...byMessage.entries()]
+    .map(([messageId, data]) => ({
+      id: messageId,
+      matchId: data.row.match_id,
+      matchLabel: 'Match',
+      userId: 'supabase-user',
+      username: data.row.display_name?.trim() || 'Supporteur',
+      text: data.row.body,
+      likes: data.users.size,
+      createdAt: new Date(data.row.created_at).getTime() || Date.now(),
+    }))
+    .sort((a, b) => (b.likes !== a.likes ? b.likes - a.likes : b.createdAt - a.createdAt))
+    .slice(0, 50)
+}
 
 export function useMessageLikes() {
   const [likesByMsg, setLikesByMsg] = useLocalStorageState<Record<string, LikeRecord>>(
@@ -66,6 +87,57 @@ export function useMessageLikes() {
     defaultTop,
     Array.isArray,
   )
+
+  // Nettoie les anciens commentaires "seed" pour n'afficher que du vrai contenu.
+  useEffect(() => {
+    setTopComments((prev) => prev.filter((c) => !LEGACY_FAKE_COMMENT_IDS.has(c.id)))
+    setLikesByMsg((prev) => {
+      const next = { ...prev }
+      LEGACY_FAKE_COMMENT_IDS.forEach((id) => {
+        delete next[id]
+      })
+      return next
+    })
+  }, [setTopComments, setLikesByMsg])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    let cancelled = false
+
+    const refreshCloudTop = async () => {
+      const { data, error } = await sb
+        .from('live_match_message_likes')
+        .select(
+          'message_id, user_id, live_match_messages!inner(id, match_id, display_name, body, created_at)',
+        )
+        .order('created_at', { foreignTable: 'live_match_messages', ascending: false })
+        .limit(4000)
+      if (cancelled || error || !data) return
+      const fromCloud = toCloudTopComments(data as LiveLikeRow[])
+      if (fromCloud.length > 0) {
+        setTopComments(fromCloud)
+      }
+    }
+
+    void refreshCloudTop()
+    const channel = sb
+      .channel('home-top-comments')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'live_match_message_likes' },
+        () => {
+          void refreshCloudTop()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      void sb.removeChannel(channel)
+    }
+  }, [setTopComments])
 
   const getLikes = useCallback(
     (messageId: string) => likesByMsg[messageId]?.count ?? 0,

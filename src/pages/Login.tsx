@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { isClerkAuthConfigured, useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -46,6 +46,7 @@ function oauthButtonShell(variant: (typeof TALKFOOT_OAUTH_PROVIDERS)[number]['va
 }
 
 export function LoginPage() {
+  const navigate = useNavigate()
   const clerkEnabled = isClerkAuthConfigured()
   const [searchParams] = useSearchParams()
   const nextPath = safeInternalNext(searchParams.get('next'))
@@ -70,6 +71,7 @@ export function LoginPage() {
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<null | TalkFootOauthProviderId>(null)
+  const backLabel = nextPath ? 'Retour' : 'Retour à l’accueil'
 
   if (!isReady) {
     return (
@@ -153,6 +155,22 @@ export function LoginPage() {
         <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
       </div>
       <div className="relative w-full max-w-sm">
+        <button
+          type="button"
+          onClick={() => {
+            if (window.history.length > 1) navigate(-1)
+            else navigate(nextPath ?? '/')
+          }}
+          className={cn(
+            'mb-3 inline-flex min-h-10 items-center gap-1 rounded-xl border px-3 py-2 text-xs font-black transition sm:text-sm',
+            isLight
+              ? 'border-slate-300/70 bg-white/80 text-slate-800 hover:border-slate-400 hover:bg-white'
+              : 'border-white/20 bg-white/[0.08] text-slate-100 hover:bg-white/[0.14]',
+          )}
+          aria-label="Retour à la page précédente"
+        >
+          ← {backLabel}
+        </button>
         <div className="mb-8 flex flex-col items-center text-center">
           <LogoMark variant="hero" className="max-w-[220px]" decorative={false} />
           <h1 className="sr-only">Talk Foot</h1>

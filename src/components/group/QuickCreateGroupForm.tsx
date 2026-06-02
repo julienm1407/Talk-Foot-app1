@@ -118,7 +118,7 @@ export function QuickCreateGroupForm({
       motto: 'On vit le foot ensemble.',
       theme: { primary, secondary, background },
       members: Math.round(12 + Math.random() * 40),
-      intensity: Math.round(50 + Math.random() * 40),
+      intensity: 12,
       channels: DEFAULT_CHANNELS,
       groupKind: 'public',
       hashtags: finalTags,

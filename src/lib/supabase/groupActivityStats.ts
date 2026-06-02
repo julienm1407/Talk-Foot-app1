@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type GroupActivityStats = {
   messagesToday: number
+  reactionsToday: number
   onlineNow: number
 }
 
@@ -24,6 +25,8 @@ export async function fetchGroupActivityStats(
     if (typeof gid !== 'string' || !gid) continue
     out.set(gid, {
       messagesToday: Number(row.messages_today) || 0,
+      reactionsToday:
+        Number(row.reactions_today ?? row.reactions_count ?? row.emoji_reactions_today) || 0,
       onlineNow: Number(row.online_now) || 0,
     })
   }

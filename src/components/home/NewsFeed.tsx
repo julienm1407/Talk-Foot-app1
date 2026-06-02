@@ -3,6 +3,7 @@ import type { NewsItem } from '../../data/news'
 import { footballImageUrl, newsItemHasArticlePage } from '../../data/news'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
+import { useAppearance } from '../../contexts/AppearanceContext'
 
 const tagStyles: Record<NewsItem['tag'], string> = {
   Breaking: 'bg-rose-50 text-rose-700 ring-rose-200',
@@ -25,6 +26,8 @@ export function NewsFeed({
   loading?: boolean
   embedded?: boolean
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   const focus = supporterClubShort?.trim()
   const resolveFeedImage = (item: NewsItem) => {
     const customCover = item.coverImageUrl?.trim()
@@ -83,15 +86,32 @@ export function NewsFeed({
                     il y a {n.minutesAgo} min
                   </span>
                 </div>
-                <h3 className="mt-1.5 text-sm font-black tracking-tight text-slate-900 sm:text-base dark:text-slate-100">
+                <h3
+                  className={cn(
+                    'mt-1.5 text-sm font-black tracking-tight sm:text-base',
+                    L ? 'text-slate-950' : 'text-slate-100',
+                  )}
+                >
                   {n.title}
                 </h3>
-                <p className="mt-1 line-clamp-2 text-xs font-semibold text-slate-600 sm:text-sm dark:text-slate-300">
+                <p
+                  className={cn(
+                    'mt-1 line-clamp-2 text-xs font-semibold sm:text-sm',
+                    L ? 'text-slate-700' : 'text-slate-300',
+                  )}
+                >
                   {n.excerpt}
                 </p>
               </div>
               <div>
-                <span className="inline-flex rounded-xl border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs font-black text-slate-900 transition group-hover:border-slate-300 group-hover:bg-white sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm dark:border-white/20 dark:bg-white/[0.08] dark:text-slate-100 dark:group-hover:bg-white/[0.12]">
+                <span
+                  className={cn(
+                    'inline-flex rounded-xl border px-2.5 py-1.5 text-xs font-black transition sm:rounded-2xl sm:px-3 sm:py-2 sm:text-sm',
+                    L
+                      ? 'border-slate-300 bg-white text-slate-900 group-hover:border-slate-400'
+                      : 'border-white/20 bg-white/[0.08] text-slate-100 dark:group-hover:bg-white/[0.12]',
+                  )}
+                >
                   {newsItemHasArticlePage(n) ? 'Lire l’article →' : 'Lire →'}
                 </span>
               </div>

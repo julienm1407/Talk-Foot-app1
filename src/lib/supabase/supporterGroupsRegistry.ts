@@ -54,7 +54,7 @@ function rowToGroup(
     location: row.location ?? undefined,
     theme: row.theme ?? { primary: '#0ea5e9', secondary: '#0369a1', background: 'clean' },
     members: Math.max(1, memberCount ?? 1),
-    intensity: Math.min(100, Math.max(20, (memberCount ?? 1) * 4)),
+    intensity: 12,
     channels,
     createdBy: isMine ? 'me' : 'system',
     createdAt: row.created_at,

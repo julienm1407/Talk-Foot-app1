@@ -16,6 +16,7 @@ import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import type { GroupActivePresence, SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
+import { computeGroupIntensity } from '../utils/groupIntensity'
 
 function joinedKeyForUser(userId: string) {
   return `talkfoot.joinedGroupIds.v1.${userId}`
@@ -57,7 +58,7 @@ export function useSupporterGroups() {
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>([])
   const [cloudGroups, setCloudGroups] = useState<SupporterGroup[]>([])
   const [activityByGroupId, setActivityByGroupId] = useState<
-    Map<string, { messagesToday: number; onlineNow: number }>
+    Map<string, { messagesToday: number; reactionsToday: number; onlineNow: number }>
   >(() => new Map())
   const [memberCountsByGroupId, setMemberCountsByGroupId] = useState<Map<string, number>>(
     () => new Map(),
@@ -97,7 +98,7 @@ export function useSupporterGroups() {
     for (const g of starterGroups) byId.set(g.id, enrichChannels(g))
     for (const g of cloudGroups) byId.set(g.id, enrichChannels(g))
     for (const g of custom) byId.set(g.id, enrichChannels(g))
-    return Array.from(byId.values()).sort((a, b) => b.intensity - a.intensity)
+    return Array.from(byId.values())
   }, [custom, cloudGroups, enrichChannels])
 
   const refreshGroupActivity = useCallback(async (groupIds: string[]) => {
@@ -185,16 +186,27 @@ export function useSupporterGroups() {
   )
 
   const groups = useMemo(() => {
-    return rawGroups.map((g) => {
-      const activity = activityByGroupId.get(g.id)
-      return {
-        ...g,
-        members: resolveMemberCount(g),
-        onlineNow: activity?.onlineNow ?? 0,
-        messagesToday: activity?.messagesToday ?? 0,
-        activePresence: presenceByGroupId.get(g.id) ?? [],
-      }
-    })
+    return rawGroups
+      .map((g) => {
+        const activity = activityByGroupId.get(g.id)
+        const messagesToday = activity?.messagesToday ?? 0
+        const reactionsToday = activity?.reactionsToday ?? 0
+        const onlineNow = activity?.onlineNow ?? 0
+        return {
+          ...g,
+          members: resolveMemberCount(g),
+          onlineNow,
+          messagesToday,
+          reactionsToday,
+          intensity: computeGroupIntensity({
+            messagesToday,
+            reactionsToday,
+            onlineNow,
+          }),
+          activePresence: presenceByGroupId.get(g.id) ?? [],
+        }
+      })
+      .sort((a, b) => b.intensity - a.intensity)
   }, [rawGroups, activityByGroupId, presenceByGroupId, resolveMemberCount])
 
   const persistJoined = useCallback(
@@ -361,6 +373,8 @@ export function useSupporterGroups() {
         createdAt: new Date().toISOString(),
         onlineNow: 0,
         messagesToday: 0,
+        reactionsToday: 0,
+        intensity: computeGroupIntensity({ messagesToday: 0, reactionsToday: 0, onlineNow: 0 }),
         groupKind: g.groupKind ?? 'public',
         lastMessagePreview: g.lastMessagePreview ?? 'Nouveau groupe — dis bonjour !',
         hashtags: hashtags?.length ? hashtags : undefined,
