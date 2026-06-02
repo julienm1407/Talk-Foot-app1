@@ -32,7 +32,10 @@ export function ProfileCharacterThumb({
   const thumbPx = PRESETS[size]
   const modularState = resolveModularAvatarState(profile.modularAvatar)
   const shellRef = useRef<HTMLDivElement>(null)
-  const [renderState, setRenderState] = useState({ shellSize: thumbPx, renderSize: thumbPx })
+  const [renderState, setRenderState] = useState<{ shellSize: number; renderSize: number }>({
+    shellSize: thumbPx,
+    renderSize: thumbPx,
+  })
 
   useEffect(() => {
     const el = shellRef.current
