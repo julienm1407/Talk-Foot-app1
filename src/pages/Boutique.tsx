@@ -17,6 +17,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
+import { BoutiquePurchaseConfirm } from '../components/shop/BoutiquePurchaseConfirm'
 import { catalogTabForShopItem } from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
@@ -47,6 +48,11 @@ export function BoutiquePage() {
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('name_asc')
   const [catalogSearch, setCatalogSearch] = useState('')
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+  const [pendingPurchase, setPendingPurchase] = useState<{
+    item: AvatarItemType
+    currency: 'medals' | 'tokens'
+  } | null>(null)
+  const [confirmingPurchase, setConfirmingPurchase] = useState(false)
 
   const shop = getAppSectionTheme('boutique')
 
@@ -76,15 +82,30 @@ export function BoutiquePage() {
   }
 
   const handleBuyCosmetic = (item: AvatarItemType, currency: 'medals' | 'tokens') => {
-    const result = purchaseCosmetic(
+    setPendingPurchase({ item, currency })
+  }
+
+  const handleCancelPurchase = () => {
+    if (confirmingPurchase) return
+    setPendingPurchase(null)
+  }
+
+  const handleConfirmPurchase = async () => {
+    if (!pendingPurchase || confirmingPurchase) return
+    const { item, currency } = pendingPurchase
+    setConfirmingPurchase(true)
+    const result = await purchaseCosmetic(
       item,
       currency,
       `/boutique?tab=${catalogTabForShopItem(item)}`,
     )
+    setConfirmingPurchase(false)
     if (result.ok) {
+      setPendingPurchase(null)
       navigate(result.href)
       return
     }
+    setPendingPurchase(null)
     if (result.code === 'partial_pack') {
       showNotice(
         'err',
@@ -102,6 +123,10 @@ export function BoutiquePage() {
     }
     if (result.code === 'payment_failed') {
       showNotice('err', 'Paiement impossible — réessaie dans un instant.')
+      return
+    }
+    if (result.code === 'save_failed') {
+      showNotice('err', 'Sauvegarde impossible — vérifie ta connexion et réessaie.')
     }
   }
 
@@ -116,6 +141,26 @@ export function BoutiquePage() {
 
   return (
     <div className="space-y-6">
+      {pendingPurchase ? (
+        <BoutiquePurchaseConfirm
+          item={pendingPurchase.item}
+          currency={pendingPurchase.currency}
+          walletMedals={wallet.medals}
+          walletTokens={wallet.tokens}
+          confirming={confirmingPurchase}
+          onConfirm={() => void handleConfirmPurchase()}
+          onCancel={handleCancelPurchase}
+          onNeedMedals={
+            pendingPurchase.currency === 'medals'
+              ? () => {
+                  const item = pendingPurchase.item
+                  setPendingPurchase(null)
+                  redirectToMedalPacks(item)
+                }
+              : undefined
+          }
+        />
+      ) : null}
       <div
         className={cn(
           'relative overflow-hidden rounded-3xl border border-tf-dark/10 shadow-[0_24px_80px_rgba(1,30,51,0.12)]',

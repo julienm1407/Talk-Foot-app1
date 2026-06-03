@@ -119,7 +119,13 @@ export type PurchaseCosmeticResult =
   | { ok: true; href: string }
   | {
       ok: false
-      code: 'already_owned' | 'partial_pack' | 'insufficient_medals' | 'insufficient_tokens' | 'payment_failed'
+      code:
+        | 'already_owned'
+        | 'partial_pack'
+        | 'insufficient_medals'
+        | 'insufficient_tokens'
+        | 'payment_failed'
+        | 'save_failed'
     }
 
 /** Valide, débite médailles ou jetons, puis accorde l’article. */

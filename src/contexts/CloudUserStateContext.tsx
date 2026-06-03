@@ -21,6 +21,11 @@ import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 import { changeDisplayNameCloud } from '../lib/supabase/displayName'
+import {
+  ensureTalkfootProfile,
+  fetchTalkfootProfileSnapshot,
+  saveTalkfootProfileAppState,
+} from '../lib/supabase/profileAppState'
 
 type CloudUserStateValue = {
   /** Profil cloud chargé (évite d’écraser le serveur avant hydratation). */
@@ -33,8 +38,8 @@ type CloudUserStateValue = {
   patchFanPreferences: (p: Partial<FanPreferencesStoredShape>) => void
   setOnboardingComplete: (v: boolean) => void
   completeOauthProfile: (displayName: string, aboutLine?: string) => Promise<void>
-  /** Force l’écriture cloud immédiate (ex. avant de quitter le studio avatar). */
-  flushAppSave: () => Promise<void>
+  /** Force l’écriture cloud immédiate (ex. achat boutique). */
+  flushAppSave: () => Promise<{ ok: boolean; error?: string }>
 }
 
 const CloudUserStateContext = createContext<CloudUserStateValue | undefined>(undefined)
@@ -72,6 +77,8 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
   const appRef = useRef(app)
   const ocRef = useRef(onboardingCompleteCol)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasLocalEditsRef = useRef(false)
+  const loadUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     appRef.current = app
@@ -80,19 +87,28 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
     ocRef.current = onboardingCompleteCol
   }, [onboardingCompleteCol])
 
-  const flushSave = useCallback(async () => {
+  const flushSave = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     const sb = getSupabaseBrowserClient()
-    if (!sb || !user?.id) return
-    const { error } = await profileEq(
-      sb
-      .from('profiles')
-      .update({
-        app_state: appRef.current,
-        onboarding_complete: ocRef.current,
-      }),
-      user.id,
-    )
-    if (error) console.error('[Talk Foot] Sauvegarde profil cloud:', error.message)
+    if (!sb || !user?.id) return { ok: false, error: 'no_session' }
+    try {
+      await saveTalkfootProfileAppState(sb, user.id, appRef.current, ocRef.current)
+      return { ok: true }
+    } catch (rpcErr) {
+      const rpcMessage = rpcErr instanceof Error ? rpcErr.message : 'rpc_save_failed'
+      const { error } = await profileEq(
+        sb.from('profiles').update({
+          app_state: appRef.current,
+          onboarding_complete: ocRef.current,
+        }),
+        user.id,
+      )
+      if (error) {
+        const message = `${rpcMessage}; ${error.message}`
+        console.error('[Talk Foot] Sauvegarde profil cloud:', message)
+        return { ok: false, error: message }
+      }
+      return { ok: true }
+    }
   }, [user?.id])
 
   const scheduleSave = useCallback(() => {
@@ -114,6 +130,11 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       setReady(true)
       return
     }
+    if (loadUserIdRef.current !== user.id) {
+      loadUserIdRef.current = user.id
+      hasLocalEditsRef.current = false
+      setReady(false)
+    }
     let cancelled = false
     ;(async () => {
       const sb = getSupabaseBrowserClient()
@@ -122,92 +143,112 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         return
       }
       setLoadError(null)
-      let { data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle()
-      if (cancelled) return
-      if (error) {
-        await new Promise((r) => setTimeout(r, 400))
-        if (cancelled) return
-        ;({ data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle())
-      }
-      if (cancelled) return
-      if (error) {
-        setApp(defaultUserAppState())
-        setLoadError(error.message)
-        setOnboardingCompleteCol(false)
-        setOauthNeedsProfile(false)
-        setReady(true)
-        return
-      }
-      if (!data) {
-        const { data: authPayload } = await sb.auth.getUser()
-        const prov = authPayload.user?.app_metadata?.provider
-        const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
-        const seededApp = defaultUserAppState()
-        const insertPayload = isUuid(user.id)
-          ? {
-              id: user.id,
-              display_name: user.email?.split('@')[0] ?? 'Supporter',
-              onboarding_complete: false,
-              app_state: seededApp,
-              oauth_profile_completed: !oauthIncomplete,
-              clerk_id: user.id,
-            }
-          : {
-              clerk_id: user.id,
-              display_name: user.email?.split('@')[0] ?? 'Supporter',
-              onboarding_complete: false,
-              app_state: seededApp,
-              oauth_profile_completed: !oauthIncomplete,
-            }
-        const { error: insErr } = await sb.from('profiles').insert(insertPayload)
-        if (insErr) {
-          const { data: again } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle()
-          if (again) {
-            setApp(mergeUserAppState(again.app_state))
-            setOnboardingCompleteCol(Boolean(again.onboarding_complete))
-            setOauthNeedsProfile(again.oauth_profile_completed === false)
-          } else {
-            setApp(defaultUserAppState())
-            setLoadError(insErr.message)
-            setOnboardingCompleteCol(false)
-            setOauthNeedsProfile(false)
-          }
-        } else {
-          setApp(seededApp)
-          setOnboardingCompleteCol(false)
-          setOauthNeedsProfile(oauthIncomplete)
+      const displayName = user.email?.split('@')[0] ?? 'Supporter'
+
+      const applySnapshot = (appState: unknown, onboardingComplete: boolean, oauthCompleted: boolean) => {
+        if (!hasLocalEditsRef.current) {
+          setApp(mergeUserAppState(appState))
+          setOnboardingCompleteCol(onboardingComplete)
+          setOauthNeedsProfile(!oauthCompleted)
         }
         setReady(true)
-        return
       }
-      const mergedApp = mergeUserAppState(data.app_state)
-      setApp(mergedApp)
-      setOnboardingCompleteCol(Boolean(data.onboarding_complete))
-      setOauthNeedsProfile(data.oauth_profile_completed === false)
-      // Auto-répare les anciens profils cloud incomplets pour garantir un avatar exploitable.
+
+      const loadViaTable = async () => {
+        let { data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle()
+        if (error) {
+          await new Promise((r) => setTimeout(r, 400))
+          ;({ data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle())
+        }
+        return { data, error }
+      }
+
       try {
-        const rawJson = JSON.stringify(data.app_state ?? {})
-        const mergedJson = JSON.stringify(mergedApp)
-        if (rawJson !== mergedJson) {
-          void profileEq(
-            sb.from('profiles').update({
-              app_state: mergedApp,
-            }),
+        let snapshot = await fetchTalkfootProfileSnapshot(sb, user.id)
+        if (cancelled) return
+
+        if (!snapshot) {
+          const { data: authPayload } = await sb.auth.getUser()
+          const prov = authPayload.user?.app_metadata?.provider
+          const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
+          snapshot = await ensureTalkfootProfile(
+            sb,
             user.id,
+            displayName,
+            !oauthIncomplete,
           )
         }
-      } catch {
-        // no-op: la session continue même si la normalisation échoue.
+
+        if (cancelled) return
+        const mergedApp = mergeUserAppState(snapshot.appState)
+        applySnapshot(snapshot.appState, snapshot.onboardingComplete, snapshot.oauthProfileCompleted)
+
+        if (!hasLocalEditsRef.current) {
+          try {
+            const rawJson = JSON.stringify(snapshot.appState ?? {})
+            const mergedJson = JSON.stringify(mergedApp)
+            if (rawJson !== mergedJson) {
+              await saveTalkfootProfileAppState(sb, user.id, mergedApp, snapshot.onboardingComplete)
+            }
+          } catch {
+            void profileEq(sb.from('profiles').update({ app_state: mergedApp }), user.id)
+          }
+        }
+        return
+      } catch (rpcLoadErr) {
+        const rpcMessage = rpcLoadErr instanceof Error ? rpcLoadErr.message : 'rpc_load_failed'
+        const { data, error } = await loadViaTable()
+        if (cancelled) return
+        if (error) {
+          setApp(defaultUserAppState())
+          setLoadError(`${rpcMessage}; ${error.message}`)
+          setOnboardingCompleteCol(false)
+          setOauthNeedsProfile(false)
+          setReady(true)
+          return
+        }
+        if (!data) {
+          const { data: authPayload } = await sb.auth.getUser()
+          const prov = authPayload.user?.app_metadata?.provider
+          const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
+          try {
+            const created = await ensureTalkfootProfile(sb, user.id, displayName, !oauthIncomplete)
+            if (cancelled) return
+            applySnapshot(created.appState, created.onboardingComplete, created.oauthProfileCompleted)
+            return
+          } catch (ensureErr) {
+            const ensureMessage = ensureErr instanceof Error ? ensureErr.message : 'ensure_failed'
+            setApp(defaultUserAppState())
+            setLoadError(`${rpcMessage}; ${ensureMessage}`)
+            setOnboardingCompleteCol(false)
+            setOauthNeedsProfile(false)
+            setReady(true)
+            return
+          }
+        }
+        applySnapshot(data.app_state, Boolean(data.onboarding_complete), data.oauth_profile_completed !== false)
+        if (!hasLocalEditsRef.current) {
+          const mergedApp = mergeUserAppState(data.app_state)
+          try {
+            const rawJson = JSON.stringify(data.app_state ?? {})
+            const mergedJson = JSON.stringify(mergedApp)
+            if (rawJson !== mergedJson) {
+              await saveTalkfootProfileAppState(sb, user.id, mergedApp, Boolean(data.onboarding_complete))
+            }
+          } catch {
+            void profileEq(sb.from('profiles').update({ app_state: mergedApp }), user.id)
+          }
+        }
       }
-      setReady(true)
     })()
     return () => {
       cancelled = true
     }
-  }, [user?.id, user?.email])
+  }, [user?.id])
 
   const patchApp = useCallback(
     (fn: (prev: UserAppStateV1) => UserAppStateV1) => {
+      hasLocalEditsRef.current = true
       setApp((prev) => {
         const next = fn(prev)
         appRef.current = next

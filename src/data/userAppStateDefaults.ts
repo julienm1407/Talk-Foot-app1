@@ -41,6 +41,8 @@ export type UserAppStateV1 = {
   profile: UserProfile
   wallet: Wallet
   bets: import('../types/bet').Bet[]
+  /** Portefeuille test admin initialisé une seule fois (évite de re-créditer après achat). */
+  adminWalletBootstrapped?: boolean
 }
 
 export function defaultUserAppState(): UserAppStateV1 {
@@ -80,5 +82,7 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
         ? { ...base.wallet, ...(o.wallet as Wallet) }
         : base.wallet,
     bets: Array.isArray(o.bets) ? (o.bets as UserAppStateV1['bets']) : base.bets,
+    adminWalletBootstrapped:
+      o.adminWalletBootstrapped === true ? true : base.adminWalletBootstrapped,
   }
 }

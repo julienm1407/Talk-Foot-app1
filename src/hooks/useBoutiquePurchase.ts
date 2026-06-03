@@ -39,8 +39,7 @@ export function useBoutiquePurchase() {
               wallet: { ...w, medals: w.medals - input.medalCost },
               profile: mergeOwnedItemsIntoProfile(prev.profile, input.grantIds),
             }
-          }
-          if (w.tokens < input.tokenCost) {
+          } else if (w.tokens < input.tokenCost) {
             result = { ok: false, insufficientTokens: true }
             return prev
           }
@@ -71,8 +70,15 @@ export function useBoutiquePurchase() {
   )
 
   const purchaseCosmetic = useCallback(
-    (item: AvatarItem, currency: 'medals' | 'tokens', returnTo?: string): PurchaseCosmeticResult => {
-      return purchaseCosmeticItem(
+    async (
+      item: AvatarItem,
+      currency: 'medals' | 'tokens',
+      returnTo?: string,
+    ): Promise<PurchaseCosmeticResult> => {
+      if (cloud && !cloud.syncReady) {
+        return { ok: false, code: 'payment_failed' }
+      }
+      const result = purchaseCosmeticItem(
         item,
         currency,
         {
@@ -84,8 +90,14 @@ export function useBoutiquePurchase() {
         ownsItem,
         returnTo,
       )
+      if (!result.ok) return result
+      if (cloud) {
+        const saved = await cloud.flushAppSave()
+        if (!saved.ok) return { ok: false, code: 'save_failed' }
+      }
+      return result
     },
-    [ownsItem, commitCosmeticPurchase, spendMedals, spendTokens, addOwnedItems],
+    [cloud, ownsItem, commitCosmeticPurchase, spendMedals, spendTokens, addOwnedItems],
   )
 
   return {

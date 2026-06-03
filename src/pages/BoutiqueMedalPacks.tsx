@@ -44,12 +44,12 @@ export function BoutiqueMedalPacksPage() {
     navigate(href, { replace: true })
   }, [pendingItem, navigate])
 
-  const tryCompletePendingPurchase = useCallback((): boolean => {
+  const tryCompletePendingPurchase = useCallback(async (): Promise<boolean> => {
     if (!pendingItem || autoPurchaseStarted.current) return false
     if (wallet.medals < pendingItem.cost) return false
 
     const returnTo = searchParams.get('return') ?? '/boutique'
-    const result = purchaseCosmetic(pendingItem, 'medals', returnTo)
+    const result = await purchaseCosmetic(pendingItem, 'medals', returnTo)
 
     if (result.ok) {
       autoPurchaseStarted.current = true
@@ -73,12 +73,14 @@ export function BoutiqueMedalPacksPage() {
 
   useEffect(() => {
     if (!pendingItem || autoPurchaseStarted.current || shortfall > 0) return
-    tryCompletePendingPurchase()
+    void tryCompletePendingPurchase()
   }, [pendingItem, shortfall, tryCompletePendingPurchase])
 
   useEffect(() => {
     if (!pendingAutoBuy || !pendingItem || shortfall > 0) return
-    if (tryCompletePendingPurchase()) setPendingAutoBuy(false)
+    void tryCompletePendingPurchase().then((done) => {
+      if (done) setPendingAutoBuy(false)
+    })
   }, [pendingAutoBuy, pendingItem, shortfall, tryCompletePendingPurchase])
 
   const handlePackPaid = (pack: MedalPack) => {

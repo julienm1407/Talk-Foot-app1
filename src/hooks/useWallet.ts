@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { useAuth, type AuthUser } from '../contexts/AuthContext'
@@ -10,7 +10,7 @@ import {
   patchWalletStore,
   subscribeWallet,
 } from '../store/walletStore'
-import { normalizeWallet } from '../utils/walletNormalize'
+import { DEFAULT_WALLET, normalizeWallet } from '../utils/walletNormalize'
 
 export const DAILY_TOKEN_BONUS_AMOUNT = 35
 export const DAILY_TOKEN_BONUS_HOUR = 10
@@ -95,25 +95,37 @@ export function useWallet() {
     [useCloudWallet, cloud],
   )
 
-  const devWalletSeeded = useRef(false)
   useEffect(() => {
-    if (!user?.id || devWalletSeeded.current) return
-    if (!isWalletTestAdmin(user)) return
+    if (!user?.id || !isWalletTestAdmin(user)) return
+    if (useCloudWallet && cloud && !cloud.syncReady) return
+    if (useCloudWallet && cloud?.app.adminWalletBootstrapped) return
 
-    const needsMedals = wallet.medals < DEV_ADMIN_TEST_MEDALS
-    const needsTokens = wallet.tokens < DEV_ADMIN_TEST_TOKENS
-    if (!needsMedals && !needsTokens) {
-      devWalletSeeded.current = true
+    const needsBootstrap =
+      wallet.medals === 0 && wallet.tokens <= DEFAULT_WALLET.tokens
+    if (!needsBootstrap && useCloudWallet) {
+      cloud?.patchApp((prev) =>
+        prev.adminWalletBootstrapped ? prev : { ...prev, adminWalletBootstrapped: true },
+      )
+      return
+    }
+    if (!needsBootstrap) return
+
+    const applyBootstrap = () => ({
+      medals: DEV_ADMIN_TEST_MEDALS,
+      tokens: DEV_ADMIN_TEST_TOKENS,
+    })
+
+    if (useCloudWallet && cloud) {
+      cloud.patchApp((prev) => ({
+        ...prev,
+        adminWalletBootstrapped: true,
+        wallet: normalizeWallet({ ...normalizeWallet(prev.wallet), ...applyBootstrap() }),
+      }))
+      void cloud.flushAppSave()
       return
     }
 
-    devWalletSeeded.current = true
-    patchWallet((w) => ({
-      ...w,
-      ...(needsMedals ? { medals: DEV_ADMIN_TEST_MEDALS } : {}),
-      ...(needsTokens ? { tokens: DEV_ADMIN_TEST_TOKENS } : {}),
-    }))
-    void cloud?.flushAppSave?.()
+    patchWallet((w) => ({ ...w, ...applyBootstrap() }))
   }, [
     user?.id,
     user?.email,
@@ -123,6 +135,7 @@ export function useWallet() {
     wallet.tokens,
     patchWallet,
     cloud,
+    useCloudWallet,
   ])
 
   const addTokens = useCallback(

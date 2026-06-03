@@ -181,27 +181,32 @@ export function CharacterLayerStudio() {
   const buyDirectCosmetic = (item: AvatarItem) => {
     return (currency: 'medals' | 'tokens') => {
       const medalPrice = item.cost
-      const result = purchaseCosmetic(item, currency)
-      if (result.ok) {
-        equipItem(item.id, equipSlotForItem(item))
-        pushNotice(
-          'ok',
-          `${item.name} acheté et équipé (${currency === 'medals' ? `${medalPrice} 🏅` : `${cosmeticTokenPrice(medalPrice).toLocaleString('fr-FR')} jetons`}).`,
-        )
-        return
-      }
-      if (result.code === 'insufficient_medals') {
-        pushNotice('err', 'Pas assez de médailles — ouvre la boutique pour un pack, ou paie en jetons.')
-        return
-      }
-      if (result.code === 'insufficient_tokens') {
-        pushNotice('err', 'Pas assez de jetons — gagne des paris ou le bonus quotidien.')
-        return
-      }
-      if (result.code === 'already_owned') {
-        equipItem(item.id, equipSlotForItem(item))
-        pushNotice('ok', `${item.name} est déjà dans ton inventaire — équipé.`)
-      }
+      void purchaseCosmetic(item, currency).then((result) => {
+        if (result.ok) {
+          equipItem(item.id, equipSlotForItem(item))
+          pushNotice(
+            'ok',
+            `${item.name} acheté et équipé (${currency === 'medals' ? `${medalPrice} 🏅` : `${cosmeticTokenPrice(medalPrice).toLocaleString('fr-FR')} jetons`}).`,
+          )
+          return
+        }
+        if (result.code === 'insufficient_medals') {
+          pushNotice('err', 'Pas assez de médailles — ouvre la boutique pour un pack, ou paie en jetons.')
+          return
+        }
+        if (result.code === 'insufficient_tokens') {
+          pushNotice('err', 'Pas assez de jetons — gagne des paris ou le bonus quotidien.')
+          return
+        }
+        if (result.code === 'save_failed') {
+          pushNotice('err', 'Achat non enregistré sur le cloud — réessaie.')
+          return
+        }
+        if (result.code === 'already_owned') {
+          equipItem(item.id, equipSlotForItem(item))
+          pushNotice('ok', `${item.name} est déjà dans ton inventaire — équipé.`)
+        }
+      })
     }
   }
 
