@@ -1,7 +1,10 @@
 import type { Match, Team } from '../../types/match'
 import { COMP_NAMES, inferTalkFootCompIdFromSmLeague, resolveTalkFootClubId } from '../footballApi'
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
+import { findNationByName } from '../../data/nations'
 import { teams, teamColors } from '../../data/teams'
+import { isWorldCupCompetitionId } from '../../utils/seasonMode'
+import { localizeMatchTeams } from '../../utils/matchSideColors'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 
 const LIVE_STATE_IDS = new Set([2, 3, 4, 6, 9, 21, 22, 25])
@@ -233,6 +236,16 @@ function getTeam(
     ...(sportMonksTeamId != null ? { sportMonksTeamId } : {}),
     ...(resolvedLogo ? { logoUrl: resolvedLogo } : {}),
   }
+  const nation = isWorldCupCompetitionId(compId) ? findNationByName(apiName) : null
+  if (nation) {
+    return {
+      id: ourId,
+      name: nation.nameFr,
+      shortName: nation.iso,
+      colors: { primary: nation.primary, secondary: nation.secondary },
+      ...sm,
+    }
+  }
   if (!compTeams) {
     return {
       id: ourId,
@@ -306,17 +319,17 @@ export function smFixtureToMatch(f: SmFixture): Match {
   }
 
   if (status === 'live') {
-    return {
+    return localizeMatchTeams({
       ...base,
       minute: minuteFromFixture(f),
       score: score ?? { home: 0, away: 0 },
       liveClockPaused: liveClockPausedFromSmFixture(f),
-    }
+    })
   }
   if (status === 'finished' && score) {
-    return { ...base, score }
+    return localizeMatchTeams({ ...base, score })
   }
-  return base
+  return localizeMatchTeams(base)
 }
 
 /** Fusionne calendrier + inplay : les entrées inplay remplacent le même `id` fixture. */

@@ -1,6 +1,7 @@
 import type { Match } from '../types/match'
+import { localizeMatchTeams } from './matchSideColors'
 
-const CACHE_KEY = 'talkfoot.matches.cache.v1'
+const CACHE_KEY = 'talkfoot.matches.cache.v2'
 const TTL_MS = 5 * 60 * 1000
 
 type Cached = { at: number; matches: Match[] }
@@ -15,7 +16,7 @@ export function readMatchesSessionCache(): Match[] {
       sessionStorage.removeItem(CACHE_KEY)
       return []
     }
-    return parsed.matches
+    return parsed.matches.map(localizeMatchTeams)
   } catch {
     return []
   }

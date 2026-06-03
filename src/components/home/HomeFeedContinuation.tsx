@@ -13,6 +13,7 @@ import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { hubGlassPanel } from '../../utils/hubSurface'
+import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 /** Infos club pour sous-titres (évite d’imposer tout le type Team depuis les hooks). */
 export type HomeFeedTeamHint = { name: string; shortName: string } | null
 
@@ -131,6 +132,7 @@ export function HomeFeedContinuation({
 
   const onlyResults = spotlightMatches.length === 0 && recentFinishedMatches.length > 0
   const noMatchesBlock = spotlightMatches.length === 0 && recentFinishedMatches.length === 0
+  const wcSpotlight = spotlightMatches.some((m) => isWorldCupCompetitionId(m.competition.id))
 
   return (
     <div
@@ -148,7 +150,12 @@ export function HomeFeedContinuation({
           }
         >
           <Card
-            className="flex flex-col overflow-visible border-2 border-sky-400/45 p-4 shadow-[0_12px_40px_rgba(14,165,233,0.12)] ring-1 ring-sky-300/30 sm:p-5"
+            className={cn(
+              'flex flex-col overflow-visible border-2 p-4 sm:p-5',
+              wcSpotlight
+                ? 'border-tf-cdm-gold/45 shadow-[0_12px_40px_rgba(244,197,66,0.14)] ring-1 ring-tf-cdm-gold/30'
+                : 'border-sky-400/45 shadow-[0_12px_40px_rgba(14,165,233,0.12)] ring-1 ring-sky-300/30',
+            )}
             elevation="soft"
           >
             {spotlightMatches.length > 0 ? (

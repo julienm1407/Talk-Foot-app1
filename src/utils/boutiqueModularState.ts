@@ -2,8 +2,10 @@ import type { AvatarItem } from '../types/profile'
 import { resolveKitPreviewPair } from '../components/profile/Avatar2DKitPreview'
 import {
   createDefaultModularAvatarState,
+  resolveModularAvatarState,
   type ModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
+import type { UserProfile } from '../types/profile'
 
 export type BoutiqueGarmentShow = 'both' | 'jersey' | 'shorts' | 'shoes'
 
@@ -108,5 +110,23 @@ export function boutiqueItemToModularState(item: AvatarItem): ModularAvatarState
       accessory: null,
     },
     slotColors: base.slotColors,
+  }
+}
+
+/** Aperçu post-achat : ton personnage avec la pièce achetée équipée. */
+export function mergePurchasedItemOntoProfile(
+  profile: UserProfile,
+  item: AvatarItem,
+): ModularAvatarState {
+  const user = resolveModularAvatarState(profile.modularAvatar ?? createDefaultModularAvatarState())
+  const bought = boutiqueItemToModularState(item)
+  return {
+    ...user,
+    data: {
+      ...user.data,
+      jersey: bought.data.jersey ?? user.data.jersey,
+      shorts: bought.data.shorts ?? user.data.shorts,
+      shoes: bought.data.shoes ?? user.data.shoes,
+    },
   }
 }

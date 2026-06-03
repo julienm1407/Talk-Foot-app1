@@ -1,33 +1,32 @@
-import { useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { BoutiquePurchaseCelebration } from '../components/shop/BoutiquePurchaseCelebration'
 import { Card } from '../components/ui/Card'
 import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
-import { profileStudioHref } from '../utils/boutiquePurchaseFlow'
-import { shopItemToModularAssetId } from '../utils/boutiqueModularState'
-import { PageLoader } from '../components/ui/PageLoader'
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
-/** Ancienne URL de confirmation — redirige vers le studio profil. */
+/**
+ * Écran de félicitations après un achat boutique (entre paiement et studio profil).
+ */
 export function BoutiquePurchaseSuccessPage() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const itemId = searchParams.get('item')
+  const currencyRaw = searchParams.get('currency')
+  const returnTo = searchParams.get('return') ?? '/boutique'
 
   const item = itemId ? findBoutiqueCatalogItem(itemId) : undefined
-  const modularAssetId = item ? shopItemToModularAssetId(item) : null
-  const studioHref = profileStudioHref(modularAssetId, itemId ?? undefined)
+  const currency = currencyRaw === 'tokens' ? 'tokens' : currencyRaw === 'medals' ? 'medals' : null
 
-  useEffect(() => {
-    if (item) navigate(studioHref, { replace: true })
-  }, [item, studioHref, navigate])
-
-  if (item) return <PageLoader />
+  if (item && currency) {
+    return <BoutiquePurchaseCelebration item={item} currency={currency} returnTo={returnTo} />
+  }
 
   return (
     <Card className="mx-auto max-w-lg p-6 text-center" elevation="soft">
       <h1 className="font-display text-xl font-black text-tf-dark">Achat enregistré</h1>
-      <p className="mt-2 text-sm font-medium text-tf-grey">Retrouve ton article dans le studio personnage.</p>
+      <p className="mt-2 text-sm font-medium text-tf-grey">
+        Retrouve ton article dans le studio personnage.
+      </p>
       <Link
         to="/profile#avatar-modulaire"
         className={cn(

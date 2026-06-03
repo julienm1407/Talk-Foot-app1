@@ -90,10 +90,29 @@ export function grantIdsForShopItem(item: AvatarItem): string[] {
   return [item.id]
 }
 
+export type CommitCosmeticPurchaseInput = {
+  currency: 'medals' | 'tokens'
+  medalCost: number
+  tokenCost: number
+  grantIds: string[]
+}
+
+export type CommitCosmeticPurchaseResult = {
+  ok: boolean
+  insufficientMedals?: boolean
+  insufficientTokens?: boolean
+}
+
+export type CommitCosmeticPurchaseFn = (
+  input: CommitCosmeticPurchaseInput,
+) => CommitCosmeticPurchaseResult
+
 export type CosmeticPayFns = {
   spendMedals: (amount: number) => { ok: boolean; insufficient?: boolean }
   spendTokens: (amount: number) => { ok: boolean }
   grantOwnedItems: (ids: string[]) => void
+  /** Débit + inventaire atomiques (cloud) — prioritaire si fourni. */
+  commitCosmeticPurchase?: CommitCosmeticPurchaseFn
 }
 
 export type PurchaseCosmeticResult =
@@ -109,10 +128,29 @@ export function purchaseCosmeticItem(
   currency: 'medals' | 'tokens',
   pays: CosmeticPayFns,
   ownsItem: (id: string) => boolean,
+  returnTo?: string,
 ): PurchaseCosmeticResult {
   const validation = validateMedalCosmeticPurchase(item, ownsItem)
   if (validation.status === 'already_owned') return { ok: false, code: 'already_owned' }
   if (validation.status === 'partial_pack') return { ok: false, code: 'partial_pack' }
+
+  const grantIds = grantIdsForShopItem(item)
+  const tokenCost = cosmeticTokenPrice(item.cost)
+
+  if (pays.commitCosmeticPurchase) {
+    const committed = pays.commitCosmeticPurchase({
+      currency,
+      medalCost: item.cost,
+      tokenCost,
+      grantIds,
+    })
+    if (!committed.ok) {
+      if (committed.insufficientMedals) return { ok: false, code: 'insufficient_medals' }
+      if (committed.insufficientTokens) return { ok: false, code: 'insufficient_tokens' }
+      return { ok: false, code: 'payment_failed' }
+    }
+    return { ok: true, href: finishCosmeticPurchase(item, () => {}, currency, returnTo) }
+  }
 
   if (currency === 'medals') {
     const paid = pays.spendMedals(item.cost)
@@ -120,18 +158,30 @@ export function purchaseCosmeticItem(
       return { ok: false, code: paid.insufficient ? 'insufficient_medals' : 'payment_failed' }
     }
   } else {
-    const tokenCost = cosmeticTokenPrice(item.cost)
     const paid = pays.spendTokens(tokenCost)
     if (!paid.ok) return { ok: false, code: 'insufficient_tokens' }
   }
 
-  return { ok: true, href: finishCosmeticPurchase(item, pays.grantOwnedItems) }
+  return { ok: true, href: finishCosmeticPurchase(item, pays.grantOwnedItems, currency, returnTo) }
 }
 
-/** Après paiement : enregistre la possession et renvoie l’URL du studio profil. */
+/** Page de félicitations après achat (avant le studio profil). */
+export function boutiquePurchaseSuccessHref(
+  item: AvatarItem,
+  currency: 'medals' | 'tokens',
+  options?: { returnTo?: string },
+): string {
+  const params = new URLSearchParams({ item: item.id, currency })
+  if (options?.returnTo) params.set('return', options.returnTo)
+  return `/boutique/achat-reussi?${params.toString()}`
+}
+
+/** Après paiement : enregistre la possession et renvoie l’URL de confirmation. */
 export function finishCosmeticPurchase(
   item: AvatarItem,
   grantOwnedItems: (ids: string[]) => void,
+  currency: 'medals' | 'tokens',
+  returnTo?: string,
 ): string {
   grantOwnedItems(grantIdsForShopItem(item))
   if (item.bundleIncludes?.length) {
@@ -140,8 +190,7 @@ export function finishCosmeticPurchase(
     const modularAssetId = modularAssetIdForPurchase(item)
     if (modularAssetId) rememberRecentStudioAsset(modularAssetId)
   }
-  const modularAssetId = modularAssetIdForPurchase(item)
-  return profileStudioHref(modularAssetId, item.id)
+  return boutiquePurchaseSuccessHref(item, currency, { returnTo })
 }
 
 export function profileStudioHref(modularAssetId: string | null, purchasedItemId?: string): string {

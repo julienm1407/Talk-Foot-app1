@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth, type AuthUser } from '../contexts/AuthContext'
+import { isAdminEmail } from '../config/adminAccess'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
   configureWalletStore,
@@ -15,7 +16,16 @@ export const DAILY_TOKEN_BONUS_AMOUNT = 35
 export const DAILY_TOKEN_BONUS_HOUR = 10
 const DEV_ADMIN_DISPLAY_NAME = 'Dev TalkFoot 1'
 const DEV_ADMIN_TEST_MEDALS = 3000
+const DEV_ADMIN_TEST_TOKENS = 100_000
 const DEV_ADMIN_EMAIL = 'mondetju1407@gmail.com'
+
+function isWalletTestAdmin(user: AuthUser | null | undefined): boolean {
+  if (!user) return false
+  if (user.isAdmin) return true
+  if (user.email?.toLowerCase() === DEV_ADMIN_EMAIL) return true
+  if (user.displayName === DEV_ADMIN_DISPLAY_NAME) return true
+  return isAdminEmail(user.email)
+}
 
 export type DailyTokenBonusStatus = {
   amount: number
@@ -85,25 +95,42 @@ export function useWallet() {
     [useCloudWallet, cloud],
   )
 
-  const devMedalsSeeded = useRef(false)
+  const devWalletSeeded = useRef(false)
   useEffect(() => {
-    if (!user?.id || devMedalsSeeded.current) return
-    const isDevAdmin =
-      user.displayName === DEV_ADMIN_DISPLAY_NAME ||
-      user.email?.toLowerCase() === DEV_ADMIN_EMAIL
-    if (!isDevAdmin) return
-    devMedalsSeeded.current = true
-    if (wallet.medals >= DEV_ADMIN_TEST_MEDALS) return
+    if (!user?.id || devWalletSeeded.current) return
+    if (!isWalletTestAdmin(user)) return
 
-    patchWallet((w) => ({ ...w, medals: DEV_ADMIN_TEST_MEDALS }))
+    const needsMedals = wallet.medals < DEV_ADMIN_TEST_MEDALS
+    const needsTokens = wallet.tokens < DEV_ADMIN_TEST_TOKENS
+    if (!needsMedals && !needsTokens) {
+      devWalletSeeded.current = true
+      return
+    }
+
+    devWalletSeeded.current = true
+    patchWallet((w) => ({
+      ...w,
+      ...(needsMedals ? { medals: DEV_ADMIN_TEST_MEDALS } : {}),
+      ...(needsTokens ? { tokens: DEV_ADMIN_TEST_TOKENS } : {}),
+    }))
     void cloud?.flushAppSave?.()
-  }, [user?.id, user?.displayName, user?.email, wallet.medals, patchWallet, cloud])
+  }, [
+    user?.id,
+    user?.email,
+    user?.displayName,
+    user?.isAdmin,
+    wallet.medals,
+    wallet.tokens,
+    patchWallet,
+    cloud,
+  ])
 
   const addTokens = useCallback(
     (amount: number) => {
       patchWallet((w) => ({ ...w, tokens: w.tokens + amount }))
+      void cloud?.flushAppSave?.()
     },
-    [patchWallet],
+    [patchWallet, cloud],
   )
 
   const spendTokens = useCallback(
@@ -123,8 +150,9 @@ export function useWallet() {
   const addMedals = useCallback(
     (amount: number) => {
       patchWallet((w) => ({ ...w, medals: w.medals + amount }))
+      void cloud?.flushAppSave?.()
     },
-    [patchWallet],
+    [patchWallet, cloud],
   )
 
   const spendMedals = useCallback(

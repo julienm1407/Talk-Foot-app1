@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
+import { useBoutiquePurchase } from '../../hooks/useBoutiquePurchase'
 import { useProfile } from '../../hooks/useProfile'
-import { useWallet } from '../../hooks/useWallet'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { mergeCharacterLook } from '../../data/characterPresets'
 import { PRESET_EYES, PRESET_HAIR, PRESET_SKIN } from '../../data/characterPresets'
@@ -164,8 +164,8 @@ function StudioLockedItem({
 export function CharacterLayerStudio() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const { wallet, spendMedals, spendTokens } = useWallet()
-  const { profile, updateCharacterLook, equipItem, ownsItem, addOwnedItem, setJerseyCustomization } = useProfile()
+  const { wallet, purchaseCosmetic, commitCosmeticPurchase } = useBoutiquePurchase()
+  const { profile, updateCharacterLook, equipItem, ownsItem, setJerseyCustomization } = useProfile()
   const [cat, setCat] = useState<CustomizerCategoryId>('hair')
   const [jerseyBuy, setJerseyBuy] = useState<AvatarItem | null>(null)
   const [shopNotice, setShopNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
@@ -181,24 +181,27 @@ export function CharacterLayerStudio() {
   const buyDirectCosmetic = (item: AvatarItem) => {
     return (currency: 'medals' | 'tokens') => {
       const medalPrice = item.cost
-      if (currency === 'medals') {
-        if (!spendMedals(medalPrice).ok) {
-          pushNotice('err', 'Pas assez de médailles — ouvre la boutique pour un pack, ou paie en jetons.')
-          return
-        }
-      } else {
-        const tokenCost = cosmeticTokenPrice(medalPrice)
-        if (!spendTokens(tokenCost).ok) {
-          pushNotice('err', 'Pas assez de jetons — gagne des paris ou le bonus quotidien.')
-          return
-        }
+      const result = purchaseCosmetic(item, currency)
+      if (result.ok) {
+        equipItem(item.id, equipSlotForItem(item))
+        pushNotice(
+          'ok',
+          `${item.name} acheté et équipé (${currency === 'medals' ? `${medalPrice} 🏅` : `${cosmeticTokenPrice(medalPrice).toLocaleString('fr-FR')} jetons`}).`,
+        )
+        return
       }
-      addOwnedItem(item.id)
-      equipItem(item.id, equipSlotForItem(item))
-      pushNotice(
-        'ok',
-        `${item.name} acheté et équipé (${currency === 'medals' ? `${medalPrice} 🏅` : `${cosmeticTokenPrice(medalPrice).toLocaleString('fr-FR')} jetons`}).`,
-      )
+      if (result.code === 'insufficient_medals') {
+        pushNotice('err', 'Pas assez de médailles — ouvre la boutique pour un pack, ou paie en jetons.')
+        return
+      }
+      if (result.code === 'insufficient_tokens') {
+        pushNotice('err', 'Pas assez de jetons — gagne des paris ou le bonus quotidien.')
+        return
+      }
+      if (result.code === 'already_owned') {
+        equipItem(item.id, equipSlotForItem(item))
+        pushNotice('ok', `${item.name} est déjà dans ton inventaire — équipé.`)
+      }
     }
   }
 
@@ -550,9 +553,7 @@ export function CharacterLayerStudio() {
           item={jerseyBuy}
           walletMedals={wallet.medals}
           walletTokens={wallet.tokens}
-          spendMedals={spendMedals}
-          spendTokens={spendTokens}
-          addOwnedItem={addOwnedItem}
+          commitCosmeticPurchase={commitCosmeticPurchase}
           setJerseyCustomization={setJerseyCustomization}
           equipItem={equipItem}
           onClose={() => setJerseyBuy(null)}

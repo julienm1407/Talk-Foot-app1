@@ -3,8 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
-import { useWallet } from '../hooks/useWallet'
-import { useProfile } from '../hooks/useProfile'
+import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import {
   CDM_BUNDLE_MEDALS,
   CDM_JERSEY_MEDALS,
@@ -18,7 +17,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
-import { catalogTabForShopItem, purchaseCosmeticItem } from '../utils/boutiquePurchaseFlow'
+import { catalogTabForShopItem } from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'packs', label: 'Packs' },
@@ -36,8 +35,7 @@ function parseCatalogTab(raw: string | null): CatalogFilter | null {
 
 export function BoutiquePage() {
   const navigate = useNavigate()
-  const { wallet, spendMedals, spendTokens } = useWallet()
-  const { ownsItem, addOwnedItems } = useProfile()
+  const { wallet, ownsItem, purchaseCosmetic } = useBoutiquePurchase()
   const [searchParams] = useSearchParams()
   const tabFromUrl = parseCatalogTab(searchParams.get('tab'))
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>(() => tabFromUrl ?? 'packs')
@@ -78,11 +76,10 @@ export function BoutiquePage() {
   }
 
   const handleBuyCosmetic = (item: AvatarItemType, currency: 'medals' | 'tokens') => {
-    const result = purchaseCosmeticItem(
+    const result = purchaseCosmetic(
       item,
       currency,
-      { spendMedals, spendTokens, grantOwnedItems: addOwnedItems },
-      ownsItem,
+      `/boutique?tab=${catalogTabForShopItem(item)}`,
     )
     if (result.ok) {
       navigate(result.href)

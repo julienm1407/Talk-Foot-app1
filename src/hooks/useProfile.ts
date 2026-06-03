@@ -49,6 +49,26 @@ function normalizeOwnedItemIds(ownedItemIds: string[]): string[] {
   return repairCdmPackJerseyWhenShortPresent(repairPackOwnedItemIds(ownedItemIds))
 }
 
+/** Fusionne des IDs boutique dans le profil (achat atomique cloud / utilitaire). */
+export function mergeOwnedItemsIntoProfile(profile: UserProfile, itemIds: string[]): UserProfile {
+  if (itemIds.length === 0) return profile
+  const ids = Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []
+  const nextOwned = normalizeOwnedItemIds(Array.from(new Set([...ids, ...itemIds])))
+  return {
+    ...profile,
+    ownedItemIds: nextOwned,
+    premiumInventory: {
+      ownedItemIds: Array.from(
+        new Set([
+          ...(profile.premiumInventory?.ownedItemIds ?? []),
+          ...styleCatalog.filter((s) => itemIds.includes(s.id)).map((s) => s.id),
+        ]),
+      ),
+      equippedByCategory: profile.premiumInventory?.equippedByCategory ?? {},
+    },
+  }
+}
+
 export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
 
 /** Synchronise tous les hooks useProfile() dans l’onglet après une mise à jour. */
@@ -288,25 +308,10 @@ export function useProfile() {
   const addOwnedItems = useCallback(
     (itemIds: string[]) => {
       if (itemIds.length === 0) return
-      setProfileStore((p) => {
-        const ids = Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []
-        const nextOwned = normalizeOwnedItemIds(Array.from(new Set([...ids, ...itemIds])))
-        return {
-          ...p,
-          ownedItemIds: nextOwned,
-          premiumInventory: {
-            ownedItemIds: Array.from(
-              new Set([
-                ...(p.premiumInventory?.ownedItemIds ?? []),
-                ...styleCatalog.filter((s) => itemIds.includes(s.id)).map((s) => s.id),
-              ]),
-            ),
-            equippedByCategory: p.premiumInventory?.equippedByCategory ?? {},
-          },
-        }
-      })
+      setProfileStore((p) => mergeOwnedItemsIntoProfile(p, itemIds))
+      void cloud?.flushAppSave?.()
     },
-    [setProfileStore],
+    [setProfileStore, cloud],
   )
 
   const addOwnedItem = useCallback(

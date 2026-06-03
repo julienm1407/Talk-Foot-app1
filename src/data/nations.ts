@@ -144,23 +144,60 @@ export function getNationByIso(iso?: string | null): Nation | null {
   return NATIONS_BY_ISO[iso.toUpperCase()] ?? null
 }
 
-/** Recherche tolérante par nom FR ou EN (utile pour matcher SportMonks). */
-export function findNationByName(name?: string | null): Nation | null {
-  if (!name) return null
-  const norm = name
+/** Normalise un libellé API (accents, tirets, espaces) pour la recherche. */
+export function normalizeNationName(name: string): string {
+  return name
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
+    .replace(/['']/g, '')
+    .replace(/[-–—]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
+}
+
+/**
+ * Noms officiels FIFA / SportMonks non couverts par `nameEn` seul.
+ * Clés = forme normalisée (`normalizeNationName`).
+ */
+const NATION_NAME_ALIASES: Record<string, string> = {
+  turkiye: 'TUR',
+  'korea republic': 'KOR',
+  'republic of korea': 'KOR',
+  czechia: 'CZE',
+  'bosnia herzegovina': 'BIH',
+  'ivory coast': 'CIV',
+  "cote d ivoire": 'CIV',
+  curacao: 'CUW',
+  'cape verde': 'CPV',
+  'cabo verde': 'CPV',
+  'saudi arabia': 'SAU',
+  'united states': 'USA',
+  usa: 'USA',
+  'ir iran': 'IRN',
+  'islamic republic of iran': 'IRN',
+  'south korea': 'KOR',
+  'new zealand': 'NZL',
+  'bosnia and herzegovina': 'BIH',
+}
+
+const NATION_LOOKUP_BY_NORM = (() => {
+  const map = new Map<string, Nation>()
   for (const n of NATIONS) {
-    const fr = n.nameFr
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
-    const en = n.nameEn.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
-    if (fr === norm || en === norm) return n
+    map.set(normalizeNationName(n.nameFr), n)
+    map.set(normalizeNationName(n.nameEn), n)
   }
-  return null
+  for (const [alias, iso] of Object.entries(NATION_NAME_ALIASES)) {
+    const nation = NATIONS_BY_ISO[iso]
+    if (nation) map.set(alias, nation)
+  }
+  return map
+})()
+
+/** Recherche tolérante par nom FR, EN ou alias FIFA/SportMonks. */
+export function findNationByName(name?: string | null): Nation | null {
+  if (!name) return null
+  return NATION_LOOKUP_BY_NORM.get(normalizeNationName(name)) ?? null
 }
 
 export const CONFEDERATIONS: { id: Confederation; label: string }[] = [

@@ -10,6 +10,7 @@ import { formatHubDayLabel, formatKickoff, formatRelativeMinute } from '../../ut
 export { formatHubDayLabel }
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { themeForCompetition } from '../../data/competitionThemes'
+import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { SalonAudienceFooter } from './SalonAudienceFooter'
 
@@ -317,6 +318,7 @@ export function HubStripUpcoming({
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const compTh = themeForCompetition(match.competition.id)
+  const isWc = isWorldCupCompetitionId(match.competition.id)
   const solid = visualStyle === 'solid'
 
   if (visualSize === 'minimal') {
@@ -572,16 +574,25 @@ export function HubStripUpcoming({
                 <span
                   className={cn(
                     'size-1.5 shrink-0 rounded-full ring-2',
-                    L ? 'ring-tf-dark/12' : 'ring-white/20',
+                    L ? 'ring-tf-dark/12' : isWc ? 'ring-tf-cdm-gold/40' : 'ring-white/20',
                   )}
-                  style={{ backgroundColor: compTh.accent2 }}
+                  style={{ backgroundColor: isWc ? 'var(--tf-cdm-gold, #f4c542)' : compTh.accent2 }}
                   aria-hidden
                 />
               ) : null}
-              {match.competition.shortName}
+              <span className={cn(isWc && !L && 'font-black uppercase tracking-wide text-tf-cdm-gold')}>
+                {isWc ? `★ ${match.competition.shortName}` : match.competition.shortName}
+              </span>
             </span>
-            <span className="shrink-0 rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 px-3 py-1.5 text-xs font-black text-white shadow-[0_4px_18px_rgba(14,165,233,0.38)] transition group-hover:from-sky-400 group-hover:to-blue-500 group-hover:shadow-[0_6px_22px_rgba(14,165,233,0.45)]">
-              Voir la tribune
+            <span
+              className={cn(
+                'shrink-0 rounded-lg px-3 py-1.5 text-xs font-black transition',
+                isWc
+                  ? 'bg-tf-cdm-gold text-tf-cdm-deep shadow-[0_4px_18px_rgba(244,197,66,0.35)] group-hover:bg-tf-cdm-gold/90'
+                  : 'bg-gradient-to-b from-sky-500 to-blue-600 text-white shadow-[0_4px_18px_rgba(14,165,233,0.38)] group-hover:from-sky-400 group-hover:to-blue-500 group-hover:shadow-[0_6px_22px_rgba(14,165,233,0.45)]',
+              )}
+            >
+              {isWc ? 'Tribune CDM →' : 'Voir la tribune'}
             </span>
           </div>
         </div>

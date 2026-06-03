@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { AvatarItem, AvatarSlot, JerseyCustomization, JerseySize, JerseySleeve } from '../../types/profile'
 import { cosmeticTokenPrice } from '../../data/shop'
+import type { CommitCosmeticPurchaseInput } from '../../utils/boutiquePurchaseFlow'
 import { Button } from '../ui/Button'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { Input } from '../ui/Input'
@@ -14,9 +15,11 @@ type Props = {
   medalPrice?: number
   walletMedals: number
   walletTokens: number
-  spendMedals: (amount: number) => { ok: boolean }
-  spendTokens: (amount: number) => { ok: boolean }
-  addOwnedItem: (id: string) => void
+  commitCosmeticPurchase: (input: CommitCosmeticPurchaseInput) => {
+    ok: boolean
+    insufficientMedals?: boolean
+    insufficientTokens?: boolean
+  }
   setJerseyCustomization: (jerseyId: string, data: JerseyCustomization) => void
   equipItem: (itemId: string, slot: AvatarSlot) => void
   onClose: () => void
@@ -35,9 +38,7 @@ export function JerseyPurchaseModal({
   medalPrice,
   walletMedals,
   walletTokens,
-  spendMedals,
-  spendTokens,
-  addOwnedItem,
+  commitCosmeticPurchase,
   setJerseyCustomization,
   equipItem,
   onClose,
@@ -65,7 +66,6 @@ export function JerseyPurchaseModal({
       size,
       sleeve,
     }
-    addOwnedItem(item.id)
     setJerseyCustomization(item.id, data)
     equipItem(item.id, 'jersey')
     onSuccess(`${item.name} acheté — porté sur ton avatar avec flocage ${num}.`)
@@ -77,9 +77,18 @@ export function JerseyPurchaseModal({
       onError('Pas assez de médailles — achète un pack (€) dans la boutique.')
       return
     }
-    const paid = spendMedals(priceMedals)
+    const paid = commitCosmeticPurchase({
+      currency: 'medals',
+      medalCost: priceMedals,
+      tokenCost: priceTokens,
+      grantIds: [item.id],
+    })
     if (!paid.ok) {
-      onError('Paiement médailles impossible.')
+      onError(
+        paid.insufficientMedals
+          ? 'Pas assez de médailles — achète un pack (€) dans la boutique.'
+          : 'Paiement médailles impossible.',
+      )
       return
     }
     finalizePurchase()
@@ -90,7 +99,12 @@ export function JerseyPurchaseModal({
       onError('Pas assez de jetons — paris gagnés ou bonus quotidien. Les jetons ne s’achètent pas en €.')
       return
     }
-    const paid = spendTokens(priceTokens)
+    const paid = commitCosmeticPurchase({
+      currency: 'tokens',
+      medalCost: priceMedals,
+      tokenCost: priceTokens,
+      grantIds: [item.id],
+    })
     if (!paid.ok) {
       onError('Paiement en jetons impossible.')
       return
