@@ -66,6 +66,8 @@ export function BoutiqueItemPurchaseModal({
     <BoutiqueShopModalPanel
       ariaLabelledBy="item-preview-title"
       onBackdropClick={onClose}
+      onDismiss={onClose}
+      dismissAriaLabel="Retour au catalogue"
       eyebrow="Visualisation"
       title={item.name}
       subtitle={typeLabel}

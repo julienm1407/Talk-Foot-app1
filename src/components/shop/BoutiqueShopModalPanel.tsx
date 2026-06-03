@@ -3,11 +3,15 @@ import { motion } from 'framer-motion'
 import { ModularAvatarCanvas } from '../profile/ModularAvatarCanvas'
 import type { ModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { cn } from '../../utils/cn'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { ShopModalPortal } from './ShopModalPortal'
 
 type BoutiqueShopModalPanelProps = {
   ariaLabelledBy: string
   onBackdropClick?: () => void
+  /** Flèche retour en haut de la carte (ferme ou étape précédente). */
+  onDismiss?: () => void
+  dismissAriaLabel?: string
   eyebrow: string
   title: string
   subtitle?: ReactNode
@@ -19,6 +23,8 @@ type BoutiqueShopModalPanelProps = {
 export function BoutiqueShopModalPanel({
   ariaLabelledBy,
   onBackdropClick,
+  onDismiss,
+  dismissAriaLabel = 'Retour',
   eyebrow,
   title,
   subtitle,
@@ -45,7 +51,26 @@ export function BoutiqueShopModalPanel({
           aria-hidden
         />
 
-        <header className="relative border-b border-white/10 px-5 py-5 text-center sm:px-7 sm:py-6">
+        {onDismiss ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'absolute left-4 top-4 z-10 flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/45 text-lg font-black text-white shadow-md transition hover:bg-white/15',
+            )}
+            aria-label={dismissAriaLabel}
+          >
+            <span aria-hidden>←</span>
+          </button>
+        ) : null}
+
+        <header
+          className={cn(
+            'relative border-b border-white/10 px-5 py-5 text-center sm:px-7 sm:py-6',
+            onDismiss && 'pt-12 sm:pt-14',
+          )}
+        >
           <p className="text-[11px] font-black uppercase tracking-[0.28em] text-sky-300/90">{eyebrow}</p>
           <h1
             id={ariaLabelledBy}
