@@ -104,7 +104,9 @@ export function useMessageLikes() {
     if (!isSupabaseConfigured()) return
     const sb = getSupabaseBrowserClient()
     if (!sb) return
+
     let cancelled = false
+    const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const refreshCloudTop = async () => {
       const { data, error } = await sb
@@ -121,21 +123,48 @@ export function useMessageLikes() {
       }
     }
 
-    void refreshCloudTop()
-    const channel = sb
-      .channel('home-top-comments')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'live_match_message_likes' },
-        () => {
-          void refreshCloudTop()
-        },
-      )
-      .subscribe()
+    const run = async () => {
+      await refreshCloudTop()
+      if (cancelled) return
+
+      // Canal unique par montage (évite le conflit Strict Mode / même topic déjà subscribe).
+      const channel = sb
+        .channel(`home-top-comments:${crypto.randomUUID()}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'live_match_message_likes' },
+          () => {
+            void refreshCloudTop()
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'live_match_message_likes' },
+          () => {
+            void refreshCloudTop()
+          },
+        )
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] home-top-comments realtime:', status)
+          }
+        })
+
+      if (cancelled) {
+        void sb.removeChannel(channel)
+        return
+      }
+      channelRef.current = channel
+    }
+
+    void run()
 
     return () => {
       cancelled = true
-      void sb.removeChannel(channel)
+      if (channelRef.current) {
+        void sb.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [setTopComments])
 
