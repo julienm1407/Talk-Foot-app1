@@ -10,10 +10,11 @@ import {
 } from '../../features/avatar2d/modularAvatarState'
 import type { BoutiqueGarmentShow } from '../../utils/boutiqueModularState'
 import {
-  MODULAR_PP_HEAD_CLIP_BOTTOM_PCT,
   MODULAR_PP_HEAD_MARGIN_TOP_PX,
+  MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX,
   MODULAR_PP_HEAD_ORIGIN,
   MODULAR_PP_HEAD_ZOOM,
+  MODULAR_PP_HEAD_ZOOM_SMALL,
 } from './modularPPFraming'
 
 export const MODULAR_COLOR_VARIANTS: Record<ModularColorVariantKey, { label: string; filter: string }> = {
@@ -239,8 +240,10 @@ export function ModularAvatarCanvas({
   )
 
   if (isHead && fitSize) {
-    const baseScale = (fitSize / canvasSize.width) * MODULAR_PP_HEAD_ZOOM
-    const clipBottom = `${MODULAR_PP_HEAD_CLIP_BOTTOM_PCT}%`
+    const smallThumb = fitSize < 40
+    const headZoom = smallThumb ? MODULAR_PP_HEAD_ZOOM_SMALL : MODULAR_PP_HEAD_ZOOM
+    const marginTop = smallThumb ? MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX : MODULAR_PP_HEAD_MARGIN_TOP_PX
+    const baseScale = (fitSize / canvasSize.width) * headZoom
     return (
       <div
         className={cn('relative overflow-hidden', className)}
@@ -252,20 +255,12 @@ export function ModularAvatarCanvas({
             width: canvasSize.width,
             height: canvasSize.height,
             marginLeft: -canvasSize.width / 2,
-            marginTop: MODULAR_PP_HEAD_MARGIN_TOP_PX,
+            marginTop,
             transform: `scale(${baseScale})`,
             transformOrigin: MODULAR_PP_HEAD_ORIGIN,
           }}
         >
-          <div
-            className="relative overflow-hidden"
-            style={{
-              width: canvasSize.width,
-              height: canvasSize.height,
-              clipPath: `inset(0 0 ${clipBottom} 0)`,
-              WebkitClipPath: `inset(0 0 ${clipBottom} 0)`,
-            }}
-          >
+          <div className="relative" style={{ width: canvasSize.width, height: canvasSize.height }}>
             {layers}
           </div>
         </div>

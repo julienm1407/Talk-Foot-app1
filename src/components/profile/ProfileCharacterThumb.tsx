@@ -3,7 +3,7 @@ import type { UserProfile } from '../../types/profile'
 import { cn } from '../../utils/cn'
 import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { ModularAvatarHeadThumb } from './ModularAvatarCanvas'
-import { MODULAR_PP_NAV_FRAMING } from './modularPPFraming'
+import { MODULAR_PP_HEAD_RENDER_BASE_PX, MODULAR_PP_NAV_FRAMING } from './modularPPFraming'
 
 export { MODULAR_PP_NAV_FRAMING }
 
@@ -47,7 +47,11 @@ export function ProfileCharacterThumb({
       const measured = Math.round(Math.min(el.clientWidth, el.clientHeight))
       const shellSize = Math.max(16, measured || thumbPx)
       const renderSize =
-        framingMode === 'topbar' ? shellSize : measured < 32 ? thumbPx : shellSize
+        framingMode === 'topbar'
+          ? MODULAR_PP_HEAD_RENDER_BASE_PX
+          : measured < 32
+            ? thumbPx
+            : shellSize
       setRenderState({ shellSize, renderSize })
     }
     update()
@@ -56,6 +60,11 @@ export function ProfileCharacterThumb({
     ro.observe(el)
     return () => ro.disconnect()
   }, [thumbPx, framingMode])
+
+  const scale =
+    framingMode === 'topbar' && renderState.renderSize > 0
+      ? renderState.shellSize / renderState.renderSize
+      : 1
 
   return (
     <div
@@ -71,10 +80,7 @@ export function ProfileCharacterThumb({
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           style={{
-            transform:
-              headOffsetPx !== 0 || headScale !== 1
-                ? `translateY(${headOffsetPx}px) scale(${headScale})`
-                : undefined,
+            transform: `translateY(${headOffsetPx}px) scale(${scale * headScale})`,
             transformOrigin: 'center center',
           }}
         >

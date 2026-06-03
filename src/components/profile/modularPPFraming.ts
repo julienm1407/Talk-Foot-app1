@@ -1,15 +1,17 @@
 /**
  * Cadrage unifié des vignettes tête (PP modulaire) — nav, chat, classement, etc.
- * Aligné sur le recadrage `Avatar2DKitPreview` (crop sous le cou, zoom centré visage).
+ * Sans clipPath (provoque des cercles noirs sur les calques PNG modulaires).
  */
-export const MODULAR_PP_HEAD_CLIP_BOTTOM_PCT = 50
-export const MODULAR_PP_HEAD_ORIGIN = '50% 30%'
-export const MODULAR_PP_HEAD_ZOOM = 2.35
-export const MODULAR_PP_HEAD_MARGIN_TOP_PX = -8
+export const MODULAR_PP_HEAD_ORIGIN = '50% 2%'
+export const MODULAR_PP_HEAD_ZOOM = 2.5
+export const MODULAR_PP_HEAD_ZOOM_SMALL = 1.74
+export const MODULAR_PP_HEAD_MARGIN_TOP_PX = -12
+export const MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX = -9
+export const MODULAR_PP_HEAD_RENDER_BASE_PX = 40
 
 /** Props `ProfileCharacterThumb` pour le même cadrage partout. */
 export const MODULAR_PP_NAV_FRAMING = {
   framingMode: 'topbar' as const,
-  headOffsetPx: 0,
-  headScale: 1,
+  headOffsetPx: -4,
+  headScale: 1.55,
 }
