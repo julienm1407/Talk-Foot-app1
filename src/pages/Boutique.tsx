@@ -143,35 +143,37 @@ export function BoutiquePage() {
           ? `${CDM_BUNDLE_MEDALS} médailles par pack maillot + short`
           : 'Chaussures standards'
 
+  const purchaseModal = purchaseFlow ? (
+    <BoutiqueItemPurchaseModal
+      item={purchaseFlow.item}
+      step={purchaseFlow.step}
+      currency={purchaseFlow.currency}
+      walletMedals={wallet.medals}
+      walletTokens={wallet.tokens}
+      confirming={confirmingPurchase}
+      onClose={closePurchaseFlow}
+      onChooseCurrency={(currency) =>
+        setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
+      }
+      onBack={() =>
+        setPurchaseFlow((prev) => (prev ? { ...prev, step: 'preview', currency: undefined } : null))
+      }
+      onConfirm={() => void handleConfirmPurchase()}
+      onNeedMedals={
+        purchaseFlow.currency === 'medals'
+          ? () => {
+              const item = purchaseFlow.item
+              setPurchaseFlow(null)
+              redirectToMedalPacks(item)
+            }
+          : undefined
+      }
+    />
+  ) : null
+
   return (
     <div className="space-y-6">
-      {purchaseFlow ? (
-        <BoutiqueItemPurchaseModal
-          item={purchaseFlow.item}
-          step={purchaseFlow.step}
-          currency={purchaseFlow.currency}
-          walletMedals={wallet.medals}
-          walletTokens={wallet.tokens}
-          confirming={confirmingPurchase}
-          onClose={closePurchaseFlow}
-          onChooseCurrency={(currency) =>
-            setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
-          }
-          onBack={() =>
-            setPurchaseFlow((prev) => (prev ? { ...prev, step: 'preview', currency: undefined } : null))
-          }
-          onConfirm={() => void handleConfirmPurchase()}
-          onNeedMedals={
-            purchaseFlow.currency === 'medals'
-              ? () => {
-                  const item = purchaseFlow.item
-                  setPurchaseFlow(null)
-                  redirectToMedalPacks(item)
-                }
-              : undefined
-          }
-        />
-      ) : null}
+      {purchaseModal}
       <div
         className={cn(
           'relative overflow-hidden rounded-3xl border border-tf-dark/10 shadow-[0_24px_80px_rgba(1,30,51,0.12)]',

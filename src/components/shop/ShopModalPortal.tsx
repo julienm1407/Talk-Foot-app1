@@ -1,40 +1,38 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { cn } from '../../utils/cn'
+import { getShopModalRoot } from '../../lib/shopModalRoot'
 
 const BACKDROP_GUARD_MS = 380
 
 /**
- * Modale boutique rendue dans document.body — centrée viewport, flou arrière-plan,
- * sans décaler le scroll de la page catalogue derrière.
+ * Modale boutique : portail vers #tf-shop-modal-root (position fixed en CSS global),
+ * centré viewport + flou, sans participer au flux de la page catalogue.
  */
 export function ShopModalPortal({
   children,
   onBackdropClick,
   ariaLabelledBy,
-  className,
 }: {
   children: ReactNode
   onBackdropClick?: () => void
   ariaLabelledBy?: string
-  className?: string
 }) {
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
   const backdropReadyAt = useRef(0)
 
+  useLayoutEffect(() => {
+    setPortalTarget(getShopModalRoot())
+  }, [])
+
   useEffect(() => {
+    if (!portalTarget) return
     backdropReadyAt.current = Date.now() + BACKDROP_GUARD_MS
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [])
-
-  const handleBackdrop = () => {
-    if (!onBackdropClick) return
-    if (Date.now() < backdropReadyAt.current) return
-    onBackdropClick()
-  }
+  }, [portalTarget])
 
   useEffect(() => {
     if (!onBackdropClick) return
@@ -48,11 +46,17 @@ export function ShopModalPortal({
     return () => document.removeEventListener('keydown', onKey)
   }, [onBackdropClick])
 
-  if (typeof document === 'undefined') return null
+  const handleBackdrop = () => {
+    if (!onBackdropClick) return
+    if (Date.now() < backdropReadyAt.current) return
+    onBackdropClick()
+  }
+
+  if (!portalTarget) return null
 
   return createPortal(
     <div
-      className={cn('fixed inset-0 z-[240] flex items-center justify-center p-4 sm:p-6', className)}
+      className="relative flex h-full min-h-0 w-full items-center justify-center p-4 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
@@ -67,8 +71,8 @@ export function ShopModalPortal({
       ) : (
         <div className="absolute inset-0 bg-[#030912]/88 backdrop-blur-md" aria-hidden />
       )}
-      <div className="relative z-[1] w-full max-w-lg">{children}</div>
+      <div className="relative z-[1] w-full max-w-lg shrink-0">{children}</div>
     </div>,
-    document.body,
+    portalTarget,
   )
 }

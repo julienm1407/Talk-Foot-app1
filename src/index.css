@@ -14,6 +14,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Modales boutique : conteneur hors #root, toujours centré viewport (pas en pied de page). */
+#tf-shop-modal-root {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  z-index: 2147483000 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top, 0px)) 1rem max(1rem, env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#tf-shop-modal-root:empty {
+  display: none !important;
+}
+
+#tf-shop-modal-root:not(:empty) {
+  pointer-events: auto;
+}
+
 @layer base {
   /* Bigail / Bebas : déjà condensées — le gras + tracking négatif rendait les titres illisibles */
   .font-display:is(.font-black, .font-bold, .font-extrabold) {
