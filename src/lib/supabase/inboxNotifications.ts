@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { InboxLikeItem } from '../../types/inbox'
+import type { InboxFriendItem, InboxItem, InboxLikeItem } from '../../types/inbox'
 
 type InboxRow = {
   id: string
@@ -8,6 +8,7 @@ type InboxRow = {
   body: string
   href: string
   actor_display_name: string | null
+  requester_supabase_id?: string | null
   read_at: string | null
   created_at: string
 }
@@ -32,7 +33,7 @@ function formatInboxTime(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
-function rowToInboxItem(row: InboxRow): InboxLikeItem {
+function rowToLikeItem(row: InboxRow): InboxLikeItem {
   return {
     kind: 'like',
     id: row.id,
@@ -45,18 +46,45 @@ function rowToInboxItem(row: InboxRow): InboxLikeItem {
   }
 }
 
+function rowToFriendItem(row: InboxRow): InboxFriendItem | null {
+  const requesterId = row.requester_supabase_id ?? null
+  if (!requesterId) return null
+  return {
+    kind: 'friend',
+    id: row.id,
+    requesterId,
+    displayName: row.actor_display_name?.trim() || 'Supporteur',
+    href: row.href || `/user/${requesterId}`,
+    createdAtLabel: formatInboxTime(row.created_at),
+    createdAtMs: new Date(row.created_at).getTime(),
+  }
+}
+
+function rowToInboxItem(row: InboxRow): InboxItem | null {
+  if (row.kind === 'friend_request') return rowToFriendItem(row)
+  if (row.kind === 'message_like') return rowToLikeItem(row)
+  return null
+}
+
 export async function fetchInboxNotificationsForRecipient(
   sb: SupabaseClient,
   recipientSupabaseId: string,
-): Promise<InboxLikeItem[]> {
+): Promise<InboxItem[]> {
   const { data, error } = await sb
     .from('inbox_notifications')
-    .select('id, kind, title, body, href, actor_display_name, read_at, created_at')
+    .select(
+      'id, kind, title, body, href, actor_display_name, requester_supabase_id, read_at, created_at',
+    )
     .eq('recipient_supabase_id', recipientSupabaseId)
     .order('created_at', { ascending: false })
     .limit(80)
   if (error || !data?.length) return []
-  return data.map((row) => rowToInboxItem(row as InboxRow))
+  const out: InboxItem[] = []
+  for (const row of data) {
+    const item = rowToInboxItem(row as InboxRow)
+    if (item) out.push(item)
+  }
+  return out
 }
 
 export async function markInboxNotificationRead(sb: SupabaseClient, id: string): Promise<void> {
@@ -94,5 +122,28 @@ export async function createMessageLikeInboxNotification(
   })
   if (error && import.meta.env.DEV) {
     console.warn('[Talk Foot] inbox_notifications insert:', error.message)
+  }
+}
+
+export async function createFriendRequestInboxNotification(
+  sb: SupabaseClient,
+  opts: {
+    recipientSupabaseId: string
+    requesterSupabaseId: string
+    requesterDisplayName: string
+  },
+): Promise<void> {
+  const name = opts.requesterDisplayName.trim() || 'Supporteur'
+  const { error } = await sb.from('inbox_notifications').insert({
+    recipient_supabase_id: opts.recipientSupabaseId,
+    kind: 'friend_request',
+    title: `${name} veut être ton ami`,
+    body: 'Demande d’ami en attente',
+    href: `/user/${opts.requesterSupabaseId}`,
+    actor_display_name: name,
+    requester_supabase_id: opts.requesterSupabaseId,
+  })
+  if (error && import.meta.env.DEV) {
+    console.warn('[Talk Foot] inbox friend_request:', error.message)
   }
 }

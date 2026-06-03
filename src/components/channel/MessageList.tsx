@@ -7,6 +7,7 @@ import { useProfile } from '../../hooks/useProfile'
 import { useChatPeerMenu } from '../../hooks/useChatPeerMenu'
 import { useDirectMessagesOptional } from '../../contexts/DirectMessagesContext'
 import { isSupabaseConfigured } from '../../lib/supabase/isEnabled'
+import { resolveChatDisplayLabel } from '../../utils/chatDisplayName'
 import { resolveChatMessagePeerUi } from '../../utils/chatPeerSocial'
 import { cn } from '../../utils/cn'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
@@ -69,6 +70,7 @@ export function MessageList({
   selfUserId = 'me',
   /** UUID Supabase du compte connecté (tribune cloud). */
   selfChatActorId = null,
+  selfClerkUserId = null,
   salonTone = 'light',
   getLikes,
   hasLiked,
@@ -79,6 +81,8 @@ export function MessageList({
   /** Identifiant auth (ou `me` en mode démo local) pour bulle « Toi ». */
   selfUserId?: string
   selfChatActorId?: string | null
+  /** Identifiant Clerk (si distinct du UUID chat). */
+  selfClerkUserId?: string | null
   /** Fond du fil tribune (clair ou sombre). */
   salonTone?: MessageListTone
   getLikes?: (messageId: string) => number
@@ -114,9 +118,12 @@ export function MessageList({
           user: u,
           selfUserId,
           selfChatActorId,
+          selfClerkUserId,
+          cloudDisplayName: u?.username,
           socialEnabled,
           isBot: kind === 'bot',
         })
+        const authorLabel = resolveChatDisplayLabel(m.authorDisplayName, u?.username)
         const openPeerMenuHandler = peer.peerSocial
           ? () => openPeerMenu(peer.menuTarget)
           : undefined
@@ -162,7 +169,7 @@ export function MessageList({
                       'rounded-sm underline-offset-2 hover:underline',
                     )}
                   >
-                    {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
+                    {authorLabel}
                   </button>
                 ) : peer.profileTo ? (
                   <Link
@@ -174,7 +181,7 @@ export function MessageList({
                       'rounded-sm',
                     )}
                   >
-                    {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
+                    {authorLabel}
                   </Link>
                 ) : (
                   <span
@@ -183,7 +190,7 @@ export function MessageList({
                       nameClass(kind, u?.accent, dark),
                     )}
                   >
-                    {u?.username ?? m.authorDisplayName ?? 'Inconnu'}
+                    {authorLabel}
                   </span>
                 )}
                 {kind === 'bot' && (

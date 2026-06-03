@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { useDirectMessagesOptional } from '../../contexts/DirectMessagesContext'
 import type { UseInboxReturn } from '../../hooks/useInbox'
 import type { InboxFriendItem, InboxInviteItem, InboxLikeItem, InboxNewsItem } from '../../types/inbox'
 
@@ -31,7 +33,9 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const navigate = useNavigate()
-  const { byKind, isRead, markRead, remove, markAllRead, items } = inbox
+  const dm = useDirectMessagesOptional()
+  const { byKind, isRead, markRead, remove, markAllRead, items, refresh } = inbox
+  const [friendActionError, setFriendActionError] = useState<string | null>(null)
 
   const shell = L
     ? 'border border-tf-dark/12 bg-white text-tf-dark shadow-xl'
@@ -64,13 +68,34 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
     remove(id)
   }
 
-  const onAcceptFriend = (id: string) => {
-    markRead(id)
-    remove(id)
+  const onAcceptFriend = async (f: InboxFriendItem) => {
+    setFriendActionError(null)
+    if (!dm) {
+      setFriendActionError('Connexion requise pour accepter la demande.')
+      return
+    }
+    const out = await dm.acceptFriendRequest(f.requesterId)
+    if (!out.ok) {
+      setFriendActionError("Impossible d'accepter la demande. Réessaie dans un instant.")
+      return
+    }
+    markRead(f.id)
+    remove(f.id)
+    void refresh()
+    void dm.refreshFriends()
+    onClose()
+    navigate(f.href)
   }
 
-  const onDeclineFriend = (id: string) => {
-    remove(id)
+  const onDeclineFriend = async (f: InboxFriendItem) => {
+    setFriendActionError(null)
+    if (dm) {
+      await dm.declineFriendRequest(f.requesterId)
+      void dm.refreshFriends()
+    }
+    markRead(f.id)
+    remove(f.id)
+    void refresh()
   }
 
   return (
@@ -121,6 +146,11 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+        {friendActionError ? (
+          <p className="mx-3 mt-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-2 py-1.5 text-[11px] font-semibold text-rose-200">
+            {friendActionError}
+          </p>
+        ) : null}
         {items.length === 0 ? (
           <p className={cn('px-4 py-8 text-center text-sm font-semibold', muted)}>Rien pour l’instant.</p>
         ) : (
@@ -259,14 +289,30 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
 
             {byKind.friends.length > 0 ? (
               <section aria-label="Demandes d'amis">
-                <SectionTitle className={cn('border-t', subtleBorder, muted)}>Demandes d&apos;amis</SectionTitle>
+                <SectionTitle className={cn('border-t', subtleBorder, muted)}>
+                  Demandes d&apos;amis
+                  {byKind.friends.some((f) => !isRead(f.id)) ? (
+                    <span className="ml-1.5 text-sky-400">· {byKind.friends.filter((f) => !isRead(f.id)).length}</span>
+                  ) : null}
+                </SectionTitle>
                 <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
                   {byKind.friends.map((f: InboxFriendItem) => (
                     <li key={f.id} className="px-3 py-3 md:py-2.5">
                       <div className="flex gap-2">
                         <UnreadDot show={!isRead(f.id)} />
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-black">{f.displayName}</p>
+                          <span
+                            className={cn(
+                              'inline-block rounded-md px-1.5 py-px text-[9px] font-black uppercase',
+                              L ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-200',
+                            )}
+                          >
+                            Ami
+                          </span>
+                          <p className="mt-1 text-xs font-black leading-snug">{f.displayName}</p>
+                          <p className={cn('mt-0.5 text-[11px] font-semibold leading-snug', muted)}>
+                            Souhaite t&apos;ajouter en ami
+                          </p>
                           {f.mutualHint ? (
                             <p className={cn('mt-0.5 text-[11px] font-semibold', muted)}>{f.mutualHint}</p>
                           ) : null}
@@ -274,14 +320,14 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                           <div className="mt-2 flex flex-col gap-2 max-md:w-full md:flex-row md:flex-wrap">
                             <button
                               type="button"
-                              onClick={() => onAcceptFriend(f.id)}
+                              onClick={() => void onAcceptFriend(f)}
                               className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
                             >
                               Accepter
                             </button>
                             <button
                               type="button"
-                              onClick={() => onDeclineFriend(f.id)}
+                              onClick={() => void onDeclineFriend(f)}
                               className={cn(
                                 'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
                                 L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',

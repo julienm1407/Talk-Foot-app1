@@ -4,7 +4,10 @@ import type { User } from '../../types/chat'
 import { ClubCrest } from '../brand/ClubCrest'
 import { useProfile } from '../../hooks/useProfile'
 import type { UserProfile } from '../../types/profile'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
+import {
+  MODULAR_PP_NAV_FRAMING,
+  ProfileCharacterThumb,
+} from '../profile/ProfileCharacterThumb'
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
 import { cn } from '../../utils/cn'
 import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
@@ -96,6 +99,7 @@ function LiveFanFaceRow({
           <ProfileCharacterThumb
             profile={meProfile}
             size="sm"
+            {...MODULAR_PP_NAV_FRAMING}
             className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-0 p-0"
             aria-label="Mon avatar in-app"
           />

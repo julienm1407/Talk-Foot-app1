@@ -1,5 +1,6 @@
 import type { ChatPeerQuickMenuTarget } from '../components/chat/ChatPeerQuickMenu'
 import type { User } from '../types/chat'
+import { resolveChatDisplayLabel } from './chatDisplayName'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -24,8 +25,12 @@ export function isSelfChatMessage(
   userId: string,
   selfUserId: string,
   selfChatActorId: string | null,
+  selfClerkUserId?: string | null,
 ): boolean {
-  return userId === selfUserId || (selfChatActorId != null && userId === selfChatActorId)
+  if (userId === selfUserId) return true
+  if (selfChatActorId != null && userId === selfChatActorId) return true
+  if (selfClerkUserId && userId === selfClerkUserId) return true
+  return false
 }
 
 export function buildChatPeerMenuTarget(
@@ -47,6 +52,8 @@ export function resolveChatMessagePeerUi(options: {
   user?: User
   selfUserId: string
   selfChatActorId: string | null
+  selfClerkUserId?: string | null
+  cloudDisplayName?: string | null
   socialEnabled: boolean
   isBot?: boolean
 }): {
@@ -56,12 +63,15 @@ export function resolveChatMessagePeerUi(options: {
   menuTarget: ChatPeerQuickMenuTarget
   displayName: string
 } {
-  const displayName =
-    options.user?.username ?? options.authorDisplayName?.trim() ?? 'Supporteur'
+  const displayName = resolveChatDisplayLabel(
+    options.authorDisplayName,
+    options.cloudDisplayName ?? options.user?.username,
+  )
   const isSelfMessage = isSelfChatMessage(
     options.userId,
     options.selfUserId,
     options.selfChatActorId,
+    options.selfClerkUserId,
   )
   const peerSocial =
     options.socialEnabled &&

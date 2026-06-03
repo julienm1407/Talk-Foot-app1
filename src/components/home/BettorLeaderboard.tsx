@@ -2,7 +2,10 @@ import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useProfile } from '../../hooks/useProfile'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { Avatar } from '../ui/Avatar'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
+import {
+  MODULAR_PP_NAV_FRAMING,
+  ProfileCharacterThumb,
+} from '../profile/ProfileCharacterThumb'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 
@@ -137,6 +140,7 @@ export function BettorLeaderboard({
                 <ProfileCharacterThumb
                   profile={profile}
                   size="sm"
+                  {...MODULAR_PP_NAV_FRAMING}
                   className="!h-7 !w-7 !min-h-7 !min-w-7 shrink-0 self-start rounded-lg border-0 p-0"
                   aria-label={e.username}
                 />

@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
+import {
+  MODULAR_PP_NAV_FRAMING,
+  ProfileCharacterThumb,
+} from '../profile/ProfileCharacterThumb'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import type { User } from '../../types/chat'
@@ -160,6 +163,7 @@ export function LiveCommentator({
     <ProfileCharacterThumb
       profile={profile}
       size="sm"
+      {...MODULAR_PP_NAV_FRAMING}
       className={cn(
         'rounded-2xl border-0 p-0',
         props.className ?? (props.size === 'sm' ? '!h-8 !w-8 !min-h-8 !min-w-8' : '!h-10 !w-10 !min-h-10 !min-w-10'),

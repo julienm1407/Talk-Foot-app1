@@ -2,7 +2,10 @@ import { useMemo } from 'react'
 import { useMessageLikes } from '../../hooks/useMessageLikes'
 import { Card } from '../ui/Card'
 import { Link } from 'react-router-dom'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
+import {
+  MODULAR_PP_NAV_FRAMING,
+  ProfileCharacterThumb,
+} from '../profile/ProfileCharacterThumb'
 import { chatPersonasPool, currentUser } from '../../data/users'
 import { useProfile } from '../../hooks/useProfile'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
@@ -82,6 +85,7 @@ export function TopCommentsFeed({
             <ProfileCharacterThumb
               profile={profile}
               size="sm"
+              {...MODULAR_PP_NAV_FRAMING}
               className="mt-0.5 !h-9 !w-9 !min-h-9 !min-w-9 shrink-0 self-start rounded-[20px] border-0 p-0 sm:!h-10 sm:!w-10 sm:!min-h-10 sm:!min-w-10"
               aria-label={u?.username ?? 'Utilisateur'}
             />

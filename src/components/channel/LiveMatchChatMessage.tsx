@@ -25,6 +25,7 @@ export function LiveMatchChatMessage({
   user,
   selfUserId = 'me',
   selfChatActorId = null,
+  selfClerkUserId = null,
   socialEnabled = false,
   likeState,
   onToggleLike,
@@ -35,6 +36,7 @@ export function LiveMatchChatMessage({
   user?: User
   selfUserId?: string
   selfChatActorId?: string | null
+  selfClerkUserId?: string | null
   socialEnabled?: boolean
   likeState?: { likes: number; likedByMe: boolean }
   onToggleLike: (id: string) => void
@@ -51,6 +53,8 @@ export function LiveMatchChatMessage({
     user,
     selfUserId,
     selfChatActorId,
+    selfClerkUserId,
+    cloudDisplayName: user?.username,
     socialEnabled,
   })
 

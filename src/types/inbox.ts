@@ -21,9 +21,13 @@ export type InboxInviteItem = {
 export type InboxFriendItem = {
   kind: 'friend'
   id: string
+  /** UUID Supabase de la personne qui a envoyé la demande. */
+  requesterId: string
   displayName: string
+  href: string
   mutualHint?: string
   createdAtLabel: string
+  createdAtMs: number
 }
 
 export type InboxLikeItem = {

@@ -3,6 +3,9 @@ import type { UserProfile } from '../../types/profile'
 import { cn } from '../../utils/cn'
 import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { ModularAvatarHeadThumb } from './ModularAvatarCanvas'
+import { MODULAR_PP_NAV_FRAMING } from './modularPPFraming'
+
+export { MODULAR_PP_NAV_FRAMING }
 
 const PRESETS = {
   sm: 40,
@@ -10,13 +13,6 @@ const PRESETS = {
   chat: 72,
   lg: 96,
 } as const
-
-/** Même cadrage tête que la pastille profil de la barre du haut (nav / chat). */
-export const MODULAR_PP_NAV_FRAMING = {
-  framingMode: 'topbar' as const,
-  headOffsetPx: -4,
-  headScale: 1.55,
-}
 
 export function ProfileCharacterThumb({
   profile,
@@ -51,11 +47,7 @@ export function ProfileCharacterThumb({
       const measured = Math.round(Math.min(el.clientWidth, el.clientHeight))
       const shellSize = Math.max(16, measured || thumbPx)
       const renderSize =
-        framingMode === 'topbar'
-          ? 40 // Base stable topbar framing.
-          : measured < 32
-            ? thumbPx
-            : shellSize
+        framingMode === 'topbar' ? shellSize : measured < 32 ? thumbPx : shellSize
       setRenderState({ shellSize, renderSize })
     }
     update()
@@ -64,8 +56,6 @@ export function ProfileCharacterThumb({
     ro.observe(el)
     return () => ro.disconnect()
   }, [thumbPx, framingMode])
-
-  const scale = framingMode === 'topbar' ? renderState.shellSize / renderState.renderSize : 1
 
   return (
     <div
@@ -81,7 +71,10 @@ export function ProfileCharacterThumb({
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           style={{
-            transform: `translateY(${headOffsetPx}px) scale(${scale * headScale})`,
+            transform:
+              headOffsetPx !== 0 || headScale !== 1
+                ? `translateY(${headOffsetPx}px) scale(${headScale})`
+                : undefined,
             transformOrigin: 'center center',
           }}
         >

@@ -13,6 +13,7 @@ import { p2pKeysForPeers } from '../lib/supabase/friendships'
 import {
   acceptFriendRequest as acceptFriendRequestApi,
   sendFriendRequest as sendFriendRequestApi,
+  declineFriendRequest as declineFriendRequestApi,
 } from '../lib/supabase/friendships'
 
 export type RegisterPeerForPrivateChatInput = {
@@ -38,6 +39,7 @@ type DirectMessagesApi = ReturnType<typeof useDirectMessages> & {
   registerPeerForPrivateChat: (peer: RegisterPeerForPrivateChatInput) => void
   sendFriendRequest: (peerId: string) => Promise<{ ok: boolean; error?: string }>
   acceptFriendRequest: (requesterId: string) => Promise<{ ok: boolean; error?: string }>
+  declineFriendRequest: (requesterId: string) => Promise<{ ok: boolean; error?: string }>
 }
 
 const DirectMessagesContext = createContext<DirectMessagesApi | null>(null)
@@ -134,11 +136,13 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       const session = await ensureTalkFootSupabaseSession(sb)
       const myId = session?.user.id
       if (!myId) return { ok: false, error: 'session' }
-      const out = await sendFriendRequestApi(sb, myId, peerId)
+      const out = await sendFriendRequestApi(sb, myId, peerId, {
+        requesterDisplayName: authUser.displayName,
+      })
       if (out.ok) await cf.refresh()
       return out
     },
-    [authUser?.id, cf.refresh],
+    [authUser?.displayName, authUser?.id, cf.refresh],
   )
 
   const acceptFriendRequest = useCallback(
@@ -150,6 +154,21 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       const myId = session?.user.id
       if (!myId) return { ok: false, error: 'session' }
       const out = await acceptFriendRequestApi(sb, myId, requesterId)
+      if (out.ok) await cf.refresh()
+      return out
+    },
+    [authUser?.id, cf.refresh],
+  )
+
+  const declineFriendRequest = useCallback(
+    async (requesterId: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!authUser?.id || !isSupabaseConfigured()) return { ok: false, error: 'offline' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false, error: 'no_client' }
+      const session = await ensureTalkFootSupabaseSession(sb)
+      const myId = session?.user.id
+      if (!myId) return { ok: false, error: 'session' }
+      const out = await declineFriendRequestApi(sb, myId, requesterId)
       if (out.ok) await cf.refresh()
       return out
     },
@@ -170,6 +189,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       registerPeerForPrivateChat,
       sendFriendRequest,
       acceptFriendRequest,
+      declineFriendRequest,
     }),
     [
       dm,
@@ -183,6 +203,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       registerPeerForPrivateChat,
       sendFriendRequest,
       acceptFriendRequest,
+      declineFriendRequest,
     ],
   )
 

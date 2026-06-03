@@ -31,6 +31,8 @@ import type { Message, User } from '../types/chat'
 import { useSupporterGroupMessageLikesSync } from '../hooks/useSupporterGroupMessageLikesSync'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatars'
+import { useCloudFriends } from '../hooks/useCloudFriends'
+import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { cn } from '../utils/cn'
 import {
@@ -49,6 +51,10 @@ import { ShareButton } from '../components/ui/ShareButton'
 import type { SupporterChannel, SupporterGroup } from '../types/group'
 import { useMatches } from '../contexts/MatchesContext'
 import { getGroupQuickEmotes, getGroupSalonChatSurfaceStyles } from '../utils/groupSalonStyles'
+import {
+  isGroupBotSeedMessageId,
+  mergeGroupThreadWithOptionalSeed,
+} from '../utils/groupBotSeedAck'
 import { isUuidMessageId } from '../utils/isUuidMessageId'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../utils/bannedWords'
 import { sportMonksTeamLogoUrlForClubId } from '../data/sportMonksLogoUrls'
@@ -92,6 +98,10 @@ export function GroupPage() {
   const L = appearance === 'light'
   const chatActorId = useTalkFootChatActorId()
   const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
+  /** Compte connecté pour mémoriser les messages bot d’accueil (une fois par tribune). */
+  const botSeedUserId = authUser?.id && !authUser.isAnonymous ? authUser.id : null
+  const botSeedUserIdRef = useRef(botSeedUserId)
+  botSeedUserIdRef.current = botSeedUserId
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const debateFromQuery = searchParams.get('debate')
@@ -260,24 +270,26 @@ export function GroupPage() {
           const ch = channelRef.current
           if (!g || !ch) return prev
           const d = debateRef.current
-          const seed = buildGroupThreadSeed(
-            g,
-            ch.id,
-            ch.name,
-            d && ch.id === 'general' ? d : null,
-          )
           const seenCloud = new Set<string>()
-          const cloud = incoming
-            .filter((m) => {
-              if (!isUuidMessageId(m.id)) return false
-              if (seenCloud.has(m.id)) return false
-              seenCloud.add(m.id)
-              return true
-            })
-            .sort((a, b) => a.createdAt - b.createdAt)
-          const merged = [...seed, ...cloud]
-            .sort((a, b) => a.createdAt - b.createdAt)
-            .slice(-MAX_GROUP_CHANNEL_MESSAGES)
+          const cloud = incoming.filter((m) => {
+            if (!isUuidMessageId(m.id)) return false
+            if (seenCloud.has(m.id)) return false
+            seenCloud.add(m.id)
+            return true
+          })
+          const merged = mergeGroupThreadWithOptionalSeed(
+            botSeedUserIdRef.current,
+            key,
+            cloud,
+            () =>
+              buildGroupThreadSeed(
+                g,
+                ch.id,
+                ch.name,
+                d && ch.id === 'general' ? d : null,
+              ),
+            MAX_GROUP_CHANNEL_MESSAGES,
+          )
           return { ...prev, [key]: merged }
         }
 
@@ -287,7 +299,7 @@ export function GroupPage() {
           const ch = channelRef.current
           if (!g || !ch) return prev
           const cur = prev[key] ?? []
-          const seedPart = cur.filter((m) => !isUuidMessageId(m.id))
+          const seedPart = cur.filter((m) => isGroupBotSeedMessageId(m.id))
           const cloudPart = cur.filter((m) => isUuidMessageId(m.id))
           const seen = new Set(cloudPart.map((m) => m.id))
           const added = incoming.filter((m) => !seen.has(m.id))
@@ -405,18 +417,22 @@ export function GroupPage() {
 
       const prevList = prev[threadKey] ?? []
       const cloudOnly = prevList.filter((m) => isUuidMessageId(m.id))
-      const seed = buildGroupThreadSeed(
-        group,
-        channel.id,
-        channel.name,
-        debate && channel.id === 'general' ? debate : null,
+      const merged = mergeGroupThreadWithOptionalSeed(
+        botSeedUserId,
+        threadKey,
+        cloudOnly,
+        () =>
+          buildGroupThreadSeed(
+            group,
+            channel.id,
+            channel.name,
+            debate && channel.id === 'general' ? debate : null,
+          ),
+        MAX_GROUP_CHANNEL_MESSAGES,
       )
-      const merged = [...seed, ...cloudOnly]
-        .sort((a, b) => a.createdAt - b.createdAt)
-        .slice(-MAX_GROUP_CHANNEL_MESSAGES)
       return { ...prev, [threadKey]: merged }
     })
-  }, [group, channel, threadKey, debate, channel?.id])
+  }, [group, channel, threadKey, debate, channel?.id, botSeedUserId])
 
   const messages = threadKey ? messagesByThread[threadKey] ?? [] : []
 
@@ -439,7 +455,20 @@ export function GroupPage() {
     () => [...new Set(messages.map((m) => m.userId))],
     [messages],
   )
-  const modularByAuthor = useChatAuthorModularAvatars(chatAuthorIds, selfChatUserId)
+  const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
+    chatAuthorIds,
+    selfChatUserId,
+  )
+  const cloudFriends = useCloudFriends()
+
+  const authorNameByUserId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const m of messages) {
+      const n = m.authorDisplayName?.trim()
+      if (n) map.set(m.userId, n)
+    }
+    return map
+  }, [messages])
 
   const usersById = useMemo(() => {
     const base: Record<string, User> = {
@@ -467,21 +496,53 @@ export function GroupPage() {
         base[chatActorId] = { ...meEntry, id: chatActorId }
       }
     }
+    for (const peer of cloudFriends.acceptedPeers) {
+      const label = resolveChatDisplayLabel(undefined, peer.displayName)
+      if (base[peer.id]) {
+        base[peer.id] = { ...base[peer.id], username: label }
+      } else {
+        base[peer.id] = {
+          id: peer.id,
+          username: label,
+          avatarSeed: peer.id.replace(/-/g, '').slice(0, 12),
+          accent: 'violet',
+        }
+      }
+    }
     for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
+      const label = resolveChatDisplayLabel(authorNameByUserId.get(id), cloudAuthorNames[id])
       if (base[id]) {
-        base[id] = { ...base[id], modularAvatar }
+        base[id] = { ...base[id], username: label, modularAvatar }
       } else {
         base[id] = {
           id,
-          username: 'Supporteur',
-          avatarSeed: id.slice(0, 12),
+          username: label,
+          avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
           modularAvatar,
         }
       }
     }
+    for (const [userId, name] of authorNameByUserId) {
+      if (base[userId]) {
+        base[userId] = {
+          ...base[userId],
+          username: resolveChatDisplayLabel(name, base[userId].username),
+        }
+      }
+    }
     return base
-  }, [debateUsers, favoriteClubIds, authUser, chatActorId, groupSalonBot, modularByAuthor])
+  }, [
+    debateUsers,
+    favoriteClubIds,
+    authUser,
+    chatActorId,
+    groupSalonBot,
+    modularByAuthor,
+    cloudAuthorNames,
+    cloudFriends.acceptedPeers,
+    authorNameByUserId,
+  ])
 
   const visibleMessages = useMemo(() => {
     if (!virageMode || favoriteClubIds.length === 0) return messages
@@ -1500,6 +1561,7 @@ export function GroupPage() {
               usersById={usersById}
               selfUserId={selfChatUserId}
               selfChatActorId={chatActorId}
+              selfClerkUserId={authUser?.id}
               salonTone={L ? 'light' : 'dark'}
               getLikes={(id) =>
                 isUuidMessageId(id) ? groupMessageLikes.getLikeState(id).likes : 0

@@ -9,6 +9,12 @@ import {
   type ModularColorizableSlot,
 } from '../../features/avatar2d/modularAvatarState'
 import type { BoutiqueGarmentShow } from '../../utils/boutiqueModularState'
+import {
+  MODULAR_PP_HEAD_CLIP_BOTTOM_PCT,
+  MODULAR_PP_HEAD_MARGIN_TOP_PX,
+  MODULAR_PP_HEAD_ORIGIN,
+  MODULAR_PP_HEAD_ZOOM,
+} from './modularPPFraming'
 
 export const MODULAR_COLOR_VARIANTS: Record<ModularColorVariantKey, { label: string; filter: string }> = {
   default: { label: 'Base', filter: 'none' },
@@ -21,10 +27,6 @@ export const MODULAR_COLOR_VARIANTS: Record<ModularColorVariantKey, { label: str
   green: { label: 'Vert', filter: 'sepia(0.95) saturate(1.65) hue-rotate(72deg) brightness(0.95)' },
   white: { label: 'Blanc', filter: 'grayscale(1) brightness(1.35) contrast(0.92)' },
 }
-
-/** Cadrage tête robuste (sans clipPath, pour éviter les rendus noirs). */
-const HEAD_ZOOM = 2.5
-const HEAD_TRANSFORM_ORIGIN = '50% 2%'
 
 function LayerImage({
   src,
@@ -237,11 +239,8 @@ export function ModularAvatarCanvas({
   )
 
   if (isHead && fitSize) {
-    const tinyThumb = fitSize < 40
-    const headZoom = tinyThumb ? 1.74 : HEAD_ZOOM
-    const transformOrigin = HEAD_TRANSFORM_ORIGIN
-    const baseScale = (fitSize / canvasSize.width) * headZoom
-    const topOffset = tinyThumb ? -9 : -12
+    const baseScale = (fitSize / canvasSize.width) * MODULAR_PP_HEAD_ZOOM
+    const clipBottom = `${MODULAR_PP_HEAD_CLIP_BOTTOM_PCT}%`
     return (
       <div
         className={cn('relative overflow-hidden', className)}
@@ -253,12 +252,20 @@ export function ModularAvatarCanvas({
             width: canvasSize.width,
             height: canvasSize.height,
             marginLeft: -canvasSize.width / 2,
-            marginTop: topOffset,
+            marginTop: MODULAR_PP_HEAD_MARGIN_TOP_PX,
             transform: `scale(${baseScale})`,
-            transformOrigin,
+            transformOrigin: MODULAR_PP_HEAD_ORIGIN,
           }}
         >
-          <div className="relative overflow-hidden" style={{ width: canvasSize.width, height: canvasSize.height }}>
+          <div
+            className="relative overflow-hidden"
+            style={{
+              width: canvasSize.width,
+              height: canvasSize.height,
+              clipPath: `inset(0 0 ${clipBottom} 0)`,
+              WebkitClipPath: `inset(0 0 ${clipBottom} 0)`,
+            }}
+          >
             {layers}
           </div>
         </div>

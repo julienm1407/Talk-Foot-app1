@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { buildInboxSeed } from '../data/inboxSeed'
 import { useArticles } from '../contexts/ArticlesContext'
-import type { InboxItem, InboxLikeItem } from '../types/inbox'
+import { useCloudFriends } from './useCloudFriends'
+import type { InboxFriendItem, InboxItem, InboxLikeItem } from '../types/inbox'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import {
   fetchInboxNotificationsForRecipient,
@@ -19,19 +20,38 @@ const READ_KEY = 'talkfoot.inbox.read.v1'
 
 const isStringArray = (p: unknown): p is string[] => Array.isArray(p) && p.every((x) => typeof x === 'string')
 
+function pendingFriendInboxItems(
+  incoming: { requesterId: string; displayName: string }[],
+  existingRequesterIds: Set<string>,
+): InboxFriendItem[] {
+  const now = Date.now()
+  return incoming
+    .filter((r) => !existingRequesterIds.has(r.requesterId))
+    .map((r) => ({
+      kind: 'friend' as const,
+      id: `friend-pending-${r.requesterId}`,
+      requesterId: r.requesterId,
+      displayName: r.displayName,
+      href: `/user/${r.requesterId}`,
+      createdAtLabel: 'En attente',
+      createdAtMs: now,
+    }))
+}
+
 export function useInbox() {
   const { user: authUser } = useAuth()
+  const cloudFriends = useCloudFriends()
   const [removedIds, setRemovedIds] = useLocalStorageState<string[]>(REMOVED_KEY, [], isStringArray)
   const [readIds, setReadIds] = useLocalStorageState<string[]>(READ_KEY, [], isStringArray)
-  const [likeNotifs, setLikeNotifs] = useState<InboxLikeItem[]>([])
+  const [cloudNotifs, setCloudNotifs] = useState<InboxItem[]>([])
   const recipientRef = useRef<string | null>(null)
 
   const { articles } = useArticles()
   const seed = useMemo(() => buildInboxSeed(articles), [articles])
 
-  const refreshLikeNotifs = useCallback(async () => {
+  const refreshCloudNotifs = useCallback(async () => {
     if (!isSupabaseConfigured() || !authUser?.id || authUser.isAnonymous) {
-      setLikeNotifs([])
+      setCloudNotifs([])
       return
     }
     const sb = getSupabaseBrowserClient()
@@ -41,12 +61,16 @@ export function useInbox() {
     recipientRef.current = session.user.id
     await syncRealtimeAuth(sb)
     const rows = await fetchInboxNotificationsForRecipient(sb, session.user.id)
-    setLikeNotifs(rows)
+    setCloudNotifs(rows)
   }, [authUser?.id, authUser?.isAnonymous])
 
   useEffect(() => {
-    void refreshLikeNotifs()
-  }, [refreshLikeNotifs])
+    void refreshCloudNotifs()
+  }, [refreshCloudNotifs])
+
+  useEffect(() => {
+    void refreshCloudNotifs()
+  }, [cloudFriends.incomingPendingFrom, refreshCloudNotifs])
 
   useEffect(() => {
     if (!isSupabaseConfigured() || !authUser?.id || authUser.isAnonymous) return
@@ -61,7 +85,7 @@ export function useInbox() {
       if (!session || cancelled) return
       recipientRef.current = session.user.id
       await syncRealtimeAuth(sb)
-      await refreshLikeNotifs()
+      await refreshCloudNotifs()
       if (cancelled) return
 
       const recipientFilter = postgresChangesEqFilter(
@@ -79,7 +103,7 @@ export function useInbox() {
             filter: recipientFilter,
           },
           () => {
-            void refreshLikeNotifs()
+            void refreshCloudNotifs()
           },
         )
         .subscribe()
@@ -100,17 +124,26 @@ export function useInbox() {
       cancelled = true
       if (channel) void sb.removeChannel(channel)
     }
-  }, [authUser?.id, authUser?.isAnonymous, refreshLikeNotifs])
+  }, [authUser?.id, authUser?.isAnonymous, refreshCloudNotifs])
 
   const all = useMemo(() => {
-    const merged: InboxItem[] = [...likeNotifs, ...seed]
+    const fromCloud = cloudNotifs
+    const friendFromInbox = fromCloud.filter((i): i is InboxFriendItem => i.kind === 'friend')
+    const inboxRequesterIds = new Set(friendFromInbox.map((f) => f.requesterId))
+    const pendingFriends = pendingFriendInboxItems(
+      cloudFriends.incomingPendingFrom,
+      inboxRequesterIds,
+    )
+    const merged: InboxItem[] = [...fromCloud, ...pendingFriends, ...seed]
     return merged.sort((a, b) => {
-      const ta = a.kind === 'like' ? a.createdAtMs : 0
-      const tb = b.kind === 'like' ? b.createdAtMs : 0
+      const ta =
+        a.kind === 'like' || a.kind === 'friend' ? a.createdAtMs : 0
+      const tb =
+        b.kind === 'like' || b.kind === 'friend' ? b.createdAtMs : 0
       if (ta !== tb) return tb - ta
       return 0
     })
-  }, [likeNotifs, seed])
+  }, [cloudNotifs, cloudFriends.incomingPendingFrom, seed])
 
   const items = useMemo(
     () => all.filter((i) => !removedIds.includes(i.id)),
@@ -126,7 +159,7 @@ export function useInbox() {
     (id: string) => {
       setReadIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
       const sb = getSupabaseBrowserClient()
-      if (sb && recipientRef.current) {
+      if (sb && recipientRef.current && !id.startsWith('friend-pending-')) {
         void markInboxNotificationRead(sb, id)
       }
     },
@@ -148,17 +181,21 @@ export function useInbox() {
     })
     const sb = getSupabaseBrowserClient()
     if (sb && recipientRef.current) {
-      for (const n of likeNotifs) {
-        void markInboxNotificationRead(sb, n.id)
+      for (const n of cloudNotifs) {
+        if (n.kind === 'like' || n.kind === 'friend') {
+          if (!n.id.startsWith('friend-pending-')) {
+            void markInboxNotificationRead(sb, n.id)
+          }
+        }
       }
     }
-  }, [items, setReadIds, likeNotifs])
+  }, [items, setReadIds, cloudNotifs])
 
   const byKind = useMemo(() => {
     const likes = items.filter((i): i is InboxLikeItem => i.kind === 'like')
     const news = items.filter((i): i is Extract<InboxItem, { kind: 'news' }> => i.kind === 'news')
     const invites = items.filter((i): i is Extract<InboxItem, { kind: 'invite' }> => i.kind === 'invite')
-    const friends = items.filter((i): i is Extract<InboxItem, { kind: 'friend' }> => i.kind === 'friend')
+    const friends = items.filter((i): i is InboxFriendItem => i.kind === 'friend')
     return { likes, news, invites, friends }
   }, [items])
 
@@ -170,6 +207,7 @@ export function useInbox() {
     markRead,
     remove,
     markAllRead,
+    refresh: refreshCloudNotifs,
   }
 }
 

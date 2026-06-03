@@ -87,7 +87,10 @@ export function useLiveMatchChatSync(options: {
   }, [onRemoteMessages])
 
   const publishMessage = useCallback(
-    async (msg: Pick<Message, 'matchId' | 'text'> & Partial<Message>) => {
+    async (
+      msg: Pick<Message, 'matchId' | 'text'> &
+        Partial<Message> & { displayName?: string },
+    ) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
@@ -107,7 +110,8 @@ export function useLiveMatchChatSync(options: {
       if (msg.emoteId) metadata.emoteId = msg.emoteId
       if (msg.groupScarf) metadata.groupScarf = msg.groupScarf
 
-      const displayName = displayNameFromSession(session.user)
+      const displayName =
+        msg.displayName?.trim() || displayNameFromSession(session.user)
 
       const { data, error } = await sb
         .from('live_match_messages')

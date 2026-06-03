@@ -18,7 +18,10 @@ import { ClubCrest } from '../brand/ClubCrest'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { HomeBoutiqueEncart } from './HomeBoutiqueEncart'
 import { Avatar } from '../ui/Avatar'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
+import {
+  MODULAR_PP_NAV_FRAMING,
+  ProfileCharacterThumb,
+} from '../profile/ProfileCharacterThumb'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { cn } from '../../utils/cn'
 import { TokenGlyph } from '../ui/TokenGlyph'
@@ -131,9 +134,7 @@ export function HomeMonEspacePanel({
           <ProfileCharacterThumb
             profile={profile}
             size="sm"
-            framingMode="topbar"
-            headOffsetPx={-4}
-            headScale={1.55}
+            {...MODULAR_PP_NAV_FRAMING}
             className={cn(
               '!shrink-0 !rounded-full !border-0 p-0 ring-2 ring-white/25',
               slim ? '!h-9 !w-9 !min-h-9 !min-w-9' : '!h-10 !w-10 !min-h-10 !min-w-10',

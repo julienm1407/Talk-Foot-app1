@@ -29,6 +29,7 @@ import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { buildChatPeerMenuTarget } from '../utils/chatPeerSocial'
+import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import type { User } from '../types/chat'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
@@ -656,21 +657,24 @@ export function ChannelPage() {
     () => [...new Set(chatMessages.map((m) => m.userId))],
     [chatMessages],
   )
-  const modularByAuthor = useChatAuthorModularAvatars(chatAuthorIds, selfChatUserId)
+  const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
+    chatAuthorIds,
+    selfChatUserId,
+  )
   const chatUsersById = useMemo(() => {
     const map: Record<string, User> = {}
     for (const m of chatMessages) {
       const modularAvatar = modularByAuthor[m.userId]
       map[m.userId] = {
         id: m.userId,
-        username: m.username,
+        username: resolveChatDisplayLabel(m.username, cloudAuthorNames[m.userId]),
         avatarSeed: m.avatarSeed,
         accent: m.avatarAccent ?? 'violet',
         ...(modularAvatar ? { modularAvatar } : {}),
       }
     }
     return map
-  }, [chatMessages, modularByAuthor])
+  }, [chatMessages, modularByAuthor, cloudAuthorNames])
   const { publishReaction } = useLiveMatchReactionsSync({
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
@@ -738,7 +742,12 @@ export function ChannelPage() {
       window.setTimeout(() => setAnimationNotice(null), 2800)
       return
     }
-    const res = await publishMessage({ matchId: match.id, text, matchTribune: selectedTribune })
+    const res = await publishMessage({
+      matchId: match.id,
+      text,
+      matchTribune: selectedTribune,
+      displayName: authUser?.displayName,
+    })
     if (!res.ok) {
       setAnimationNotice(
         res.error === 'moderation'
@@ -1401,6 +1410,7 @@ export function ChannelPage() {
         matchId: match.id,
         text: `🔴 Live lancé (${liveMicEnabled ? 'micro ON' : 'micro OFF'} · ${liveCamEnabled ? 'camera ON' : 'camera OFF'})`,
         matchTribune: selectedTribune,
+        displayName: authUser?.displayName,
       })
     }
     setLiveBroadcastActive(true)
@@ -2118,6 +2128,7 @@ export function ChannelPage() {
                       user={chatUsersById[msg.userId]}
                       selfUserId={selfChatUserId}
                       selfChatActorId={chatActorId}
+                      selfClerkUserId={authUser?.id}
                       socialEnabled={chatSocialEnabled}
                       light={L}
                       likeState={messageLikes.getLikeState(msg.id)}

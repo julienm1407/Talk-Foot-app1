@@ -1,6 +1,6 @@
 import { Card } from '../ui/Card'
 import { useProfile } from '../../hooks/useProfile'
-import { ProfileCharacterThumb } from './ProfileCharacterThumb'
+import { MODULAR_PP_NAV_FRAMING, ProfileCharacterThumb } from './ProfileCharacterThumb'
 
 export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }) {
   const { profile } = useProfile()
@@ -16,9 +16,7 @@ export function ProfilePhotoSection({ usernameLabel }: { usernameLabel: string }
         <ProfileCharacterThumb
           profile={profile}
           size="lg"
-          framingMode="topbar"
-          headOffsetPx={-13}
-          headScale={1.55}
+          {...MODULAR_PP_NAV_FRAMING}
           className="!h-24 !w-24 !min-h-24 !min-w-24 shrink-0 rounded-full border-0 p-0 ring-2 ring-white/25 sm:!h-28 sm:!w-28 sm:!min-h-28 sm:!min-w-28"
           aria-label={`Photo de profil Talk Foot — ${usernameLabel}`}
         />

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createFriendRequestInboxNotification } from './inboxNotifications'
 import { p2pThreadKey } from '../../utils/cloudDmThread'
 
 export type FriendshipRow = {
@@ -49,7 +50,12 @@ export async function fetchProfilesByIds(
   return map
 }
 
-export async function sendFriendRequest(sb: SupabaseClient, myId: string, peerId: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendFriendRequest(
+  sb: SupabaseClient,
+  myId: string,
+  peerId: string,
+  opts?: { requesterDisplayName?: string },
+): Promise<{ ok: boolean; error?: string }> {
   if (myId === peerId) return { ok: false, error: 'invalid' }
   const { user_low, user_high } = canonicalFriendshipPair(myId, peerId)
   const { error } = await sb.from('friendships').insert({
@@ -62,6 +68,29 @@ export async function sendFriendRequest(sb: SupabaseClient, myId: string, peerId
     if (error.code === '23505') return { ok: false, error: 'already_exists' }
     return { ok: false, error: error.message }
   }
+  const requesterDisplayName = opts?.requesterDisplayName?.trim() || 'Supporteur'
+  await createFriendRequestInboxNotification(sb, {
+    recipientSupabaseId: peerId,
+    requesterSupabaseId: myId,
+    requesterDisplayName,
+  })
+  return { ok: true }
+}
+
+export async function declineFriendRequest(
+  sb: SupabaseClient,
+  myId: string,
+  requesterId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { user_low, user_high } = canonicalFriendshipPair(myId, requesterId)
+  const { error } = await sb
+    .from('friendships')
+    .delete()
+    .eq('user_low', user_low)
+    .eq('user_high', user_high)
+    .eq('status', 'pending')
+    .eq('requested_by', requesterId)
+  if (error) return { ok: false, error: error.message }
   return { ok: true }
 }
 
