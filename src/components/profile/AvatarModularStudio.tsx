@@ -104,6 +104,13 @@ const NOSE_DISPLAY_NAMES: Record<string, string> = {
   'nose-nose-small-light': 'Nez petit',
 }
 
+const MOUTH_DISPLAY_NAMES: Record<string, string> = {
+  'mouth-bouche-homme': 'Bouche homme',
+  'mouth-lips-none': 'Lèvres naturelles',
+  'mouth-lips-lipstick-red': 'Rouge à lèvres rouge',
+  'mouth-lips-lipstick-pink': 'Rouge à lèvres rose',
+}
+
 /** Option vide en tête de grille (aucun calque PNG). */
 const EMPTY_SLOT_OPTION: Partial<Record<AvatarSlotKey, { key: string; label: string }>> = {
   hair: { key: 'hair-bald', label: 'Chauve' },
@@ -120,6 +127,7 @@ function assetLabel(asset: AvatarAsset, slot: AvatarSlotKey): string {
   if (slot === 'shoes') return SHOES_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
   if (slot === 'eyes') return EYES_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
   if (slot === 'nose') return NOSE_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
+  if (slot === 'mouth') return MOUTH_DISPLAY_NAMES[asset.id] ?? asset.name ?? asset.fileName
   return asset.name || asset.fileName
 }
 
