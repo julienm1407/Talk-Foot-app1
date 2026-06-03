@@ -71,8 +71,10 @@ export function ShopModalPortal({
         <div className="tf-shop-modal-backdrop z-0" aria-hidden />
       )}
 
-      <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center overflow-y-auto p-4 sm:p-6">
-        <div className="pointer-events-auto w-full max-w-lg shrink-0">{children}</div>
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] flex items-start justify-center overflow-y-auto overscroll-contain px-[max(0.75rem,env(safe-area-inset-left,0px))] py-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] sm:items-center sm:p-6 [-webkit-overflow-scrolling:touch]"
+      >
+        <div className="pointer-events-auto my-auto w-full max-w-lg shrink-0 sm:my-0">{children}</div>
       </div>
     </div>,
     portalTarget,

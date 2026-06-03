@@ -77,7 +77,7 @@ export function BoutiqueItemPurchaseModal({
           <p className="text-center text-xs font-bold text-white/70">
             Choisis ton mode de paiement pour continuer
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:justify-center">
             <button
               type="button"
               onClick={() => onChooseCurrency('medals')}

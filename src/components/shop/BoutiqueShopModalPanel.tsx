@@ -38,7 +38,7 @@ export function BoutiqueShopModalPanel({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
         className={cn(
-          'relative w-full shrink-0 overflow-hidden rounded-[28px] border border-sky-400/35',
+          'relative w-full max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] shrink-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-[22px] border border-sky-400/35 sm:rounded-[28px]',
           'bg-gradient-to-b from-[#0c1f3d] via-[#081628] to-[#050a12] shadow-[0_32px_100px_rgba(0,0,0,0.55)]',
         )}
       >
@@ -67,27 +67,31 @@ export function BoutiqueShopModalPanel({
 
         <header
           className={cn(
-            'relative border-b border-white/10 px-5 py-5 text-center sm:px-7 sm:py-6',
-            onDismiss && 'pt-12 sm:pt-14',
+            'relative border-b border-white/10 px-4 py-4 text-center sm:px-7 sm:py-6',
+            onDismiss && 'pt-11 sm:pt-14',
           )}
         >
-          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-sky-300/90">{eyebrow}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-300/90 sm:text-[11px] sm:tracking-[0.28em]">
+            {eyebrow}
+          </p>
           <h1
             id={ariaLabelledBy}
-            className="mt-2 font-display text-2xl font-black leading-tight text-white sm:text-3xl"
+            className="mt-2 text-balance font-display text-xl font-black leading-tight text-white sm:text-2xl lg:text-3xl"
           >
             {title}
           </h1>
-          {subtitle ? <div className="mt-2 text-sm font-semibold text-sky-100/85">{subtitle}</div> : null}
+          {subtitle ? (
+            <div className="mt-2 text-balance text-xs font-semibold text-sky-100/85 sm:text-sm">{subtitle}</div>
+          ) : null}
         </header>
 
-        <div className="relative flex justify-center px-4 py-4 sm:px-6 sm:py-5">
-          <div className="relative w-full max-w-[280px]">
+        <div className="relative flex justify-center px-3 py-3 sm:px-6 sm:py-5">
+          <div className="relative w-full max-w-[min(280px,100%)]">
             <div
               className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(ellipse_80%_60%_at_50%_30%,rgba(56,189,248,0.18),transparent_70%)]"
               aria-hidden
             />
-            <div className="relative h-[min(72vw,320px)] w-full sm:h-[340px]">
+            <div className="relative h-[min(52vw,240px)] w-full min-h-[200px] sm:h-[340px] sm:min-h-0 sm:max-h-[340px]">
               <ModularAvatarCanvas state={previewState} crop="full" fill className="h-full w-full" />
             </div>
             <span
@@ -99,7 +103,7 @@ export function BoutiqueShopModalPanel({
           </div>
         </div>
 
-        <div className="relative border-t border-white/10 px-5 py-4 sm:px-7">{footer}</div>
+        <div className="relative border-t border-white/10 px-4 py-3.5 sm:px-7 sm:py-4">{footer}</div>
       </motion.div>
     </ShopModalPortal>
   )

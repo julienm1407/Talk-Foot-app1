@@ -56,8 +56,6 @@ export function BoutiquePurchaseConfirm({
     <BoutiqueShopModalPanel
       ariaLabelledBy="purchase-confirm-title"
       onBackdropClick={handleBackdrop}
-      onDismiss={onBack}
-      dismissAriaLabel="Retour à la visualisation"
       eyebrow="Confirmation d'achat"
       title="Tu confirmes cet achat ?"
       subtitle={
