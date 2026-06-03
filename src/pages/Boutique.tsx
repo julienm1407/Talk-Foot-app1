@@ -17,7 +17,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
-import { BoutiquePurchaseConfirm } from '../components/shop/BoutiquePurchaseConfirm'
+import { BoutiqueItemPurchaseModal } from '../components/shop/BoutiqueItemPurchaseModal'
 import { catalogTabForShopItem } from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
@@ -48,9 +48,10 @@ export function BoutiquePage() {
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('name_asc')
   const [catalogSearch, setCatalogSearch] = useState('')
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
-  const [pendingPurchase, setPendingPurchase] = useState<{
+  const [purchaseFlow, setPurchaseFlow] = useState<{
     item: AvatarItemType
-    currency: 'medals' | 'tokens'
+    step: 'preview' | 'confirm'
+    currency?: 'medals' | 'tokens'
   } | null>(null)
   const [confirmingPurchase, setConfirmingPurchase] = useState(false)
 
@@ -81,18 +82,20 @@ export function BoutiquePage() {
     navigate(`/boutique/medailles?${params.toString()}`)
   }
 
-  const handleBuyCosmetic = (item: AvatarItemType, currency: 'medals' | 'tokens') => {
-    setPendingPurchase({ item, currency })
+  const openItemPreview = (item: AvatarItemType) => {
+    setPurchaseFlow({ item, step: 'preview' })
   }
 
-  const handleCancelPurchase = () => {
+  const closePurchaseFlow = () => {
     if (confirmingPurchase) return
-    setPendingPurchase(null)
+    setPurchaseFlow(null)
   }
 
   const handleConfirmPurchase = async () => {
-    if (!pendingPurchase || confirmingPurchase) return
-    const { item, currency } = pendingPurchase
+    if (!purchaseFlow || purchaseFlow.step !== 'confirm' || !purchaseFlow.currency || confirmingPurchase) {
+      return
+    }
+    const { item, currency } = purchaseFlow
     setConfirmingPurchase(true)
     const result = await purchaseCosmetic(
       item,
@@ -101,11 +104,11 @@ export function BoutiquePage() {
     )
     setConfirmingPurchase(false)
     if (result.ok) {
-      setPendingPurchase(null)
+      setPurchaseFlow(null)
       navigate(result.href)
       return
     }
-    setPendingPurchase(null)
+    setPurchaseFlow(null)
     if (result.code === 'partial_pack') {
       showNotice(
         'err',
@@ -141,20 +144,27 @@ export function BoutiquePage() {
 
   return (
     <div className="space-y-6">
-      {pendingPurchase ? (
-        <BoutiquePurchaseConfirm
-          item={pendingPurchase.item}
-          currency={pendingPurchase.currency}
+      {purchaseFlow ? (
+        <BoutiqueItemPurchaseModal
+          item={purchaseFlow.item}
+          step={purchaseFlow.step}
+          currency={purchaseFlow.currency}
           walletMedals={wallet.medals}
           walletTokens={wallet.tokens}
           confirming={confirmingPurchase}
+          onClose={closePurchaseFlow}
+          onChooseCurrency={(currency) =>
+            setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
+          }
+          onBack={() =>
+            setPurchaseFlow((prev) => (prev ? { ...prev, step: 'preview', currency: undefined } : null))
+          }
           onConfirm={() => void handleConfirmPurchase()}
-          onCancel={handleCancelPurchase}
           onNeedMedals={
-            pendingPurchase.currency === 'medals'
+            purchaseFlow.currency === 'medals'
               ? () => {
-                  const item = pendingPurchase.item
-                  setPendingPurchase(null)
+                  const item = purchaseFlow.item
+                  setPurchaseFlow(null)
                   redirectToMedalPacks(item)
                 }
               : undefined
@@ -293,7 +303,7 @@ export function BoutiquePage() {
                   key={row.item.id}
                   item={row.item}
                   owned={isCosmeticOwned(row.item, ownsItem)}
-                  handleBuyCosmetic={handleBuyCosmetic}
+                  onOpenItem={openItemPreview}
                 />
               ))}
             </div>

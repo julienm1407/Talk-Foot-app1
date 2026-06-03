@@ -4,24 +4,12 @@ import { ModularAvatarCanvas } from '../profile/ModularAvatarCanvas'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { useProfile } from '../../hooks/useProfile'
 import { cosmeticTokenPrice } from '../../data/shop'
-import type { AvatarItem, AvatarSlot } from '../../types/profile'
+import type { AvatarItem } from '../../types/profile'
 import { mergePurchasedItemOntoProfile } from '../../utils/boutiqueModularState'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
-
-const SLOT_LABELS: Record<AvatarSlot, string> = {
-  scarf: 'Écharpe',
-  hat: 'Casquette',
-  jersey: 'Maillot',
-  accessory: 'Accessoire',
-  pants: 'Short',
-  shoes: 'Chaussures',
-}
-
-function itemTypeLabel(item: AvatarItem): string {
-  if (item.bundleIncludes?.length) return 'Pack maillot + short'
-  return SLOT_LABELS[item.slot]
-}
+import { boutiqueItemTypeLabel } from './boutiqueItemLabels'
+import { ShopModalPortal } from './ShopModalPortal'
 
 export function BoutiquePurchaseConfirm({
   item,
@@ -31,6 +19,7 @@ export function BoutiquePurchaseConfirm({
   confirming,
   onConfirm,
   onCancel,
+  onBack,
   onNeedMedals,
 }: {
   item: AvatarItem
@@ -40,6 +29,7 @@ export function BoutiquePurchaseConfirm({
   confirming?: boolean
   onConfirm: () => void
   onCancel: () => void
+  onBack?: () => void
   onNeedMedals?: () => void
 }) {
   const { profile } = useProfile()
@@ -51,7 +41,7 @@ export function BoutiquePurchaseConfirm({
 
   const medalCost = item.cost
   const tokenCost = cosmeticTokenPrice(item.cost)
-  const typeLabel = itemTypeLabel(item)
+  const typeLabel = boutiqueItemTypeLabel(item)
 
   const insufficientMedals = currency === 'medals' && walletMedals < medalCost
   const insufficientTokens = currency === 'tokens' && walletTokens < tokenCost
@@ -63,21 +53,22 @@ export function BoutiquePurchaseConfirm({
 
   const confirmDisabled = confirming || insufficientMedals || insufficientTokens
 
+  const handleBackdrop = onBack ?? onCancel
+
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-[#030912]/88 p-4 backdrop-blur-md sm:p-6"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="purchase-confirm-title"
+    <ShopModalPortal
+      ariaLabelledBy="purchase-confirm-title"
+      onBackdropClick={handleBackdrop}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.92, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
         className={cn(
-          'relative w-full max-w-lg overflow-hidden rounded-[28px] border border-sky-400/35',
+          'relative w-full overflow-y-auto overflow-x-hidden rounded-[28px] border border-sky-400/35',
           'bg-gradient-to-b from-[#0c1f3d] via-[#081628] to-[#050a12] shadow-[0_32px_100px_rgba(0,0,0,0.55)]',
         )}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-sky-500/20 blur-3xl"
@@ -115,7 +106,7 @@ export function BoutiquePurchaseConfirm({
               <ModularAvatarCanvas state={previewState} crop="full" fill className="h-full w-full" />
             </div>
             <span
-              className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full border border-sky-400/45 bg-sky-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-sky-200 shadow-lg"
+              className="absolute left-1/2 top-2 z-[2] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 whitespace-nowrap rounded-full border border-sky-400/45 bg-sky-500/20 px-4 py-1 text-[10px] font-black uppercase tracking-wide text-sky-200 shadow-lg"
               aria-hidden
             >
               Aperçu sur ton avatar
@@ -168,23 +159,37 @@ export function BoutiquePurchaseConfirm({
                 {confirming ? 'Achat en cours…' : 'Confirmer l’achat'}
               </button>
             )}
-            <button
-              type="button"
-              disabled={confirming}
-              onClick={onCancel}
-              className={cn(
-                TF_FOCUS_VISIBLE,
-                'inline-flex min-h-tf-touch flex-1 items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15 disabled:opacity-50 sm:flex-initial sm:min-w-[11rem]',
-              )}
-            >
-              Annuler
-            </button>
+            {onBack ? (
+              <button
+                type="button"
+                disabled={confirming}
+                onClick={onBack}
+                className={cn(
+                  TF_FOCUS_VISIBLE,
+                  'inline-flex min-h-tf-touch flex-1 items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15 disabled:opacity-50 sm:flex-initial sm:min-w-[11rem]',
+                )}
+              >
+                Retour
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={confirming}
+                onClick={onCancel}
+                className={cn(
+                  TF_FOCUS_VISIBLE,
+                  'inline-flex min-h-tf-touch flex-1 items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-black text-white transition hover:bg-white/15 disabled:opacity-50 sm:flex-initial sm:min-w-[11rem]',
+                )}
+              >
+                Annuler
+              </button>
+            )}
           </div>
           <p className="text-center text-[10px] font-semibold text-white/45">
             L&apos;article sera ajouté à ton inventaire après confirmation.
           </p>
         </div>
       </motion.div>
-    </div>
+    </ShopModalPortal>
   )
 }

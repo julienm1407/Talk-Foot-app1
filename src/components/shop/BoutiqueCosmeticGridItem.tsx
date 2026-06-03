@@ -1,20 +1,11 @@
-import { Button } from '../ui/Button'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { BoutiqueKitStudioPreview } from './BoutiqueKitStudioPreview'
 import { shopEncartButtonClass, shopEncartTokenButtonClass } from './ShopRarityEncart'
 import { cosmeticTokenPrice } from '../../data/shop'
-import type { AvatarItem, AvatarSlot } from '../../types/profile'
+import type { AvatarItem } from '../../types/profile'
 import type { ShopRarity } from './ShopRarityEncart'
 import { cn } from '../../utils/cn'
-
-const SLOT_LABELS: Record<AvatarSlot, string> = {
-  scarf: 'Écharpe',
-  hat: 'Casquette',
-  jersey: 'Maillot',
-  accessory: 'Accessoire',
-  pants: 'Short',
-  shoes: 'Chaussures',
-}
+import { boutiqueItemTypeLabel } from './boutiqueItemLabels'
 
 const RARITY_RING: Record<ShopRarity, string> = {
   common: 'ring-cyan-400/50',
@@ -37,15 +28,18 @@ function usesStudioPreview(item: AvatarItem): boolean {
 export function BoutiqueCosmeticGridItem({
   item,
   owned,
-  handleBuyCosmetic,
+  onOpenItem,
 }: {
   item: AvatarItem
   owned: boolean
-  handleBuyCosmetic: (item: AvatarItem, currency: 'medals' | 'tokens', medalCost?: number) => void
+  onOpenItem: (item: AvatarItem) => void
 }) {
   const tokenPrice = cosmeticTokenPrice(item.cost)
-  const typeLabel = item.bundleIncludes?.length ? 'Pack maillot + short' : SLOT_LABELS[item.slot]
+  const typeLabel = boutiqueItemTypeLabel(item)
   const studioCard = usesStudioPreview(item)
+  const openPreview = () => {
+    if (!owned) onOpenItem(item)
+  }
 
   return (
     <article
@@ -53,7 +47,18 @@ export function BoutiqueCosmeticGridItem({
         'relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
         RARITY_RING[item.rarity],
         studioCard ? 'max-w-[300px]' : 'max-w-[220px]',
+        !owned && 'cursor-pointer transition hover:border-sky-400/40 hover:shadow-[0_16px_48px_rgba(56,189,248,0.2)]',
       )}
+      onClick={openPreview}
+      onKeyDown={(e) => {
+        if (!owned && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault()
+          openPreview()
+        }
+      }}
+      role={owned ? undefined : 'button'}
+      tabIndex={owned ? undefined : 0}
+      aria-label={owned ? undefined : `Voir et acheter ${item.name}`}
     >
       {studioCard ? (
         <div
@@ -64,6 +69,14 @@ export function BoutiqueCosmeticGridItem({
           )}
         >
           <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />
+          {!owned ? (
+            <span
+              className="pointer-events-none absolute inset-x-0 top-3 z-[2] text-center text-[9px] font-black uppercase tracking-[0.2em] text-sky-200/70"
+              aria-hidden
+            >
+              Toucher pour visualiser
+            </span>
+          ) : null}
           <BoutiqueKitStudioPreview item={item} className="relative z-[1]" />
         </div>
       ) : (
@@ -88,24 +101,26 @@ export function BoutiqueCosmeticGridItem({
           </p>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <Button
-            variant="soft"
-            className={cn(shopEncartButtonClass(owned), 'min-h-9 px-1 text-[10px] sm:min-h-10 sm:text-xs')}
-            disabled={owned}
-            onClick={() => !owned && handleBuyCosmetic(item, 'medals')}
+        <div className="mt-2 grid grid-cols-2 gap-1.5" aria-hidden={owned ? undefined : true}>
+          <div
+            className={cn(
+              shopEncartButtonClass(owned),
+              'flex min-h-9 items-center justify-center px-1 text-[10px] sm:min-h-10 sm:text-xs',
+              owned && 'opacity-70',
+            )}
           >
             {owned ? 'Possédé' : (
               <span className="tabular-nums">
                 {item.cost} <span aria-hidden>🏅</span>
               </span>
             )}
-          </Button>
-          <Button
-            variant="soft"
-            className={cn(shopEncartTokenButtonClass(owned), 'min-h-9 px-1 text-[10px] sm:min-h-10 sm:text-xs')}
-            disabled={owned}
-            onClick={() => !owned && handleBuyCosmetic(item, 'tokens')}
+          </div>
+          <div
+            className={cn(
+              shopEncartTokenButtonClass(owned),
+              'flex min-h-9 items-center justify-center px-1 text-[10px] sm:min-h-10 sm:text-xs',
+              owned && 'opacity-70',
+            )}
           >
             {owned ? (
               'Possédé'
@@ -115,7 +130,7 @@ export function BoutiqueCosmeticGridItem({
                 <TokenGlyph variant="onDark" className="size-3.5 shrink-0" />
               </span>
             )}
-          </Button>
+          </div>
         </div>
       </div>
     </article>
