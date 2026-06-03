@@ -38,7 +38,8 @@ export function BoutiqueShopModalPanel({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 380, damping: 28 }}
         className={cn(
-          'relative w-full max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] shrink-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-[22px] border border-sky-400/35 sm:rounded-[28px]',
+          'relative w-full shrink-0 overflow-x-hidden rounded-[22px] border border-sky-400/35 sm:overflow-hidden sm:rounded-[28px]',
+          'max-sm:max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-1.5rem))] max-sm:overflow-y-auto max-sm:overscroll-contain',
           'bg-gradient-to-b from-[#0c1f3d] via-[#081628] to-[#050a12] shadow-[0_32px_100px_rgba(0,0,0,0.55)]',
         )}
       >
