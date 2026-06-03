@@ -83,12 +83,13 @@ export function BoutiquePage() {
   }
 
   const openItemPreview = (item: AvatarItemType) => {
+    setConfirmingPurchase(false)
     setPurchaseFlow({ item, step: 'preview' })
   }
 
   const closePurchaseFlow = () => {
-    if (confirmingPurchase) return
     setPurchaseFlow(null)
+    setConfirmingPurchase(false)
   }
 
   const handleConfirmPurchase = async () => {

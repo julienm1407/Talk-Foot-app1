@@ -1,6 +1,8 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '../../utils/cn'
+
+const BACKDROP_GUARD_MS = 380
 
 /**
  * Modale boutique rendue dans document.body — centrée viewport, flou arrière-plan,
@@ -17,7 +19,10 @@ export function ShopModalPortal({
   ariaLabelledBy?: string
   className?: string
 }) {
+  const backdropReadyAt = useRef(0)
+
   useEffect(() => {
+    backdropReadyAt.current = Date.now() + BACKDROP_GUARD_MS
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
@@ -25,10 +30,19 @@ export function ShopModalPortal({
     }
   }, [])
 
+  const handleBackdrop = () => {
+    if (!onBackdropClick) return
+    if (Date.now() < backdropReadyAt.current) return
+    onBackdropClick()
+  }
+
   useEffect(() => {
     if (!onBackdropClick) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onBackdropClick()
+      if (e.key === 'Escape') {
+        if (Date.now() < backdropReadyAt.current) return
+        onBackdropClick()
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
@@ -38,10 +52,7 @@ export function ShopModalPortal({
 
   return createPortal(
     <div
-      className={cn(
-        'pointer-events-none fixed inset-0 z-[240] flex items-center justify-center p-4 sm:p-6',
-        className,
-      )}
+      className={cn('fixed inset-0 z-[240] flex items-center justify-center p-4 sm:p-6', className)}
       role="dialog"
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
@@ -49,14 +60,14 @@ export function ShopModalPortal({
       {onBackdropClick ? (
         <button
           type="button"
-          className="pointer-events-auto absolute inset-0 bg-[#030912]/88 backdrop-blur-md"
-          onClick={onBackdropClick}
+          className="absolute inset-0 bg-[#030912]/88 backdrop-blur-md"
+          onClick={handleBackdrop}
           aria-label="Fermer"
         />
       ) : (
-        <div className="pointer-events-none absolute inset-0 bg-[#030912]/88 backdrop-blur-md" aria-hidden />
+        <div className="absolute inset-0 bg-[#030912]/88 backdrop-blur-md" aria-hidden />
       )}
-      <div className="pointer-events-auto relative z-[1] w-full max-w-lg">{children}</div>
+      <div className="relative z-[1] w-full max-w-lg">{children}</div>
     </div>,
     document.body,
   )

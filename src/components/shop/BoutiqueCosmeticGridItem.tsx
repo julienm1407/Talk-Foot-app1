@@ -5,6 +5,7 @@ import { cosmeticTokenPrice } from '../../data/shop'
 import type { AvatarItem } from '../../types/profile'
 import type { ShopRarity } from './ShopRarityEncart'
 import { cn } from '../../utils/cn'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { boutiqueItemTypeLabel } from './boutiqueItemLabels'
 
 const RARITY_RING: Record<ShopRarity, string> = {
@@ -25,62 +26,51 @@ function usesStudioPreview(item: AvatarItem): boolean {
   )
 }
 
-export function BoutiqueCosmeticGridItem({
+const encartClass = (item: AvatarItem, owned: boolean) =>
+  cn(
+    'relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] text-left shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
+    RARITY_RING[item.rarity],
+    usesStudioPreview(item) ? 'max-w-[300px]' : 'max-w-[220px]',
+    !owned &&
+      cn(
+        TF_FOCUS_VISIBLE,
+        'cursor-pointer appearance-none border-0 p-0 font-inherit transition hover:border-sky-400/40 hover:shadow-[0_16px_48px_rgba(56,189,248,0.2)]',
+      ),
+  )
+
+function EncartBody({
   item,
   owned,
-  onOpenItem,
+  typeLabel,
+  tokenPrice,
+  studioCard,
 }: {
   item: AvatarItem
   owned: boolean
-  onOpenItem: (item: AvatarItem) => void
+  typeLabel: string
+  tokenPrice: number
+  studioCard: boolean
 }) {
-  const tokenPrice = cosmeticTokenPrice(item.cost)
-  const typeLabel = boutiqueItemTypeLabel(item)
-  const studioCard = usesStudioPreview(item)
-  const openPreview = () => {
-    if (!owned) onOpenItem(item)
-  }
-
   return (
-    <article
-      className={cn(
-        'relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
-        RARITY_RING[item.rarity],
-        studioCard ? 'max-w-[300px]' : 'max-w-[220px]',
-        !owned && 'cursor-pointer transition hover:border-sky-400/40 hover:shadow-[0_16px_48px_rgba(56,189,248,0.2)]',
-      )}
-      onClick={openPreview}
-      onKeyDown={(e) => {
-        if (!owned && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault()
-          openPreview()
-        }
-      }}
-      role={owned ? undefined : 'button'}
-      tabIndex={owned ? undefined : 0}
-      aria-label={owned ? undefined : `Voir et acheter ${item.name}`}
-    >
+    <>
       {studioCard ? (
         <div
           className={cn(
-            'relative flex w-full flex-col items-center justify-end overflow-hidden',
+            'pointer-events-none relative flex w-full flex-col items-center justify-end overflow-hidden',
             'min-h-[300px] bg-[radial-gradient(circle_at_50%_16%,rgba(56,189,248,0.26),transparent_58%)]',
             'px-2 pb-1 pt-5 sm:min-h-[340px] sm:px-3 sm:pt-6',
           )}
         >
-          <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />
+          <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />
           {!owned ? (
-            <span
-              className="pointer-events-none absolute inset-x-0 top-3 z-[2] text-center text-[9px] font-black uppercase tracking-[0.2em] text-sky-200/70"
-              aria-hidden
-            >
+            <span className="absolute inset-x-0 top-3 z-[2] text-center text-[9px] font-black uppercase tracking-[0.2em] text-sky-200/70">
               Toucher pour visualiser
             </span>
           ) : null}
           <BoutiqueKitStudioPreview item={item} className="relative z-[1]" />
         </div>
       ) : (
-        <div className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white p-3">
+        <div className="pointer-events-none relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white p-3">
           <span className="text-5xl" aria-hidden>
             {item.emoji}
           </span>
@@ -101,7 +91,7 @@ export function BoutiqueCosmeticGridItem({
           </p>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-1.5" aria-hidden={owned ? undefined : true}>
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           <div
             className={cn(
               shopEncartButtonClass(owned),
@@ -133,6 +123,50 @@ export function BoutiqueCosmeticGridItem({
           </div>
         </div>
       </div>
-    </article>
+    </>
+  )
+}
+
+export function BoutiqueCosmeticGridItem({
+  item,
+  owned,
+  onOpenItem,
+}: {
+  item: AvatarItem
+  owned: boolean
+  onOpenItem: (item: AvatarItem) => void
+}) {
+  const tokenPrice = cosmeticTokenPrice(item.cost)
+  const typeLabel = boutiqueItemTypeLabel(item)
+  const studioCard = usesStudioPreview(item)
+
+  const handleOpen = () => {
+    window.setTimeout(() => onOpenItem(item), 0)
+  }
+
+  if (owned) {
+    return (
+      <article className={encartClass(item, true)}>
+        <EncartBody
+          item={item}
+          owned={owned}
+          typeLabel={typeLabel}
+          tokenPrice={tokenPrice}
+          studioCard={studioCard}
+        />
+      </article>
+    )
+  }
+
+  return (
+    <button type="button" className={encartClass(item, false)} onClick={handleOpen}>
+      <EncartBody
+        item={item}
+        owned={owned}
+        typeLabel={typeLabel}
+        tokenPrice={tokenPrice}
+        studioCard={studioCard}
+      />
+    </button>
   )
 }
