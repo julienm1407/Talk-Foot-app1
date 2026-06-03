@@ -5,8 +5,7 @@ import { getShopModalRoot } from '../../lib/shopModalRoot'
 const BACKDROP_GUARD_MS = 380
 
 /**
- * Modale boutique : portail vers #tf-shop-modal-root (position fixed en CSS global),
- * centré viewport + flou, sans participer au flux de la page catalogue.
+ * Modale boutique : portail plein écran (#tf-shop-modal-root) + flou sur toute la page.
  */
 export function ShopModalPortal({
   children,
@@ -56,7 +55,7 @@ export function ShopModalPortal({
 
   return createPortal(
     <div
-      className="relative flex h-full min-h-0 w-full items-center justify-center p-4 sm:p-6"
+      className="absolute inset-0 size-full min-h-[100dvh] min-w-full overflow-hidden"
       role="dialog"
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
@@ -64,14 +63,17 @@ export function ShopModalPortal({
       {onBackdropClick ? (
         <button
           type="button"
-          className="absolute inset-0 bg-[#030912]/88 backdrop-blur-md"
+          className="tf-shop-modal-backdrop z-0 cursor-default"
           onClick={handleBackdrop}
           aria-label="Fermer"
         />
       ) : (
-        <div className="absolute inset-0 bg-[#030912]/88 backdrop-blur-md" aria-hidden />
+        <div className="tf-shop-modal-backdrop z-0" aria-hidden />
       )}
-      <div className="relative z-[1] w-full max-w-lg shrink-0">{children}</div>
+
+      <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center overflow-y-auto p-4 sm:p-6">
+        <div className="pointer-events-auto w-full max-w-lg shrink-0">{children}</div>
+      </div>
     </div>,
     portalTarget,
   )
