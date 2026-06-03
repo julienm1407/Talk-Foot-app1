@@ -1,0 +1,81 @@
+import type { ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import { ModularAvatarCanvas } from '../profile/ModularAvatarCanvas'
+import type { ModularAvatarState } from '../../features/avatar2d/modularAvatarState'
+import { cn } from '../../utils/cn'
+import { ShopModalPortal } from './ShopModalPortal'
+
+type BoutiqueShopModalPanelProps = {
+  ariaLabelledBy: string
+  onBackdropClick?: () => void
+  eyebrow: string
+  title: string
+  subtitle?: ReactNode
+  previewState: ModularAvatarState
+  footer: ReactNode
+}
+
+/** Coque modale boutique (visualisation + confirmation) — même rendu centré et stable. */
+export function BoutiqueShopModalPanel({
+  ariaLabelledBy,
+  onBackdropClick,
+  eyebrow,
+  title,
+  subtitle,
+  previewState,
+  footer,
+}: BoutiqueShopModalPanelProps) {
+  return (
+    <ShopModalPortal ariaLabelledBy={ariaLabelledBy} onBackdropClick={onBackdropClick}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+        className={cn(
+          'relative w-full shrink-0 overflow-hidden rounded-[28px] border border-sky-400/35',
+          'bg-gradient-to-b from-[#0c1f3d] via-[#081628] to-[#050a12] shadow-[0_32px_100px_rgba(0,0,0,0.55)]',
+        )}
+      >
+        <div
+          className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-sky-500/20 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-20 -left-12 size-40 rounded-full bg-tf-cdm-gold/15 blur-3xl"
+          aria-hidden
+        />
+
+        <header className="relative border-b border-white/10 px-5 py-5 text-center sm:px-7 sm:py-6">
+          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-sky-300/90">{eyebrow}</p>
+          <h1
+            id={ariaLabelledBy}
+            className="mt-2 font-display text-2xl font-black leading-tight text-white sm:text-3xl"
+          >
+            {title}
+          </h1>
+          {subtitle ? <div className="mt-2 text-sm font-semibold text-sky-100/85">{subtitle}</div> : null}
+        </header>
+
+        <div className="relative flex justify-center px-4 py-4 sm:px-6 sm:py-5">
+          <div className="relative w-full max-w-[280px]">
+            <div
+              className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(ellipse_80%_60%_at_50%_30%,rgba(56,189,248,0.18),transparent_70%)]"
+              aria-hidden
+            />
+            <div className="relative h-[min(72vw,320px)] w-full sm:h-[340px]">
+              <ModularAvatarCanvas state={previewState} crop="full" fill className="h-full w-full" />
+            </div>
+            <span
+              className="absolute left-1/2 top-2 z-[2] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 whitespace-nowrap rounded-full border border-sky-400/45 bg-sky-500/20 px-4 py-1 text-[10px] font-black uppercase tracking-wide text-sky-200 shadow-lg"
+              aria-hidden
+            >
+              Aperçu sur ton avatar
+            </span>
+          </div>
+        </div>
+
+        <div className="relative border-t border-white/10 px-5 py-4 sm:px-7">{footer}</div>
+      </motion.div>
+    </ShopModalPortal>
+  )
+}

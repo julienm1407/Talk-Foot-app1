@@ -39,22 +39,24 @@ export function ShopModalPortal({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-[240] flex items-center justify-center p-4 sm:p-6',
+        'pointer-events-none fixed inset-0 z-[240] flex items-center justify-center p-4 sm:p-6',
         className,
       )}
       role="dialog"
       aria-modal="true"
       aria-labelledby={ariaLabelledBy}
     >
-      <button
-        type="button"
-        className="absolute inset-0 bg-[#030912]/88 backdrop-blur-md"
-        onClick={onBackdropClick}
-        aria-label="Fermer"
-      />
-      <div className="relative z-[1] flex max-h-[min(92dvh,920px)] w-full max-w-lg flex-col">
-        {children}
-      </div>
+      {onBackdropClick ? (
+        <button
+          type="button"
+          className="pointer-events-auto absolute inset-0 bg-[#030912]/88 backdrop-blur-md"
+          onClick={onBackdropClick}
+          aria-label="Fermer"
+        />
+      ) : (
+        <div className="pointer-events-none absolute inset-0 bg-[#030912]/88 backdrop-blur-md" aria-hidden />
+      )}
+      <div className="pointer-events-auto relative z-[1] w-full max-w-lg">{children}</div>
     </div>,
     document.body,
   )
