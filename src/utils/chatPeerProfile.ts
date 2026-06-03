@@ -18,6 +18,7 @@ export function buildChatPeerProfile(user: User | undefined): UserProfile {
   return {
     ...defaultUserProfile,
     characterLook: look,
+    ...(user?.modularAvatar ? { modularAvatar: user.modularAvatar } : {}),
     equippedItems: {
       scarf: null,
       hat: null,

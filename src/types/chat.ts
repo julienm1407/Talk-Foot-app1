@@ -1,5 +1,6 @@
 import type { TribuneId } from './tribune'
 import type { AvatarCharacterLook } from './profile'
+import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
 
 /** Zone tribune du canal live (métadonnée `match_tribune` / `matchTribune`). */
 export type MatchTribuneZone = 'home-ultras' | 'away-ultras' | 'analystes' | 'neutres'
@@ -24,6 +25,8 @@ export type User = {
   tagline?: string
   /** Même schéma que l’éditeur profil — sinon couleurs dérivées du seed (buste 3D chat). */
   characterLook?: Partial<AvatarCharacterLook>
+  /** Avatar modulaire (studio) — chargé depuis le profil cloud pour les vrais comptes. */
+  modularAvatar?: ModularAvatarState
 }
 
 export type Message = {

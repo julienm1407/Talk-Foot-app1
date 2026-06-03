@@ -91,7 +91,9 @@ export function UserProfilePage() {
     dm.isCloudFriend(peer.id) ||
     (!useCloudFriends && Boolean(peer.isMockFriend))
 
-  const canMessage = isFriend
+  const canMessage =
+    isFriend ||
+    (useCloudFriends && UUID_RE.test(peer.id) && !peer.isTalkFootBot)
 
   const canAddFriend =
     useCloudFriends &&
@@ -107,6 +109,14 @@ export function UserProfilePage() {
     dm.incomingFriendRequests.some((r) => r.requesterId === peer.id)
 
   const openPrivateChat = () => {
+    if (!peer.isTalkFootBot && UUID_RE.test(peer.id)) {
+      dm.registerPeerForPrivateChat({
+        id: peer.id,
+        username: displayUsername,
+        avatarSeed: peer.avatarSeed,
+        accent: peer.accent,
+      })
+    }
     const threadId = peer.isTalkFootBot ? TALKFOOT_BOT_DM_THREAD_ID : friendDmThreadId(peer.id)
     pm.open({ threadId })
   }
@@ -216,7 +226,7 @@ export function UserProfilePage() {
                 )}
               >
                 {useCloudFriends
-                  ? 'Ajoute cette personne en ami pour lui écrire en privé (stocké sur Supabase).'
+                  ? 'Tu peux aussi lui écrire depuis la tribune en touchant sa photo de profil.'
                   : 'Les messages privés seront disponibles lorsque ce joueur sera dans tes amis.'}
               </p>
             )}

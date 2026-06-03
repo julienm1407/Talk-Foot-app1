@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
@@ -8,6 +8,29 @@ import { themeForCompetition } from '../../data/competitionThemes'
 import { useAppearance } from '../../contexts/AppearanceContext'
 
 export type CarouselLiveMirror = LiveEncartSimulation & { matchId: string }
+
+const AUTO_ADVANCE_MS = 3800
+/** Pause du défilement auto après interaction tactile / glissement. */
+const AUTO_PAUSE_AFTER_USER_MS = 14_000
+
+function nearestSlideIndex(
+  container: HTMLDivElement,
+  items: Array<HTMLDivElement | null>,
+): number {
+  const center = container.scrollLeft + container.clientWidth / 2
+  let best = 0
+  let bestDist = Number.POSITIVE_INFINITY
+  items.forEach((el, i) => {
+    if (!el) return
+    const elCenter = el.offsetLeft + el.clientWidth / 2
+    const dist = Math.abs(elCenter - center)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = i
+    }
+  })
+  return best
+}
 
 function mirrorForCard(
   liveMirror: CarouselLiveMirror | undefined,
@@ -111,6 +134,11 @@ export function MatchCarousel({
   const [desktopLayout, setDesktopLayout] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
   const itemRefs = useRef<Array<HTMLDivElement | null>>([])
+  const pauseAutoUntilRef = useRef(0)
+  const programmaticScrollRef = useRef(false)
+  /** Évite de forcer scrollLeft quand l’index vient du doigt. */
+  const scrollSourceRef = useRef<'auto' | 'control' | 'user'>('auto')
+  const scrollSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)')
@@ -125,23 +153,88 @@ export function MatchCarousel({
     return () => window.clearInterval(id)
   }, [])
 
+  const pauseAutoAdvance = useCallback((ms = AUTO_PAUSE_AFTER_USER_MS) => {
+    pauseAutoUntilRef.current = Date.now() + ms
+  }, [])
+
+  const scrollToSlide = useCallback((slideIndex: number, behavior: ScrollBehavior = 'smooth') => {
+    const container = listRef.current
+    const el = itemRefs.current[slideIndex]
+    if (!container || !el) return
+    const targetScroll = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2
+    const clamped = Math.max(0, Math.min(targetScroll, container.scrollWidth - container.clientWidth))
+    programmaticScrollRef.current = true
+    container.scrollTo({ left: clamped, behavior })
+  }, [])
+
+  const goToSlide = useCallback(
+    (next: number, source: 'auto' | 'control') => {
+      scrollSourceRef.current = source
+      setIndex(((next % sorted.length) + sorted.length) % sorted.length)
+    },
+    [sorted.length],
+  )
+
+  useEffect(() => {
+    setIndex(0)
+    scrollSourceRef.current = 'control'
+  }, [sorted.length])
+
   useEffect(() => {
     if (desktopLayout || sorted.length <= 1) return
     const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % sorted.length)
-    }, 3800)
+      if (Date.now() < pauseAutoUntilRef.current) return
+      setIndex((i) => {
+        scrollSourceRef.current = 'auto'
+        return (i + 1) % sorted.length
+      })
+    }, AUTO_ADVANCE_MS)
     return () => window.clearInterval(id)
-  }, [sorted.length, desktopLayout])
+  }, [desktopLayout, sorted.length])
+
+  useEffect(() => {
+    if (desktopLayout) return
+    if (scrollSourceRef.current === 'user') {
+      scrollSourceRef.current = 'auto'
+      return
+    }
+    scrollToSlide(index)
+  }, [index, desktopLayout, scrollToSlide])
 
   useEffect(() => {
     if (desktopLayout) return
     const container = listRef.current
-    const el = itemRefs.current[index]
-    if (!container || !el) return
-    const targetScroll = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2
-    const clamped = Math.max(0, Math.min(targetScroll, container.scrollWidth - container.clientWidth))
-    container.scrollTo({ left: clamped, behavior: 'smooth' })
-  }, [index, desktopLayout])
+    if (!container) return
+
+    const onUserScroll = () => {
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false
+        return
+      }
+      pauseAutoAdvance()
+      scrollSourceRef.current = 'user'
+      if (scrollSyncTimerRef.current) window.clearTimeout(scrollSyncTimerRef.current)
+      scrollSyncTimerRef.current = window.setTimeout(() => {
+        const list = listRef.current
+        if (!list) return
+        const nearest = nearestSlideIndex(list, itemRefs.current)
+        setIndex((prev) => (prev === nearest ? prev : nearest))
+      }, 64)
+    }
+
+    const onTouchStart = () => pauseAutoAdvance()
+
+    container.addEventListener('scroll', onUserScroll, { passive: true })
+    container.addEventListener('touchstart', onTouchStart, { passive: true })
+    container.addEventListener('pointerdown', onTouchStart, { passive: true })
+
+    return () => {
+      container.removeEventListener('scroll', onUserScroll)
+      container.removeEventListener('touchstart', onTouchStart)
+      container.removeEventListener('pointerdown', onTouchStart)
+      if (scrollSyncTimerRef.current) window.clearTimeout(scrollSyncTimerRef.current)
+    }
+  }, [desktopLayout, pauseAutoAdvance, sorted.length])
 
   const viewMatches = useMemo(() => {
     return sorted.map((m) => {
@@ -200,7 +293,7 @@ export function MatchCarousel({
         <div className="flex w-full items-center justify-center gap-2 lg:hidden sm:w-auto sm:justify-end">
           <button
             type="button"
-            onClick={() => setIndex((i) => (i - 1 + sorted.length) % sorted.length)}
+            onClick={() => goToSlide(index - 1, 'control')}
             className={navBtn}
             aria-label="Match précédent"
           >
@@ -208,7 +301,7 @@ export function MatchCarousel({
           </button>
           <button
             type="button"
-            onClick={() => setIndex((i) => (i + 1) % sorted.length)}
+            onClick={() => goToSlide(index + 1, 'control')}
             className={navBtn}
             aria-label="Match suivant"
           >
@@ -270,7 +363,7 @@ export function MatchCarousel({
                 type="button"
                 role="tab"
                 aria-selected={i === index}
-                onClick={() => setIndex(i)}
+                onClick={() => goToSlide(i, 'control')}
                 className={cn(
                   /* Cible ≥ 44px (WCAG) : pastille au centre, zone cliquable large */
                   'grid min-h-tf-touch min-w-tf-touch place-items-center rounded-full border-0 bg-transparent p-0 transition',

@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { channelsForSupporterGroup } from '../data/defaultGroupChannels'
 import { starterGroups } from '../data/groups'
+import { stripDemoPresentationMedia } from '../utils/groupPresentationMedia'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { deleteCloudGroupMembership, upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import {
+  deleteCloudSupporterGroup,
   fetchCloudSupporterGroups,
   upsertCloudSupporterGroup,
 } from '../lib/supabase/supporterGroupsRegistry'
+import { removeCustomDebatesForGroup } from '../utils/customGroupDebatesStorage'
 import { fetchGroupActivityStats } from '../lib/supabase/groupActivityStats'
 import { fetchGroupActivePresence } from '../lib/supabase/groupActivePresence'
 import { fetchSupporterGroupMemberCounts } from '../lib/supabase/groupMemberCounts'
@@ -86,10 +89,11 @@ export function useSupporterGroups() {
   }, [userId])
 
   const enrichChannels = useCallback(
-    (g: SupporterGroup): SupporterGroup => ({
-      ...g,
-      channels: channelsForSupporterGroup(g.channels),
-    }),
+    (g: SupporterGroup): SupporterGroup =>
+      stripDemoPresentationMedia({
+        ...g,
+        channels: channelsForSupporterGroup(g.channels),
+      }),
     [],
   )
 
@@ -420,6 +424,48 @@ export function useSupporterGroups() {
     [groups],
   )
 
+  const deleteGroup = useCallback(
+    async (id: string): Promise<{ ok: true } | { ok: false; error: string }> => {
+      const target = groups.find((g) => g.id === id)
+      if (!target || target.createdBy !== 'me') {
+        return { ok: false, error: 'not_owner' }
+      }
+
+      const sb = getSupabaseBrowserClient()
+      if (sb && isSupabaseConfigured()) {
+        const session = await ensureTalkFootSupabaseSession(sb)
+        if (!session) {
+          return { ok: false, error: 'no_session' }
+        }
+        const del = await deleteCloudSupporterGroup(sb, id)
+        if (!del.ok) {
+          return { ok: false, error: del.error ?? 'cloud_delete_failed' }
+        }
+        await deleteCloudGroupMembership(sb, id)
+      }
+
+      setCustom((prev) => {
+        const next = prev.filter((g) => g.id !== id)
+        if (next.length !== prev.length) persistCustom(next)
+        return next
+      })
+      setCloudGroups((prev) => prev.filter((g) => g.id !== id))
+      setJoinedGroupIds((prev) => {
+        const next = prev.filter((gid) => gid !== id)
+        if (next.length !== prev.length) persistJoined(next)
+        return next
+      })
+      removeCustomDebatesForGroup(id)
+
+      if (sb && isSupabaseConfigured()) {
+        await refreshCloudGroups()
+      }
+
+      return { ok: true }
+    },
+    [groups, persistCustom, persistJoined, refreshCloudGroups],
+  )
+
   const updateGroup = useCallback(
     (
       id: string,
@@ -477,6 +523,7 @@ export function useSupporterGroups() {
     groups,
     createGroup,
     updateGroup,
+    deleteGroup,
     byId,
     joinedGroupIds,
     joinGroup,

@@ -117,10 +117,10 @@
   --tf-shadow: var(--tf-elev-3);
   --tf-flood: #f97316;
   --tf-live-glow: var(--tf-c10-accent-glow);
-  /** Mode nuit (défaut body) — muted/subtle assez clairs pour fond #0d2135 / verre sombre */
-  --tf-app-fg-rgb: 244 248 251;
-  --tf-app-muted-rgb: 198 212 226;
-  --tf-app-subtle-rgb: 158 178 198;
+  /** Mode nuit (défaut body) — contrastes WCAG sur fond #051a2d / cartes #0d2135 */
+  --tf-app-fg-rgb: 248 250 252;
+  --tf-app-muted-rgb: 210 222 235;
+  --tf-app-subtle-rgb: 178 194 214;
 }
 
 /* Fallbacks neutres uniquement — home/away/accent réels via inline style (Channel) */
@@ -180,9 +180,9 @@ body {
 /* Mode jour — fond clair, lisible (persisté via data-tf-appearance sur <html>) */
 html[data-tf-appearance='light'] {
   --tf-app-fg-rgb: 2 52 88;
-  /* Secondaire plus soutenu sur #f4f8fb / cartes blanches (évite gris trop pâle) */
-  --tf-app-muted-rgb: 70 86 102;
-  --tf-app-subtle-rgb: 100 118 136;
+  /* Secondaire lisible sur #f4f8fb / cartes blanches (évite bleu/gris trop pâles) */
+  --tf-app-muted-rgb: 55 72 88;
+  --tf-app-subtle-rgb: 82 98 116;
 }
 
 html[data-tf-appearance='light'] body {
@@ -965,6 +965,55 @@ html[data-tf-appearance='light'] .tf-surface {
   box-shadow: var(--tf-elev-glass-dark);
 }
 
+/**
+ * Contraste global — évite « noir sur noir » (nuit) et « bleu sur bleu » (jour).
+ * Les pastilles sémantiques (emerald, violet, amber…) gardent leurs couleurs.
+ */
+html:not([data-tf-appearance='light']) #main-content :is(.text-sky-50, .text-sky-100),
+html:not([data-tf-appearance='light']) .tf-panel :is(.text-sky-50, .text-sky-100),
+html:not([data-tf-appearance='light']) .tf-home-block :is(.text-sky-50, .text-sky-100) {
+  color: rgb(var(--tf-app-fg-rgb)) !important;
+}
+
+html:not([data-tf-appearance='light']) #main-content [class*='text-sky-200'],
+html:not([data-tf-appearance='light']) #main-content [class*='text-sky-300'],
+html:not([data-tf-appearance='light']) .tf-panel [class*='text-sky-200'],
+html:not([data-tf-appearance='light']) .tf-panel [class*='text-sky-300'],
+html:not([data-tf-appearance='light']) .tf-home-block [class*='text-sky-200'],
+html:not([data-tf-appearance='light']) .tf-home-block [class*='text-sky-300'] {
+  color: rgb(var(--tf-app-muted-rgb)) !important;
+}
+
+html:not([data-tf-appearance='light']) #main-content [class*='bg-slate-9'],
+html:not([data-tf-appearance='light']) #main-content [class*='bg-slate-950'],
+html:not([data-tf-appearance='light']) .tf-panel [class*='bg-slate-9'],
+html:not([data-tf-appearance='light']) .tf-panel [class*='bg-slate-950'],
+html:not([data-tf-appearance='light']) .tf-home-block [class*='bg-slate-9'],
+html:not([data-tf-appearance='light']) .tf-home-block [class*='bg-slate-950'] {
+  background-color: var(--tf-c30-surface-soft) !important;
+  border-color: var(--tf-c30-border);
+}
+
+html[data-tf-appearance='light'] #main-content [class*='text-tf-grey/'],
+html[data-tf-appearance='light'] .tf-panel [class*='text-tf-grey/'],
+html[data-tf-appearance='light'] .tf-home-block [class*='text-tf-grey/'] {
+  color: rgb(var(--tf-app-muted-rgb)) !important;
+}
+
+html[data-tf-appearance='light'] #main-content [class*='text-sky-200'],
+html[data-tf-appearance='light'] #main-content [class*='text-sky-300'],
+html[data-tf-appearance='light'] .tf-panel [class*='text-sky-200'],
+html[data-tf-appearance='light'] .tf-panel [class*='text-sky-300'] {
+  color: rgb(var(--tf-app-muted-rgb)) !important;
+}
+
+html[data-tf-appearance='light'] #main-content .text-sky-50,
+html[data-tf-appearance='light'] #main-content .text-sky-100,
+html[data-tf-appearance='light'] .tf-panel .text-sky-50,
+html[data-tf-appearance='light'] .tf-panel .text-sky-100 {
+  color: rgb(var(--tf-app-fg-rgb)) !important;
+}
+
 .tf-section {
   background: color-mix(in srgb, var(--tf-grey-pastel) 28%, transparent);
   border: 1px solid rgba(2, 52, 88, 0.1);
@@ -1036,6 +1085,25 @@ body::before {
     opacity: 0.88;
     transform: scale(0.95);
   }
+}
+
+/* Bot tribune groupe : halo doré sur la PP modulaire */
+@keyframes tf-salon-bot-thumb-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(244, 197, 66, 0.28),
+      0 4px 14px rgba(1, 30, 51, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(244, 197, 66, 0.2),
+      0 4px 18px rgba(244, 197, 66, 0.22);
+  }
+}
+
+.tf-salon-bot-thumb {
+  animation: tf-salon-bot-thumb-glow 2.8s ease-in-out infinite;
 }
 
 /* Page club : atmosphère & mode match */

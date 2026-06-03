@@ -20,7 +20,10 @@ import { useIsBelowXl } from '../hooks/useIsBelowXl'
 import { useMonEspaceDrawerOptional } from '../contexts/MonEspaceDrawerContext'
 import { useAuth } from '../contexts/AuthContext'
 import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
-import { ProfileCharacterThumb } from '../components/profile/ProfileCharacterThumb'
+import {
+  MODULAR_PP_NAV_FRAMING,
+  ProfileCharacterThumb,
+} from '../components/profile/ProfileCharacterThumb'
 import { NavWalletBalances } from './NavWalletBalances'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 
@@ -32,7 +35,7 @@ export function TopBar() {
   const L = appearance === 'light'
   const navPillBase = cn(
     'tf-nav-pill inline-flex h-8 shrink-0 items-center justify-center rounded-[16px] px-2 text-center text-[11px] font-black leading-none outline-none transition active:scale-[0.97] min-[900px]:h-8 min-[900px]:px-2.5 min-[900px]:text-[12px] min-[1100px]:px-3 min-[1100px]:text-[13px]',
-    L ? 'text-tf-app-muted hover:text-tf-app-fg' : 'text-sky-200/92 hover:text-white',
+    'text-tf-app-muted hover:text-tf-app-fg',
   )
 
   /** Rappel couleur section (hover) — aligné sur l’esprit BottomNav / bandeau header */
@@ -349,9 +352,7 @@ export function TopBar() {
             <ProfileCharacterThumb
               profile={profile}
               size="sm"
-              framingMode="topbar"
-              headOffsetPx={-4}
-              headScale={1.55}
+              {...MODULAR_PP_NAV_FRAMING}
               className="!h-6 !w-6 !min-h-6 !min-w-6 shrink-0 rounded-full border-0 p-0 ring-2 ring-white/25 min-[420px]:!h-7 min-[420px]:!w-7 min-[420px]:!min-h-7 min-[420px]:!min-w-7 sm:!h-8 sm:!w-8 sm:!min-h-8 sm:!min-w-8"
               aria-label="Mon avatar in-app"
             />

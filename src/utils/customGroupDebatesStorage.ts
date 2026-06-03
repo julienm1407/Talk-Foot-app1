@@ -4,6 +4,17 @@ export const CUSTOM_GROUP_DEBATES_KEY = 'talkfoot.groupCustomDebates.v1'
 
 export type CustomDebatesBucket = Record<string, Debate[]>
 
+export function removeCustomDebatesForGroup(groupId: string): void {
+  try {
+    const bucket = readCustomDebatesBucket()
+    if (!bucket[groupId]) return
+    delete bucket[groupId]
+    localStorage.setItem(CUSTOM_GROUP_DEBATES_KEY, JSON.stringify(bucket))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function readCustomDebatesBucket(): CustomDebatesBucket {
   try {
     const raw = localStorage.getItem(CUSTOM_GROUP_DEBATES_KEY)

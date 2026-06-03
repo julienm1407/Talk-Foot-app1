@@ -58,12 +58,6 @@ export const starterGroups: SupporterGroup[] = [
       colorB: '#111827',
       colorC: '#dc2626',
     },
-    presentationMedia: {
-      type: 'image',
-      url: 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=960&q=80',
-      moderationStatus: 'approved',
-      caption: 'Ambiance tribune — média validé plateforme (exemple)',
-    },
     members: 0,
     intensity: 82,
     channels: [...baseChannels],

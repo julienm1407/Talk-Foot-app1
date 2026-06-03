@@ -9,6 +9,7 @@ import {
   p2pKeysForPeers,
   type FriendshipRow,
 } from '../lib/supabase/friendships'
+import { useTalkFootChatActorId } from './useTalkFootChatActorId'
 
 export type CloudFriendPeer = {
   id: string
@@ -20,7 +21,8 @@ export type CloudFriendPeer = {
  */
 export function useCloudFriends() {
   const { user: authUser } = useAuth()
-  const myId = authUser?.id
+  const chatActorId = useTalkFootChatActorId()
+  const myId = chatActorId
   const [rows, setRows] = useState<FriendshipRow[]>([])
   const [profiles, setProfiles] = useState<Map<string, { display_name: string | null }>>(new Map())
   const [loading, setLoading] = useState(false)
@@ -78,6 +80,13 @@ export function useCloudFriends() {
       })
   }, [rows, profiles, myId])
 
+  const outgoingPendingTo = useMemo(() => {
+    if (!myId) return [] as string[]
+    return rows
+      .filter((r) => r.status === 'pending' && r.requested_by === myId)
+      .map((r) => peerIdFromFriendshipRow(r, myId))
+  }, [rows, myId])
+
   const p2pThreadKeys = useMemo(() => (myId ? p2pKeysForPeers(myId, acceptedPeers.map((p) => p.id)) : []), [myId, acceptedPeers])
 
   return {
@@ -85,7 +94,10 @@ export function useCloudFriends() {
     refresh,
     acceptedPeers,
     incomingPendingFrom,
+    outgoingPendingTo,
+    friendshipRows: rows,
     p2pThreadKeys,
-    hasSupabaseFriends: isSupabaseConfigured() && Boolean(myId),
+    chatActorId: myId,
+    hasSupabaseFriends: isSupabaseConfigured() && Boolean(authUser?.id && myId),
   }
 }

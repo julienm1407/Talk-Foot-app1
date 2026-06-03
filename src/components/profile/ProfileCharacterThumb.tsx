@@ -11,6 +11,13 @@ const PRESETS = {
   lg: 96,
 } as const
 
+/** Même cadrage tête que la pastille profil de la barre du haut (nav / chat). */
+export const MODULAR_PP_NAV_FRAMING = {
+  framingMode: 'topbar' as const,
+  headOffsetPx: -4,
+  headScale: 1.55,
+}
+
 export function ProfileCharacterThumb({
   profile,
   size = 'md',

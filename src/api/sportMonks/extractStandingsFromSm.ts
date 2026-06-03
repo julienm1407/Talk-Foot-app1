@@ -1,8 +1,14 @@
 import type { FormResult } from '../../types/standings'
 import type { LeagueStandingRow } from '../../data/leagueStandings'
+import { findNationByName } from '../../data/nations'
+import type { WcGroup, WcGroupId, WcStandingRow } from '../../types/wc2026'
 import { apiNameToOurId } from '../footballApi'
 import { teams } from '../../data/teams'
 import { SPORTMONKS_TEAM_ID_BY_CLUB_ID } from '../../data/sportMonksKnownTeamIds'
+
+const WC_GROUP_IDS: WcGroupId[] = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+]
 
 function smStandingsListFromEnvelope(body: unknown): unknown[] {
   const raw = body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body
@@ -621,4 +627,135 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
 
   rows.sort((a, b) => a.rank - b.rank || b.points - a.points)
   return rows
+}
+
+function wcGroupIdFromSmGroupName(name: string | undefined | null): WcGroupId | null {
+  if (!name) return null
+  const m = /group\s+([A-L])\b/i.exec(name.trim())
+  return m ? (m[1].toUpperCase() as WcGroupId) : null
+}
+
+function smStandingRowToWcStats(raw: Record<string, unknown>): {
+  rank: number
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goalsFor: number
+  goalsAgainst: number
+  goalDiff: number
+  points: number
+  form?: string
+} {
+  const pos = parseNum(raw.position ?? raw.rank ?? raw.place)
+  const rank = pos != null && pos > 0 ? Math.floor(pos) : 1
+  const points = parseNum(raw.points) ?? 0
+
+  let d = parseDetailBlob(raw.details)
+  const direct = parseDirectStandingsCore(raw)
+  if (direct) d = mergeStandingCore(d, direct)
+  const top = parseTopLevelBlock(raw)
+  if (top) d = mergeStandingCore(d, top)
+  const ov = parseOverallBlock(raw)
+  if (ov) d = mergeStandingCore(d, ov)
+
+  const { won, drawn, lost, gf } = d
+  const rowGd = parseGoalDiff(raw)
+  const ga = resolveGoalsAgainst(gf, d.ga, rowGd ?? d.gd) ?? 0
+  let played = d.played
+  const sumWdl = won + drawn + lost
+  if (played > 0 && sumWdl > played) played = sumWdl
+  if (!played && sumWdl > 0) played = sumWdl
+
+  const goalsFor = gf ?? 0
+  const goalsAgainst = ga
+  const goalDiff = rowGd ?? d.gd ?? goalsFor - goalsAgainst
+  const formArr = parseForm(raw.form)
+  const form = formArr.length ? formArr.join('') : undefined
+
+  return {
+    rank,
+    played,
+    won,
+    drawn,
+    lost,
+    goalsFor,
+    goalsAgainst,
+    goalDiff,
+    points,
+    form,
+  }
+}
+
+/**
+ * Poules et classements CDM depuis `GET /standings/seasons/{id}?include=participant;group`.
+ */
+export function extractWcGroupsAndStandingsFromSmEnvelope(body: unknown): {
+  groups: WcGroup[]
+  standings: Record<WcGroupId, WcStandingRow[]>
+} {
+  const list = smStandingsListFromEnvelope(body)
+  const buckets = new Map<WcGroupId, Record<string, unknown>[]>()
+
+  for (const raw of list) {
+    if (!raw || typeof raw !== 'object') continue
+    const row = raw as Record<string, unknown>
+    const groupObj = row.group
+    const gName =
+      groupObj && typeof groupObj === 'object'
+        ? String((groupObj as Record<string, unknown>).name ?? '').trim()
+        : ''
+    const gid = wcGroupIdFromSmGroupName(gName)
+    if (!gid) continue
+    const arr = buckets.get(gid) ?? []
+    arr.push(row)
+    buckets.set(gid, arr)
+  }
+
+  const groups: WcGroup[] = []
+  const standings = {} as Record<WcGroupId, WcStandingRow[]>
+
+  for (const gid of WC_GROUP_IDS) {
+    const rows = buckets.get(gid) ?? []
+    rows.sort((a, b) => {
+      const pa = parseNum(a.position ?? a.rank) ?? 99
+      const pb = parseNum(b.position ?? b.rank) ?? 99
+      return pa - pb
+    })
+
+    const standingRows: WcStandingRow[] = rows.map((row, idx) => {
+      const part = row.participant
+      const pname =
+        part && typeof part === 'object'
+          ? String((part as Record<string, unknown>).name ?? '').trim()
+          : ''
+      const nation = findNationByName(pname)
+      const stats = smStandingRowToWcStats(row)
+      return {
+        iso: nation?.iso ?? 'TBD',
+        rank: stats.rank || idx + 1,
+        played: stats.played,
+        won: stats.won,
+        drawn: stats.drawn,
+        lost: stats.lost,
+        goalsFor: stats.goalsFor,
+        goalsAgainst: stats.goalsAgainst,
+        goalDiff: stats.goalDiff,
+        points: stats.points,
+        ...(stats.form ? { form: stats.form } : {}),
+        qualificationState: 'in-contention' as const,
+      }
+    })
+
+    groups.push({
+      id: gid,
+      teams: standingRows.map((r, i) => ({
+        iso: r.iso,
+        drawPos: (i + 1) as 1 | 2 | 3 | 4,
+      })),
+    })
+    standings[gid] = standingRows
+  }
+
+  return { groups, standings }
 }

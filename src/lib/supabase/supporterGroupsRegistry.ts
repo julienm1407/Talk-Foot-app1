@@ -121,3 +121,15 @@ export async function upsertCloudSupporterGroup(
   }
   return { ok: true }
 }
+
+export async function deleteCloudSupporterGroup(
+  sb: SupabaseClient,
+  groupId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await sb.from('supporter_groups').delete().eq('id', groupId)
+  if (error) {
+    console.error('[Talk Foot] delete supporter_groups:', error.message)
+    return { ok: false, error: error.message }
+  }
+  return { ok: true }
+}

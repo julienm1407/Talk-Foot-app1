@@ -16,11 +16,26 @@ const POSITION_ORDER: WcPosition[] = ['GK', 'DF', 'MF', 'FW']
  */
 export function NationSquadList({
   squad,
+  loading = false,
   className,
 }: {
   squad: WcSquad | null
+  loading?: boolean
   className?: string
 }) {
+  if (loading) {
+    return (
+      <div
+        className={cn(
+          'rounded-tf-xl border border-tf-c30-border bg-tf-c30-surface p-6 text-center text-xs text-tf-app-muted shadow-tf-elev-1',
+          className,
+        )}
+      >
+        <p className="font-bold text-tf-app-fg">Chargement de l&apos;effectif…</p>
+      </div>
+    )
+  }
+
   if (!squad || squad.players.length === 0) {
     return (
       <div

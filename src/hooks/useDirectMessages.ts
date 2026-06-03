@@ -43,9 +43,14 @@ function rowToDmLine(row: { id: string; sender_id: string; body: string; created
   }
 }
 
-export function useDirectMessages(activeUiThreadId: string | null, syncP2pThreadKeys: string[] = []) {
+export function useDirectMessages(
+  activeUiThreadId: string | null,
+  syncP2pThreadKeys: string[] = [],
+  /** UUID session Supabase (`auth.uid()`), pas l’id Clerk. */
+  cloudActorId?: string | null,
+) {
   const { user: authUser } = useAuth()
-  const myAuthId = authUser?.id
+  const myAuthId = cloudActorId ?? authUser?.id
   const [userByThread, setUserByThread] = useLocalStorageState<Record<string, DirectMessageLine[]>>(
     KEY_MESSAGES,
     {},

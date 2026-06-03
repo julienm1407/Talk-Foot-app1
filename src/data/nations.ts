@@ -115,6 +115,7 @@ export const NATIONS: Nation[] = [
   { iso: 'CPV', nameFr: 'Cap-Vert', nameEn: 'Cape Verde', flag: '🇨🇻', confederation: 'CAF', primary: '#003893', secondary: '#ffffff', accent: '#cf2027', jerseyUrl: jersey('CPV'), shortsUrl: shorts('CPV') },
   { iso: 'ZAF', nameFr: 'Afrique du Sud', nameEn: 'South Africa', flag: '🇿🇦', confederation: 'CAF', primary: '#007a4d', secondary: '#fcb514', accent: '#001489', jerseyUrl: jersey('ZAF'), shortsUrl: shorts('ZAF') },
   { iso: 'COG', nameFr: 'Congo', nameEn: 'Congo', flag: '🇨🇬', confederation: 'CAF', primary: '#009543', secondary: '#fbde4a', accent: '#dc241f', jerseyUrl: jersey('COG'), shortsUrl: shorts('COG') },
+  { iso: 'COD', nameFr: 'RD Congo', nameEn: 'DR Congo', flag: '🇨🇩', confederation: 'CAF', primary: '#007fff', secondary: '#f7d618', accent: '#ce1021', jerseyUrl: jersey('COD'), shortsUrl: shorts('COD') },
 
   // ──────────────────── AFC ────────────────
   { iso: 'JPN', nameFr: 'Japon', nameEn: 'Japan', flag: '🇯🇵', confederation: 'AFC', primary: '#0a2756', secondary: '#ffffff', accent: '#bc002d', jerseyUrl: jersey('JPN'), shortsUrl: shorts('JPN') },
@@ -170,7 +171,11 @@ const NATION_NAME_ALIASES: Record<string, string> = {
   "cote d ivoire": 'CIV',
   curacao: 'CUW',
   'cape verde': 'CPV',
+  'cape verde islands': 'CPV',
   'cabo verde': 'CPV',
+  'congo dr': 'COD',
+  'dr congo': 'COD',
+  'democratic republic of congo': 'COD',
   'saudi arabia': 'SAU',
   'united states': 'USA',
   usa: 'USA',

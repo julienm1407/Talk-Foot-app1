@@ -18,10 +18,18 @@ import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandin
 import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
 import { projectStandingsWithLiveMatch } from '../utils/liveStandingsProjection'
 import { useBetting } from '../hooks/useBetting'
-import { DressableCharacter } from '../components/profile/DressableCharacter'
-import { defaultUserProfile } from '../data/userAppStateDefaults'
-import { mergeCharacterLook } from '../data/characterPresets'
-import { seedToLegoPalette } from '../utils/seedLegoPalette'
+import {
+  LiveMatchChatMessage,
+  type LiveMatchChatMessageItem,
+} from '../components/channel/LiveMatchChatMessage'
+import { ChatPeerMenuHost } from '../components/chat/ChatPeerMenuHost'
+import { useChatPeerMenu } from '../hooks/useChatPeerMenu'
+import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatars'
+import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
+import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
+import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { buildChatPeerMenuTarget } from '../utils/chatPeerSocial'
+import type { User } from '../types/chat'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
@@ -58,19 +66,7 @@ function isBigFiveLeagueId(id: string): id is BigFiveLeagueId {
   return (BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(id)
 }
 
-type ChatMessageItem = {
-  id: string
-  userId: string
-  username: string
-  text: string
-  time: string
-  avatarSeed: string
-  avatarAccent?: 'violet' | 'emerald' | 'rose' | 'amber'
-  likes: number
-  likedByMe?: boolean
-  emoteId?: string
-  matchTribune?: MatchTribuneZone
-}
+type ChatMessageItem = LiveMatchChatMessageItem
 
 type PaidAnimation = {
   id: 'fumigene' | 'ola' | 'tifo-geant' | 'stroboscope'
@@ -309,92 +305,6 @@ function MatchRow({
   )
 }
 
-function ChatMessage({
-  message,
-  selfUserId,
-  likeState,
-  onToggleLike,
-}: {
-  message: ChatMessageItem
-  selfUserId?: string | null
-  likeState?: { likes: number; likedByMe: boolean }
-  onToggleLike: (id: string) => void
-}) {
-  const likes = likeState?.likes ?? message.likes ?? 0
-  const likedByMe = likeState?.likedByMe ?? Boolean(message.likedByMe)
-  const profileTo =
-    message.userId && selfUserId && message.userId === selfUserId
-      ? '/profile'
-      : message.userId
-        ? `/user/${message.userId}`
-        : null
-  const avatarProfile = useMemo(
-    () => ({
-      ...defaultUserProfile,
-      characterLook: mergeCharacterLook({
-        ...seedToLegoPalette(message.avatarSeed, message.avatarAccent ?? 'violet'),
-        supporterTint: false,
-      }),
-    }),
-    [message.avatarAccent, message.avatarSeed],
-  )
-
-  return (
-    <article className="tf-chat-message flex items-start gap-2 rounded-lg bg-[#0a2239] p-1.5 transition hover:bg-[#0f2841]">
-      <div className="relative h-6 w-6 shrink-0 overflow-visible">
-        <div className="pointer-events-none absolute left-1/2 top-0 origin-top -translate-x-1/2 scale-[0.18]">
-          <DressableCharacter profile={avatarProfile} variant="front" />
-        </div>
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-1">
-            {profileTo ? (
-              <Link
-                to={profileTo}
-                className="truncate text-xs font-semibold text-sky-50 underline-offset-2 hover:text-cyan-100 hover:underline"
-              >
-                {message.username}
-              </Link>
-            ) : (
-              <p className="truncate text-xs font-semibold text-sky-50">{message.username}</p>
-            )}
-            {message.matchTribune ? (
-              <span className="shrink-0 rounded border border-white/15 bg-black/25 px-1 py-px text-[8px] font-bold uppercase tracking-wide text-sky-200/90">
-                {message.matchTribune === 'home-ultras'
-                  ? 'Ultras'
-                  : message.matchTribune === 'away-ultras'
-                    ? 'Parcage'
-                    : message.matchTribune === 'analystes'
-                      ? 'Analyse'
-                      : 'Neutre'}
-              </span>
-            ) : null}
-          </div>
-          <p className="shrink-0 text-[10px] text-sky-200/70">{message.time}</p>
-        </div>
-        <p className="mt-0.5 text-xs leading-tight text-sky-100">{message.text}</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => onToggleLike(message.id)}
-        className={`tf-chat-like mt-0.5 inline-flex h-6 items-center gap-1 rounded-md border px-1.5 text-[10px] font-bold transition ${
-          likedByMe
-            ? 'border-rose-300/70 bg-rose-400/20 text-rose-100'
-            : likes > 0
-              ? 'border-rose-400/45 bg-rose-500/10 text-rose-100'
-              : 'border-[#3a6690] bg-[#08223a] text-sky-100 hover:border-sky-300/70'
-        }`}
-        title={likedByMe ? 'Retirer ton like' : 'Aimer ce message'}
-        aria-pressed={likedByMe}
-      >
-        <span aria-hidden="true">{likedByMe ? '❤️' : likes > 0 ? '❤️' : '🤍'}</span>
-        <span aria-live="polite">{likes}</span>
-      </button>
-    </article>
-  )
-}
-
 function PlayerBadge({
   name,
   className,
@@ -476,7 +386,12 @@ export function ChannelPage() {
   const { matchId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user: authUser } = useAuth()
-  const selfUserId = authUser?.id ?? null
+  const chatActorId = useTalkFootChatActorId()
+  const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
+  const selfUserId = selfChatUserId
+  const dm = useDirectMessagesOptional()
+  const chatPeerMenu = useChatPeerMenu()
+  const chatSocialEnabled = isSupabaseConfigured() && Boolean(dm)
   const { matches, loading } = useMatches()
   const routeMatch = useMemo(() => matches.find((m) => m.id === matchId) ?? null, [matches, matchId])
   const hasRouteMatchId = Boolean(matchId)
@@ -736,6 +651,26 @@ export function ChannelPage() {
     () => chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),
     [chatMessages, selectedTribune],
   )
+
+  const chatAuthorIds = useMemo(
+    () => [...new Set(chatMessages.map((m) => m.userId))],
+    [chatMessages],
+  )
+  const modularByAuthor = useChatAuthorModularAvatars(chatAuthorIds, selfChatUserId)
+  const chatUsersById = useMemo(() => {
+    const map: Record<string, User> = {}
+    for (const m of chatMessages) {
+      const modularAvatar = modularByAuthor[m.userId]
+      map[m.userId] = {
+        id: m.userId,
+        username: m.username,
+        avatarSeed: m.avatarSeed,
+        accent: m.avatarAccent ?? 'violet',
+        ...(modularAvatar ? { modularAvatar } : {}),
+      }
+    }
+    return map
+  }, [chatMessages, modularByAuthor])
   const { publishReaction } = useLiveMatchReactionsSync({
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
@@ -2177,14 +2112,33 @@ export function ChannelPage() {
               ) : (
                 <>
                   {filteredChatMessages.map((msg) => (
-                    <ChatMessage
+                    <LiveMatchChatMessage
                       key={msg.id}
                       message={msg}
-                      selfUserId={selfUserId}
+                      user={chatUsersById[msg.userId]}
+                      selfUserId={selfChatUserId}
+                      selfChatActorId={chatActorId}
+                      socialEnabled={chatSocialEnabled}
+                      light={L}
                       likeState={messageLikes.getLikeState(msg.id)}
                       onToggleLike={onToggleLikeMessage}
+                      onOpenPeerMenu={() =>
+                        chatPeerMenu.openPeerMenu(
+                          buildChatPeerMenuTarget(
+                            msg.userId,
+                            msg.username,
+                            chatUsersById[msg.userId],
+                          ),
+                        )
+                      }
                     />
                   ))}
+                  <ChatPeerMenuHost
+                    peerMenu={chatPeerMenu.peerMenu}
+                    menuOpen={chatPeerMenu.menuOpen}
+                    dark={!L}
+                    onClose={chatPeerMenu.closePeerMenu}
+                  />
                   {filteredChatMessages.length === 0 ? (
                     <div
                       className={`rounded-lg border p-3 text-center text-[11px] font-semibold text-sky-200/80 ${

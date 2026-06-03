@@ -1,0 +1,141 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
+import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
+import { friendDmThreadId } from '../../data/directMessageConstants'
+import { cn } from '../../utils/cn'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+
+export type ChatPeerQuickMenuTarget = {
+  id: string
+  username: string
+  avatarSeed?: string
+  accent?: string
+}
+
+export function ChatPeerQuickMenu({
+  open,
+  onClose,
+  peer,
+  dark = false,
+}: {
+  open: boolean
+  onClose: () => void
+  peer: ChatPeerQuickMenuTarget | null
+  dark?: boolean
+}) {
+  const pm = usePrivateMessagesUi()
+  const dm = useDirectMessagesContext()
+  const [hint, setHint] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  if (!open || !peer) return null
+
+  const isFriend = dm.isCloudFriend(peer.id)
+  const outgoing = dm.hasOutgoingFriendRequestTo(peer.id)
+  const incoming = dm.hasIncomingFriendRequestFrom(peer.id)
+
+  const openPrivateChat = () => {
+    dm.registerPeerForPrivateChat(peer)
+    pm.open({ threadId: friendDmThreadId(peer.id) })
+    onClose()
+  }
+
+  const onAddFriend = async () => {
+    setHint(null)
+    setBusy(true)
+    const out = await dm.sendFriendRequest(peer.id)
+    setBusy(false)
+    if (out.ok) setHint('Demande envoyée — enregistrée sur ton compte.')
+    else if (out.error === 'already_exists') setHint('Une demande existe déjà entre vous.')
+    else setHint(out.error ?? 'Impossible d’envoyer la demande.')
+  }
+
+  const onAcceptFriend = async () => {
+    setHint(null)
+    setBusy(true)
+    const out = await dm.acceptFriendRequest(peer.id)
+    setBusy(false)
+    if (out.ok) setHint('Vous êtes amis — retrouve la conversation dans Messages.')
+    else setHint(out.error ?? 'Impossible d’accepter.')
+  }
+
+  const shell = dark
+    ? 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)] text-tf-app-fg shadow-2xl'
+    : 'border-tf-dark/12 bg-white text-tf-app-fg shadow-xl'
+  const muted = 'text-tf-app-muted'
+  const btn = cn(
+    'w-full rounded-xl border px-4 py-3 text-left text-sm font-black transition',
+    TF_FOCUS_VISIBLE,
+    dark
+      ? 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-fg hover:bg-[color:color-mix(in_srgb,var(--tf-c30-surface-soft)_88%,white)]'
+      : 'border-tf-dark/10 bg-tf-grey-pastel/25 text-tf-app-fg hover:bg-tf-grey-pastel/45',
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-[210] flex items-end justify-center bg-black/45 p-4 sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Actions pour ${peer.username}`}
+      onClick={onClose}
+    >
+      <div
+        className={cn('w-full max-w-sm overflow-hidden rounded-2xl', shell)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className={cn(
+            'border-b px-4 py-3',
+            dark ? 'border-[color:var(--tf-c30-border)]' : 'border-tf-dark/10',
+          )}
+        >
+          <p className="text-base font-black">{peer.username}</p>
+          <p className={cn('mt-0.5 text-xs font-semibold', muted)}>Message privé ou demande d’ami</p>
+        </div>
+
+        <div className="flex flex-col gap-2 p-4">
+          <button type="button" className={btn} onClick={openPrivateChat}>
+            Message privé
+          </button>
+
+          {incoming ? (
+            <button type="button" className={btn} disabled={busy} onClick={() => void onAcceptFriend()}>
+              Accepter la demande d’ami
+            </button>
+          ) : isFriend ? (
+            <p className={cn('px-1 text-xs font-semibold', muted)}>Déjà dans tes amis.</p>
+          ) : outgoing ? (
+            <p className={cn('px-1 text-xs font-semibold', muted)}>Demande d’ami en attente.</p>
+          ) : (
+            <button type="button" className={btn} disabled={busy} onClick={() => void onAddFriend()}>
+              Demander en ami
+            </button>
+          )}
+
+          <Link
+            to={`/user/${peer.id}`}
+            className={cn(btn, 'inline-block text-center no-underline')}
+            onClick={onClose}
+          >
+            Voir le profil
+          </Link>
+
+          {hint ? <p className={cn('text-xs font-semibold', muted)}>{hint}</p> : null}
+
+          <button
+            type="button"
+            onClick={onClose}
+            className={cn(
+              'mt-1 w-full rounded-xl py-2.5 text-xs font-black',
+              TF_FOCUS_VISIBLE,
+              dark ? 'text-sky-200 hover:text-tf-app-fg' : 'text-sky-700 hover:text-sky-800',
+            )}
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

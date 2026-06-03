@@ -1,4 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { activeWcDataSource } from '../api/wc2026'
+import type { WcSquad } from '../types/wc2026'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { getNationByIso, findNationByName } from '../data/nations'
 import { useMatches } from '../contexts/MatchesContext'
@@ -50,10 +52,33 @@ export function NationPage() {
     return cdm.dataset.groups.find((g) => g.teams.some((t) => t.iso === nation.iso)) ?? null
   }, [cdm?.dataset, nation])
   const wcStanding = wcGroup ? (cdm?.dataset?.standings[wcGroup.id] ?? []) : []
-  const wcSquad = useMemo(
+  const datasetSquad = useMemo(
     () => (nation && cdm?.dataset ? cdm.dataset.squads.find((s) => s.nationIso === nation.iso) ?? null : null),
     [cdm?.dataset, nation],
   )
+  const [wcSquad, setWcSquad] = useState<WcSquad | null>(datasetSquad)
+  const [squadLoading, setSquadLoading] = useState(false)
+
+  useEffect(() => {
+    setWcSquad(datasetSquad)
+    if (!nation) return
+    if (datasetSquad && datasetSquad.players.length > 0) return
+    if (!activeWcDataSource.loadSquad) return
+
+    let cancelled = false
+    setSquadLoading(true)
+    void activeWcDataSource
+      .loadSquad(nation.iso)
+      .then((squad) => {
+        if (!cancelled && squad.players.length > 0) setWcSquad(squad)
+      })
+      .finally(() => {
+        if (!cancelled) setSquadLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [nation, datasetSquad])
 
   if (!nation) {
     return <Navigate to="/nations" replace />
@@ -230,7 +255,7 @@ export function NationPage() {
             Le 26
           </h2>
         </header>
-        <NationSquadList squad={wcSquad ?? null} />
+        <NationSquadList squad={wcSquad ?? null} loading={squadLoading} />
       </section>
 
       <section
