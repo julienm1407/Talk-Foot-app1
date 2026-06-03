@@ -195,7 +195,10 @@ export function CharacterLayerStudio() {
       }
       addOwnedItem(item.id)
       equipItem(item.id, equipSlotForItem(item))
-      pushNotice('ok', `${item.name} acheté et équipé.`)
+      pushNotice(
+        'ok',
+        `${item.name} acheté et équipé (${currency === 'medals' ? `${medalPrice} 🏅` : `${cosmeticTokenPrice(medalPrice).toLocaleString('fr-FR')} jetons`}).`,
+      )
     }
   }
 

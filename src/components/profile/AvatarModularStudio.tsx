@@ -22,6 +22,7 @@ import {
 import { sortModularGarmentAssetsForStudio } from '../../utils/modularGarmentDisplayName'
 import {
   consumeRecentStudioAsset,
+  consumeRecentStudioPack,
   peekRecentStudioAsset,
   studioSlotForModularAssetId,
 } from '../../utils/boutiquePurchaseFlow'
@@ -404,6 +405,21 @@ export function AvatarModularStudio() {
 
   useEffect(() => {
     if (purchaseFocusApplied.current) return
+    const packEquip = consumeRecentStudioPack()
+    if (packEquip) {
+      purchaseFocusApplied.current = true
+      setActiveSlot('jersey')
+      updateModularAvatar((prev) => ({
+        ...prev,
+        data: {
+          ...prev.data,
+          ...(packEquip.jersey ? { jersey: packEquip.jersey } : {}),
+          ...(packEquip.shorts ? { shorts: packEquip.shorts } : {}),
+        },
+      }))
+      return
+    }
+
     const fromUrl = searchParams.get('asset')
     const assetId = fromUrl ?? consumeRecentStudioAsset()
     if (!assetId) return

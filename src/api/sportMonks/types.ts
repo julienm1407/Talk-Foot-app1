@@ -125,6 +125,8 @@ export type SmFixture = {
   venue?: { name?: string; city?: string }
   /** Présent avec include `round` (calendrier / inplay). */
   round?: { id?: number; name?: string }
+  /** Phase tournoi (ex. groupe, 8es) avec include `stage`. */
+  stage?: { id?: number; name?: string }
   participants?: SmParticipant[]
   scores?: SmScoreRow[]
   odds?: SmOdd[]

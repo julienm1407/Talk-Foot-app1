@@ -2,7 +2,7 @@ import type { AvatarItem, MedalPack } from '../types/profile'
 import { cdm2026BundleItems } from './cdm2026Bundles'
 import { cdm2026JerseyItems } from './cdm2026Jerseys'
 import { cdm2026ShortItems } from './cdm2026Shorts'
-import { STANDARD_SHOES_MEDALS } from './boutiqueEconomy'
+import { STANDARD_SHOES_MEDALS } from './boutiqueMedalCosts'
 import { baseJerseyUrl, baseShortsUrl } from './nations'
 
 export { TOKENS_PER_MEDAL, cosmeticTokenPrice, isCosmeticOwned } from './boutiqueEconomy'

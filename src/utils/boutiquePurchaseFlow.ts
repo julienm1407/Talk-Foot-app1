@@ -1,9 +1,11 @@
 import type { AvatarItem } from '../types/profile'
 import type { CatalogFilter } from './boutiqueCatalog'
-import { isCosmeticOwned } from '../data/boutiqueEconomy'
-import { shopItemToModularAssetId } from './boutiqueModularState'
+import { cosmeticTokenPrice, isBoutiqueShopItemOwned, isCosmeticOwned } from '../data/boutiqueEconomy'
+import { cdm2026BundleItems } from '../data/cdm2026Bundles'
+import { boutiqueItemToModularState, shopItemToModularAssetId } from './boutiqueModularState'
 
 export const RECENT_STUDIO_ASSET_KEY = 'talkfoot.recentStudioAsset'
+export const RECENT_STUDIO_PACK_KEY = 'talkfoot.recentStudioPackEquip'
 
 export function catalogTabForShopItem(item: AvatarItem): CatalogFilter {
   if (item.slot === 'pants') return 'shorts'
@@ -17,6 +19,38 @@ export function rememberRecentStudioAsset(modularAssetId: string) {
     sessionStorage.setItem(RECENT_STUDIO_ASSET_KEY, modularAssetId)
   } catch {
     /* quota / private mode */
+  }
+}
+
+/** Après achat d’un pack : équipe maillot + short au retour studio. */
+export function rememberRecentStudioPack(item: AvatarItem) {
+  if (!item.bundleIncludes?.length) return
+  try {
+    const modular = boutiqueItemToModularState(item)
+    sessionStorage.setItem(
+      RECENT_STUDIO_PACK_KEY,
+      JSON.stringify({
+        jersey: modular.data.jersey,
+        shorts: modular.data.shorts,
+      }),
+    )
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function consumeRecentStudioPack(): { jersey: string | null; shorts: string | null } | null {
+  try {
+    const raw = sessionStorage.getItem(RECENT_STUDIO_PACK_KEY)
+    if (!raw) return null
+    sessionStorage.removeItem(RECENT_STUDIO_PACK_KEY)
+    const parsed = JSON.parse(raw) as { jersey?: string | null; shorts?: string | null }
+    return {
+      jersey: parsed.jersey ?? null,
+      shorts: parsed.shorts ?? null,
+    }
+  } catch {
+    return null
   }
 }
 
@@ -50,17 +84,63 @@ export function studioSlotForModularAssetId(modularAssetId: string): 'jersey' | 
 }
 
 export function grantIdsForShopItem(item: AvatarItem): string[] {
-  return item.bundleIncludes?.length ? item.bundleIncludes : [item.id]
+  if (item.bundleIncludes?.length) {
+    return Array.from(new Set([item.id, ...item.bundleIncludes]))
+  }
+  return [item.id]
+}
+
+export type CosmeticPayFns = {
+  spendMedals: (amount: number) => { ok: boolean; insufficient?: boolean }
+  spendTokens: (amount: number) => { ok: boolean }
+  grantOwnedItems: (ids: string[]) => void
+}
+
+export type PurchaseCosmeticResult =
+  | { ok: true; href: string }
+  | {
+      ok: false
+      code: 'already_owned' | 'partial_pack' | 'insufficient_medals' | 'insufficient_tokens' | 'payment_failed'
+    }
+
+/** Valide, débite médailles ou jetons, puis accorde l’article. */
+export function purchaseCosmeticItem(
+  item: AvatarItem,
+  currency: 'medals' | 'tokens',
+  pays: CosmeticPayFns,
+  ownsItem: (id: string) => boolean,
+): PurchaseCosmeticResult {
+  const validation = validateMedalCosmeticPurchase(item, ownsItem)
+  if (validation.status === 'already_owned') return { ok: false, code: 'already_owned' }
+  if (validation.status === 'partial_pack') return { ok: false, code: 'partial_pack' }
+
+  if (currency === 'medals') {
+    const paid = pays.spendMedals(item.cost)
+    if (!paid.ok) {
+      return { ok: false, code: paid.insufficient ? 'insufficient_medals' : 'payment_failed' }
+    }
+  } else {
+    const tokenCost = cosmeticTokenPrice(item.cost)
+    const paid = pays.spendTokens(tokenCost)
+    if (!paid.ok) return { ok: false, code: 'insufficient_tokens' }
+  }
+
+  return { ok: true, href: finishCosmeticPurchase(item, pays.grantOwnedItems) }
 }
 
 /** Après paiement : enregistre la possession et renvoie l’URL du studio profil. */
 export function finishCosmeticPurchase(
   item: AvatarItem,
-  addOwnedItem: (id: string) => void,
+  grantOwnedItems: (ids: string[]) => void,
 ): string {
-  grantIdsForShopItem(item).forEach((id) => addOwnedItem(id))
+  grantOwnedItems(grantIdsForShopItem(item))
+  if (item.bundleIncludes?.length) {
+    rememberRecentStudioPack(item)
+  } else {
+    const modularAssetId = modularAssetIdForPurchase(item)
+    if (modularAssetId) rememberRecentStudioAsset(modularAssetId)
+  }
   const modularAssetId = modularAssetIdForPurchase(item)
-  if (modularAssetId) rememberRecentStudioAsset(modularAssetId)
   return profileStudioHref(modularAssetId, item.id)
 }
 
@@ -88,7 +168,18 @@ export function validateMedalCosmeticPurchase(
 ): MedalPurchaseAttempt {
   if (isCosmeticOwned(item, ownsItem)) return { status: 'already_owned' }
   const grantIds = grantIdsForShopItem(item)
-  const alreadyOwned = grantIds.filter((id) => ownsItem(id))
-  if (alreadyOwned.length > 0) return { status: 'partial_pack' }
+  const owned: string[] = []
+  const probeIds = [
+    item.id,
+    ...grantIds,
+    ...cdm2026BundleItems.flatMap((p) => [p.id, ...(p.bundleIncludes ?? [])]),
+  ]
+  for (const id of probeIds) {
+    if (ownsItem(id) && !owned.includes(id)) owned.push(id)
+  }
+  if (item.bundleIncludes?.length) {
+    const alreadyOwned = grantIds.filter((id) => isBoutiqueShopItemOwned(id, owned))
+    if (alreadyOwned.length > 0) return { status: 'partial_pack' }
+  }
   return { status: 'ok' }
 }

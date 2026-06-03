@@ -4,7 +4,7 @@
  */
 
 import type { AvatarItem } from '../types/profile'
-import { CDM_BUNDLE_MEDALS, CDM_JERSEY_MEDALS, CDM_SHORT_MEDALS } from './boutiqueEconomy'
+import { CDM_BUNDLE_MEDALS, CDM_JERSEY_MEDALS, CDM_SHORT_MEDALS } from './boutiqueMedalCosts'
 import { NATIONS, boutiqueJerseyUrl, boutiqueShortsUrl, kitPackUrl, type Nation } from './nations'
 
 function buildBundle(nation: Nation): AvatarItem {

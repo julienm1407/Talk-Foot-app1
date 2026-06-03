@@ -18,6 +18,8 @@ interface ImportMetaEnv {
   readonly VITE_ADMIN_EMAILS?: string
   /** SportMonks v3 — header `Authorization` = valeur du token (ne pas committer). */
   readonly VITE_SPORTMONKS_TOKEN?: string
+  /** Saison SportMonks CDM 2026 (`schedules/seasons/{id}`). Défaut : 26618. */
+  readonly VITE_SPORTMONKS_WC_SEASON_ID?: string
   /** Journée SM pour charger les cotes 1N2 (`/rounds/{id}`) quand le match n’expose pas `sportMonksRoundId`. */
   readonly VITE_SPORTMONKS_PREMATCH_ODDS_ROUND_ID?: string
   /** Bookmaker SportMonks unique pour les cotes 1N2 (domicile / nul / extérieur). Défaut : `2`. */

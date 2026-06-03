@@ -9,13 +9,17 @@ import {
 import type { Match } from '../types/match'
 import {
   fetchSportMonksFixturesBetween,
+  fetchSportMonksFixturesForSeason,
   fetchSportMonksInplay,
   fetchSportMonksLeaguesByDate,
+  fetchSportMonksSeasonSchedule,
   mergeSportMonksFixtureLists,
   smFixtureToMatch,
   smFixturesFromLeaguesDateEnvelope,
+  smFixturesFromSeasonScheduleEnvelope,
   type SmFixture,
 } from '../api/sportMonks'
+import { resolveSportMonksWc2026SeasonId } from '../data/wc2026SportMonks'
 import { API_TOKENS_CHANGED_EVENT } from '../constants/apiKeysStorage'
 import { getSportMonksToken, getSportMonksTokenSource } from '../utils/apiTokens'
 import { getFootballCalendarWindow } from '../utils/footballCalendarWindow'
@@ -103,6 +107,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       }
       try {
         const range = getFootballCalendarWindow()
+        const cdmExtended = range.cdmExtended
         const todayParis = matchCalendarDayKeyParis(new Date())
         const [inplaySettled, betweenSettled] = await Promise.allSettled([
           fetchSportMonksInplay(sportmonksToken),
@@ -117,11 +122,34 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         if (betweenSettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(betweenSettled))
 
         let fromLeaguesDate: SmFixture[] = []
+        let fromWcSeason: SmFixture[] = []
+        if (cdmExtended) {
+          const seasonId = resolveSportMonksWc2026SeasonId()
+          try {
+            const scheduleEnv = await fetchSportMonksSeasonSchedule(sportmonksToken, seasonId)
+            fromWcSeason = smFixturesFromSeasonScheduleEnvelope(scheduleEnv)
+          } catch (wcSchedErr) {
+            if (import.meta.env.DEV) {
+              console.warn('[TalkFoot] schedules/seasons CDM:', wcSchedErr)
+            }
+          }
+          if (fromWcSeason.length === 0) {
+            try {
+              fromWcSeason = await fetchSportMonksFixturesForSeason(sportmonksToken, seasonId)
+            } catch (wcFxErr) {
+              if (!silent) {
+                const msg = wcFxErr instanceof Error ? wcFxErr.message : String(wcFxErr)
+                primaryFetchFailures.push(`CDM saison ${seasonId}: ${msg}`)
+              }
+            }
+          }
+        }
         /**
          * Poll silencieux live : éviter la passe `leagues/date` (coûteuse) pour accélérer
          * la remontée score/événements. Le chargement initial garde la passe complète.
          */
-        if (!silent) {
+        /** En mode CDM : `fixtures/between` jusqu’au 31/07 suffit — évite ~90 appels `leagues/date`. */
+        if (!silent && !cdmExtended) {
           const leaguesDateKeys = parisCalendarDayKeysInclusive(
             addParisCalendarDays(todayParis, -LEAGUES_DATE_FULL_BACK),
             addParisCalendarDays(todayParis, LEAGUES_DATE_FULL_FORWARD),
@@ -135,6 +163,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
 
         const mergedSm = new Map<number, (typeof between)[number]>()
         for (const f of mergeSportMonksFixtureLists(between, inplay)) mergedSm.set(f.id, f)
+        for (const f of fromWcSeason) mergedSm.set(f.id, f)
         for (const f of fromLeaguesDate) {
           if (!mergedSm.has(f.id)) mergedSm.set(f.id, f)
         }
@@ -142,6 +171,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
 
         const baseList = merged
           .map(smFixtureToMatch)
+          .filter((m) => !cdmExtended || m.competition.id === 'wc-2026')
           .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
         if (baseList.length > 0) {
           setMatches(baseList)
@@ -165,7 +195,9 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
               setError(
                 primaryFetchFailures.length
                   ? `Échec des appels SportMonks : ${primaryFetchFailures.join(' — ')}. Si tu es sur Vercel avec le relais /api/sm, vérifie que la route n’est pas renvoyée vers index.html (onglet Réseau) et que SPORTMONKS_TOKEN est bien défini.`
-                  : 'SportMonks n’a renvoyé aucun match pour cette période (~7 jours passés + ~10 jours à venir, fuseau Paris). Vérifie ton plan SportMonks (ligues / pays inclus) ou un créneau sans matchs du Big 5.',
+                  : cdmExtended
+                    ? 'SportMonks n’a renvoyé aucun match Coupe du monde pour cette période (jusqu’au 31 juillet 2026, fuseau Paris). Vérifie ton abonnement CDM et la clé API.'
+                    : 'SportMonks n’a renvoyé aucun match pour cette période (~7 jours passés + ~10 jours à venir, fuseau Paris). Vérifie ton plan SportMonks (ligues / pays inclus) ou un créneau sans matchs du Big 5.',
               ),
             )
             return []

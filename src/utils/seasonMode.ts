@@ -38,8 +38,11 @@ export function resolveSeasonMode(
 /** Compétition Talk Foot : Coupe du Monde 2026. */
 export const WC_2026_COMP_ID = 'wc-2026'
 
-/** Id ligue SportMonks de la Coupe du Monde (FIFA World Cup). */
-export const SM_LEAGUE_ID_WORLD_CUP = 5
+/**
+ * Id ligue SportMonks Coupe du Monde 2026 (doc SM : 732).
+ * L’ancien id 5 (historique) reste reconnu dans `footballApi` pour compatibilité.
+ */
+export const SM_LEAGUE_ID_WORLD_CUP = 732
 
 export function isWorldCupCompetitionId(id?: string | null): boolean {
   return id === WC_2026_COMP_ID

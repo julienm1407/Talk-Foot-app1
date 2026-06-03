@@ -4,7 +4,7 @@
 
 import type { AvatarItem } from '../types/profile'
 import { boutiqueShoeImageUrl } from '../utils/boutiqueShoeAssets'
-import { STANDARD_SHOES_MEDALS } from './boutiqueEconomy'
+import { STANDARD_SHOES_MEDALS } from './boutiqueMedalCosts'
 
 const SHOE_VARIANTS = [
   { id: 'shoes-sneaker-white', name: 'Crampons blancs', emoji: '👟', free: true },

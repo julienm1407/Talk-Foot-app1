@@ -85,6 +85,41 @@ export async function fetchSportMonksFixturePredictionsOnly(
   return envelopeDataAsFixture(json.data)
 }
 
+/** Calendrier complet d’une saison (stages → rounds → fixtures) — CDM 2026. */
+export async function fetchSportMonksSeasonSchedule(token: string, seasonId: number) {
+  return sportMonksFetchJson<SportMonksListEnvelope<unknown>>(`/schedules/seasons/${seasonId}`, token, {
+    per_page: 50,
+    page: 1,
+  })
+}
+
+/**
+ * Toutes les fixtures d’une saison (`filters=fixtureSeasons:{id}`).
+ * Repli si `schedules/seasons` est vide ou incomplet.
+ */
+export async function fetchSportMonksFixturesForSeason(
+  token: string,
+  seasonId: number,
+  include: string = SM_INCLUDE_FIXTURE_LIST,
+): Promise<SmFixture[]> {
+  const out: SmFixture[] = []
+  let page = 1
+  const filters = `fixtureSeasons:${seasonId}`
+  while (page <= MAX_PAGES) {
+    const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>('/fixtures', token, {
+      include,
+      per_page: PER_PAGE,
+      page,
+      filters,
+    })
+    const chunk = asFixtureArray(json.data)
+    out.push(...chunk)
+    if (!sportMonksPaginationHasMore(json, PER_PAGE, chunk.length)) break
+    page += 1
+  }
+  return out
+}
+
 /** Tous les matchs entre deux dates (pagination). */
 export async function fetchSportMonksFixturesBetween(
   token: string,

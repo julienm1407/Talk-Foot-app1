@@ -114,6 +114,11 @@ export function smFixturesFromTeamScheduleEnvelope(envelope: { data?: unknown })
   return teamScheduleFixtureRows(envelope).map((r) => r.fixture)
 }
 
+/** Même structure que `schedules/teams/{id}` — utilisé pour `schedules/seasons/{seasonId}`. */
+export function smFixturesFromSeasonScheduleEnvelope(envelope: { data?: unknown }): SmFixture[] {
+  return smFixturesFromTeamScheduleEnvelope(envelope)
+}
+
 /** Fixtures listées dans `data.upcoming` (réponse `GET /teams/{id}` + include upcoming). */
 export function smFixturesFromTeamUpcomingEnvelope(envelope: { data?: unknown }): SmFixture[] {
   const data = envelope.data

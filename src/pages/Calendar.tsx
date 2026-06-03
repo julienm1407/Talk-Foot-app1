@@ -18,7 +18,9 @@ import {
   startOfParisCalendarDayMs,
 } from '../utils/time'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
+import { WC_2026_COMP_ID, isInsideCdm2026Window } from '../utils/seasonMode'
 
 /** Matchs mis en avant sous « À la une » (hors live) — prochains coup d’envoi. */
 const CALENDAR_ALAUNE_MAX = 8
@@ -55,6 +57,8 @@ export function CalendarPage() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { supporterTintActive, team } = useSupporterTintMode()
+  const season = useOptionalSeasonMode()
+  const isCdm = season?.isCdm2026 ?? isInsideCdm2026Window()
 
   const { matches, loading, error: matchesError } = useMatches()
 
@@ -101,7 +105,9 @@ export function CalendarPage() {
     return Array.from(map.values()).sort((a, b) => a.shortName.localeCompare(b.shortName))
   }, [sorted])
 
-  const [competitionId, setCompetitionId] = useState<string>('all')
+  const [competitionId, setCompetitionId] = useState<string>(() =>
+    isInsideCdm2026Window() ? WC_2026_COMP_ID : 'all',
+  )
   const [dayKey, setDayKey] = useState<string>('all')
   /** Vue principale : accès direct aux résultats sans défiler les à venir. */
   const [primaryTab, setPrimaryTab] = useState<'upcoming' | 'past'>('upcoming')
@@ -118,6 +124,7 @@ export function CalendarPage() {
   const isMultiplex = liveFeatured.length > 1
 
   const upcomingSpotlightMatches = useMemo(() => {
+    if (isCdm) return [] as Match[]
     if (liveFeatured.length > 0) return [] as Match[]
     const upcomingOnly = poolFiltered
       .filter((m) => m.status === 'upcoming')
@@ -126,7 +133,7 @@ export function CalendarPage() {
     const anchorIdx = upcomingOnly.findIndex((m) => +new Date(m.kickoffAt) >= now - 60_000)
     const start = anchorIdx >= 0 ? anchorIdx : 0
     return upcomingOnly.slice(start, start + CALENDAR_ALAUNE_MAX)
-  }, [liveFeatured.length, poolFiltered, now])
+  }, [isCdm, liveFeatured.length, poolFiltered, now])
 
   const excludedIds = useMemo(() => {
     const s = new Set<string>()
@@ -389,6 +396,12 @@ export function CalendarPage() {
             <span className="font-black text-tf-app-fg">{upcomingTotal}</span> à venir
             <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
             <span className="font-black text-tf-app-fg">{pastTotal}</span> résultats
+            {isCdm ? (
+              <>
+                <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
+                <span className="font-bold text-tf-app-fg">Calendrier CDM jusqu’au 31 juillet</span>
+              </>
+            ) : null}
             {competitionId !== 'all' ? (
               <>
                 <span className="mx-1.5 font-normal text-tf-app-subtle">·</span>
@@ -747,7 +760,9 @@ export function CalendarPage() {
           >
             <p className="text-tf-md font-bold text-tf-app-fg">Aucun match à venir</p>
             <p className="mt-tf-2 text-tf-sm font-medium text-tf-app-muted">
-              Change de ligue ou de jour{pastTotal > 0 ? ', ou passe à l’onglet Résultats.' : '.'}
+              {isCdm
+                ? 'Aucune rencontre CDM chargée depuis SportMonks pour la période (jusqu’au 31 juillet). Vérifie la clé API Coupe du monde.'
+                : `Change de ligue ou de jour${pastTotal > 0 ? ', ou passe à l’onglet Résultats.' : '.'}`}
             </p>
             {pastTotal > 0 ? (
               <button

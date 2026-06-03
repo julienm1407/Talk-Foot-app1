@@ -14,7 +14,13 @@ import {
   hasBrowserSportMonksToken,
   setSportMonksTokenBrowser,
 } from '../utils/apiTokens'
-import { fetchSportMonksInplay } from '../api/sportMonks'
+import {
+  fetchSportMonksFixturesForSeason,
+  fetchSportMonksInplay,
+  fetchSportMonksSeasonSchedule,
+  smFixturesFromSeasonScheduleEnvelope,
+} from '../api/sportMonks'
+import { resolveSportMonksWc2026SeasonId, SM_WC_2026_LEAGUE_ID } from '../data/wc2026SportMonks'
 
 const SM_KEY_HASH = '#tf-sportmonks-cle'
 
@@ -86,7 +92,23 @@ export function DataSourcesSettingsPage() {
     setBusySm(true)
     try {
       await fetchSportMonksInplay(token)
-      setMsg('Connexion SportMonks OK (matchs en cours récupérés ou liste vide).')
+      const seasonId = resolveSportMonksWc2026SeasonId()
+      let wcCount = 0
+      try {
+        const env = await fetchSportMonksSeasonSchedule(token, seasonId)
+        wcCount = smFixturesFromSeasonScheduleEnvelope(env).length
+      } catch {
+        wcCount = 0
+      }
+      if (wcCount === 0) {
+        const fx = await fetchSportMonksFixturesForSeason(token, seasonId)
+        wcCount = fx.length
+      }
+      setMsg(
+        wcCount > 0
+          ? `Connexion OK — ${wcCount} match(s) Coupe du monde (ligue SM ${SM_WC_2026_LEAGUE_ID}, saison ${seasonId}).`
+          : `Connexion OK (inplay), mais 0 match CDM pour la saison ${seasonId}. Vérifie l’abonnement World Cup 2026 chez SportMonks.`,
+      )
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur SportMonks')
     } finally {

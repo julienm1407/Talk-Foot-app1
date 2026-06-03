@@ -38,6 +38,7 @@ export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
   1371: 'uecl',
   271: 'uecl',
   5: 'wc-2026',
+  732: 'wc-2026',
 }
 
 /** Ids ligue SportMonks pour `standings/live/leagues/{id}` (inverse de `SM_LEAGUE_ID_TO_COMP` Big 5). */
@@ -47,6 +48,7 @@ export const SM_LEAGUE_ID_BY_TALKFOOT_COMP: Record<string, number> = {
   laliga: 564,
   'serie-a': 384,
   bund: 82,
+  'wc-2026': 732,
 }
 
 const LEAGUE_NAME_TO_COMP: [RegExp, string][] = [

@@ -286,6 +286,9 @@ export function smFixtureToMatch(f: SmFixture): Match {
       : typeof f.round_id === 'number'
         ? f.round_id
         : undefined
+  const roundName = f.round?.name?.trim() || undefined
+  const stageName = f.stage?.name?.trim() || undefined
+  const venueName = f.venue?.name?.trim() || undefined
 
   const base: Match = {
     id,
@@ -297,6 +300,9 @@ export function smFixtureToMatch(f: SmFixture): Match {
     provider: 'sportmonks',
     sportMonksFixtureId: f.id,
     ...(roundId != null ? { sportMonksRoundId: roundId } : {}),
+    ...(roundName ? { roundName } : {}),
+    ...(stageName ? { stageName } : {}),
+    ...(venueName ? { venueName } : {}),
   }
 
   if (status === 'live') {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { useAuth } from '../contexts/AuthContext'
@@ -85,12 +85,14 @@ export function useWallet() {
     [useCloudWallet, cloud],
   )
 
+  const devMedalsSeeded = useRef(false)
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || devMedalsSeeded.current) return
     const isDevAdmin =
       user.displayName === DEV_ADMIN_DISPLAY_NAME ||
       user.email?.toLowerCase() === DEV_ADMIN_EMAIL
     if (!isDevAdmin) return
+    devMedalsSeeded.current = true
     if (wallet.medals >= DEV_ADMIN_TEST_MEDALS) return
 
     patchWallet((w) => ({ ...w, medals: DEV_ADMIN_TEST_MEDALS }))
@@ -112,9 +114,10 @@ export function useWallet() {
         ok = true
         return { ...w, tokens: w.tokens - amount }
       })
+      if (ok) void cloud?.flushAppSave?.()
       return { ok }
     },
-    [patchWallet],
+    [patchWallet, cloud],
   )
 
   const addMedals = useCallback(
@@ -136,9 +139,10 @@ export function useWallet() {
         ok = true
         return { ...w, medals: w.medals - amount }
       })
+      if (ok) void cloud?.flushAppSave?.()
       return { ok, insufficient }
     },
-    [patchWallet],
+    [patchWallet, cloud],
   )
 
   const dailyBonus = useMemo(() => buildDailyBonusStatus(wallet), [wallet])

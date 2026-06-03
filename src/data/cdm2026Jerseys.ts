@@ -3,7 +3,7 @@
  */
 
 import type { AvatarItem } from '../types/profile'
-import { CDM_JERSEY_MEDALS } from './boutiqueEconomy'
+import { CDM_JERSEY_MEDALS } from './boutiqueMedalCosts'
 import { NATIONS, boutiqueJerseyUrl, type Nation } from './nations'
 
 function buildJersey(nation: Nation): AvatarItem {

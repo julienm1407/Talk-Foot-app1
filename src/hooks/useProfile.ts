@@ -22,13 +22,31 @@ import {
   sanitizeModularAvatarState,
   type ModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
-import { avatarItems } from '../data/shop'
+import { isBoutiqueShopItemOwned, repairPackOwnedItemIds } from '../data/boutiqueEconomy'
 import { sanitizeModularGarmentAccess } from '../utils/modularGarmentAccess'
 
 function catalogItemOwned(itemId: string, ownedItemIds: string[]): boolean {
-  if (ownedItemIds.includes(itemId)) return true
-  const row = avatarItems.find((i) => i.id === itemId)
-  return Boolean(row && row.cost === 0)
+  return isBoutiqueShopItemOwned(itemId, ownedItemIds)
+}
+
+/** Corrige l’ancien bug d’achat pack (plusieurs addOwnedItem → seul le short restait). */
+function repairCdmPackJerseyWhenShortPresent(ownedItemIds: string[]): string[] {
+  const next = [...ownedItemIds]
+  let changed = false
+  for (const id of ownedItemIds) {
+    const m = id.match(/^cdm2026-short-([a-z]+)$/)
+    if (!m) continue
+    const jerseyId = `cdm2026-${m[1]}`
+    if (!next.includes(jerseyId)) {
+      next.push(jerseyId)
+      changed = true
+    }
+  }
+  return changed ? next : ownedItemIds
+}
+
+function normalizeOwnedItemIds(ownedItemIds: string[]): string[] {
+  return repairCdmPackJerseyWhenShortPresent(repairPackOwnedItemIds(ownedItemIds))
 }
 
 export const PROFILE_STORAGE_KEY = 'talkfoot.profile.v1'
@@ -177,6 +195,16 @@ export function useProfile() {
     }
   }, [cloud, setLocalProfileRaw])
 
+  useEffect(() => {
+    const raw = Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []
+    const fixed = normalizeOwnedItemIds(raw)
+    const same =
+      raw.length === fixed.length && raw.every((id) => fixed.includes(id)) && fixed.every((id) => raw.includes(id))
+    if (!same) {
+      setProfileStore((p) => ({ ...p, ownedItemIds: fixed }))
+    }
+  }, [profile.ownedItemIds, setProfileStore])
+
   const computedLevel = useMemo(() => levelFromXp(profile.xp), [profile.xp])
   const tier = useMemo(() => getLevelTier(computedLevel), [computedLevel])
   const xpForCurrentLevel = useMemo(() => {
@@ -257,11 +285,12 @@ export function useProfile() {
     [setProfileStore],
   )
 
-  const addOwnedItem = useCallback(
-    (itemId: string) => {
+  const addOwnedItems = useCallback(
+    (itemIds: string[]) => {
+      if (itemIds.length === 0) return
       setProfileStore((p) => {
         const ids = Array.isArray(p.ownedItemIds) ? p.ownedItemIds : []
-        const nextOwned = ids.includes(itemId) ? ids : [...ids, itemId]
+        const nextOwned = normalizeOwnedItemIds(Array.from(new Set([...ids, ...itemIds])))
         return {
           ...p,
           ownedItemIds: nextOwned,
@@ -269,7 +298,7 @@ export function useProfile() {
             ownedItemIds: Array.from(
               new Set([
                 ...(p.premiumInventory?.ownedItemIds ?? []),
-                ...styleCatalog.filter((s) => s.id === itemId).map((s) => s.id),
+                ...styleCatalog.filter((s) => itemIds.includes(s.id)).map((s) => s.id),
               ]),
             ),
             equippedByCategory: p.premiumInventory?.equippedByCategory ?? {},
@@ -278,6 +307,13 @@ export function useProfile() {
       })
     },
     [setProfileStore],
+  )
+
+  const addOwnedItem = useCallback(
+    (itemId: string) => {
+      addOwnedItems([itemId])
+    },
+    [addOwnedItems],
   )
 
   const updateCharacterLook = useCallback(
@@ -370,7 +406,9 @@ export function useProfile() {
       // La photo perso est désactivée: l'identité visuelle provient du personnage Talk Foot.
       profilePhotoDataUrl: undefined,
       level: computedLevel,
-      ownedItemIds: Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
+      ownedItemIds: normalizeOwnedItemIds(
+        Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
+      ),
       equippedItems: (() => {
         if (profile.equippedItems && typeof profile.equippedItems === 'object') {
           return { ...EQUIPPED_BASE, ...profile.equippedItems }
@@ -383,7 +421,9 @@ export function useProfile() {
       modularAvatar: sanitizeModularAvatarState(
         sanitizeModularGarmentAccess(
           resolveModularAvatarState(profile.modularAvatar),
-          Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
+          normalizeOwnedItemIds(
+            Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
+          ),
         ),
       ),
       premiumInventory: {
@@ -415,13 +455,17 @@ export function useProfile() {
     equipItem,
     unequipSlot,
     addOwnedItem,
+    addOwnedItems,
     updateCharacterLook,
     setJerseyCustomization,
     setProfilePhotoDataUrl,
     updateModularAvatar,
     creditWonBets,
     ownsItem: (id: string) =>
-      catalogItemOwned(id, Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []),
+      catalogItemOwned(
+        id,
+        normalizeOwnedItemIds(Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []),
+      ),
     setProfile: setProfileStore,
   }
 }

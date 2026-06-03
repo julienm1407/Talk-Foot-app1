@@ -8,7 +8,6 @@ import { Button } from '../components/ui/Button'
 import { useEffect } from 'react'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { BadgeIllustration } from '../components/profile/BadgeIllustration'
-import { AvatarEditor } from '../components/profile/AvatarEditor'
 import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
 import { AvatarModularStudio } from '../components/profile/AvatarModularStudio'
 import { UserRankCard } from '../components/profile/UserRankCard'
@@ -498,9 +497,6 @@ export function ProfilePage() {
 
         <div id="profil-look" className="scroll-mt-28 space-y-3 sm:scroll-mt-4 sm:space-y-4">
           <AvatarModularStudio />
-        </div>
-        <div id="profil-avatar" className="scroll-mt-28 sm:scroll-mt-4">
-          <AvatarEditor />
         </div>
       </div>
 

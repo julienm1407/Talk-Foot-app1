@@ -5,7 +5,6 @@ import { Input } from '../components/ui/Input'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useWallet } from '../hooks/useWallet'
 import { useProfile } from '../hooks/useProfile'
-import { cosmeticTokenPrice } from '../data/shop'
 import {
   CDM_BUNDLE_MEDALS,
   CDM_JERSEY_MEDALS,
@@ -19,11 +18,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
-import {
-  catalogTabForShopItem,
-  finishCosmeticPurchase,
-  validateMedalCosmeticPurchase,
-} from '../utils/boutiquePurchaseFlow'
+import { catalogTabForShopItem, purchaseCosmeticItem } from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'packs', label: 'Packs' },
@@ -42,7 +37,7 @@ function parseCatalogTab(raw: string | null): CatalogFilter | null {
 export function BoutiquePage() {
   const navigate = useNavigate()
   const { wallet, spendMedals, spendTokens } = useWallet()
-  const { ownsItem, addOwnedItem } = useProfile()
+  const { ownsItem, addOwnedItems } = useProfile()
   const [searchParams] = useSearchParams()
   const tabFromUrl = parseCatalogTab(searchParams.get('tab'))
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>(() => tabFromUrl ?? 'packs')
@@ -83,34 +78,34 @@ export function BoutiquePage() {
   }
 
   const handleBuyCosmetic = (item: AvatarItemType, currency: 'medals' | 'tokens') => {
-    const validation = validateMedalCosmeticPurchase(item, ownsItem)
-    if (validation.status === 'already_owned') return
-    if (validation.status === 'partial_pack') {
+    const result = purchaseCosmeticItem(
+      item,
+      currency,
+      { spendMedals, spendTokens, grantOwnedItems: addOwnedItems },
+      ownsItem,
+    )
+    if (result.ok) {
+      navigate(result.href)
+      return
+    }
+    if (result.code === 'partial_pack') {
       showNotice(
         'err',
         'Tu possèdes déjà une partie de ce pack — achète les pièces manquantes dans Maillots ou Shorts.',
       )
       return
     }
-
-    if (currency === 'medals') {
-      const result = spendMedals(item.cost)
-      if (!result.ok) {
-        if (result.insufficient) redirectToMedalPacks(item)
-        else showNotice('err', 'Paiement impossible — réessaie dans un instant.')
-        return
-      }
-      navigate(finishCosmeticPurchase(item, addOwnedItem))
+    if (result.code === 'insufficient_medals') {
+      redirectToMedalPacks(item)
       return
     }
-
-    const tokenCost = cosmeticTokenPrice(item.cost)
-    const tokenResult = spendTokens(tokenCost)
-    if (!tokenResult.ok) {
+    if (result.code === 'insufficient_tokens') {
       showNotice('err', 'Pas assez de jetons — paris gagnés ou bonus quotidien.')
       return
     }
-    navigate(finishCosmeticPurchase(item, addOwnedItem))
+    if (result.code === 'payment_failed') {
+      showNotice('err', 'Paiement impossible — réessaie dans un instant.')
+    }
   }
 
   const filterHint =

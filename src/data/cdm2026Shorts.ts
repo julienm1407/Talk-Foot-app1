@@ -3,7 +3,7 @@
  */
 
 import type { AvatarItem } from '../types/profile'
-import { CDM_SHORT_MEDALS } from './boutiqueEconomy'
+import { CDM_SHORT_MEDALS } from './boutiqueMedalCosts'
 import { NATIONS, boutiqueShortsUrl, type Nation } from './nations'
 
 function buildShorts(nation: Nation): AvatarItem {

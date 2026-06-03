@@ -1,5 +1,5 @@
 import type { AvatarAssetCategory } from '../features/avatar2d/types'
-import { avatarItems } from '../data/shop'
+import { isBoutiqueShopItemOwned } from '../data/boutiqueEconomy'
 import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
 import type { CatalogFilter } from './boutiqueCatalog'
 
@@ -27,12 +27,6 @@ const MODULAR_SHOE_TO_SHOP: Record<string, string> = {
   'shoes-shoes-rouge': 'shoes-retro-gum',
   'shoes-shoes-jaune': 'shoes-sneaker-jaune',
   'shoes-shoes-vert': 'shoes-sneaker-vert',
-}
-
-function ownsCatalogItem(itemId: string, ownedItemIds: string[]): boolean {
-  if (ownedItemIds.includes(itemId)) return true
-  const row = avatarItems.find((i) => i.id === itemId)
-  return Boolean(row && row.cost === 0)
 }
 
 /** Maillot / short / chaussures modulaires gratuits (couleurs de base + crampons blancs). */
@@ -77,7 +71,7 @@ export function isModularAssetUnlocked(
   if (isModularGarmentFree(modularAssetId)) return true
   const shopId = shopItemIdFromModularAsset(modularAssetId, category)
   if (!shopId) return false
-  return ownsCatalogItem(shopId, ownedItemIds)
+  return isBoutiqueShopItemOwned(shopId, ownedItemIds)
 }
 
 export function boutiqueTabForModularCategory(

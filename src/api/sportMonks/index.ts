@@ -4,6 +4,8 @@ export {
   fetchSportMonksFixturePrematchOdds,
   fetchSportMonksFixturePredictionsOnly,
   fetchSportMonksFixturesBetween,
+  fetchSportMonksFixturesForSeason,
+  fetchSportMonksSeasonSchedule,
   fetchSportMonksFixturesByDate,
   fetchSportMonksFixtureWithXG,
   fetchSportMonksFixtureEventsTimeline,
@@ -42,6 +44,7 @@ export {
   lastFiveFormFromTeamSchedule,
   smFixturesFromTeamLatestEnvelope,
   smFixturesFromTeamScheduleEnvelope,
+  smFixturesFromSeasonScheduleEnvelope,
   smFixturesFromTeamUpcomingEnvelope,
   teamScheduleFixtureRows,
 } from './clubScheduleFromSm'
