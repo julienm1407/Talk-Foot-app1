@@ -113,7 +113,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
   },
   supporter_plus: {
     id: 'supporter_plus',
-    name: 'Supporter+',
+    name: 'Ultras',
     priceLabel: '4,99 € / mois',
     priceCents: 499,
     tagline: 'Plus de tribunes, moins de limites, badge vérifié.',
@@ -214,17 +214,11 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
       { id: 'stream', label: 'Stream sur tes salons · salons vocaux', included: true },
       { id: 'salon-inf', label: 'Salons publics sans limite', included: true },
       { id: 'tokens-m', label: '1000 jetons / mois (collection rapide)', included: true },
-      {
-        id: 'articles',
-        label: 'Rédiger des articles sur l’app',
-        included: true,
-        comingSoon: true,
-      },
+      { id: 'articles', label: 'Rédiger des articles sur l’app', included: true },
       {
         id: 'live-priv',
-        label: 'Lives match privés tribunes personnalisables',
+        label: 'Salon live privé (lien invité depuis la tribune)',
         included: true,
-        comingSoon: true,
       },
       {
         id: 'monetize',

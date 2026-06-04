@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveEncartSimulation } from '../hooks/useLiveEncartSimulation'
-import { HubStripLive } from '../components/match/HubMatchEncart'
+import { HubStripLive, HubStripUpcoming } from '../components/match/HubMatchEncart'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDebates } from '../contexts/DebatesContext'
+import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { useMatches } from '../contexts/MatchesContext'
 import {
   debateSnippetsForArticle,
@@ -14,7 +15,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { fetchPublishedArticleBySlug } from '../lib/supabase/articles'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { useArticleSeo } from '../hooks/useArticleSeo'
-import { LogoMark } from '../layout/LogoMark'
+import { LogoEncartLink } from '../layout/LogoMark'
 import {
   DebatesRichBody,
   EncartChrome,
@@ -31,6 +32,7 @@ import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { AdSlot } from '../components/ui/AdSlot'
 import { EditorialProse } from '../components/ads/EditorialProse'
 import { ArticleMarkdown } from '../components/article/ArticleMarkdown'
+import { ArticleProse } from '../components/article/ArticleProse'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { trackArticleEvent } from '../lib/supabase/articleAnalytics'
@@ -41,6 +43,8 @@ import {
   type ArticleComment,
 } from '../lib/supabase/articleComments'
 import { subscribeNewsletter } from '../lib/supabase/newsletter'
+import { resolveArticleExcerpt } from '../utils/articleExcerpt'
+import { getArticleSidebarEncart } from '../utils/articleSidebarEncart'
 
 /** Lisibles sur panneau clair (jour) et sur verre sombre (nuit). */
 function articleTagClass(tag: string, light: boolean): string {
@@ -93,7 +97,8 @@ export function ArticlePage() {
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterState, setNewsletterState] = useState<'idle' | 'ok' | 'error'>('idle')
   const { user, isReady } = useAuth()
-  const { trendingDebates } = useDebates()
+  const { trendingDebates, debateOfTheDay, debates: allDebates } = useDebates()
+  const { groups: supporterGroups } = useSupporterGroups()
   const { matches } = useMatches()
 
   useEffect(() => {
@@ -139,6 +144,16 @@ export function ArticlePage() {
     [],
   )
 
+  const sidebarEncartTone = isLight ? 'light' : 'dark'
+  const sidebarDebates = useMemo(
+    () => getArticleSidebarEncart('debates', sidebarEncartTone),
+    [sidebarEncartTone],
+  )
+  const sidebarGroups = useMemo(
+    () => getArticleSidebarEncart('groups', sidebarEncartTone),
+    [sidebarEncartTone],
+  )
+
   const featuredMatch = useMemo(() => {
     const live = matches
       .filter((m) => m.status === 'live')
@@ -153,11 +168,32 @@ export function ArticlePage() {
     featuredMatch?.status === 'live' ? featuredMatch : null,
   )
 
+  const articleExcerpt = useMemo(
+    () => (article ? resolveArticleExcerpt(article) : ''),
+    [article],
+  )
+
+  const groupDiscussPreviews = useMemo(
+    () => (article ? getGroupDiscussPreviewsForArticle(article, supporterGroups) : []),
+    [article, supporterGroups],
+  )
+  const debateCatalogForArticle = useMemo(() => {
+    if (trendingDebates.length) return trendingDebates
+    if (debateOfTheDay) return [debateOfTheDay]
+    return allDebates
+  }, [trendingDebates, debateOfTheDay, allDebates])
+  const debateSnippets = useMemo(
+    () => (article ? debateSnippetsForArticle(article, debateCatalogForArticle) : []),
+    [article, debateCatalogForArticle],
+  )
+  const sidebarDebateSnippets = debateSnippets.slice(0, 1)
+  const sidebarGroupPreviews = groupDiscussPreviews.slice(0, 1)
+
   const seoPayload = useMemo(() => {
     if (!article) return null
     return {
       title: article.title,
-      description: article.excerpt,
+      description: articleExcerpt || article.title,
       canonicalPath: `/article/${article.slug}`,
       ogImage: article.coverImageUrl || footballImageUrl(article.id, 'og'),
       publishedAt: article.publishedAt ?? new Date().toISOString(),
@@ -165,7 +201,7 @@ export function ArticlePage() {
       section: article.tag,
       authorName: article.authorName,
     }
-  }, [article])
+  }, [article, articleExcerpt])
 
   useArticleSeo(seoPayload)
 
@@ -259,21 +295,7 @@ export function ArticlePage() {
               >
                 ← Retour
               </button>
-            <Link
-              to="/login"
-              className={cn(
-                'shrink-0 rounded-2xl border px-2 py-1.5 opacity-95 transition hover:opacity-100 sm:px-2.5 sm:py-2',
-                isLight
-                  ? 'border-tf-dark/12 bg-white/95 hover:bg-white'
-                  : 'border-white/10 bg-white/[0.07] hover:border-white/20 hover:bg-white/[0.1]',
-              )}
-            >
-              <LogoMark
-                variant="header"
-                className={cn(!isLight && 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]')}
-                decorative={false}
-              />
-            </Link>
+            <LogoEncartLink to="/login" isLight={isLight} className="opacity-95 hover:opacity-100" />
             </div>
             <Link
               to="/login"
@@ -319,24 +341,21 @@ export function ArticlePage() {
   const toLive = user ? livePath : loginWithNext(livePath)
   const toStade = user ? stadePath : loginWithNext(stadePath)
   const toDebates = user ? debatesPath : loginWithNext(debatesPath)
+  const toDebate = (debateId: string) =>
+    user ? `/debate/${debateId}` : loginWithNext(`/debate/${debateId}`)
   const toGroups = user ? groupsPath : loginWithNext(groupsPath)
   const toMatches = user ? '/match' : loginWithNext('/match')
   const toRankingsBets = user ? '/rankings' : loginWithNext('/rankings')
   const appHome = user ? '/' : '/login'
 
-  const groupDiscussPreviews = getGroupDiscussPreviewsForArticle(article)
-  const debateSnippets = debateSnippetsForArticle(article, trendingDebates)
-  const sidebarDebateSnippets = debateSnippets.slice(0, 1)
-  const sidebarGroupPreviews = groupDiscussPreviews.slice(0, 1).map((g) => ({
-    ...g,
-    messages: g.messages.slice(0, 1),
-  }))
-
   const toGroup = (id: string) => (user ? `/group/${id}` : loginWithNext(`/group/${id}`))
 
   const liveEnc = encarts.live
-  const D = encarts.debates
-  const G = encarts.groups
+  const featuredIsLive = featuredMatch?.status === 'live'
+  const featuredIsUpcoming = featuredMatch?.status === 'upcoming'
+  const featuredTribuneTo = featuredMatch ? `/channel/${featuredMatch.id}` : toLive
+  const D = sidebarDebates
+  const G = sidebarGroups
   const S = encarts.stade
   const B = encarts.bets
   const matchesEncart = getAppSectionTheme('matches').encart
@@ -375,21 +394,7 @@ export function ArticlePage() {
             >
               ← Retour
             </button>
-            <Link
-              to={appHome}
-              className={cn(
-                'shrink-0 rounded-2xl border px-2 py-1.5 transition sm:px-2.5 sm:py-2',
-                isLight
-                  ? 'border-tf-dark/12 bg-white/95 hover:border-tf-dark/18 hover:bg-white'
-                  : 'border-white/10 bg-white/[0.07] hover:border-white/20 hover:bg-white/[0.1]',
-              )}
-            >
-              <LogoMark
-                variant="header"
-                className={cn(!isLight && 'drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]')}
-                decorative={false}
-              />
-            </Link>
+            <LogoEncartLink to={appHome} isLight={isLight} />
           </div>
           <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
@@ -426,33 +431,30 @@ export function ArticlePage() {
             {/* Ligne 1 : image ~30 % | live compact ~70 % */}
             <section aria-label="Illustration et match en direct">
               <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-10 lg:gap-5">
-                <figure className="min-h-0 lg:col-span-3">
-                  <div className="h-full overflow-hidden rounded-2xl border border-white/55 bg-white/90 p-1 shadow-md ring-1 ring-tf-dark/[0.06] sm:rounded-3xl sm:p-1.5">
+                <figure className="min-h-0 lg:col-span-3 lg:h-full">
+                  <div
+                    className={cn(
+                      'relative w-full overflow-hidden rounded-2xl border p-1 shadow-md sm:rounded-3xl sm:p-1.5',
+                      'aspect-[4/5] sm:aspect-[3/4] lg:aspect-auto lg:h-full lg:min-h-[12rem]',
+                      isLight
+                        ? 'border-white/55 bg-white/90 ring-1 ring-tf-dark/[0.06]'
+                        : 'border-white/20 bg-white/10 ring-1 ring-white/10',
+                    )}
+                  >
                     <img
                       src={leadImageSrc}
                       alt={article.title}
-                      className="aspect-[4/5] w-full rounded-[14px] object-cover sm:aspect-[3/4] lg:aspect-auto lg:min-h-[200px] lg:max-h-[min(100%,320px)]"
+                      className="size-full rounded-[14px] object-cover object-center"
                       width={560}
                       height={720}
                       fetchPriority="high"
                     />
                   </div>
-                  <figcaption
-                    className={cn(
-                      'mt-2 text-[9px] font-semibold leading-snug sm:text-[10px]',
-                      isLight ? 'text-tf-grey' : 'text-sky-200/72',
-                    )}
-                  >
-                    Photo Unsplash — licence libre (usage éditorial).
-                  </figcaption>
                 </figure>
 
                 <div className="flex min-h-0 flex-col lg:col-span-7">
                   <div className="tf-home-block flex h-full flex-col rounded-2xl p-2.5 sm:rounded-[22px] sm:p-3">
-                    <Link
-                      to={toLive}
-                      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border-2 border-sky-400/45 bg-white/95 shadow-[0_8px_28px_rgba(14,165,233,0.1)] ring-1 ring-sky-300/30 outline-none transition hover:border-sky-500/55 hover:shadow-md focus-visible:ring-2 focus-visible:ring-sky-400/45 sm:rounded-2xl"
-                    >
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border-2 border-sky-400/45 bg-white/95 shadow-[0_8px_28px_rgba(14,165,233,0.1)] ring-1 ring-sky-300/30 sm:rounded-2xl">
                       <div className="relative shrink-0 border-b border-sky-100/90 px-3 pb-2 pt-2.5 sm:px-4 sm:pt-3">
                         <div
                           className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-sky-400/12 blur-2xl"
@@ -460,18 +462,26 @@ export function ArticlePage() {
                         />
                         <EncartChrome theme={liveEnc.chrome} badge={liveEnc.label} hint={liveEnc.hint}>
                           <p className="mt-1 font-display text-base font-black leading-tight text-tf-dark sm:text-lg">
-                            Tribune live
+                            {featuredIsUpcoming ? 'Prochain match' : 'Tribune live'}
                           </p>
                         </EncartChrome>
                       </div>
                       <div className="min-h-0 flex-1 overflow-hidden px-1 pb-1 pt-1 sm:px-2 sm:pb-2 sm:pt-1.5">
                         {featuredMatch ? (
-                          <HubStripLive
-                            match={featuredMatch}
-                            liveMirror={articleLiveMirror}
-                            asLink={false}
-                            className="h-full min-h-[200px] min-w-0"
-                          />
+                          featuredIsUpcoming ? (
+                            <HubStripUpcoming
+                              match={featuredMatch}
+                              visualSize="hubCard"
+                              className="h-full min-h-[200px] min-w-0"
+                            />
+                          ) : (
+                            <HubStripLive
+                              match={featuredMatch}
+                              liveMirror={articleLiveMirror}
+                              asLink
+                              className="h-full min-h-[200px] min-w-0"
+                            />
+                          )
                         ) : (
                           <div className="flex h-full min-h-[200px] items-center justify-center rounded-xl border border-sky-200/60 bg-sky-50/70 p-4 text-center">
                             <p className="text-sm font-bold text-sky-900">
@@ -480,140 +490,128 @@ export function ArticlePage() {
                           </div>
                         )}
                       </div>
-                      <div
+                      <Link
+                        to={featuredTribuneTo}
                         className={cn(
-                          'flex shrink-0 items-center justify-center px-3 py-2 sm:py-2.5',
+                          'flex shrink-0 items-center justify-center px-3 py-2 outline-none transition hover:opacity-95 focus-visible:ring-2 focus-visible:ring-sky-400/45 sm:py-2.5',
                           liveEnc.ctaBar,
                         )}
                       >
                         <span className="text-xs font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] sm:text-sm">
-                          Entrer dans la tribune →
+                          {featuredIsUpcoming
+                            ? 'Préparer la tribune →'
+                            : featuredIsLive
+                              ? 'Entrer dans la tribune →'
+                              : 'Voir le calendrier →'}
                         </span>
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
 
-            {/* Ligne 2 : article ~70 % | encarts ~30 % */}
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-10 lg:gap-8 lg:gap-y-0">
-              <article className="min-w-0 lg:col-span-7">
-                <header>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        'inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ring-1',
-                        articleTagClass(article.tag, isLight),
-                      )}
-                    >
-                      {article.tag}
-                    </span>
-                    <time
-                      dateTime={published.toISOString()}
-                      className="text-[11px] font-bold text-tf-app-muted"
-                    >
-                      {published.toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </time>
-                  </div>
-                  <h1 className="mt-4 max-w-none font-display text-2xl font-black leading-snug tracking-tight text-tf-app-fg sm:text-[1.85rem] sm:leading-[1.12] md:text-[2rem]">
-                    {article.title}
-                  </h1>
-                  <p className="mt-3 max-w-none text-sm font-semibold leading-relaxed text-tf-app-muted sm:text-base">
-                    {article.excerpt}
-                  </p>
-                  <p className="mt-2 text-xs font-bold text-tf-app-muted">
-                    Par {article.authorName || 'Talk Foot'}
-                  </p>
-                </header>
-
-                <div className={cn('mt-8 border-t pt-8', articleDivider)}>
-                  {article.bodyMarkdown?.trim() ? (
-                    <ArticleMarkdown
-                      markdown={article.bodyMarkdown}
-                      className={cn(
-                        'tf-article-markdown max-w-none text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]',
-                        'prose prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-headings:text-tf-app-fg',
-                        'prose-p:text-tf-app-fg prose-strong:text-tf-app-fg prose-li:text-tf-app-fg prose-a:text-sky-600 hover:prose-a:text-sky-500',
-                        'prose-table:block prose-table:w-full prose-table:overflow-x-auto prose-th:bg-slate-100/80 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-td:px-3 prose-td:py-2',
-                        'prose-h2:mt-8 prose-h2:text-[1.35rem] prose-h2:leading-tight prose-h3:mt-6 prose-h3:text-[1.15rem]',
-                      )}
-                    />
-                  ) : (
-                    <div className="max-w-none space-y-6 text-[1.0625rem] font-medium leading-[1.78] tracking-normal text-tf-app-fg sm:text-[1.125rem] sm:leading-[1.75]">
-                      {article.body.map((p, i) => (
-                        <p key={`${article.id}-p-${i}`}>{p}</p>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-8 max-w-none">
-                    <AdSlot
-                      compact
-                      tone="navy"
-                      brand="Partenaire Talk Foot"
-                      body="Annonce affichée après le corps de l’article."
-                      imageSeed="article-inline"
-                      contentReady
-                    />
-                  </div>
-                  <EditorialProse
-                    light={isLight}
+            <article className="min-w-0">
+            {/* Chapeau + encarts latéraux ; corps en pleine largeur en dessous. */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-10 lg:items-start lg:gap-8">
+              <header className="min-w-0 lg:col-span-7">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
                     className={cn(
-                      'mt-8 max-w-none',
-                      isLight
-                        ? 'border-tf-dark/10 bg-white/80'
-                        : 'border-white/12 bg-white/[0.04]',
+                      'inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ring-1',
+                      articleTagClass(article.tag, isLight),
                     )}
-                    title="À propos de cet article"
-                    paragraphs={[
-                      `Cet article est publié sur Talk Foot dans la rubrique « ${article.tag} ». Il s’inscrit dans une ligne éditoriale dédiée au football professionnel : analyse, contexte de match et liens vers les tribunes live de la communauté.`,
-                      'Les fonctionnalités interactives (chat en direct, débats, groupes supporters) sont accessibles après connexion. Les pages de navigation pure ou les écrans de match plein écran ne contiennent pas de publicité.',
-                    ]}
-                  />
+                  >
+                    {article.tag}
+                  </span>
+                  <time
+                    dateTime={published.toISOString()}
+                    className={cn(
+                      'text-[11px] font-bold',
+                      isLight ? 'text-slate-600' : 'text-sky-100/90',
+                    )}
+                  >
+                    {published.toLocaleDateString('fr-FR', {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </time>
                 </div>
-              </article>
+                <h1 className="mt-4 max-w-none font-display text-2xl font-black leading-snug tracking-tight text-tf-app-fg sm:text-[1.85rem] sm:leading-[1.12] md:text-[2rem]">
+                  {article.title}
+                </h1>
+                {articleExcerpt ? (
+                  <p
+                    className={cn(
+                      'mt-3 max-w-none text-sm font-semibold leading-relaxed sm:text-base',
+                      isLight ? 'text-slate-700' : 'text-sky-50/92',
+                    )}
+                  >
+                    {articleExcerpt}
+                  </p>
+                ) : null}
+                <p className={cn('mt-2 text-xs font-bold', isLight ? 'text-slate-600' : 'text-sky-100/85')}>
+                  Par {article.authorName || 'Talk Foot'}
+                </p>
+              </header>
 
               <aside
                 aria-label="En lien avec cet article"
-                className="min-w-0 space-y-4 lg:col-span-3 lg:space-y-5"
+                className="min-w-0 space-y-4 lg:col-span-3 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:space-y-5 lg:overflow-y-auto lg:overscroll-contain lg:pr-0.5"
               >
                 <div>
                   <p
                     className={cn(
                       'text-[10px] font-black uppercase tracking-[0.18em] sm:text-[11px]',
-                      isLight ? 'text-tf-electric-deep' : 'text-sky-200/88',
+                      isLight ? 'text-tf-electric-deep' : 'text-sky-100',
                     )}
                   >
                     Dans l’app
                   </p>
-                  <p className="mt-0.5 text-xs font-semibold text-tf-app-muted">À lire à côté de l’article.</p>
+                  <p
+                    className={cn(
+                      'mt-0.5 text-xs font-semibold',
+                      isLight ? 'text-slate-600' : 'text-sky-100/88',
+                    )}
+                  >
+                    À lire à côté de l’article.
+                  </p>
                 </div>
 
-                <Link
-                  to={toDebates}
-                  className={cn(
-                    D.wrap,
-                    'relative block overflow-hidden rounded-2xl p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/45 sm:p-4',
-                  )}
-                >
+                <div className={cn(D.wrap, 'relative overflow-hidden rounded-2xl p-3 sm:p-4')}>
                   <EncartChrome theme={D.chrome} badge={D.label} hint={D.hint}>
-                    <p className="mt-1.5 font-display text-sm font-black text-tf-dark">Débats</p>
-                    <p className="mt-0.5 text-[10px] font-semibold text-tf-grey">Fil le plus chaud (extrait).</p>
-                    <DebatesRichBody snippets={sidebarDebateSnippets} />
-                    <span className={cn('mt-2 inline-block text-[11px] font-black', D.cta)}>Tout voir →</span>
+                    <p className={cn('mt-1.5 font-display text-sm font-black', D.titleClass)}>Débats</p>
+                    <p className={cn('mt-0.5 text-[10px] font-semibold', D.mutedClass)}>
+                      {sidebarDebateSnippets.length
+                        ? 'Fil tendance — ouvre le débat ou la liste complète.'
+                        : 'Rejoins les fils et polémiques de la communauté.'}
+                    </p>
+                    {sidebarDebateSnippets.length > 0 ? (
+                      <DebatesRichBody
+                        snippets={sidebarDebateSnippets}
+                        debatePath={toDebate}
+                        tone={sidebarEncartTone}
+                      />
+                    ) : null}
+                    <Link to={toDebates} className={cn('mt-3 block w-full text-center', D.pillButton)}>
+                      Voir tous les débats →
+                    </Link>
                   </EncartChrome>
-                </Link>
+                </div>
 
                 <div className={cn(G.wrap, 'relative overflow-hidden rounded-2xl p-3 sm:p-4')}>
                   <EncartChrome theme={G.chrome} badge={G.label} hint={G.hint}>
-                    <p className="mt-1.5 font-display text-sm font-black text-tf-dark">Groupes</p>
-                    <p className="mt-0.5 text-[10px] font-semibold text-tf-grey">Une tribune sur ce thème.</p>
-                    <GroupsDiscussRichBody previews={sidebarGroupPreviews} groupPath={toGroup} />
+                    <p className={cn('mt-1.5 font-display text-sm font-black', G.titleClass)}>Groupes</p>
+                    <p className={cn('mt-0.5 text-[10px] font-semibold', G.mutedClass)}>
+                      Une tribune sur ce thème.
+                    </p>
+                    <GroupsDiscussRichBody
+                      previews={sidebarGroupPreviews}
+                      groupPath={toGroup}
+                      tone={sidebarEncartTone}
+                    />
                     <Link to={toGroups} className={cn('mt-3 block w-full text-center', G.pillButton)}>
                       Hub →
                     </Link>
@@ -622,18 +620,72 @@ export function ArticlePage() {
               </aside>
             </div>
 
+            <section
+              aria-label="Corps de l’article"
+              className={cn('mt-8 w-full border-t pt-8 sm:mt-10 sm:pt-10', articleDivider)}
+            >
+              <ArticleProse light={isLight}>
+                {article.bodyMarkdown?.trim() ? (
+                  <ArticleMarkdown markdown={article.bodyMarkdown} />
+                ) : (
+                  <div className="tf-article-prose__body">
+                    {article.body.map((p, i) => (
+                      <p key={`${article.id}-p-${i}`} className="tf-article-p">
+                        {p}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </ArticleProse>
+              <div className="mt-8 w-full">
+                <AdSlot
+                  compact
+                  tone="navy"
+                  brand="Partenaire Talk Foot"
+                  body="Annonce affichée après le corps de l’article."
+                  imageSeed="article-inline"
+                  contentReady
+                />
+              </div>
+              <EditorialProse
+                light={isLight}
+                className={cn(
+                  'mt-8 w-full',
+                  isLight
+                    ? 'border-tf-dark/10 bg-white/80'
+                    : 'border-white/12 bg-white/[0.04]',
+                )}
+                title="À propos de cet article"
+                paragraphs={[
+                  `Cet article est publié sur Talk Foot dans la rubrique « ${article.tag} ». Il s’inscrit dans une ligne éditoriale dédiée au football professionnel : analyse, contexte de match et liens vers les tribunes live de la communauté.`,
+                  'Les fonctionnalités interactives (chat en direct, débats, groupes supporters) sont accessibles après connexion. Les pages de navigation pure ou les écrans de match plein écran ne contiennent pas de publicité.',
+                ]}
+              />
+            </section>
+            </article>
+
             {/* Clôture : mises en bouche des autres encarts */}
             <section
               aria-label="Pour aller plus loin"
               className={cn('border-t pt-6 sm:pt-8', articleDivider)}
             >
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-tf-app-muted sm:text-[11px]">
+              <p
+                className={cn(
+                  'text-[10px] font-black uppercase tracking-[0.2em] sm:text-[11px]',
+                  isLight ? 'text-slate-500' : 'text-sky-100/80',
+                )}
+              >
                 Poursuivre
               </p>
               <h2 className="mt-1 font-display text-lg font-black text-tf-app-fg sm:text-xl">
                 Encarts restants
               </h2>
-              <p className="mt-1 text-xs font-semibold text-tf-app-muted">
+              <p
+                className={cn(
+                  'mt-1 text-xs font-semibold',
+                  isLight ? 'text-slate-600' : 'text-sky-100/88',
+                )}
+              >
                 Stade, paris et calendrier — accès rapide avant de quitter la page.
               </p>
 

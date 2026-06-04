@@ -1,60 +1,127 @@
 import { Link } from 'react-router-dom'
 import { useUserBets } from '../../hooks/useUserBets'
+import { useWallet } from '../../hooks/useWallet'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { getAppSectionTheme } from '../../theme/appSectionThemes'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+
+const pronoTheme = getAppSectionTheme('pronostic')
 
 /** Raccourci vers la page Pronostic (paris en cours + validés). */
 export function MesParisEncart({ className, compact = false }: { className?: string; compact?: boolean }) {
   const [bets] = useUserBets()
+  const { wallet } = useWallet()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const open = bets.filter((b) => b.status === 'open').length
   const settled = bets.filter((b) => b.status !== 'open').length
+  const total = open + settled
+  const tokens = Math.round(wallet.tokens)
+
+  const detailLine =
+    total > 0 ? (
+      <>
+        {open > 0 ? (
+          <span className={cn('font-black tabular-nums', L ? 'text-emerald-700' : 'text-emerald-300')}>
+            {open} en cours
+          </span>
+        ) : null}
+        {open > 0 && settled > 0 ? <span className="opacity-45"> · </span> : null}
+        {settled > 0 ? (
+          <span className="tabular-nums">
+            {settled} validé{settled > 1 ? 's' : ''}
+          </span>
+        ) : null}
+      </>
+    ) : (
+      <span>
+        <span className={cn('font-black tabular-nums', L ? 'text-emerald-700' : 'text-emerald-300')}>
+          {tokens.toLocaleString('fr-FR')} jetons
+        </span>
+        <span className="opacity-45"> · pronos</span>
+      </span>
+    )
 
   return (
     <Link
       to="/pronostic"
       className={cn(
-        'flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 outline-none transition',
+        'group relative flex overflow-hidden outline-none transition',
         TF_FOCUS_VISIBLE,
-        compact ? 'py-2' : 'py-2.5',
-        L
-          ? 'border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 to-white hover:border-emerald-300'
-          : 'border-emerald-400/35 bg-emerald-950/30 hover:border-emerald-400/50',
+        compact
+          ? cn(
+              'rounded-xl border',
+              L
+                ? 'border-tf-cta/22 bg-gradient-to-br from-white via-white to-tf-cta/[0.06] hover:border-tf-cta/35 hover:from-white hover:to-tf-cta/[0.09]'
+                : 'border-tf-cta/30 bg-gradient-to-br from-[#0d2135]/95 to-[#061018]/90 hover:border-tf-cta/45',
+            )
+          : cn(
+              'rounded-xl border',
+              L
+                ? 'border-tf-cta/25 bg-gradient-to-br from-emerald-50/80 via-white to-tf-cta/[0.05] hover:border-tf-cta/40'
+                : 'border-tf-cta/35 bg-gradient-to-br from-emerald-950/25 to-[#0d2135]/90 hover:border-tf-cta/50',
+            ),
         className,
       )}
-      aria-label={`Mes paris — ${open} en cours, ${settled} validés`}
+      aria-label={
+        total > 0
+          ? `Mes paris — ${open} en cours, ${settled} validés, ${tokens} jetons`
+          : `Mes paris — ${tokens} jetons`
+      }
     >
-      <div className="min-w-0 text-left">
-        <p
-          className={cn(
-            'text-[10px] font-black uppercase tracking-[0.16em]',
-            L ? 'text-emerald-800/80' : 'text-emerald-200/90',
-          )}
-        >
-          Mes paris
-        </p>
-        <p className="mt-0.5 text-sm font-black text-tf-app-fg">
-          {open > 0 || settled > 0 ? (
-            <>
-              <span className="tabular-nums">{open}</span> en cours
-              <span className="mx-1 font-semibold opacity-50">·</span>
-              <span className="tabular-nums">{settled}</span> validés
-            </>
-          ) : (
-            <span className="text-xs font-bold text-tf-app-muted">Aucun pour l’instant — parie sur un live</span>
-          )}
-        </p>
-      </div>
-      <span
+      <span className={cn('block w-full shrink-0', pronoTheme.shellStripe)} aria-hidden />
+      <div
         className={cn(
-          'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black tabular-nums',
-          L ? 'bg-emerald-600 text-white' : 'bg-emerald-500/90 text-emerald-950',
+          'flex w-full min-w-0 items-center gap-2',
+          compact ? 'px-2 py-2' : 'px-2.5 py-2.5',
         )}
       >
-        {open + settled > 0 ? open + settled : '→'}
-      </span>
+        <span
+          className={cn(
+            'flex shrink-0 items-center justify-center rounded-lg text-base leading-none',
+            compact ? 'size-8' : 'size-9',
+            L ? 'bg-tf-cta/12 ring-1 ring-tf-cta/20' : 'bg-tf-cta/20 ring-1 ring-tf-cta/35',
+          )}
+          aria-hidden
+        >
+          🎯
+        </span>
+        <div className="min-w-0 flex-1 text-left">
+          <p
+            className={cn(
+              'text-[9px] font-black uppercase tracking-[0.14em]',
+              L ? 'text-tf-cta' : 'text-red-300',
+            )}
+          >
+            Pronostic
+          </p>
+          <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
+          <p className={cn('truncate text-[10px] font-semibold leading-snug', L ? 'text-tf-dark/60' : 'text-sky-200/75')}>
+            {detailLine}
+          </p>
+        </div>
+        {open > 0 ? (
+          <span
+            className={cn(
+              'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums',
+              L ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-emerald-950',
+            )}
+          >
+            {open}
+          </span>
+        ) : (
+          <span
+            className={cn(
+              'shrink-0 text-base font-black leading-none transition group-hover:translate-x-0.5',
+              L ? 'text-tf-cta' : 'text-red-300',
+            )}
+            aria-hidden
+          >
+            ›
+          </span>
+        )}
+      </div>
     </Link>
   )
 }

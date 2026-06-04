@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NewsItem } from '../../data/news'
+import { resolveStoredArticleExcerpt } from '../../utils/articleExcerpt'
 
 export type ArticleRow = {
   id: string
@@ -122,10 +123,14 @@ function toAdminArticle(row: ArticleRow): AdminArticle {
 function toPersistPayload(input: AdminArticleDraftInput) {
   const bodyMarkdown = input.bodyMarkdown.trim()
   const slug = sanitizeSlug(input.slug)
+  const excerpt = resolveStoredArticleExcerpt(input.excerpt, {
+    bodyMarkdown,
+    body: legacyBodyFromMarkdown(bodyMarkdown),
+  })
   return {
     slug,
     title: input.title.trim(),
-    excerpt: input.excerpt.trim(),
+    excerpt,
     tag: input.tag,
     body_markdown: bodyMarkdown,
     body: legacyBodyFromMarkdown(bodyMarkdown),

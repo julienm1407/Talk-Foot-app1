@@ -6,6 +6,10 @@ import { useWallet } from '../hooks/useWallet'
 import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
 import { MedalPaymentModal } from '../components/shop/MedalPaymentModal'
+import { isStripePublishableConfigured } from '../config/stripe'
+import { startStripeCheckout } from '../lib/stripe/checkout'
+import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
+import { useAuth } from '../contexts/AuthContext'
 import { getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
 import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
 import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiquePurchaseFlow'
@@ -16,7 +20,11 @@ import type { MedalPack } from '../types/profile'
 export function BoutiqueMedalPacksPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { user } = useAuth()
   const { wallet, addMedals } = useWallet()
+  const { status: checkoutStatus, message: checkoutMessage } = useStripeCheckoutReturn()
+  const [stripeLoadingPackId, setStripeLoadingPackId] = useState<string | null>(null)
+  const [stripeError, setStripeError] = useState<string | null>(null)
   const { ownsItem, purchaseCosmetic } = useBoutiquePurchase()
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null)
   const [pendingAutoBuy, setPendingAutoBuy] = useState(false)
@@ -92,6 +100,31 @@ export function BoutiqueMedalPacksPage() {
     if (pendingItem) setPendingAutoBuy(true)
   }
 
+  const handleSelectPack = async (packId: string) => {
+    if (!isStripePublishableConfigured()) {
+      setSelectedPackId(packId)
+      return
+    }
+    if (!user?.id) {
+      navigate(`/login?next=${encodeURIComponent('/boutique/packs-medailles')}`)
+      return
+    }
+    setStripeError(null)
+    setStripeLoadingPackId(packId)
+    const result = await startStripeCheckout({
+      kind: 'medal_pack',
+      productId: packId,
+      userId: user.id,
+      email: user.email,
+    })
+    setStripeLoadingPackId(null)
+    if (!result.ok) {
+      setStripeError('Paiement indisponible — réessaie ou contacte le support.')
+      return
+    }
+    window.location.assign(result.url)
+  }
+
   const showPendingBanner = pendingItem && shortfall > 0
 
   return (
@@ -100,8 +133,19 @@ export function BoutiqueMedalPacksPage() {
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/90">Recharge</p>
         <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Packs de médailles</h1>
         <p className="mt-2 max-w-xl text-sm font-medium text-amber-100/90">
-          Achète des médailles en euros (paiement simulé) pour débloquer maillots, shorts et packs CDM.
+          Achète des médailles en euros (Stripe) pour débloquer maillots, shorts et packs CDM.
         </p>
+        {checkoutMessage ? (
+          <p
+            className={cn(
+              'mt-3 text-sm font-bold',
+              checkoutStatus === 'done' ? 'text-emerald-200' : 'text-amber-200',
+            )}
+          >
+            {checkoutMessage}
+          </p>
+        ) : null}
+        {stripeError ? <p className="mt-2 text-sm font-bold text-rose-200">{stripeError}</p> : null}
         <div className="mt-4 inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
           <span className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Solde actuel</span>
           <span className="ml-3 font-display text-2xl font-black text-white">
@@ -129,7 +173,12 @@ export function BoutiqueMedalPacksPage() {
       <Card className="p-4 sm:p-6" elevation="soft">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {medalPacks.map((pack) => (
-            <BoutiquePackGridItem key={pack.id} pack={pack} onSelect={setSelectedPackId} />
+            <BoutiquePackGridItem
+              key={pack.id}
+              pack={pack}
+              onSelect={handleSelectPack}
+              disabled={stripeLoadingPackId === pack.id}
+            />
           ))}
         </div>
       </Card>
@@ -140,7 +189,7 @@ export function BoutiqueMedalPacksPage() {
         </Link>
       </p>
 
-      {selectedPack ? (
+      {selectedPack && !isStripePublishableConfigured() ? (
         <MedalPaymentModal
           pack={selectedPack}
           creatorCode=""

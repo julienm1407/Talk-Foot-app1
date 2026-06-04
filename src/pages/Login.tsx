@@ -5,7 +5,7 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { cn } from '../utils/cn'
-import { LogoMark } from '../layout/LogoMark'
+import { LogoEncart } from '../layout/LogoMark'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
@@ -172,7 +172,7 @@ export function LoginPage() {
           ← {backLabel}
         </button>
         <div className="mb-8 flex flex-col items-center text-center">
-          <LogoMark variant="hero" className="max-w-[220px]" decorative={false} />
+          <LogoEncart size="lg" isLight={isLight} decorative={false} />
           <h1 className="sr-only">Talk Foot</h1>
           <p
             className={cn(

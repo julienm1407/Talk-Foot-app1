@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
-import { TALKFOOT_LOGO_URL } from './LogoMark'
+import { LogoEncartLink } from './LogoMark'
 import { useProfile } from '../hooks/useProfile'
 import {
   TOP_NAV_ROUTES,
@@ -127,8 +127,9 @@ export function TopBar() {
       >
         <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 min-[700px]:grid-cols-[auto_minmax(0,1fr)_auto] min-[700px]:gap-3 lg:gap-4">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
-          <Link
+          <LogoEncartLink
             to="/"
+            isLight={L}
             onClick={(e) => {
               if (belowXl && isHomePath && monEspace) {
                 e.preventDefault()
@@ -136,29 +137,15 @@ export function TopBar() {
               }
             }}
             className={cn(
-              'group shrink-0 outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2 rounded-xl active:opacity-95',
-              L ? 'focus-visible:ring-tf-dark/40 focus-visible:ring-offset-[color:var(--tf-page-bg-light)]' : 'focus-visible:ring-sky-400/50 focus-visible:ring-offset-tf-dark',
+              'group shrink-0 outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2 active:opacity-95',
+              L
+                ? 'focus-visible:ring-tf-dark/40 focus-visible:ring-offset-[color:var(--tf-page-bg-light)]'
+                : 'focus-visible:ring-sky-400/50 focus-visible:ring-offset-tf-dark',
             )}
             aria-label={
               belowXl && isHomePath ? 'Talk Foot — ouvrir Mon espace' : 'Talk Foot — Accueil'
             }
-          >
-            <div
-              className={cn(
-                'relative size-10 overflow-hidden rounded-xl border-2 shadow-sm transition group-hover:opacity-95 sm:size-11 md:size-12',
-                L ? 'border-tf-dark/20 bg-white ring-1 ring-tf-dark/[0.06]' : 'border-white/30 bg-white/[0.12] ring-1 ring-white/10',
-              )}
-            >
-              <img
-                src={TALKFOOT_LOGO_URL}
-                alt=""
-                width={320}
-                height={160}
-                draggable={false}
-                className="pointer-events-none size-full max-w-none scale-[1.35] object-cover object-[22%_48%]"
-              />
-            </div>
-          </Link>
+          />
 
           {isCdm ? (
             <Link

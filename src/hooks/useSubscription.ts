@@ -56,21 +56,31 @@ export function useSubscription() {
 
   const patchSubscription = useCallback(
     (fn: (prev: SubscriptionState) => SubscriptionState) => {
+      const apply = (prev: SubscriptionState) => fn(normalizeSubscription(prev))
       if (cloud) {
-        cloud.patchApp((prev) => ({
-          ...prev,
-          subscription: fn(normalizeSubscription(prev.subscription)),
-        }))
+        cloud.patchApp((prev) => {
+          const next = apply(normalizeSubscription(prev.subscription))
+          if (user?.id) writeLocalSubscription(user.id, next)
+          setLocalSub(next)
+          return { ...prev, subscription: next }
+        })
         return
       }
       setLocalSub((prev) => {
-        const next = fn(normalizeSubscription(prev))
+        const next = apply(prev)
         if (user?.id) writeLocalSubscription(user.id, next)
         return next
       })
     },
     [cloud, user?.id],
   )
+
+  useEffect(() => {
+    if (!cloud?.app.subscription || !user?.id) return
+    const synced = normalizeSubscription(cloud.app.subscription)
+    writeLocalSubscription(user.id, synced)
+    setLocalSub(synced)
+  }, [cloud?.app.subscription, user?.id])
 
   const setTier = useCallback(
     (nextTier: SubscriptionTierId) => {
@@ -82,8 +92,9 @@ export function useSubscription() {
             ? null
             : new Date(Date.now() + 30 * 86400000).toISOString(),
       }))
+      void cloud?.flushAppSave?.()
     },
-    [patchSubscription],
+    [patchSubscription, cloud],
   )
 
   const patchUsage = useCallback(
@@ -104,6 +115,12 @@ export function useSubscription() {
     monthlyTokens: monthlyTokenAllowance(tier),
     betTokenMultiplier: betTokenMultiplier(tier),
     showAds: shouldShowAdsForTier(tier),
+    hasVerifiedBadge: plan.flags.verifiedBadge,
+    canStreamSalon: plan.flags.canStreamSalon,
+    canJoinVoiceSalons: plan.flags.canJoinVoiceSalons,
+    canWriteArticles: plan.flags.canWriteArticles,
+    canCreatePrivateLiveMatches: plan.flags.canCreatePrivateLiveMatches,
+    liveMatchTokensPerHour: plan.limits.liveMatchTokensPerHour,
     patchSubscription,
     patchUsage,
     /** Dev / admin : bascule de formule (Stripe à brancher). */

@@ -4,8 +4,10 @@ import {
   normalizeWallet,
 } from '../utils/walletNormalize'
 import { scorerLineupMatchesScoredGoal } from '../utils/liveFootballOdds'
+import { betWinTokenCredit } from '../utils/subscriptionEntitlements'
 import { useWallet } from './useWallet'
 import { useUserBets } from './useUserBets'
+import { useSubscription } from './useSubscription'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
@@ -17,6 +19,7 @@ function clampStake(n: number) {
 export function useBetting(matchId: string) {
   const cloud = useOptionalCloudUserState()
   const { wallet, patchWallet } = useWallet()
+  const { betTokenMultiplier: betMult } = useSubscription()
   const [bets, setBets] = useUserBets()
 
   const matchBets = useMemo(() => bets.filter((b) => b.matchId === matchId), [bets, matchId])
@@ -97,7 +100,7 @@ export function useBetting(matchId: string) {
 
   const settleNextGoal = useCallback(
     (scoringSide: 'home' | 'away') => {
-      const run = (bets: Bet[], now: string) => {
+      const run = (bets: Bet[], now: string, mult: number) => {
         let delta = 0
         const next = bets.map((b) => {
           if (b.matchId !== matchId) return b
@@ -108,7 +111,7 @@ export function useBetting(matchId: string) {
             (scoringSide === 'away' && b.selection === 'away')
           if (won) {
             const payout = Math.round(b.stake * b.odds)
-            delta += payout
+            delta += betWinTokenCredit(payout, b.stake, mult)
             return { ...b, status: 'won' as const, settledAt: now, payout }
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
@@ -118,7 +121,7 @@ export function useBetting(matchId: string) {
       if (isSupabaseConfigured() && cloud) {
         cloud.patchApp((prev) => {
           const now = new Date().toISOString()
-          const { next, delta } = run(prev.bets, now)
+          const { next, delta } = run(prev.bets, now, betMult)
           const w = normalizeWallet(prev.wallet)
           return {
             ...prev,
@@ -130,17 +133,17 @@ export function useBetting(matchId: string) {
       }
       setBets((prev) => {
         const now = new Date().toISOString()
-        const { next, delta } = run(prev, now)
+        const { next, delta } = run(prev, now, betMult)
         if (delta) patchWallet((w) => ({ ...w, tokens: w.tokens + delta }))
         return next
       })
     },
-    [matchId, setBets, patchWallet, cloud],
+    [matchId, setBets, patchWallet, cloud, betMult],
   )
 
   const settleFirstGoal = useCallback(
     (scoringSide: 'home' | 'away') => {
-      const run = (bets: Bet[], now: string) => {
+      const run = (bets: Bet[], now: string, mult: number) => {
         let delta = 0
         const next = bets.map((b) => {
           if (b.matchId !== matchId) return b
@@ -151,7 +154,7 @@ export function useBetting(matchId: string) {
             (scoringSide === 'away' && b.selection === 'away')
           if (won) {
             const payout = Math.round(b.stake * b.odds)
-            delta += payout
+            delta += betWinTokenCredit(payout, b.stake, mult)
             return { ...b, status: 'won' as const, settledAt: now, payout }
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
@@ -161,7 +164,7 @@ export function useBetting(matchId: string) {
       if (isSupabaseConfigured() && cloud) {
         cloud.patchApp((prev) => {
           const now = new Date().toISOString()
-          const { next, delta } = run(prev.bets, now)
+          const { next, delta } = run(prev.bets, now, betMult)
           const w = normalizeWallet(prev.wallet)
           return {
             ...prev,
@@ -173,12 +176,12 @@ export function useBetting(matchId: string) {
       }
       setBets((prev) => {
         const now = new Date().toISOString()
-        const { next, delta } = run(prev, now)
+        const { next, delta } = run(prev, now, betMult)
         if (delta) patchWallet((w) => ({ ...w, tokens: w.tokens + delta }))
         return next
       })
     },
-    [matchId, setBets, patchWallet, cloud],
+    [matchId, setBets, patchWallet, cloud, betMult],
   )
 
   const settleMatchResult = useCallback(
@@ -191,7 +194,7 @@ export function useBetting(matchId: string) {
       },
     ) => {
       const targetMatchId = opts?.forMatchId ?? matchId
-      const run = (bets: Bet[], now: string) => {
+      const run = (bets: Bet[], now: string, mult: number) => {
         let delta = 0
         const { home, away } = finalScore
         const totalGoals = home + away
@@ -218,7 +221,7 @@ export function useBetting(matchId: string) {
               (b.selection === 'away' && awayWins)
             if (won) {
               const payout = Math.round(b.stake * b.odds)
-              delta += payout
+              delta += betWinTokenCredit(payout, b.stake, mult)
               return { ...b, status: 'won' as const, settledAt: now, payout }
             }
             return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
@@ -229,7 +232,7 @@ export function useBetting(matchId: string) {
               (b.selection === 'under' && totalGoals <= 2)
             if (won) {
               const payout = Math.round(b.stake * b.odds)
-              delta += payout
+              delta += betWinTokenCredit(payout, b.stake, mult)
               return { ...b, status: 'won' as const, settledAt: now, payout }
             }
             return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
@@ -239,7 +242,7 @@ export function useBetting(matchId: string) {
             const won = Boolean(exp && exp[0] === home && exp[1] === away)
             if (won) {
               const payout = Math.round(b.stake * b.odds)
-              delta += payout
+              delta += betWinTokenCredit(payout, b.stake, mult)
               return { ...b, status: 'won' as const, settledAt: now, payout }
             }
             return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
@@ -255,7 +258,7 @@ export function useBetting(matchId: string) {
             )
             if (won) {
               const payout = Math.round(b.stake * b.odds)
-              delta += payout
+              delta += betWinTokenCredit(payout, b.stake, mult)
               return { ...b, status: 'won' as const, settledAt: now, payout }
             }
             return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
@@ -267,7 +270,7 @@ export function useBetting(matchId: string) {
       if (isSupabaseConfigured() && cloud) {
         cloud.patchApp((prev) => {
           const now = new Date().toISOString()
-          const { next, delta } = run(prev.bets, now)
+          const { next, delta } = run(prev.bets, now, betMult)
           const w = normalizeWallet(prev.wallet)
           return {
             ...prev,
@@ -279,12 +282,12 @@ export function useBetting(matchId: string) {
       }
       setBets((prev) => {
         const now = new Date().toISOString()
-        const { next, delta } = run(prev, now)
+        const { next, delta } = run(prev, now, betMult)
         if (delta) patchWallet((w) => ({ ...w, tokens: w.tokens + delta }))
         return next
       })
     },
-    [matchId, setBets, patchWallet, cloud],
+    [matchId, setBets, patchWallet, cloud, betMult],
   )
 
   const spendTokens = useCallback(

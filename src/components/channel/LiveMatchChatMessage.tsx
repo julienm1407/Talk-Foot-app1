@@ -5,6 +5,7 @@ import { resolveChatMessagePeerUi } from '../../utils/chatPeerSocial'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { ChatCharacterThumb } from './ChatCharacterThumb'
+import { VerifiedBadge } from '../subscription/VerifiedBadge'
 
 export type LiveMatchChatMessageItem = {
   id: string
@@ -30,6 +31,7 @@ export function LiveMatchChatMessage({
   likeState,
   onToggleLike,
   onOpenPeerMenu,
+  showVerifiedBadge = false,
   light = false,
 }: {
   message: LiveMatchChatMessageItem
@@ -41,6 +43,7 @@ export function LiveMatchChatMessage({
   likeState?: { likes: number; likedByMe: boolean }
   onToggleLike: (id: string) => void
   onOpenPeerMenu?: () => void
+  showVerifiedBadge?: boolean
   light?: boolean
 }) {
   const { profile } = useProfile()
@@ -121,6 +124,7 @@ export function LiveMatchChatMessage({
             ) : (
               <p className="truncate text-xs font-semibold text-tf-app-fg">{peer.displayName}</p>
             )}
+            {showVerifiedBadge ? <VerifiedBadge size="xs" /> : null}
             {message.matchTribune ? (
               <span
                 className={cn(

@@ -21,7 +21,12 @@ import type { GroupActivePresence, SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
 import { computeGroupIntensity } from '../utils/groupIntensity'
 import { useSubscription } from './useSubscription'
-import { canCreateGroup, canJoinGroup } from '../utils/subscriptionEntitlements'
+import {
+  canCreateGroup,
+  canJoinGroup,
+  canJoinGroupByMemberCap,
+  groupMemberCapForTier,
+} from '../utils/subscriptionEntitlements'
 import { getSubscriptionPlan } from '../data/subscriptionPlans'
 
 function joinedKeyForUser(userId: string) {
@@ -322,6 +327,17 @@ export function useSupporterGroups() {
   const joinGroup = useCallback(
     (id: string): { ok: true } | { ok: false; reason: string } => {
       if (!userId) return { ok: false, reason: 'Connexion requise.' }
+      const target = groups.find((g) => g.id === id)
+      if (target) {
+        const membersNow = memberCountsByGroupId.get(id) ?? target.members ?? 0
+        const cap = canJoinGroupByMemberCap(membersNow, target.maxMembers)
+        if (!cap.ok) {
+          return {
+            ok: false,
+            reason: `Ce groupe est complet (${cap.limit} membres max pour cette tribune).`,
+          }
+        }
+      }
       if (!joinedGroupIds.includes(id)) {
         const gate = canJoinGroup(tier, joinedGroupIds.length)
         if (!gate.ok) {
@@ -347,7 +363,18 @@ export function useSupporterGroups() {
       }
       return { ok: true }
     },
-    [userId, persistJoined, rawGroups, refreshMemberCounts, refreshGroupPresence, joinedGroupIds, tier, plan],
+    [
+      userId,
+      persistJoined,
+      rawGroups,
+      groups,
+      memberCountsByGroupId,
+      refreshMemberCounts,
+      refreshGroupPresence,
+      joinedGroupIds,
+      tier,
+      plan,
+    ],
   )
 
   const leaveGroup = useCallback(
@@ -396,6 +423,7 @@ export function useSupporterGroups() {
         id,
         createdBy: 'me',
         createdAt: new Date().toISOString(),
+        maxMembers: groupMemberCapForTier(tier),
         onlineNow: 0,
         messagesToday: 0,
         reactionsToday: 0,

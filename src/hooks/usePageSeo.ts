@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { absolutePageUrl, viteBasePath } from '../seo/basePath'
+import { absoluteBrandLogoUrl } from '../seo/brandLogo'
 import { SITE_DEFAULT_DESCRIPTION, SITE_DEFAULT_OG_IMAGE, SITE_NAME } from '../seo/siteCopy'
 import type { RouteSeoConfig } from '../seo/routeMeta'
 
@@ -100,11 +101,8 @@ export function usePageSeo(pathname: string, config: PageSeoMode) {
 
     upsertLinkRel('canonical', canonicalUrl)
 
+    const logoUrl = absoluteBrandLogoUrl()
     const base = viteBasePath()
-    const logoUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}${base}/logo-talk-foot.png`
-        : `${base}/logo-talk-foot.png`
 
     upsertJsonLd({
       '@context': 'https://schema.org',

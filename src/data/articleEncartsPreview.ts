@@ -19,102 +19,17 @@ export const articlePreviewLiveMatch: Match = {
   score: { home: 1, away: 2 },
 }
 
-export type TopLikedMessage = {
-  id: string
-  author: string
-  text: string
-  likes: number
-}
-
 export type GroupDiscussPreview = {
   groupId: string
   name: string
   emoji: string
   themePrimary: string
-  messages: TopLikedMessage[]
-}
-
-const GROUP_MESSAGES: Record<string, TopLikedMessage[]> = {
-  'g-virage-nord': [
-    {
-      id: 'm1',
-      author: 'KOP13',
-      text: 'Ce choc avant le Vélodrome, on le sent déjà. L’OM doit prendre les points ici.',
-      likes: 428,
-    },
-    {
-      id: 'm2',
-      author: 'SashaMarseille',
-      text: 'Le milieu rival est fatigué — si on accélère à la 70e ça joue.',
-      likes: 312,
-    },
-    {
-      id: 'm3',
-      author: 'VeloVoice',
-      text: 'Ambiance Talk Foot insane ce soir, ça chante dans la tribune L1 🔥',
-      likes: 267,
-    },
-  ],
-  'g-ultras-nuit': [
-    {
-      id: 'm1',
-      author: 'ParisSud',
-      text: 'Pressing haut + transitions : la recette qu’on a vue en EPL, on la veut en L1.',
-      likes: 511,
-    },
-    {
-      id: 'm2',
-      author: 'Lucas_75',
-      text: 'Dembélé sur le côté gauche = danger permanent. Les stats live le confirment.',
-      likes: 402,
-    },
-    {
-      id: 'm3',
-      author: 'AuteuilRouge',
-      text: 'Le tribune live est à 12 msg/s au dernier corner, jamais vu ça sur une amical.',
-      likes: 355,
-    },
-  ],
-  'g-kop-bleu': [
-    {
-      id: 'm1',
-      author: 'Cityzen',
-      text: 'Le pressing haut en EPL ça se joue sur 5 mètres — regardez la séquence à la 22e.',
-      likes: 389,
-    },
-    {
-      id: 'm2',
-      author: 'HaalandFan',
-      text: 'Les xG du live encart collent au réel, City domine les secondes 45.',
-      likes: 276,
-    },
-    {
-      id: 'm3',
-      author: 'PepThoughts',
-      text: 'Kop virtuel qui hurle à chaque récup haute, j’adore cette synchro.',
-      likes: 198,
-    },
-  ],
-  'g-tribune-rouge': [
-    {
-      id: 'm1',
-      author: 'AnfieldFR',
-      text: 'YNWA en tribune Talk Foot + stats pressing = soirée parfaite.',
-      likes: 334,
-    },
-    {
-      id: 'm2',
-      author: 'SalahSZN',
-      text: 'Le débrief auto sur les 3 actions clés, c’est exactement ce qu’il fallait.',
-      likes: 245,
-    },
-    {
-      id: 'm3',
-      author: 'KopEnd',
-      text: 'Plus de 400 réactions / 10 min sur le live, le dashboard suit la courbe.',
-      likes: 189,
-    },
-  ],
+  motto?: string
+  /** Dernier message cloud (`lastMessagePreview`) — jamais de texte inventé. */
+  previewText?: string
+  members?: number
+  onlineNow?: number
+  messagesToday?: number
 }
 
 function affinityScore(g: SupporterGroup, article: NewsItem): number {
@@ -133,30 +48,30 @@ function affinityScore(g: SupporterGroup, article: NewsItem): number {
   return s
 }
 
-export function getGroupDiscussPreviewsForArticle(article: NewsItem, max = 3): GroupDiscussPreview[] {
-  const ranked = [...starterGroups]
-    .map((g) => ({ g, score: affinityScore(g, article) + g.intensity / 200 }))
+export function getGroupDiscussPreviewsForArticle(
+  article: NewsItem,
+  groups: SupporterGroup[] = [],
+  max = 3,
+): GroupDiscussPreview[] {
+  const pool = groups.length > 0 ? groups : starterGroups
+  return [...pool]
+    .map((g) => ({
+      g,
+      score: affinityScore(g, article) + (g.intensity ?? 0) / 200,
+    }))
     .sort((a, b) => b.score - a.score)
-
-  const picked: SupporterGroup[] = []
-  for (const { g } of ranked) {
-    if (picked.length >= max) break
-    if (GROUP_MESSAGES[g.id]) picked.push(g)
-  }
-  if (picked.length < max) {
-    for (const g of starterGroups) {
-      if (picked.length >= max) break
-      if (!picked.includes(g) && GROUP_MESSAGES[g.id]) picked.push(g)
-    }
-  }
-
-  return picked.map((g) => ({
-    groupId: g.id,
-    name: g.name,
-    emoji: g.emoji,
-    themePrimary: g.theme.primary,
-    messages: GROUP_MESSAGES[g.id] ?? [],
-  }))
+    .slice(0, max)
+    .map(({ g }) => ({
+      groupId: g.id,
+      name: g.name,
+      emoji: g.emoji,
+      themePrimary: g.theme.primary,
+      motto: g.motto?.trim() || undefined,
+      previewText: g.lastMessagePreview?.trim() || undefined,
+      members: g.members,
+      onlineNow: g.onlineNow,
+      messagesToday: g.messagesToday,
+    }))
 }
 
 /** Série momentum (0–100) pour sparkline — varie légèrement selon l’article. */
@@ -184,14 +99,21 @@ export type DebateSnippet = { id: string; title: string; likes: number; hot?: bo
 
 export function debateSnippetsForArticle(
   _article: NewsItem,
-  debates: { id: string; title: string; messagesCount: number; trending?: boolean }[] = [],
+  debates: { id: string; title: string; messagesCount: number; trending?: boolean; featured?: boolean }[] = [],
 ): DebateSnippet[] {
   if (!debates.length) return []
-  return debates.slice(0, 2).map((d) => ({
+  const sorted = [...debates].sort((a, b) => {
+    if (a.featured && !b.featured) return -1
+    if (!a.featured && b.featured) return 1
+    if (a.trending && !b.trending) return -1
+    if (!a.trending && b.trending) return 1
+    return (b.messagesCount ?? 0) - (a.messagesCount ?? 0)
+  })
+  return sorted.slice(0, 2).map((d) => ({
     id: d.id,
     title: d.title,
     likes: d.messagesCount,
-    hot: d.trending,
+    hot: d.trending || d.featured,
   }))
 }
 

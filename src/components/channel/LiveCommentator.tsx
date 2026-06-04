@@ -9,6 +9,7 @@ import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import type { User } from '../../types/chat'
 import { useProfile } from '../../hooks/useProfile'
+import { useSubscription } from '../../hooks/useSubscription'
 import { moderateChatText } from '../../utils/bannedWords'
 
 const SPEAK_DURATION_MS = 8000
@@ -155,9 +156,10 @@ export function LiveCommentator({
   }, [liveCommentary])
 
   const { profile } = useProfile()
+  const { canStreamSalon } = useSubscription()
   const commentatorProfileHref = user.id === 'me' ? '/profile' : `/user/${user.id}`
 
-  if (!user.isAdmin) return null
+  if (!canStreamSalon && !user.isAdmin) return null
 
   const Face = (props: { className?: string; size?: 'sm' | 'md' }) => (
     <ProfileCharacterThumb

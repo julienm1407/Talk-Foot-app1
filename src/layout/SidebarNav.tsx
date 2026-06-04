@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { cn } from '../utils/cn'
-import { LogoMark } from './LogoMark'
+import { LogoEncartLink } from './LogoMark'
 import { OVERLAY_NAV_ROUTES, getAppSectionTheme } from '../theme/appSectionThemes'
 
 export function SidebarNav() {
@@ -9,7 +9,7 @@ export function SidebarNav() {
       <div className="sticky top-[76px] space-y-3">
         <div className="tf-surface rounded-3xl p-5 shadow-tf-card">
           <div className="flex items-center gap-3">
-            <LogoMark variant="compact" />
+            <LogoEncartLink to="/" isLight aria-label="Talk Foot — Accueil" />
             <div className="leading-tight">
               <span className="sr-only">Talk Foot</span>
               <div className="text-[11px] font-semibold text-tf-grey">deuxième écran live</div>

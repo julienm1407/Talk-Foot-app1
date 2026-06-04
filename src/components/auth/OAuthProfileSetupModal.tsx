@@ -6,7 +6,7 @@ import { useOptionalCloudUserState } from '../../contexts/CloudUserStateContext'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { cn } from '../../utils/cn'
-import { LogoMark } from '../../layout/LogoMark'
+import { LogoEncart } from '../../layout/LogoMark'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 
 /**
@@ -70,7 +70,7 @@ export function OAuthProfileSetupModal() {
       <div className="max-h-[min(92dvh,640px)] w-full max-w-md overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white text-tf-dark shadow-[0_24px_80px_rgba(1,30,51,0.22)]">
         <div className="border-b border-tf-grey-pastel/50 bg-tf-ice/90 px-5 py-4">
           <div className="flex items-start gap-3">
-            <LogoMark variant="compact" className="!h-8" decorative={false} />
+            <LogoEncart isLight decorative={false} />
             <div className="min-w-0 flex-1">
               <div className="text-[11px] font-black tracking-[0.2em] text-tf-grey">NOUVEAU COMPTE</div>
               <h2

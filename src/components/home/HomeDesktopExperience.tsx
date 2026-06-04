@@ -482,45 +482,42 @@ export function HomeDesktopExperience({
 
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', card, 'p-0')}>
           <HubEncartTopAccent appearance={appearance} preset="debate" />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3 sm:p-3.5">
-            <div
-              className={cn('mb-0 shrink-0', railHeadBorder, 'pb-2.5')}
-            >
-              <h3 className="font-display text-xs font-black uppercase leading-snug tracking-[0.18em] text-tf-app-fg">
-                Top débats
-              </h3>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-3.5">
+              <div className={cn('mb-0 shrink-0', railHeadBorder, 'pb-2.5')}>
+                <h3 className="font-display text-xs font-black uppercase leading-snug tracking-[0.18em] text-tf-app-fg">
+                  Top débats
+                </h3>
+              </div>
+              <div
+                className={cn(
+                  'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                  'pt-2.5',
+                )}
+              >
+                <ol className="space-y-3 pb-1" role="list">
+                  {topDebates.map((d, i) => (
+                    <li key={d.id} className="min-w-0">
+                      <Link to={`/debate/${d.id}`} className={debateRow}>
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 text-xs font-black text-white sm:size-8 sm:text-sm">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-[11px] font-bold leading-snug text-tf-app-fg sm:text-xs">{d.title}</p>
+                          <p className={cn('mt-0.5 flex min-w-0 items-center gap-1 text-[9px] font-bold sm:text-[10px]', hubSecondary)}>
+                            <span aria-hidden>🔥</span>
+                            {d.messagesCount.toLocaleString('fr-FR')} réponses
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
             <div
               className={cn(
-                'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-0.5 [scrollbar-gutter:stable] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                'pt-2.5',
-              )}
-            >
-              <ol className="space-y-3 pb-1" role="list">
-                {topDebates.map((d, i) => (
-                  <li
-                    key={d.id}
-                    className="min-w-0"
-                  >
-                    <Link to={`/debate/${d.id}`} className={debateRow}>
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 text-xs font-black text-white sm:size-8 sm:text-sm">
-                        {i + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 text-[11px] font-bold leading-snug text-tf-app-fg sm:text-xs">{d.title}</p>
-                        <p className={cn('mt-0.5 flex min-w-0 items-center gap-1 text-[9px] font-bold sm:text-[10px]', hubSecondary)}>
-                          <span aria-hidden>🔥</span>
-                          {d.messagesCount.toLocaleString('fr-FR')} réponses
-                        </p>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </div>
-            <div
-              className={cn(
-                'relative z-[1] mt-2 shrink-0 border-t pt-2.5',
+                'shrink-0 border-t px-3 pt-2.5 pb-3 sm:px-3.5 sm:pb-3.5 rounded-b-tf-xl',
                 L
                   ? 'border-tf-dark/10 bg-[color:color-mix(in_srgb,var(--tf-ice)_92%,white)]'
                   : 'border-white/10 bg-[color:var(--tf-card-bg-dark)]',
@@ -530,7 +527,7 @@ export function HomeDesktopExperience({
                 to="/debates"
                 className={cn(
                   hubPillLink(appearance, 'sm'),
-                  'w-full justify-center text-center',
+                  'w-full justify-center text-center shadow-none',
                   L
                     ? 'border-orange-200/90 bg-orange-50/95 text-orange-900 hover:border-orange-300 hover:bg-orange-50'
                     : 'border-orange-400/35 bg-orange-500/12 text-orange-100 hover:border-orange-400/50 hover:bg-orange-500/20',

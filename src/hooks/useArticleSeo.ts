@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { absolutePageUrl, resolvedSiteOrigin, viteBasePath } from '../seo/basePath'
+import { absolutePageUrl } from '../seo/basePath'
+import { absoluteBrandLogoUrl } from '../seo/brandLogo'
 import { SITE_DEFAULT_DESCRIPTION, SITE_NAME } from '../seo/siteCopy'
 
 const SEO_ATTR = 'data-tf-article-seo'
@@ -65,8 +66,7 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
 
     const rel = opts.canonicalPath.startsWith('/') ? opts.canonicalPath : `/${opts.canonicalPath}`
     const canonicalUrl = absolutePageUrl(rel)
-    const origin = resolvedSiteOrigin()
-    const logoUrl = `${origin}${viteBasePath()}/logo-talk-foot.png`
+    const logoUrl = absoluteBrandLogoUrl()
 
     const prevTitle = document.title
     document.title = `${opts.title} | ${SITE_NAME}`
@@ -118,7 +118,7 @@ export function useArticleSeo(opts: ArticleSeoInput | null) {
         name: SITE_NAME,
         logo: {
           '@type': 'ImageObject',
-          url: logoUrl || `${viteBasePath()}/logo-talk-foot.png`,
+          url: logoUrl,
         },
       },
       mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },

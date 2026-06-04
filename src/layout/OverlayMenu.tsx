@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
-import { LogoMark } from './LogoMark'
+import { LogoEncartLink } from './LogoMark'
 import {
   OVERLAY_NAV_ROUTES,
   getAppSectionTheme,
@@ -39,7 +39,7 @@ export function OverlayMenu({
       <div className="absolute left-3 top-[72px] w-[min(100%,20rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[28px] border border-tf-grey-pastel/55 bg-white/95 shadow-tf-card backdrop-blur-md sm:left-6">
         <div className="px-4 py-4">
           <div className="flex items-center gap-3">
-            <LogoMark variant="compact" />
+            <LogoEncartLink to="/" isLight aria-label="Talk Foot — Accueil" />
             <div className="leading-tight">
               <span className="sr-only">Talk Foot</span>
               <div className="text-[11px] font-semibold text-tf-grey">Navigation</div>

@@ -16,6 +16,7 @@ import { useUserBets } from '../hooks/useUserBets'
 import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
 import { useSubscription } from '../hooks/useSubscription'
+import { VerifiedBadge } from '../components/subscription/VerifiedBadge'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
@@ -90,7 +91,14 @@ export function ProfilePage() {
     })
     .filter((x) => Boolean(x.meta && x.team))
   const { wallet, monthlyTokenAllowance, claimMonthlySubscriptionTokens } = useWallet()
-  const { plan: subPlan } = useSubscription()
+  const {
+    plan: subPlan,
+    hasVerifiedBadge,
+    canWriteArticles,
+    canCreatePrivateLiveMatches,
+    canStreamSalon,
+  } = useSubscription()
+  const mayEditArticles = Boolean(authUser?.isAdmin || canWriteArticles)
   const { badges, progress } = usePronoStats()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useUserBets()
@@ -120,8 +128,14 @@ export function ProfilePage() {
           <div className={cn('text-[11px] font-black tracking-[0.18em]', pr.page.eyebrowClass)}>
             Profil
           </div>
-          <DisplayNameEditor />
-          <p className="text-sm font-semibold text-tf-app-muted">Nom visible sur le live et les tribunes.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <DisplayNameEditor />
+            {hasVerifiedBadge ? <VerifiedBadge /> : null}
+          </div>
+          <p className="text-sm font-semibold text-tf-app-muted">
+            {subPlan.name}
+            {hasVerifiedBadge ? ' · compte vérifié' : ''} — visible sur le live et les tribunes.
+          </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
           <Link
@@ -136,7 +150,7 @@ export function ProfilePage() {
           >
             Formules
           </Link>
-          {authUser?.isAdmin ? (
+          {mayEditArticles ? (
             <Link
               to="/admin"
               className={cn(
@@ -146,9 +160,9 @@ export function ProfilePage() {
                   ? 'border-amber-400/60 bg-amber-50 text-amber-950 hover:bg-amber-100'
                   : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:bg-amber-900/50',
               )}
-              aria-label="Ouvrir l’administration"
+              aria-label="Rédaction et administration"
             >
-              Admin
+              {authUser?.isAdmin ? 'Admin' : 'Rédaction'}
             </Link>
           ) : null}
           <Button
@@ -168,25 +182,36 @@ export function ProfilePage() {
       </header>
 
       <div id="compte" className="scroll-mt-4 space-y-3 sm:space-y-4">
-        {authUser?.isAdmin ? (
-          <>
-            <Link
-              to="/admin"
-              className={cn(
-                TF_FOCUS_VISIBLE,
-                'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
-                L
-                  ? 'border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-950 hover:border-amber-500/70 hover:shadow-md'
-                  : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:border-amber-400/55 hover:shadow-md',
-              )}
-            >
-              <span>Administration du site</span>
-              <span aria-hidden className="text-lg">
-                →
-              </span>
-            </Link>
-            <SeasonAdminToggle />
-          </>
+        {mayEditArticles ? (
+          <Link
+            to="/admin"
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm transition',
+              L
+                ? 'border-amber-400/60 bg-gradient-to-r from-amber-50 to-amber-100/90 text-amber-950 hover:border-amber-500/70 hover:shadow-md'
+                : 'border-amber-400/35 bg-amber-950/40 text-amber-100 hover:border-amber-400/55 hover:shadow-md',
+            )}
+          >
+            <span>{authUser?.isAdmin ? 'Administration du site' : 'Rédiger des articles'}</span>
+            <span aria-hidden className="text-lg">
+              →
+            </span>
+          </Link>
+        ) : null}
+        {authUser?.isAdmin ? <SeasonAdminToggle /> : null}
+        {canStreamSalon || canCreatePrivateLiveMatches ? (
+          <p
+            className={cn(
+              'rounded-2xl border px-4 py-3 text-xs font-semibold leading-relaxed',
+              L ? 'border-violet-200 bg-violet-50/90 text-violet-950' : 'border-violet-500/30 bg-violet-950/35 text-violet-100',
+            )}
+          >
+            {canStreamSalon ? 'Stream tribune live activé (bouton LIVE sur les matchs). ' : ''}
+            {canCreatePrivateLiveMatches
+              ? 'Tu peux activer un salon privé depuis la tribune d’un match en direct.'
+              : ''}
+          </p>
         ) : null}
 
         <ProfilePrivacySection />

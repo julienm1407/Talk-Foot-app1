@@ -5,9 +5,11 @@ import { cn } from '../../utils/cn'
 export function BoutiquePackGridItem({
   pack,
   onSelect,
+  disabled = false,
 }: {
   pack: MedalPack
   onSelect: (packId: string) => void
+  disabled?: boolean
 }) {
   return (
     <div
@@ -37,6 +39,7 @@ export function BoutiquePackGridItem({
       <Button
         variant="primary"
         className="mt-4 w-full rounded-xl text-sm font-black"
+        disabled={disabled}
         onClick={() => onSelect(pack.id)}
       >
         Acheter le pack

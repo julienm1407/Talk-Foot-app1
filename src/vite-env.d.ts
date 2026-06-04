@@ -49,6 +49,8 @@ interface ImportMetaEnv {
   readonly VITE_ADSENSE_SLOT_ARTICLE_INLINE?: string
   readonly VITE_ADSENSE_SLOT_DEBATE_INLINE?: string
   readonly VITE_ADSENSE_SLOT_CLUB_INLINE?: string
+  /** Stripe Checkout (clé publique `pk_…` uniquement). */
+  readonly VITE_STRIPE_PUBLISHABLE_KEY?: string
 }
 
 interface ImportMeta {

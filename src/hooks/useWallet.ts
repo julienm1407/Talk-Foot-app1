@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { useAuth, type AuthUser } from '../contexts/AuthContext'
@@ -12,7 +12,11 @@ import {
 } from '../store/walletStore'
 import { DEFAULT_WALLET, normalizeWallet } from '../utils/walletNormalize'
 import { useSubscription } from './useSubscription'
-import { toLocalMonthKey } from '../utils/subscriptionEntitlements'
+import {
+  monthlyTokenGrantEligible,
+  normalizeSubscription,
+  toLocalMonthKey,
+} from '../utils/subscriptionEntitlements'
 
 export const DAILY_TOKEN_BONUS_AMOUNT = 35
 export const DAILY_TOKEN_BONUS_HOUR = 10
@@ -68,7 +72,8 @@ function buildDailyBonusStatus(wallet: Wallet): DailyTokenBonusStatus {
 
 export function useWallet() {
   const { user } = useAuth()
-  const { tier, monthlyTokens, subscription, patchUsage } = useSubscription()
+  const { tier, monthlyTokens, subscription, plan, patchUsage } = useSubscription()
+  const monthlyAutoGrantRef = useRef<string | null>(null)
   const cloud = useOptionalCloudUserState()
   const persistLocal = !isSupabaseConfigured()
   const useCloudWallet = cloud !== undefined
@@ -198,23 +203,72 @@ export function useWallet() {
     amount?: number
     reason?: string
   } => {
-    if (monthlyTokens <= 0) {
-      return { ok: false, reason: 'not_eligible' }
+    if (!monthlyTokenGrantEligible(tier, subscription.usage ?? {})) {
+      return {
+        ok: false,
+        reason: monthlyTokens <= 0 ? 'not_eligible' : 'already_claimed',
+      }
     }
     const monthKey = toLocalMonthKey()
+    let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
+
+    if (useCloudWallet && cloud) {
+      cloud.patchApp((prev) => {
+        const usage = normalizeSubscription(prev.subscription).usage ?? {}
+        if (usage.monthlyTokensMonthKey === monthKey) {
+          out = { ok: false, reason: 'already_claimed' }
+          return prev
+        }
+        const w = normalizeWallet(prev.wallet)
+        out = { ok: true, amount: monthlyTokens }
+        return {
+          ...prev,
+          subscription: normalizeSubscription({
+            ...normalizeSubscription(prev.subscription),
+            usage: { ...usage, monthlyTokensMonthKey: monthKey },
+          }),
+          wallet: { ...w, tokens: w.tokens + monthlyTokens },
+        }
+      })
+      if (out.ok) void cloud.flushAppSave()
+      return out
+    }
+
     const usage = subscription.usage ?? {}
     if (usage.monthlyTokensMonthKey === monthKey) {
       return { ok: false, reason: 'already_claimed' }
     }
-    let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
     patchUsage((u) => ({ ...u, monthlyTokensMonthKey: monthKey }))
     patchWallet((w) => {
       out = { ok: true, amount: monthlyTokens }
       return { ...w, tokens: w.tokens + monthlyTokens }
     })
-    if (out.ok) void cloud?.flushAppSave?.()
     return out
-  }, [monthlyTokens, subscription.usage, patchUsage, patchWallet, cloud])
+  }, [monthlyTokens, subscription.usage, tier, patchUsage, patchWallet, cloud, useCloudWallet])
+
+  useEffect(() => {
+    if (!user?.id || !plan.flags.monthlyTokenGrant || monthlyTokens <= 0) return
+    if (useCloudWallet && cloud && !cloud.syncReady) return
+    const monthKey = toLocalMonthKey()
+    if (monthlyAutoGrantRef.current === monthKey) return
+    if (!monthlyTokenGrantEligible(tier, subscription.usage ?? {})) return
+
+    monthlyAutoGrantRef.current = monthKey
+    const result = claimMonthlySubscriptionTokens()
+    if (!result.ok && result.reason !== 'already_claimed') {
+      monthlyAutoGrantRef.current = null
+    }
+  }, [
+    user?.id,
+    plan.flags.monthlyTokenGrant,
+    monthlyTokens,
+    tier,
+    subscription.usage?.monthlyTokensMonthKey,
+    useCloudWallet,
+    cloud,
+    cloud?.syncReady,
+    claimMonthlySubscriptionTokens,
+  ])
 
   const claimDailyTokenBonus = useCallback((): {
     ok: boolean

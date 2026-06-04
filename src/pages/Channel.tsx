@@ -18,6 +18,12 @@ import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandin
 import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
 import { projectStandingsWithLiveMatch } from '../utils/liveStandingsProjection'
 import { useBetting } from '../hooks/useBetting'
+import { useChatSendGuard } from '../hooks/useChatSendGuard'
+import { useSubscription } from '../hooks/useSubscription'
+import {
+  ChannelPrivateSalonGate,
+  ChannelSubscriptionExtras,
+} from '../components/channel/ChannelSubscriptionExtras'
 import {
   LiveMatchChatMessage,
   type LiveMatchChatMessageItem,
@@ -387,6 +393,13 @@ export function ChannelPage() {
   const { matchId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const { user: authUser } = useAuth()
+  const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
+  const {
+    hasVerifiedBadge,
+    canStreamSalon,
+    canJoinVoiceSalons,
+  } = useSubscription()
+  const mayStreamSalon = canStreamSalon || Boolean(authUser?.isAdmin)
   const chatActorId = useTalkFootChatActorId()
   const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
   const selfUserId = selfChatUserId
@@ -742,6 +755,12 @@ export function ChannelPage() {
       window.setTimeout(() => setAnimationNotice(null), 2800)
       return
     }
+    const chatGate = checkChatSend()
+    if (!chatGate.ok) {
+      setAnimationNotice(chatGate.reason ?? 'Envoi de message limité pour ta formule.')
+      window.setTimeout(() => setAnimationNotice(null), 3200)
+      return
+    }
     const res = await publishMessage({
       matchId: match.id,
       text,
@@ -757,6 +776,7 @@ export function ChannelPage() {
       window.setTimeout(() => setAnimationNotice(null), 2800)
       return
     }
+    recordChatSend()
     setDraft('')
   }
   const onToggleLikeMessage = (id: string) => {
@@ -1405,6 +1425,11 @@ export function ChannelPage() {
   }
 
   const startLiveBroadcast = async () => {
+    if (!mayStreamSalon) {
+      setAnimationNotice('Stream tribune réservé aux Ambassadeurs — voir /formules.')
+      window.setTimeout(() => setAnimationNotice(null), 3200)
+      return
+    }
     if (match?.id) {
       await publishMessage({
         matchId: match.id,
@@ -2093,6 +2118,12 @@ export function ChannelPage() {
                 {animationNotice}
               </div>
             ) : null}
+            <ChannelSubscriptionExtras
+              matchId={match?.id}
+              isLive={status === 'live'}
+              light={L}
+            />
+            <ChannelPrivateSalonGate matchId={match?.id} light={L}>
             <div
               className={cn(
                 'tf-chat-scroll mt-1.5 space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
@@ -2142,6 +2173,10 @@ export function ChannelPage() {
                           ),
                         )
                       }
+                      showVerifiedBadge={
+                        hasVerifiedBadge &&
+                        (msg.userId === selfChatUserId || msg.userId === authUser?.id)
+                      }
                     />
                   ))}
                   <ChatPeerMenuHost
@@ -2184,12 +2219,23 @@ export function ChannelPage() {
                   <div className="grid grid-cols-1 gap-1">
                     <button
                       type="button"
-                      onClick={() => setLiveMicEnabled((v) => !v)}
+                      disabled={!canJoinVoiceSalons}
+                      onClick={() => {
+                        if (!canJoinVoiceSalons) return
+                        setLiveMicEnabled((v) => !v)
+                      }}
                       className={`rounded-md border px-2 py-1 text-left text-[11px] font-bold ${
-                        liveMicEnabled
-                          ? 'border-cyan-300/75 bg-cyan-300/16 text-cyan-100'
-                          : 'border-[#4b6f90] bg-[#0b2741] text-sky-100'
+                        !canJoinVoiceSalons
+                          ? 'cursor-not-allowed border-[#4b6f90]/60 bg-[#0b2741]/60 text-sky-100/45'
+                          : liveMicEnabled
+                            ? 'border-cyan-300/75 bg-cyan-300/16 text-cyan-100'
+                            : 'border-[#4b6f90] bg-[#0b2741] text-sky-100'
                       }`}
+                      title={
+                        canJoinVoiceSalons
+                          ? 'Micro tribune'
+                          : 'Salons vocaux — formule Ambassadeur'
+                      }
                     >
                       🎤 {liveMicEnabled ? 'Micro ON' : 'Micro OFF'}
                     </button>
@@ -2214,6 +2260,7 @@ export function ChannelPage() {
                   </div>
                 </div>
               ) : null}
+              {mayStreamSalon ? (
               <button
                 type="button"
                 onClick={() => setLivePanelOpen((v) => !v)}
@@ -2222,10 +2269,11 @@ export function ChannelPage() {
                     ? 'border-rose-300/70 bg-rose-500/80 text-white'
                     : 'border-[#3a6690] bg-[#0a1f35] text-sky-100 hover:border-sky-300/70'
                 }`}
-                title="Live micro + camera"
+                title="Stream tribune (Ambassadeur)"
               >
                 {liveBroadcastActive ? 'LIVE ON' : 'LIVE'}
               </button>
+              ) : null}
               {animationsOpen ? (
                 <div
                   className={`z-[100] flex max-h-[min(70dvh,30rem)] flex-col overflow-y-auto overflow-x-hidden overscroll-contain p-2 shadow-2xl max-md:fixed max-md:inset-x-3 max-md:bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] max-md:max-h-[min(72dvh,32rem)] max-md:rounded-xl md:absolute md:bottom-[calc(100%+8px)] md:left-1/2 md:max-h-[min(calc(100dvh-8rem),34rem)] md:w-[min(22rem,calc(100vw-1rem))] md:-translate-x-1/2 ${chFxPanelShell}`}
@@ -2363,6 +2411,7 @@ export function ChannelPage() {
                 {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : 'Envoyer'}
               </button>
             </form>
+            </ChannelPrivateSalonGate>
             </div>
           </Card>
           ) : null}

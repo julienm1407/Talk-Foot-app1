@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SUBSCRIPTION_PLANS, SUBSCRIPTION_TIER_ORDER } from '../data/subscriptionPlans'
 import { useSubscription } from '../hooks/useSubscription'
@@ -8,10 +9,42 @@ import { Badge } from '../components/ui/Badge'
 import { cn } from '../utils/cn'
 import type { SubscriptionTierId } from '../types/subscription'
 import { isStripePublishableConfigured, stripeModeLabel } from '../config/stripe'
+import { isPaidSubscriptionTier } from '../config/stripeCatalog'
+import { startStripeCheckout } from '../lib/stripe/checkout'
+import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
 
 export function SubscriptionPlansPage() {
   const { user } = useAuth()
   const { tier, setTier } = useSubscription()
+  const { status: checkoutStatus, message: checkoutMessage } = useStripeCheckoutReturn()
+  const [payingTier, setPayingTier] = useState<SubscriptionTierId | null>(null)
+  const [payError, setPayError] = useState<string | null>(null)
+
+  async function handleSubscribe(tierId: SubscriptionTierId) {
+    if (!isPaidSubscriptionTier(tierId)) return
+    if (!user?.id) {
+      setPayError('Connecte-toi pour t’abonner.')
+      return
+    }
+    setPayError(null)
+    setPayingTier(tierId)
+    const result = await startStripeCheckout({
+      kind: 'subscription',
+      productId: tierId,
+      userId: user.id,
+      email: user.email,
+    })
+    setPayingTier(null)
+    if (!result.ok) {
+      setPayError(
+        result.error === 'stripe_not_configured'
+          ? 'Paiement Stripe non configuré sur cet environnement.'
+          : 'Impossible d’ouvrir le paiement. Réessaie dans un instant.',
+      )
+      return
+    }
+    window.location.assign(result.url)
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 pb-10">
@@ -19,20 +52,27 @@ export function SubscriptionPlansPage() {
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-300/90">
           Formules Talk Foot
         </p>
-        <h1 className="text-2xl font-black text-white sm:text-3xl">Freemium · Supporter+ · Ambassadeur</h1>
+        <h1 className="text-2xl font-black text-white sm:text-3xl">Freemium · Ultras · Ambassadeur</h1>
         <p className="max-w-2xl text-sm text-white/70">
-          Trois niveaux d’accès : gratuit pour découvrir, 4,99 €/mois pour les supporters actifs, 14,99 €/mois
-          pour les créateurs (stream, voix, articles).
+          Trois niveaux d’accès : gratuit pour découvrir, 4,99 €/mois (Ultras) pour les supporters actifs,
+          14,99 €/mois pour les créateurs (stream, voix, articles). Paiement sécurisé par Stripe.
           {isStripePublishableConfigured() ? (
-            <>
-              {' '}
-              Paiement Stripe : clé publique {stripeModeLabel() === 'live' ? 'live' : 'test'} configurée
-              (Checkout à finaliser avec les Price IDs + clé secrète serveur).
-            </>
+            <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
           ) : (
-            <> Le paiement Stripe sera branché dès que la clé publique est dans Vercel.</>
+            <> Ajoute <code className="text-white/90">VITE_STRIPE_PUBLISHABLE_KEY</code> sur Vercel pour activer le paiement.</>
           )}
         </p>
+        {checkoutMessage ? (
+          <p
+            className={cn(
+              'text-sm font-semibold',
+              checkoutStatus === 'done' ? 'text-emerald-200/95' : 'text-amber-200/90',
+            )}
+          >
+            {checkoutMessage}
+          </p>
+        ) : null}
+        {payError ? <p className="text-sm font-semibold text-rose-200/95">{payError}</p> : null}
         {user && (
           <p className="text-sm font-semibold text-emerald-200/90">
             Ta formule actuelle : <span className="text-white">{SUBSCRIPTION_PLANS[tier].name}</span>
@@ -102,10 +142,26 @@ export function SubscriptionPlansPage() {
                   </Button>
                 ) : id === 'freemium' ? (
                   <p className="text-center text-xs text-white/50">Inclus à l’inscription</p>
-                ) : (
-                  <Button type="button" className="w-full" disabled>
-                    S’abonner — bientôt
+                ) : isStripePublishableConfigured() ? (
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={payingTier === id}
+                    onClick={() => void handleSubscribe(id)}
+                  >
+                    {payingTier === id ? 'Redirection Stripe…' : `S’abonner — ${plan.priceLabel}`}
                   </Button>
+                ) : user ? (
+                  <Button type="button" className="w-full" disabled>
+                    Stripe non configuré
+                  </Button>
+                ) : (
+                  <Link
+                    to="/login?next=/formules"
+                    className="block w-full rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 py-2.5 text-center text-xs font-black text-white"
+                  >
+                    Se connecter pour s’abonner
+                  </Link>
                 )}
               </div>
             </Card>
@@ -126,10 +182,10 @@ export function SubscriptionPlansPage() {
             Freemium : pas de débats ; cooldown tchat 15 s ; 100 messages/jour ; rival club → accès
             tribune rivale sur demande / kick modos.
           </li>
-          <li>Supporter+ : pas de création de live match ; emotes groupe non personnalisables.</li>
+          <li>Supporter+ : pas de stream ni salon privé ; emotes groupe non personnalisables.</li>
           <li>
-            Ambassadeur : stream, salons vocaux, lives privés et rémunération créateur — en cours
-            d’implémentation.
+            Ambassadeur : stream tribune, micro vocal, salon privé par lien, rédaction d’articles.
+            Rémunération créateur — à venir.
           </li>
         </ul>
         <Link to="/profile" className="inline-block text-sm font-semibold text-sky-300 hover:underline">

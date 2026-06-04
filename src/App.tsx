@@ -37,6 +37,7 @@ import {
   VideosPage,
 } from './routes/lazyPages'
 import { useAuth } from './contexts/AuthContext'
+import { useSubscription } from './hooks/useSubscription'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
 import { CloudUserStateGate } from './contexts/CloudUserStateContext'
@@ -69,6 +70,7 @@ function RequireAuthRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
+  const { plan } = useSubscription()
   if (!isReady) {
     return (
       <div className="relative flex min-h-dvh items-center justify-center">
@@ -80,8 +82,8 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (!user) {
     return <Navigate to="/login" replace state={{ from: '/admin' }} />
   }
-  if (!user.isAdmin) {
-    return <Navigate to="/profile" replace />
+  if (!user.isAdmin && !plan.flags.canWriteArticles) {
+    return <Navigate to="/formules" replace />
   }
   return <RouteSuspense>{children}</RouteSuspense>
 }

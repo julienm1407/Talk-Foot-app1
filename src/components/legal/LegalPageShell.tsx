@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { LEGAL_CONTACT_EMAIL, LEGAL_LAST_UPDATED_LABEL, legalContactMailto } from '../../constants/siteLegal'
-import { LogoMark } from '../../layout/LogoMark'
+import { LogoEncart } from '../../layout/LogoMark'
 import { ThemeAppearanceToggle } from '../ui/ThemeAppearanceToggle'
 import { cn } from '../../utils/cn'
 
@@ -47,7 +47,7 @@ export function LegalPageShell({
           ) : null}
         </div>
         <div className="mb-6 flex justify-center">
-          <LogoMark variant="hero" className="max-w-[180px]" decorative />
+          <LogoEncart size="lg" isLight={L} />
         </div>
         <article
           className={cn(

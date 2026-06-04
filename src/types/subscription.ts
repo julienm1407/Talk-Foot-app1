@@ -14,6 +14,9 @@ export type SubscriptionUsageCounters = {
   lastChatSendAt?: number | null
   /** Mois YYYY-MM du dernier crédit jetons mensuels */
   monthlyTokensMonthKey?: string | null
+  /** Heure locale YYYY-MM-DDTHH — jetons gagnés en tribune live */
+  liveTokensHourKey?: string | null
+  liveTokensThisHour?: number
 }
 
 export type SubscriptionState = {

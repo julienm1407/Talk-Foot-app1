@@ -67,6 +67,8 @@ export type SupporterGroup = {
   motto: string
   theme: GroupTheme
   members: number
+  /** Plafond membres (fixé à la création selon la formule du créateur). */
+  maxMembers?: number
   intensity: number // 0..100
   channels: SupporterChannel[]
   createdBy: 'system' | 'me'

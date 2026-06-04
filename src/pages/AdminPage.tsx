@@ -41,6 +41,8 @@ import {
   type NewsletterCampaign,
 } from '../lib/supabase/newsletter'
 import { cn } from '../utils/cn'
+import { resolveArticleExcerpt } from '../utils/articleExcerpt'
+import { normalizeArticleListHtml } from '../utils/normalizeArticleListHtml'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
 type FormState = {
@@ -98,33 +100,6 @@ const ARTICLE_TEMPLATES: Array<{ id: string; label: string; markdown: string }> 
     markdown:
       '## Plan de jeu\n\nDécris le système et l’intention collective.\n\n## Clé côté ballon\n\nOrganisation offensive et circuits préférentiels.\n\n## Clé sans ballon\n\nPressing, bloc et gestion des transitions.\n\n## Conclusion\n\nCe que cela implique pour le prochain match.',
   },
-]
-
-const LAYOUT_TEMPLATES: Array<{ id: string; label: string; markdown: string }> = [
-  {
-    id: 'grid-2-images',
-    label: 'Grille 2 images',
-    markdown:
-      '## Galerie 2 colonnes\n\n| Image 1 | Image 2 |\n|---|---|\n| ![Image 1](https://) | ![Image 2](https://) |\n',
-  },
-  {
-    id: 'grid-3-highlights',
-    label: 'Grille 3 points clés',
-    markdown:
-      '## Points clés\n\n| Point 1 | Point 2 | Point 3 |\n|---|---|---|\n| Fait marquant | Fait marquant | Fait marquant |\n',
-  },
-]
-
-const STYLE_SNIPPETS: Array<{ id: string; label: string; markdown: string }> = [
-  { id: 'block-sm', label: 'Bloc petit', markdown: '[[bloc-sm: Texte compact pour un encadre.]]' },
-  { id: 'block-md', label: 'Bloc moyen', markdown: '[[bloc-md: Texte standard pour un encadre.]]' },
-  { id: 'block-lg', label: 'Bloc grand', markdown: '[[bloc-lg: Texte important mis en avant.]]' },
-  { id: 'space-sm', label: 'Espace court', markdown: '[[spacer-sm]]' },
-  { id: 'space-md', label: 'Espace moyen', markdown: '[[spacer-md]]' },
-  { id: 'space-lg', label: 'Espace large', markdown: '[[spacer-lg]]' },
-  { id: 'txt-sm', label: 'Texte petit', markdown: '[[txt-sm: Texte plus petit]]' },
-  { id: 'txt-md', label: 'Texte normal', markdown: '[[txt-md: Texte normal]]' },
-  { id: 'txt-lg', label: 'Texte grand', markdown: '[[txt-lg: Texte mis en valeur]]' },
 ]
 
 function computeSeoScore(form: FormState): { score: number; tips: string[] } {
@@ -189,7 +164,7 @@ function extractMarkdownImages(markdown: string): MarkdownImageToken[] {
 }
 
 function sanitizeRichHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
+  const sanitized = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       'p',
       'br',
@@ -208,6 +183,7 @@ function sanitizeRichHtml(html: string): string {
     ],
     ALLOWED_ATTR: ['href', 'target', 'rel'],
   }).trim()
+  return normalizeArticleListHtml(sanitized)
 }
 
 function escapeHtml(text: string): string {
@@ -221,17 +197,50 @@ function plainTextToStructuredHtml(text: string): string {
   const lines = text.split('\n')
   const out: string[] = []
   let paragraph: string[] = []
+  let listTag: 'ul' | 'ol' | null = null
+  let listItems: string[] = []
+
   const flushParagraph = () => {
     if (!paragraph.length) return
     out.push(`<p>${paragraph.map((x) => escapeHtml(x)).join('<br />')}</p>`)
     paragraph = []
   }
+
+  const flushList = () => {
+    if (!listTag || !listItems.length) {
+      listTag = null
+      listItems = []
+      return
+    }
+    out.push(
+      `<${listTag}>${listItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</${listTag}>`,
+    )
+    listTag = null
+    listItems = []
+  }
+
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) {
+      flushList()
       flushParagraph()
       continue
     }
+
+    const bullet = line.match(/^[-*•]\s+(.+)$/)
+    const ordered = line.match(/^\d+[.)]\s+(.+)$/)
+    if (bullet || ordered) {
+      flushParagraph()
+      const tag = ordered ? 'ol' : 'ul'
+      const item = (bullet?.[1] ?? ordered?.[1] ?? '').trim()
+      if (listTag && listTag !== tag) flushList()
+      listTag = tag
+      listItems.push(item)
+      continue
+    }
+
+    flushList()
+
     if (/^#{1,6}\s+/.test(line)) {
       flushParagraph()
       const level = Math.min(3, Math.max(2, (line.match(/^#+/)?.[0].length ?? 2)))
@@ -239,13 +248,15 @@ function plainTextToStructuredHtml(text: string): string {
       out.push(`<h${level}>${escapeHtml(title)}</h${level}>`)
       continue
     }
-    if (/^\d+\.\s+/.test(line) || /^[A-ZÀ-Ý0-9][A-ZÀ-Ý0-9\s'’\-:!?]{8,}$/.test(line)) {
+    if (/^[A-ZÀ-Ý0-9][A-ZÀ-Ý0-9\s'’\-:!?]{8,}$/.test(line) && !line.endsWith(';')) {
       flushParagraph()
-      out.push(`<h2>${escapeHtml(line.replace(/^\d+\.\s+/, ''))}</h2>`)
+      out.push(`<h2>${escapeHtml(line)}</h2>`)
       continue
     }
     paragraph.push(line)
   }
+
+  flushList()
   flushParagraph()
   return out.join('')
 }
@@ -376,8 +387,9 @@ export function AdminPage() {
       ...EMPTY_FORM,
       title: 'Nouveau brouillon',
       slug: `article-${Date.now()}`,
-      excerpt: 'Résumé court de l’article.',
-      bodyMarkdown: '## Introduction\n\nCommence à rédiger ici.',
+      excerpt: '',
+      bodyMarkdown:
+        '## Introduction\n\nPremier paragraphe : contexte et accroche en 2–3 phrases.\n\n## Développement\n\nDétaille les faits, l’analyse ou le récit. Un paragraphe par idée.\n\n## À retenir\n\n- Point clé 1\n- Point clé 2\n- Point clé 3',
       authorName: user?.displayName || user?.email || 'Talk Foot',
     }
     const created = await createDraftArticle(sb, draftInputFromForm(next))
@@ -862,10 +874,13 @@ export function AdminPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Extrait</label>
+              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">
+                Résumé court (chapo)
+              </label>
               <textarea
                 value={form.excerpt}
                 onChange={(e) => setForm((p) => ({ ...p, excerpt: e.target.value }))}
+                placeholder="2–3 phrases sous le titre. Si vide, le 1er paragraphe du corps sera utilisé à l’affichage."
                 className="mt-1 min-h-[70px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
@@ -954,19 +969,6 @@ export function AdminPage() {
                 ))}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {LAYOUT_TEMPLATES.map((tpl) => (
-                  <Button
-                    key={tpl.id}
-                    type="button"
-                    variant="ghost"
-                    className="rounded-xl text-xs"
-                    onClick={() => insertLayoutTemplate(tpl.markdown)}
-                  >
-                    Grille : {tpl.label}
-                  </Button>
-                ))}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="soft"
@@ -975,17 +977,22 @@ export function AdminPage() {
                 >
                   Gras
                 </Button>
-                {STYLE_SNIPPETS.map((tpl) => (
-                  <Button
-                    key={tpl.id}
-                    type="button"
-                    variant="ghost"
-                    className="rounded-xl text-xs"
-                    onClick={() => insertLayoutTemplate(tpl.markdown)}
-                  >
-                    Style : {tpl.label}
-                  </Button>
-                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-xl text-xs"
+                  onClick={() => insertLayoutTemplate('\n\n## Nouvelle section\n\n')}
+                >
+                  + Section (H2)
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-xl text-xs"
+                  onClick={() => insertLayoutTemplate('\n\n### Sous-partie\n\n')}
+                >
+                  + Sous-partie (H3)
+                </Button>
               </div>
               <textarea
                 ref={markdownRef}
@@ -995,11 +1002,9 @@ export function AdminPage() {
                 aria-describedby="admin-markdown-help"
               />
               <p id="admin-markdown-help" className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Supporte titres, listes, tableaux markdown et images URL.
-              </p>
-              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Raccourcis: `[[bloc-sm: ...]]`, `[[bloc-md: ...]]`, `[[bloc-lg: ...]]`, `[[spacer-sm]]`,
-                `[[spacer-md]]`, `[[spacer-lg]]`, `[[txt-sm: ...]]`, `[[txt-md: ...]]`, `[[txt-lg: ...]]`.
+                Rédaction simple : `##` section (H2), `###` sous-partie (H3), paragraphes séparés par une ligne
+                vide. Listes avec `-` ou `1.` en début de ligne (une puce par ligne). Liens et images
+                `![légende](url)`.
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
@@ -1142,11 +1147,20 @@ export function AdminPage() {
           {previewOpen ? (
             <Card className="space-y-3 border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/70">
               <h3 className="font-display text-lg font-black text-tf-dark">Aperçu live</h3>
-              <p className="text-sm font-semibold text-tf-grey dark:text-slate-300">{form.excerpt || 'Aucun extrait.'}</p>
-              <ArticleMarkdown
-                markdown={form.bodyMarkdown || '_Commence à écrire du markdown..._'}
-                className="prose prose-slate max-w-none prose-headings:font-display prose-headings:font-black prose-table:block prose-table:w-full"
-              />
+              <p className="text-sm font-semibold text-tf-grey dark:text-slate-300">
+                {resolveArticleExcerpt({
+                  excerpt: form.excerpt,
+                  bodyMarkdown: form.bodyMarkdown,
+                }) || 'Aucun résumé (remplis le chapo ou le corps).'}
+              </p>
+              <div
+                data-tf-article-tone="light"
+                className="tf-article-prose rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80"
+              >
+                <ArticleMarkdown
+                  markdown={form.bodyMarkdown || '_Commence à écrire : une section `##`, puis des paragraphes._'}
+                />
+              </div>
             </Card>
           ) : null}
         </Card>

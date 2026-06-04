@@ -114,13 +114,30 @@ export function StadeDashboardRichBody({
   )
 }
 
-export function DebatesRichBody({ snippets }: { snippets: DebateSnippet[] }) {
+export function DebatesRichBody({
+  snippets,
+  debatePath,
+  tone = 'light',
+}: {
+  snippets: DebateSnippet[]
+  /** Lien vers `/debate/:id` (ou login avec next). */
+  debatePath: (id: string) => string
+  tone?: 'light' | 'dark'
+}) {
+  const dark = tone === 'dark'
   return (
     <div className="mt-3 space-y-2">
       {snippets.map((d) => (
-        <div
+        <Link
           key={d.id}
-          className="rounded-xl border border-orange-200/80 bg-white/95 p-2.5 shadow-sm"
+          to={debatePath(d.id)}
+          className={cn(
+            'block rounded-xl border p-2.5 shadow-sm outline-none transition focus-visible:ring-2',
+            dark
+              ? 'border-orange-400/28 bg-orange-950/35 hover:border-orange-400/45 hover:bg-orange-950/45 focus-visible:ring-orange-400/45'
+              : 'border-orange-200/80 bg-white/95 hover:border-orange-400 hover:shadow-md focus-visible:ring-orange-400/50',
+          )}
+          aria-label={`Ouvrir le débat : ${d.title}`}
         >
           <div className="flex items-start gap-2">
             {d.hot ? (
@@ -132,13 +149,27 @@ export function DebatesRichBody({ snippets }: { snippets: DebateSnippet[] }) {
                 💬
               </span>
             )}
-            <p className="min-w-0 flex-1 text-[11px] font-bold leading-snug text-tf-dark">{d.title}</p>
+            <p
+              className={cn(
+                'min-w-0 flex-1 text-[11px] font-bold leading-snug',
+                dark ? 'text-orange-50/95' : 'text-tf-dark',
+              )}
+            >
+              {d.title}
+            </p>
           </div>
-          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] font-black text-orange-700">
-            <span aria-hidden>❤️</span>
-            {d.likes.toLocaleString('fr-FR')} likes sur le fil
+          <div
+            className={cn(
+              'mt-2 flex items-center justify-between gap-2 text-[10px] font-black',
+              dark ? 'text-orange-200/90' : 'text-orange-700',
+            )}
+          >
+            <span>
+              {d.likes.toLocaleString('fr-FR')} message{d.likes > 1 ? 's' : ''}
+            </span>
+            <span className="shrink-0 uppercase tracking-wide opacity-90">Ouvrir →</span>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   )
@@ -180,45 +211,88 @@ export function BetsRichBody({ slices }: { slices: BetVolumeSlice[] }) {
 export function GroupsDiscussRichBody({
   previews,
   groupPath,
+  tone = 'light',
 }: {
   previews: GroupDiscussPreview[]
   groupPath: (id: string) => string
+  tone?: 'light' | 'dark'
 }) {
+  const dark = tone === 'dark'
   return (
     <div className="mt-3 space-y-3">
       {previews.map((g) => (
         <Link
           key={g.groupId}
           to={groupPath(g.groupId)}
-          className="block rounded-xl border border-violet-200/80 bg-white/95 p-3 shadow-sm outline-none ring-0 transition hover:border-violet-400 hover:shadow-md focus-visible:ring-2 focus-visible:ring-violet-400/50"
+          className={cn(
+            'block rounded-xl border p-3 shadow-sm outline-none ring-0 transition focus-visible:ring-2',
+            dark
+              ? 'border-violet-400/28 bg-violet-950/30 hover:border-violet-400/45 hover:bg-violet-950/40 focus-visible:ring-violet-400/45'
+              : 'border-violet-200/80 bg-white/95 hover:border-violet-400 hover:shadow-md focus-visible:ring-violet-400/50',
+          )}
         >
           <div className="flex items-center gap-2">
             <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-solid bg-white/90 text-lg shadow-sm"
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-solid text-lg shadow-sm',
+                dark ? 'bg-white/8' : 'bg-white/90',
+              )}
               style={{ borderColor: g.themePrimary, backgroundColor: `${g.themePrimary}18` }}
             >
               {g.emoji}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-sm font-black text-tf-dark">{g.name}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wide text-violet-700/90">
-                Top messages likés sur ce thème
+              <p
+                className={cn(
+                  'truncate font-display text-sm font-black',
+                  dark ? 'text-violet-50' : 'text-tf-dark',
+                )}
+              >
+                {g.name}
+              </p>
+              <p
+                className={cn(
+                  'text-[9px] font-bold',
+                  dark ? 'text-violet-200/80' : 'text-violet-700/90',
+                )}
+              >
+                {typeof g.members === 'number'
+                  ? `${g.members.toLocaleString('fr-FR')} membres`
+                  : 'Tribune supporters'}
+                {g.onlineNow != null && g.onlineNow > 0
+                  ? ` · ${g.onlineNow} en ligne`
+                  : ''}
               </p>
             </div>
           </div>
-          <ul className="mt-2.5 space-y-2 border-t border-violet-100/80 pt-2.5" role="list">
-            {g.messages.slice(0, 2).map((m) => (
-              <li key={m.id} className="rounded-lg bg-violet-50/50 px-2 py-1.5">
-                <p className="text-[10px] font-semibold leading-snug text-tf-dark">
-                  <span className="font-black text-violet-900">@{m.author}</span>{' '}
-                  <span className="text-tf-dark/90">{m.text}</span>
-                </p>
-                <p className="mt-1 text-[9px] font-black text-violet-700">
-                  ❤️ {m.likes.toLocaleString('fr-FR')} likes
-                </p>
-              </li>
-            ))}
-          </ul>
+          {g.previewText ? (
+            <p
+              className={cn(
+                'mt-2.5 line-clamp-3 border-t pt-2.5 text-[10px] font-semibold leading-snug',
+                dark ? 'border-violet-400/22 text-violet-50/92' : 'border-violet-100/80 text-tf-dark',
+              )}
+            >
+              {g.previewText}
+            </p>
+          ) : g.motto ? (
+            <p
+              className={cn(
+                'mt-2.5 line-clamp-2 border-t pt-2.5 text-[10px] font-semibold italic leading-snug',
+                dark ? 'border-violet-400/22 text-violet-100/80' : 'border-violet-100/80 text-tf-dark/80',
+              )}
+            >
+              {g.motto}
+            </p>
+          ) : (
+            <p
+              className={cn(
+                'mt-2.5 border-t pt-2.5 text-[10px] font-bold',
+                dark ? 'border-violet-400/22 text-violet-200/85' : 'border-violet-100/80 text-violet-700',
+              )}
+            >
+              Rejoins le fil de la tribune →
+            </p>
+          )}
         </Link>
       ))}
     </div>

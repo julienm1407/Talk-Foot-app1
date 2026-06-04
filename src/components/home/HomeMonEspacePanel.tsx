@@ -58,7 +58,7 @@ export function HomeMonEspacePanel({
   const { profile } = useProfile()
   const displayLabel = authUser?.displayName ?? currentUser.username
   const { appearance } = useAppearance()
-  const { wallet, claimDailyTokenBonus, dailyBonus } = useWallet()
+  const { claimDailyTokenBonus, dailyBonus } = useWallet()
   const { acceptedPeers } = useCloudFriends()
   const friendAvatars = useMemo(() => acceptedPeers.slice(0, 4), [acceptedPeers])
   const firstLiveMatch = useMemo(
@@ -282,11 +282,17 @@ export function HomeMonEspacePanel({
         ) : null}
 
         <div className={cn(!slim && 'pt-1', railSep)}>
-          <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+          <div
+            className={cn(
+              slim ? 'px-1' : 'flex flex-wrap items-end justify-between gap-2 px-1',
+            )}
+          >
             <p className={cn('text-[10px] font-black uppercase tracking-[0.2em]', hubCaps)}>Mes tribunes</p>
-            <Link to="/groups" className={cn(hubPillLink(appearance, slim ? 'xs' : 'sm'))}>
-              {slim ? 'Tous' : 'Tous les groupes'}
-            </Link>
+            {!slim ? (
+              <Link to="/groups" className={hubPillLink(appearance, 'sm')}>
+                Tous les groupes
+              </Link>
+            ) : null}
           </div>
           <ul className="mt-2 space-y-1" role="list">
             {myCreatedGroups.length === 0 ? (
@@ -347,9 +353,6 @@ export function HomeMonEspacePanel({
                 <TokenGlyph className="mt-0.5 size-4 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-[10px] font-black text-tf-app-fg">+{dailyBonus.amount} jetons à 10h</p>
-                  <p className={cn('mt-0.5 text-[9px] font-semibold leading-snug', hubSecondary)}>
-                    Solde : {wallet.tokens.toLocaleString('fr-FR')} jetons · 1 récupération / jour.
-                  </p>
                 </div>
               </div>
               <button

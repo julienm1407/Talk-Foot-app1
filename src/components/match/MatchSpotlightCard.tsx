@@ -269,7 +269,7 @@ export function MatchSpotlightCard({
           />
           <span
             className={cn(
-              'shrink-0 rounded-xl px-4 py-2 text-xs font-black shadow-md transition',
+              'shrink-0 rounded-xl px-4 py-2 text-xs font-black transition',
               isWc
                 ? 'bg-tf-cdm-gold text-tf-cdm-deep hover:bg-tf-cdm-gold/90'
                 : 'bg-gradient-to-b from-sky-500 to-blue-600 text-white group-hover:from-sky-400 group-hover:to-blue-500',

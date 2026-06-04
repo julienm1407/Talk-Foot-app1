@@ -165,6 +165,102 @@ export function betTokenMultiplier(tier: SubscriptionTierId): number {
   return getSubscriptionPlan(tier).limits.betTokenMultiplier
 }
 
+/** Jetons crédités au wallet après un pari gagné (payout = mise × cote, bonus sur le profit si ×2). */
+export function betWinTokenCredit(
+  payout: number,
+  stake: number,
+  multiplier: number,
+): number {
+  const m = Number.isFinite(multiplier) && multiplier > 1 ? multiplier : 1
+  if (m <= 1) return payout
+  const profit = Math.max(0, payout - stake)
+  return payout + Math.round(profit * (m - 1))
+}
+
+export function monthlyTokenGrantEligible(
+  tier: SubscriptionTierId,
+  usage: SubscriptionUsageCounters,
+  now = new Date(),
+): boolean {
+  const plan = getSubscriptionPlan(tier)
+  if (!plan.flags.monthlyTokenGrant || plan.limits.monthlyTokens <= 0) return false
+  const monthKey = toLocalMonthKey(now)
+  return usage.monthlyTokensMonthKey !== monthKey
+}
+
+export function groupMemberCapForTier(tier: SubscriptionTierId): number {
+  return maxGroupMembersForTier(tier)
+}
+
+export function canJoinGroupByMemberCap(
+  currentMembers: number,
+  maxMembers: number | undefined,
+): { ok: boolean; limit: number } {
+  const limit = maxMembers ?? Number.POSITIVE_INFINITY
+  if (!Number.isFinite(limit)) return { ok: true, limit }
+  return { ok: currentMembers < limit, limit }
+}
+
+export function toLocalHourKey(date = new Date()): string {
+  const y = date.getFullYear()
+  const m = `${date.getMonth() + 1}`.padStart(2, '0')
+  const d = `${date.getDate()}`.padStart(2, '0')
+  const h = `${date.getHours()}`.padStart(2, '0')
+  return `${y}-${m}-${d}T${h}`
+}
+
+export function liveMatchTokensPerHour(tier: SubscriptionTierId): number {
+  return getSubscriptionPlan(tier).limits.liveMatchTokensPerHour
+}
+
+export function liveTokensEarnedThisHour(
+  usage: SubscriptionUsageCounters,
+  now = Date.now(),
+): number {
+  const hourKey = toLocalHourKey(new Date(now))
+  return usage.liveTokensHourKey === hourKey ? (usage.liveTokensThisHour ?? 0) : 0
+}
+
+export function liveMatchTokenGrantAllowed(
+  tier: SubscriptionTierId,
+  usage: SubscriptionUsageCounters,
+  amount: number,
+  now = Date.now(),
+): { ok: boolean; remaining: number; limit: number; reason?: string } {
+  const limit = liveMatchTokensPerHour(tier)
+  if (limit <= 0) {
+    return { ok: false, remaining: 0, limit: 0, reason: 'none' }
+  }
+  const used = liveTokensEarnedThisHour(usage, now)
+  const remaining = Math.max(0, limit - used)
+  if (amount > remaining) {
+    return { ok: false, remaining, limit, reason: 'hour_cap' }
+  }
+  return { ok: true, remaining: remaining - amount, limit }
+}
+
+export function bumpLiveTokenUsage(
+  usage: SubscriptionUsageCounters,
+  amount: number,
+  now = Date.now(),
+): SubscriptionUsageCounters {
+  const hourKey = toLocalHourKey(new Date(now))
+  const used =
+    usage.liveTokensHourKey === hourKey ? (usage.liveTokensThisHour ?? 0) : 0
+  return {
+    ...usage,
+    liveTokensHourKey: hourKey,
+    liveTokensThisHour: used + amount,
+  }
+}
+
+export function hasPlanFlag(
+  tier: SubscriptionTierId,
+  flag: keyof ReturnType<typeof getSubscriptionPlan>['flags'],
+): boolean {
+  return Boolean(getSubscriptionPlan(tier).flags[flag])
+}
+
 function toLocalDayKey(date: Date): string {
   const y = date.getFullYear()
   const m = `${date.getMonth() + 1}`.padStart(2, '0')

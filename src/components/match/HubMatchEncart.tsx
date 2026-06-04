@@ -569,18 +569,18 @@ export function HubStripUpcoming({
               L ? 'border-tf-dark/10' : 'border-white/10',
             )}
           >
-            <span className="flex min-w-0 items-center gap-2 truncate text-xs font-semibold text-tf-app-muted">
+            <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-tf-app-muted">
               {compTh ? (
                 <span
                   className={cn(
-                    'size-1.5 shrink-0 rounded-full ring-2',
-                    L ? 'ring-tf-dark/12' : isWc ? 'ring-tf-cdm-gold/40' : 'ring-white/20',
+                    'size-2 shrink-0 rounded-full border',
+                    L ? 'border-tf-dark/15' : isWc ? 'border-tf-cdm-gold/45' : 'border-white/25',
                   )}
                   style={{ backgroundColor: isWc ? 'var(--tf-cdm-gold, #f4c542)' : compTh.accent2 }}
                   aria-hidden
                 />
               ) : null}
-              <span className={cn(isWc && !L && 'font-black uppercase tracking-wide text-tf-cdm-gold')}>
+              <span className={cn('truncate', isWc && !L && 'font-black uppercase tracking-wide text-tf-cdm-gold')}>
                 {isWc ? `★ ${match.competition.shortName}` : match.competition.shortName}
               </span>
             </span>
@@ -588,8 +588,8 @@ export function HubStripUpcoming({
               className={cn(
                 'shrink-0 rounded-lg px-3 py-1.5 text-xs font-black transition',
                 isWc
-                  ? 'bg-tf-cdm-gold text-tf-cdm-deep shadow-[0_4px_18px_rgba(244,197,66,0.35)] group-hover:bg-tf-cdm-gold/90'
-                  : 'bg-gradient-to-b from-sky-500 to-blue-600 text-white shadow-[0_4px_18px_rgba(14,165,233,0.38)] group-hover:from-sky-400 group-hover:to-blue-500 group-hover:shadow-[0_6px_22px_rgba(14,165,233,0.45)]',
+                  ? 'bg-tf-cdm-gold text-tf-cdm-deep group-hover:bg-tf-cdm-gold/90'
+                  : 'bg-gradient-to-b from-sky-500 to-blue-600 text-white group-hover:from-sky-400 group-hover:to-blue-500',
               )}
             >
               {isWc ? 'Tribune CDM →' : 'Voir la tribune'}
@@ -767,10 +767,10 @@ export function HubStripUpcoming({
           className={cn(
             'shrink-0 rounded-lg bg-gradient-to-b from-sky-500 to-blue-600 font-black text-white transition group-hover:from-sky-400 group-hover:to-blue-500',
             isSidebar
-              ? 'px-2 py-0.5 text-[9px] shadow-[0_2px_10px_rgba(14,165,233,0.28)]'
+              ? 'px-2 py-0.5 text-[9px]'
               : visualSize === 'compact'
-                ? 'rounded-xl px-3 py-1 text-[11px] shadow-[0_4px_16px_rgba(14,165,233,0.35)]'
-                : 'rounded-xl px-4 py-1.5 text-xs shadow-[0_4px_16px_rgba(14,165,233,0.35)]',
+                ? 'rounded-xl px-3 py-1 text-[11px]'
+                : 'rounded-xl px-4 py-1.5 text-xs',
           )}
         >
           Voir la tribune
