@@ -49,12 +49,13 @@ export default async function handler(req, res) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
       const result = await fulfillCheckoutSession(session)
-      if (!result.ok && result.error === 'supabase_service_not_configured') {
-        console.warn('[stripe-webhook] Fulfillment skipped — set SUPABASE_SERVICE_ROLE_KEY', result)
-        json(res, 200, { ok: true, deferred: true })
-        return
+      if (!result.ok) {
+        console.error('[stripe-webhook] Fulfillment failed', result)
+        if (result.error === 'supabase_service_not_configured') {
+          console.warn('[stripe-webhook] Ajoute SUPABASE_SERVICE_ROLE_KEY + SUPABASE_URL sur Vercel')
+        }
       }
-      json(res, 200, result)
+      json(res, result.ok ? 200 : 500, result)
       return
     }
 

@@ -38,6 +38,7 @@ export default async function handler(req, res) {
   }
 
   const userId = String(body.userId ?? '').trim()
+  const supabaseUserId = String(body.supabaseUserId ?? '').trim()
   const email = String(body.email ?? '').trim()
   const kind = String(body.kind ?? '').trim()
   const productId = String(body.productId ?? '').trim()
@@ -45,6 +46,12 @@ export default async function handler(req, res) {
   if (!userId) {
     json(res, 400, { ok: false, error: 'missing_user_id' })
     return
+  }
+
+  const metaBase = {
+    clerk_user_id: userId,
+    kind,
+    ...(supabaseUserId ? { supabase_user_id: supabaseUserId } : {}),
   }
 
   const origin = siteOrigin(req)
@@ -65,7 +72,7 @@ export default async function handler(req, res) {
         client_reference_id: userId,
         customer_email: email || undefined,
         metadata: {
-          clerk_user_id: userId,
+          ...metaBase,
           tier: productId,
           kind: 'subscription',
         },
@@ -88,7 +95,7 @@ export default async function handler(req, res) {
         client_reference_id: userId,
         customer_email: email || undefined,
         metadata: {
-          clerk_user_id: userId,
+          ...metaBase,
           medal_pack_id: productId,
           kind: 'medal_pack',
         },

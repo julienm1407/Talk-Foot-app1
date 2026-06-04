@@ -12,11 +12,14 @@ import { isStripePublishableConfigured, stripeModeLabel } from '../config/stripe
 import { isPaidSubscriptionTier } from '../config/stripeCatalog'
 import { startStripeCheckout } from '../lib/stripe/checkout'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
+import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 
 export function SubscriptionPlansPage() {
   const { user } = useAuth()
+  const supabaseActorId = useTalkFootChatActorId()
   const { tier, setTier } = useSubscription()
-  const { status: checkoutStatus, message: checkoutMessage } = useStripeCheckoutReturn()
+  const { status: checkoutStatus, message: checkoutMessage, canRetry, retryFulfill } =
+    useStripeCheckoutReturn()
   const [payingTier, setPayingTier] = useState<SubscriptionTierId | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
 
@@ -32,6 +35,7 @@ export function SubscriptionPlansPage() {
       kind: 'subscription',
       productId: tierId,
       userId: user.id,
+      supabaseUserId: supabaseActorId,
       email: user.email,
     })
     setPayingTier(null)
@@ -63,14 +67,21 @@ export function SubscriptionPlansPage() {
           )}
         </p>
         {checkoutMessage ? (
-          <p
-            className={cn(
-              'text-sm font-semibold',
-              checkoutStatus === 'done' ? 'text-emerald-200/95' : 'text-amber-200/90',
-            )}
-          >
-            {checkoutMessage}
-          </p>
+          <div className="space-y-2">
+            <p
+              className={cn(
+                'text-sm font-semibold',
+                checkoutStatus === 'done' ? 'text-emerald-200/95' : 'text-amber-200/90',
+              )}
+            >
+              {checkoutMessage}
+            </p>
+            {canRetry ? (
+              <Button type="button" variant="soft" className="text-xs" onClick={retryFulfill}>
+                Synchroniser mon achat
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         {payError ? <p className="text-sm font-semibold text-rose-200/95">{payError}</p> : null}
         {user && (

@@ -6,6 +6,7 @@ export async function startStripeCheckout(opts: {
   kind: StripeCheckoutKind
   productId: string
   userId: string
+  supabaseUserId?: string | null
   email?: string | null
 }): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   if (!isStripePublishableConfigured()) {
@@ -19,6 +20,7 @@ export async function startStripeCheckout(opts: {
       kind: opts.kind,
       productId: opts.productId,
       userId: opts.userId,
+      supabaseUserId: opts.supabaseUserId ?? undefined,
       email: opts.email ?? undefined,
     }),
   })
@@ -40,15 +42,20 @@ export async function startStripeCheckout(opts: {
 export async function fulfillStripeSession(opts: {
   sessionId: string
   userId: string
+  supabaseUserId?: string | null
 }): Promise<
-  | { ok: true; kind: 'subscription'; tier: string }
-  | { ok: true; kind: 'medal_pack'; packId: string; medals: number }
+  | { ok: true; kind: 'subscription'; tier: string; alreadyFulfilled?: boolean }
+  | { ok: true; kind: 'medal_pack'; packId: string; medals: number; alreadyFulfilled?: boolean }
   | { ok: false; error: string }
 > {
   const res = await fetch('/api/stripe-fulfill', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(opts),
+    body: JSON.stringify({
+      sessionId: opts.sessionId,
+      userId: opts.userId,
+      supabaseUserId: opts.supabaseUserId ?? undefined,
+    }),
   })
 
   let data: Record<string, unknown>
@@ -62,15 +69,17 @@ export async function fulfillStripeSession(opts: {
     return { ok: false, error: String(data.error ?? 'fulfill_failed') }
   }
 
+  const alreadyFulfilled = data.alreadyFulfilled === true
+
   if (data.kind === 'subscription' && typeof data.tier === 'string') {
-    return { ok: true, kind: 'subscription', tier: data.tier }
+    return { ok: true, kind: 'subscription', tier: data.tier, alreadyFulfilled }
   }
   if (
     data.kind === 'medal_pack' &&
     typeof data.packId === 'string' &&
     typeof data.medals === 'number'
   ) {
-    return { ok: true, kind: 'medal_pack', packId: data.packId, medals: data.medals }
+    return { ok: true, kind: 'medal_pack', packId: data.packId, medals: data.medals, alreadyFulfilled }
   }
 
   return { ok: false, error: 'unexpected_fulfill_payload' }

@@ -10,6 +10,8 @@ import { isStripePublishableConfigured } from '../config/stripe'
 import { startStripeCheckout } from '../lib/stripe/checkout'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
 import { useAuth } from '../contexts/AuthContext'
+import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
+import { Button } from '../components/ui/Button'
 import { getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
 import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
 import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiquePurchaseFlow'
@@ -21,8 +23,10 @@ export function BoutiqueMedalPacksPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
+  const supabaseActorId = useTalkFootChatActorId()
   const { wallet, addMedals } = useWallet()
-  const { status: checkoutStatus, message: checkoutMessage } = useStripeCheckoutReturn()
+  const { status: checkoutStatus, message: checkoutMessage, canRetry, retryFulfill } =
+    useStripeCheckoutReturn()
   const [stripeLoadingPackId, setStripeLoadingPackId] = useState<string | null>(null)
   const [stripeError, setStripeError] = useState<string | null>(null)
   const { ownsItem, purchaseCosmetic } = useBoutiquePurchase()
@@ -115,6 +119,7 @@ export function BoutiqueMedalPacksPage() {
       kind: 'medal_pack',
       productId: packId,
       userId: user.id,
+      supabaseUserId: supabaseActorId,
       email: user.email,
     })
     setStripeLoadingPackId(null)
@@ -136,14 +141,21 @@ export function BoutiqueMedalPacksPage() {
           Achète des médailles en euros (Stripe) pour débloquer maillots, shorts et packs CDM.
         </p>
         {checkoutMessage ? (
-          <p
-            className={cn(
-              'mt-3 text-sm font-bold',
-              checkoutStatus === 'done' ? 'text-emerald-200' : 'text-amber-200',
-            )}
-          >
-            {checkoutMessage}
-          </p>
+          <div className="mt-3 space-y-2">
+            <p
+              className={cn(
+                'text-sm font-bold',
+                checkoutStatus === 'done' ? 'text-emerald-200' : 'text-amber-200',
+              )}
+            >
+              {checkoutMessage}
+            </p>
+            {canRetry ? (
+              <Button type="button" variant="soft" className="text-xs" onClick={retryFulfill}>
+                Synchroniser mon achat
+              </Button>
+            ) : null}
+          </div>
         ) : null}
         {stripeError ? <p className="mt-2 text-sm font-bold text-rose-200">{stripeError}</p> : null}
         <div className="mt-4 inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
