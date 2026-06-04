@@ -796,7 +796,10 @@ export function GroupPage() {
 
   return (
     <>
-      <div className="flex flex-col gap-7" data-no-swipe="true">
+      <div
+        className="flex min-w-0 max-w-full flex-col gap-7 overflow-x-clip"
+        data-no-swipe="true"
+      >
       <Card className="order-2 overflow-hidden p-0 lg:order-1" elevation="soft">
         <div
           className="relative px-5 py-5 sm:px-6"
@@ -1126,18 +1129,18 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <div className="order-3 grid min-h-0 gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:grid-cols-[320px_1fr] lg:items-stretch">
-        <div className="col-span-full mb-0 flex min-h-9 items-center justify-between gap-2 lg:hidden">
+      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-col gap-2 overflow-x-clip sm:gap-3 max-lg:min-h-[calc(100dvh-10.5rem)] max-lg:max-h-[calc(100dvh-10.5rem)] lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:grid-cols-[320px_1fr] lg:items-stretch">
+        <div className="mb-0 flex min-h-9 min-w-0 shrink-0 items-center justify-between gap-1.5 lg:hidden">
           <Link
             to="/groups"
-            className={cn('shrink-0 px-2.5 py-1.5 text-[11px] font-black', tfGhostOnCard(L))}
+            className={cn('shrink-0 px-2 py-1.5 text-[11px] font-black', tfGhostOnCard(L))}
           >
             ← Groupes
           </Link>
-          <span className={cn('min-w-0 flex-1 truncate text-center text-xs font-black', TF_TEXT_FG)}>
+          <span className={cn('min-w-0 flex-1 truncate px-1 text-center text-xs font-black', TF_TEXT_FG)}>
             <span aria-hidden>{group.emoji}</span> {group.name}
           </span>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex max-w-[42%] shrink-0 items-center justify-end gap-0.5 sm:max-w-none sm:gap-1">
             <ShareButton
               compact
               path={`/group/${group.id}`}
@@ -1148,10 +1151,14 @@ export function GroupPage() {
               <Button
                 type="button"
                 variant="soft"
-                className="h-8 shrink-0 rounded-2xl px-2.5 text-[10px] font-black"
+                className="h-8 shrink-0 rounded-2xl px-2 text-[10px] font-black sm:px-2.5"
+                title="Personnaliser la tribune"
                 onClick={() => setPersonalizeOpen(true)}
               >
-                Perso
+                <span className="sm:hidden" aria-hidden>
+                  ⚙️
+                </span>
+                <span className="hidden sm:inline">Perso</span>
               </Button>
             ) : null}
             {group.createdBy === 'me' ? (
@@ -1159,6 +1166,7 @@ export function GroupPage() {
                 type="button"
                 variant="ghost"
                 className="h-8 shrink-0 rounded-2xl px-2 text-[10px] font-black text-rose-700"
+                title="Supprimer la tribune"
                 disabled={deleteBusy}
                 onClick={() => {
                   if (deleteBusy) return
@@ -1177,12 +1185,110 @@ export function GroupPage() {
                   })
                 }}
               >
-                Suppr.
+                <span className="sm:hidden" aria-hidden>
+                  🗑
+                </span>
+                <span className="hidden sm:inline">Suppr.</span>
               </Button>
             ) : null}
           </div>
         </div>
-        <Card className="p-4 sm:p-5 lg:max-h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain" elevation="soft">
+
+        <div className="min-w-0 shrink-0 space-y-2 lg:hidden">
+          <p className={cn('text-[10px] font-black tracking-[0.18em]', TF_TEXT_MUTED)}>Salons</p>
+          <div
+            className="flex gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="tablist"
+            aria-label="Choisir un salon"
+          >
+            {group.channels.map((c) => {
+              const active = channelId === c.id
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={cn(
+                    'shrink-0 rounded-2xl border px-3 py-2 text-left text-xs font-black transition',
+                    active
+                      ? L
+                        ? 'border-tf-dark/25 bg-white shadow-sm ring-2 ring-tf-electric/25'
+                        : 'border-sky-400/40 bg-white/[0.12] ring-2 ring-sky-400/30'
+                      : L
+                        ? 'border-tf-grey-pastel/60 bg-tf-white/90'
+                        : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
+                  )}
+                  style={
+                    active && salonSurface
+                      ? { borderColor: salonSurface.boxBorderColor }
+                      : undefined
+                  }
+                  onClick={() => setChannelId(c.id)}
+                >
+                  <span className="whitespace-nowrap">
+                    {c.emoji} {c.name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {canManageGroup ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {!salonFormOpen ? (
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="rounded-2xl text-[10px] font-black"
+                  disabled={group.channels.length >= MAX_GROUP_CHANNELS}
+                  onClick={() => {
+                    setNewSalonError(null)
+                    setSalonFormOpen(true)
+                  }}
+                >
+                  + Nouvelle tribune
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-2xl text-[10px] font-black"
+                  onClick={() => {
+                    setSalonFormOpen(false)
+                    setNewSalonError(null)
+                  }}
+                >
+                  Annuler
+                </Button>
+              )}
+            </div>
+          ) : null}
+          <details
+            className={cn(
+              'rounded-2xl border px-3 py-2',
+              L ? 'border-tf-grey-pastel/40 bg-tf-white/95' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
+            )}
+            data-no-swipe="true"
+          >
+            <summary
+              className={cn(
+                'cursor-pointer list-none text-[11px] font-black uppercase tracking-wide [&::-webkit-details-marker]:hidden',
+                TF_TEXT_MUTED,
+              )}
+            >
+              Tifo pixel (match)
+            </summary>
+            <GroupTifoPanel
+              groupId={group.id}
+              matches={matches}
+              groupClubId={groupMainClubId}
+              groupClubLabel={groupMainClubLabel ?? undefined}
+              isGroupAdmin={group.createdBy === 'me'}
+            />
+          </details>
+        </div>
+
+        <Card className="hidden p-4 sm:p-5 lg:block lg:max-h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain" elevation="soft">
           <div className={cn('text-[11px] font-black tracking-[0.18em]', TF_TEXT_MUTED)}>
             SALONS
           </div>
@@ -1332,7 +1438,7 @@ export function GroupPage() {
 
           <details
             className={cn(
-              'mt-4 rounded-2xl border px-3 py-2',
+              'mt-4 hidden rounded-2xl border px-3 py-2 lg:block',
               L ? 'border-tf-grey-pastel/40 bg-tf-white/95' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
             )}
             data-no-swipe="true"
@@ -1355,11 +1461,82 @@ export function GroupPage() {
           </details>
         </Card>
 
+        {canManageGroup && salonFormOpen ? (
+          <Card className="min-w-0 space-y-2 p-3 lg:hidden" elevation="soft">
+            <div className={cn('text-xs font-black', TF_TEXT_FG)}>Créer une tribune</div>
+            <form
+              className="space-y-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                setNewSalonError(null)
+                const name = newSalonName.trim()
+                if (name.length < 2) {
+                  setNewSalonError('Nom d’au moins 2 caractères.')
+                  return
+                }
+                const desc = newSalonDesc.trim() || 'Discussion'
+                if (containsBannedWord(name) || containsBannedWord(desc)) {
+                  setNewSalonError(MODERATION_REFUSED_MESSAGE_FR)
+                  return
+                }
+                if (group.channels.length >= MAX_GROUP_CHANNELS) {
+                  setNewSalonError(`Limite de ${MAX_GROUP_CHANNELS} tribunes atteinte.`)
+                  return
+                }
+                const id = newChannelIdFromName(name)
+                if (group.channels.some((c) => c.id === id)) {
+                  setNewSalonError('Réessaie avec un autre nom.')
+                  return
+                }
+                const ch: SupporterChannel = {
+                  id,
+                  name: name.slice(0, 48),
+                  description: desc.slice(0, 120),
+                  emoji: (newSalonEmoji.trim() || '🔊').slice(0, 8),
+                }
+                updateGroup(group.id, { channels: [...group.channels, ch] })
+                setChannelId(ch.id)
+                setNewSalonName('')
+                setNewSalonDesc('')
+                setNewSalonEmoji('🔊')
+                setSalonFormOpen(false)
+              }}
+            >
+              <Input
+                value={newSalonName}
+                onChange={(e) => setNewSalonName(e.target.value)}
+                placeholder="Nom de la tribune"
+                className="text-sm"
+                aria-label="Nom de la nouvelle tribune"
+              />
+              <Input
+                value={newSalonDesc}
+                onChange={(e) => setNewSalonDesc(e.target.value)}
+                placeholder="Description courte"
+                className="text-sm"
+                aria-label="Description"
+              />
+              <Input
+                value={newSalonEmoji}
+                onChange={(e) => setNewSalonEmoji(e.target.value)}
+                placeholder="Emoji"
+                className="text-sm"
+                aria-label="Emoji de la tribune"
+              />
+              {newSalonError ? (
+                <p className="text-xs font-semibold text-rose-600">{newSalonError}</p>
+              ) : null}
+              <Button type="submit" variant="primary" className="w-full rounded-2xl text-xs font-black">
+                Ajouter
+              </Button>
+            </form>
+          </Card>
+        ) : null}
+
         <Card
           className={cn(
-            'flex min-h-0 flex-col overflow-hidden border-2 p-0',
-            /* Mobile : plus de hauteur pour le fil — l’en-tête + débat ne doivent pas le tuer */
-            'max-lg:h-[min(92dvh,calc(100dvh-4.25rem))] max-lg:max-h-[min(92dvh,calc(100dvh-4.25rem))]',
+            'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden border-2 p-0',
+            'max-lg:min-h-0',
             'min-h-[min(50dvh,22rem)] sm:min-h-[min(52dvh,24rem)]',
             'lg:min-h-[18rem] lg:h-full lg:max-h-none',
           )}
@@ -1413,11 +1590,20 @@ export function GroupPage() {
                     <span aria-hidden className="text-base leading-none">
                       {debateFromQuery ? '↻' : '🗣️'}
                     </span>
-                    {debateFromQuery
-                      ? 'Changer le débat de la tribune'
-                      : groupDebates.length > 0
-                        ? `Débat de la tribune (${groupDebates.length})`
-                        : 'Débat de la tribune'}
+                    <span className="max-sm:hidden">
+                      {debateFromQuery
+                        ? 'Changer le débat de la tribune'
+                        : groupDebates.length > 0
+                          ? `Débat de la tribune (${groupDebates.length})`
+                          : 'Débat de la tribune'}
+                    </span>
+                    <span className="sm:hidden">
+                      {debateFromQuery
+                        ? 'Changer le débat'
+                        : groupDebates.length > 0
+                          ? `Débat (${groupDebates.length})`
+                          : 'Débat tribune'}
+                    </span>
                   </Button>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
@@ -1523,14 +1709,14 @@ export function GroupPage() {
             </div>
           ) : null}
 
-          <div className="mx-4 mt-3 shrink-0 space-y-2 sm:mx-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="mx-3 mt-3 min-w-0 shrink-0 space-y-2 sm:mx-5">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <Input
                 type="search"
                 value={salonSearchQuery}
                 onChange={(e) => setSalonSearchQuery(e.target.value)}
                 placeholder="Rechercher dans cette tribune…"
-                className="h-10 flex-1 rounded-xl border-tf-grey-pastel/80 text-sm font-semibold"
+                className="h-10 min-w-0 flex-1 rounded-xl border-tf-grey-pastel/80 text-sm font-semibold"
                 aria-label="Rechercher dans les messages de la tribune"
               />
               {salonSearchQuery.trim() ? (
@@ -1614,7 +1800,7 @@ export function GroupPage() {
             </div>
           ) : (
             <div
-              className="shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3"
+              className="min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3"
               style={salonSurface?.backdrop}
             >
               {groupChatModerationHint ? (
