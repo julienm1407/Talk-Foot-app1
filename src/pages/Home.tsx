@@ -44,6 +44,7 @@ import { CdmHomeReminder } from '../components/cdm/CdmHomeReminder'
 import { FavoriteNationsHomeSection } from '../components/cdm/FavoriteNationsHomeSection'
 import { FavoriteNationsAlertBar } from '../components/cdm/FavoriteNationsAlertBar'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
+import { DailyTokenBonusCard } from '../components/wallet/DailyTokenBonusCard'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -287,6 +288,9 @@ export function HomePage() {
 
       <div className="md:hidden space-y-6 sm:space-y-8">
       <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
+      <div className="mx-auto w-full max-w-tf-content px-3 sm:px-4">
+        <DailyTokenBonusCard variant="prominent" />
+      </div>
       {cdmTopBlockMobile ? (
         <div className="mx-auto w-full max-w-tf-content px-3 sm:px-4">
           {cdmTopBlockMobile}
