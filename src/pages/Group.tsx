@@ -7,6 +7,8 @@ import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
+import { useSubscription } from '../hooks/useSubscription'
+import { TribuneLimitPopup } from '../components/subscription/TribuneLimitPopup'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { getGroupAccess } from '../utils/groupAccess'
 import { isRivalClub } from '../data/fanRivals'
@@ -353,14 +355,6 @@ export function GroupPage() {
           isOpenPublicDebateSalon),
     )
 
-  /** Groupe public : adhésion locale + Supabase pour « Mes groupes » et cohérence RLS membre. */
-  useEffect(() => {
-    if (!group || !authUser?.id || authUser.isAnonymous) return
-    if (!isPublicGroup) return
-    if (isJoined(group.id)) return
-    joinGroup(group.id)
-  }, [group?.id, isPublicGroup, authUser?.id, authUser?.isAnonymous, isJoined, joinGroup])
-
   const { publishMessage: publishGroupChannelMessage, loadOlderMessages: loadOlderCloudMessages } =
     useSupporterGroupChannelSync({
       groupId: group?.id ?? '',
@@ -399,15 +393,35 @@ export function GroupPage() {
   const [newSalonError, setNewSalonError] = useState<string | null>(null)
   const [groupChatModerationHint, setGroupChatModerationHint] = useState<string | null>(null)
   const [groupChatLimitHint, setGroupChatLimitHint] = useState<string | null>(null)
-  const [joinLimitHint, setJoinLimitHint] = useState<string | null>(null)
+  const [joinOtherError, setJoinOtherError] = useState<string | null>(null)
+  const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | null>(null)
+  const { tier } = useSubscription()
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
   const handleJoinGroup = useCallback(() => {
     if (!group) return
     const r = joinGroup(group.id)
-    if (!r.ok) setJoinLimitHint(r.reason)
-    else setJoinLimitHint(null)
+    if (!r.ok) {
+      if (r.limitKind === 'join') {
+        setTribuneLimitPopup('join')
+        setJoinOtherError(null)
+      } else {
+        setJoinOtherError(r.reason)
+      }
+      return
+    }
+    setJoinOtherError(null)
+    setTribuneLimitPopup(null)
   }, [group, joinGroup])
+
+  /** Groupe public : adhésion locale + Supabase pour « Mes groupes » et cohérence RLS membre. */
+  useEffect(() => {
+    if (!group || !authUser?.id || authUser.isAnonymous) return
+    if (!isPublicGroup) return
+    if (isJoined(group.id)) return
+    const r = joinGroup(group.id)
+    if (!r.ok && r.limitKind === 'join') setTribuneLimitPopup('join')
+  }, [group?.id, isPublicGroup, authUser?.id, authUser?.isAnonymous, isJoined, joinGroup])
 
   useEffect(() => {
     if (!group || !channel || !threadKey) return
@@ -991,13 +1005,8 @@ export function GroupPage() {
                   >
                     Rejoindre cette tribune
                   </Button>
-                  {joinLimitHint ? (
-                    <p className="text-xs font-semibold text-amber-200">
-                      {joinLimitHint}{' '}
-                      <Link to="/formules" className="underline">
-                        Formules
-                      </Link>
-                    </p>
+                  {joinOtherError ? (
+                    <p className="text-xs font-semibold text-amber-200">{joinOtherError}</p>
                   ) : null}
                 </div>
               ) : null}
@@ -1958,6 +1967,11 @@ export function GroupPage() {
               >
                 Rejoindre pour écrire
               </Button>
+              {joinOtherError ? (
+                <p className="mx-auto mt-2 max-w-sm text-center text-xs font-semibold text-amber-800">
+                  {joinOtherError}
+                </p>
+              ) : null}
             </div>
           ) : (
             <div

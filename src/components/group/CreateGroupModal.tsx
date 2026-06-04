@@ -18,7 +18,7 @@ import { ALL_CLUBS_CATALOG } from '../../data/allClubsCatalog'
 import type { ClubCatalogEntry } from '../../data/allClubsCatalog'
 import { CONFEDERATIONS, NATIONS } from '../../data/nations'
 import { useSubscription } from '../../hooks/useSubscription'
-import { Link } from 'react-router-dom'
+import { TribuneLimitPopup } from '../subscription/TribuneLimitPopup'
 
 export function CreateGroupModal({
   open,
@@ -29,9 +29,9 @@ export function CreateGroupModal({
   onClose: () => void
   onCreate: (
     g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>,
-  ) => void
+  ) => { ok: true } | { ok: false; reason: string; limitKind?: 'join' | 'create' }
 }) {
-  const { plan } = useSubscription()
+  const { plan, tier } = useSubscription()
   const themeCustomization = plan.flags.groupThemeCustomization
   const [name, setName] = useState('Mon groupe')
   const [emoji, setEmoji] = useState('🧢')
@@ -44,6 +44,7 @@ export function CreateGroupModal({
     'smoke',
   )
   const [nameError, setNameError] = useState<string | null>(null)
+  const [createLimitPopupOpen, setCreateLimitPopupOpen] = useState(false)
   const [groupKind, setGroupKind] = useState<'public' | 'private'>('public')
   const [hashtags, setHashtags] = useState<string[]>([])
   const [tagDraft, setTagDraft] = useState('')
@@ -62,6 +63,7 @@ export function CreateGroupModal({
     setAccent('')
     setBackground('smoke')
     setNameError(null)
+    setCreateLimitPopupOpen(false)
     setGroupKind('public')
     setHashtags([])
     setTagDraft('')
@@ -628,7 +630,7 @@ export function CreateGroupModal({
                   const theme: GroupTheme = { primary, secondary, background }
                   if (accent.trim()) theme.accent = accent.trim()
                   const cleanCountry = affiliationCountry.trim()
-                  onCreate({
+                  const result = onCreate({
                     name: trimmedName,
                     emoji: (emoji.trim() || '🧢').slice(0, 8),
                     location: location.trim() || undefined,
@@ -648,6 +650,14 @@ export function CreateGroupModal({
                           }
                         : undefined,
                   })
+                  if (!result.ok) {
+                    if (result.limitKind === 'create') {
+                      setCreateLimitPopupOpen(true)
+                    } else {
+                      setNameError(result.reason)
+                    }
+                    return
+                  }
                   onClose()
                 }}
               >
@@ -678,6 +688,13 @@ export function CreateGroupModal({
         </div>
         </Card>
       </div>
+
+      <TribuneLimitPopup
+        open={createLimitPopupOpen}
+        kind="create"
+        tier={tier}
+        onClose={() => setCreateLimitPopupOpen(false)}
+      />
     </div>
   )
 }

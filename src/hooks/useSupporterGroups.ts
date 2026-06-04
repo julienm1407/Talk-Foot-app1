@@ -23,11 +23,12 @@ import { computeGroupIntensity } from '../utils/groupIntensity'
 import { useSubscription } from './useSubscription'
 import {
   canCreateGroup,
+  createGroupLimitMessage,
+  joinGroupLimitMessage,
   canJoinGroup,
   canJoinGroupByMemberCap,
   groupMemberCapForTier,
 } from '../utils/subscriptionEntitlements'
-import { getSubscriptionPlan } from '../data/subscriptionPlans'
 
 function joinedKeyForUser(userId: string) {
   return `talkfoot.joinedGroupIds.v1.${userId}`
@@ -325,7 +326,11 @@ export function useSupporterGroups() {
   }, [userId])
 
   const joinGroup = useCallback(
-    (id: string): { ok: true } | { ok: false; reason: string } => {
+    (
+      id: string,
+    ):
+      | { ok: true }
+      | { ok: false; reason: string; limitKind?: 'join' | 'create' } => {
       if (!userId) return { ok: false, reason: 'Connexion requise.' }
       const target = groups.find((g) => g.id === id)
       if (target) {
@@ -340,10 +345,11 @@ export function useSupporterGroups() {
       }
       if (!joinedGroupIds.includes(id)) {
         const gate = canJoinGroup(tier, joinedGroupIds.length)
-        if (!gate.ok) {
+        if (!gate.ok && gate.limit != null) {
           return {
             ok: false,
-            reason: `Tu peux rejoindre ${gate.limit} groupes max (${plan.name}). Passe sur /formules.`,
+            reason: joinGroupLimitMessage(tier, gate.limit),
+            limitKind: 'join',
           }
         }
       }
@@ -373,7 +379,6 @@ export function useSupporterGroups() {
       refreshGroupPresence,
       joinedGroupIds,
       tier,
-      plan,
     ],
   )
 
@@ -404,16 +409,22 @@ export function useSupporterGroups() {
   )
 
   const createGroup = useCallback(
-    (g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>) => {
+    (
+      g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>,
+    ):
+      | { ok: true; group: SupporterGroup }
+      | { ok: false; reason: string; limitKind?: 'join' | 'create' } => {
       if (!userId) {
-        throw new Error('Connexion requise pour créer un groupe.')
+        return { ok: false, reason: 'Connexion requise pour créer une tribune.' }
       }
       const createdCount = custom.filter((x) => x.createdBy === 'me').length
       const gate = canCreateGroup(tier, createdCount)
       if (!gate.ok) {
-        throw new Error(
-          `Limite de ${gate.limit} groupes créés (${getSubscriptionPlan(tier).name}). Voir /formules.`,
-        )
+        return {
+          ok: false,
+          reason: createGroupLimitMessage(tier, gate.limit),
+          limitKind: 'create',
+        }
       }
       const id = `g-me-${Date.now()}-${Math.random().toString(16).slice(2)}`
       const hashtags =
@@ -463,7 +474,7 @@ export function useSupporterGroups() {
           await refreshCloudGroups()
         })()
       }
-      return next
+      return { ok: true, group: next }
     },
     [userId, persistCustom, persistJoined, refreshCloudGroups, custom, tier],
   )

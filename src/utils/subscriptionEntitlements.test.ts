@@ -4,6 +4,8 @@ import {
   canCreateDebate,
   canCreateGroup,
   canJoinGroup,
+  createGroupLimitMessage,
+  joinGroupLimitMessage,
   effectiveTier,
   liveMatchTokenGrantAllowed,
   liveTokensEarnedThisHour,
@@ -30,6 +32,11 @@ describe('subscriptionEntitlements', () => {
   it('canJoinGroup freemium max 5', () => {
     expect(canJoinGroup('freemium', 5).ok).toBe(false)
     expect(canJoinGroup('supporter_plus', 99).ok).toBe(true)
+  })
+
+  it('messages de limite tribunes freemium', () => {
+    expect(joinGroupLimitMessage('freemium', 5)).toContain('tribunes à rejoindre')
+    expect(createGroupLimitMessage('freemium', 2)).toContain('tribunes créées')
   })
 
   it('freemium ne peut pas créer de débat', () => {

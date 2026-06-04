@@ -275,8 +275,10 @@ export function GroupsHubPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreate={(payload) => {
-          const created = createGroup(payload)
-          navigate(`/group/${created.id}`)
+          const r = createGroup(payload)
+          if (!r.ok) return r
+          navigate(`/group/${r.group.id}`)
+          return { ok: true as const }
         }}
       />
     </div>

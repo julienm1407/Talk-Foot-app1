@@ -51,6 +51,24 @@ export function canJoinGroup(
   return { ok: joinedCount < limit, limit }
 }
 
+/** Message affiché quand l’utilisateur tente de rejoindre une tribune au-delà du plafond de sa formule. */
+export function joinGroupLimitMessage(
+  tier: SubscriptionTierId,
+  limit: number,
+): string {
+  const planName = getSubscriptionPlan(tier).name
+  return `Vous avez atteint la limite de tribunes à rejoindre (${limit} max avec ${planName}).`
+}
+
+/** Message affiché quand l’utilisateur tente de créer une tribune au-delà du plafond de sa formule. */
+export function createGroupLimitMessage(
+  tier: SubscriptionTierId,
+  limit: number,
+): string {
+  const planName = getSubscriptionPlan(tier).name
+  return `Vous avez atteint la limite de tribunes créées (${limit} max avec ${planName}).`
+}
+
 export function maxGroupMembersForTier(tier: SubscriptionTierId): number {
   const n = getSubscriptionPlan(tier).limits.maxGroupMembers
   return Number.isFinite(n) ? n : 10_000
