@@ -1134,17 +1134,19 @@ export function GroupPage() {
       </Card>
 
       <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-2 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
-        <div className="mb-0 flex min-h-9 min-w-0 shrink-0 items-center justify-between gap-1.5 lg:hidden">
-          <Link
-            to="/groups"
-            className={cn('shrink-0 px-2 py-1.5 text-[11px] font-black', tfGhostOnCard(L))}
-          >
-            ← Groupes
-          </Link>
-          <span className={cn('min-w-0 flex-1 truncate px-1 text-center text-xs font-black', TF_TEXT_FG)}>
-            <span aria-hidden>{group.emoji}</span> {group.name}
-          </span>
-          <div className="flex max-w-[42%] shrink-0 items-center justify-end gap-0.5 sm:max-w-none sm:gap-1">
+        <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 lg:hidden">
+          <div className="flex min-w-0 items-center gap-1">
+            <Link
+              to="/groups"
+              className={cn('shrink-0 rounded-xl px-1.5 py-1 text-[11px] font-black', tfGhostOnCard(L))}
+            >
+              ←
+            </Link>
+            <span className={cn('min-w-0 truncate text-xs font-black leading-tight', TF_TEXT_FG)}>
+              <span aria-hidden>{group.emoji}</span> {group.name}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <ShareButton
               compact
               path={`/group/${group.id}`}
@@ -1155,21 +1157,18 @@ export function GroupPage() {
               <Button
                 type="button"
                 variant="soft"
-                className="h-8 shrink-0 rounded-2xl px-2 text-[10px] font-black sm:px-2.5"
+                className="size-8 shrink-0 rounded-xl p-0 text-base"
                 title="Personnaliser la tribune"
                 onClick={() => setPersonalizeOpen(true)}
               >
-                <span className="sm:hidden" aria-hidden>
-                  ⚙️
-                </span>
-                <span className="hidden sm:inline">Perso</span>
+                <span aria-hidden>⚙️</span>
               </Button>
             ) : null}
             {group.createdBy === 'me' ? (
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 shrink-0 rounded-2xl px-2 text-[10px] font-black text-rose-700"
+                className="size-8 shrink-0 rounded-xl p-0 text-base text-rose-700"
                 title="Supprimer la tribune"
                 disabled={deleteBusy}
                 onClick={() => {
@@ -1189,19 +1188,15 @@ export function GroupPage() {
                   })
                 }}
               >
-                <span className="sm:hidden" aria-hidden>
-                  🗑
-                </span>
-                <span className="hidden sm:inline">Suppr.</span>
+                <span aria-hidden>🗑</span>
               </Button>
             ) : null}
           </div>
         </div>
 
-        <div className="min-w-0 shrink-0 space-y-2 lg:hidden">
-          <p className={cn('text-[10px] font-black tracking-[0.18em]', TF_TEXT_MUTED)}>Salons</p>
+        <div className="min-w-0 shrink-0 space-y-1 lg:hidden">
           <div
-            className="flex gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex gap-1.5 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="tablist"
             aria-label="Choisir un salon"
           >
@@ -1214,7 +1209,7 @@ export function GroupPage() {
                   role="tab"
                   aria-selected={active}
                   className={cn(
-                    'shrink-0 rounded-2xl border px-3 py-2 text-left text-xs font-black transition',
+                    'shrink-0 rounded-xl border px-2.5 py-1.5 text-left text-[11px] font-black transition',
                     active
                       ? L
                         ? 'border-tf-dark/25 bg-white shadow-sm ring-2 ring-tf-electric/25'
@@ -1237,60 +1232,62 @@ export function GroupPage() {
               )
             })}
           </div>
-          {canManageGroup ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {!salonFormOpen ? (
-                <Button
-                  type="button"
-                  variant="soft"
-                  className="rounded-2xl text-[10px] font-black"
-                  disabled={group.channels.length >= MAX_GROUP_CHANNELS}
-                  onClick={() => {
-                    setNewSalonError(null)
-                    setSalonFormOpen(true)
-                  }}
-                >
-                  + Nouvelle tribune
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="rounded-2xl text-[10px] font-black"
-                  onClick={() => {
-                    setSalonFormOpen(false)
-                    setNewSalonError(null)
-                  }}
-                >
-                  Annuler
-                </Button>
-              )}
-            </div>
-          ) : null}
           <details
             className={cn(
-              'overflow-hidden rounded-2xl border px-3 py-2',
+              'overflow-hidden rounded-xl border px-2 py-1.5',
               L ? 'border-tf-grey-pastel/40 bg-tf-white/95' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
             )}
             data-no-swipe="true"
           >
             <summary
               className={cn(
-                'cursor-pointer list-none text-[11px] font-black uppercase tracking-wide [&::-webkit-details-marker]:hidden',
+                'cursor-pointer list-none text-[10px] font-black uppercase tracking-wide [&::-webkit-details-marker]:hidden',
                 TF_TEXT_MUTED,
               )}
             >
-              Tifo pixel (match)
+              Tifo · options
             </summary>
-            <div className="max-h-[min(38dvh,15rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-              <GroupTifoPanel
-                embedded
-                groupId={group.id}
-                matches={matches}
-                groupClubId={groupMainClubId}
-                groupClubLabel={groupMainClubLabel ?? undefined}
-                isGroupAdmin={group.createdBy === 'me'}
-              />
+            <div className="space-y-2 pt-2">
+              {canManageGroup ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {!salonFormOpen ? (
+                    <Button
+                      type="button"
+                      variant="soft"
+                      className="rounded-xl text-[10px] font-black"
+                      disabled={group.channels.length >= MAX_GROUP_CHANNELS}
+                      onClick={() => {
+                        setNewSalonError(null)
+                        setSalonFormOpen(true)
+                      }}
+                    >
+                      + Nouvelle tribune
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="rounded-xl text-[10px] font-black"
+                      onClick={() => {
+                        setSalonFormOpen(false)
+                        setNewSalonError(null)
+                      }}
+                    >
+                      Annuler
+                    </Button>
+                  )}
+                </div>
+              ) : null}
+              <div className="max-h-[min(38dvh,15rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                <GroupTifoPanel
+                  embedded
+                  groupId={group.id}
+                  matches={matches}
+                  groupClubId={groupMainClubId}
+                  groupClubLabel={groupMainClubLabel ?? undefined}
+                  isGroupAdmin={group.createdBy === 'me'}
+                />
+              </div>
             </div>
           </details>
         </div>
@@ -1543,7 +1540,7 @@ export function GroupPage() {
         <Card
           className={cn(
             'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden border-2 p-0',
-            'max-lg:min-h-0 max-lg:flex-1',
+            'max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[auto_minmax(0,1fr)_auto]',
             'lg:min-h-[min(50dvh,22rem)] lg:h-full lg:max-h-none',
           )}
           elevation="soft"
@@ -1553,8 +1550,14 @@ export function GroupPage() {
               : undefined
           }
         >
-          <div className={tfSalonHeader(L, 'shrink-0 p-3 sm:p-4 lg:p-5')}>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
+          <div
+            className={cn(
+              tfSalonHeader(L, 'shrink-0 p-3 sm:p-4 lg:p-5'),
+              'max-lg:row-start-1 max-lg:border-b max-lg:p-2 max-lg:sm:p-3',
+              L ? 'max-lg:border-tf-grey-pastel/40' : 'max-lg:border-white/10',
+            )}
+          >
+            <div className="hidden flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 lg:flex">
               <div className="min-w-0 flex-1 sm:min-w-[14rem]">
                 <div
                   className={cn(
@@ -1650,6 +1653,90 @@ export function GroupPage() {
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-1.5 lg:hidden">
+              {channel?.id === 'general' ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  className={cn(
+                    'h-8 shrink-0 rounded-xl px-2.5 text-[10px] font-black',
+                    'shadow-[0_4px_16px_rgba(255,59,59,0.28)]',
+                  )}
+                  onClick={() => setDebatePickerOpen(true)}
+                >
+                  <span aria-hidden className="mr-1">
+                    {debateFromQuery ? '↻' : '🗣️'}
+                  </span>
+                  {debateFromQuery
+                    ? 'Changer'
+                    : groupDebates.length > 0
+                      ? `Débat (${groupDebates.length})`
+                      : 'Débat'}
+                </Button>
+              ) : null}
+              {preferencesComplete && favoriteClubIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setVirageMode(!virageMode)}
+                  className={cn(
+                    'h-8 shrink-0 rounded-full border px-2 py-1 text-[9px] font-black',
+                    virageMode
+                      ? 'border-tf-dark bg-tf-dark text-white'
+                      : tfChipSurface(L, 'hover:opacity-95'),
+                  )}
+                  title={LIVE_FIL_EQUIPE_COEUR.title}
+                >
+                  {virageMode ? '✓ Cœur' : 'Cœur'}
+                </button>
+              ) : null}
+              {channel?.id === 'general' && debateFromQuery ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'h-8 shrink-0 rounded-xl border px-2 py-1 text-[9px] font-bold',
+                    tfChipSurface(L, 'hover:opacity-95'),
+                  )}
+                  onClick={() => {
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev)
+                      next.delete('debate')
+                      return next
+                    })
+                  }}
+                >
+                  Détacher
+                </button>
+              ) : null}
+              <details
+                className={cn('min-w-[5.5rem] shrink-0', L ? 'text-tf-grey' : 'text-sky-200/90')}
+                data-no-swipe="true"
+              >
+                <summary
+                  className={cn(
+                    'flex h-8 cursor-pointer list-none items-center justify-center rounded-xl border px-2 text-[10px] font-black [&::-webkit-details-marker]:hidden',
+                    tfChipSurface(L),
+                  )}
+                >
+                  🔍
+                </summary>
+                <div className="mt-1.5 w-full min-w-[10rem]">
+                  <Input
+                    type="search"
+                    value={salonSearchQuery}
+                    onChange={(e) => setSalonSearchQuery(e.target.value)}
+                    placeholder="Rechercher…"
+                    className="h-9 w-full rounded-xl text-sm font-semibold"
+                    aria-label="Rechercher dans les messages"
+                  />
+                  {salonSearchQuery.trim() ? (
+                    <p className="mt-1 text-[10px] font-bold text-tf-grey">
+                      {displayMessages.length} résultat{displayMessages.length !== 1 ? 's' : ''}
+                    </p>
+                  ) : null}
+                </div>
+              </details>
+            </div>
+
             {debate && channel?.id === 'general' ? (
               <>
                 <LinkedDebateBanner
@@ -1659,7 +1746,7 @@ export function GroupPage() {
                 />
                 <details
                   className={cn(
-                    'mt-2 rounded-xl border lg:hidden',
+                    'mt-1.5 rounded-xl border lg:hidden',
                     L ? 'border-tf-dark/12 bg-white' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
                   )}
                   data-no-swipe="true"
@@ -1696,7 +1783,7 @@ export function GroupPage() {
           </div>
 
           {accessLevel === 'readonly' ? (
-            <div className="mx-4 mt-4 shrink-0 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950 sm:mx-5">
+            <div className="mx-3 mt-2 max-lg:row-start-1 shrink-0 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950 sm:mx-5 sm:mt-4 sm:px-4 sm:py-3 sm:text-sm">
               <p className="font-black text-amber-900">Lecture seule (tribune « ennemi »)</p>
               <p className="mt-2 leading-relaxed text-amber-900/95">
                 Ici, c’est volontaire : dans les <strong>groupes</strong>, une tribune rattachée à un club{' '}
@@ -1715,7 +1802,7 @@ export function GroupPage() {
             </div>
           ) : null}
 
-          <div className="mx-3 mt-3 min-w-0 shrink-0 space-y-2 sm:mx-5">
+          <div className="mx-3 mt-3 hidden min-w-0 shrink-0 space-y-2 sm:mx-5 lg:block">
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <Input
                 type="search"
@@ -1747,17 +1834,29 @@ export function GroupPage() {
           <div
             ref={feedRef}
             className={cn(
-              'mt-4 min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-3 [-webkit-overflow-scrolling:touch] sm:mt-5 sm:px-5 sm:py-4',
-              'scroll-pb-3',
+              'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
+              'max-lg:row-start-2 max-lg:mt-0',
+              'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',
-              /* Garde une zone de lecture minimum quand l’en-tête est chargé (débat, etc.) */
-              debate && channel?.id === 'general' ? 'max-lg:min-h-[8rem]' : 'max-lg:min-h-[10rem]',
             )}
             style={salonSurface?.backdrop}
             role="log"
             aria-label="Messages de la tribune"
             aria-live="polite"
           >
+            {groupCloudChatEnabled && hasOlderOnServer && oldestCloudIso ? (
+              <div className="mb-2 lg:hidden">
+                <Button
+                  type="button"
+                  variant="soft"
+                  className="h-8 w-full rounded-xl text-[10px] font-black"
+                  disabled={olderLoading}
+                  onClick={() => void onLoadOlderCloudMessages()}
+                >
+                  {olderLoading ? 'Chargement…' : 'Messages plus anciens'}
+                </Button>
+              </div>
+            ) : null}
             <MessageList
               messages={displayMessages}
               usersById={usersById}
@@ -1784,11 +1883,11 @@ export function GroupPage() {
           </div>
 
           {accessLevel === 'readonly' ? (
-            <div className="border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-4 py-4 text-center text-sm font-bold text-tf-grey sm:px-5">
+            <div className="border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/20 px-4 py-4 text-center text-sm font-bold text-tf-grey max-lg:row-start-3 sm:px-5">
               Écriture désactivée sur cette tribune (mode lecture seule).
             </div>
           ) : !canWriteInTribune ? (
-            <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-gradient-to-b from-slate-50/95 to-tf-ice/90 px-4 py-4 sm:px-5">
+            <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-gradient-to-b from-slate-50/95 to-tf-ice/90 px-4 py-4 max-lg:row-start-3 sm:px-5">
               <p className="text-center text-sm font-bold text-tf-dark">
                 {debate && channel?.id === 'general' && debate.salonAccess === 'members'
                   ? 'Ce débat est réservé aux membres du groupe — rejoins pour participer.'
@@ -1805,7 +1904,10 @@ export function GroupPage() {
             </div>
           ) : (
             <div
-              className="min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3 max-sm:pb-1"
+              className={cn(
+                'min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-md max-lg:row-start-3 sm:px-5 sm:py-3',
+                L ? 'bg-white/95' : 'bg-[#041a2d]/95',
+              )}
               style={salonSurface?.backdrop}
             >
               {groupChatModerationHint ? (
