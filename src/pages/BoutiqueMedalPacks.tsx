@@ -12,7 +12,7 @@ import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
 import { useAuth } from '../contexts/AuthContext'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { Button } from '../components/ui/Button'
-import { StripePurchaseSyncPanel } from '../components/shop/StripePurchaseSyncPanel'
+import { StripeRefundRequestPanel } from '../components/shop/StripeRefundRequestPanel'
 import { getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
 import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
 import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiquePurchaseFlow'
@@ -153,12 +153,12 @@ export function BoutiqueMedalPacksPage() {
             </p>
             {canRetry ? (
               <Button type="button" variant="soft" className="text-xs" onClick={retryFulfill}>
-                Réessayer la synchronisation
+                Réessayer le crédit
               </Button>
             ) : null}
           </div>
         ) : null}
-        <StripePurchaseSyncPanel className="mt-4" reloadOnMedalCredit />
+        <StripeRefundRequestPanel className="mt-4" purchaseKind="medal_pack" />
         {stripeError ? <p className="mt-2 text-sm font-bold text-rose-200">{stripeError}</p> : null}
         <div className="mt-4 inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
           <span className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Solde actuel</span>

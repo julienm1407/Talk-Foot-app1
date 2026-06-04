@@ -10,15 +10,15 @@ import type { SubscriptionTierId } from '../types/subscription'
 function errorMessageFr(code: string | undefined): string {
   switch (code) {
     case 'supabase_service_not_configured':
-      return 'Paiement reçu. Ajoute SUPABASE_SERVICE_ROLE_KEY sur Vercel (voir support), puis clique « Synchroniser mon achat ».'
+      return 'Paiement reçu — crédit en attente côté serveur. Utilise la demande de remboursement ou contacte le support.'
     case 'profile_not_found':
-      return 'Paiement reçu — profil introuvable. Connecte-toi avec le même compte, puis « Synchroniser mon achat ».'
+      return 'Paiement reçu — profil introuvable. Connecte-toi avec le même compte ou contacte le support.'
     case 'session_user_mismatch':
       return 'Session de paiement non liée à ce compte. Ouvre la page avec le compte utilisé au paiement.'
     case 'unknown_pack':
       return 'Pack inconnu côté serveur — contacte le support avec la date d’achat.'
     default:
-      return 'Paiement reçu — clique « Synchroniser mon achat » ou recharge dans 1 minute.'
+      return 'Paiement reçu — recharge la page dans 1 minute ou contacte le support.'
   }
 }
 
@@ -92,7 +92,7 @@ export function useStripeCheckoutReturn() {
     autoRan.current = true
     void runFulfill().catch(() => {
       setStatus('error')
-      setMessage('Paiement reçu — utilise « Synchroniser mon achat » ci-dessous.')
+      setMessage('Paiement reçu — réessaie ou utilise la demande de remboursement ci-dessous.')
     })
   }, [checkoutSuccess, sessionId, user?.id, runFulfill])
 
