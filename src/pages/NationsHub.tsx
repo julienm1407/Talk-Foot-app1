@@ -89,9 +89,9 @@ export function NationsHub() {
           Aucune sélection pour ces critères. Essaie un autre filtre ou modifie ta recherche.
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 [&>*]:min-w-0">
           {filtered.map((nation) => (
-            <NationCard key={nation.iso} nation={nation} variant="jersey" />
+            <NationCard key={nation.iso} nation={nation} variant="jersey" className="w-full" />
           ))}
         </div>
       )}

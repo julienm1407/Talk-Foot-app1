@@ -101,7 +101,15 @@ export function BoutiqueShopModalPanel({
           ) : null}
         </header>
 
-        <div className="relative flex justify-center px-3 py-3 sm:px-6 sm:py-5">
+        <div className="flex flex-col items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6 sm:py-5">
+          <span
+            className={cn(
+              'max-w-full text-center text-[10px] font-black uppercase tracking-wide',
+              isCelebration ? 'text-tf-cdm-gold' : 'text-sky-300/90',
+            )}
+          >
+            {previewBadge}
+          </span>
           <div className="relative w-full max-w-[min(280px,100%)]">
             <div
               className={cn(
@@ -112,20 +120,9 @@ export function BoutiqueShopModalPanel({
               )}
               aria-hidden
             />
-            <div className="relative h-[min(52vw,240px)] w-full min-h-[200px] sm:h-[340px] sm:min-h-0 sm:max-h-[340px]">
+            <div className="relative h-[min(52vw,240px)] w-full min-h-[200px] pt-1 sm:h-[340px] sm:min-h-0 sm:max-h-[340px]">
               <ModularAvatarCanvas state={previewState} crop="full" fill className="h-full w-full" />
             </div>
-            <span
-              className={cn(
-                'absolute left-1/2 top-2 z-[2] w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 whitespace-nowrap rounded-full px-4 py-1 text-[10px] font-black uppercase tracking-wide shadow-lg',
-                isCelebration
-                  ? 'border border-tf-cdm-gold/50 bg-tf-cdm-gold/20 text-tf-cdm-gold'
-                  : 'border border-sky-400/45 bg-sky-500/20 text-sky-200',
-              )}
-              aria-hidden
-            >
-              {previewBadge}
-            </span>
           </div>
         </div>
 

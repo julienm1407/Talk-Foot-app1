@@ -32,9 +32,8 @@ function usesStudioPreview(item: AvatarItem): boolean {
 
 const encartClass = (item: AvatarItem, owned: boolean, dailyDeal: boolean) =>
   cn(
-    'relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] text-left shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
+    'relative flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] text-left shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
     dailyDeal && !owned ? 'ring-amber-400/65' : RARITY_RING[item.rarity],
-    usesStudioPreview(item) ? 'max-w-[300px]' : 'max-w-[220px]',
     !owned &&
       cn(
         TF_FOCUS_VISIBLE,
@@ -72,8 +71,8 @@ function EncartBody({
         <div
           className={cn(
             'pointer-events-none relative flex w-full flex-col items-center justify-end overflow-hidden',
-            'min-h-[300px] bg-[radial-gradient(circle_at_50%_16%,rgba(56,189,248,0.26),transparent_58%)]',
-            'px-2 pb-1 pt-5 sm:min-h-[340px] sm:px-3 sm:pt-6',
+            'min-h-[220px] bg-[radial-gradient(circle_at_50%_16%,rgba(56,189,248,0.26),transparent_58%)]',
+            'px-2 pb-1 pt-5 sm:min-h-[300px] sm:px-3 sm:pt-6 lg:min-h-[340px]',
           )}
         >
           <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />

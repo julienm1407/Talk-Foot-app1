@@ -325,7 +325,7 @@ export function BoutiquePage() {
               Aucun article pour cette recherche.
             </p>
           ) : (
-            <div className="grid justify-items-center gap-4 sm:gap-5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr))]">
+            <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:gap-5 xl:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
               {sortedCatalogRows.map((row) => (
                 <BoutiqueCosmeticGridItem
                   key={row.item.id}

@@ -22,11 +22,19 @@ export function NationCard({
   className?: string
   hideFavorite?: boolean
 }) {
+  const railLayout = Boolean(className?.includes('snap-start'))
+
   return (
     <div
       className={cn(
-        'group relative shrink-0',
-        variant === 'jersey' ? 'h-56 w-44' : 'h-32 w-32',
+        'group relative min-w-0',
+        variant === 'jersey'
+          ? railLayout
+            ? 'h-56 w-44 shrink-0'
+            : 'h-auto min-h-[12.5rem] w-full'
+          : railLayout
+            ? 'h-32 w-32 shrink-0'
+            : 'aspect-square h-auto w-full max-w-[8.5rem]',
         className,
       )}
     >
