@@ -17,6 +17,10 @@ export function TrendingDebatesSection({
   /** `band` : encart pleine largeur sur l’accueil (fond déjà porté par le parent). */
   variant?: 'default' | 'band'
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+  const debatesEncart = getAppSectionTheme('debates').encart
+
   if (loading) {
     return (
       <section className="rounded-2xl border border-dashed border-orange-200/50 bg-orange-50/30 px-4 py-8 text-center text-sm font-semibold text-slate-600">
@@ -41,15 +45,10 @@ export function TrendingDebatesSection({
     )
   }
 
-  const { appearance } = useAppearance()
-  const L = appearance === 'light'
-
   const gridCols =
     debates.length >= 6
       ? 'grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 lg:gap-4'
       : 'grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3'
-
-  const debatesEncart = getAppSectionTheme('debates').encart
 
   return (
     <section
