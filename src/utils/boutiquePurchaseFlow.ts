@@ -4,7 +4,7 @@ import {
   getEffectiveMedalCost,
   getEffectiveTokenCost,
 } from '../data/boutiqueDailyDeal'
-import { cosmeticTokenPrice, isBoutiqueShopItemOwned, isCosmeticOwned } from '../data/boutiqueEconomy'
+import { isBoutiqueShopItemOwned, isCosmeticOwned } from '../data/boutiqueEconomy'
 import { cdm2026BundleItems } from '../data/cdm2026Bundles'
 import { boutiqueItemToModularState, shopItemToModularAssetId } from './boutiqueModularState'
 

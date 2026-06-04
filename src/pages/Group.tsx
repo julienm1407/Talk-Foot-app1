@@ -772,7 +772,6 @@ export function GroupPage() {
     channel.id === 'general' &&
     debate != null &&
     (debate.salonAccess ?? 'public') === 'public'
-  const isPublicGroupKind = (group.groupKind ?? 'public') === 'public'
 
   const canWriteInTribune =
     accessLevel !== 'readonly' && (isGroupMember || isPublicDebateInGeneral)
