@@ -727,6 +727,30 @@ export function GroupPage() {
     [group, channel, threadKey, isJoined, accessLevel, debate, tryCloudGroupThenLocal, selfChatUserId],
   )
 
+  const isPublicDebateInGeneralForChip = Boolean(
+    group &&
+      channel != null &&
+      channel.id === 'general' &&
+      debate != null &&
+      (debate.salonAccess ?? 'public') === 'public',
+  )
+
+  const groupAccessChip = useMemo(() => {
+    if (!group) {
+      return { label: 'Tribune', open: false }
+    }
+    if (group.createdBy === 'me') {
+      return { label: 'Ton groupe', open: true }
+    }
+    if (isPublicDebateInGeneralForChip) {
+      return { label: 'Débat ouvert (général)', open: true }
+    }
+    if ((group.groupKind ?? 'public') === 'public') {
+      return { label: 'Tribune publique', open: true }
+    }
+    return { label: 'Tribune privée', open: false }
+  }, [group, isPublicDebateInGeneralForChip])
+
   if (!group) {
     return (
       <Card className="p-6" elevation="soft">
@@ -749,18 +773,6 @@ export function GroupPage() {
     debate != null &&
     (debate.salonAccess ?? 'public') === 'public'
   const isPublicGroupKind = (group.groupKind ?? 'public') === 'public'
-  const groupAccessChip = useMemo(() => {
-    if (group.createdBy === 'me') {
-      return { label: 'Ton groupe', open: true }
-    }
-    if (isPublicDebateInGeneral) {
-      return { label: 'Débat ouvert (général)', open: true }
-    }
-    if (isPublicGroupKind) {
-      return { label: 'Tribune publique', open: true }
-    }
-    return { label: 'Tribune privée', open: false }
-  }, [group.createdBy, isPublicDebateInGeneral, isPublicGroupKind])
 
   const canWriteInTribune =
     accessLevel !== 'readonly' && (isGroupMember || isPublicDebateInGeneral)
