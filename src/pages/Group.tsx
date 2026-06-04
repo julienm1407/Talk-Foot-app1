@@ -797,10 +797,14 @@ export function GroupPage() {
   return (
     <>
       <div
-        className="flex min-w-0 max-w-full flex-col gap-7 overflow-x-clip"
+        className={cn(
+          'flex min-w-0 max-w-full flex-col overflow-x-clip',
+          'max-lg:h-full max-lg:min-h-0 max-lg:flex-1 max-lg:gap-2 max-lg:overflow-hidden',
+          'lg:gap-7',
+        )}
         data-no-swipe="true"
       >
-      <Card className="order-2 overflow-hidden p-0 lg:order-1" elevation="soft">
+      <Card className="order-2 hidden overflow-hidden p-0 lg:order-1 lg:block" elevation="soft">
         <div
           className="relative px-5 py-5 sm:px-6"
           style={
@@ -1129,7 +1133,7 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-col gap-2 overflow-x-clip sm:gap-3 max-lg:min-h-[calc(100dvh-10.5rem)] max-lg:max-h-[calc(100dvh-10.5rem)] lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:grid-cols-[320px_1fr] lg:items-stretch">
+      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-2 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
         <div className="mb-0 flex min-h-9 min-w-0 shrink-0 items-center justify-between gap-1.5 lg:hidden">
           <Link
             to="/groups"
@@ -1265,7 +1269,7 @@ export function GroupPage() {
           ) : null}
           <details
             className={cn(
-              'rounded-2xl border px-3 py-2',
+              'overflow-hidden rounded-2xl border px-3 py-2',
               L ? 'border-tf-grey-pastel/40 bg-tf-white/95' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
             )}
             data-no-swipe="true"
@@ -1278,13 +1282,16 @@ export function GroupPage() {
             >
               Tifo pixel (match)
             </summary>
-            <GroupTifoPanel
-              groupId={group.id}
-              matches={matches}
-              groupClubId={groupMainClubId}
-              groupClubLabel={groupMainClubLabel ?? undefined}
-              isGroupAdmin={group.createdBy === 'me'}
-            />
+            <div className="max-h-[min(38dvh,15rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              <GroupTifoPanel
+                embedded
+                groupId={group.id}
+                matches={matches}
+                groupClubId={groupMainClubId}
+                groupClubLabel={groupMainClubLabel ?? undefined}
+                isGroupAdmin={group.createdBy === 'me'}
+              />
+            </div>
           </details>
         </div>
 
@@ -1536,9 +1543,8 @@ export function GroupPage() {
         <Card
           className={cn(
             'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden border-2 p-0',
-            'max-lg:min-h-0',
-            'min-h-[min(50dvh,22rem)] sm:min-h-[min(52dvh,24rem)]',
-            'lg:min-h-[18rem] lg:h-full lg:max-h-none',
+            'max-lg:min-h-0 max-lg:flex-1',
+            'lg:min-h-[min(50dvh,22rem)] lg:h-full lg:max-h-none',
           )}
           elevation="soft"
           style={
@@ -1746,7 +1752,7 @@ export function GroupPage() {
               'max-lg:overscroll-y-auto',
               'lg:overscroll-y-contain',
               /* Garde une zone de lecture minimum quand l’en-tête est chargé (débat, etc.) */
-              debate && channel?.id === 'general' ? 'max-lg:min-h-[min(42dvh,16rem)]' : 'max-lg:min-h-[min(38dvh,14rem)]',
+              debate && channel?.id === 'general' ? 'max-lg:min-h-[8rem]' : 'max-lg:min-h-[10rem]',
             )}
             style={salonSurface?.backdrop}
             role="log"

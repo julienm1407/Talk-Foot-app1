@@ -25,6 +25,7 @@ export function AppShell() {
   const isHome = location.pathname === '/' || location.pathname === ''
   const isChannel = location.pathname.startsWith('/channel/')
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
+  const isGroupTribune = /^\/group\/[^/]+/.test(location.pathname)
   const homeScrollRef = useRef<HTMLDivElement | null>(null)
   const [homeFooterVisible, setHomeFooterVisible] = useState(false)
 
@@ -39,7 +40,7 @@ export function AppShell() {
   }, [])
 
   useSwipeNavigate({
-    enabled: !isChannel,
+    enabled: !isChannel && !isGroupTribune,
     order: ['/', '/match', '/groups', '/rankings'],
   })
 
@@ -75,6 +76,31 @@ export function AppShell() {
             </ErrorBoundary>
             <div className="mt-4">
               <SiteLegalFooter compact className="rounded-t-2xl" />
+            </div>
+          </div>
+        ) : isGroupTribune ? (
+          <div
+            className={cn(
+              'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col min-h-0 px-[var(--tf-page-gutter)]',
+              'max-lg:overflow-hidden max-lg:pt-2',
+              'lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-y-contain lg:pt-7 lg:[-webkit-overflow-scrolling:touch]',
+              mainBottomPadChannel,
+              'lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
+            )}
+          >
+            <div
+              className={cn(
+                'flex min-h-0 min-w-0 flex-col',
+                'max-lg:flex-1 max-lg:overflow-hidden',
+                'lg:rounded-tf-3xl lg:p-tf-6 tf-panel',
+              )}
+            >
+              <ErrorBoundary key={location.pathname}>
+                <Outlet />
+              </ErrorBoundary>
+            </div>
+            <div className="mt-5 hidden shrink-0 lg:block">
+              <SiteLegalFooter className="rounded-t-2xl" />
             </div>
           </div>
         ) : isHome ? (

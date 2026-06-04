@@ -12,12 +12,15 @@ export function GroupTifoPanel({
   groupClubId,
   groupClubLabel,
   isGroupAdmin,
+  /** Dans un panneau repliable mobile : marges réduites, grille scrollable. */
+  embedded = false,
 }: {
   groupId: string
   matches: Match[]
   groupClubId?: string | null
   groupClubLabel?: string
   isGroupAdmin: boolean
+  embedded?: boolean
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
@@ -68,7 +71,8 @@ export function GroupTifoPanel({
     return (
       <div
         className={cn(
-          'mt-4 rounded-2xl border border-dashed px-3 py-3 text-center text-[11px] font-semibold',
+          embedded ? 'mt-2' : 'mt-4',
+          'rounded-2xl border border-dashed px-3 py-3 text-center text-[11px] font-semibold',
           L
             ? 'border-tf-grey-pastel/60 bg-tf-white/60 text-tf-grey'
             : 'border-white/20 bg-slate-900/60 text-sky-200/80',
@@ -87,10 +91,11 @@ export function GroupTifoPanel({
   return (
     <div
       className={cn(
-        'mt-4 rounded-2xl border p-3 shadow-sm',
-        L
-          ? 'border-tf-grey-pastel/50 bg-gradient-to-b from-tf-ice/40 to-white/95'
-          : 'border-white/15 bg-gradient-to-b from-slate-900/70 to-[#0b1220]/95',
+        embedded ? 'mt-2' : 'mt-4 rounded-2xl border p-3 shadow-sm',
+        !embedded &&
+          (L
+            ? 'border-tf-grey-pastel/50 bg-gradient-to-b from-tf-ice/40 to-white/95'
+            : 'border-white/15 bg-gradient-to-b from-slate-900/70 to-[#0b1220]/95'),
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -184,7 +189,8 @@ export function GroupTifoPanel({
 
       <div
         className={cn(
-          'relative mt-3 overflow-x-auto rounded-xl border p-1.5 shadow-inner',
+          'relative mt-3 overflow-auto rounded-xl border p-1.5 shadow-inner',
+          embedded && 'max-h-[min(28dvh,12.5rem)]',
           L ? 'border-tf-grey-pastel/50 bg-white' : 'border-white/15 bg-slate-900/80',
         )}
         data-no-swipe="true"
