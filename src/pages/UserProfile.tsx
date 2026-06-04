@@ -6,7 +6,8 @@ import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
 import { TALKFOOT_BOT_DM_THREAD_ID, friendDmThreadId } from '../data/directMessageConstants'
 import { resolveProfilePeer } from '../data/users'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
-import { Avatar } from '../components/ui/Avatar'
+import { UserProfileAvatar } from '../components/profile/UserProfileAvatar'
+import { usePeerPublicProfile } from '../hooks/usePeerPublicProfile'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { cn } from '../utils/cn'
@@ -83,6 +84,7 @@ export function UserProfilePage() {
   }
 
   const displayUsername = liveName ?? peer.username
+  const cloudProfile = usePeerPublicProfile(peer, authUser?.id)
   const club = peer.fanClubId ? ALL_CLUBS_BY_ID[peer.fanClubId] : undefined
 
   const useCloudFriends = isSupabaseConfigured() && Boolean(authUser?.id)
@@ -165,7 +167,7 @@ export function UserProfilePage() {
           )}
         >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-            <Avatar seed={peer.avatarSeed} accent={peer.accent} className="!size-24 shrink-0 shadow-lg ring-4 ring-white/40" alt="" />
+            <UserProfileAvatar peer={peer} cloudProfile={cloudProfile} />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <h1
