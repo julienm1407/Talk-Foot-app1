@@ -152,9 +152,9 @@ export function GroupsHubPage() {
       <div
         className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
         role="tablist"
-        aria-label="Mes groupes ou découverte"
+        aria-label="Mes tribunes ou découverte"
       >
-        {tabBtn('mine', `Mes groupes${myGroups.length ? ` (${myGroups.length})` : ''}`)}
+        {tabBtn('mine', `Mes tribunes${myGroups.length ? ` (${myGroups.length})` : ''}`)}
         {tabBtn(
           'discover',
           `Toutes les tribunes${discoverListCount ? ` (${discoverListCount})` : ''}`,
@@ -164,7 +164,7 @@ export function GroupsHubPage() {
       {activeTab === 'mine' ? (
         <section aria-labelledby="hub-mine-heading" className="space-y-4">
           <h2 id="hub-mine-heading" className="sr-only">
-            Mes groupes
+            Mes tribunes
           </h2>
           {myGroups.length === 0 ? (
             <Card className="p-8 text-center" elevation="soft">
@@ -177,7 +177,7 @@ export function GroupsHubPage() {
               <p className="mx-auto mt-2 max-w-md text-sm font-semibold text-tf-grey">
                 Ouvre une tribune depuis <strong className="text-tf-dark">Toutes les tribunes</strong>, puis utilise{' '}
                 <strong className="text-tf-dark">Rejoindre cette tribune</strong> pour l’ajouter à{' '}
-                <strong className="text-tf-dark">Mes groupes</strong>. Tu peux aussi créer le tien.
+                <strong className="text-tf-dark">Mes tribunes</strong>. Tu peux aussi créer le tien.
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button variant="primary" className="rounded-2xl" onClick={() => setTab('discover')}>
