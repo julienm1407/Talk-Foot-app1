@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { cn } from '../utils/cn'
 import type { SubscriptionTierId } from '../types/subscription'
+import { isStripePublishableConfigured, stripeModeLabel } from '../config/stripe'
 
 export function SubscriptionPlansPage() {
   const { user } = useAuth()
@@ -21,7 +22,16 @@ export function SubscriptionPlansPage() {
         <h1 className="text-2xl font-black text-white sm:text-3xl">Freemium · Supporter+ · Ambassadeur</h1>
         <p className="max-w-2xl text-sm text-white/70">
           Trois niveaux d’accès : gratuit pour découvrir, 4,99 €/mois pour les supporters actifs, 14,99 €/mois
-          pour les créateurs (stream, voix, articles). Le paiement Stripe sera branché prochainement.
+          pour les créateurs (stream, voix, articles).
+          {isStripePublishableConfigured() ? (
+            <>
+              {' '}
+              Paiement Stripe : clé publique {stripeModeLabel() === 'live' ? 'live' : 'test'} configurée
+              (Checkout à finaliser avec les Price IDs + clé secrète serveur).
+            </>
+          ) : (
+            <> Le paiement Stripe sera branché dès que la clé publique est dans Vercel.</>
+          )}
         </p>
         {user && (
           <p className="text-sm font-semibold text-emerald-200/90">
