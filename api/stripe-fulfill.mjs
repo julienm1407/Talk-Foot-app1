@@ -189,6 +189,161 @@ export async function fulfillCheckoutSession(session) {
   return { ok: false, error: lastErr, actorKeys: keys }
 }
 
+/** Part du montant remboursé (0–1) pour ajuster le retrait de médailles. */
+export function refundFractionFromCharge(charge) {
+  const amount = Number(charge?.amount ?? 0)
+  const refunded = Number(charge?.amount_refunded ?? 0)
+  if (!Number.isFinite(amount) || amount <= 0) return 1
+  if (!Number.isFinite(refunded) || refunded <= 0) return 0
+  return Math.min(1, refunded / amount)
+}
+
+export async function resolveCheckoutSessionId(stripe, charge) {
+  const meta = charge?.metadata?.checkout_session_id
+  if (meta && String(meta).trim()) return String(meta).trim()
+
+  const pi = charge?.payment_intent
+  const paymentIntentId = typeof pi === 'string' ? pi : pi?.id
+  if (!paymentIntentId) return null
+
+  const sessions = await stripe.checkout.sessions.list({
+    payment_intent: paymentIntentId,
+    limit: 1,
+  })
+  return sessions.data[0]?.id ?? null
+}
+
+async function revokeForActor(sb, actorKey, sessionId, session, refundFraction) {
+  const snap = await loadSnapshot(sb, actorKey)
+  if (!snap) return { ok: false, error: 'profile_not_found', actorKey }
+
+  const app = mergeAppState(snap.app_state)
+  let prior = app.stripeFulfillmentBySessionId?.[sessionId]
+  if (!prior && session && (session.metadata?.kind === 'medal_pack' || session.mode === 'payment')) {
+    const packId = session.metadata?.medal_pack_id
+    const grant = MEDAL_PACK_GRANTS[packId]
+    if (grant) prior = { kind: 'medal_pack', packId, medals: grant }
+  }
+  if (!prior && session && (session.metadata?.kind === 'subscription' || session.mode === 'subscription')) {
+    const tierKey = session.metadata?.tier
+    const tier = SUBSCRIPTION_TIER_BY_KEY[tierKey]
+    if (tier) prior = { kind: 'subscription', tier }
+  }
+  if (!prior) return { ok: false, error: 'fulfillment_not_found', actorKey }
+  if (prior.refundedAt) {
+    return { ok: true, alreadyRevoked: true, actorKey, medalsRevoked: prior.medalsRevoked ?? 0 }
+  }
+
+  const stamp = new Date().toISOString()
+  const fraction = Math.min(1, Math.max(0, Number(refundFraction) || 0))
+  if (fraction <= 0) return { ok: false, error: 'no_refund_fraction', actorKey }
+
+  if (prior.kind === 'medal_pack') {
+    const grant = Number(prior.medals) || MEDAL_PACK_GRANTS[prior.packId] || 0
+    const toRevoke = Math.max(0, Math.floor(grant * fraction))
+    const current = Math.max(0, Number(app.wallet?.medals ?? 0))
+    const newMedals = Math.max(0, current - toRevoke)
+    const merged = {
+      ...app,
+      wallet: { ...app.wallet, medals: newMedals },
+      stripeFulfillmentBySessionId: {
+        ...app.stripeFulfillmentBySessionId,
+        [sessionId]: {
+          ...prior,
+          refundedAt: stamp,
+          medalsRevoked: toRevoke,
+          medalsAfterRefund: newMedals,
+        },
+      },
+    }
+    await saveAppState(sb, actorKey, merged, snap.onboarding_complete)
+    return {
+      ok: true,
+      kind: 'medal_pack',
+      actorKey,
+      medalsRevoked: toRevoke,
+      medalsAfter: newMedals,
+      packId: prior.packId,
+    }
+  }
+
+  if (prior.kind === 'subscription') {
+    const merged = {
+      ...app,
+      subscription: {
+        ...app.subscription,
+        tier: 'freemium',
+        activeUntil: null,
+      },
+      stripeFulfillmentBySessionId: {
+        ...app.stripeFulfillmentBySessionId,
+        [sessionId]: { ...prior, refundedAt: stamp, tierRevoked: prior.tier },
+      },
+    }
+    await saveAppState(sb, actorKey, merged, snap.onboarding_complete)
+    return { ok: true, kind: 'subscription', actorKey, tierRevoked: prior.tier }
+  }
+
+  return { ok: false, error: 'unknown_kind', actorKey }
+}
+
+/**
+ * Retire médailles (ou abonnement) liés à une session Checkout après remboursement Stripe.
+ */
+export async function revokeCheckoutSessionFulfillment(session, refundFraction = 1) {
+  const sessionId = typeof session === 'string' ? session : session?.id
+  if (!sessionId) return { ok: false, error: 'missing_session' }
+
+  const keys =
+    typeof session === 'object' && session !== null
+      ? actorKeysFromSession(session)
+      : []
+
+  const sb = getSupabaseAdmin()
+  if (!sb) return { ok: false, error: 'supabase_service_not_configured' }
+
+  let resolvedSession = typeof session === 'object' && session !== null ? session : null
+  if (!keys.length && !resolvedSession) {
+    return { ok: false, error: 'missing_actor' }
+  }
+
+  const actorList = keys.length ? keys : actorKeysFromSession(resolvedSession)
+  if (!actorList.length) return { ok: false, error: 'missing_actor' }
+
+  let lastErr = 'profile_not_found'
+  for (const actorKey of actorList) {
+    try {
+      const result = await revokeForActor(sb, actorKey, sessionId, resolvedSession, refundFraction)
+      if (result.ok) return { ...result, sessionId }
+      lastErr = result.error ?? lastErr
+      if (result.error !== 'profile_not_found' && result.error !== 'fulfillment_not_found') {
+        return { ...result, sessionId }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'revoke_failed'
+      return { ok: false, error: message, sessionId, actorKey }
+    }
+  }
+
+  return { ok: false, error: lastErr, sessionId, actorKeys: actorList }
+}
+
+/** Webhook `charge.refunded` — retrouve la session Checkout et révoque le crédit. */
+export async function revokeFulfillmentForCharge(stripe, charge) {
+  const sessionId = await resolveCheckoutSessionId(stripe, charge)
+  if (!sessionId) {
+    console.warn('[stripe-refund] session introuvable pour charge', charge.id)
+    return { ok: false, error: 'session_not_found', chargeId: charge.id }
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  const fraction = refundFractionFromCharge(charge)
+  if (fraction <= 0) return { ok: false, error: 'no_refund_amount', chargeId: charge.id }
+
+  const result = await revokeCheckoutSessionFulfillment(session, fraction)
+  return { ...result, chargeId: charge.id, refundFraction: fraction }
+}
+
 function sessionOwnedByUser(session, userId, supabaseUserId) {
   const allowed = actorKeysFromSession(session)
   if (allowed.includes(userId)) return true

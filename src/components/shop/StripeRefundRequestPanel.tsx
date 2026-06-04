@@ -49,8 +49,9 @@ export function StripeRefundRequestPanel({ className, purchaseKind = 'medal_pack
     >
       <p className="text-xs font-bold text-amber-100/95">Demande de remboursement</p>
       <p className="mt-1 text-[11px] font-medium leading-relaxed text-amber-100/75">
-        Problème de paiement ou achat non reçu ? Envoie une demande à notre support. Les remboursements
-        Stripe sont traités sous 5 à 10 jours ouvrés après validation.{' '}
+        Problème de paiement ou achat non reçu ? Envoie une demande à notre support. Après remboursement
+        validé sur Stripe, les médailles liées à l’achat sont retirées automatiquement de ton compte
+        (sous 5 à 10 jours ouvrés).{' '}
         <Link to="/terms" className={cn('font-bold text-amber-50 underline-offset-2 hover:underline', TF_FOCUS_VISIBLE)}>
           Conditions
         </Link>

@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { fulfillCheckoutSession } from './stripe-fulfill.mjs'
+import { fulfillCheckoutSession, revokeFulfillmentForCharge } from './stripe-fulfill.mjs'
 
 function json(res, status, body) {
   res.statusCode = status
@@ -56,6 +56,26 @@ export default async function handler(req, res) {
         }
       }
       json(res, result.ok ? 200 : 500, result)
+      return
+    }
+
+    if (event.type === 'charge.refunded') {
+      const charge = event.data.object
+      const result = await revokeFulfillmentForCharge(stripe, charge)
+      if (!result.ok) {
+        console.error('[stripe-webhook] Revoke after refund failed', result)
+        if (result.error === 'fulfillment_not_found') {
+          json(res, 200, { ok: true, skipped: 'fulfillment_not_found', chargeId: charge.id })
+          return
+        }
+      } else {
+        console.info('[stripe-webhook] Revoke after refund', result)
+      }
+      const softOk =
+        result.ok ||
+        result.error === 'fulfillment_not_found' ||
+        result.error === 'session_not_found'
+      json(res, softOk ? 200 : 500, result)
       return
     }
 
