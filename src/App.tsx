@@ -30,6 +30,7 @@ import {
   NationPage,
   NationsHubPage,
   ProfilePage,
+  SubscriptionPlansPage,
   PronosticHubPage,
   RankingsPage,
   UserProfilePage,
@@ -250,6 +251,14 @@ export default function App() {
             }
           />
           <Route path="mes-paris" element={<Navigate to="/pronostic" replace />} />
+          <Route
+            path="formules"
+            element={
+              <RequireAuthRoute>
+                <SubscriptionPlansPage />
+              </RequireAuthRoute>
+            }
+          />
           <Route
             path="settings/donnees"
             element={

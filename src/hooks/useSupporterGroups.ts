@@ -20,6 +20,9 @@ import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/
 import type { GroupActivePresence, SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
 import { computeGroupIntensity } from '../utils/groupIntensity'
+import { useSubscription } from './useSubscription'
+import { canCreateGroup, canJoinGroup } from '../utils/subscriptionEntitlements'
+import { getSubscriptionPlan } from '../data/subscriptionPlans'
 
 function joinedKeyForUser(userId: string) {
   return `talkfoot.joinedGroupIds.v1.${userId}`
@@ -55,6 +58,7 @@ const isSupporterGroupArray = (p: unknown): p is SupporterGroup[] =>
 
 export function useSupporterGroups() {
   const { user: authUser } = useAuth()
+  const { tier, plan } = useSubscription()
   const userId = authUser?.id && !authUser.isAnonymous ? authUser.id : null
 
   const [custom, setCustom] = useState<SupporterGroup[]>([])
@@ -316,8 +320,17 @@ export function useSupporterGroups() {
   }, [userId])
 
   const joinGroup = useCallback(
-    (id: string) => {
-      if (!userId) return
+    (id: string): { ok: true } | { ok: false; reason: string } => {
+      if (!userId) return { ok: false, reason: 'Connexion requise.' }
+      if (!joinedGroupIds.includes(id)) {
+        const gate = canJoinGroup(tier, joinedGroupIds.length)
+        if (!gate.ok) {
+          return {
+            ok: false,
+            reason: `Tu peux rejoindre ${gate.limit} groupes max (${plan.name}). Passe sur /formules.`,
+          }
+        }
+      }
       setJoinedGroupIds((prev) => {
         const next = prev.includes(id) ? prev : [...prev, id]
         persistJoined(next)
@@ -332,8 +345,9 @@ export function useSupporterGroups() {
           void refreshGroupPresence(ids)
         })()
       }
+      return { ok: true }
     },
-    [userId, persistJoined, rawGroups, refreshMemberCounts, refreshGroupPresence],
+    [userId, persistJoined, rawGroups, refreshMemberCounts, refreshGroupPresence, joinedGroupIds, tier, plan],
   )
 
   const leaveGroup = useCallback(
@@ -366,6 +380,13 @@ export function useSupporterGroups() {
     (g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>) => {
       if (!userId) {
         throw new Error('Connexion requise pour créer un groupe.')
+      }
+      const createdCount = custom.filter((x) => x.createdBy === 'me').length
+      const gate = canCreateGroup(tier, createdCount)
+      if (!gate.ok) {
+        throw new Error(
+          `Limite de ${gate.limit} groupes créés (${getSubscriptionPlan(tier).name}). Voir /formules.`,
+        )
       }
       const id = `g-me-${Date.now()}-${Math.random().toString(16).slice(2)}`
       const hashtags =
@@ -416,7 +437,7 @@ export function useSupporterGroups() {
       }
       return next
     },
-    [userId, persistCustom, persistJoined, refreshCloudGroups],
+    [userId, persistCustom, persistJoined, refreshCloudGroups, custom, tier],
   )
 
   const byId = useCallback(
@@ -519,8 +540,20 @@ export function useSupporterGroups() {
     void refreshGroupPresence(ids)
   }, [rawGroups, refreshGroupActivity, refreshMemberCounts, refreshGroupPresence])
 
+  const createdByMeCount = useMemo(
+    () => custom.filter((g) => g.createdBy === 'me').length,
+    [custom],
+  )
+
   return {
     groups,
+    subscriptionTier: tier,
+    groupLimits: {
+      created: createdByMeCount,
+      maxCreated: plan.limits.maxGroupsCreated,
+      joined: joinedGroupIds.length,
+      maxJoined: plan.limits.maxGroupsJoined,
+    },
     createGroup,
     updateGroup,
     deleteGroup,

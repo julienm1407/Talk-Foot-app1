@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getAdsenseClient } from '../../config/ads'
 import { shouldLoadAdsenseScript } from '../../config/adsPolicy'
+import { useSubscription } from '../../hooks/useSubscription'
 
 const SCRIPT_ATTR = 'data-tf-adsense-loader'
 
@@ -11,10 +12,11 @@ const SCRIPT_ATTR = 'data-tf-adsense-loader'
  */
 export function AdsenseScriptLoader() {
   const { pathname } = useLocation()
+  const { tier } = useSubscription()
 
   useEffect(() => {
     const client = getAdsenseClient()
-    if (!client || !shouldLoadAdsenseScript(pathname)) return
+    if (!client || !shouldLoadAdsenseScript(pathname, tier)) return
 
     if (document.querySelector(`script[${SCRIPT_ATTR}]`)) return
 
@@ -24,7 +26,7 @@ export function AdsenseScriptLoader() {
     script.crossOrigin = 'anonymous'
     script.setAttribute(SCRIPT_ATTR, '1')
     document.head.appendChild(script)
-  }, [pathname])
+  }, [pathname, tier])
 
   return null
 }

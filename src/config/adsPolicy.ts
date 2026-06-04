@@ -1,3 +1,6 @@
+import type { SubscriptionTierId } from '../types/subscription'
+import { shouldShowAdsForTier } from '../utils/subscriptionEntitlements'
+
 /**
  * Politique AdSense — conformité « contenu d’éditeur » (programme Google).
  * @see https://support.google.com/adsense/answer/1346295
@@ -65,14 +68,21 @@ export function isAdsenseBlockedRoute(pathname: string): boolean {
   return false
 }
 
-export function shouldServeLiveAdsense(pathname: string, opts?: { contentReady?: boolean }): boolean {
+export function shouldServeLiveAdsense(
+  pathname: string,
+  opts?: { contentReady?: boolean; subscriptionTier?: SubscriptionTierId },
+): boolean {
   if (opts?.contentReady === false) return false
+  if (opts?.subscriptionTier && !shouldShowAdsForTier(opts.subscriptionTier)) return false
   if (isAdsenseBlockedRoute(pathname)) return false
   return isEditorialAdsRoute(pathname)
 }
 
-export function shouldLoadAdsenseScript(pathname: string): boolean {
-  return shouldServeLiveAdsense(pathname)
+export function shouldLoadAdsenseScript(
+  pathname: string,
+  subscriptionTier?: SubscriptionTierId,
+): boolean {
+  return shouldServeLiveAdsense(pathname, { subscriptionTier })
 }
 
 /** Accueil : max 3 unités live (densité raisonnable). */
@@ -82,8 +92,12 @@ const HOME_LIVE_PLACEMENTS = new Set([
   'home-carousel-feed',
 ])
 
-export function shouldShowLiveAdPlacement(placementKey: string, pathname: string): boolean {
-  if (!shouldServeLiveAdsense(pathname)) return false
+export function shouldShowLiveAdPlacement(
+  placementKey: string,
+  pathname: string,
+  subscriptionTier?: SubscriptionTierId,
+): boolean {
+  if (!shouldServeLiveAdsense(pathname, { subscriptionTier })) return false
   const kind = getEditorialRouteKind(pathname)
   if (kind === 'home') return HOME_LIVE_PLACEMENTS.has(placementKey)
   if (kind === 'article') {

@@ -34,6 +34,7 @@ import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatar
 import { useCloudFriends } from '../hooks/useCloudFriends'
 import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
+import { useChatSendGuard } from '../hooks/useChatSendGuard'
 import { cn } from '../utils/cn'
 import {
   buildGroupSalonBotUser,
@@ -397,6 +398,16 @@ export function GroupPage() {
   const [newSalonEmoji, setNewSalonEmoji] = useState('🔊')
   const [newSalonError, setNewSalonError] = useState<string | null>(null)
   const [groupChatModerationHint, setGroupChatModerationHint] = useState<string | null>(null)
+  const [groupChatLimitHint, setGroupChatLimitHint] = useState<string | null>(null)
+  const [joinLimitHint, setJoinLimitHint] = useState<string | null>(null)
+  const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
+
+  const handleJoinGroup = useCallback(() => {
+    if (!group) return
+    const r = joinGroup(group.id)
+    if (!r.ok) setJoinLimitHint(r.reason)
+    else setJoinLimitHint(null)
+  }, [group, joinGroup])
 
   useEffect(() => {
     if (!group || !channel || !threadKey) return
@@ -674,6 +685,13 @@ export function GroupPage() {
     (text: string) => {
       if (!group || !channel || !threadKey) return
       if (accessLevel === 'readonly') return
+      const chatGate = checkChatSend()
+      if (!chatGate.ok) {
+        setGroupChatLimitHint(chatGate.reason ?? 'Limite de messages atteinte.')
+        return
+      }
+      recordChatSend()
+      setGroupChatLimitHint(null)
       const openDebateToAll =
         debate != null &&
         channel.id === 'general' &&
@@ -695,13 +713,31 @@ export function GroupPage() {
       }
       void tryCloudGroupThenLocal(msg)
     },
-    [group, channel, threadKey, isJoined, accessLevel, debate, tryCloudGroupThenLocal, selfChatUserId],
+    [
+      group,
+      channel,
+      threadKey,
+      isJoined,
+      accessLevel,
+      debate,
+      tryCloudGroupThenLocal,
+      selfChatUserId,
+      checkChatSend,
+      recordChatSend,
+    ],
   )
 
   const onSendScarf = useCallback(
     (payload: NonNullable<Message['groupScarf']>) => {
       if (!group || !channel || !threadKey) return
       if (accessLevel === 'readonly') return
+      const chatGate = checkChatSend()
+      if (!chatGate.ok) {
+        setGroupChatLimitHint(chatGate.reason ?? 'Limite de messages atteinte.')
+        return
+      }
+      recordChatSend()
+      setGroupChatLimitHint(null)
       const openDebateToAll =
         debate != null &&
         channel.id === 'general' &&
@@ -724,7 +760,18 @@ export function GroupPage() {
       }
       void tryCloudGroupThenLocal(msg)
     },
-    [group, channel, threadKey, isJoined, accessLevel, debate, tryCloudGroupThenLocal, selfChatUserId],
+    [
+      group,
+      channel,
+      threadKey,
+      isJoined,
+      accessLevel,
+      debate,
+      tryCloudGroupThenLocal,
+      selfChatUserId,
+      checkChatSend,
+      recordChatSend,
+    ],
   )
 
   const isPublicDebateInGeneralForChip = Boolean(
@@ -936,13 +983,23 @@ export function GroupPage() {
                 label="Partager la tribune"
               />
               {group.createdBy !== 'me' && !isJoined(group.id) ? (
-                <Button
-                  variant="primary"
-                  className="rounded-2xl text-xs font-black"
-                  onClick={() => joinGroup(group.id)}
-                >
-                  Rejoindre cette tribune
-                </Button>
+                <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
+                  <Button
+                    variant="primary"
+                    className="rounded-2xl text-xs font-black"
+                    onClick={handleJoinGroup}
+                  >
+                    Rejoindre cette tribune
+                  </Button>
+                  {joinLimitHint ? (
+                    <p className="text-xs font-semibold text-amber-200">
+                      {joinLimitHint}{' '}
+                      <Link to="/formules" className="underline">
+                        Formules
+                      </Link>
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
               {group.createdBy !== 'me' && isJoined(group.id) ? (
                 <Button
@@ -1897,7 +1954,7 @@ export function GroupPage() {
                 type="button"
                 variant="primary"
                 className="mx-auto mt-3 block w-full max-w-sm rounded-2xl text-sm font-black"
-                onClick={() => joinGroup(group.id)}
+                onClick={handleJoinGroup}
               >
                 Rejoindre pour écrire
               </Button>
@@ -1913,6 +1970,14 @@ export function GroupPage() {
               {groupChatModerationHint ? (
                 <p className="mb-2 rounded-xl border border-rose-200/80 bg-rose-50/95 px-3 py-2 text-xs font-semibold text-rose-800">
                   {groupChatModerationHint}
+                </p>
+              ) : null}
+              {groupChatLimitHint ? (
+                <p className="mb-2 rounded-xl border border-amber-200/80 bg-amber-50/95 px-3 py-2 text-xs font-semibold text-amber-900">
+                  {groupChatLimitHint}{' '}
+                  <Link to="/formules" className="underline">
+                    Voir les formules
+                  </Link>
                 </p>
               ) : null}
               <MessageComposer

@@ -11,6 +11,8 @@ import {
   subscribeWallet,
 } from '../store/walletStore'
 import { DEFAULT_WALLET, normalizeWallet } from '../utils/walletNormalize'
+import { useSubscription } from './useSubscription'
+import { toLocalMonthKey } from '../utils/subscriptionEntitlements'
 
 export const DAILY_TOKEN_BONUS_AMOUNT = 35
 export const DAILY_TOKEN_BONUS_HOUR = 10
@@ -66,6 +68,7 @@ function buildDailyBonusStatus(wallet: Wallet): DailyTokenBonusStatus {
 
 export function useWallet() {
   const { user } = useAuth()
+  const { tier, monthlyTokens, subscription, patchUsage } = useSubscription()
   const cloud = useOptionalCloudUserState()
   const persistLocal = !isSupabaseConfigured()
   const useCloudWallet = cloud !== undefined
@@ -190,6 +193,29 @@ export function useWallet() {
 
   const dailyTokenBonusStatus = useCallback(() => dailyBonus, [dailyBonus])
 
+  const claimMonthlySubscriptionTokens = useCallback((): {
+    ok: boolean
+    amount?: number
+    reason?: string
+  } => {
+    if (monthlyTokens <= 0) {
+      return { ok: false, reason: 'not_eligible' }
+    }
+    const monthKey = toLocalMonthKey()
+    const usage = subscription.usage ?? {}
+    if (usage.monthlyTokensMonthKey === monthKey) {
+      return { ok: false, reason: 'already_claimed' }
+    }
+    let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
+    patchUsage((u) => ({ ...u, monthlyTokensMonthKey: monthKey }))
+    patchWallet((w) => {
+      out = { ok: true, amount: monthlyTokens }
+      return { ...w, tokens: w.tokens + monthlyTokens }
+    })
+    if (out.ok) void cloud?.flushAppSave?.()
+    return out
+  }, [monthlyTokens, subscription.usage, patchUsage, patchWallet, cloud])
+
   const claimDailyTokenBonus = useCallback((): {
     ok: boolean
     amount?: number
@@ -221,6 +247,8 @@ export function useWallet() {
   return {
     wallet,
     dailyBonus,
+    subscriptionTier: tier,
+    monthlyTokenAllowance: monthlyTokens,
     patchWallet,
     addTokens,
     spendTokens,
@@ -228,5 +256,6 @@ export function useWallet() {
     spendMedals,
     dailyTokenBonusStatus,
     claimDailyTokenBonus,
+    claimMonthlySubscriptionTokens,
   }
 }

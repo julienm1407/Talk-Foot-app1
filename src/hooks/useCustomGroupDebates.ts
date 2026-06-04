@@ -14,12 +14,15 @@ import {
 } from '../utils/customGroupDebatesStorage'
 import { moderateDebateInput } from '../utils/bannedWords'
 import { useLocalStorageState } from './useLocalStorage'
+import { useSubscription } from './useSubscription'
+import { bumpDebateUsage, canCreateDebate } from '../utils/subscriptionEntitlements'
 
 const isBucket = (p: unknown): p is CustomDebatesBucket =>
   p !== null && typeof p === 'object' && !Array.isArray(p)
 
 export function useCustomGroupDebates(groupId: string | undefined) {
   const { user: authUser } = useAuth()
+  const { tier, subscription, patchUsage } = useSubscription()
   const { favoriteClubIds } = useFanPreferences()
   const { refresh: refreshDebates } = useDebates()
   const fanClubId = favoriteClubIds[0] ?? 'psg'
@@ -39,7 +42,10 @@ export function useCustomGroupDebates(groupId: string | undefined) {
   const addCustomDebate = useCallback(
     (input: { title: string; excerpt: string; accent: string }): Debate | null => {
       if (!groupId) return null
+      const debateGate = canCreateDebate(tier, subscription.usage ?? {})
+      if (!debateGate.ok) return null
       if (!moderateDebateInput(input).ok) return null
+      patchUsage((u) => bumpDebateUsage(u))
       const debate = createCustomGroupDebateRecord(
         groupId,
         input,
@@ -72,8 +78,10 @@ export function useCustomGroupDebates(groupId: string | undefined) {
       }
       return debate
     },
-    [fanClubId, groupId, refreshDebates, setBucket, username],
+    [fanClubId, groupId, refreshDebates, setBucket, username, tier, subscription.usage, patchUsage],
   )
 
-  return { customForGroup, addCustomDebate }
+  const canAddDebate = canCreateDebate(tier, subscription.usage ?? {}).ok
+
+  return { customForGroup, addCustomDebate, canAddDebate }
 }

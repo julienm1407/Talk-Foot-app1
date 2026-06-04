@@ -15,6 +15,7 @@ import { usePronoStats } from '../hooks/usePronoStats'
 import { useUserBets } from '../hooks/useUserBets'
 import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
+import { useSubscription } from '../hooks/useSubscription'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
@@ -88,7 +89,8 @@ export function ProfilePage() {
       return { id, meta, team }
     })
     .filter((x) => Boolean(x.meta && x.team))
-  const { wallet } = useWallet()
+  const { wallet, monthlyTokenAllowance, claimMonthlySubscriptionTokens } = useWallet()
+  const { plan: subPlan } = useSubscription()
   const { badges, progress } = usePronoStats()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useUserBets()
@@ -122,6 +124,18 @@ export function ProfilePage() {
           <p className="text-sm font-semibold text-tf-app-muted">Nom visible sur le live et les tribunes.</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+          <Link
+            to="/formules"
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'inline-flex items-center justify-center rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition',
+              L
+                ? 'border-violet-300/70 bg-violet-50 text-violet-950 hover:bg-violet-100'
+                : 'border-violet-400/35 bg-violet-950/40 text-violet-100 hover:bg-violet-900/50',
+            )}
+          >
+            Formules
+          </Link>
           {authUser?.isAdmin ? (
             <Link
               to="/admin"
@@ -416,6 +430,22 @@ export function ProfilePage() {
                 </div>
               </div>
             </div>
+            {monthlyTokenAllowance > 0 ? (
+              <p className="mt-2 w-full text-xs font-semibold text-tf-app-muted">
+                {subPlan.name} : {monthlyTokenAllowance.toLocaleString('fr-FR')} jetons / mois —{' '}
+                <button
+                  type="button"
+                  className="font-black text-violet-600 underline hover:text-violet-800"
+                  onClick={() => {
+                    const r = claimMonthlySubscriptionTokens()
+                    if (r.ok) window.alert(`+${r.amount} jetons crédités !`)
+                    else if (r.reason === 'already_claimed') window.alert('Déjà récupéré ce mois-ci.')
+                  }}
+                >
+                  Récupérer
+                </button>
+              </p>
+            ) : null}
           </div>
         </div>
       </Card>

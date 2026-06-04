@@ -3,6 +3,9 @@ import type { Wallet } from '../types/bet'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from './characterPresets'
 import { DEFAULT_WALLET } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
+import type { SubscriptionState } from '../types/subscription'
+import { DEFAULT_SUBSCRIPTION } from '../types/subscription'
+import { normalizeSubscription } from '../utils/subscriptionEntitlements'
 import { AVATAR_2D_DEFAULTS } from './avatar2dCatalog'
 import {
   createDefaultModularAvatarState,
@@ -41,6 +44,8 @@ export type UserAppStateV1 = {
   profile: UserProfile
   wallet: Wallet
   bets: import('../types/bet').Bet[]
+  /** Formule freemium / Supporter+ / Ambassadeur */
+  subscription?: SubscriptionState
   /** Portefeuille test admin initialisé une seule fois (évite de re-créditer après achat). */
   adminWalletBootstrapped?: boolean
 }
@@ -51,6 +56,7 @@ export function defaultUserAppState(): UserAppStateV1 {
     profile: { ...defaultUserProfile, characterLook: { ...DEFAULT_CHARACTER_LOOK } },
     wallet: { ...DEFAULT_WALLET },
     bets: [],
+    subscription: { ...DEFAULT_SUBSCRIPTION },
   }
 }
 
@@ -82,6 +88,7 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
         ? { ...base.wallet, ...(o.wallet as Wallet) }
         : base.wallet,
     bets: Array.isArray(o.bets) ? (o.bets as UserAppStateV1['bets']) : base.bets,
+    subscription: normalizeSubscription(o.subscription ?? DEFAULT_SUBSCRIPTION),
     adminWalletBootstrapped:
       o.adminWalletBootstrapped === true ? true : base.adminWalletBootstrapped,
   }

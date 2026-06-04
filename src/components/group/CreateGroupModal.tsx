@@ -17,6 +17,8 @@ import type { GroupTheme } from '../../types/group'
 import { ALL_CLUBS_CATALOG } from '../../data/allClubsCatalog'
 import type { ClubCatalogEntry } from '../../data/allClubsCatalog'
 import { CONFEDERATIONS, NATIONS } from '../../data/nations'
+import { useSubscription } from '../../hooks/useSubscription'
+import { Link } from 'react-router-dom'
 
 export function CreateGroupModal({
   open,
@@ -29,6 +31,8 @@ export function CreateGroupModal({
     g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>,
   ) => void
 }) {
+  const { plan } = useSubscription()
+  const themeCustomization = plan.flags.groupThemeCustomization
   const [name, setName] = useState('Mon groupe')
   const [emoji, setEmoji] = useState('🧢')
   const [location, setLocation] = useState('Ma ville')
@@ -456,6 +460,17 @@ export function CreateGroupModal({
               </p>
             </div>
 
+            {!themeCustomization ? (
+              <p className="mt-4 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900">
+                Freemium : photo, nom et # uniquement. Personnalisation couleurs / thème avec{' '}
+                <Link to="/formules" className="font-black underline">
+                  Supporter+
+                </Link>
+                .
+              </p>
+            ) : null}
+
+            {themeCustomization ? (
             <div className="mt-4">
               <div className="text-sm font-black text-slate-900">Palettes</div>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -476,7 +491,9 @@ export function CreateGroupModal({
                 ))}
               </div>
             </div>
+            ) : null}
 
+            {themeCustomization ? (
             <div className="mt-4 min-w-0">
               <div className="text-sm font-black text-slate-900">Thème</div>
               <div className="mt-2 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
@@ -568,6 +585,7 @@ export function CreateGroupModal({
                 />
               </div>
             </div>
+            ) : null}
 
             <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
               <Button

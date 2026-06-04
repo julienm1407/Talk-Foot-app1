@@ -45,6 +45,9 @@ export const BoutiquePurchaseSuccessPage = lazy(() =>
 export const ProfilePage = lazy(() =>
   import('../pages/Profile').then((m) => ({ default: m.ProfilePage })),
 )
+export const SubscriptionPlansPage = lazy(() =>
+  import('../pages/SubscriptionPlansPage').then((m) => ({ default: m.SubscriptionPlansPage })),
+)
 export const UserProfilePage = lazy(() =>
   import('../pages/UserProfile').then((m) => ({ default: m.UserProfilePage })),
 )

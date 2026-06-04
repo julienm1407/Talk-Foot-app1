@@ -4,6 +4,7 @@ import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
+import { useSubscription } from '../hooks/useSubscription'
 import {
   CDM_BUNDLE_MEDALS,
   CDM_JERSEY_MEDALS,
@@ -38,6 +39,7 @@ function parseCatalogTab(raw: string | null): CatalogFilter | null {
 
 export function BoutiquePage() {
   const navigate = useNavigate()
+  const { plan, monthlyTokens, betTokenMultiplier } = useSubscription()
   const { wallet, ownsItem, purchaseCosmetic } = useBoutiquePurchase()
   const [searchParams] = useSearchParams()
   const tabFromUrl = parseCatalogTab(searchParams.get('tab'))
@@ -203,7 +205,13 @@ export function BoutiquePage() {
             </h1>
             <p className="max-w-xl text-sm font-medium text-sky-100/90">
               Visuel produit · achat en <strong className="text-white">médailles 🏅</strong> ou{' '}
-              <strong className="text-white">jetons</strong> (1 🏅 = {TOKENS_PER_MEDAL.toLocaleString('fr-FR')} jetons).
+              <strong className="text-white">jetons</strong> (1 🏅 = {TOKENS_PER_MEDAL.toLocaleString('fr-FR')}{' '}
+              jetons). Catalogue identique pour toutes les formules — ta formule{' '}
+              <strong className="text-white">{plan.name}</strong>
+              {monthlyTokens > 0
+                ? ` : +${monthlyTokens.toLocaleString('fr-FR')} jetons / mois`
+                : ''}
+              {betTokenMultiplier > 1 ? ` · jetons paris ×${betTokenMultiplier}` : ''}.
             </p>
           </header>
 

@@ -4,6 +4,7 @@ import { AdSenseDisclosure } from '../ads/AdSenseDisclosure'
 import { AdsenseDisplayUnit } from '../ads/AdsenseDisplayUnit'
 import { getLiveAdsenseUnit } from '../../config/ads'
 import { shouldServeLiveAdsense } from '../../config/adsPolicy'
+import { useSubscription } from '../../hooks/useSubscription'
 import { cn } from '../../utils/cn'
 
 export function AdSlot({
@@ -30,10 +31,13 @@ export function AdSlot({
   className?: string
 }) {
   const { pathname } = useLocation()
+  const { tier } = useSubscription()
   const placementKey = imageSeed
   const liveUnit = getLiveAdsenseUnit(placementKey, pathname)
   const live =
-    liveUnit && shouldServeLiveAdsense(pathname, { contentReady }) ? liveUnit : null
+    liveUnit && shouldServeLiveAdsense(pathname, { contentReady, subscriptionTier: tier })
+      ? liveUnit
+      : null
 
   const gradient =
     tone === 'navy'
