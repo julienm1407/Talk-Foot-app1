@@ -1,83 +1,80 @@
-import { lazy } from 'react'
+import { lazyWithRetry } from '../utils/lazyWithRetry'
 
-export const HomePage = lazy(() =>
+export const HomePage = lazyWithRetry(() =>
   import('../pages/Home').then((m) => ({ default: m.HomePage })),
 )
-export const CalendarPage = lazy(() =>
+export const CalendarPage = lazyWithRetry(() =>
   import('../pages/Calendar').then((m) => ({ default: m.CalendarPage })),
 )
-export const PronosticHubPage = lazy(() =>
+export const PronosticHubPage = lazyWithRetry(() =>
   import('../pages/PronosticHub').then((m) => ({ default: m.PronosticHubPage })),
 )
-export const ChannelPage = lazy(() =>
+export const ChannelPage = lazyWithRetry(() =>
   import('../pages/Channel').then((m) => ({ default: m.ChannelPage })),
 )
-export const ChannelStadiumPage = lazy(() =>
+export const ChannelStadiumPage = lazyWithRetry(() =>
   import('../pages/ChannelStadium').then((m) => ({ default: m.ChannelStadiumPage })),
 )
-export const GroupPage = lazy(() =>
+export const GroupPage = lazyWithRetry(() =>
   import('../pages/Group').then((m) => ({ default: m.GroupPage })),
 )
-export const GroupsHubPage = lazy(() =>
+export const GroupsHubPage = lazyWithRetry(() =>
   import('../pages/GroupsHub').then((m) => ({ default: m.GroupsHubPage })),
 )
-export const DebatesPage = lazy(() =>
+export const DebatesPage = lazyWithRetry(() =>
   import('../pages/Debates').then((m) => ({ default: m.DebatesPage })),
 )
-export const DebateDetailPage = lazy(() =>
+export const DebateDetailPage = lazyWithRetry(() =>
   import('../pages/DebateDetail').then((m) => ({ default: m.DebateDetailPage })),
 )
-export const RankingsPage = lazy(() =>
+export const RankingsPage = lazyWithRetry(() =>
   import('../pages/Rankings').then((m) => ({ default: m.RankingsPage })),
 )
-export const VideosPage = lazy(() =>
+export const VideosPage = lazyWithRetry(() =>
   import('../pages/Videos').then((m) => ({ default: m.VideosPage })),
 )
-export const BoutiquePage = lazy(() =>
+export const BoutiquePage = lazyWithRetry(() =>
   import('../pages/Boutique').then((m) => ({ default: m.BoutiquePage })),
 )
-export const BoutiqueMedalPacksPage = lazy(() =>
+export const BoutiqueMedalPacksPage = lazyWithRetry(() =>
   import('../pages/BoutiqueMedalPacks').then((m) => ({ default: m.BoutiqueMedalPacksPage })),
 )
-export const BoutiquePurchaseSuccessPage = lazy(() =>
+export const BoutiquePurchaseSuccessPage = lazyWithRetry(() =>
   import('../pages/BoutiquePurchaseSuccess').then((m) => ({ default: m.BoutiquePurchaseSuccessPage })),
 )
-export const ProfilePage = lazy(() =>
+export const ProfilePage = lazyWithRetry(() =>
   import('../pages/Profile').then((m) => ({ default: m.ProfilePage })),
 )
-export const SubscriptionPlansPage = lazy(() =>
-  import('../pages/SubscriptionPlansPage').then((m) => ({ default: m.SubscriptionPlansPage })),
-)
-export const UserProfilePage = lazy(() =>
+export const UserProfilePage = lazyWithRetry(() =>
   import('../pages/UserProfile').then((m) => ({ default: m.UserProfilePage })),
 )
-export const ArticlePage = lazy(() =>
+export const ArticlePage = lazyWithRetry(() =>
   import('../pages/ArticlePage').then((m) => ({ default: m.ArticlePage })),
 )
-export const ClubPage = lazy(() =>
+export const ClubPage = lazyWithRetry(() =>
   import('../pages/ClubPage').then((m) => ({ default: m.ClubPage })),
 )
-export const AdminPage = lazy(() =>
+export const AdminPage = lazyWithRetry(() =>
   import('../pages/AdminPage').then((m) => ({ default: m.AdminPage })),
 )
-export const DataSourcesSettingsPage = lazy(() =>
+export const DataSourcesSettingsPage = lazyWithRetry(() =>
   import('../pages/DataSourcesSettings').then((m) => ({ default: m.DataSourcesSettingsPage })),
 )
-export const NationPage = lazy(() =>
+export const NationPage = lazyWithRetry(() =>
   import('../pages/NationPage').then((m) => ({ default: m.NationPage })),
 )
-export const NationsHubPage = lazy(() =>
+export const NationsHubPage = lazyWithRetry(() =>
   import('../pages/NationsHub').then((m) => ({ default: m.NationsHub })),
 )
-export const CdmHubPage = lazy(() =>
+export const CdmHubPage = lazyWithRetry(() =>
   import('../pages/CdmHub').then((m) => ({ default: m.CdmHubPage })),
 )
-export const CdmGroupsPage = lazy(() =>
+export const CdmGroupsPage = lazyWithRetry(() =>
   import('../pages/CdmGroups').then((m) => ({ default: m.CdmGroupsPage })),
 )
-export const CdmBracketPage = lazy(() =>
+export const CdmBracketPage = lazyWithRetry(() =>
   import('../pages/CdmBracket').then((m) => ({ default: m.CdmBracketPage })),
 )
-export const CdmStatsPage = lazy(() =>
+export const CdmStatsPage = lazyWithRetry(() =>
   import('../pages/CdmStats').then((m) => ({ default: m.CdmStatsPage })),
 )

@@ -7,6 +7,7 @@ import { LoginPage } from './pages/Login'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { AboutPage } from './pages/AboutPage'
+import { SubscriptionPlansPage } from './pages/SubscriptionPlansPage'
 import {
   AdminPage,
   ArticlePage,
@@ -30,7 +31,6 @@ import {
   NationPage,
   NationsHubPage,
   ProfilePage,
-  SubscriptionPlansPage,
   PronosticHubPage,
   RankingsPage,
   UserProfilePage,
