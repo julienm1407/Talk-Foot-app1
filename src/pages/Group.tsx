@@ -1747,9 +1747,8 @@ export function GroupPage() {
           <div
             ref={feedRef}
             className={cn(
-              'mt-4 min-h-0 flex-1 overflow-y-auto px-3 py-3 [-webkit-overflow-scrolling:touch] sm:mt-5 sm:px-5 sm:py-4',
-              /* Mobile : en bas du fil, le geste continue sur la page (accessibilité). Desktop : isole le bounce. */
-              'max-lg:overscroll-y-auto',
+              'mt-4 min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-3 [-webkit-overflow-scrolling:touch] sm:mt-5 sm:px-5 sm:py-4',
+              'scroll-pb-3',
               'lg:overscroll-y-contain',
               /* Garde une zone de lecture minimum quand l’en-tête est chargé (débat, etc.) */
               debate && channel?.id === 'general' ? 'max-lg:min-h-[8rem]' : 'max-lg:min-h-[10rem]',
@@ -1806,7 +1805,7 @@ export function GroupPage() {
             </div>
           ) : (
             <div
-              className="min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3"
+              className="min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-sm sm:px-5 sm:py-3 max-sm:pb-1"
               style={salonSurface?.backdrop}
             >
               {groupChatModerationHint ? (

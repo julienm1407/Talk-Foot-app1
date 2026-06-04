@@ -17,6 +17,9 @@ import { cn } from '../utils/cn'
 
 const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
 const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
+/** Espace au-dessus de la BottomNav fixe (sm:hidden → téléphone uniquement). */
+const mainBottomPadAboveBottomNav =
+  'max-sm:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
 /** Accueil desktop : pas de bottom nav — éviter le grand vide gris sous le hub. */
 const mainBottomPadHomeDesktop = 'md:pb-2 lg:pb-3'
 
@@ -84,8 +87,8 @@ export function AppShell() {
               'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col min-h-0 px-[var(--tf-page-gutter)]',
               'max-lg:overflow-hidden max-lg:pt-2',
               'lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-y-contain lg:pt-7 lg:[-webkit-overflow-scrolling:touch]',
-              mainBottomPadChannel,
-              'lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
+              mainBottomPadAboveBottomNav,
+              'sm:pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
             )}
           >
             <div
