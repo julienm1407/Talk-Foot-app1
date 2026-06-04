@@ -44,7 +44,7 @@ export function AppShell() {
 
   useSwipeNavigate({
     enabled: !isChannel && !isGroupTribune,
-    order: ['/', '/match', '/groups', '/rankings'],
+    order: ['/', '/match', '/groups', '/rankings', '/boutique'],
   })
 
   return (

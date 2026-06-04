@@ -22,7 +22,7 @@ export function BottomNav() {
       )}
       aria-label="Bottom navigation"
     >
-      <div className="mx-auto grid w-full max-w-tf-content grid-cols-5 gap-0.5 px-1 py-1.5">
+      <div className="mx-auto grid w-full max-w-tf-content grid-cols-6 gap-0.5 px-0.5 py-1.5">
         {BOTTOM_NAV_ROUTES.map(({ to, end, section, icon }) => {
           const th = getAppSectionTheme(section)
           const active = isRouteActiveForSection(
@@ -37,7 +37,7 @@ export function BottomNav() {
               end={end}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'tf-nav-pill flex min-h-tf-touch flex-col items-center justify-center gap-0.5 rounded-tf-xl px-1 py-1.5 text-[10px] font-semibold leading-tight outline-none active:scale-[0.96]',
+                'tf-nav-pill flex min-h-tf-touch flex-col items-center justify-center gap-0.5 rounded-tf-xl px-0.5 py-1.5 text-[9px] font-semibold leading-tight outline-none active:scale-[0.96] sm:px-1 sm:text-[10px]',
                 th.nav.focus,
                 active
                   ? cn(
@@ -53,6 +53,8 @@ export function BottomNav() {
                         (L ? 'ring-tf-nav-rankings/50' : 'ring-tf-nav-rankings/55'),
                       section === 'pronostic' &&
                         (L ? 'ring-tf-cta/50' : 'ring-tf-cta/55'),
+                      section === 'boutique' &&
+                        (L ? 'ring-amber-400/45' : 'ring-amber-300/40'),
                     )
                   : cn(
                       L ? 'text-tf-app-muted hover:text-tf-app-fg' : 'text-sky-200/92 hover:text-white',

@@ -366,7 +366,7 @@ export function getAppSectionFromPath(pathname: string): AppSectionId {
   return 'default'
 }
 
-/** Arborescence officielle : 5 entrées (le reste via la home ou sous-pages). */
+/** Barre du haut desktop : 6 entrées (le reste via sous-pages). */
 export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId }[] = [
   { to: '/', end: true, section: 'home' },
   { to: '/match', end: true, section: 'matches' },
@@ -382,6 +382,7 @@ export const BOTTOM_NAV_ROUTES: { to: string; end?: boolean; section: AppSection
   { to: '/pronostic', section: 'pronostic', icon: '🎯' },
   { to: '/groups', section: 'groups', icon: '👥' },
   { to: '/rankings', section: 'rankings', icon: '🏆' },
+  { to: '/boutique', section: 'boutique', icon: '🛍️' },
 ]
 
 export const OVERLAY_NAV_ROUTES: {
