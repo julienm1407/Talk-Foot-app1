@@ -39,7 +39,9 @@ export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogR
   } else if (filter === 'packs') {
     items = items.filter((i) => i.bundleIncludes?.length)
   } else {
-    items = items.filter((i) => i.slot === 'shoes')
+    items = items.filter(
+      (i) => i.slot === 'shoes' && i.id !== 'shoes-sneaker-white' && i.cost > 0,
+    )
   }
 
   items = items.filter((i) => matchesQuery(i, q))

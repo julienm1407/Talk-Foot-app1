@@ -22,7 +22,6 @@ const FREE_SHORTS_BASE = new Set([
 ])
 
 const MODULAR_SHOE_TO_SHOP: Record<string, string> = {
-  'shoes-shoes-base': 'shoes-sneaker-white',
   'shoes-shoes-bleu': 'shoes-sneaker-neon',
   'shoes-shoes-rouge': 'shoes-retro-gum',
   'shoes-shoes-jaune': 'shoes-sneaker-jaune',

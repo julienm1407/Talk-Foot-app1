@@ -14,7 +14,12 @@ export {
 const PACK_ITEMS = cdm2026BundleItems.filter((i) => (i.bundleIncludes?.length ?? 0) > 0)
 
 function isFreeShopItem(shopItemId: string): boolean {
-  return shopItemId.startsWith('kit-base-') || shopItemId.startsWith('pants-base-')
+  return (
+    shopItemId.startsWith('kit-base-') ||
+    shopItemId.startsWith('pants-base-') ||
+    shopItemId === 'shoes-sneaker-white' ||
+    shopItemId === 'shoes-studs'
+  )
 }
 
 function grantedViaPack(shopItemId: string, hasId: (id: string) => boolean): boolean {

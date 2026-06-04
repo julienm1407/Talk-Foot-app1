@@ -131,15 +131,6 @@ export const baseAvatarItems: AvatarItem[] = [
     description: 'Poches utilitaires.',
   },
   {
-    id: 'shoes-sneaker-white',
-    name: 'Crampons standards blancs',
-    slot: 'shoes',
-    emoji: '👟',
-    cost: 0,
-    rarity: 'common',
-    description: 'Crampons blancs — offerts à tous les joueurs.',
-  },
-  {
     id: 'shoes-sneaker-neon',
     name: 'Crampons standards bleus',
     slot: 'shoes',

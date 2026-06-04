@@ -6,12 +6,12 @@ import type { AvatarItem } from '../types/profile'
 import { boutiqueShoeImageUrl } from '../utils/boutiqueShoeAssets'
 import { STANDARD_SHOES_MEDALS } from './boutiqueMedalCosts'
 
+/** Crampons blancs (`shoes-shoes-base`) : gratuits pour tous — absents de la boutique. */
 const SHOE_VARIANTS = [
-  { id: 'shoes-sneaker-white', name: 'Crampons blancs', emoji: '👟', free: true },
-  { id: 'shoes-sneaker-neon', name: 'Crampons bleus', emoji: '💠', free: false },
-  { id: 'shoes-retro-gum', name: 'Crampons rouges', emoji: '🔴', free: false },
-  { id: 'shoes-sneaker-jaune', name: 'Crampons jaunes', emoji: '🟡', free: false },
-  { id: 'shoes-sneaker-vert', name: 'Crampons verts', emoji: '🟢', free: false },
+  { id: 'shoes-sneaker-neon', name: 'Crampons bleus', emoji: '💠' },
+  { id: 'shoes-retro-gum', name: 'Crampons rouges', emoji: '🔴' },
+  { id: 'shoes-sneaker-jaune', name: 'Crampons jaunes', emoji: '🟡' },
+  { id: 'shoes-sneaker-vert', name: 'Crampons verts', emoji: '🟢' },
 ] as const
 
 export const boutiqueShoeItems: AvatarItem[] = SHOE_VARIANTS.map((v) => ({
@@ -19,11 +19,9 @@ export const boutiqueShoeItems: AvatarItem[] = SHOE_VARIANTS.map((v) => ({
   name: v.name,
   slot: 'shoes' as const,
   emoji: v.emoji,
-  cost: v.free ? 0 : STANDARD_SHOES_MEDALS,
+  cost: STANDARD_SHOES_MEDALS,
   rarity: 'common' as const,
-  description: v.free
-    ? 'Crampons blancs — offerts à tous les joueurs.'
-    : 'Chaussures standards — collection stade.',
+  description: 'Chaussures standards — collection stade.',
   collection: 'standard' as const,
   shoesVisual: {
     imageUrl: boutiqueShoeImageUrl(v.id),
