@@ -27,13 +27,7 @@ import { cn } from '../../utils/cn'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { MesParisEncart } from '../bet/MesParisEncart'
 import { resolveClubCatalogLogoUrl } from '../../utils/catalogLogos'
-
-/** Petites offres mockées pour le rail hub (évite le vide visuel sous les tribunes). */
-const RAIL_BOUTIQUE_OFFERS = [
-  { id: 'flash-maillot', emoji: '👕', title: 'Maillots third', sub: 'Clubs partenaires', badge: '-15%' },
-  { id: 'casq', emoji: '🧢', title: 'Casquettes club', sub: 'Dès 19 €', badge: '-20%' },
-  { id: 'med', emoji: '🏅', title: 'Médailles tribune', sub: 'Pack collector', badge: 'Promo' },
-] as const
+import { getHomeRailBoutiqueOffers } from '../../data/homeRailBoutiqueOffers'
 
 /**
  * Colonne « Mon espace » (favoris, tribunes, boutique) — desktop rail ou carte pleine largeur mobile.
@@ -94,6 +88,8 @@ export function HomeMonEspacePanel({
       })
       .filter((t): t is Team => Boolean(t))
   }, [favoriteClubIds])
+
+  const railBoutiqueOffers = useMemo(() => getHomeRailBoutiqueOffers(), [])
 
   return (
     <ShellTag
@@ -406,19 +402,31 @@ export function HomeMonEspacePanel({
               id="rail-boutique-offers-title"
               className={cn('px-1 text-[10px] font-black uppercase tracking-[0.18em]', hubCaps)}
             >
-              Offres boutique
+              Offre du jour
+            </p>
+            <p className={cn('px-1 text-[9px] font-semibold leading-snug', hubSecondary)}>
+              Nouvelle offre demain à minuit (Paris).
             </p>
             <ul className="space-y-1.5" role="list">
-              {RAIL_BOUTIQUE_OFFERS.map((o) => (
+              {railBoutiqueOffers.length === 0 ? (
+                <li className={cn('rounded-lg px-2 py-2 text-xs font-semibold leading-snug', hubSecondary)}>
+                  Aucune offre du jour pour l&apos;instant.
+                </li>
+              ) : null}
+              {railBoutiqueOffers.map((o) => (
                 <li key={o.id}>
                   <Link
-                    to="/boutique"
+                    to={o.href}
                     className={cn(
                       'flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 outline-none transition',
                       TF_FOCUS_VISIBLE,
-                      L
-                        ? 'border border-tf-dark/[0.08] bg-white/75 hover:border-tf-dark/15 hover:bg-white'
-                        : 'border border-white/10 bg-white/[0.05] hover:border-white/18 hover:bg-white/[0.09]',
+                      o.isDailyDeal
+                        ? L
+                          ? 'border border-amber-400/50 bg-gradient-to-r from-amber-50/95 to-white hover:border-amber-500/60'
+                          : 'border border-amber-400/40 bg-gradient-to-r from-amber-500/15 to-white/[0.06] hover:border-amber-300/55'
+                        : L
+                          ? 'border border-tf-dark/[0.08] bg-white/75 hover:border-tf-dark/15 hover:bg-white'
+                          : 'border border-white/10 bg-white/[0.05] hover:border-white/18 hover:bg-white/[0.09]',
                     )}
                   >
                     <span className="shrink-0 text-base leading-none" aria-hidden>
@@ -431,7 +439,11 @@ export function HomeMonEspacePanel({
                     <span
                       className={cn(
                         'shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-black tabular-nums',
-                        L ? 'bg-amber-100 text-amber-900' : 'bg-amber-500/20 text-amber-200',
+                        o.isDailyDeal
+                          ? 'bg-amber-500 text-amber-950'
+                          : L
+                            ? 'bg-amber-100 text-amber-900'
+                            : 'bg-amber-500/20 text-amber-200',
                       )}
                     >
                       {o.badge}
@@ -440,6 +452,12 @@ export function HomeMonEspacePanel({
                 </li>
               ))}
             </ul>
+            <Link
+              to="/boutique"
+              className={cn(hubPillLink(appearance, 'xs'), 'mt-1.5 w-full justify-center text-center')}
+            >
+              Toute la boutique
+            </Link>
           </section>
         ) : null}
       </div>

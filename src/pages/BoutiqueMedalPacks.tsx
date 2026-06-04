@@ -6,6 +6,7 @@ import { useWallet } from '../hooks/useWallet'
 import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
 import { MedalPaymentModal } from '../components/shop/MedalPaymentModal'
+import { getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
 import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
 import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiquePurchaseFlow'
 import { cn } from '../utils/cn'
@@ -30,9 +31,11 @@ export function BoutiqueMedalPacksPage() {
     [selectedPackId],
   )
 
+  const pendingMedalCost = pendingItem ? getEffectiveMedalCost(pendingItem) : 0
+
   const shortfall =
-    pendingItem && Number.isFinite(pendingItem.cost)
-      ? Math.max(0, pendingItem.cost - wallet.medals)
+    pendingItem && Number.isFinite(pendingMedalCost)
+      ? Math.max(0, pendingMedalCost - wallet.medals)
       : Number.isFinite(needMedals) && needMedals > 0
         ? Math.max(0, needMedals - wallet.medals)
         : 0
@@ -46,7 +49,7 @@ export function BoutiqueMedalPacksPage() {
 
   const tryCompletePendingPurchase = useCallback(async (): Promise<boolean> => {
     if (!pendingItem || autoPurchaseStarted.current) return false
-    if (wallet.medals < pendingItem.cost) return false
+    if (wallet.medals < getEffectiveMedalCost(pendingItem)) return false
 
     const returnTo = searchParams.get('return') ?? '/boutique'
     const result = await purchaseCosmetic(pendingItem, 'medals', returnTo)
@@ -111,7 +114,7 @@ export function BoutiqueMedalPacksPage() {
         <div className="rounded-xl border border-amber-400/40 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-950">
           <p>
             Pour acheter <strong>{pendingItem.name}</strong>, il te faut{' '}
-            <strong>{pendingItem.cost} médailles</strong>.
+            <strong>{pendingMedalCost} médailles</strong>.
           </p>
           <p className="mt-1">
             Il te manque environ <strong>{shortfall} médailles</strong> — choisis un pack ci-dessous.

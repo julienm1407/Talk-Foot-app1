@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { useProfile } from '../../hooks/useProfile'
 import { useWallet } from '../../hooks/useWallet'
-import { cosmeticTokenPrice } from '../../data/shop'
+import { getEffectiveMedalCost, getEffectiveTokenCost } from '../../data/boutiqueDailyDeal'
 import type { AvatarItem } from '../../types/profile'
 import { profileStudioHref } from '../../utils/boutiquePurchaseFlow'
 import { mergePurchasedItemOntoProfile, shopItemToModularAssetId } from '../../utils/boutiqueModularState'
@@ -35,8 +35,8 @@ export function BoutiquePurchaseCelebration({
 
   const paidLabel =
     currency === 'medals'
-      ? `${item.cost.toLocaleString('fr-FR')} médailles 🏅`
-      : `${cosmeticTokenPrice(item.cost).toLocaleString('fr-FR')} jetons`
+      ? `${getEffectiveMedalCost(item).toLocaleString('fr-FR')} médailles 🏅`
+      : `${getEffectiveTokenCost(item).toLocaleString('fr-FR')} jetons`
 
   const itemLabel = item.bundleIncludes?.length ? 'Pack maillot + short' : item.name
 

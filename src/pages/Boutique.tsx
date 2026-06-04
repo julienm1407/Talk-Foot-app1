@@ -15,8 +15,10 @@ import type { AvatarItem as AvatarItemType } from '../types/profile'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
+import { getBoutiqueDailyDeal, getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
+import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
 import { BoutiqueItemPurchaseModal } from '../components/shop/BoutiqueItemPurchaseModal'
 import { catalogTabForShopItem } from '../utils/boutiquePurchaseFlow'
 
@@ -56,15 +58,28 @@ export function BoutiquePage() {
   const [confirmingPurchase, setConfirmingPurchase] = useState(false)
 
   const shop = getAppSectionTheme('boutique')
+  const dailyDeal = useMemo(() => getBoutiqueDailyDeal(), [])
+
+  useEffect(() => {
+    if (searchParams.get('deal') !== 'jour' || !dailyDeal) return
+    const tab = catalogTabForShopItem(dailyDeal.item)
+    setCatalogFilter(tab)
+  }, [searchParams, dailyDeal])
 
   const catalogRows = useMemo(
     () => buildCatalogRows(catalogFilter, catalogSearch),
     [catalogFilter, catalogSearch],
   )
-  const sortedCatalogRows = useMemo(
-    () => sortCatalogRows(catalogRows, catalogSort),
-    [catalogRows, catalogSort],
-  )
+  const sortedCatalogRows = useMemo(() => {
+    const sorted = sortCatalogRows(catalogRows, catalogSort)
+    if (!dailyDeal || catalogSearch.trim()) return sorted
+    const idx = sorted.findIndex((r) => r.item.id === dailyDeal.itemId)
+    if (idx <= 0) return sorted
+    const copy = [...sorted]
+    const [row] = copy.splice(idx, 1)
+    copy.unshift(row)
+    return copy
+  }, [catalogRows, catalogSort, dailyDeal, catalogSearch])
 
   const showNotice = (tone: 'ok' | 'err', text: string) => {
     setNotice({ tone, text })
@@ -75,7 +90,7 @@ export function BoutiquePage() {
     const tab = catalogTabForShopItem(item)
     const returnTo = `/boutique?tab=${tab}`
     const params = new URLSearchParams({
-      need: String(item.cost),
+      need: String(getEffectiveMedalCost(item)),
       item: item.id,
       return: returnTo,
     })
@@ -241,6 +256,8 @@ export function BoutiquePage() {
           {notice.text}
         </div>
       ) : null}
+
+      {dailyDeal ? <BoutiqueDailyDealBanner deal={dailyDeal} /> : null}
 
       <Card className="overflow-hidden p-0 sm:p-0" elevation="soft">
         <div className="border-b border-tf-grey-pastel/50 bg-gradient-to-r from-slate-50/95 via-white to-sky-50/50 px-4 py-4 sm:px-6 sm:py-5">

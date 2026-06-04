@@ -1,5 +1,9 @@
 import type { AvatarItem } from '../types/profile'
 import type { CatalogFilter } from './boutiqueCatalog'
+import {
+  getEffectiveMedalCost,
+  getEffectiveTokenCost,
+} from '../data/boutiqueDailyDeal'
 import { cosmeticTokenPrice, isBoutiqueShopItemOwned, isCosmeticOwned } from '../data/boutiqueEconomy'
 import { cdm2026BundleItems } from '../data/cdm2026Bundles'
 import { boutiqueItemToModularState, shopItemToModularAssetId } from './boutiqueModularState'
@@ -141,12 +145,13 @@ export function purchaseCosmeticItem(
   if (validation.status === 'partial_pack') return { ok: false, code: 'partial_pack' }
 
   const grantIds = grantIdsForShopItem(item)
-  const tokenCost = cosmeticTokenPrice(item.cost)
+  const medalCost = getEffectiveMedalCost(item)
+  const tokenCost = getEffectiveTokenCost(item)
 
   if (pays.commitCosmeticPurchase) {
     const committed = pays.commitCosmeticPurchase({
       currency,
-      medalCost: item.cost,
+      medalCost,
       tokenCost,
       grantIds,
     })
@@ -159,7 +164,7 @@ export function purchaseCosmeticItem(
   }
 
   if (currency === 'medals') {
-    const paid = pays.spendMedals(item.cost)
+    const paid = pays.spendMedals(medalCost)
     if (!paid.ok) {
       return { ok: false, code: paid.insufficient ? 'insufficient_medals' : 'payment_failed' }
     }

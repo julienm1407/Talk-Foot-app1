@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { useProfile } from '../../hooks/useProfile'
-import { cosmeticTokenPrice } from '../../data/shop'
+import { getEffectiveMedalCost, getEffectiveTokenCost } from '../../data/boutiqueDailyDeal'
 import type { AvatarItem } from '../../types/profile'
 import { mergePurchasedItemOntoProfile } from '../../utils/boutiqueModularState'
 import { cn } from '../../utils/cn'
@@ -43,7 +43,10 @@ export function BoutiqueItemPurchaseModal({
     [profile, item],
   )
 
-  const tokenPrice = cosmeticTokenPrice(item.cost)
+  const medalCost = getEffectiveMedalCost(item)
+  const tokenPrice = getEffectiveTokenCost(item)
+  const listCost = item.cost
+  const onDailyDeal = medalCost < listCost
   const typeLabel = boutiqueItemTypeLabel(item)
 
   if (step === 'confirm' && currency) {
@@ -87,7 +90,14 @@ export function BoutiqueItemPurchaseModal({
               )}
             >
               <span className="tabular-nums text-base">
-                {item.cost} <span aria-hidden>🏅</span>
+                {onDailyDeal ? (
+                  <>
+                    <span className="text-white/50 line-through">{listCost}</span> {medalCost}
+                  </>
+                ) : (
+                  medalCost
+                )}{' '}
+                <span aria-hidden>🏅</span>
               </span>
               <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wide opacity-90">
                 Médailles

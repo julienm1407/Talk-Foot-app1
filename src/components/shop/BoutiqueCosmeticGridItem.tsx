@@ -1,7 +1,11 @@
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { BoutiqueKitStudioPreview } from './BoutiqueKitStudioPreview'
 import { shopEncartButtonClass, shopEncartTokenButtonClass } from './ShopRarityEncart'
-import { cosmeticTokenPrice } from '../../data/shop'
+import {
+  getEffectiveMedalCost,
+  getEffectiveTokenCost,
+  isDailyDealItem,
+} from '../../data/boutiqueDailyDeal'
 import type { AvatarItem } from '../../types/profile'
 import type { ShopRarity } from './ShopRarityEncart'
 import { cn } from '../../utils/cn'
@@ -26,10 +30,10 @@ function usesStudioPreview(item: AvatarItem): boolean {
   )
 }
 
-const encartClass = (item: AvatarItem, owned: boolean) =>
+const encartClass = (item: AvatarItem, owned: boolean, dailyDeal: boolean) =>
   cn(
     'relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0a1220] text-left shadow-[0_12px_40px_rgba(0,0,0,0.35)] ring-2',
-    RARITY_RING[item.rarity],
+    dailyDeal && !owned ? 'ring-amber-400/65' : RARITY_RING[item.rarity],
     usesStudioPreview(item) ? 'max-w-[300px]' : 'max-w-[220px]',
     !owned &&
       cn(
@@ -42,17 +46,28 @@ function EncartBody({
   item,
   owned,
   typeLabel,
+  medalCost,
+  listCost,
   tokenPrice,
+  dailyDeal,
   studioCard,
 }: {
   item: AvatarItem
   owned: boolean
   typeLabel: string
+  medalCost: number
+  listCost: number
   tokenPrice: number
+  dailyDeal: boolean
   studioCard: boolean
 }) {
   return (
     <>
+      {dailyDeal && !owned ? (
+        <span className="absolute left-2 top-2 z-[3] rounded-md border border-amber-300/50 bg-amber-500/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-950 shadow-sm">
+          Offre du jour
+        </span>
+      ) : null}
       {studioCard ? (
         <div
           className={cn(
@@ -99,9 +114,16 @@ function EncartBody({
               owned && 'opacity-70',
             )}
           >
-            {owned ? 'Possédé' : (
+            {owned ? (
+              'Possédé'
+            ) : dailyDeal && listCost > medalCost ? (
               <span className="tabular-nums">
-                {item.cost} <span aria-hidden>🏅</span>
+                <span className="text-white/45 line-through">{listCost}</span>{' '}
+                {medalCost} <span aria-hidden>🏅</span>
+              </span>
+            ) : (
+              <span className="tabular-nums">
+                {medalCost} <span aria-hidden>🏅</span>
               </span>
             )}
           </div>
@@ -136,9 +158,22 @@ export function BoutiqueCosmeticGridItem({
   owned: boolean
   onOpenItem: (item: AvatarItem) => void
 }) {
-  const tokenPrice = cosmeticTokenPrice(item.cost)
+  const medalCost = getEffectiveMedalCost(item)
+  const listCost = item.cost
+  const tokenPrice = getEffectiveTokenCost(item)
+  const dailyDeal = isDailyDealItem(item.id)
   const typeLabel = boutiqueItemTypeLabel(item)
   const studioCard = usesStudioPreview(item)
+  const bodyProps = {
+    item,
+    owned,
+    typeLabel,
+    medalCost,
+    listCost,
+    tokenPrice,
+    dailyDeal,
+    studioCard,
+  }
 
   const handleOpen = () => {
     window.setTimeout(() => onOpenItem(item), 0)
@@ -146,27 +181,15 @@ export function BoutiqueCosmeticGridItem({
 
   if (owned) {
     return (
-      <article className={encartClass(item, true)}>
-        <EncartBody
-          item={item}
-          owned={owned}
-          typeLabel={typeLabel}
-          tokenPrice={tokenPrice}
-          studioCard={studioCard}
-        />
+      <article className={encartClass(item, true, dailyDeal)}>
+        <EncartBody {...bodyProps} />
       </article>
     )
   }
 
   return (
-    <button type="button" className={encartClass(item, false)} onClick={handleOpen}>
-      <EncartBody
-        item={item}
-        owned={owned}
-        typeLabel={typeLabel}
-        tokenPrice={tokenPrice}
-        studioCard={studioCard}
-      />
+    <button type="button" className={encartClass(item, false, dailyDeal)} onClick={handleOpen}>
+      <EncartBody {...bodyProps} />
     </button>
   )
 }

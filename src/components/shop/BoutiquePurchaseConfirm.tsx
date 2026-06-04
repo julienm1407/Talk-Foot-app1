@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { useProfile } from '../../hooks/useProfile'
-import { cosmeticTokenPrice } from '../../data/shop'
+import { getEffectiveMedalCost, getEffectiveTokenCost } from '../../data/boutiqueDailyDeal'
 import type { AvatarItem } from '../../types/profile'
 import { mergePurchasedItemOntoProfile } from '../../utils/boutiqueModularState'
 import { cn } from '../../utils/cn'
@@ -37,8 +37,10 @@ export function BoutiquePurchaseConfirm({
     [profile, item],
   )
 
-  const medalCost = item.cost
-  const tokenCost = cosmeticTokenPrice(item.cost)
+  const medalCost = getEffectiveMedalCost(item)
+  const tokenCost = getEffectiveTokenCost(item)
+  const listCost = item.cost
+  const onDailyDeal = medalCost < listCost
   const typeLabel = boutiqueItemTypeLabel(item)
 
   const insufficientMedals = currency === 'medals' && walletMedals < medalCost
@@ -46,7 +48,9 @@ export function BoutiquePurchaseConfirm({
 
   const paidLabel =
     currency === 'medals'
-      ? `${medalCost.toLocaleString('fr-FR')} médailles 🏅`
+      ? onDailyDeal
+        ? `${medalCost.toLocaleString('fr-FR')} médailles 🏅 (offre du jour, ${listCost} 🏅)`
+        : `${medalCost.toLocaleString('fr-FR')} médailles 🏅`
       : `${tokenCost.toLocaleString('fr-FR')} jetons`
 
   const confirmDisabled = confirming || insufficientMedals || insufficientTokens
