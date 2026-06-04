@@ -107,7 +107,10 @@ export function useStripeCheckoutReturn() {
     status,
     message,
     sessionId: checkoutSuccess ? sessionId : '',
-    canRetry: checkoutSuccess && Boolean(sessionId) && status === 'error',
+    canRetry:
+      checkoutSuccess &&
+      Boolean(sessionId) &&
+      (status === 'error' || status === 'idle'),
     retryFulfill,
   }
 }

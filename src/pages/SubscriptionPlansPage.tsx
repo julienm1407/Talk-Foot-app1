@@ -13,6 +13,7 @@ import { isPaidSubscriptionTier } from '../config/stripeCatalog'
 import { startStripeCheckout } from '../lib/stripe/checkout'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
+import { StripePurchaseSyncPanel } from '../components/shop/StripePurchaseSyncPanel'
 
 export function SubscriptionPlansPage() {
   const { user } = useAuth()
@@ -83,6 +84,7 @@ export function SubscriptionPlansPage() {
             ) : null}
           </div>
         ) : null}
+        <StripePurchaseSyncPanel className="mt-4 max-w-xl" />
         {payError ? <p className="text-sm font-semibold text-rose-200/95">{payError}</p> : null}
         {user && (
           <p className="text-sm font-semibold text-emerald-200/90">
