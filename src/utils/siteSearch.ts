@@ -41,7 +41,7 @@ const STATIC_PAGES: { title: string; subtitle: string; href: string; kw: string 
   { title: 'Groupes & tribunes', subtitle: 'Tribunes de supporters', href: '/groups', kw: 'groupe tribune communauté' },
   { title: 'Débats', subtitle: 'Discussions tendance', href: '/debates', kw: 'débat discussion topic' },
   { title: 'Classement parieurs', subtitle: 'Top paris & points', href: '/pronostic?vue=classement', kw: 'classement parieur paris pronostic leaderboard' },
-  { title: 'Classements ligues', subtitle: 'Big 5 & forme', href: '/rankings', kw: 'classement ranking ligue championnat' },
+  { title: 'Classements CDM', subtitle: 'Poules Mondial 2026', href: '/rankings', kw: 'classement ranking poule coupe du monde cdm wc 2026' },
   { title: 'Profil', subtitle: 'Favoris & réglages', href: '/profile', kw: 'profil compte favoris paramètres' },
   { title: 'Boutique', subtitle: 'Maillots & goodies', href: '/boutique', kw: 'boutique shop maillot' },
   { title: 'Vidéos', subtitle: 'Extraits & replays', href: '/videos', kw: 'vidéo video replay highlight' },
