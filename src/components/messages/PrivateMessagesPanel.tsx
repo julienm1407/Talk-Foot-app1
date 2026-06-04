@@ -21,7 +21,7 @@ export function PrivateMessagesPanel({
   const L = appearance === 'light'
   const { pendingThreadId, clearPendingThread } = usePrivateMessagesUi()
   const [active, setActive] = useState<DirectThread | null>(null)
-  const { mergedFor, send, visitedIds, markVisited, setActiveDmUiThreadId, directThreads } =
+  const { mergedFor, send, markVisited, setActiveDmUiThreadId, directThreads } =
     useDirectMessagesContext()
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export function PrivateMessagesPanel({
               const last = lines[lines.length - 1]
               const preview = last?.body ?? t.lastPreview
               const atLabel = last?.atLabel ?? t.lastAtLabel
-              const showUnread = t.unread && !visitedIds.includes(t.id)
+              const showUnread = t.unread
               return (
               <li key={t.id} className="flex w-full items-stretch">
                 <Link
@@ -170,12 +170,26 @@ export function PrivateMessagesPanel({
                   <div className="flex justify-end">
                     <span className={cn('text-[10px] font-bold', muted)}>{atLabel}</span>
                   </div>
-                  <p className={cn('line-clamp-2 text-[11px] font-semibold leading-snug', muted)}>{preview}</p>
+                  <p
+                    className={cn(
+                      'line-clamp-2 text-[11px] leading-snug',
+                      showUnread
+                        ? cn('font-black', L ? 'text-tf-dark' : 'text-white')
+                        : cn('font-semibold', muted),
+                    )}
+                  >
+                    {preview}
+                  </p>
                   {showUnread ? (
-                    <span
-                      className="mt-1 size-2 shrink-0 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.7)]"
-                      aria-hidden
-                    />
+                    <span className="mt-1 inline-flex items-center gap-1">
+                      <span
+                        className="size-2 shrink-0 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.7)]"
+                        aria-hidden
+                      />
+                      <span className={cn('text-[9px] font-black uppercase tracking-wide', L ? 'text-violet-700' : 'text-violet-300')}>
+                        Non lu
+                      </span>
+                    </span>
                   ) : null}
                 </button>
               </li>

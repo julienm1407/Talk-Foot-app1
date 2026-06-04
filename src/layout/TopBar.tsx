@@ -14,6 +14,7 @@ import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { InboxPanel } from '../components/inbox/InboxPanel'
 import { PrivateMessagesPanel } from '../components/messages/PrivateMessagesPanel'
 import { coachDirectThread } from '../data/directMessagesMock'
+import { pickThreadIdToOpenOnInbox } from '../utils/directThreadEnrichment'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { useInbox } from '../hooks/useInbox'
 import { useIsBelowXl } from '../hooks/useIsBelowXl'
@@ -83,8 +84,8 @@ export function TopBar() {
   const dmOpt = useDirectMessagesOptional()
   const dmThreads = dmOpt?.directThreads ?? [coachDirectThread]
   const dmUnread = useMemo(
-    () => dmThreads.filter((t) => t.unread && !dmOpt?.visitedIds.includes(t.id)).length,
-    [dmOpt?.visitedIds, dmThreads],
+    () => dmThreads.filter((t) => t.unread).length,
+    [dmThreads],
   )
   const belowXl = useIsBelowXl()
   const isHomePath = location.pathname === '/' || location.pathname === ''
@@ -243,7 +244,9 @@ export function TopBar() {
               onClick={() => {
                 if (pm.isOpen) pm.close()
                 else {
-                  pm.open()
+                  void dmOpt?.refreshFriends()
+                  const threadId = pickThreadIdToOpenOnInbox(dmThreads)
+                  pm.open(threadId ? { threadId } : undefined)
                   setInboxOpen(false)
                 }
               }}

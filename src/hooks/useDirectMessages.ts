@@ -323,7 +323,7 @@ export function useDirectMessages(
   )
 
   return useMemo(
-    () => ({ mergedFor, send, visitedIds, markVisited }),
-    [mergedFor, send, visitedIds, markVisited],
+    () => ({ mergedFor, send, visitedIds, markVisited, cloudByKey }),
+    [mergedFor, send, visitedIds, markVisited, cloudByKey],
   )
 }

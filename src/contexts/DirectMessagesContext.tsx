@@ -11,6 +11,11 @@ import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { p2pKeysForPeers } from '../lib/supabase/friendships'
 import {
+  discoverThreadsFromCloudKeys,
+  enrichDirectThread,
+  sortDirectThreadsForInbox,
+} from '../utils/directThreadEnrichment'
+import {
   acceptFriendRequest as acceptFriendRequestApi,
   sendFriendRequest as sendFriendRequestApi,
   declineFriendRequest as declineFriendRequestApi,
@@ -101,6 +106,27 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
 
   const dm = useDirectMessages(activeDmUiThreadId, p2pKeys, chatActorId)
 
+  const directThreadsEnriched = useMemo((): DirectThread[] => {
+    const baseIds = new Set(directThreads.map((t) => t.id))
+    const discovered = chatActorId
+      ? discoverThreadsFromCloudKeys(dm.cloudByKey, chatActorId, baseIds, (peerId) =>
+          cf.acceptedPeers.find((p) => p.id === peerId)?.displayName,
+        )
+      : []
+    const merged = [...directThreads, ...discovered].map((t) =>
+      enrichDirectThread(t, dm.mergedFor(t.id), dm.visitedIds, activeDmUiThreadId),
+    )
+    return sortDirectThreadsForInbox(merged)
+  }, [
+    directThreads,
+    dm.cloudByKey,
+    dm.mergedFor,
+    dm.visitedIds,
+    activeDmUiThreadId,
+    chatActorId,
+    cf.acceptedPeers,
+  ])
+
   const refreshFriends = useCallback(async () => {
     await cf.refresh()
   }, [cf])
@@ -179,7 +205,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
     () => ({
       ...dm,
       setActiveDmUiThreadId,
-      directThreads,
+      directThreads: directThreadsEnriched,
       friendsLoading: cf.loading,
       refreshFriends,
       isCloudFriend,
@@ -193,7 +219,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
     }),
     [
       dm,
-      directThreads,
+      directThreadsEnriched,
       cf.loading,
       cf.incomingPendingFrom,
       refreshFriends,

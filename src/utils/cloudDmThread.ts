@@ -1,5 +1,6 @@
 import {
   TALKFOOT_BOT_DM_THREAD_ID,
+  friendDmThreadId,
   parseFriendPeerIdFromThreadId,
 } from '../data/directMessageConstants'
 
@@ -35,4 +36,22 @@ export function cloudPrivateThreadKey(uiThreadId: string, authUserId: string | u
   const peerId = parseFriendPeerIdFromThreadId(uiThreadId)
   if (!peerId) return null
   return p2pThreadKey(authUserId, peerId)
+}
+
+/** Autre participant d’un fil `p2p:uuid:uuid`. */
+export function peerIdFromP2pThreadKey(threadKey: string, myAuthId: string): string | null {
+  const parts = threadKey.split(':')
+  if (parts[0] !== 'p2p' || parts.length !== 3) return null
+  const a = parts[1]!
+  const b = parts[2]!
+  if (a === myAuthId) return b
+  if (b === myAuthId) return a
+  return null
+}
+
+/** Id de fil UI (`dm-friend-…` ou Coach) à partir de `private_messages.thread_key`. */
+export function uiThreadIdFromCloudKey(threadKey: string, myAuthId: string): string | null {
+  if (threadKey.startsWith('coach:')) return TALKFOOT_BOT_DM_THREAD_ID
+  const peer = peerIdFromP2pThreadKey(threadKey, myAuthId)
+  return peer ? friendDmThreadId(peer) : null
 }
