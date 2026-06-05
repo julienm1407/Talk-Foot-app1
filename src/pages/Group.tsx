@@ -2042,6 +2042,13 @@ export function GroupPage() {
         }}
         onPublishCustom={(input) => addCustomDebate(input)}
       />
+
+      <TribuneLimitPopup
+        open={tribuneLimitPopup === 'join'}
+        kind="join"
+        tier={tier}
+        onClose={() => setTribuneLimitPopup(null)}
+      />
     </>
   )
 }

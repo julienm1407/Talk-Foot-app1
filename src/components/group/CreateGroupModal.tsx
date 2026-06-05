@@ -19,6 +19,7 @@ import type { ClubCatalogEntry } from '../../data/allClubsCatalog'
 import { CONFEDERATIONS, NATIONS } from '../../data/nations'
 import { useSubscription } from '../../hooks/useSubscription'
 import { TribuneLimitPopup } from '../subscription/TribuneLimitPopup'
+import { Link } from 'react-router-dom'
 
 export function CreateGroupModal({
   open,
