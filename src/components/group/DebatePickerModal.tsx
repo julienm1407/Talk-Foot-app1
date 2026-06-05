@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -39,6 +40,7 @@ export function DebatePickerModal({
   const [excerpt, setExcerpt] = useState('')
   const [accent, setAccent] = useState('#6366f1')
   const [formError, setFormError] = useState<string | null>(null)
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
 
   const { debates: catalogDebates, refresh, loading } = useDebates()
 
@@ -46,6 +48,19 @@ export function DebatePickerModal({
     () => mergeDebatesForGroup(catalogDebates, customForGroup, groupId),
     [catalogDebates, customForGroup, groupId],
   )
+
+  useLayoutEffect(() => {
+    setPortalTarget(document.body)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -57,10 +72,14 @@ export function DebatePickerModal({
     void refresh()
   }, [open, refresh])
 
-  if (!open) return null
+  if (!open || !portalTarget) return null
 
   const submitCreate = () => {
     setFormError(null)
+    if (!canCreateDebate) {
+      onBlockedCreate?.()
+      return
+    }
     const t = title.trim()
     if (t.length < 4) {
       setFormError('Titre d’au moins 4 caractères.')
@@ -80,10 +99,6 @@ export function DebatePickerModal({
       setFormError('Description trop longue (280 max).')
       return
     }
-    if (!canCreateDebate) {
-      onBlockedCreate?.()
-      return
-    }
     const d = onPublishCustom({ title: t, excerpt: ex, accent })
     if (!d) {
       onBlockedCreate?.()
@@ -93,18 +108,22 @@ export function DebatePickerModal({
     onClose()
   }
 
+  const selectTab = (id: Tab) => {
+    if (id === 'create' && !canCreateDebate) {
+      setTab('create')
+      setFormError(null)
+      onBlockedCreate?.()
+      return
+    }
+    setTab(id)
+    setFormError(null)
+  }
+
   const tabBtn = (id: Tab, label: string) => (
     <button
       key={id}
       type="button"
-      onClick={() => {
-        if (id === 'create' && !canCreateDebate) {
-          onBlockedCreate?.()
-          return
-        }
-        setTab(id)
-        setFormError(null)
-      }}
+      onClick={() => selectTab(id)}
       className={cn(
         'min-h-10 flex-1 rounded-2xl px-3 py-2 text-center text-xs font-black transition sm:text-sm',
         tab === id
@@ -116,9 +135,13 @@ export function DebatePickerModal({
     </button>
   )
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[90] overflow-y-auto overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      className={cn(
+        'fixed inset-0 z-[280] grid w-full place-items-center overflow-hidden',
+        'h-[100dvh] max-h-[100dvh]',
+        'p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]',
+      )}
       data-no-swipe="true"
       data-tf-modal="true"
       role="dialog"
@@ -127,12 +150,12 @@ export function DebatePickerModal({
     >
       <button
         type="button"
-        className="fixed inset-0 bg-black/25 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
         onClick={onClose}
         aria-label="Fermer"
       />
-      <div className="relative z-10 mx-auto w-full max-w-[min(100%,26rem)] px-4 py-8 pb-[max(2rem,calc(2rem+env(safe-area-inset-bottom)))] sm:py-10">
-        <Card className="relative max-h-[min(88vh,36rem)] overflow-hidden p-4 sm:max-h-[min(85vh,40rem)] sm:p-5">
+      <Card className="relative z-10 flex max-h-[min(calc(100dvh-2rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),40rem)] w-full max-w-[min(100%,26rem)] flex-col overflow-hidden p-4 sm:p-5">
+        <div className="shrink-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Tribune général</p>
@@ -152,9 +175,27 @@ export function DebatePickerModal({
             {tabBtn('browse', `Parcourir (${groupDebates.length})`)}
             {tabBtn('create', 'Publier le mien')}
           </div>
+        </div>
 
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
           {tab === 'create' ? (
-            <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+            <div className="space-y-3 border-t border-slate-100 pt-4">
+              {!canCreateDebate ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-left">
+                  <p className="text-sm font-black text-amber-950">Publication indisponible</p>
+                  <p className="mt-1 text-xs font-semibold text-amber-900/90">
+                    Vérifie ta formule ou ton quota de débats — une fenêtre d’info s’affiche au-dessus.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="soft"
+                    className="mt-3 w-full rounded-2xl font-black"
+                    onClick={() => onBlockedCreate?.()}
+                  >
+                    Voir les limites
+                  </Button>
+                </div>
+              ) : null}
               <div>
                 <label className="text-xs font-bold text-slate-700">Titre du débat *</label>
                 <Input
@@ -163,6 +204,7 @@ export function DebatePickerModal({
                   placeholder="Ex. : On garde ce coach jusqu’en juin ?"
                   className="mt-1"
                   maxLength={120}
+                  disabled={!canCreateDebate}
                 />
               </div>
               <div>
@@ -173,7 +215,8 @@ export function DebatePickerModal({
                   placeholder="Pose le contexte en une ou deux phrases…"
                   rows={3}
                   maxLength={280}
-                  className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-violet-500/35"
+                  disabled={!canCreateDebate}
+                  className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-violet-500/35 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -182,12 +225,14 @@ export function DebatePickerModal({
                   type="color"
                   value={accent}
                   onChange={(e) => setAccent(e.target.value)}
-                  className="h-9 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white"
+                  disabled={!canCreateDebate}
+                  className="h-9 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Couleur d’accent"
                 />
                 <Input
                   value={accent}
                   onChange={(e) => setAccent(e.target.value)}
+                  disabled={!canCreateDebate}
                   className="max-w-[7.5rem] font-mono text-xs"
                   aria-label="Couleur en hex"
                 />
@@ -198,6 +243,7 @@ export function DebatePickerModal({
                 variant="primary"
                 className="w-full rounded-2xl font-black"
                 onClick={submitCreate}
+                disabled={!canCreateDebate}
               >
                 Publier et lier à la tribune
               </Button>
@@ -206,7 +252,7 @@ export function DebatePickerModal({
               </p>
             </div>
           ) : (
-            <div className="mt-4 max-h-[min(52vh,26rem)] space-y-3 overflow-y-auto pr-1">
+            <div className="space-y-3 pr-1">
               {loading ? (
                 <p className="text-sm font-semibold text-slate-500">Chargement des débats…</p>
               ) : groupDebates.length > 0 ? (
@@ -230,13 +276,22 @@ export function DebatePickerModal({
                     Publie le tien ou demande à ton ami de le lier à la tribune générale — il apparaîtra ici pour
                     tout le monde.
                   </p>
+                  <Button
+                    type="button"
+                    variant="soft"
+                    className="mt-3 w-full rounded-2xl font-black"
+                    onClick={() => selectTab('create')}
+                  >
+                    Publier le mien
+                  </Button>
                 </div>
               )}
             </div>
           )}
-        </Card>
-      </div>
-    </div>
+        </div>
+      </Card>
+    </div>,
+    portalTarget,
   )
 }
 

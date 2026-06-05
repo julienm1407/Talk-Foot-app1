@@ -2062,7 +2062,6 @@ export function GroupPage() {
         onPublishCustom={(input) => {
           const r = addCustomDebate(input)
           if (!r.ok) {
-            setDebatePickerOpen(false)
             setTribuneLimitPopup('debate')
             return null
           }
@@ -2070,7 +2069,6 @@ export function GroupPage() {
         }}
         canCreateDebate={canAddDebate}
         onBlockedCreate={() => {
-          setDebatePickerOpen(false)
           setTribuneLimitPopup('debate')
         }}
       />
