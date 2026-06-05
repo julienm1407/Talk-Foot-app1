@@ -16,6 +16,7 @@ export function DebatePickerModal({
   groupId,
   customForGroup,
   canCreateDebate = true,
+  initialTab = 'browse',
   onClose,
   onPick,
   onPublishCustom,
@@ -26,6 +27,8 @@ export function DebatePickerModal({
   customForGroup: Debate[]
   /** Formule + quota : false pour Supporter ou quota épuisé. */
   canCreateDebate?: boolean
+  /** Onglet affiché à l’ouverture. */
+  initialTab?: Tab
   onClose: () => void
   onPick: (debateId: string) => void
   onPublishCustom: (input: {
@@ -64,13 +67,13 @@ export function DebatePickerModal({
 
   useEffect(() => {
     if (!open) return
-    setTab('browse')
+    setTab(initialTab)
     setTitle('')
     setExcerpt('')
     setAccent('#6366f1')
     setFormError(null)
     void refresh()
-  }, [open, refresh])
+  }, [open, initialTab, refresh])
 
   if (!open || !portalTarget) return null
 

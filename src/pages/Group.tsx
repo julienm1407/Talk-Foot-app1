@@ -390,6 +390,7 @@ export function GroupPage() {
 
   const [personalizeOpen, setPersonalizeOpen] = useState(false)
   const [debatePickerOpen, setDebatePickerOpen] = useState(false)
+  const [debatePickerInitialTab, setDebatePickerInitialTab] = useState<'browse' | 'create'>('browse')
   const [salonFormOpen, setSalonFormOpen] = useState(false)
   const [newSalonName, setNewSalonName] = useState('')
   const [newSalonDesc, setNewSalonDesc] = useState('')
@@ -400,6 +401,19 @@ export function GroupPage() {
   const [joinOtherError, setJoinOtherError] = useState<string | null>(null)
   const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | 'debate' | null>(null)
   const { tier } = useSubscription()
+
+  const openDebatePicker = useCallback((tab: 'browse' | 'create') => {
+    setDebatePickerInitialTab(tab)
+    setDebatePickerOpen(true)
+  }, [])
+
+  const handleCreateMyDebate = useCallback(() => {
+    if (!canAddDebate) {
+      setTribuneLimitPopup('debate')
+      return
+    }
+    openDebatePicker('create')
+  }, [canAddDebate, openDebatePicker])
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
   const handleJoinGroup = useCallback(async () => {
@@ -1664,6 +1678,7 @@ export function GroupPage() {
               </div>
               <div className="flex w-full flex-col gap-2.5 pt-1 sm:w-auto sm:min-w-[min(100%,18rem)] sm:items-stretch sm:pt-0">
                 {channel?.id === 'general' ? (
+                  <>
                   <Button
                     type="button"
                     variant="primary"
@@ -1672,7 +1687,7 @@ export function GroupPage() {
                       'shadow-[0_8px_28px_rgba(255,59,59,0.32)] ring-2 ring-white/20',
                       !L && 'border-orange-400/45 hover:shadow-[0_10px_32px_rgba(255,59,59,0.4)]',
                     )}
-                    onClick={() => setDebatePickerOpen(true)}
+                    onClick={() => openDebatePicker('browse')}
                   >
                     <span aria-hidden className="text-base leading-none">
                       {debateFromQuery ? '↻' : '🗣️'}
@@ -1692,6 +1707,23 @@ export function GroupPage() {
                           : 'Débat tribune'}
                     </span>
                   </Button>
+                  <Button
+                    type="button"
+                    variant="soft"
+                    className={cn(
+                      'w-full shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black tracking-tight',
+                      L
+                        ? 'border-violet-300/50 bg-violet-50 text-violet-950 ring-1 ring-violet-200/80'
+                        : 'border-violet-400/35 bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/25',
+                    )}
+                    onClick={handleCreateMyDebate}
+                  >
+                    <span aria-hidden className="text-base leading-none">
+                      ✍️
+                    </span>
+                    Créer mon débat
+                  </Button>
+                  </>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
                   {preferencesComplete && favoriteClubIds.length > 0 ? (
@@ -1733,24 +1765,42 @@ export function GroupPage() {
 
             <div className="flex flex-wrap items-center gap-1.5 lg:hidden">
               {channel?.id === 'general' ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  className={cn(
-                    'h-8 shrink-0 rounded-xl px-2.5 text-[10px] font-black',
-                    'shadow-[0_4px_16px_rgba(255,59,59,0.28)]',
-                  )}
-                  onClick={() => setDebatePickerOpen(true)}
-                >
-                  <span aria-hidden className="mr-1">
-                    {debateFromQuery ? '↻' : '🗣️'}
-                  </span>
-                  {debateFromQuery
-                    ? 'Changer'
-                    : groupDebates.length > 0
-                      ? `Débat (${groupDebates.length})`
-                      : 'Débat'}
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className={cn(
+                      'h-8 shrink-0 rounded-xl px-2.5 text-[10px] font-black',
+                      'shadow-[0_4px_16px_rgba(255,59,59,0.28)]',
+                    )}
+                    onClick={() => openDebatePicker('browse')}
+                  >
+                    <span aria-hidden className="mr-1">
+                      {debateFromQuery ? '↻' : '🗣️'}
+                    </span>
+                    {debateFromQuery
+                      ? 'Changer'
+                      : groupDebates.length > 0
+                        ? `Débat (${groupDebates.length})`
+                        : 'Débat'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="soft"
+                    className={cn(
+                      'h-8 shrink-0 rounded-xl px-2.5 text-[10px] font-black',
+                      L
+                        ? 'border-violet-300/50 bg-violet-50 text-violet-950'
+                        : 'border-violet-400/35 bg-violet-500/15 text-violet-100',
+                    )}
+                    onClick={handleCreateMyDebate}
+                  >
+                    <span aria-hidden className="mr-1">
+                      ✍️
+                    </span>
+                    Créer
+                  </Button>
+                </>
               ) : null}
               {preferencesComplete && favoriteClubIds.length > 0 ? (
                 <button
@@ -1814,6 +1864,35 @@ export function GroupPage() {
                 </div>
               </details>
             </div>
+
+            {channel?.id === 'general' && !debate ? (
+              <div
+                className={cn(
+                  'mx-3 mt-3 rounded-2xl border px-4 py-3 sm:mx-5',
+                  L
+                    ? 'border-violet-200/80 bg-violet-50/80'
+                    : 'border-violet-400/25 bg-violet-500/10',
+                )}
+              >
+                <p className={cn('text-sm font-black', TF_TEXT_FG)}>Lancer un débat dans ce groupe</p>
+                <p className={cn('mt-1 text-xs font-semibold', TF_TEXT_MUTED)}>
+                  Publie ton sujet et lie-le à la tribune générale pour que tout le monde puisse en parler.
+                </p>
+                <Button
+                  type="button"
+                  variant="soft"
+                  className={cn(
+                    'mt-3 w-full rounded-2xl font-black sm:w-auto',
+                    L
+                      ? 'border-violet-300/50 bg-white text-violet-950'
+                      : 'border-violet-400/35 bg-violet-500/20 text-violet-50',
+                  )}
+                  onClick={handleCreateMyDebate}
+                >
+                  ✍️ Créer mon débat
+                </Button>
+              </div>
+            ) : null}
 
             {debate && channel?.id === 'general' ? (
               <>
@@ -2049,9 +2128,13 @@ export function GroupPage() {
 
       <DebatePickerModal
         open={debatePickerOpen}
+        initialTab={debatePickerInitialTab}
         groupId={group.id}
         customForGroup={customForGroup}
-        onClose={() => setDebatePickerOpen(false)}
+        onClose={() => {
+          setDebatePickerOpen(false)
+          setDebatePickerInitialTab('browse')
+        }}
         onPick={(debateId) => {
           setSearchParams((prev) => {
             const next = new URLSearchParams(prev)
