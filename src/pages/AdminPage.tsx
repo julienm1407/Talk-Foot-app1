@@ -40,6 +40,7 @@ import {
   fetchNewsletterCampaigns,
   type NewsletterCampaign,
 } from '../lib/supabase/newsletter'
+import { fetchRefundRequests, type RefundRequestRow } from '../lib/supabase/refundRequests'
 import { cn } from '../utils/cn'
 import { resolveArticleExcerpt } from '../utils/articleExcerpt'
 import { normalizeArticleListHtml } from '../utils/normalizeArticleListHtml'
@@ -311,6 +312,7 @@ export function AdminPage() {
   const [roleEmail, setRoleEmail] = useState('')
   const [roleValue, setRoleValue] = useState<EditorialRole>('redacteur')
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([])
+  const [refundRequests, setRefundRequests] = useState<RefundRequestRow[]>([])
   const [campaignTitle, setCampaignTitle] = useState('')
   const [campaignSubject, setCampaignSubject] = useState('')
   const [campaignBody, setCampaignBody] = useState('')
@@ -348,14 +350,16 @@ export function AdminPage() {
     setArticles(rows)
     const stats = await fetchArticleDashboardStats(sb)
     setDashboard(stats)
-    const [comments, roles, newsletter] = await Promise.all([
+    const [comments, roles, newsletter, refunds] = await Promise.all([
       fetchCommentsForModeration(sb),
       fetchEditorialUsers(sb),
       fetchNewsletterCampaigns(sb),
+      fetchRefundRequests(sb),
     ])
     setCommentsToModerate(comments)
     setEditorialUsers(roles)
     setCampaigns(newsletter)
+    setRefundRequests(refunds)
     setLoading(false)
   }, [sb])
 
@@ -774,6 +778,45 @@ export function AdminPage() {
           </div>
         </Card>
       </div>
+
+      <Card className="p-4">
+        <h2 className="font-display text-lg font-black text-tf-dark">Demandes de remboursement</h2>
+        <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          Saisies depuis les pages packs médailles et formules. Traite le remboursement dans Stripe puis mets à jour le statut ici si besoin.
+        </p>
+        <div className="mt-3 space-y-2">
+          {refundRequests.length === 0 ? (
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucune demande pour le moment.</p>
+          ) : (
+            refundRequests.map((r) => (
+              <div
+                key={r.id}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-black text-slate-900 dark:text-slate-100">
+                    {r.purchaseKind === 'subscription' ? 'Abonnement' : 'Pack médailles'}
+                  </p>
+                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
+                    {r.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {r.userEmail ?? 'E-mail non fourni'}
+                  {r.userId ? ` · ${r.userId.slice(0, 12)}…` : ''}
+                </p>
+                {r.paymentRef ? (
+                  <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">Stripe : {r.paymentRef}</p>
+                ) : null}
+                <p className="mt-1 text-sm text-slate-800 dark:text-slate-100">{r.reason}</p>
+                <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  {new Date(r.createdAt).toLocaleString('fr-FR')}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
 
       <Card className="p-4">
         <h2 className="font-display text-lg font-black text-tf-dark">Modération commentaires</h2>
