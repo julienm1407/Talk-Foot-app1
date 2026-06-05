@@ -25,9 +25,14 @@ export function PrivateMessagesPanel({
     useDirectMessagesContext()
 
   useEffect(() => {
+    if (!visible) {
+      setActive(null)
+      setActiveDmUiThreadId(null)
+      return
+    }
     setActiveDmUiThreadId(active?.id ?? null)
     return () => setActiveDmUiThreadId(null)
-  }, [active, setActiveDmUiThreadId])
+  }, [visible, active, setActiveDmUiThreadId])
 
   const activeMessages = active ? mergedFor(active.id) : []
   const activeLastMessageId = activeMessages[activeMessages.length - 1]?.id
@@ -52,6 +57,12 @@ export function PrivateMessagesPanel({
   const subtleBorder = L ? 'border-tf-dark/10' : 'border-white/10'
   const rowHover = L ? 'hover:bg-tf-dark/[0.04]' : 'hover:bg-white/[0.06]'
 
+  const handleClose = () => {
+    setActive(null)
+    setActiveDmUiThreadId(null)
+    onClose()
+  }
+
   return (
     <div
       className={cn(
@@ -75,14 +86,14 @@ export function PrivateMessagesPanel({
           {active ? (
             <button
               type="button"
-              onClick={() => setActive(null)}
+              onClick={handleClose}
               className={cn(
                 'mb-0.5 text-[11px] font-bold underline-offset-2 hover:underline',
                 L ? 'text-sky-700' : 'text-sky-300',
                 TF_FOCUS_VISIBLE,
               )}
             >
-              ← Conversations
+              ← Fermer
             </button>
           ) : null}
           {active ? (
@@ -115,7 +126,7 @@ export function PrivateMessagesPanel({
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={handleClose}
           className={cn(
             'grid min-h-11 min-w-11 place-items-center rounded-xl border text-lg font-black leading-none',
             L ? 'border-tf-dark/15 text-tf-dark hover:bg-tf-dark/[0.05]' : 'border-white/20 text-white hover:bg-white/[0.08]',

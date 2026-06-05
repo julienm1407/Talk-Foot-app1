@@ -14,7 +14,6 @@ import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { InboxPanel } from '../components/inbox/InboxPanel'
 import { PrivateMessagesPanel } from '../components/messages/PrivateMessagesPanel'
 import { coachDirectThread } from '../data/directMessagesMock'
-import { pickThreadIdToOpenOnInbox } from '../utils/directThreadEnrichment'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { useInbox } from '../hooks/useInbox'
 import { useIsBelowXl } from '../hooks/useIsBelowXl'
@@ -232,8 +231,7 @@ export function TopBar() {
                 if (pm.isOpen) pm.close()
                 else {
                   void dmOpt?.refreshFriends()
-                  const threadId = pickThreadIdToOpenOnInbox(dmThreads)
-                  pm.open(threadId ? { threadId } : undefined)
+                  pm.open()
                   setInboxOpen(false)
                 }
               }}
