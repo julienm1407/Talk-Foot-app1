@@ -90,7 +90,11 @@ export function TribuneLimitPopup({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[300] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      className={cn(
+        'fixed inset-0 z-[300] grid w-full place-items-center overflow-hidden',
+        'h-[100dvh] max-h-[100dvh]',
+        'p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]',
+      )}
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="tribune-limit-title"
@@ -98,17 +102,18 @@ export function TribuneLimitPopup({
     >
       <button
         type="button"
-        className="fixed inset-0 bg-black/55 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
         aria-label="Fermer"
         onClick={onClose}
       />
-      <div className="relative z-10 flex min-h-full items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
-        <div
-          className={cn(
-            'w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white shadow-[0_24px_80px_-12px_rgba(2,52,88,0.45)] tf-modal-pop-in',
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
+      <div
+        className={cn(
+          'relative z-10 w-full max-w-md overflow-y-auto overscroll-contain',
+          'max-h-[calc(100dvh-2rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]',
+          'rounded-3xl border border-white/10 bg-white shadow-[0_24px_80px_-12px_rgba(2,52,88,0.45)] tf-modal-pop-in',
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bg-gradient-to-br from-[#023458] to-[#0b4a7a] px-6 py-8 text-center text-white">
           <div
             className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-white/15 text-3xl"
@@ -158,7 +163,6 @@ export function TribuneLimitPopup({
               Compris
             </Button>
           </div>
-        </div>
         </div>
       </div>
     </div>,
