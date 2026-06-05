@@ -59,8 +59,8 @@ export const BOUTIQUE_FULL_ACCESS_ALL_TIERS = true
 export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefinition> = {
   freemium: {
     id: 'freemium',
-    name: 'Freemium',
-    priceLabel: 'Gratuit',
+    name: 'Supporter',
+    priceLabel: '',
     priceCents: null,
     tagline: 'Découvre Talk Foot et rejoins la communauté.',
     accentClass: 'from-slate-600 to-slate-800',
@@ -113,7 +113,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
   },
   supporter_plus: {
     id: 'supporter_plus',
-    name: 'Ultras',
+    name: 'Ultra',
     priceLabel: '4,99 € / mois',
     priceCents: 499,
     tagline: 'Plus de tribunes, moins de limites, badge vérifié.',
@@ -207,7 +207,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
     },
     features: [
       { id: 'boutique', label: 'Boutique complète — progression jetons maximale', included: true },
-      { id: 'all-plus', label: 'Tout Supporter+ + emotes groupe', included: true },
+      { id: 'all-plus', label: 'Tout Ultra + emotes groupe', included: true },
       { id: 'debate-d', label: '1 débat par jour', included: true },
       { id: 'groups-inf', label: 'Groupes créés illimités', included: true },
       { id: 'ambassador', label: 'Statut ambassadeur', included: true },

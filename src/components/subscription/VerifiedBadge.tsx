@@ -1,6 +1,6 @@
 import { cn } from '../../utils/cn'
 
-/** Badge « compte vérifié » (Supporter+ / Ambassadeur). */
+/** Badge « compte vérifié » (Ultra / Ambassadeur). */
 export function VerifiedBadge({
   className,
   size = 'sm',

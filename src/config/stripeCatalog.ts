@@ -3,7 +3,7 @@ import type { SubscriptionTierId } from '../types/subscription'
 /** IDs Stripe Price (dashboard Talk Foot — live). */
 export const STRIPE_PRICE = {
   subscription: {
-    /** Talk Foot « Ultras » — 4,99 €/mois → formule `supporter_plus` */
+    /** Talk Foot « Ultra » — 4,99 €/mois → formule `supporter_plus` */
     supporter_plus: 'price_1TebiTRZHpojSftNXPLKhRTB',
     /** Talk Foot « Ambassadeur » — 14,99 €/mois */
     ambassador: 'price_1TebkfRZHpojSftNt4I6Gwc4',

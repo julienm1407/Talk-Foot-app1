@@ -7,9 +7,9 @@ import { cn } from '../../utils/cn'
 
 export type TribuneLimitPopupKind = 'join' | 'create'
 
-/** Libellé affiché pour la formule gratuite (Freemium). */
+/** Libellé affiché pour la formule de l’utilisateur. */
 export function subscriptionFormulaDisplayName(tier: SubscriptionTierId): string {
-  if (tier === 'freemium') return 'Supporter gratuite'
+  if (tier === 'freemium') return 'Supporter'
   const plan = getSubscriptionPlan(tier)
   return plan.priceLabel ? `${plan.name} (${plan.priceLabel})` : plan.name
 }

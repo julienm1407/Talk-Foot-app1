@@ -81,7 +81,7 @@ export function canCreateDebate(
 ): { ok: boolean; reason?: string } {
   const plan = getSubscriptionPlan(tier)
   if (!plan.flags.canCreateDebates) {
-    return { ok: false, reason: 'Les débats nécessitent Supporter+ ou Ambassadeur.' }
+    return { ok: false, reason: 'Les débats nécessitent Ultra ou Ambassadeur.' }
   }
   if (plan.limits.debatesPerDay != null) {
     const dayKey = toLocalDayKey(now)

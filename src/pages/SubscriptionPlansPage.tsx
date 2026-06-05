@@ -57,10 +57,10 @@ export function SubscriptionPlansPage() {
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-300/90">
           Formules Talk Foot
         </p>
-        <h1 className="text-2xl font-black text-white sm:text-3xl">Freemium · Ultras · Ambassadeur</h1>
+        <h1 className="text-2xl font-black text-white sm:text-3xl">Supporter · Ultra · Ambassadeur</h1>
         <p className="max-w-2xl text-sm text-white/70">
-          Trois niveaux d’accès : gratuit pour découvrir, 4,99 €/mois (Ultras) pour les supporters actifs,
-          14,99 €/mois pour les créateurs (stream, voix, articles). Paiement sécurisé par Stripe.
+          Trois niveaux d’accès : Supporter pour découvrir Talk Foot, Ultra à 4,99 €/mois pour aller plus loin,
+          Ambassadeur à 14,99 €/mois pour les créateurs (stream, voix, articles). Paiement sécurisé par Stripe.
           {isStripePublishableConfigured() ? (
             <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
           ) : (
@@ -117,7 +117,9 @@ export function SubscriptionPlansPage() {
                     <Badge className="border-white/30 bg-white/20 text-white">Actif</Badge>
                   )}
                 </div>
-                <p className="mt-1 text-2xl font-black">{plan.priceLabel}</p>
+                {plan.priceLabel ? (
+                  <p className="mt-1 text-2xl font-black">{plan.priceLabel}</p>
+                ) : null}
                 <p className="mt-2 text-sm text-white/85">{plan.tagline}</p>
               </div>
               <ul className="space-y-2.5 px-5 py-5">
@@ -187,15 +189,15 @@ export function SubscriptionPlansPage() {
         <ul className="list-inside list-disc space-y-1.5">
           <li>
             <strong className="text-white">Boutique :</strong> les 3 formules voient et peuvent acheter tous
-            les articles (maillots, shorts, chaussures, packs). Supporter+ et Ambassadeur reçoivent plus de
+            les articles (maillots, shorts, chaussures, packs). Ultra et Ambassadeur reçoivent plus de
             jetons (mensuels, paris ×2) pour constituer leur collection plus vite — pas d’articles réservés aux
             payants.
           </li>
           <li>
-            Freemium : pas de débats ; cooldown tchat 15 s ; 100 messages/jour ; rival club → accès
+            Supporter : pas de débats ; cooldown tchat 15 s ; 100 messages/jour ; rival club → accès
             tribune rivale sur demande / kick modos.
           </li>
-          <li>Supporter+ : pas de stream ni salon privé ; emotes groupe non personnalisables.</li>
+          <li>Ultra : pas de stream ni salon privé ; emotes groupe non personnalisables.</li>
           <li>
             Ambassadeur : stream tribune, micro vocal, salon privé par lien, rédaction d’articles.
             Rémunération créateur — à venir.

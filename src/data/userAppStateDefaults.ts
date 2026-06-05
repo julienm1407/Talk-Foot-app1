@@ -44,7 +44,7 @@ export type UserAppStateV1 = {
   profile: UserProfile
   wallet: Wallet
   bets: import('../types/bet').Bet[]
-  /** Formule freemium / Supporter+ / Ambassadeur */
+  /** Formule Supporter / Ultra / Ambassadeur */
   subscription?: SubscriptionState
   /** Portefeuille test admin initialisé une seule fois (évite de re-créditer après achat). */
   adminWalletBootstrapped?: boolean

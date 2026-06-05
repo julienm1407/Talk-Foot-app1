@@ -465,9 +465,9 @@ export function CreateGroupModal({
 
             {!themeCustomization ? (
               <p className="mt-4 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900">
-                Freemium : photo, nom et # uniquement. Personnalisation couleurs / thème avec{' '}
+                Supporter : photo, nom et # uniquement. Personnalisation couleurs / thème avec{' '}
                 <Link to="/formules" className="font-black underline">
-                  Supporter+
+                  Ultra
                 </Link>
                 .
               </p>
