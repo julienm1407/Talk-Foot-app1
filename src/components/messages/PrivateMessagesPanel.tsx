@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
 import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
 import { cn } from '../../utils/cn'
-import { type DirectMessageLine, type DirectThread } from '../../data/directMessagesMock'
+import { type DirectMessageLine } from '../../data/directMessagesMock'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
 import { moderateChatText } from '../../utils/bannedWords'
@@ -14,40 +14,41 @@ export function PrivateMessagesPanel({
   visible = true,
 }: {
   onClose: () => void
-  /** Faux quand le panneau est replié mais reste monté (préserve la conversation + synchro ouverture fil). */
+  /** Faux quand le panneau est replié mais reste monté. */
   visible?: boolean
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const { pendingThreadId, clearPendingThread } = usePrivateMessagesUi()
-  const [active, setActive] = useState<DirectThread | null>(null)
+  const { pendingThreadId, clearPendingThread, activeThreadId, setActiveThreadId } = usePrivateMessagesUi()
   const { mergedFor, send, markVisited, setActiveDmUiThreadId, directThreads } =
     useDirectMessagesContext()
+  const active = useMemo(
+    () => (activeThreadId ? directThreads.find((x) => x.id === activeThreadId) ?? null : null),
+    [activeThreadId, directThreads],
+  )
 
   useEffect(() => {
     if (!visible) {
-      setActive(null)
+      setActiveThreadId(null)
       setActiveDmUiThreadId(null)
       return
     }
     setActiveDmUiThreadId(active?.id ?? null)
-    return () => setActiveDmUiThreadId(null)
-  }, [visible, active, setActiveDmUiThreadId])
+  }, [visible, active, setActiveDmUiThreadId, setActiveThreadId])
 
   const activeMessages = active ? mergedFor(active.id) : []
   const activeLastMessageId = activeMessages[activeMessages.length - 1]?.id
 
   useEffect(() => {
-    if (!active) return
+    if (!visible || !active) return
     markVisited(active.id)
-  }, [active, activeLastMessageId, markVisited])
+  }, [visible, active, activeLastMessageId, markVisited])
 
   useEffect(() => {
     if (!pendingThreadId) return
-    const t = directThreads.find((x) => x.id === pendingThreadId)
-    if (t) setActive(t)
+    setActiveThreadId(pendingThreadId)
     clearPendingThread()
-  }, [pendingThreadId, clearPendingThread, directThreads])
+  }, [pendingThreadId, clearPendingThread, setActiveThreadId])
 
   const shell = L
     ? 'border border-tf-dark/12 bg-white text-tf-dark shadow-xl'
@@ -58,7 +59,7 @@ export function PrivateMessagesPanel({
   const rowHover = L ? 'hover:bg-tf-dark/[0.04]' : 'hover:bg-white/[0.06]'
 
   const handleClose = () => {
-    setActive(null)
+    setActiveThreadId(null)
     setActiveDmUiThreadId(null)
     onClose()
   }
@@ -174,7 +175,7 @@ export function PrivateMessagesPanel({
                 </Link>
                 <button
                   type="button"
-                  onClick={() => setActive(t)}
+                  onClick={() => setActiveThreadId(t.id)}
                   className={cn(
                     'flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-3 pr-3 text-left transition max-md:min-h-[3.25rem] md:py-2.5',
                     rowHover,

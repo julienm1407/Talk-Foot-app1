@@ -7,6 +7,9 @@ type OpenOpts = {
 
 type PrivateMessagesUiApi = {
   isOpen: boolean
+  /** Fil affiché dans le panneau (null = liste des conversations). */
+  activeThreadId: string | null
+  setActiveThreadId: (id: string | null) => void
   /** Fil à activer une fois le panneau monté (consommé par le panneau). */
   pendingThreadId: string | null
   open: (opts?: OpenOpts) => void
@@ -18,16 +21,22 @@ const PrivateMessagesUiContext = createContext<PrivateMessagesUiApi | null>(null
 
 export function PrivateMessagesUiProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const [pendingThreadId, setPendingThreadId] = useState<string | null>(null)
 
   const open = useCallback((opts?: OpenOpts) => {
-    if (opts?.threadId != null && opts.threadId !== '') setPendingThreadId(opts.threadId)
+    if (opts?.threadId != null && opts.threadId !== '') {
+      setPendingThreadId(opts.threadId)
+    } else {
+      setActiveThreadId(null)
+    }
     setIsOpen(true)
   }, [])
 
   const close = useCallback(() => {
     setIsOpen(false)
     setPendingThreadId(null)
+    setActiveThreadId(null)
   }, [])
 
   const clearPendingThread = useCallback(() => {
@@ -35,8 +44,16 @@ export function PrivateMessagesUiProvider({ children }: { children: ReactNode })
   }, [])
 
   const value = useMemo(
-    () => ({ isOpen, pendingThreadId, open, close, clearPendingThread }),
-    [isOpen, pendingThreadId, open, close, clearPendingThread],
+    () => ({
+      isOpen,
+      activeThreadId,
+      setActiveThreadId,
+      pendingThreadId,
+      open,
+      close,
+      clearPendingThread,
+    }),
+    [isOpen, activeThreadId, pendingThreadId, open, close, clearPendingThread],
   )
 
   return <PrivateMessagesUiContext.Provider value={value}>{children}</PrivateMessagesUiContext.Provider>

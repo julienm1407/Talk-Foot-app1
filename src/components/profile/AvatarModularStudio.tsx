@@ -106,10 +106,10 @@ const NOSE_DISPLAY_NAMES: Record<string, string> = {
 }
 
 const MOUTH_DISPLAY_NAMES: Record<string, string> = {
-  'mouth-bouche-homme': 'Bouche homme',
+  'mouth-bouche-homme': 'Bouche discrète',
   'mouth-lips-none': 'Lèvres naturelles',
-  'mouth-lips-lipstick-red': 'Rouge à lèvres rouge',
-  'mouth-lips-lipstick-pink': 'Rouge à lèvres rose',
+  'mouth-lips-lipstick-red': 'Lèvres rouges',
+  'mouth-lips-lipstick-pink': 'Lèvres roses',
 }
 
 /** Option vide en tête de grille (aucun calque PNG). */
