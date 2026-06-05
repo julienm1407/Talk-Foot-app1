@@ -114,14 +114,14 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
         )
       : []
     const merged = [...directThreads, ...discovered].map((t) =>
-      enrichDirectThread(t, dm.mergedFor(t.id), dm.visitedIds, activeDmUiThreadId),
+      enrichDirectThread(t, dm.mergedFor(t.id), dm.lastReadByThread, activeDmUiThreadId),
     )
     return sortDirectThreadsForInbox(merged)
   }, [
     directThreads,
     dm.cloudByKey,
     dm.mergedFor,
-    dm.visitedIds,
+    dm.lastReadByThread,
     activeDmUiThreadId,
     chatActorId,
     cf.acceptedPeers,

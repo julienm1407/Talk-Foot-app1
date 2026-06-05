@@ -29,9 +29,13 @@ export function PrivateMessagesPanel({
     return () => setActiveDmUiThreadId(null)
   }, [active, setActiveDmUiThreadId])
 
+  const activeMessages = active ? mergedFor(active.id) : []
+  const activeLastMessageId = activeMessages[activeMessages.length - 1]?.id
+
   useEffect(() => {
-    if (active) markVisited(active.id)
-  }, [active, markVisited])
+    if (!active) return
+    markVisited(active.id)
+  }, [active, activeLastMessageId, markVisited])
 
   useEffect(() => {
     if (!pendingThreadId) return

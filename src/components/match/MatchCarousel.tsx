@@ -4,7 +4,6 @@ import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
 import { MatchSpotlightCard } from './MatchSpotlightCard'
 import { cn } from '../../utils/cn'
-import { themeForCompetition } from '../../data/competitionThemes'
 import { useAppearance } from '../../contexts/AppearanceContext'
 
 export type CarouselLiveMirror = LiveEncartSimulation & { matchId: string }
@@ -246,11 +245,6 @@ export function MatchCarousel({
     })
   }, [sorted, carouselNowMs, liveMirror?.matchId])
 
-  const activeTheme = useMemo(() => {
-    const m = viewMatches[index]
-    return m ? themeForCompetition(m.competition.id) : null
-  }, [index, viewMatches])
-
   const navBtn = cn(
     'flex size-11 shrink-0 items-center justify-center rounded-full border text-base font-black shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 active:scale-95',
     L
@@ -345,58 +339,13 @@ export function MatchCarousel({
             <Link
               to="/match"
               className={cn(
-                'text-[11px] font-black uppercase tracking-wide underline-offset-2 hover:underline sm:order-last',
+                'text-[11px] font-black uppercase tracking-wide underline-offset-2 hover:underline sm:ml-auto',
                 L ? 'text-tf-electric-deep' : 'text-sky-300',
               )}
             >
               Tous les matchs →
             </Link>
           ) : null}
-          <div
-            className="flex flex-wrap items-center gap-1.5 sm:justify-end"
-            role="tablist"
-            aria-label="Choisir un match"
-          >
-            {viewMatches.map((m, i) => (
-              <button
-                key={m.id}
-                type="button"
-                role="tab"
-                aria-selected={i === index}
-                onClick={() => goToSlide(i, 'control')}
-                className={cn(
-                  /* Cible ≥ 44px (WCAG) : pastille au centre, zone cliquable large */
-                  'grid min-h-tf-touch min-w-tf-touch place-items-center rounded-full border-0 bg-transparent p-0 transition',
-                )}
-                aria-label={`Match ${i + 1} : ${m.home.shortName} contre ${m.away.shortName}`}
-              >
-                <span
-                  className={cn(
-                    'block h-2.5 w-2.5 rounded-full border transition',
-                    i === index
-                      ? m.status === 'live'
-                        ? 'border-rose-400/90 ring-2 ring-rose-300/50'
-                        : L
-                          ? 'border-slate-400'
-                          : 'border-slate-500'
-                      : L
-                        ? 'border-slate-300 bg-white'
-                        : 'border-slate-600 bg-slate-800/90',
-                  )}
-                  style={
-                    i === index && m.status === 'live'
-                      ? { background: '#e11d48' }
-                      : i === index && activeTheme
-                        ? { background: activeTheme.accent }
-                        : i === index
-                          ? { background: '#0ea5e9' }
-                          : undefined
-                  }
-                  aria-hidden
-                />
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 

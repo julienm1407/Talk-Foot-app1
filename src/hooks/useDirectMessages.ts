@@ -14,6 +14,7 @@ import { isSupabaseModerationError, moderateChatText } from '../utils/bannedWord
 
 const KEY_MESSAGES = 'talkfoot.dm.userMessages.v1'
 const KEY_VISITED = 'talkfoot.dm.visitedThreads.v1'
+const KEY_LAST_READ = 'talkfoot.dm.lastReadMessageByThread.v1'
 
 function isUserDmStore(x: unknown): x is Record<string, DirectMessageLine[]> {
   if (!x || typeof x !== 'object' || Array.isArray(x)) return false
@@ -32,6 +33,13 @@ function isUserDmStore(x: unknown): x is Record<string, DirectMessageLine[]> {
 function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((i) => typeof i === 'string')
 }
+
+function isLastReadStore(x: unknown): x is Record<string, string> {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return false
+  return Object.values(x as Record<string, unknown>).every((v) => typeof v === 'string')
+}
+
+const EMPTY_THREAD_READ = '__empty__'
 
 function rowToDmLine(row: { id: string; sender_id: string; body: string; created_at: string }, myAuthId: string): DirectMessageLine {
   const t = new Date(row.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -56,7 +64,16 @@ export function useDirectMessages(
     {},
     isUserDmStore,
   )
-  const [visitedIds, setVisitedIds] = useLocalStorageState<string[]>(KEY_VISITED, [], isStringArray)
+  const [legacyVisitedIds, setLegacyVisitedIds] = useLocalStorageState<string[]>(
+    KEY_VISITED,
+    [],
+    isStringArray,
+  )
+  const [lastReadByThread, setLastReadByThread] = useLocalStorageState<Record<string, string>>(
+    KEY_LAST_READ,
+    {},
+    isLastReadStore,
+  )
   const [cloudByKey, setCloudByKey] = useState<Record<string, DirectMessageLine[]>>({})
 
   const cloudKeyForActive = useMemo(
@@ -317,13 +334,36 @@ export function useDirectMessages(
 
   const markVisited = useCallback(
     (threadId: string) => {
-      setVisitedIds((prev) => (prev.includes(threadId) ? prev : [...prev, threadId]))
+      const lines = mergedFor(threadId)
+      const last = lines[lines.length - 1]
+      const lastId = last?.id ?? EMPTY_THREAD_READ
+      setLastReadByThread((prev) =>
+        prev[threadId] === lastId ? prev : { ...prev, [threadId]: lastId },
+      )
     },
-    [setVisitedIds],
+    [mergedFor, setLastReadByThread],
   )
 
+  /** Migration : ancien « fil visité » → dernier message lu connu à ce moment-là. */
+  useEffect(() => {
+    if (legacyVisitedIds.length === 0) return
+    setLastReadByThread((prev) => {
+      let changed = false
+      const next = { ...prev }
+      for (const threadId of legacyVisitedIds) {
+        if (next[threadId]) continue
+        const lines = mergedFor(threadId)
+        const last = lines[lines.length - 1]
+        next[threadId] = last?.id ?? EMPTY_THREAD_READ
+        changed = true
+      }
+      return changed ? next : prev
+    })
+    setLegacyVisitedIds([])
+  }, [legacyVisitedIds, mergedFor, setLastReadByThread, setLegacyVisitedIds])
+
   return useMemo(
-    () => ({ mergedFor, send, visitedIds, markVisited, cloudByKey }),
-    [mergedFor, send, visitedIds, markVisited, cloudByKey],
+    () => ({ mergedFor, send, lastReadByThread, markVisited, cloudByKey }),
+    [mergedFor, send, lastReadByThread, markVisited, cloudByKey],
   )
 }

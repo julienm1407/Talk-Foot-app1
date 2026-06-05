@@ -9,12 +9,16 @@ import { peerIdFromP2pThreadKey, uiThreadIdFromCloudKey } from './cloudDmThread'
 export function enrichDirectThread(
   thread: DirectThread,
   lines: DirectMessageLine[],
-  visitedIds: string[],
+  lastReadByThread: Record<string, string | undefined>,
   activeUiThreadId: string | null,
 ): DirectThread {
   const last = lines[lines.length - 1]
+  const lastReadId = lastReadByThread[thread.id]
   const unread = Boolean(
-    last && !last.fromMe && !visitedIds.includes(thread.id) && activeUiThreadId !== thread.id,
+    last &&
+      !last.fromMe &&
+      last.id !== lastReadId &&
+      activeUiThreadId !== thread.id,
   )
   return {
     ...thread,

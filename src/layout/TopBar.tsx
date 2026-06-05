@@ -256,9 +256,10 @@ export function TopBar() {
               {dmUnread > 0 ? (
                 <span
                   className={cn(
-                    'absolute -right-0.5 -top-0.5 flex min-w-5 justify-center rounded-full bg-violet-600 px-1 text-[10px] font-black tabular-nums text-white ring-2',
+                    'pointer-events-none absolute -right-1 -top-1 flex min-w-[1.125rem] items-center justify-center rounded-full bg-violet-500 px-1 py-0.5 text-[10px] font-black leading-none tabular-nums text-white shadow-[0_0_10px_rgba(139,92,246,0.75)] ring-2',
                     L ? 'ring-[color:var(--tf-page-bg-light)]' : 'ring-tf-dark',
                   )}
+                  aria-hidden
                 >
                   {dmUnread > 9 ? '9+' : dmUnread}
                 </span>
