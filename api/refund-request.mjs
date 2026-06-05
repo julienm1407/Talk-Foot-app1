@@ -116,23 +116,52 @@ export default async function handler(req, res) {
     status: 'pending',
   }
 
-  const { data, error } = await sb.from('refund_requests').insert(row).select('id, created_at').single()
+  let requestId = null
+  let createdAt = null
 
-  if (error || !data?.id) {
-    console.error('[refund-request] insert failed', error?.message)
-    json(res, 500, { ok: false, error: 'save_failed' })
-    return
+  const { data: rpcData, error: rpcError } = await sb.rpc('submit_refund_request', {
+    p_purchase_kind: purchaseKind,
+    p_user_email: userEmail,
+    p_user_id: userId,
+    p_payment_ref: paymentRef,
+    p_reason: reason.slice(0, 4000),
+  })
+
+  if (!rpcError && rpcData && typeof rpcData === 'object' && rpcData.ok === true && rpcData.id) {
+    requestId = rpcData.id
+    createdAt = rpcData.created_at
+  } else {
+    if (rpcError) {
+      console.warn('[refund-request] rpc unavailable, fallback insert', rpcError.message)
+    } else if (rpcData?.ok === false) {
+      console.error('[refund-request] rpc rejected', rpcData.error, rpcData.detail ?? '')
+      json(res, 500, {
+        ok: false,
+        error: rpcData.error ?? 'save_failed',
+      })
+      return
+    }
+
+    const { data, error } = await sb.from('refund_requests').insert(row).select('id, created_at').single()
+
+    if (error || !data?.id) {
+      console.error('[refund-request] insert failed', error?.message)
+      json(res, 500, { ok: false, error: 'save_failed' })
+      return
+    }
+    requestId = data.id
+    createdAt = data.created_at
   }
 
   const emailResult = await notifySupportByEmail({
     ...row,
-    id: data.id,
-    created_at: data.created_at,
+    id: requestId,
+    created_at: createdAt,
   })
 
   json(res, 200, {
     ok: true,
-    requestId: data.id,
+    requestId,
     emailSent: emailResult.ok === true,
   })
 }

@@ -48,7 +48,9 @@ export function StripeRefundRequestPanel({ className, purchaseKind = 'medal_pack
           ? 'Service indisponible pour le moment — écris-nous directement par e-mail.'
           : result.error === 'reason_too_short'
             ? 'Le motif est trop court.'
-            : 'Envoi impossible — réessaie ou contacte le support par e-mail.'
+            : result.error === 'save_failed'
+              ? 'Enregistrement impossible — la base n’est peut‑être pas à jour. Écris à support@talkfoot.app en attendant.'
+              : 'Envoi impossible — réessaie ou contacte le support par e-mail.'
       setFeedback({ tone: 'err', text: message })
       return
     }
