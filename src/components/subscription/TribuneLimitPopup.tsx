@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import type { SubscriptionTierId } from '../../types/subscription'
 import { Button } from '../ui/Button'
@@ -76,28 +77,38 @@ export function TribuneLimitPopup({
     }
   }, [open, onClose])
 
-  if (!open) return null
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+  useLayoutEffect(() => {
+    setPortalTarget(document.body)
+  }, [])
+
+  if (!open || !portalTarget) return null
 
   const { title, body } = copyForKind(kind, tier, message)
   const showUpgradeToUltra = kind === 'join' && tier === 'freemium'
   const showPlansLink = kind === 'create' || kind === 'debate' || showUpgradeToUltra
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[250] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[300] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="tribune-limit-title"
       aria-describedby="tribune-limit-desc"
-      onClick={onClose}
     >
-      <div
-        className={cn(
-          'w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white shadow-[0_24px_80px_-12px_rgba(2,52,88,0.45)]',
-          'tf-live-toast-in',
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <button
+        type="button"
+        className="fixed inset-0 bg-black/55 backdrop-blur-sm"
+        aria-label="Fermer"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex min-h-full items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
+        <div
+          className={cn(
+            'w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-white shadow-[0_24px_80px_-12px_rgba(2,52,88,0.45)] tf-modal-pop-in',
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
         <div className="bg-gradient-to-br from-[#023458] to-[#0b4a7a] px-6 py-8 text-center text-white">
           <div
             className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-white/15 text-3xl"
@@ -148,7 +159,9 @@ export function TribuneLimitPopup({
             </Button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   )
 }
