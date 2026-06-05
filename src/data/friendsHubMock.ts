@@ -16,19 +16,6 @@ export type FriendLeaderboardRow = {
   isMe?: boolean
 }
 
-/** Démo : toi + l’assistant (pas de faux profils « amis »). */
-export const mockFriendsLeaderboard: FriendLeaderboardRow[] = [
-  { userId: 'me', username: 'Toi', rank: 1, gains: 0, roiPct: 0, streak: 0, isMe: true },
-  {
-    userId: 'u-tf-bot',
-    username: 'Coach Talk Foot',
-    rank: 2,
-    gains: 0,
-    roiPct: 0,
-    streak: 0,
-  },
-]
-
 export type FriendsActivityItem = {
   id: string
   type: 'bet' | 'live' | 'post' | 'duel'

@@ -507,9 +507,9 @@ export function CalendarPage() {
             </span>
           </div>
           <HubEncartTopAccent appearance={L ? 'light' : 'dark'} preset="upcoming" />
-          <div className="grid grid-cols-1 gap-tf-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-tf-3 sm:gap-tf-4 xl:grid-cols-3 2xl:grid-cols-4">
             {upcomingSpotlightMatches.map((m) => (
-              <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+              <MatchSpotlightCard key={m.id} match={m} density="grid" className="h-full min-w-0" />
             ))}
           </div>
         </section>
@@ -851,9 +851,9 @@ export function CalendarPage() {
                       >
                         {g.label}
                       </h3>
-                      <div className="grid grid-cols-1 gap-tf-4 md:grid-cols-2 md:gap-tf-5">
+                      <div className="grid grid-cols-2 gap-tf-3 md:gap-tf-5">
                         {g.matches.map((m) => (
-                          <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+                          <MatchSpotlightCard key={m.id} match={m} density="grid" className="h-full min-w-0" />
                         ))}
                       </div>
                     </div>
@@ -906,9 +906,9 @@ export function CalendarPage() {
               {visiblePast.map((g) => (
                 <div key={`past-${g.key}`}>
                   <h3 className="mb-tf-3 text-sm font-black uppercase tracking-wide text-tf-app-fg">{g.label}</h3>
-                  <div className="grid grid-cols-1 gap-tf-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-tf-3 sm:gap-tf-4 xl:grid-cols-3 2xl:grid-cols-4">
                     {g.matches.map((m) => (
-                      <MatchSpotlightCard key={m.id} match={m} className="h-full min-w-0" />
+                      <MatchSpotlightCard key={m.id} match={m} density="grid" className="h-full min-w-0" />
                     ))}
                   </div>
                 </div>

@@ -3,6 +3,8 @@ import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { useAuth } from '../contexts/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { claimDailyTokenBonusCloud, isDailyClaimRpcUnavailable } from '../lib/supabase/claimDailyTokenBonus'
 import {
   configureWalletStore,
   getWalletSnapshot,
@@ -23,43 +25,32 @@ import {
   normalizeSubscription,
   toLocalMonthKey,
 } from '../utils/subscriptionEntitlements'
+import {
+  DAILY_TOKEN_BONUS_AMOUNT,
+  isDailyBonusOpenNow,
+  nextDailyBonusWindow,
+  type DailyTokenBonusStatus,
+} from '../utils/dailyTokenBonus'
+import {
+  mergeDailyTokenGrant,
+  readLocalDailyTokenGrant,
+  writeLocalDailyTokenGrant,
+} from '../utils/dailyTokenGrantLocal'
 
-export const DAILY_TOKEN_BONUS_AMOUNT = 35
-export const DAILY_TOKEN_BONUS_HOUR = 10
+export { DAILY_TOKEN_BONUS_AMOUNT, DAILY_TOKEN_BONUS_HOUR } from '../utils/dailyTokenBonus'
+export type { DailyTokenBonusStatus } from '../utils/dailyTokenBonus'
+
 const DEV_ADMIN_TEST_MEDALS = 3000
 const DEV_ADMIN_TEST_TOKENS = 100_000
 
-export type DailyTokenBonusStatus = {
-  amount: number
-  canClaim: boolean
-  alreadyClaimedToday: boolean
-  nextClaimAt: Date
-  claimDayKey: string
-}
-
-function toLocalDayKey(date: Date): string {
-  const y = date.getFullYear()
-  const m = `${date.getMonth() + 1}`.padStart(2, '0')
-  const d = `${date.getDate()}`.padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-function nextDailyBonusWindow(now = new Date()): { claimDayKey: string; nextClaimAt: Date } {
-  const nextClaimAt = new Date(now)
-  nextClaimAt.setHours(DAILY_TOKEN_BONUS_HOUR, 0, 0, 0)
-  if (now >= nextClaimAt) {
-    return { claimDayKey: toLocalDayKey(now), nextClaimAt }
-  }
-  return { claimDayKey: toLocalDayKey(nextClaimAt), nextClaimAt }
-}
-
-function buildDailyBonusStatus(wallet: Wallet): DailyTokenBonusStatus {
+function buildDailyBonusStatus(wallet: Wallet, userId?: string): DailyTokenBonusStatus {
   const now = new Date()
   const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
-  const alreadyClaimedToday = wallet.lastDailyTokenGrant === claimDayKey
+  const lastGrant = mergeDailyTokenGrant(wallet.lastDailyTokenGrant, userId)
+  const alreadyClaimedToday = lastGrant === claimDayKey
   return {
     amount: DAILY_TOKEN_BONUS_AMOUNT,
-    canClaim: now >= nextClaimAt && !alreadyClaimedToday,
+    canClaim: isDailyBonusOpenNow(now) && !alreadyClaimedToday,
     alreadyClaimedToday,
     nextClaimAt,
     claimDayKey,
@@ -102,7 +93,7 @@ export function useWallet() {
   useEffect(() => {
     if (!user?.id) return
     if (useCloudWallet && cloud && !cloud.syncReady) return
-    if (isWalletStandardizeExempt(user, wallet)) return
+    if (isWalletStandardizeExempt(user, wallet) || readLocalDailyTokenGrant(user.id)) return
 
     if (useCloudWallet && cloud) {
       if (cloud.app.walletStandardizedV2) return
@@ -220,7 +211,12 @@ export function useWallet() {
     [patchWallet, cloud],
   )
 
-  const dailyBonus = useMemo(() => buildDailyBonusStatus(wallet), [wallet])
+  const claimInFlightRef = useRef(false)
+
+  const dailyBonus = useMemo(
+    () => buildDailyBonusStatus(wallet, user?.id),
+    [wallet, user?.id],
+  )
 
   const dailyTokenBonusStatus = useCallback(() => dailyBonus, [dailyBonus])
 
@@ -296,33 +292,78 @@ export function useWallet() {
     claimMonthlySubscriptionTokens,
   ])
 
-  const claimDailyTokenBonus = useCallback((): {
+  const claimDailyTokenBonus = useCallback(async (): Promise<{
     ok: boolean
     amount?: number
     reason?: string
-  } => {
+  }> => {
+    if (claimInFlightRef.current) return { ok: false, reason: 'in_flight' }
+
     const now = new Date()
-    const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
-    let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
-    patchWallet((w) => {
-      if (now < nextClaimAt) {
-        out = { ok: false, reason: 'not_open_yet' }
-        return w
+    const { claimDayKey } = nextDailyBonusWindow(now)
+    const lastGrant = mergeDailyTokenGrant(wallet.lastDailyTokenGrant, user?.id)
+
+    if (!isDailyBonusOpenNow(now)) return { ok: false, reason: 'not_open_yet' }
+    if (lastGrant === claimDayKey) return { ok: false, reason: 'already_claimed' }
+
+    const claimLocally = (): { ok: boolean; amount?: number; reason?: string } => {
+      let out: { ok: boolean; amount?: number; reason?: string } = { ok: false, reason: 'unknown' }
+      patchWallet((w) => {
+        const merged = mergeDailyTokenGrant(w.lastDailyTokenGrant, user?.id)
+        if (merged === claimDayKey) {
+          out = { ok: false, reason: 'already_claimed' }
+          return w
+        }
+        out = { ok: true, amount: DAILY_TOKEN_BONUS_AMOUNT }
+        return {
+          ...w,
+          tokens: w.tokens + DAILY_TOKEN_BONUS_AMOUNT,
+          lastDailyTokenGrant: claimDayKey,
+        }
+      })
+      if (out.ok) writeLocalDailyTokenGrant(user?.id, claimDayKey)
+      return out
+    }
+
+    claimInFlightRef.current = true
+    try {
+      if (useCloudWallet && user?.id && isSupabaseConfigured()) {
+        const sb = getSupabaseBrowserClient()
+        if (sb) {
+          const rpc = await claimDailyTokenBonusCloud(sb, user.id)
+          if (rpc.ok) {
+            patchWallet(() => rpc.wallet)
+            writeLocalDailyTokenGrant(user.id, rpc.claimDayKey)
+            // Le RPC a déjà persisté app_state — pas de flush (évite d'écraser avec un état stale).
+            return { ok: true, amount: rpc.amount }
+          }
+          if (rpc.reason === 'already_claimed') {
+            writeLocalDailyTokenGrant(user.id, rpc.claimDayKey ?? claimDayKey)
+            if (rpc.wallet) {
+              const synced = rpc.wallet
+              patchWallet(() => synced)
+            }
+            return { ok: false, reason: 'already_claimed' }
+          }
+          if (rpc.reason === 'not_open_yet') {
+            return { ok: false, reason: 'not_open_yet' }
+          }
+          if (isDailyClaimRpcUnavailable(rpc.reason)) {
+            const local = claimLocally()
+            if (local.ok) await cloud?.flushAppSave?.()
+            return local
+          }
+          return { ok: false, reason: rpc.reason }
+        }
       }
-      if (w.lastDailyTokenGrant === claimDayKey) {
-        out = { ok: false, reason: 'already_claimed' }
-        return w
-      }
-      out = { ok: true, amount: DAILY_TOKEN_BONUS_AMOUNT }
-      return {
-        ...w,
-        tokens: w.tokens + DAILY_TOKEN_BONUS_AMOUNT,
-        lastDailyTokenGrant: claimDayKey,
-      }
-    })
-    if (out.ok) void cloud?.flushAppSave?.()
-    return out
-  }, [patchWallet, cloud])
+
+      const local = claimLocally()
+      if (local.ok && useCloudWallet) await cloud?.flushAppSave?.()
+      return local
+    } finally {
+      claimInFlightRef.current = false
+    }
+  }, [wallet, user?.id, useCloudWallet, patchWallet, cloud])
 
   return {
     wallet,

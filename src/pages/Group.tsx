@@ -119,7 +119,11 @@ export function GroupPage() {
     deleteGroup,
     joinedGroupIds,
     refreshGroupActivity,
+    groupLimits,
   } = useSupporterGroups()
+
+  const atJoinLimit =
+    groupLimits.maxJoined != null && groupLimits.joined >= groupLimits.maxJoined
   const { matches } = useMatches()
   const group = groupId ? byId(groupId) : null
 
@@ -186,7 +190,7 @@ export function GroupPage() {
     () => (group ? getGroupQuickEmotes(group) : []),
     [group],
   )
-  const { customForGroup, addCustomDebate } = useCustomGroupDebates(group?.id)
+  const { customForGroup, addCustomDebate, canAddDebate } = useCustomGroupDebates(group?.id)
 
   const { debates: cloudDebates, getDebateById: resolveDebate, refresh: refreshDebates } = useDebates()
   const groupDebates = useMemo(
@@ -394,13 +398,13 @@ export function GroupPage() {
   const [groupChatModerationHint, setGroupChatModerationHint] = useState<string | null>(null)
   const [groupChatLimitHint, setGroupChatLimitHint] = useState<string | null>(null)
   const [joinOtherError, setJoinOtherError] = useState<string | null>(null)
-  const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | null>(null)
+  const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | 'debate' | null>(null)
   const { tier } = useSubscription()
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
-  const handleJoinGroup = useCallback(() => {
+  const handleJoinGroup = useCallback(async () => {
     if (!group) return
-    const r = joinGroup(group.id)
+    const r = await joinGroup(group.id)
     if (!r.ok) {
       if (r.limitKind === 'join') {
         setTribuneLimitPopup('join')
@@ -419,8 +423,9 @@ export function GroupPage() {
     if (!group || !authUser?.id || authUser.isAnonymous) return
     if (!isPublicGroup) return
     if (isJoined(group.id)) return
-    const r = joinGroup(group.id)
-    if (!r.ok && r.limitKind === 'join') setTribuneLimitPopup('join')
+    void joinGroup(group.id).then((r) => {
+      if (!r.ok && r.limitKind === 'join') setTribuneLimitPopup('join')
+    })
   }, [group?.id, isPublicGroup, authUser?.id, authUser?.isAnonymous, isJoined, joinGroup])
 
   useEffect(() => {
@@ -1001,7 +1006,14 @@ export function GroupPage() {
                   <Button
                     variant="primary"
                     className="rounded-2xl text-xs font-black"
-                    onClick={handleJoinGroup}
+                    disabled={atJoinLimit}
+                    onClick={() => {
+                      if (atJoinLimit) {
+                        setTribuneLimitPopup('join')
+                        return
+                      }
+                      void handleJoinGroup()
+                    }}
                   >
                     Rejoindre cette tribune
                   </Button>
@@ -1963,7 +1975,14 @@ export function GroupPage() {
                 type="button"
                 variant="primary"
                 className="mx-auto mt-3 block w-full max-w-sm rounded-2xl text-sm font-black"
-                onClick={handleJoinGroup}
+                disabled={atJoinLimit}
+                onClick={() => {
+                  if (atJoinLimit) {
+                    setTribuneLimitPopup('join')
+                    return
+                  }
+                  void handleJoinGroup()
+                }}
               >
                 Rejoindre pour écrire
               </Button>
@@ -2040,12 +2059,31 @@ export function GroupPage() {
             return next
           })
         }}
-        onPublishCustom={(input) => addCustomDebate(input)}
+        onPublishCustom={(input) => {
+          const r = addCustomDebate(input)
+          if (!r.ok) {
+            setDebatePickerOpen(false)
+            setTribuneLimitPopup('debate')
+            return null
+          }
+          return r.debate
+        }}
+        canCreateDebate={canAddDebate}
+        onBlockedCreate={() => {
+          setDebatePickerOpen(false)
+          setTribuneLimitPopup('debate')
+        }}
       />
 
       <TribuneLimitPopup
         open={tribuneLimitPopup === 'join'}
         kind="join"
+        tier={tier}
+        onClose={() => setTribuneLimitPopup(null)}
+      />
+      <TribuneLimitPopup
+        open={tribuneLimitPopup === 'debate'}
+        kind="debate"
         tier={tier}
         onClose={() => setTribuneLimitPopup(null)}
       />

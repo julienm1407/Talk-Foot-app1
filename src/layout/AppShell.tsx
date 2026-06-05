@@ -1,5 +1,4 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { useCallback, useEffect, useRef, useState } from 'react'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { DirectMessagesProvider } from '../contexts/DirectMessagesContext'
 import { PrivateMessagesUiProvider } from '../contexts/PrivateMessagesUiContext'
@@ -31,18 +30,6 @@ export function AppShell() {
   const isChannel = location.pathname.startsWith('/channel/')
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
   const isGroupTribune = /^\/group\/[^/]+/.test(location.pathname)
-  const homeScrollRef = useRef<HTMLDivElement | null>(null)
-  const [homeFooterVisible, setHomeFooterVisible] = useState(false)
-
-  useEffect(() => {
-    if (isHome) setHomeFooterVisible(false)
-  }, [isHome, location.pathname])
-
-  const onHomeScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24
-    setHomeFooterVisible(atBottom)
-  }, [])
 
   useSwipeNavigate({
     enabled: !isChannel && !isGroupTribune,
@@ -111,10 +98,8 @@ export function AppShell() {
           </div>
         ) : isHome ? (
           <div
-            ref={homeScrollRef}
-            onScroll={onHomeScroll}
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
               'lg:flex lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-y-contain',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-3 sm:pt-4 lg:pt-6',
               'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
@@ -126,11 +111,9 @@ export function AppShell() {
                 <Outlet />
               </ErrorBoundary>
             </PageAdRails>
-            {homeFooterVisible ? (
-              <div className="mt-6">
-                <SiteLegalFooter className="lg:hidden rounded-t-2xl" />
-              </div>
-            ) : null}
+            <div className="mt-6 shrink-0 lg:hidden">
+              <SiteLegalFooter className="rounded-t-2xl" />
+            </div>
           </div>
         ) : (
           <div

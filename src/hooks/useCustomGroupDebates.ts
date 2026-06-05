@@ -40,11 +40,17 @@ export function useCustomGroupDebates(groupId: string | undefined) {
   )
 
   const addCustomDebate = useCallback(
-    (input: { title: string; excerpt: string; accent: string }): Debate | null => {
-      if (!groupId) return null
+    (
+      input: { title: string; excerpt: string; accent: string },
+    ): { ok: true; debate: Debate } | { ok: false; reason: string } => {
+      if (!groupId) return { ok: false, reason: 'Groupe introuvable.' }
       const debateGate = canCreateDebate(tier, subscription.usage ?? {})
-      if (!debateGate.ok) return null
-      if (!moderateDebateInput(input).ok) return null
+      if (!debateGate.ok) {
+        return { ok: false, reason: debateGate.reason ?? 'Limite de débats atteinte.' }
+      }
+      if (!moderateDebateInput(input).ok) {
+        return { ok: false, reason: 'Contenu refusé par la modération.' }
+      }
       patchUsage((u) => bumpDebateUsage(u))
       const debate = createCustomGroupDebateRecord(
         groupId,
@@ -76,7 +82,7 @@ export function useCustomGroupDebates(groupId: string | undefined) {
       } else {
         void refreshDebates()
       }
-      return debate
+      return { ok: true, debate }
     },
     [fanClubId, groupId, refreshDebates, setBucket, username, tier, subscription.usage, patchUsage],
   )

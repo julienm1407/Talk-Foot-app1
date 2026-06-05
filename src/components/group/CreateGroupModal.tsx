@@ -30,7 +30,10 @@ export function CreateGroupModal({
   onClose: () => void
   onCreate: (
     g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>,
-  ) => { ok: true } | { ok: false; reason: string; limitKind?: 'join' | 'create' }
+  ) =>
+    | Promise<{ ok: true } | { ok: false; reason: string; limitKind?: 'join' | 'create' }>
+    | { ok: true }
+    | { ok: false; reason: string; limitKind?: 'join' | 'create' }
 }) {
   const { plan, tier } = useSubscription()
   const themeCustomization = plan.flags.groupThemeCustomization
@@ -594,7 +597,7 @@ export function CreateGroupModal({
               <Button
                 variant="primary"
                 className="min-h-11 w-full rounded-3xl sm:min-h-0 sm:w-auto sm:order-2"
-                onClick={() => {
+                onClick={async () => {
                   setNameError(null)
                   setTagError(null)
                   const trimmedName = name.trim()
@@ -631,26 +634,28 @@ export function CreateGroupModal({
                   const theme: GroupTheme = { primary, secondary, background }
                   if (accent.trim()) theme.accent = accent.trim()
                   const cleanCountry = affiliationCountry.trim()
-                  const result = onCreate({
-                    name: trimmedName,
-                    emoji: (emoji.trim() || '🧢').slice(0, 8),
-                    location: location.trim() || undefined,
-                    motto: (motto.trim() || 'On vit le foot ensemble.').slice(0, 200),
-                    theme,
-                    members: Math.max(1, draft.members),
-                    intensity: 12,
-                    channels: draft.channels,
-                    groupKind,
-                    hashtags: finalTags.length > 0 ? finalTags : undefined,
-                    fanTags:
-                      selectedClub || cleanCountry
-                        ? {
-                            leagueIds: selectedClub ? [selectedClub.leagueId] : [],
-                            clubIds: selectedClub ? [selectedClub.id] : [],
-                            countryLabels: cleanCountry ? [cleanCountry] : undefined,
-                          }
-                        : undefined,
-                  })
+                  const result = await Promise.resolve(
+                    onCreate({
+                      name: trimmedName,
+                      emoji: (emoji.trim() || '🧢').slice(0, 8),
+                      location: location.trim() || undefined,
+                      motto: (motto.trim() || 'On vit le foot ensemble.').slice(0, 200),
+                      theme,
+                      members: Math.max(1, draft.members),
+                      intensity: 12,
+                      channels: draft.channels,
+                      groupKind,
+                      hashtags: finalTags.length > 0 ? finalTags : undefined,
+                      fanTags:
+                        selectedClub || cleanCountry
+                          ? {
+                              leagueIds: selectedClub ? [selectedClub.leagueId] : [],
+                              clubIds: selectedClub ? [selectedClub.id] : [],
+                              countryLabels: cleanCountry ? [cleanCountry] : undefined,
+                            }
+                          : undefined,
+                    }),
+                  )
                   if (!result.ok) {
                     if (result.limitKind === 'create') {
                       setCreateLimitPopupOpen(true)

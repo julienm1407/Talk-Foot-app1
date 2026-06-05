@@ -116,6 +116,7 @@ export function useSubscription() {
     betTokenMultiplier: betTokenMultiplier(tier),
     showAds: shouldShowAdsForTier(tier),
     hasVerifiedBadge: plan.flags.verifiedBadge,
+    hasAmbassadorStatus: plan.flags.ambassadorStatus,
     canStreamSalon: plan.flags.canStreamSalon,
     canJoinVoiceSalons: plan.flags.canJoinVoiceSalons,
     canWriteArticles: plan.flags.canWriteArticles,

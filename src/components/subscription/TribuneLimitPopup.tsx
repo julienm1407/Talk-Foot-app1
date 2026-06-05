@@ -1,38 +1,50 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getSubscriptionPlan } from '../../data/subscriptionPlans'
 import type { SubscriptionTierId } from '../../types/subscription'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/cn'
 
-export type TribuneLimitPopupKind = 'join' | 'create'
+export type TribuneLimitPopupKind = 'join' | 'create' | 'debate'
 
 /** Libellé affiché pour la formule de l’utilisateur. */
 export function subscriptionFormulaDisplayName(tier: SubscriptionTierId): string {
   if (tier === 'freemium') return 'Supporter'
-  const plan = getSubscriptionPlan(tier)
-  return plan.priceLabel ? `${plan.name} (${plan.priceLabel})` : plan.name
+  if (tier === 'supporter_plus') return 'Ultra'
+  return 'Ambassadeur'
 }
 
 function copyForKind(
   kind: TribuneLimitPopupKind,
   tier: SubscriptionTierId,
-): { title: string; body: string; limit: number } {
-  const plan = getSubscriptionPlan(tier)
-  const formula = subscriptionFormulaDisplayName(tier)
+  messageOverride?: string,
+): { title: string; body: string } {
+  if (messageOverride?.trim()) {
+    return { title: 'Limite atteinte', body: messageOverride.trim() }
+  }
   if (kind === 'join') {
-    const limit = plan.limits.maxGroupsJoined ?? 5
     return {
-      title: 'Vous avez atteint la limite de tribunes à rejoindre',
-      body: `Avec la formule ${formula}, vous pouvez rejoindre jusqu’à ${limit} tribunes maximum.`,
-      limit,
+      title: 'Limite atteinte',
+      body: 'Vous ne pouvez pas rejoindre plus de groupes. Vous avez atteint la limite de votre abonnement.',
     }
   }
-  const limit = plan.limits.maxGroupsCreated
+  if (kind === 'create') {
+    return {
+      title: 'Limite atteinte',
+      body: 'Vous avez atteint le nombre maximum de groupes autorisés par votre abonnement.',
+    }
+  }
+  if (tier === 'freemium') {
+    return {
+      title: 'Limite atteinte',
+      body: 'La création de débats est réservée aux formules Ultra et Ambassadeur.',
+    }
+  }
   return {
-    title: 'Vous avez atteint la limite de tribunes créées',
-    body: `Avec la formule ${formula}, vous pouvez créer jusqu’à ${limit} tribunes maximum.`,
-    limit,
+    title: 'Limite atteinte',
+    body:
+      tier === 'ambassador'
+        ? 'Tu as déjà publié ton débat du jour. Reviens demain pour en créer un nouveau.'
+        : 'Tu as déjà publié ton débat de la semaine. Reviens la semaine prochaine pour en créer un nouveau.',
   }
 }
 
@@ -40,11 +52,14 @@ export function TribuneLimitPopup({
   open,
   kind,
   tier = 'freemium',
+  message,
   onClose,
 }: {
   open: boolean
   kind: TribuneLimitPopupKind
   tier?: SubscriptionTierId
+  /** Message personnalisé (ex. quota débat). */
+  message?: string
   onClose: () => void
 }) {
   useEffect(() => {
@@ -63,7 +78,9 @@ export function TribuneLimitPopup({
 
   if (!open) return null
 
-  const { title, body } = copyForKind(kind, tier)
+  const { title, body } = copyForKind(kind, tier, message)
+  const showUpgradeToUltra = kind === 'join' && tier === 'freemium'
+  const showPlansLink = kind === 'create' || kind === 'debate' || showUpgradeToUltra
 
   return (
     <div
@@ -103,28 +120,31 @@ export function TribuneLimitPopup({
           >
             {body}
           </p>
-          <p className="mt-3 text-sm font-semibold text-slate-500">
-            Passe à une formule supérieure pour lever cette limite.
-          </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              to="/formules"
-              onClick={onClose}
-              className={cn(
-                'inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-tf-cta-hover/40',
-                'bg-tf-cta px-5 text-base font-black text-white shadow-tf-cta transition',
-                'hover:bg-tf-cta-hover sm:w-auto sm:min-w-[10rem]',
-              )}
-            >
-              Voir les formules
-            </Link>
+            {showPlansLink ? (
+              <Link
+                to="/formules"
+                onClick={onClose}
+                className={cn(
+                  'inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-tf-cta-hover/40',
+                  'bg-tf-cta px-5 text-base font-black text-white shadow-tf-cta transition',
+                  'hover:bg-tf-cta-hover sm:w-auto sm:min-w-[10rem]',
+                )}
+              >
+                {showUpgradeToUltra ? 'Passer à Ultra' : 'Voir les abonnements'}
+              </Link>
+            ) : null}
             <Button
-              variant="soft"
-              className="min-h-12 w-full rounded-2xl text-base font-black sm:w-auto sm:min-w-[10rem]"
+              variant={showPlansLink ? 'soft' : 'primary'}
+              className={cn(
+                'min-h-12 w-full rounded-2xl text-base font-black sm:w-auto sm:min-w-[10rem]',
+                !showPlansLink &&
+                  'border-2 border-tf-cta-hover/40 bg-tf-cta text-white shadow-tf-cta hover:bg-tf-cta-hover',
+              )}
               onClick={onClose}
             >
-              OK
+              Compris
             </Button>
           </div>
         </div>

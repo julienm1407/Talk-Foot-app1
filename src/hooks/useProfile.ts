@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { AvatarCharacterLook, AvatarSlot, JerseyCustomization, UserProfile } from '../types/profile'
 
 const EQUIPPED_BASE: Record<AvatarSlot, string | null> = {
@@ -147,6 +147,23 @@ export function useProfile() {
   )
 
   const profile = cloud !== undefined ? cloud.app.profile : localProfile
+  const profileCloudFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleProfileCloudFlush = useCallback(() => {
+    if (!cloud) return
+    if (profileCloudFlushRef.current) clearTimeout(profileCloudFlushRef.current)
+    profileCloudFlushRef.current = setTimeout(() => {
+      profileCloudFlushRef.current = null
+      void cloud.flushAppSave()
+    }, 800)
+  }, [cloud])
+
+  useEffect(
+    () => () => {
+      if (profileCloudFlushRef.current) clearTimeout(profileCloudFlushRef.current)
+    },
+    [],
+  )
 
   const broadcastProfile = useCallback((next: UserProfile) => {
     queueMicrotask(() => {
@@ -161,11 +178,6 @@ export function useProfile() {
           ...prev,
           profile: typeof u === 'function' ? (u as (p: UserProfile) => UserProfile)(prev.profile) : u,
         }))
-        const next =
-          typeof u === 'function'
-            ? (u as (p: UserProfile) => UserProfile)(cloud.app.profile)
-            : u
-        broadcastProfile(next)
       } else {
         setLocalProfileRaw((prev) => {
           const next = typeof u === 'function' ? u(prev) : u
@@ -187,22 +199,17 @@ export function useProfile() {
       const ce = e as CustomEvent<UserProfile>
       const d = ce.detail
       if (!d || !isUserProfileStored(d)) return
-      if (cloud) {
-        cloud.patchApp((prev) => ({ ...prev, profile: d }))
-      } else {
-        setLocalProfileRaw(d)
-      }
+      // En mode cloud, le profil est déjà centralisé dans CloudUserStateContext.
+      if (cloud) return
+      setLocalProfileRaw(d)
     }
     const onStorage = (e: StorageEvent) => {
       if (e.key !== PROFILE_STORAGE_KEY || !e.newValue) return
       try {
         const parsed: unknown = JSON.parse(e.newValue)
         if (!isUserProfileStored(parsed)) return
-        if (cloud) {
-          cloud.patchApp((prev) => ({ ...prev, profile: parsed as UserProfile }))
-        } else {
-          setLocalProfileRaw(parsed as UserProfile)
-        }
+        if (cloud) return
+        setLocalProfileRaw(parsed as UserProfile)
       } catch {
         /* ignore */
       }
@@ -368,8 +375,9 @@ export function useProfile() {
           modularAvatar: sanitizeModularAvatarState(next),
         }
       })
+      scheduleProfileCloudFlush()
     },
-    [setProfileStore],
+    [setProfileStore, scheduleProfileCloudFlush],
   )
 
   const setProfilePhotoDataUrl = useCallback(

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isSubscriptionCreateLimitError } from './groupMembership'
 import { channelsForSupporterGroup } from '../../data/defaultGroupChannels'
 import type { SupporterChannel, SupporterGroup } from '../../types/group'
 import { fetchSupporterGroupMemberCounts } from './groupMemberCounts'
@@ -96,7 +97,7 @@ export async function upsertCloudSupporterGroup(
   group: SupporterGroup,
   ownerSupabaseId: string,
   ownerClerkId?: string | null,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; code?: 'subscription_create_limit' }> {
   const { error } = await sb.from('supporter_groups').upsert(
     {
       id: group.id,
@@ -117,6 +118,9 @@ export async function upsertCloudSupporterGroup(
   )
   if (error) {
     console.error('[Talk Foot] upsert supporter_groups:', error.message)
+    if (isSubscriptionCreateLimitError(error)) {
+      return { ok: false, error: error.message, code: 'subscription_create_limit' }
+    }
     return { ok: false, error: error.message }
   }
   return { ok: true }

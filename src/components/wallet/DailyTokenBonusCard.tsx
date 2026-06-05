@@ -17,6 +17,7 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
   const { appearance } = useAppearance()
   const { claimDailyTokenBonus, dailyBonus } = useWallet()
   const [dailyClaimHint, setDailyClaimHint] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState(false)
   const L = appearance === 'light'
   const prominent = variant === 'prominent'
 
@@ -72,17 +73,31 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
                 ? 'bg-slate-200 text-slate-600'
                 : 'bg-white/15 text-white/70',
           )}
-          disabled={!dailyBonus.canClaim}
+          disabled={!dailyBonus.canClaim || claiming}
           onClick={() => {
-            const r = claimDailyTokenBonus()
-            if (r.ok) setDailyClaimHint(`+${r.amount} jetons récupérés !`)
-            else if (r.reason === 'already_claimed') setDailyClaimHint('Déjà récupéré pour cette journée.')
-            else if (r.reason === 'not_open_yet') setDailyClaimHint('Le bonus ouvre tous les jours à 10h.')
-            else setDailyClaimHint('Impossible pour le moment.')
-            window.setTimeout(() => setDailyClaimHint(null), 3200)
+            void (async () => {
+              if (claiming) return
+              setClaiming(true)
+              try {
+                const r = await claimDailyTokenBonus()
+                if (r.ok) setDailyClaimHint(`+${r.amount} jetons récupérés !`)
+                else if (r.reason === 'already_claimed') setDailyClaimHint('Déjà récupéré pour cette journée.')
+                else if (r.reason === 'not_open_yet') setDailyClaimHint('Le bonus ouvre tous les jours à 10h.')
+                else setDailyClaimHint('Impossible pour le moment.')
+                window.setTimeout(() => setDailyClaimHint(null), 3200)
+              } finally {
+                setClaiming(false)
+              }
+            })()
           }}
         >
-          {dailyBonus.canClaim ? 'Récupérer mes jetons' : dailyBonus.alreadyClaimedToday ? 'Déjà récupéré' : 'À 10h'}
+          {claiming
+            ? 'Récupération…'
+            : dailyBonus.canClaim
+              ? 'Récupérer mes jetons'
+              : dailyBonus.alreadyClaimedToday
+                ? 'Déjà récupéré'
+                : 'À 10h'}
         </button>
         {dailyClaimHint ? (
           <p

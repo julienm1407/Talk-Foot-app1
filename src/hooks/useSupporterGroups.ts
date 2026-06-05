@@ -326,11 +326,12 @@ export function useSupporterGroups() {
   }, [userId])
 
   const joinGroup = useCallback(
-    (
+    async (
       id: string,
-    ):
+    ): Promise<
       | { ok: true }
-      | { ok: false; reason: string; limitKind?: 'join' | 'create' } => {
+      | { ok: false; reason: string; limitKind?: 'join' | 'create' }
+    > => {
       if (!userId) return { ok: false, reason: 'Connexion requise.' }
       const target = groups.find((g) => g.id === id)
       if (target) {
@@ -353,19 +354,31 @@ export function useSupporterGroups() {
           }
         }
       }
+
+      const sb = getSupabaseBrowserClient()
+      if (sb && isSupabaseConfigured()) {
+        const cloudRes = await upsertCloudGroupMembership(sb, id)
+        if (!cloudRes.ok) {
+          if (cloudRes.code === 'subscription_join_limit') {
+            return {
+              ok: false,
+              reason: joinGroupLimitMessage(tier, plan.limits.maxGroupsJoined ?? 5),
+              limitKind: 'join',
+            }
+          }
+          return { ok: false, reason: cloudRes.error ?? 'Impossible de rejoindre ce groupe.' }
+        }
+      }
+
       setJoinedGroupIds((prev) => {
         const next = prev.includes(id) ? prev : [...prev, id]
         persistJoined(next)
         return next
       })
-      const sb = getSupabaseBrowserClient()
       if (sb && isSupabaseConfigured()) {
-        void (async () => {
-          await upsertCloudGroupMembership(sb, id)
-          const ids = rawGroups.map((g) => g.id)
-          void refreshMemberCounts(ids)
-          void refreshGroupPresence(ids)
-        })()
+        const ids = rawGroups.map((g) => g.id)
+        void refreshMemberCounts(ids)
+        void refreshGroupPresence(ids)
       }
       return { ok: true }
     },
@@ -379,6 +392,7 @@ export function useSupporterGroups() {
       refreshGroupPresence,
       joinedGroupIds,
       tier,
+      plan.limits.maxGroupsJoined,
     ],
   )
 
@@ -409,16 +423,23 @@ export function useSupporterGroups() {
   )
 
   const createGroup = useCallback(
-    (
+    async (
       g: Omit<SupporterGroup, 'id' | 'createdAt' | 'createdBy'>,
-    ):
+    ): Promise<
       | { ok: true; group: SupporterGroup }
-      | { ok: false; reason: string; limitKind?: 'join' | 'create' } => {
+      | { ok: false; reason: string; limitKind?: 'join' | 'create' }
+    > => {
       if (!userId) {
         return { ok: false, reason: 'Connexion requise pour créer une tribune.' }
       }
-      const createdCount = custom.filter((x) => x.createdBy === 'me').length
-      const gate = canCreateGroup(tier, createdCount)
+      const createdIds = new Set<string>()
+      for (const g of custom) {
+        if (g.createdBy === 'me') createdIds.add(g.id)
+      }
+      for (const g of cloudGroups) {
+        if (g.createdBy === 'me') createdIds.add(g.id)
+      }
+      const gate = canCreateGroup(tier, createdIds.size)
       if (!gate.ok) {
         return {
           ok: false,
@@ -453,30 +474,52 @@ export function useSupporterGroups() {
         persistJoined(joined)
         return joined
       })
+
       const sb = getSupabaseBrowserClient()
       if (sb && isSupabaseConfigured()) {
-        void (async () => {
-          const session = await ensureTalkFootSupabaseSession(sb)
-          if (!session) {
-            console.error('[Talk Foot] Création groupe : session Supabase indisponible.')
-            return
+        const session = await ensureTalkFootSupabaseSession(sb)
+        if (!session) {
+          setCustom((prev) => {
+            const rolled = prev.filter((g) => g.id !== id)
+            persistCustom(rolled)
+            return rolled
+          })
+          setJoinedGroupIds((prev) => {
+            const rolled = prev.filter((gid) => gid !== id)
+            persistJoined(rolled)
+            return rolled
+          })
+          return { ok: false, reason: 'Session cloud indisponible. Réessaie.' }
+        }
+        setSupabaseActorId(session.user.id)
+        const ownerClerkId = isClerkAuthMode() ? userId : null
+        const reg = await upsertCloudSupporterGroup(sb, next, session.user.id, ownerClerkId)
+        if (!reg.ok) {
+          setCustom((prev) => {
+            const rolled = prev.filter((g) => g.id !== id)
+            persistCustom(rolled)
+            return rolled
+          })
+          setJoinedGroupIds((prev) => {
+            const rolled = prev.filter((gid) => gid !== id)
+            persistJoined(rolled)
+            return rolled
+          })
+          if (reg.code === 'subscription_create_limit') {
+            return {
+              ok: false,
+              reason: createGroupLimitMessage(tier, gate.limit),
+              limitKind: 'create',
+            }
           }
-          setSupabaseActorId(session.user.id)
-          const ownerClerkId = isClerkAuthMode() ? userId : null
-          const reg = await upsertCloudSupporterGroup(
-            sb,
-            next,
-            session.user.id,
-            ownerClerkId,
-          )
-          if (!reg.ok) return
-          await upsertCloudGroupMembership(sb, id)
-          await refreshCloudGroups()
-        })()
+          return { ok: false, reason: reg.error ?? 'Impossible de créer le groupe.' }
+        }
+        await upsertCloudGroupMembership(sb, id)
+        await refreshCloudGroups()
       }
       return { ok: true, group: next }
     },
-    [userId, persistCustom, persistJoined, refreshCloudGroups, custom, tier],
+    [userId, persistCustom, persistJoined, refreshCloudGroups, custom, cloudGroups, tier],
   )
 
   const byId = useCallback(
@@ -579,10 +622,16 @@ export function useSupporterGroups() {
     void refreshGroupPresence(ids)
   }, [rawGroups, refreshGroupActivity, refreshMemberCounts, refreshGroupPresence])
 
-  const createdByMeCount = useMemo(
-    () => custom.filter((g) => g.createdBy === 'me').length,
-    [custom],
-  )
+  const createdByMeCount = useMemo(() => {
+    const ids = new Set<string>()
+    for (const g of custom) {
+      if (g.createdBy === 'me') ids.add(g.id)
+    }
+    for (const g of cloudGroups) {
+      if (g.createdBy === 'me') ids.add(g.id)
+    }
+    return ids.size
+  }, [custom, cloudGroups])
 
   return {
     groups,

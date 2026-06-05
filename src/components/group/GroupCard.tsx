@@ -178,7 +178,7 @@ export function GroupCard({
         ? 'px-3 py-3'
         : encart
           ? 'flex h-full min-h-0 flex-col px-4 py-4'
-          : 'px-5 py-4',
+          : 'max-sm:rounded-2xl px-3 py-2.5 sm:px-5 sm:py-4',
     className,
   )
 
@@ -198,11 +198,12 @@ export function GroupCard({
     ? 'border-2 border-emerald-500/40 bg-emerald-50 text-emerald-900'
     : 'border-2 border-emerald-500/30 bg-emerald-950/60 text-emerald-200'
 
-  const emojiBox = (sz: 'md' | 'sm') => (
+  const emojiBox = (sz: 'md' | 'sm', extraClassName?: string) => (
     <div
       className={cn(
         'grid place-items-center rounded-3xl font-black text-white shadow-sm',
         sz === 'sm' ? 'size-9 text-base' : 'size-10 text-lg',
+        extraClassName,
       )}
       style={{
         background: `linear-gradient(135deg, ${group.theme.primary}, ${group.theme.secondary})`,
@@ -549,18 +550,18 @@ export function GroupCard({
       <ThemeBackdrop group={group} />
       <ClubLogoBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
 
-      <div className="relative flex flex-wrap items-start justify-between gap-3">
+      <div className="relative flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            {emojiBox('md')}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {emojiBox('md', 'size-8 shrink-0 text-sm rounded-2xl sm:size-10 sm:text-lg sm:rounded-3xl')}
             <div className="min-w-0">
-              <div className={cn('truncate text-base font-black', titleC)}>{group.name}</div>
-              <div className={cn('mt-0.5 truncate text-sm font-semibold', subC)}>
+              <div className={cn('truncate text-sm font-black sm:text-base', titleC)}>{group.name}</div>
+              <div className={cn('mt-0.5 truncate text-[11px] font-semibold sm:text-sm', subC)}>
                 {group.location ? `${group.location} • ` : ''}
                 {group.members} membres
               </div>
               {countryLabel || mainClubName ? (
-                <div className={cn('mt-1 truncate text-xs font-bold', subC)}>
+                <div className={cn('mt-0.5 truncate text-[10px] font-bold sm:mt-1 sm:text-xs', subC)}>
                   {countryLabel ? `🌍 ${countryLabel}` : null}
                   {countryLabel && mainClubName ? ' · ' : null}
                   {mainClubName ? `⚽ ${mainClubName}` : null}
@@ -569,10 +570,11 @@ export function GroupCard({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1 sm:mt-3 sm:gap-2">
             {online > 0 ? (
               <Badge
                 className={cn(
+                  'px-1.5 py-0 text-[9px] leading-tight sm:px-2 sm:py-0.5 sm:text-[10px]',
                   L
                     ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
                     : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
@@ -584,16 +586,19 @@ export function GroupCard({
             {msgs > 0 ? (
               <Badge
                 className={cn(
+                  'px-1.5 py-0 text-[9px] leading-tight sm:px-2 sm:py-0.5 sm:text-[10px]',
                   L
                     ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
                     : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
                 )}
               >
-                📈 {msgs.toLocaleString('fr-FR')} msg aujourd’hui
+                <span className="sm:hidden">📈 {msgs.toLocaleString('fr-FR')} msg</span>
+                <span className="hidden sm:inline">📈 {msgs.toLocaleString('fr-FR')} msg aujourd’hui</span>
               </Badge>
             ) : null}
             <Badge
               className={cn(
+                'px-1.5 py-0 text-[9px] leading-tight sm:px-2 sm:py-0.5 sm:text-[10px]',
                 L ? 'border-slate-200 bg-white/90 text-slate-800' : 'border-white/10 bg-white/[0.08] text-sky-100',
               )}
             >
@@ -601,12 +606,17 @@ export function GroupCard({
             </Badge>
           </div>
 
-          <div className={cn('mt-3 line-clamp-2 text-sm font-semibold', L ? 'text-slate-700/80' : 'text-sky-100/85')}>
+          <div
+            className={cn(
+              'mt-1.5 line-clamp-1 text-[11px] font-semibold sm:mt-3 sm:line-clamp-2 sm:text-sm',
+              L ? 'text-slate-700/80' : 'text-sky-100/85',
+            )}
+          >
             « {group.motto} »
           </div>
 
           {group.hashtags && group.hashtags.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-1.5 hidden flex-wrap gap-1 sm:mt-3 sm:flex sm:gap-1.5">
               {group.hashtags.map((h) => (
                 <span
                   key={h}
@@ -626,7 +636,10 @@ export function GroupCard({
           {preview ? (
             <div
               className={cn(
-                'mt-0 overflow-hidden rounded-2xl border px-3 py-2 text-xs font-semibold opacity-0 max-h-0 translate-y-1 transition-all duration-200 group-hover:mt-3 group-hover:max-h-24 group-hover:translate-y-0 group-hover:opacity-100',
+                'mt-0 overflow-hidden rounded-xl border px-2 py-1.5 text-[11px] font-semibold opacity-0 max-h-0 translate-y-1 transition-all duration-200',
+                'group-hover:mt-2 group-hover:max-h-16 group-hover:translate-y-0 group-hover:opacity-100',
+                'group-active:mt-2 group-active:max-h-16 group-active:translate-y-0 group-active:opacity-100',
+                'sm:rounded-2xl sm:px-3 sm:py-2 sm:text-xs sm:group-hover:mt-3 sm:group-hover:max-h-24 sm:group-active:mt-3 sm:group-active:max-h-24',
                 L
                   ? 'border-slate-200/60 bg-white/50 text-slate-600'
                   : 'border-white/10 bg-white/[0.05] text-sky-200/80',
@@ -635,7 +648,7 @@ export function GroupCard({
             >
               <span
                 className={cn(
-                  'text-[10px] font-black uppercase tracking-wide',
+                  'text-[9px] font-black uppercase tracking-wide sm:text-[10px]',
                   L ? 'text-slate-400' : 'text-sky-300/65',
                 )}
               >
@@ -646,10 +659,11 @@ export function GroupCard({
           ) : null}
         </div>
 
-        <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+        <div className="flex w-full shrink-0 flex-row flex-wrap items-center justify-between gap-x-2 gap-y-1 sm:w-auto sm:flex-col sm:items-end sm:gap-2">
           {accessLevel === 'readonly' ? (
             <Badge
               className={cn(
+                'px-1.5 py-0 text-[9px] sm:text-[10px]',
                 L ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-amber-500/30 bg-amber-500/10 text-amber-200',
               )}
             >
@@ -658,17 +672,18 @@ export function GroupCard({
           ) : null}
           <Badge
             className={cn(
+              'hidden px-1.5 py-0 text-[9px] sm:inline-flex sm:px-2 sm:py-0.5 sm:text-[10px]',
               L ? 'border-slate-200 bg-white/80 text-slate-900' : 'border-white/10 bg-white/[0.1] text-sky-100',
             )}
           >
             {group.intensity}% ambiance
           </Badge>
-          <div className={cn('text-xs font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}>
+          <div className={cn('hidden text-xs font-bold sm:block', L ? 'text-slate-600' : 'text-tf-app-muted')}>
             {group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}
           </div>
           <span
             className={cn(
-              'tf-interactive-press inline-flex items-center justify-center rounded-2xl px-4 py-2 text-center text-xs font-black shadow-sm sm:min-w-[7.5rem]',
+              'tf-interactive-press ml-auto inline-flex shrink-0 items-center justify-center rounded-xl px-3 py-1.5 text-center text-[10px] font-black shadow-sm sm:ml-0 sm:rounded-2xl sm:px-4 sm:py-2 sm:text-xs sm:min-w-[7.5rem]',
               member ? memberBadgeC : 'bg-tf-dark text-white',
             )}
           >

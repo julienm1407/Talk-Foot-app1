@@ -23,8 +23,8 @@ function Stat({ label, value, hint }: { label: string; value: string; hint: stri
   )
 }
 
-/** Stats paris réels — page Pronostic. */
-export function PronoStatsPanel() {
+/** Stats paris réels — page Pronostic (onglet classement). */
+export function PronoStatsPanel({ className }: { className?: string }) {
   const stats = useBettingHubStats()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
@@ -35,6 +35,7 @@ export function PronoStatsPanel() {
       className={cn(
         'scroll-mt-4 space-y-4 border-t pt-5 sm:pt-6',
         L ? 'border-tf-dark/10' : 'border-white/12',
+        className,
       )}
       aria-labelledby="prono-stats-heading"
     >

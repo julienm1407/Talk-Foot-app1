@@ -14,13 +14,17 @@ export function DebatePickerModal({
   open,
   groupId,
   customForGroup,
+  canCreateDebate = true,
   onClose,
   onPick,
   onPublishCustom,
+  onBlockedCreate,
 }: {
   open: boolean
   groupId: string
   customForGroup: Debate[]
+  /** Formule + quota : false pour Supporter ou quota épuisé. */
+  canCreateDebate?: boolean
   onClose: () => void
   onPick: (debateId: string) => void
   onPublishCustom: (input: {
@@ -28,6 +32,7 @@ export function DebatePickerModal({
     excerpt: string
     accent: string
   }) => Debate | null
+  onBlockedCreate?: () => void
 }) {
   const [tab, setTab] = useState<Tab>('browse')
   const [title, setTitle] = useState('')
@@ -75,9 +80,13 @@ export function DebatePickerModal({
       setFormError('Description trop longue (280 max).')
       return
     }
+    if (!canCreateDebate) {
+      onBlockedCreate?.()
+      return
+    }
     const d = onPublishCustom({ title: t, excerpt: ex, accent })
     if (!d) {
-      setFormError('Impossible d’enregistrer. Réessaie.')
+      onBlockedCreate?.()
       return
     }
     onPick(d.id)
@@ -89,6 +98,10 @@ export function DebatePickerModal({
       key={id}
       type="button"
       onClick={() => {
+        if (id === 'create' && !canCreateDebate) {
+          onBlockedCreate?.()
+          return
+        }
         setTab(id)
         setFormError(null)
       }}

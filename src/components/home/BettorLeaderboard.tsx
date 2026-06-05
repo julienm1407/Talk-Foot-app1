@@ -45,7 +45,7 @@ export function BettorLeaderboard({
           )}
         >
           {extended
-            ? 'Classement des parieurs'
+            ? 'Classement public'
             : titleCount > 0
               ? `Top ${titleCount} parieur${titleCount > 1 ? 's' : ''}`
               : 'Classement parieurs'}
@@ -56,7 +56,7 @@ export function BettorLeaderboard({
       </div>
       <p className={cn('mt-0.5 text-[11px] font-medium', dark ? 'text-sky-200/75' : 'text-tf-grey')}>
         {extended
-          ? 'Comptes ayant au moins un pari enregistré — top 40 affichés'
+          ? 'Tous les parieurs Talk Foot — top 40 affichés'
           : 'Parieurs actifs sur Talk Foot'}
       </p>
 

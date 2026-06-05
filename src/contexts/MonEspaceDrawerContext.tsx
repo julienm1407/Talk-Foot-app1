@@ -131,8 +131,8 @@ export function MonEspaceDrawerProvider({ children }: { children: ReactNode }) {
       <CreateGroupModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreate={(g) => {
-          const r = createGroup(g)
+        onCreate={async (g) => {
+          const r = await createGroup(g)
           if (!r.ok) return r
           navigate(`/group/${r.group.id}`)
           setCreateOpen(false)

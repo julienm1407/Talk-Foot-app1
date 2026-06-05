@@ -274,8 +274,8 @@ export function GroupsHubPage() {
       <CreateGroupModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreate={(payload) => {
-          const r = createGroup(payload)
+        onCreate={async (payload) => {
+          const r = await createGroup(payload)
           if (!r.ok) return r
           navigate(`/group/${r.group.id}`)
           return { ok: true as const }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { BetSlipCard } from '../components/bet/BetSlipCard'
 import { BettorLeaderboard } from '../components/home/BettorLeaderboard'
@@ -7,11 +7,9 @@ import { FictionalBettingNotice } from '../components/legal/FictionalBettingNoti
 import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniRank'
 import { Card } from '../components/ui/Card'
 import { SectionIntro } from '../components/ui/SectionIntro'
-import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useBetMatchesMap } from '../hooks/useBetMatchesMap'
 import { useMatches } from '../contexts/MatchesContext'
 import { useUserBets } from '../hooks/useUserBets'
-import { useWallet } from '../hooks/useWallet'
 import { useAppearance } from '../contexts/AppearanceContext'
 import {
   filterBetsByTab,
@@ -31,7 +29,7 @@ const TABS: { id: BetFilterTab; label: string }[] = [
 type HubView = 'paris' | 'classement'
 
 /**
- * Hub « Pronostic » : mes paris, jetons, classement parieurs et accès tribune live.
+ * Hub « Pronostic » : mes paris, stats et classement parieurs.
  */
 export function PronosticHubPage() {
   const { appearance } = useAppearance()
@@ -39,7 +37,6 @@ export function PronosticHubPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const hubView: HubView = searchParams.get('vue') === 'classement' ? 'classement' : 'paris'
   const [bets] = useUserBets()
-  const { wallet } = useWallet()
   const { matches } = useMatches()
   const [tab, setTab] = useState<BetFilterTab>('all')
 
@@ -110,8 +107,8 @@ export function PronosticHubPage() {
         titleAs="h1"
         uppercaseTitle={false}
         eyebrow="Pronostic"
-        title="Mes paris & jetons"
-        description="Tes paris, ton solde de jetons et le classement des meilleurs parieurs Talk Foot."
+        title="Mes paris"
+        description="Tes paris et le classement des meilleurs parieurs Talk Foot."
         actions={
           liveMatch ? (
             <Link
@@ -157,68 +154,14 @@ export function PronosticHubPage() {
 
       {hubView === 'classement' ? (
         <section className="space-y-4" aria-label="Classement des parieurs">
+          <PronoStatsPanel className="border-t-0 pt-0 sm:pt-0" />
           <FriendsParieurMiniRank />
           <Card className="p-5 sm:p-6" elevation="soft">
-            <p className="mb-4 text-[10px] font-black uppercase tracking-wider text-tf-grey">
-              Classement global
-            </p>
-            <BettorLeaderboard extended />
+            <BettorLeaderboard extended embedded />
           </Card>
         </section>
       ) : (
         <>
-      <FictionalBettingNotice />
-      <PronoStatsPanel />
-
-      <div
-        className={cn(
-          'flex flex-wrap items-stretch gap-3 rounded-2xl border p-4 sm:p-5',
-          L
-            ? 'border-tf-dark/12 bg-white shadow-sm'
-            : 'border-white/12 bg-[#0d2135]/90 shadow-tf-elev-2',
-        )}
-      >
-        <WalletStat
-          label="Jetons"
-          value={wallet.tokens}
-          hint="Pour tes paris"
-          accent="emerald"
-          L={L}
-          icon={<TokenGlyph className="size-6" variant={L ? 'solid' : 'onDark'} />}
-        />
-        <div
-          className={cn('hidden w-px sm:block', L ? 'bg-tf-dark/10' : 'bg-white/12')}
-          aria-hidden
-        />
-        <WalletStat
-          label="Médailles"
-          value={wallet.medals}
-          hint="Boutique & cosmétiques"
-          accent="amber"
-          L={L}
-          icon={<span className="text-2xl leading-none" aria-hidden>🏅</span>}
-        />
-        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-col sm:items-end">
-          <Link
-            to="/profile#monnaie"
-            className={cn(
-              'text-xs font-bold underline-offset-2 hover:underline',
-              L ? 'text-tf-dark/70' : 'text-sky-200/80',
-            )}
-          >
-            Gérer mon solde
-          </Link>
-          {liveMatch ? (
-            <Link
-              to={`/channel/${liveMatch.id}?paris=1`}
-              className="text-xs font-black text-tf-cta hover:text-tf-cta-hover"
-            >
-              Nouveau pari →
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
       <div
         className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
@@ -244,6 +187,8 @@ export function PronosticHubPage() {
       )}
         </>
       )}
+
+      <FictionalBettingNotice className="mt-2" />
     </div>
   )
 }
@@ -276,45 +221,6 @@ function HubTabButton({
     >
       {label}
     </button>
-  )
-}
-
-function WalletStat({
-  label,
-  value,
-  hint,
-  accent,
-  L,
-  icon,
-}: {
-  label: string
-  value: number
-  hint: string
-  accent: 'emerald' | 'amber'
-  L: boolean
-  icon: ReactNode
-}) {
-  const valueColor =
-    accent === 'emerald'
-      ? L
-        ? 'text-emerald-800'
-        : 'text-emerald-300'
-      : L
-        ? 'text-amber-900'
-        : 'text-amber-200'
-  return (
-    <div className="flex min-w-[8.5rem] flex-1 items-center gap-3 sm:flex-none">
-      {icon}
-      <div>
-        <div className="text-[10px] font-black uppercase tracking-wide text-tf-app-muted">
-          {label}
-        </div>
-        <div className={cn('text-2xl font-black tabular-nums leading-none', valueColor)}>
-          {Math.round(value)}
-        </div>
-        <div className="mt-0.5 text-[11px] font-semibold text-tf-app-muted">{hint}</div>
-      </div>
-    </div>
   )
 }
 

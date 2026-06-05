@@ -7,10 +7,20 @@ function isUniqueViolation(err: { code?: string; message?: string; details?: str
   return c === '23505' || /duplicate key|unique constraint|already exists/i.test(m)
 }
 
+export function isSubscriptionJoinLimitError(err: { message?: string; details?: string; hint?: string }): boolean {
+  const m = `${err.message ?? ''} ${err.details ?? ''} ${err.hint ?? ''}`
+  return /subscription_join_limit|max_groups_joined/i.test(m)
+}
+
+export function isSubscriptionCreateLimitError(err: { message?: string; details?: string; hint?: string }): boolean {
+  const m = `${err.message ?? ''} ${err.details ?? ''} ${err.hint ?? ''}`
+  return /subscription_create_limit|max_groups_created/i.test(m)
+}
+
 export async function upsertCloudGroupMembership(
   sb: SupabaseClient,
   groupId: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; code?: 'subscription_join_limit' }> {
   const session = await ensureTalkFootSupabaseSession(sb)
   if (!session) return { ok: false, error: 'no_authenticated_session' }
   const { error } = await sb.from('supporter_group_members').insert({
@@ -19,6 +29,9 @@ export async function upsertCloudGroupMembership(
   })
   if (!error) return { ok: true }
   if (isUniqueViolation(error)) return { ok: true }
+  if (isSubscriptionJoinLimitError(error)) {
+    return { ok: false, error: error.message, code: 'subscription_join_limit' }
+  }
   return { ok: false, error: error.message }
 }
 

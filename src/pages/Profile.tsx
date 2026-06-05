@@ -17,6 +17,7 @@ import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
 import { useSubscription } from '../hooks/useSubscription'
 import { VerifiedBadge } from '../components/subscription/VerifiedBadge'
+import { AmbassadorBadge } from '../components/subscription/AmbassadorBadge'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
@@ -95,6 +96,7 @@ export function ProfilePage() {
   const {
     plan: subPlan,
     hasVerifiedBadge,
+    hasAmbassadorStatus,
     canWriteArticles,
     canCreatePrivateLiveMatches,
     canStreamSalon,
@@ -132,10 +134,12 @@ export function ProfilePage() {
           <div className="flex flex-wrap items-center gap-2">
             <DisplayNameEditor />
             {hasVerifiedBadge ? <VerifiedBadge /> : null}
+            {hasAmbassadorStatus ? <AmbassadorBadge /> : null}
           </div>
           <p className="text-sm font-semibold text-tf-app-muted">
             {subPlan.name}
-            {hasVerifiedBadge ? ' · compte vérifié' : ''} — visible sur le live et les tribunes.
+            {hasAmbassadorStatus ? ' · Ambassadeur' : hasVerifiedBadge ? ' · compte vérifié' : ''} — visible sur le
+            live et les tribunes.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
