@@ -7,37 +7,45 @@ const ITEMS = [
   { to: '/cdm/bracket', label: 'Arbre' },
   { to: '/cdm/stats', label: 'Stats' },
   { to: '/nations', label: 'Nations' },
-]
+] as const
 
 /**
- * Sous-navigation horizontale persistante en tête de toutes les pages CDM.
+ * Sous-navigation persistante en tête des pages CDM.
+ * Mobile : grille 3 colonnes (aucun crop). sm+ : ligne flexible.
  */
 export function CdmSubNav({ className }: { className?: string }) {
   return (
     <nav
       aria-label="Sections Coupe du Monde 2026"
-      className={cn(
-        '-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:[scrollbar-width:thin]',
-        className,
-      )}
+      className={cn('relative w-full min-w-0', className)}
     >
-      {ITEMS.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          className={({ isActive }) =>
-            cn(
-              'snap-start rounded-full border-2 px-3.5 py-1.5 text-xs font-black uppercase tracking-wide transition whitespace-nowrap',
-              isActive
-                ? 'border-tf-cdm-gold/70 bg-tf-cdm-gold/15 text-tf-cdm-gold'
-                : 'border-tf-c30-border bg-tf-c30-surface text-tf-app-muted hover:border-tf-cdm-gold/55 hover:text-tf-app-fg',
-            )
-          }
-        >
-          {item.label}
-        </NavLink>
-      ))}
+      <div
+        className={cn(
+          'grid grid-cols-3 gap-2',
+          'sm:flex sm:flex-wrap sm:items-center sm:gap-2.5',
+          'lg:flex-nowrap',
+        )}
+      >
+        {ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={'end' in item ? item.end : undefined}
+            className={({ isActive }) =>
+              cn(
+                'inline-flex min-h-10 shrink-0 items-center justify-center rounded-full border-2',
+                'px-3 py-2 text-[11px] font-black uppercase tracking-wide transition whitespace-nowrap',
+                'sm:min-h-0 sm:px-3.5 sm:py-1.5 sm:text-xs',
+                isActive
+                  ? 'border-tf-cdm-gold/70 bg-tf-cdm-gold/15 text-tf-cdm-gold'
+                  : 'border-tf-c30-border bg-tf-c30-surface text-tf-app-muted hover:border-tf-cdm-gold/55 hover:text-tf-app-fg',
+              )
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   )
 }

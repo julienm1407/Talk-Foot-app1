@@ -1,10 +1,11 @@
 import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
-type Variant = 'bar' | 'floating' | 'headerMinimal'
+type Variant = 'bar' | 'floating' | 'headerMinimal' | 'headerIcon'
 
 /**
- * Bascule Jour / Nuit — `headerMinimal` : discret pour la barre du haut (icônes seules, faible contraste).
+ * Bascule Jour / Nuit — `headerIcon` : une icône (action inverse, ex. lune en mode jour).
  */
 export function ThemeAppearanceToggle({
   className,
@@ -16,6 +17,29 @@ export function ThemeAppearanceToggle({
   const { appearance, setAppearance } = useAppearance()
   const L = appearance === 'light'
   const minimal = variant === 'headerMinimal'
+  const iconOnly = variant === 'headerIcon'
+
+  if (iconOnly) {
+    const next = L ? 'dark' : 'light'
+    return (
+      <button
+        type="button"
+        onClick={() => setAppearance(next)}
+        title={L ? 'Passer en nuit stade' : 'Passer en mode jour'}
+        aria-label={L ? 'Passer en nuit stade' : 'Passer en mode jour'}
+        className={cn(
+          TF_FOCUS_VISIBLE,
+          'tf-nav-pill grid size-9 shrink-0 place-items-center rounded-xl border text-lg leading-none transition active:scale-[0.96] sm:size-10',
+          L
+            ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
+            : 'border-white/15 bg-white/[0.08] text-white hover:border-white/25 hover:bg-white/[0.12]',
+          className,
+        )}
+      >
+        <span aria-hidden>{L ? '🌙' : '☀️'}</span>
+      </button>
+    )
+  }
 
   const track =
     variant === 'floating'

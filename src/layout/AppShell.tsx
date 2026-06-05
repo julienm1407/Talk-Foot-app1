@@ -16,13 +16,14 @@ import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
 import { BetSettlementRunner } from '../components/bet/BetSettlementRunner'
 
-const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
+const mainBottomPadMobile =
+  'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] lg:pb-2'
 const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
-/** Espace au-dessus de la BottomNav fixe (sm:hidden → téléphone uniquement). */
+/** Espace au-dessus de la BottomNav fixe (lg:hidden → mobile + tablette). */
 const mainBottomPadAboveBottomNav =
-  'max-sm:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
+  'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
 /** Accueil desktop : pas de bottom nav — éviter le grand vide gris sous le hub. */
-const mainBottomPadHomeDesktop = 'md:pb-2 lg:pb-3'
+const mainBottomPadHomeDesktop = 'lg:pb-2 xl:pb-3'
 
 export function AppShell() {
   const location = useLocation()
@@ -45,13 +46,13 @@ export function AppShell() {
 
   useSwipeNavigate({
     enabled: !isChannel && !isGroupTribune,
-    order: ['/', '/match', '/groups', '/rankings', '/boutique'],
+    order: ['/', '/match', '/groups'],
   })
 
   return (
     <DirectMessagesProvider>
     <PrivateMessagesUiProvider>
-    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden">
+    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell">
       <SkipLink />
       <ActivityRouteLogger />
       <BetSettlementRunner />
@@ -114,9 +115,9 @@ export function AppShell() {
             onScroll={onHomeScroll}
             className={cn(
               'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
-              'md:flex md:min-h-0 md:flex-col md:overflow-y-auto md:overscroll-y-contain',
-              'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-4 sm:pt-6',
-              'max-md:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
+              'lg:flex lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-y-contain',
+              'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-3 sm:pt-4 lg:pt-6',
+              'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
               mainBottomPadHomeDesktop,
             )}
           >
@@ -127,7 +128,7 @@ export function AppShell() {
             </PageAdRails>
             {homeFooterVisible ? (
               <div className="mt-6">
-                <SiteLegalFooter className="md:hidden rounded-t-2xl" />
+                <SiteLegalFooter className="lg:hidden rounded-t-2xl" />
               </div>
             ) : null}
           </div>

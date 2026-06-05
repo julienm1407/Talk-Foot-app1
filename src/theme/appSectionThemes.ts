@@ -376,13 +376,30 @@ export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId 
   { to: '/boutique', section: 'boutique' },
 ]
 
-export const BOTTOM_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId; icon: string }[] = [
+export type BottomNavRoute = { to: string; end?: boolean; section: AppSectionId; icon: string }
+
+/** Onglets visibles dans la barre du bas (mobile). */
+export const BOTTOM_NAV_PRIMARY_ROUTES: BottomNavRoute[] = [
   { to: '/', end: true, section: 'home', icon: '🏟️' },
   { to: '/match', end: true, section: 'matches', icon: '⚽' },
-  { to: '/pronostic', section: 'pronostic', icon: '🎯' },
   { to: '/groups', section: 'groups', icon: '👥' },
-  { to: '/rankings', section: 'rankings', icon: '🏆' },
-  { to: '/boutique', section: 'boutique', icon: '🛍️' },
+]
+
+/** Entrées du sous-menu « Plus » (sheet au-dessus de la barre). */
+export const BOTTOM_NAV_MORE_ROUTES: {
+  to: string
+  section: AppSectionId
+  icon: string
+  hint: string
+}[] = [
+  { to: '/pronostic', section: 'pronostic', icon: '🎯', hint: 'Paris & gains' },
+  { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Ligues & podium' },
+  { to: '/boutique', section: 'boutique', icon: '🛍️', hint: 'Tokens & médailles' },
+]
+
+export const BOTTOM_NAV_ROUTES: BottomNavRoute[] = [
+  ...BOTTOM_NAV_PRIMARY_ROUTES,
+  ...BOTTOM_NAV_MORE_ROUTES.map(({ to, section, icon }) => ({ to, section, icon })),
 ]
 
 export const OVERLAY_NAV_ROUTES: {

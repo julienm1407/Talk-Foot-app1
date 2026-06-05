@@ -4,6 +4,22 @@ type ArticleExcerptSource = {
   body?: string[]
 }
 
+/** Retire balises HTML / entités — chapôs admin parfois collés depuis un éditeur riche. */
+function stripHtmlToPlain(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function stripMarkdownToPlain(block: string): string {
   return block
     .replace(/^#{1,6}\s+/gm, '')
@@ -17,6 +33,11 @@ function stripMarkdownToPlain(block: string): string {
     .replace(/^[-*+]\s+/gm, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function toPlainExcerpt(raw: string): string {
+  const plain = stripMarkdownToPlain(stripHtmlToPlain(raw))
+  return plain
 }
 
 function clampExcerpt(text: string, max = 240): string {
@@ -51,18 +72,21 @@ function isPlaceholderExcerpt(text: string): boolean {
 /** Résumé court affiché sous le titre (champ admin ou 1er paragraphe du corps). */
 export function resolveArticleExcerpt(article: ArticleExcerptSource): string {
   const direct = article.excerpt?.trim()
-  if (direct && !isPlaceholderExcerpt(direct)) return direct
+  if (direct && !isPlaceholderExcerpt(direct)) {
+    const plain = toPlainExcerpt(direct)
+    if (plain.length >= 12) return clampExcerpt(plain)
+  }
 
   const md = article.bodyMarkdown?.trim()
   if (md) {
     for (const block of md.split(/\n{2,}/)) {
-      const plain = stripMarkdownToPlain(block)
+      const plain = toPlainExcerpt(block)
       if (plain.length >= 24) return clampExcerpt(plain)
     }
   }
 
   const legacy = article.body?.map((p) => p.trim()).find((p) => p.length >= 24)
-  if (legacy) return clampExcerpt(stripMarkdownToPlain(legacy))
+  if (legacy) return clampExcerpt(toPlainExcerpt(legacy))
 
   return ''
 }

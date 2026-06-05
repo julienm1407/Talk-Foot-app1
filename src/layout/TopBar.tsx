@@ -116,6 +116,7 @@ export function TopBar() {
     <header
       className={cn(
         'tf-app-topbar relative sticky top-0 z-40 w-full min-w-0 shrink-0 overflow-visible border-b backdrop-blur-md',
+        'pt-[env(safe-area-inset-top,0px)]',
         L
           ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-tf-elev-nav-light'
           : 'border-tf-dark-alt/40 bg-tf-dark shadow-tf-elev-nav-dark',
@@ -146,6 +147,8 @@ export function TopBar() {
             }
           />
 
+          <ThemeAppearanceToggle variant="headerIcon" className="hidden shrink-0 lg:grid" />
+
           {isCdm ? (
             <Link
               to="/cdm"
@@ -161,17 +164,7 @@ export function TopBar() {
               <span aria-hidden>★</span>
               CDM 2026
             </Link>
-          ) : (
-            <p
-              className={cn(
-                'hidden min-w-0 whitespace-nowrap font-sans text-[10px] font-bold leading-none tracking-wide min-[1180px]:block sm:text-[11px]',
-                L ? 'text-tf-dark/90' : 'text-white/92',
-              )}
-              title="Talk Foot — le réseau foot en continu"
-            >
-              Foot live, sans fin.
-            </p>
-          )}
+          ) : null}
         </div>
 
         <nav
@@ -221,8 +214,7 @@ export function TopBar() {
             L ? 'min-[700px]:border-l min-[700px]:border-tf-dark/10' : 'min-[700px]:border-l min-[700px]:border-white/10',
           )}
         >
-          <ThemeAppearanceToggle variant="headerMinimal" className="relative z-[1]" />
-          <NavWalletBalances className="relative z-[1] inline-flex max-[380px]:px-1.5 max-[380px]:py-1" compact />
+          <NavWalletBalances className="relative z-[1]" compact />
           <div className="relative z-[1] flex items-center gap-1 sm:gap-1.5">
           <div ref={dmWrapRef} className="relative shrink-0">
             <button
@@ -238,7 +230,7 @@ export function TopBar() {
               aria-expanded={pm.isOpen}
               aria-haspopup="dialog"
               className={cn(
-                'relative grid size-8 shrink-0 place-items-center rounded-xl border text-[14px] transition max-[380px]:size-[1.875rem] sm:size-10 min-[700px]:size-11 sm:text-base',
+                'relative grid min-h-tf-touch min-w-tf-touch shrink-0 place-items-center rounded-xl border text-[15px] transition lg:size-10 lg:min-h-10 lg:min-w-10 min-[700px]:size-11 lg:text-base',
                 pm.isOpen && (L ? 'ring-2 ring-violet-500/40' : 'ring-2 ring-violet-400/35'),
                 L
                   ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
@@ -278,7 +270,7 @@ export function TopBar() {
               aria-expanded={inboxOpen}
               aria-haspopup="dialog"
               className={cn(
-                'relative grid size-8 shrink-0 place-items-center rounded-xl border text-[14px] transition max-[380px]:size-[1.875rem] sm:size-10 min-[700px]:size-11 sm:text-base',
+                'relative grid min-h-tf-touch min-w-tf-touch shrink-0 place-items-center rounded-xl border text-[15px] transition lg:size-10 lg:min-h-10 lg:min-w-10 min-[700px]:size-11 lg:text-base',
                 inboxOpen && (L ? 'ring-2 ring-sky-500/40' : 'ring-2 ring-sky-400/35'),
                 L
                   ? 'border-tf-dark/12 bg-white/90 text-tf-dark hover:bg-white'
@@ -318,10 +310,11 @@ export function TopBar() {
               Admin
             </NavLink>
           ) : null}
+          <ThemeAppearanceToggle variant="headerIcon" className="shrink-0 lg:hidden" />
           <NavLink
             to="/profile"
             className={cn(
-              'tf-nav-pill inline-flex shrink-0 items-center gap-1 rounded-2xl border px-1.5 py-1 text-xs font-semibold outline-none',
+              'tf-nav-pill hidden shrink-0 items-center gap-1 rounded-2xl border px-1.5 py-1 text-xs font-semibold outline-none lg:inline-flex',
               'min-[480px]:gap-1.5 min-[480px]:px-2 min-[480px]:py-1.5 sm:gap-2 sm:px-2.5 sm:py-2',
               profileTheme.nav.focus,
               profileActive

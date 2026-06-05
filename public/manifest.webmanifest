@@ -1,0 +1,20 @@
+{
+  "name": "Talk Foot",
+  "short_name": "TalkFoot",
+  "description": "Foot live, débats et tribunes — réseau social football",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#061222",
+  "theme_color": "#061222",
+  "lang": "fr",
+  "categories": ["sports", "social"],
+  "icons": [
+    {
+      "src": "logo-talk-foot.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

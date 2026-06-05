@@ -346,9 +346,6 @@ export function HomeMonEspacePanel({
             >
               Offre du jour
             </p>
-            <p className={cn('px-1 text-[9px] font-semibold leading-snug', hubSecondary)}>
-              Nouvelle offre demain à minuit (Paris).
-            </p>
             <ul className="space-y-1.5" role="list">
               {railBoutiqueOffers.length === 0 ? (
                 <li className={cn('rounded-lg px-2 py-2 text-xs font-semibold leading-snug', hubSecondary)}>

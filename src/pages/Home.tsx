@@ -1,18 +1,12 @@
 import { useMatches } from '../contexts/MatchesContext'
 import { useArticles } from '../contexts/ArticlesContext'
 import { useDebates } from '../contexts/DebatesContext'
-import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
 import { AdSlot } from '../components/ui/AdSlot'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { CreateGroupModal } from '../components/group/CreateGroupModal'
-import { LiveMatchHero } from '../components/home/LiveMatchHero'
-import { HomeLeftColumn } from '../components/home/HomeLeftColumn'
-import { HomeRightColumn } from '../components/home/HomeRightColumn'
-import { DebateOfTheDayCard } from '../components/home/DebateOfTheDayCard'
 import { TrendingDebatesSection } from '../components/home/TrendingDebatesSection'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLiveEncartSimulation } from '../hooks/useLiveEncartSimulation'
 import { cn } from '../utils/cn'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
@@ -23,28 +17,17 @@ import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { FavoritesEncart } from '../components/fan/FavoritesEncart'
 import { HomeDesktopExperience } from '../components/home/HomeDesktopExperience'
 import { HomeFeedContinuation } from '../components/home/HomeFeedContinuation'
-import { HomeUpcomingHero } from '../components/home/HomeUpcomingHero'
-import { HubStripUpcoming } from '../components/match/HubMatchEncart'
+import { HomeMobileExperience } from '../components/mobile/HomeMobileExperience'
 import { useAppearance } from '../contexts/AppearanceContext'
-import { hubGlassPanel, hubTrendsShell } from '../utils/hubSurface'
-import { HomeLandingHub } from '../components/home/HomeLandingHub'
-import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
-import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
-import { ThemeArrivalHint } from '../components/ui/ThemeArrivalHint'
-import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
+import { hubTrendsShell } from '../utils/hubSurface'
 import { getSportMonksTokenSource } from '../utils/apiTokens'
-import { HomeSiteSearch, type HomeSiteSearchHandle } from '../components/search/HomeSiteSearch'
-import { SearchTrends12h } from '../components/search/SearchTrends12h'
 import { HomeEditorialIntro } from '../components/ads/HomeEditorialIntro'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
-import { CdmHomeHero } from '../components/cdm/CdmHomeHero'
 import { CdmTodayMatches } from '../components/cdm/CdmTodayMatches'
 import { CdmNationsRail } from '../components/cdm/CdmNationsRail'
-import { CdmHomeReminder } from '../components/cdm/CdmHomeReminder'
 import { FavoriteNationsHomeSection } from '../components/cdm/FavoriteNationsHomeSection'
-import { FavoriteNationsAlertBar } from '../components/cdm/FavoriteNationsAlertBar'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
-import { DailyTokenBonusCard } from '../components/wallet/DailyTokenBonusCard'
+import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -131,7 +114,6 @@ export function HomePage() {
       .map((id) => ALL_CLUBS_BY_ID[id]?.shortName ?? id)
       .join(' · ')
   }, [favoriteClubIds])
-  const mobileSearchRef = useRef<HomeSiteSearchHandle>(null)
 
   const supporterFocusUi = Boolean(supporterTintActive && team && favoriteClubIds.length > 0)
 
@@ -155,15 +137,6 @@ export function HomePage() {
 
   const trendsShell = hubTrendsShell(appearance)
 
-  /** Bento « téléphone » : sous md, une colonne ; md+ utilise le hub large écran. */
-  const bentoCols =
-    'md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,14rem)] lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_minmax(0,15rem)] xl:grid-cols-[minmax(0,13.5rem)_minmax(0,1fr)_minmax(0,17rem)]'
-  const bentoGrid = cn(
-    'grid grid-cols-1 gap-4 sm:gap-5 md:grid-rows-[auto_auto] md:items-start md:gap-x-5',
-    bentoCols,
-  )
-  const spanTwoCenter = 'min-w-0 md:col-span-2 md:col-start-1 md:row-start-1'
-
   /**
    * Bloc CDM 2026 complémentaire : matchs du jour + rail nations.
    *
@@ -171,7 +144,7 @@ export function HomePage() {
    * en mode CDM). Ici on ajoute juste le contenu enrichi autour.
    */
   const cdmTopBlockMobile = isCdm ? (
-    <div className="mx-auto w-full max-w-tf-content space-y-4">
+    <div className="space-y-4">
       <FavoriteNationsHomeSection />
       <CdmTodayMatches />
       <CdmNationsRail variant="tile" title="Sélections CDM" hint="Drapeau + fiche pays" />
@@ -256,19 +229,11 @@ export function HomePage() {
     <div
       className={cn(
         'w-full min-w-0 space-y-6 sm:space-y-8',
-        'md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col md:space-y-0 md:gap-0',
+        'lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:space-y-0 lg:gap-0',
       )}
     >
       {smKeyBanner}
-      {/*
-        Vue ≥ md : une seule colonne logique « page » — bandeau thème + hub 3 colonnes + suite (tendances, favoris, fil)
-        dans le même cadre visuel que le hub (continuation dans la colonne centrale).
-      */}
-      {/*
-        Hauteur = viewport − header : le hub 3 colonnes remplit l’espace restant ; seule la colonne centrale défile.
-      */}
-      <div className="mx-auto hidden h-full min-h-0 w-full max-w-[min(100%,112.5rem)] md:flex md:flex-1 md:flex-col md:gap-3 md:px-4 md:pb-0 lg:gap-4 lg:px-6">
-        <ThemeArrivalHint className="w-full max-w-none shrink-0" />
+      <div className="mx-auto hidden h-full min-h-0 w-full max-w-[min(100%,112.5rem)] lg:flex lg:flex-1 lg:flex-col lg:gap-3 lg:px-4 lg:pb-0 xl:gap-4 xl:px-6">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <HomeDesktopExperience
             liveMatches={hubLiveMatches}
@@ -286,220 +251,34 @@ export function HomePage() {
         </div>
       </div>
 
-      <div className="md:hidden space-y-6 sm:space-y-8">
-      <ThemeArrivalHint className="mx-auto w-full max-w-tf-content" />
-      <div className="mx-auto w-full max-w-tf-content px-3 sm:px-4">
-        <DailyTokenBonusCard variant="prominent" />
-      </div>
-      {cdmTopBlockMobile ? (
-        <div className="mx-auto w-full max-w-tf-content px-3 sm:px-4">
-          {cdmTopBlockMobile}
-        </div>
-      ) : null}
-      <section
-        className={cn(
-          'mx-auto w-full max-w-tf-content rounded-2xl border p-2.5',
-          appearance === 'light'
-            ? 'border-tf-electric/20 bg-white/95 shadow-sm'
-            : 'border-sky-400/20 bg-[#0a1e36]/95 ring-1 ring-sky-400/10',
-        )}
-        aria-label="Recherche rapide"
-      >
-        <p
-          className={cn(
-            'mb-1 text-[10px] font-black uppercase tracking-[0.16em]',
-            appearance === 'light' ? 'text-tf-electric-deep' : 'text-sky-200/90',
-          )}
-        >
-          Rechercher
-        </p>
-        <HomeSiteSearch
-          ref={mobileSearchRef}
-          inputId="home-mobile-search"
-          className="w-full [&_input]:min-h-[2.35rem] [&_input]:text-sm"
+      <div className="lg:hidden">
+        <HomeMobileExperience
+          appearance={appearance}
+          isCdm={isCdm}
+          loading={loading}
+          heroLiveMatch={heroLiveMatch}
+          heroLiveSim={heroLiveSim}
+          hubLiveMatches={hubLiveMatches}
+          heroSlide={heroSlide}
+          setHeroSlide={setHeroSlide}
+          upcomingSortedForHome={upcomingSortedForHome}
+          upcomingUnderLiveStrip={upcomingUnderLiveStrip}
+          displayMatchesFull={displayMatchesFull}
+          displayMatches={displayMatches}
+          debateOfTheDay={debateOfTheDay}
+          debatesLoading={debatesLoading}
+          trendingDebates={trendingDebates}
+          activeGroupsRail={activeGroupsRail}
+          personalizedNews={personalizedNews}
+          articlesLoading={articlesLoading}
+          supporterFocusUi={supporterFocusUi}
+          clubFocusLabel={clubFocusLabel}
+          team={team}
+          hideRivalSalons={hideRivalSalons}
+          setHideRivalSalons={setHideRivalSalons}
+          onCreateGroup={() => setCreateOpen(true)}
+          cdmTopBlockMobile={cdmTopBlockMobile}
         />
-        <SearchTrends12h
-          className="mt-1.5 w-full min-w-0"
-          maxTerms={2}
-          onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
-        />
-      </section>
-      {isCdm ? (
-        <CdmHomeReminder className="mx-auto w-full max-w-tf-content" />
-      ) : null}
-      {isCdm ? (
-        <FavoriteNationsAlertBar className="mx-auto w-full max-w-tf-content" />
-      ) : null}
-      <HomeLandingHub
-        appearance={appearance}
-        className={cn('mx-auto w-full max-w-tf-content', hubGlassPanel(appearance))}
-        compact
-        onCreateGroup={() => setCreateOpen(true)}
-      />
-      {isCdm ? null : <FavoritesEncart className="mx-auto max-w-tf-content" />}
-      <HomeEditorialIntro />
-      <div className="mx-auto w-full max-w-tf-content space-y-6 sm:space-y-8">
-        {supporterTintActive && team ? (
-          <div
-            className="rounded-2xl border border-tf-electric/30 bg-tf-electric-soft/90 px-4 py-3 text-sm font-bold text-tf-dark shadow-sm"
-            role="status"
-          >
-            Mode supporter actif : couleurs & titres autour de{' '}
-            <span className="font-black">{clubFocusLabel || team.name}</span>. Les matchs et actus restent
-            larges — pour filtrer les messages (live, tribunes, top com.), utilise le{' '}
-            <strong className="font-black">{LIVE_FIL_EQUIPE_COEUR.label}</strong> dans Profil (pas les zones Virage /
-            Chill du live, ni une tribune groupe).
-          </div>
-        ) : null}
-
-        {/* Bloc supérieur : même verre que le hub desktop */}
-        <div
-          className={cn(
-            'min-w-0 max-w-full overflow-x-clip rounded-[20px] p-3 sm:p-4 lg:rounded-2xl',
-            hubGlassPanel(appearance),
-          )}
-        >
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <label
-              className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-tf-grey-pastel/50 bg-tf-white/90 px-3 py-2.5 text-xs font-bold text-tf-dark shadow-sm sm:w-auto"
-              title="Ex. masquer la tribune OM si ton club de cœur est le PSG"
-            >
-              <input
-                type="checkbox"
-                checked={hideRivalSalons}
-                onChange={(e) => setHideRivalSalons(e.target.checked)}
-                className="size-4 rounded border-tf-grey-pastel"
-              />
-              <span className="leading-snug">Masquer tribunes rivales</span>
-            </label>
-            <Button
-              variant="primary"
-              className="tf-interactive-press w-full rounded-2xl px-4 py-2.5 text-xs font-black sm:w-auto sm:py-2"
-              onClick={() => setCreateOpen(true)}
-            >
-              ➕ Créer un groupe
-            </Button>
-          </div>
-
-          {/* Bento type maquette : hero sur 2 colonnes, rail droit sur 2 rangées, matchs sous le hero à gauche */}
-          <div className={cn(bentoGrid)}>
-          <div className={cn('order-1', spanTwoCenter)}>
-            {heroLiveMatch ? (
-              <div className="space-y-2">
-                <HubEncartTopAccent appearance={appearance} preset="live" />
-                <LiveMatchHero
-                  match={heroLiveMatch}
-                  simulation={heroLiveSim}
-                  carousel={
-                    hubLiveMatches.length > 1
-                      ? {
-                          count: hubLiveMatches.length,
-                          index: heroSlide,
-                          onSelect: setHeroSlide,
-                        }
-                      : undefined
-                  }
-                />
-                {upcomingUnderLiveStrip.length > 0 ? (
-                  <div className="min-w-0 border-t border-tf-dark/10 pt-2 dark:border-white/10">
-                    <HubEncartTopAccent appearance={appearance} preset="upcoming" className="mb-2" />
-                    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 px-0.5">
-                      <h3
-                        className={cn(
-                          'text-[10px] font-black uppercase tracking-wider',
-                          appearance === 'light' ? 'text-tf-dark/90' : 'text-sky-100',
-                        )}
-                      >
-                        À venir
-                      </h3>
-                      <Link
-                        to="/match"
-                        className={cn(
-                          'text-[10px] font-black hover:underline',
-                          appearance === 'light' ? 'text-tf-dark' : 'text-sky-300',
-                        )}
-                      >
-                        Voir tout
-                      </Link>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {upcomingUnderLiveStrip.map((m) => (
-                        <HubStripUpcoming key={m.id} match={m} visualSize="minimal" className="min-w-0" />
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : upcomingSortedForHome.length > 0 ? (
-              <HomeUpcomingHero matches={upcomingSortedForHome} />
-            ) : isCdm ? (
-              <CdmHomeHero />
-            ) : (
-              <Card className="border-dashed border-tf-grey-pastel/60 p-6 text-center sm:p-8" elevation="soft">
-                <p className="text-sm font-bold text-tf-grey">
-                  Aucun match à venir dans la fenêtre — ouvre le calendrier ou le carrousel ci-dessous.
-                </p>
-                <Link to="/match" className="mt-4 inline-block text-sm font-black text-tf-electric-deep underline">
-                  Voir les matchs
-                </Link>
-              </Card>
-            )}
-            <div className="mt-5 space-y-4 sm:mt-6">
-              <DebateOfTheDayCard debate={debateOfTheDay} loading={debatesLoading} />
-            </div>
-          </div>
-
-          <aside className="order-5 flex justify-center md:order-none md:col-start-3 md:row-start-1 md:row-span-2 md:block md:justify-start">
-            <div className="w-full max-w-tf-hub-rail min-w-0 md:max-w-none">
-              <HomeRightColumn
-                debates={[]}
-                groups={activeGroupsRail}
-                onCreateGroup={() => setCreateOpen(true)}
-                showDebatesSection={false}
-              />
-            </div>
-          </aside>
-
-          <aside className="order-4 flex justify-center md:order-none md:col-start-1 md:row-start-2 md:block md:justify-start">
-            <div className="w-full max-w-tf-hub-rail min-w-0 md:max-w-none">
-              <HomeLeftColumn
-                upcomingPool={displayMatchesFull}
-                resultsPool={displayMatchesFull}
-                omitUpcoming
-              />
-            </div>
-          </aside>
-
-          <div className="order-2 flex min-w-0 flex-col gap-5 sm:gap-6 md:order-none md:col-start-2 md:row-start-2">
-            <AdSlot
-              compact
-              tone="navy"
-              brand="Matchday sponsor"
-              body="Sous le débat du jour dans la colonne principale."
-              imageSeed="home-under-hero"
-              contentReady={!loading}
-            />
-          </div>
-          </div>
-        </div>
-      </div>
-
-      <section className={cn('mx-auto w-full max-w-tf-content', trendsShell)} aria-label="Débats tendances">
-        <TrendingDebatesSection debates={trendingDebates} loading={debatesLoading} variant="band" />
-      </section>
-
-      <HomeFeedContinuation
-        idPrefix="m-"
-        displayMatches={displayMatches}
-        heroLiveMatch={heroLiveMatch}
-        heroLiveSim={heroLiveSim}
-        personalizedNews={personalizedNews}
-        articlesLoading={articlesLoading}
-        supporterFocusUi={supporterFocusUi}
-        clubFocusLabel={clubFocusLabel}
-        team={team}
-        contentReady={!loading}
-      />
       </div>
 
       <CreateGroupModal

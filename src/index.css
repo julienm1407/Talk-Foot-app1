@@ -2274,3 +2274,32 @@ body::before {
     animation: none !important;
   }
 }
+
+/* ── Mobile app shell (Capacitor / PWA / standalone) ── */
+.tf-mobile-app-shell {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (max-width: 1023px) {
+  .tf-mobile-app-shell .tf-app-bottomnav {
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06), 0 -12px 40px rgba(0, 0, 0, 0.28);
+  }
+
+  .tf-mobile-home {
+    scroll-behavior: smooth;
+  }
+
+  .tf-mobile-home input,
+  .tf-mobile-home select,
+  .tf-mobile-home textarea {
+    font-size: 16px;
+  }
+}
+
+@media (display-mode: standalone) {
+  .tf-mobile-app-shell .tf-app-topbar {
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+  }
+}
+
