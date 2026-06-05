@@ -59,8 +59,8 @@ export function SubscriptionPlansPage() {
         </p>
         <h1 className="text-2xl font-black text-white sm:text-3xl">Supporter · Ultra · Ambassadeur</h1>
         <p className="max-w-2xl text-sm text-white/70">
-          Trois niveaux d’accès : Supporter pour découvrir Talk Foot, Ultra à 4,99 €/mois pour aller plus loin,
-          Ambassadeur à 14,99 €/mois pour les créateurs (stream, voix, articles). Paiement sécurisé par Stripe.
+          Trois niveaux : Supporter (gratuit) pour rejoindre la communauté, Ultra à 4,99 €/mois pour les
+          membres actifs, Ambassadeur à 14,99 €/mois pour les créateurs. Paiement sécurisé par Stripe.
           {isStripePublishableConfigured() ? (
             <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
           ) : (
@@ -112,7 +112,19 @@ export function SubscriptionPlansPage() {
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-xl font-black">{plan.name}</h2>
+                  <div>
+                    <p className="text-lg leading-none" aria-hidden>
+                      {plan.tierEmoji}
+                    </p>
+                    <h2 className="mt-1 text-xl font-black uppercase tracking-wide">
+                      {plan.name}
+                      {plan.nameHint ? (
+                        <span className="ml-1.5 text-base font-black normal-case text-white/80">
+                          ({plan.nameHint})
+                        </span>
+                      ) : null}
+                    </h2>
+                  </div>
                   {isCurrent && (
                     <Badge className="border-white/30 bg-white/20 text-white">Actif</Badge>
                   )}
@@ -123,24 +135,20 @@ export function SubscriptionPlansPage() {
                 <p className="mt-2 text-sm text-white/85">{plan.tagline}</p>
               </div>
               <ul className="space-y-2.5 px-5 py-5">
-                {plan.features.map((f) => (
-                  <li
-                    key={f.id}
-                    className={cn(
-                      'flex gap-2 text-sm',
-                      f.included ? 'text-white/90' : 'text-white/40 line-through decoration-white/30',
-                    )}
-                  >
+                {plan.features
+                  .filter((f) => f.included)
+                  .map((f) => (
+                  <li key={f.id} className="flex gap-2 text-sm text-white/90">
                     <span aria-hidden className="shrink-0">
-                      {f.included ? '✓' : '×'}
+                      {plan.featureIcon ?? '✓'}
                     </span>
                     <span>
                       {f.label}
-                      {f.comingSoon && f.included && (
+                      {f.comingSoon ? (
                         <span className="ml-1 text-[10px] font-bold uppercase text-amber-300/90">
                           (bientôt)
                         </span>
-                      )}
+                      ) : null}
                     </span>
                   </li>
                 ))}
@@ -185,22 +193,24 @@ export function SubscriptionPlansPage() {
       </div>
 
       <Card className="space-y-3 border-white/10 bg-white/[0.04] p-5 text-sm text-white/75">
-        <h3 className="font-black text-white">Rappels produit</h3>
+        <h3 className="font-black text-white">Bon à savoir</h3>
         <ul className="list-inside list-disc space-y-1.5">
           <li>
-            <strong className="text-white">Boutique :</strong> les 3 formules voient et peuvent acheter tous
-            les articles (maillots, shorts, chaussures, packs). Ultra et Ambassadeur reçoivent plus de
-            jetons (mensuels, paris ×2) pour constituer leur collection plus vite — pas d’articles réservés aux
-            payants.
+            <strong className="text-white">Boutique :</strong> toutes les formules voient le même catalogue
+            (maillots, shorts, chaussures, packs). Ultra et Ambassadeur reçoivent plus de jetons pour
+            constituer leur collection plus vite.
           </li>
           <li>
-            Supporter : pas de débats ; cooldown tchat 15 s ; 100 messages/jour ; rival club → accès
-            tribune rivale sur demande / kick modos.
+            <strong className="text-white">Supporter :</strong> idéal pour découvrir TalkFoot — groupes,
+            avatar de base, jetons live et messages du jour inclus.
           </li>
-          <li>Ultra : pas de stream ni salon privé ; emotes groupe non personnalisables.</li>
           <li>
-            Ambassadeur : stream tribune, micro vocal, salon privé par lien, rédaction d’articles.
-            Rémunération créateur — à venir.
+            <strong className="text-white">Ultra :</strong> badge vérifié, plus de groupes, salons VIP et
+            double récompense sur les pronostics.
+          </li>
+          <li>
+            <strong className="text-white">Ambassadeur :</strong> statut exclusif, débats quotidiens, salons
+            vocaux, articles et live privé — récompenses créateurs bientôt disponibles.
           </li>
         </ul>
         <Link to="/profile" className="inline-block text-sm font-semibold text-sky-300 hover:underline">

@@ -13,6 +13,12 @@ export type SubscriptionPlanFeature = {
 export type SubscriptionPlanDefinition = {
   id: SubscriptionTierId
   name: string
+  /** Sous-titre court sous le nom (ex. « gratuit »). */
+  nameHint?: string
+  /** Emoji d’en-tête carte formules. */
+  tierEmoji?: string
+  /** Préfixe des puces avantages (✅, ⭐, 👑). */
+  featureIcon?: string
   priceLabel: string
   priceCents: number | null
   tagline: string
@@ -60,9 +66,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
   freemium: {
     id: 'freemium',
     name: 'Supporter',
+    nameHint: 'gratuit',
+    tierEmoji: '🟢',
+    featureIcon: '✅',
     priceLabel: '',
     priceCents: null,
-    tagline: 'Découvre Talk Foot et rejoins la communauté.',
+    tagline: 'Pour profiter de TalkFoot et rejoindre la communauté.',
     accentClass: 'from-slate-600 to-slate-800',
     limits: {
       maxGroupsCreated: 2,
@@ -98,25 +107,22 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
       handRaiseOnLive: true,
     },
     features: [
-      { id: 'boutique', label: 'Boutique complète (tous les articles)', included: true },
-      { id: 'skin', label: 'Skin de base (peau, cheveux, coupe)', included: true },
-      { id: 'groups', label: '2 groupes créés · 5 rejoints max', included: true },
-      { id: 'group-basic', label: 'Groupe : photo, nom et # uniquement', included: true },
-      { id: 'tokens-live', label: '40 jetons / h sur les live matchs', included: true },
-      { id: 'tokens-earn', label: 'Progression jetons standard (paris, live)', included: true },
-      { id: 'chat-cd', label: 'Cooldown tchat 15 s · 100 messages / jour', included: true },
-      { id: 'debates', label: 'Création de débats', included: false },
-      { id: 'monthly-tokens', label: 'Jetons mensuels offerts', included: false },
-      { id: 'bet-x2', label: 'Jetons paris ×2', included: false },
-      { id: 'ads', label: 'Sans publicité', included: false },
+      { id: 'groups-create', label: 'Crée jusqu’à 2 groupes', included: true },
+      { id: 'groups-join', label: 'Rejoins jusqu’à 5 groupes', included: true },
+      { id: 'avatar-base', label: 'Personnalisation de base de ton avatar', included: true },
+      { id: 'tokens-live', label: '40 jetons / heure pendant les matchs', included: true },
+      { id: 'chat-day', label: '100 messages par jour', included: true },
+      { id: 'progress', label: 'Progression classique (paris, live…)', included: true },
     ],
   },
   supporter_plus: {
     id: 'supporter_plus',
     name: 'Ultra',
+    tierEmoji: '🟣',
+    featureIcon: '⭐',
     priceLabel: '4,99 € / mois',
     priceCents: 499,
-    tagline: 'Plus de tribunes, moins de limites, badge vérifié.',
+    tagline: 'Pour les membres les plus actifs.',
     accentClass: 'from-violet-600 to-indigo-800',
     limits: {
       maxGroupsCreated: 10,
@@ -152,25 +158,25 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
       handRaiseOnLive: true,
     },
     features: [
-      { id: 'boutique', label: 'Boutique complète — débloque plus vite (plus de jetons)', included: true },
+      { id: 'badge', label: 'Badge vérifié sur ton profil', included: true },
+      { id: 'groups-create', label: 'Crée jusqu’à 10 groupes', included: true },
+      { id: 'groups-join', label: 'Rejoins autant de groupes que tu veux', included: true },
+      { id: 'vip', label: 'Salons privés VIP', included: true },
+      { id: 'tokens-m', label: '250 jetons offerts chaque mois', included: true },
+      { id: 'bet-x2', label: 'Double récompense sur les pronostics', included: true },
+      { id: 'salon-1k', label: 'Accès aux salons publics jusqu’à 1000 personnes', included: true },
+      { id: 'group-theme', label: 'Plus de personnalisation pour tes groupes', included: true },
       { id: 'debate-w', label: '1 débat créé par semaine', included: true },
-      { id: 'groups', label: '10 groupes créés · rejoindre illimité', included: true },
-      { id: 'group-theme', label: 'Personnalisation esthétique du groupe (pas les emotes)', included: true },
-      { id: 'badge', label: 'Badge vérifié · encart photo profil', included: true },
-      { id: 'vip', label: 'Salons vérifiés / VIP', included: true },
-      { id: 'tokens-m', label: '250 jetons / mois (maillots & shorts plus rapides)', included: true },
-      { id: 'bet-x2', label: 'Jetons paris ×2', included: true },
-      { id: 'no-ads', label: 'Fin des pubs (hors articles)', included: true },
-      { id: 'salon-1k', label: 'Salon public jusqu’à 1000 personnes', included: true },
-      { id: 'live-create', label: 'Créer un live match', included: false },
     ],
   },
   ambassador: {
     id: 'ambassador',
     name: 'Ambassadeur',
+    tierEmoji: '🟠',
+    featureIcon: '👑',
     priceLabel: '14,99 € / mois',
     priceCents: 1499,
-    tagline: 'Créateur : stream, voix, débats quotidiens, statut ambassadeur.',
+    tagline: 'Pour les créateurs et les leaders de communauté.',
     accentClass: 'from-amber-500 to-orange-700',
     limits: {
       maxGroupsCreated: Number.POSITIVE_INFINITY,
@@ -206,23 +212,17 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
       handRaiseOnLive: true,
     },
     features: [
-      { id: 'boutique', label: 'Boutique complète — progression jetons maximale', included: true },
-      { id: 'all-plus', label: 'Tout Ultra + emotes groupe', included: true },
-      { id: 'debate-d', label: '1 débat par jour', included: true },
-      { id: 'groups-inf', label: 'Groupes créés illimités', included: true },
-      { id: 'ambassador', label: 'Statut ambassadeur', included: true },
-      { id: 'stream', label: 'Stream sur tes salons · salons vocaux', included: true },
+      { id: 'ambassador', label: 'Statut Ambassadeur exclusif', included: true },
+      { id: 'groups-inf', label: 'Groupes illimités', included: true },
+      { id: 'debate-d', label: '1 débat créé chaque jour', included: true },
+      { id: 'voice', label: 'Salons vocaux pour tes groupes', included: true },
       { id: 'salon-inf', label: 'Salons publics sans limite', included: true },
-      { id: 'tokens-m', label: '1000 jetons / mois (collection rapide)', included: true },
-      { id: 'articles', label: 'Rédiger des articles sur l’app', included: true },
-      {
-        id: 'live-priv',
-        label: 'Salon live privé (lien invité depuis la tribune)',
-        included: true,
-      },
+      { id: 'tokens-m', label: '1000 jetons offerts chaque mois', included: true },
+      { id: 'articles', label: 'Articles et contenus sur TalkFoot', included: true },
+      { id: 'live-priv', label: 'Live privé avec lien d’invitation', included: true },
       {
         id: 'monetize',
-        label: 'Rémunération créations (articles / lives)',
+        label: 'Récompenses créateurs',
         included: true,
         comingSoon: true,
       },
