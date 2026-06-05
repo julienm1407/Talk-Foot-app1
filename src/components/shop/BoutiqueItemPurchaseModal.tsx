@@ -75,6 +75,7 @@ export function BoutiqueItemPurchaseModal({
       title={item.name}
       subtitle={typeLabel}
       previewState={previewState}
+      previewItem={item}
       footer={
         <div className="space-y-3">
           <p className="text-center text-xs font-bold text-white/70">

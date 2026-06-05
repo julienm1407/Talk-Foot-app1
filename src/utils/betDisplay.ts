@@ -29,10 +29,8 @@ function teamDisplayName(team: Match['home'] | undefined, fallback: string): str
 }
 
 export function getBetPickTitle(bet: Bet, match: Match | null): string {
-  const homeShort = match?.home.shortName ?? 'Domicile'
-  const awayShort = match?.away.shortName ?? 'Extérieur'
-  const homeFull = teamDisplayName(match?.home, 'Domicile')
-  const awayFull = teamDisplayName(match?.away, 'Extérieur')
+  const homeShort = match?.home.shortName ?? bet.matchLabel?.homeShort ?? 'Domicile'
+  const awayShort = match?.away.shortName ?? bet.matchLabel?.awayShort ?? 'Extérieur'
   const sel = bet.selection
 
   if (bet.market === 'anytime_scorer' && typeof sel === 'string' && sel.startsWith('scor:')) {
@@ -40,8 +38,8 @@ export function getBetPickTitle(bet: Bet, match: Match | null): string {
     return `${playerNameFromScorerSlug(slug)} Buteur`
   }
   if (bet.market === 'result_1x2') {
-    if (sel === 'home') return homeFull
-    if (sel === 'away') return awayFull
+    if (sel === 'home') return teamNameFromBetContext(bet, match, 'home')
+    if (sel === 'away') return teamNameFromBetContext(bet, match, 'away')
     if (sel === 'draw') return 'Match nul'
   }
   if (bet.market === 'over25') {
@@ -140,20 +138,64 @@ export function getBetMarketHint(bet: Bet): string | null {
   return marketShortLabel(bet.market)
 }
 
+/** Titre de section en tête de ticket (ex. « Résultat », « Buteur »). */
+export function getBetMarketSectionLabel(bet: Bet): string {
+  if (bet.market === 'result_1x2') return 'Résultat'
+  return marketShortLabel(bet.market)
+}
+
+/** Ligne match sous le choix parié (ex. « FRA · BRA »). */
+export function getBetMatchFixtureLabel(match: Match | null, bet?: Bet): string {
+  if (match) {
+    const home = match.home.shortName?.trim() || match.home.name?.trim() || 'Domicile'
+    const away = match.away.shortName?.trim() || match.away.name?.trim() || 'Extérieur'
+    return `${home} · ${away}`
+  }
+  const label = bet?.matchLabel
+  if (label) {
+    return `${label.homeShort} · ${label.awayShort}`
+  }
+  return '…'
+}
+
+/** Équipe du joueur / camp parié (buteur, 1N2 domicile/extérieur). */
+export function getBetPickedTeamLabel(bet: Bet, match: Match | null): string | null {
+  const side = getBetPickedSide(bet)
+  if (!side || side === 'draw') return null
+  return teamNameFromBetContext(bet, match, side)
+}
+
+function teamNameFromBetContext(
+  bet: Bet,
+  match: Match | null,
+  side: 'home' | 'away',
+): string {
+  if (match) {
+    return side === 'home'
+      ? teamDisplayName(match.home, 'Domicile')
+      : teamDisplayName(match.away, 'Extérieur')
+  }
+  const label = bet.matchLabel
+  if (label) {
+    return side === 'home'
+      ? label.homeName?.trim() || label.homeShort
+      : label.awayName?.trim() || label.awayShort
+  }
+  return side === 'home' ? 'Domicile' : 'Extérieur'
+}
+
 /** Équipe / choix sur lequel le pari a été placé (affiché sous « Résultat »). */
 export function getBetPickedOutcomeLabel(bet: Bet, match: Match | null): string {
-  const home = teamDisplayName(match?.home, 'Domicile')
-  const away = teamDisplayName(match?.away, 'Extérieur')
   const sel = bet.selection
 
   if (bet.market === 'result_1x2') {
-    if (sel === 'home') return home
-    if (sel === 'away') return away
+    if (sel === 'home') return teamNameFromBetContext(bet, match, 'home')
+    if (sel === 'away') return teamNameFromBetContext(bet, match, 'away')
     if (sel === 'draw') return 'Match nul'
   }
   if (bet.market === 'next_goal' || bet.market === 'first_goal') {
-    if (sel === 'home') return home
-    if (sel === 'away') return away
+    if (sel === 'home') return teamNameFromBetContext(bet, match, 'home')
+    if (sel === 'away') return teamNameFromBetContext(bet, match, 'away')
   }
   if (bet.market === 'anytime_scorer' && typeof sel === 'string' && sel.startsWith('scor:')) {
     const slug = sel.slice(sel.lastIndexOf(':') + 1)
@@ -175,8 +217,8 @@ export function getBetFinalVerdict(bet: Bet): {
   label: string
   tone: 'won' | 'lost'
 } | null {
-  if (bet.status === 'won') return { label: 'Pari gagnant', tone: 'won' }
-  if (bet.status === 'lost') return { label: 'Pari perdant', tone: 'lost' }
+  if (bet.status === 'won') return { label: 'Gagné', tone: 'won' }
+  if (bet.status === 'lost') return { label: 'Perdu', tone: 'lost' }
   return null
 }
 

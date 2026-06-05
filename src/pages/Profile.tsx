@@ -25,6 +25,7 @@ import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
+import { clubPathForId } from '../utils/clubRoute'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
 import { SeasonAdminToggle } from '../components/admin/SeasonAdminToggle'
 import { DisplayNameEditor } from '../components/profile/DisplayNameEditor'
@@ -493,9 +494,14 @@ export function ProfilePage() {
             {favoriteClubEntries.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {favoriteClubEntries.map(({ id, meta, team }) => (
-                  <span
+                  <Link
                     key={id}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-xs font-bold text-tf-app-fg"
+                    to={clubPathForId(id)}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-xs font-bold text-tf-app-fg transition hover:border-white/25 hover:bg-white/[0.1]',
+                      TF_FOCUS_VISIBLE,
+                    )}
+                    title={`Voir le hub ${meta?.name ?? id}`}
                   >
                     {team ? (
                       <ClubCrest
@@ -509,7 +515,7 @@ export function ProfilePage() {
                       />
                     ) : null}
                     {meta?.name ?? id}
-                  </span>
+                  </Link>
                 ))}
               </div>
             ) : (

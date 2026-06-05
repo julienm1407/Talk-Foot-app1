@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { Wallet } from '../types/bet'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
-import { useAuth, type AuthUser } from '../contexts/AuthContext'
-import { isAdminEmail } from '../config/adminAccess'
+import { useAuth } from '../contexts/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
   configureWalletStore,
@@ -11,6 +10,13 @@ import {
   subscribeWallet,
 } from '../store/walletStore'
 import { DEFAULT_WALLET, normalizeWallet } from '../utils/walletNormalize'
+import {
+  isWalletStandardizeExempt,
+  isWalletTestAdmin,
+  readLocalWalletStandardizedFlag,
+  standardizedWalletForUser,
+  writeLocalWalletStandardizedFlag,
+} from '../utils/walletStandardize'
 import { useSubscription } from './useSubscription'
 import {
   monthlyTokenGrantEligible,
@@ -20,18 +26,8 @@ import {
 
 export const DAILY_TOKEN_BONUS_AMOUNT = 35
 export const DAILY_TOKEN_BONUS_HOUR = 10
-const DEV_ADMIN_DISPLAY_NAME = 'Dev TalkFoot 1'
 const DEV_ADMIN_TEST_MEDALS = 3000
 const DEV_ADMIN_TEST_TOKENS = 100_000
-const DEV_ADMIN_EMAIL = 'mondetju1407@gmail.com'
-
-function isWalletTestAdmin(user: AuthUser | null | undefined): boolean {
-  if (!user) return false
-  if (user.isAdmin) return true
-  if (user.email?.toLowerCase() === DEV_ADMIN_EMAIL) return true
-  if (user.displayName === DEV_ADMIN_DISPLAY_NAME) return true
-  return isAdminEmail(user.email)
-}
 
 export type DailyTokenBonusStatus = {
   amount: number
@@ -102,6 +98,36 @@ export function useWallet() {
     },
     [useCloudWallet, cloud],
   )
+
+  useEffect(() => {
+    if (!user?.id) return
+    if (useCloudWallet && cloud && !cloud.syncReady) return
+    if (isWalletStandardizeExempt(user, wallet)) return
+
+    if (useCloudWallet && cloud) {
+      if (cloud.app.walletStandardizedV2) return
+      cloud.patchApp((prev) => ({
+        ...prev,
+        walletStandardizedV2: true,
+        wallet: standardizedWalletForUser(normalizeWallet(prev.wallet)),
+      }))
+      void cloud.flushAppSave()
+      return
+    }
+
+    if (readLocalWalletStandardizedFlag()) return
+    patchWallet((w) => standardizedWalletForUser(w))
+    writeLocalWalletStandardizedFlag()
+  }, [
+    user?.id,
+    user?.isAdmin,
+    user?.email,
+    user?.displayName,
+    wallet.lastDailyTokenGrant,
+    patchWallet,
+    cloud,
+    useCloudWallet,
+  ])
 
   useEffect(() => {
     if (!user?.id || !isWalletTestAdmin(user)) return

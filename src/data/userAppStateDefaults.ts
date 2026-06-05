@@ -48,6 +48,8 @@ export type UserAppStateV1 = {
   subscription?: SubscriptionState
   /** Portefeuille test admin initialisé une seule fois (évite de re-créditer après achat). */
   adminWalletBootstrapped?: boolean
+  /** Réalignement unique 100 jetons / 0 médailles (hors admins & bonus quotidien déjà pris). */
+  walletStandardizedV2?: boolean
 }
 
 export function defaultUserAppState(): UserAppStateV1 {
@@ -91,5 +93,7 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
     subscription: normalizeSubscription(o.subscription ?? DEFAULT_SUBSCRIPTION),
     adminWalletBootstrapped:
       o.adminWalletBootstrapped === true ? true : base.adminWalletBootstrapped,
+    walletStandardizedV2:
+      o.walletStandardizedV2 === true ? true : base.walletStandardizedV2,
   }
 }

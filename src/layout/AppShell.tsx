@@ -14,6 +14,7 @@ import { FanSetupBanner } from '../components/fan/FanSetupBanner'
 import { PageAdRails } from './PageAdRails'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
+import { BetSettlementRunner } from '../components/bet/BetSettlementRunner'
 
 const mainBottomPadMobile = 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
 const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
@@ -53,6 +54,7 @@ export function AppShell() {
     <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden">
       <SkipLink />
       <ActivityRouteLogger />
+      <BetSettlementRunner />
       <OAuthProfileSetupModal />
       <FanOnboardingModal />
       <TopBar />

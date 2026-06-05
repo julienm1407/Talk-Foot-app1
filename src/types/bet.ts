@@ -23,6 +23,19 @@ export type BetSelection =
   | '12'
   | `scor:${'home' | 'away'}:${string}`
 
+/** Infos match figées au moment du pari (affichage pronostic si le match sort du calendrier). */
+export type BetMatchLabel = {
+  homeShort: string
+  awayShort: string
+  homeName?: string
+  awayName?: string
+  competition?: string
+  kickoffAt?: string
+  status?: 'upcoming' | 'live' | 'finished'
+  scoreHome?: number
+  scoreAway?: number
+}
+
 export type Bet = {
   id: string
   matchId: string
@@ -34,6 +47,7 @@ export type Bet = {
   placedAt: string
   settledAt?: string
   payout?: number
+  matchLabel?: BetMatchLabel
 }
 
 export type Wallet = {

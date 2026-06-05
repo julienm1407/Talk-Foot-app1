@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { ModularAvatarCanvas } from '../profile/ModularAvatarCanvas'
+import type { AvatarItem } from '../../types/profile'
 import type { ModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+import { BoutiqueModalStudioPreview } from './BoutiqueModalStudioPreview'
 import { ShopModalPortal } from './ShopModalPortal'
 
 type BoutiqueShopModalPanelProps = {
@@ -18,6 +19,7 @@ type BoutiqueShopModalPanelProps = {
   title: string
   subtitle?: ReactNode
   previewState: ModularAvatarState
+  previewItem: AvatarItem
   footer: ReactNode
 }
 
@@ -33,6 +35,7 @@ export function BoutiqueShopModalPanel({
   title,
   subtitle,
   previewState,
+  previewItem,
   footer,
 }: BoutiqueShopModalPanelProps) {
   const isCelebration = tone === 'celebration'
@@ -120,9 +123,7 @@ export function BoutiqueShopModalPanel({
               )}
               aria-hidden
             />
-            <div className="relative h-[min(52vw,240px)] w-full min-h-[200px] pt-1 sm:h-[340px] sm:min-h-0 sm:max-h-[340px]">
-              <ModularAvatarCanvas state={previewState} crop="full" fill className="h-full w-full" />
-            </div>
+            <BoutiqueModalStudioPreview item={previewItem} previewState={previewState} />
           </div>
         </div>
 

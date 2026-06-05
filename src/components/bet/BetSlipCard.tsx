@@ -6,39 +6,67 @@ import {
   formatBetOddsFr,
   formatBetPlacedAt,
   formatBetPotentialGain,
-  getBetFinalVerdict,
-  getBetPickTitle,
+  getBetMarketSectionLabel,
+  getBetMatchFixtureLabel,
   getBetPickedOutcomeLabel,
   getBetPickedSide,
-  getBetStatusMeta,
+  getBetPickedTeamLabel,
   matchScoreLine,
 } from '../../utils/betDisplay'
 import { cn } from '../../utils/cn'
 
-export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
-  const status = getBetStatusMeta(bet.status)
-  const pickTitle = getBetPickTitle(bet, match)
+function betStatusLabel(bet: Bet): string {
+  if (bet.status === 'won') return 'Gagné'
+  if (bet.status === 'lost') return 'Perdu'
+  return 'En cours'
+}
+
+function betStatusTone(bet: Bet): 'open' | 'won' | 'lost' {
+  if (bet.status === 'won') return 'won'
+  if (bet.status === 'lost') return 'lost'
+  return 'open'
+}
+
+export function BetSlipCard({
+  bet,
+  match,
+  matchResolving = false,
+}: {
+  bet: Bet
+  match: Match | null
+  matchResolving?: boolean
+}) {
+  const statusLabel = betStatusLabel(bet)
+  const statusTone = betStatusTone(bet)
+  const sectionLabel = getBetMarketSectionLabel(bet)
   const pickedOutcome = getBetPickedOutcomeLabel(bet, match)
-  const verdict = getBetFinalVerdict(bet)
+  const pickedTeam = getBetPickedTeamLabel(bet, match)
+  const showPickedTeamLine =
+    pickedTeam != null &&
+    pickedTeam !== pickedOutcome &&
+    bet.market === 'anytime_scorer'
+  const matchFixture = matchResolving
+    ? 'Chargement du match…'
+    : getBetMatchFixtureLabel(match, bet)
+  const hasScore = match?.score?.home != null && match?.score?.away != null
   const pickedSide = getBetPickedSide(bet)
   const odds = formatBetOddsFr(bet.odds)
   const potential = formatBetPotentialGain(bet.stake, bet.odds)
   const score = matchScoreLine(match)
-  const homeName = match?.home.shortName ?? '—'
-  const awayName = match?.away.shortName ?? '—'
-  const comp = match?.competition.shortName ?? ''
+  const homeName = match?.home.shortName ?? bet.matchLabel?.homeShort ?? '—'
+  const awayName = match?.away.shortName ?? bet.matchLabel?.awayShort ?? '—'
+  const comp = match?.competition.shortName ?? bet.matchLabel?.competition ?? ''
   const isWon = bet.status === 'won'
   const isLost = bet.status === 'lost'
   const isSettled = isWon || isLost
+  const matchLive = match?.status === 'live'
 
   const statusBadgeClass =
-    status.tone === 'open'
+    statusTone === 'open'
       ? 'border-amber-500/35 bg-amber-500/15 text-amber-200'
-      : status.tone === 'won'
+      : statusTone === 'won'
         ? 'border-emerald-400/45 bg-emerald-500/20 text-emerald-100'
-        : status.tone === 'lost'
-          ? 'border-rose-400/45 bg-rose-500/20 text-rose-100'
-          : 'border-white/15 bg-white/8 text-sky-200/85'
+        : 'border-rose-400/45 bg-rose-500/20 text-rose-100'
 
   const highlightHomeScore =
     pickedSide === 'home' && (isWon || isLost || bet.status === 'open')
@@ -51,6 +79,21 @@ export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
     if (isLost && pickedSide === side) return 'text-rose-300'
     return 'text-white/55'
   }
+
+  const pickToneClass = cn(
+    'mt-0.5 text-[15px] font-black leading-snug sm:text-base',
+    isWon && 'text-emerald-100',
+    isLost && 'text-rose-100',
+    !isSettled && 'text-amber-50 group-hover:text-white',
+  )
+
+  const matchPhaseLabel = matchResolving
+    ? 'Récupération…'
+    : matchLive
+      ? 'En cours'
+      : match?.status === 'finished'
+        ? 'Terminé'
+        : 'Match à venir'
 
   return (
     <Link
@@ -73,7 +116,7 @@ export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
               statusBadgeClass,
             )}
           >
-            {status.label}
+            {statusLabel}
           </span>
           <span className="text-[11px] font-bold text-sky-200/70">Simple</span>
           <span className="inline-flex items-center gap-1 text-[11px] font-black tabular-nums text-amber-200">
@@ -88,47 +131,13 @@ export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
 
       <div className="mt-3 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {bet.market === 'result_1x2' ? (
-            <>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-sky-300/55">
-                Résultat
-              </p>
-              <p
-                className={cn(
-                  'mt-0.5 text-[15px] font-black leading-snug sm:text-base',
-                  isWon && 'text-emerald-100',
-                  isLost && 'text-rose-100',
-                  !isSettled && 'text-amber-50 group-hover:text-white',
-                )}
-              >
-                {pickTitle}
-              </p>
-            </>
-          ) : (
-            <p
-              className={cn(
-                'text-[15px] font-black leading-snug sm:text-base',
-                isWon && 'text-emerald-100',
-                isLost && 'text-rose-100',
-                !isSettled && 'text-amber-50 group-hover:text-white',
-              )}
-            >
-              {pickTitle}
-            </p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-semibold text-sky-200/80">
-            <span className="text-sky-100/90">⚽</span>
-            <span>
-              {homeName}
-              <span className="mx-1 text-sky-300/40">·</span>
-              {awayName}
-            </span>
-            {comp ? (
-              <span className="text-[10px] font-bold uppercase tracking-wide text-sky-300/45">
-                {comp}
-              </span>
-            ) : null}
-          </div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-300/55">
+            {sectionLabel}
+          </p>
+          <p className={pickToneClass}>{pickedOutcome}</p>
+          {showPickedTeamLine ? (
+            <p className="mt-1 text-[13px] font-bold text-sky-100/85">{pickedTeam}</p>
+          ) : null}
         </div>
         <span
           className={cn(
@@ -144,54 +153,68 @@ export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
 
       <div
         className={cn(
-          'mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2',
+          'mt-3 rounded-xl px-3 py-2.5',
           isWon && 'bg-emerald-500/10',
           isLost && 'bg-rose-500/10',
           !isSettled && 'bg-black/25',
         )}
       >
-        <div className="flex items-center gap-3 tabular-nums">
-          <div className="text-center">
-            <div
-              className={cn(
-                'text-[10px] font-bold uppercase tracking-wide',
-                highlightHomeScore && isWon && 'text-emerald-300/80',
-                highlightHomeScore && isLost && 'text-rose-300/80',
-                !highlightHomeScore && 'text-sky-300/50',
-              )}
-            >
-              {homeName}
-            </div>
-            <div className={cn('text-lg font-black leading-none', scoreTone('home'))}>
-              {score.home}
-            </div>
-          </div>
-          <span className="text-xs font-black text-sky-300/40">—</span>
-          <div className="text-center">
-            <div
-              className={cn(
-                'text-[10px] font-bold uppercase tracking-wide',
-                highlightAwayScore && isWon && 'text-emerald-300/80',
-                highlightAwayScore && isLost && 'text-rose-300/80',
-                !highlightAwayScore && 'text-sky-300/50',
-              )}
-            >
-              {awayName}
-            </div>
-            <div className={cn('text-lg font-black leading-none', scoreTone('away'))}>
-              {score.away}
-            </div>
-          </div>
-        </div>
-        {score.live ? (
-          <span className="rounded-full border border-rose-500/40 bg-rose-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-rose-200">
-            Live{score.minute != null ? ` ${score.minute}'` : ''}
-          </span>
-        ) : match?.status === 'finished' ? (
-          <span className="text-[10px] font-bold uppercase tracking-wide text-sky-300/45">
-            Terminé
-          </span>
+        <p className="text-center text-sm font-black leading-snug text-sky-50">{matchFixture}</p>
+        {comp ? (
+          <p className="mt-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-sky-300/45">
+            {comp}
+          </p>
         ) : null}
+        {hasScore ? (
+          <div className="mt-2.5 flex items-center justify-between gap-3">
+            <div className="flex flex-1 items-center justify-center gap-3 tabular-nums">
+              <div className="text-center">
+                <div
+                  className={cn(
+                    'text-[10px] font-bold uppercase tracking-wide',
+                    highlightHomeScore && isWon && 'text-emerald-300/80',
+                    highlightHomeScore && isLost && 'text-rose-300/80',
+                    !highlightHomeScore && 'text-sky-300/50',
+                  )}
+                >
+                  {homeName}
+                </div>
+                <div className={cn('text-lg font-black leading-none', scoreTone('home'))}>
+                  {score.home}
+                </div>
+              </div>
+              <span className="text-xs font-black text-sky-300/40">—</span>
+              <div className="text-center">
+                <div
+                  className={cn(
+                    'text-[10px] font-bold uppercase tracking-wide',
+                    highlightAwayScore && isWon && 'text-emerald-300/80',
+                    highlightAwayScore && isLost && 'text-rose-300/80',
+                    !highlightAwayScore && 'text-sky-300/50',
+                  )}
+                >
+                  {awayName}
+                </div>
+                <div className={cn('text-lg font-black leading-none', scoreTone('away'))}>
+                  {score.away}
+                </div>
+              </div>
+            </div>
+            {score.live ? (
+              <span className="shrink-0 rounded-full border border-rose-500/40 bg-rose-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-rose-200">
+                Live{score.minute != null ? ` ${score.minute}'` : ''}
+              </span>
+            ) : (
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-sky-300/45">
+                {matchPhaseLabel}
+              </span>
+            )}
+          </div>
+        ) : (
+          <p className="mt-2 text-center text-[11px] font-semibold text-sky-300/55">
+            {matchPhaseLabel}
+          </p>
+        )}
       </div>
 
       <div
@@ -210,22 +233,6 @@ export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
             <TokenGlyph className="size-4" variant="onDark" />
             <span className="tabular-nums">{bet.stake} jetons</span>
           </div>
-          {isSettled && bet.market !== 'result_1x2' ? (
-            <div className="mt-2">
-              <div className="text-[10px] font-bold uppercase tracking-wide text-sky-300/50">
-                Résultat
-              </div>
-              <div
-                className={cn(
-                  'mt-0.5 text-sm font-black',
-                  isWon && 'text-emerald-200',
-                  isLost && 'text-rose-200',
-                )}
-              >
-                {pickedOutcome}
-              </div>
-            </div>
-          ) : null}
         </div>
         <div className="text-right">
           {bet.status === 'won' && bet.payout != null ? (
@@ -253,17 +260,6 @@ export function BetSlipCard({ bet, match }: { bet: Bet; match: Match | null }) {
               </div>
               <div className="mt-0.5 text-sm font-black tabular-nums text-rose-300/90">0 jeton</div>
             </>
-          ) : null}
-          {verdict ? (
-            <p
-              className={cn(
-                'mt-2 text-sm font-black uppercase tracking-wide',
-                verdict.tone === 'won' && 'text-emerald-400',
-                verdict.tone === 'lost' && 'text-rose-400',
-              )}
-            >
-              {verdict.label}
-            </p>
           ) : null}
         </div>
       </div>

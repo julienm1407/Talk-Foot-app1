@@ -18,6 +18,8 @@ import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandin
 import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
 import { projectStandingsWithLiveMatch } from '../utils/liveStandingsProjection'
 import { useBetting } from '../hooks/useBetting'
+import { writeBetMatchCacheEntry } from '../utils/betMatchResolve'
+import { useChannelRouteMatch } from '../hooks/useChannelRouteMatch'
 import { useChatSendGuard } from '../hooks/useChatSendGuard'
 import { useSubscription } from '../hooks/useSubscription'
 import {
@@ -406,19 +408,27 @@ export function ChannelPage() {
   const dm = useDirectMessagesOptional()
   const chatPeerMenu = useChatPeerMenu()
   const chatSocialEnabled = isSupabaseConfigured() && Boolean(dm)
-  const { matches, loading } = useMatches()
-  const routeMatch = useMemo(() => matches.find((m) => m.id === matchId) ?? null, [matches, matchId])
-  const hasRouteMatchId = Boolean(matchId)
-  const waitingRouteResolution = hasRouteMatchId && loading && !routeMatch
+  const { matches } = useMatches()
+  const { routeMatch, hasRouteMatchId, waitingRouteResolution, routeNotFound } =
+    useChannelRouteMatch(matchId)
   const fallbackMatch = useMemo(
     () => matches.find((m) => m.status === 'live') ?? matches[0] ?? null,
     [matches],
   )
-  const match = waitingRouteResolution ? null : routeMatch ?? fallbackMatch
+  /** Avec `:matchId` dans l’URL : uniquement ce match (jamais un fallback type Mexique–AFS). */
+  const match = hasRouteMatchId
+    ? waitingRouteResolution
+      ? null
+      : routeMatch
+    : fallbackMatch
   useEffect(() => {
-    if (waitingRouteResolution || routeMatch || !fallbackMatch) return
+    if (hasRouteMatchId || !fallbackMatch) return
     navigate(`/channel/${fallbackMatch.id}`, { replace: true })
-  }, [waitingRouteResolution, routeMatch, fallbackMatch, navigate])
+  }, [hasRouteMatchId, fallbackMatch, navigate])
+  useEffect(() => {
+    if (!hasRouteMatchId || !routeMatch || !matchId) return
+    writeBetMatchCacheEntry(routeMatch, matchId)
+  }, [hasRouteMatchId, routeMatch, matchId])
 
   const homeName = match?.home.name ?? match?.home.shortName ?? 'Paris SG'
   const awayName = match?.away.name ?? match?.away.shortName ?? 'Nantes'
@@ -482,7 +492,7 @@ export function ChannelPage() {
   const awayHeaderLabel = match?.away.shortName ?? awayName
   const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
-  const betting = useBetting(match?.id ?? 'channel-demo-match')
+  const betting = useBetting(match?.id ?? '', match ?? null)
   const { liveStatRows, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
     status,
@@ -1485,9 +1495,14 @@ export function ChannelPage() {
     return (
       <div className="flex h-full w-full items-center justify-center bg-[#03172a] p-4">
         <div className="max-w-sm rounded-xl border border-[#2f5f8f] bg-[#0b2440] px-4 py-3 text-center text-sm font-semibold text-sky-100">
-          Aucun match disponible pour le moment.
-          <Link to="/" className="mt-2 block text-cyan-300 hover:underline">
-            Retour à l&apos;accueil
+          {routeNotFound && hasRouteMatchId
+            ? 'Ce match est introuvable ou plus disponible dans le calendrier.'
+            : 'Aucun match disponible pour le moment.'}
+          <Link to="/pronostic" className="mt-2 block text-cyan-300 hover:underline">
+            Retour à mes paris
+          </Link>
+          <Link to="/" className="mt-2 block text-sky-300/80 hover:underline">
+            Accueil
           </Link>
         </div>
       </div>

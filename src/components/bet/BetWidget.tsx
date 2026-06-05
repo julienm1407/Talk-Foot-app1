@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -17,6 +17,7 @@ import {
   slugScorer,
   type ScorerLineupMeta,
 } from '../../utils/liveFootballOdds'
+import { getBetPickedOutcomeLabel } from '../../utils/betDisplay'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -114,7 +115,7 @@ export function BetWidget({
   }
 }) {
   void bookOddsOverUnder25
-  const fallback = useBetting(match.id)
+  const fallback = useBetting(match.id, match)
   const { wallet, openBets, matchBets, placeBet, cancelBet: _cancelBet, stats } = betting ?? fallback
   const [sheetOpen, setSheetOpen] = useState(false)
   const [stake, setStake] = useState(25)
@@ -222,7 +223,37 @@ export function BetWidget({
     return { home, away }
   }, [lineupScorers, scoredButeurs, x12Resolved, isLive, minuteLive, teamAttackIndices])
 
-  const scorerPicksTotal = scorerPicksSplit.home.length + scorerPicksSplit.away.length
+  const isFinished = match.status === 'finished'
+  const userScorerBets = useMemo(
+    () => matchBets.filter((b) => b.market === 'anytime_scorer' && b.status !== 'cancelled'),
+    [matchBets],
+  )
+
+  const scorerPicksForDisplay = useMemo(() => {
+    const home = [...scorerPicksSplit.home]
+    const away = [...scorerPicksSplit.away]
+    const seen = new Set([...home, ...away].map((p) => String(p.id)))
+    for (const bet of userScorerBets) {
+      const sel = String(bet.selection)
+      if (!sel.startsWith('scor:')) continue
+      if (seen.has(sel)) continue
+      seen.add(sel)
+      const m = /^scor:(home|away):(.+)$/.exec(sel)
+      if (!m) continue
+      const row: ScorerPickRow = {
+        id: bet.selection,
+        label: getBetPickedOutcomeLabel(bet, match),
+        odds: bet.odds,
+        disabled: true,
+      }
+      if (m[1] === 'home') home.push(row)
+      else away.push(row)
+    }
+    return { home, away }
+  }, [scorerPicksSplit, userScorerBets, match])
+
+  const scorerPicksDisplayTotal =
+    scorerPicksForDisplay.home.length + scorerPicksForDisplay.away.length
 
   const markets = useMemo(() => {
     const x12 = x12Displayed
@@ -247,16 +278,20 @@ export function BetWidget({
       },
     ]
 
-    if (scorerPicksTotal > 0 && (isUpcoming || isLive)) {
+    const showScorerMarket =
+      scorerPicksDisplayTotal > 0 &&
+      (isUpcoming || isLive || (isFinished && userScorerBets.length > 0))
+
+    if (showScorerMarket) {
       base.push({
         id: 'anytime_scorer',
-        label: 'Buteur (marque dans le match)',
-        enabled: x12Ready,
+        label: isFinished ? 'Buteur (résultat)' : 'Buteur (marque dans le match)',
+        enabled: isFinished ? false : x12Ready,
         gridCols: 2,
-        picks: [...scorerPicksSplit.home, ...scorerPicksSplit.away],
+        picks: [...scorerPicksForDisplay.home, ...scorerPicksForDisplay.away],
         scorerSides: [
-          { teamLabel: match.home.shortName, picks: scorerPicksSplit.home },
-          { teamLabel: match.away.shortName, picks: scorerPicksSplit.away },
+          { teamLabel: match.home.shortName, picks: scorerPicksForDisplay.home },
+          { teamLabel: match.away.shortName, picks: scorerPicksForDisplay.away },
         ],
       })
     }
@@ -265,10 +300,12 @@ export function BetWidget({
   }, [
     isLive,
     isUpcoming,
+    isFinished,
     match.away.shortName,
     match.home.shortName,
-    scorerPicksSplit,
-    scorerPicksTotal,
+    scorerPicksForDisplay,
+    scorerPicksDisplayTotal,
+    userScorerBets.length,
     x12Displayed,
     x12Ready,
   ])
@@ -278,6 +315,102 @@ export function BetWidget({
   const stakePct =
     maxStake > 0 ? Math.round((Math.min(maxStake, Math.max(0, stake)) / maxStake) * 100) : 0
   const settled = useMemo(() => matchBets.filter((b) => b.status !== 'open'), [matchBets])
+
+  const resultBetForSide = useCallback(
+    (side: BetSelection) =>
+      matchBets.find(
+        (b) =>
+          b.market === 'result_1x2' &&
+          b.selection === side &&
+          b.status !== 'cancelled',
+      ),
+    [matchBets],
+  )
+
+  const pickTeamVisual = useCallback(
+    (side: 'home' | 'away' | 'draw') => {
+      const bet = resultBetForSide(side)
+      if (!bet) {
+        return {
+          shell:
+            'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
+          odd: 'border-emerald-700/35 bg-emerald-600/12 text-emerald-950',
+          badge: null as string | null,
+        }
+      }
+      if (bet.status === 'won') {
+        return {
+          shell:
+            'border-2 border-emerald-500/80 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-400/35',
+          odd: 'border-emerald-700/50 bg-emerald-600/20 text-emerald-950',
+          badge: 'Gagné ✓',
+        }
+      }
+      if (bet.status === 'lost') {
+        return {
+          shell:
+            'border-2 border-rose-500/80 bg-rose-100 text-rose-950 ring-2 ring-rose-400/35',
+          odd: 'border-rose-700/50 bg-rose-600/15 text-rose-950',
+          badge: 'Perdu',
+        }
+      }
+      return {
+        shell:
+          'border-2 border-amber-400/70 bg-amber-50 text-amber-950 hover:border-amber-500/80',
+        odd: 'border-amber-700/35 bg-amber-500/15 text-amber-950',
+        badge: 'En cours',
+      }
+    },
+    [resultBetForSide],
+  )
+
+  const scorerBetForSelection = useCallback(
+    (selection: BetSelection) =>
+      matchBets.find(
+        (b) =>
+          b.market === 'anytime_scorer' &&
+          b.selection === selection &&
+          b.status !== 'cancelled',
+      ),
+    [matchBets],
+  )
+
+  const pickScorerVisual = useCallback(
+    (selection: BetSelection) => {
+      const bet = scorerBetForSelection(selection)
+      if (!bet) {
+        return {
+          shell:
+            'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
+          badge: null as string | null,
+          odd: 'text-slate-500',
+        }
+      }
+      if (bet.status === 'won') {
+        return {
+          shell:
+            'border-2 border-emerald-500/80 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-400/35',
+          badge: 'Gagné ✓',
+          odd: 'text-emerald-800',
+        }
+      }
+      if (bet.status === 'lost') {
+        return {
+          shell:
+            'border-2 border-rose-500/80 bg-rose-100 text-rose-950 ring-2 ring-rose-400/35',
+          badge: 'Perdu',
+          odd: 'text-rose-800',
+        }
+      }
+      return {
+        shell:
+          'border-2 border-amber-400/70 bg-amber-50 text-amber-950 hover:border-amber-500/80',
+        badge: 'En cours',
+        odd: 'text-amber-800',
+      }
+    },
+    [scorerBetForSelection],
+  )
 
   const openSheet = () => setSheetOpen(true)
 
@@ -411,42 +544,48 @@ export function BetWidget({
         )}
       >
         <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-          <Button
-            variant="soft"
-            title="Pari 1N2 — vainqueur domicile"
-            disabled={!x12Ready || !x12Displayed}
-            className={cn(
-              'tf-bet-pick min-h-11 min-w-0 justify-between gap-2 rounded-xl border-2 border-sky-400/55 bg-[#e8f3fc] px-3 text-sm font-bold text-[#04202f] shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:px-4',
-              'hover:border-sky-300/90 hover:bg-[#f2f8ff] disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
-              compact ? 'sm:h-10' : 'sm:h-10',
-            )}
-            onClick={() => pickQuick('home')}
-          >
-            <span className="tf-bet-pick-name min-w-0 overflow-hidden text-ellipsis font-extrabold text-[#04202f]">
-              {match.home.shortName}
-            </span>
-            <span className="tf-bet-pick-odd shrink-0 rounded-lg border border-emerald-700/35 bg-emerald-600/12 px-2 py-0.5 text-xs font-black tabular-nums text-emerald-950">
-              {x12Ready && x12Displayed ? fmtOdds(x12Displayed.home) : x12UnavailableLabel}
-            </span>
-          </Button>
-          <Button
-            variant="soft"
-            title="Pari 1N2 — vainqueur extérieur"
-            disabled={!x12Ready || !x12Displayed}
-            className={cn(
-              'tf-bet-pick min-h-11 min-w-0 justify-between gap-2 rounded-xl border-2 border-sky-400/55 bg-[#e8f3fc] px-3 text-sm font-bold text-[#04202f] shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:px-4',
-              'hover:border-sky-300/90 hover:bg-[#f2f8ff] disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
-              compact ? 'sm:h-10' : 'sm:h-10',
-            )}
-            onClick={() => pickQuick('away')}
-          >
-            <span className="tf-bet-pick-name min-w-0 overflow-hidden text-ellipsis font-extrabold text-[#04202f]">
-              {match.away.shortName}
-            </span>
-            <span className="tf-bet-pick-odd shrink-0 rounded-lg border border-emerald-700/35 bg-emerald-600/12 px-2 py-0.5 text-xs font-black tabular-nums text-emerald-950">
-              {x12Ready && x12Displayed ? fmtOdds(x12Displayed.away) : x12UnavailableLabel}
-            </span>
-          </Button>
+          {(['home', 'away'] as const).map((side) => {
+            const visual = pickTeamVisual(side)
+            const label = side === 'home' ? match.home.shortName : match.away.shortName
+            const odds =
+              x12Ready && x12Displayed
+                ? fmtOdds(side === 'home' ? x12Displayed.home : x12Displayed.away)
+                : x12UnavailableLabel
+            return (
+              <Button
+                key={side}
+                variant="soft"
+                title={`Pari 1N2 — ${label}`}
+                disabled={!x12Ready || !x12Displayed}
+                className={cn(
+                  'tf-bet-pick min-h-11 min-w-0 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm font-bold shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2',
+                  visual.shell,
+                  'disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
+                  compact ? 'sm:h-10' : 'sm:h-10',
+                )}
+                onClick={() => pickQuick(side)}
+              >
+                <span className="tf-bet-pick-name min-w-0 overflow-hidden text-ellipsis font-extrabold">
+                  {label}
+                </span>
+                <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+                  {visual.badge ? (
+                    <span className="rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide">
+                      {visual.badge}
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      'tf-bet-pick-odd rounded-lg border px-2 py-0.5 text-xs font-black tabular-nums',
+                      visual.odd,
+                    )}
+                  >
+                    {odds}
+                  </span>
+                </div>
+              </Button>
+            )
+          })}
         </div>
         {compact ? (
           <div className="grid grid-cols-3 gap-2">
@@ -685,51 +824,68 @@ export function BetWidget({
                   Coup rapide — 1N2
                 </p>
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  <Button
-                    variant="soft"
-                    className="h-11 justify-between rounded-xl px-3 text-sm font-bold"
-                    disabled={!x12Ready || !x12Displayed}
-                    onClick={() => pickQuick('home')}
-                  >
-                    <span className="truncate">{match.home.shortName}</span>
-                    <span className="shrink-0 text-xs font-black text-slate-500">
-                      {x12OddsPending ? '…' : x12Ready && x12Displayed ? fmtOdds(x12Displayed.home) : '—'}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="soft"
-                    className="h-11 flex-col justify-center gap-0.5 rounded-xl px-2 text-[11px] font-bold leading-tight"
-                    disabled={!x12Ready || !x12Displayed}
-                    onClick={() => {
-                      if (!x12Displayed) return
-                      setPending({
-                        market: 'result_1x2',
-                        selection: 'draw',
-                        odds: x12Displayed.draw,
-                        label: '1N2 · Nul',
-                      })
-                      openSheet()
-                      if (maxStake >= minStake) {
-                        setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                      }
-                    }}
-                  >
-                    <span className="text-[10px] font-semibold text-slate-500">Nul</span>
-                    <span className="font-black text-slate-700">
-                      {x12OddsPending ? '…' : x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : '—'}
-                    </span>
-                  </Button>
-                  <Button
-                    variant="soft"
-                    className="h-11 justify-between rounded-xl px-3 text-sm font-bold"
-                    disabled={!x12Ready || !x12Displayed}
-                    onClick={() => pickQuick('away')}
-                  >
-                    <span className="truncate">{match.away.shortName}</span>
-                    <span className="shrink-0 text-xs font-black text-slate-500">
-                      {x12OddsPending ? '…' : x12Ready && x12Displayed ? fmtOdds(x12Displayed.away) : '—'}
-                    </span>
-                  </Button>
+                  {(['home', 'draw', 'away'] as const).map((side) => {
+                    const visual = pickTeamVisual(side)
+                    const label =
+                      side === 'home'
+                        ? match.home.shortName
+                        : side === 'away'
+                          ? match.away.shortName
+                          : 'Nul'
+                    const odds =
+                      x12OddsPending
+                        ? '…'
+                        : x12Ready && x12Displayed
+                          ? fmtOdds(
+                              side === 'home'
+                                ? x12Displayed.home
+                                : side === 'away'
+                                  ? x12Displayed.away
+                                  : x12Displayed.draw,
+                            )
+                          : '—'
+                    return (
+                      <Button
+                        key={side}
+                        variant="soft"
+                        className={cn(
+                          'h-11 rounded-xl px-3 text-sm font-bold',
+                          side === 'draw'
+                            ? 'flex-col justify-center gap-0.5 text-[11px] leading-tight'
+                            : 'justify-between',
+                          visual.shell,
+                        )}
+                        disabled={!x12Ready || !x12Displayed}
+                        onClick={() => {
+                          if (side === 'draw') {
+                            if (!x12Displayed) return
+                            setPending({
+                              market: 'result_1x2',
+                              selection: 'draw',
+                              odds: x12Displayed.draw,
+                              label: '1N2 · Nul',
+                            })
+                            openSheet()
+                            if (maxStake >= minStake) {
+                              setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                            }
+                            return
+                          }
+                          pickQuick(side)
+                        }}
+                      >
+                        <span className={cn('truncate', side === 'draw' && 'text-[10px] font-semibold')}>
+                          {label}
+                        </span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {visual.badge ? (
+                            <span className="text-[9px] font-black uppercase">{visual.badge}</span>
+                          ) : null}
+                          <span className="text-xs font-black tabular-nums">{odds}</span>
+                        </div>
+                      </Button>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -770,32 +926,52 @@ export function BetWidget({
                                 </p>
                               ) : (
                                 <div className="mt-2 grid grid-cols-2 gap-2">
-                                  {side.picks.map((p) => (
-                                    <Button
-                                      key={p.id}
-                                      variant="soft"
-                                      className="h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold"
-                                      disabled={!m.enabled || p.disabled}
-                                      onClick={() => {
-                                        setPending({
-                                          market: m.id,
-                                          selection: p.id,
-                                          odds: p.odds,
-                                          label: `${m.label} • ${p.label}`,
-                                        })
-                                        if (maxStake >= minStake) {
-                                          setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                                        }
-                                      }}
-                                    >
-                                      <span className="min-w-0 text-center leading-snug sm:text-left">
-                                        {p.label}
-                                      </span>
-                                      <span className="shrink-0 font-black text-slate-500">
-                                        {p.disabled ? 'But ✓' : fmtOdds(p.odds)}
-                                      </span>
-                                    </Button>
-                                  ))}
+                                  {side.picks.map((p) => {
+                                    const visual = pickScorerVisual(p.id)
+                                    const bet = scorerBetForSelection(p.id)
+                                    const scoredLive =
+                                      p.disabled && !bet && m.id === 'anytime_scorer'
+                                    return (
+                                      <Button
+                                        key={p.id}
+                                        variant="soft"
+                                        className={cn(
+                                          'h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold',
+                                          visual.shell,
+                                        )}
+                                        disabled={!m.enabled || p.disabled || Boolean(bet)}
+                                        onClick={() => {
+                                          setPending({
+                                            market: m.id,
+                                            selection: p.id,
+                                            odds: p.odds,
+                                            label: `${m.label} • ${p.label}`,
+                                          })
+                                          if (maxStake >= minStake) {
+                                            setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                                          }
+                                        }}
+                                      >
+                                        <span className="min-w-0 text-center leading-snug sm:text-left">
+                                          {p.label}
+                                        </span>
+                                        <div className="flex shrink-0 items-center gap-1">
+                                          {visual.badge ? (
+                                            <span className="text-[9px] font-black uppercase">
+                                              {visual.badge}
+                                            </span>
+                                          ) : null}
+                                          <span className={cn('font-black tabular-nums', visual.odd)}>
+                                            {scoredLive
+                                              ? 'But ✓'
+                                              : bet
+                                                ? fmtOdds(p.odds)
+                                                : fmtOdds(p.odds)}
+                                          </span>
+                                        </div>
+                                      </Button>
+                                    )
+                                  })}
                                 </div>
                               )}
                             </div>
@@ -809,39 +985,56 @@ export function BetWidget({
                           m.gridCols === 2 ? 'grid-cols-2' : 'grid-cols-3',
                         )}
                       >
-                        {m.picks.map((p) => (
-                          <Button
-                            key={p.id}
-                            variant="soft"
-                            className={cn(
-                              'min-h-10 justify-between gap-1 rounded-xl px-2 text-xs font-bold',
-                              m.id === 'anytime_scorer' ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
-                            )}
-                            disabled={!m.enabled || p.disabled}
-                            onClick={() => {
-                              setPending({
-                                market: m.id,
-                                selection: p.id,
-                                odds: p.odds,
-                                label: `${m.label} • ${p.label}`,
-                              })
-                              if (maxStake >= minStake) {
-                                setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                              }
-                            }}
-                          >
-                            <span className="min-w-0 text-center leading-snug sm:text-left">{p.label}</span>
-                            <span className="shrink-0 font-black text-slate-500">
-                              {m.id === 'result_1x2' && !x12Ready
-                                ? x12OddsPending
-                                  ? '…'
-                                  : '—'
-                                : p.disabled
-                                  ? 'But ✓'
-                                  : fmtOdds(p.odds)}
-                            </span>
-                          </Button>
-                        ))}
+                        {m.picks.map((p) => {
+                          const isScorer = m.id === 'anytime_scorer'
+                          const visual = isScorer ? pickScorerVisual(p.id) : null
+                          const bet = isScorer ? scorerBetForSelection(p.id) : null
+                          const scoredLive = isScorer && p.disabled && !bet
+                          return (
+                            <Button
+                              key={p.id}
+                              variant="soft"
+                              className={cn(
+                                'min-h-10 justify-between gap-1 rounded-xl px-2 text-xs font-bold',
+                                isScorer ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
+                                visual?.shell,
+                              )}
+                              disabled={!m.enabled || p.disabled || Boolean(bet)}
+                              onClick={() => {
+                                setPending({
+                                  market: m.id,
+                                  selection: p.id,
+                                  odds: p.odds,
+                                  label: `${m.label} • ${p.label}`,
+                                })
+                                if (maxStake >= minStake) {
+                                  setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+                                }
+                              }}
+                            >
+                              <span className="min-w-0 text-center leading-snug sm:text-left">{p.label}</span>
+                              <div className="flex shrink-0 items-center gap-1">
+                                {visual?.badge ? (
+                                  <span className="text-[9px] font-black uppercase">{visual.badge}</span>
+                                ) : null}
+                                <span
+                                  className={cn(
+                                    'font-black tabular-nums',
+                                    visual?.odd ?? 'text-slate-500',
+                                  )}
+                                >
+                                  {m.id === 'result_1x2' && !x12Ready
+                                    ? x12OddsPending
+                                      ? '…'
+                                      : '—'
+                                    : scoredLive
+                                      ? 'But ✓'
+                                      : fmtOdds(p.odds)}
+                                </span>
+                              </div>
+                            </Button>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

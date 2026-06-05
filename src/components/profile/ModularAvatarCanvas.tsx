@@ -33,10 +33,12 @@ function LayerImage({
   src,
   alt,
   filter,
+  priority,
 }: {
   src: string
   alt: string
   filter?: string
+  priority?: boolean
 }) {
   return (
     <img
@@ -44,7 +46,8 @@ function LayerImage({
       alt={alt}
       className="pointer-events-none absolute left-0 top-0 h-auto w-auto max-w-none"
       style={{ filter }}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : undefined}
       decoding="async"
       draggable={false}
     />
@@ -104,6 +107,10 @@ type CanvasProps = {
   fill?: boolean
   /** PNG direct si l’asset modulaire est introuvable (ex. chaussures boutique). */
   garmentFallbackSrc?: string
+  /** Zoom sur les pieds (aperçu chaussures sur l’avatar). */
+  feetFocus?: boolean
+  /** Chargement immédiat des calques (modales boutique, iOS Safari). */
+  imagePriority?: boolean
   className?: string
 }
 
@@ -131,6 +138,8 @@ export function ModularAvatarCanvas({
   previewMax: previewMaxProp = 404,
   fill = false,
   garmentFallbackSrc,
+  feetFocus = false,
+  imagePriority = false,
   className,
 }: CanvasProps) {
   const { data: avatar, slotColors } = resolveModularAvatarState(state)
@@ -199,42 +208,44 @@ export function ModularAvatarCanvas({
   const showShoesLayer = garmentsShow === 'shoes'
   const shoesLayerSrc = selectedAssets.shoes?.src ?? garmentFallbackSrc
 
+  const imgProps = { priority: imagePriority }
+
   const layers = garmentsOnly ? (
     <>
       {!isHead && showShortsLayer && selectedAssets.shorts?.src ? (
-        <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} />
+        <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} {...imgProps} />
       ) : null}
       {!isHead && showJerseyLayer && selectedAssets.jersey?.src ? (
-        <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} />
+        <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} {...imgProps} />
       ) : null}
       {!isHead && showShoesLayer && shoesLayerSrc ? (
-        <LayerImage src={shoesLayerSrc} alt="" filter={filterFor('shoes')} />
+        <LayerImage src={shoesLayerSrc} alt="" filter={filterFor('shoes')} {...imgProps} />
       ) : null}
     </>
   ) : (
     <>
-      {selectedAssets.body?.src ? <LayerImage src={selectedAssets.body.src} alt="" /> : null}
+      {selectedAssets.body?.src ? <LayerImage src={selectedAssets.body.src} alt="" {...imgProps} /> : null}
       {selectedAssets.body?.src ? (
         <SkinTintLayer maskSrc={selectedAssets.body.src} skinTone={avatar.skinTone} />
       ) : null}
       {!isHead && selectedAssets.shorts?.src ? (
-        <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} />
+        <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} {...imgProps} />
       ) : null}
       {!isHead && selectedAssets.jersey?.src ? (
-        <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} />
+        <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} {...imgProps} />
       ) : null}
-      {!isHead && selectedAssets.shoes?.src ? (
-        <LayerImage src={selectedAssets.shoes.src} alt="" filter={filterFor('shoes')} />
+      {!isHead && shoesLayerSrc ? (
+        <LayerImage src={shoesLayerSrc} alt="" filter={filterFor('shoes')} {...imgProps} />
       ) : null}
-      {selectedAssets.eyes?.src ? <LayerImage src={selectedAssets.eyes.src} alt="" /> : null}
-      {selectedAssets.eyebrows?.src ? <LayerImage src={selectedAssets.eyebrows.src} alt="" /> : null}
-      {selectedAssets.nose?.src ? <LayerImage src={selectedAssets.nose.src} alt="" /> : null}
-      {selectedAssets.mouth?.src ? <LayerImage src={selectedAssets.mouth.src} alt="" /> : null}
+      {selectedAssets.eyes?.src ? <LayerImage src={selectedAssets.eyes.src} alt="" {...imgProps} /> : null}
+      {selectedAssets.eyebrows?.src ? <LayerImage src={selectedAssets.eyebrows.src} alt="" {...imgProps} /> : null}
+      {selectedAssets.nose?.src ? <LayerImage src={selectedAssets.nose.src} alt="" {...imgProps} /> : null}
+      {selectedAssets.mouth?.src ? <LayerImage src={selectedAssets.mouth.src} alt="" {...imgProps} /> : null}
       {selectedAssets.beard?.src ? (
-        <LayerImage src={selectedAssets.beard.src} alt="" filter={filterFor('beard')} />
+        <LayerImage src={selectedAssets.beard.src} alt="" filter={filterFor('beard')} {...imgProps} />
       ) : null}
       {selectedAssets.hair?.src ? (
-        <LayerImage src={selectedAssets.hair.src} alt="" filter={filterFor('hair')} />
+        <LayerImage src={selectedAssets.hair.src} alt="" filter={filterFor('hair')} {...imgProps} />
       ) : null}
     </>
   )
@@ -287,6 +298,39 @@ export function ModularAvatarCanvas({
       {layerStack}
     </div>
   )
+
+  if (fill && feetFocus) {
+    const baseScale =
+      Math.max(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * 2.35
+    const canvasScale = baseScale * Math.max(1, garmentsZoom)
+    return (
+      <div ref={fillRef} className={cn('relative h-full w-full overflow-hidden', className)}>
+        <div
+          className="absolute left-1/2"
+          style={{
+            top: '62%',
+            width: canvasSize.width,
+            height: canvasSize.height,
+            transform: `translate3d(-50%, -54%, 0) scale(${canvasScale})`,
+            transformOrigin: '50% 92%',
+            WebkitTransform: `translate3d(-50%, -54%, 0) scale(${canvasScale})`,
+          }}
+        >
+          <div
+            className="relative overflow-hidden"
+            style={{
+              width: canvasSize.width,
+              height: canvasSize.height,
+              clipPath: garmentFocusClip('shoes'),
+              WebkitClipPath: garmentFocusClip('shoes'),
+            }}
+          >
+            {layerStack}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (fill && focusGarments) {
     const baseScale =

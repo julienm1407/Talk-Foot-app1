@@ -277,10 +277,6 @@ export function UserProfilePage() {
           ) : null}
         </div>
       </Card>
-
-      <p className={cn('text-center text-[11px] font-semibold', L ? 'text-tf-grey' : 'text-sky-200/70')}>
-        Avec Supabase connecté, amis et messages privés (hors Coach démo) sont enregistrés côté serveur.
-      </p>
     </div>
   )
 }

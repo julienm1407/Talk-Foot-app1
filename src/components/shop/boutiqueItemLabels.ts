@@ -10,6 +10,9 @@ const SLOT_LABELS: Record<AvatarSlot, string> = {
 }
 
 export function boutiqueItemTypeLabel(item: AvatarItem): string {
-  if (item.bundleIncludes?.length) return 'Pack maillot + short'
+  if (item.bundleIncludes?.length) {
+    if (item.collection === 'cdm2026') return 'Coupe du Monde 2026'
+    return 'Pack maillot + short'
+  }
   return SLOT_LABELS[item.slot]
 }

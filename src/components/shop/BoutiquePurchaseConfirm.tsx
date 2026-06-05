@@ -70,6 +70,7 @@ export function BoutiquePurchaseConfirm({
         </>
       }
       previewState={previewState}
+      previewItem={item}
       footer={
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-center gap-2 text-center text-xs font-bold text-white/75">

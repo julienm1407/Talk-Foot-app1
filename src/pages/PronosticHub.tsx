@@ -8,6 +8,7 @@ import { FriendsParieurMiniRank } from '../components/social/FriendsParieurMiniR
 import { Card } from '../components/ui/Card'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
+import { useBetMatchesMap } from '../hooks/useBetMatchesMap'
 import { useMatches } from '../contexts/MatchesContext'
 import { useUserBets } from '../hooks/useUserBets'
 import { useWallet } from '../hooks/useWallet'
@@ -50,7 +51,7 @@ export function PronosticHubPage() {
     }
   }
 
-  const matchesById = useMemo(() => new Map(matches.map((m) => [m.id, m])), [matches])
+  const { getBetMatch, isBetMatchResolving } = useBetMatchesMap(bets)
   const liveMatch = useMemo(() => matches.find((m) => m.status === 'live') ?? null, [matches])
 
   const counts = useMemo(
@@ -230,7 +231,11 @@ export function PronosticHubPage() {
         <ul className="grid gap-3 sm:gap-4">
           {visibleBets.map((bet) => (
             <li key={bet.id}>
-              <BetSlipCard bet={bet} match={matchesById.get(bet.matchId) ?? null} />
+              <BetSlipCard
+                bet={bet}
+                match={getBetMatch(bet)}
+                matchResolving={isBetMatchResolving(bet)}
+              />
             </li>
           ))}
         </ul>
