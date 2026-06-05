@@ -31,3 +31,12 @@ export async function fetchRefundRequests(sb: SupabaseClient): Promise<RefundReq
     createdAt: String(row.created_at),
   }))
 }
+
+export async function updateRefundRequestStatus(
+  sb: SupabaseClient,
+  id: string,
+  status: RefundRequestRow['status'],
+): Promise<boolean> {
+  const { error } = await sb.from('refund_requests').update({ status }).eq('id', id)
+  return !error
+}

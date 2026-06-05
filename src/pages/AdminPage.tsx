@@ -40,7 +40,13 @@ import {
   fetchNewsletterCampaigns,
   type NewsletterCampaign,
 } from '../lib/supabase/newsletter'
-import { fetchRefundRequests, type RefundRequestRow } from '../lib/supabase/refundRequests'
+import { fetchRefundRequests, updateRefundRequestStatus, type RefundRequestRow } from '../lib/supabase/refundRequests'
+import { AdminSectionNav } from '../components/admin/AdminSectionNav'
+import {
+  refundStatusLabel,
+  stripeDashboardUrl,
+  type AdminSectionId,
+} from '../components/admin/adminSections'
 import { cn } from '../utils/cn'
 import { resolveArticleExcerpt } from '../utils/articleExcerpt'
 import { normalizeArticleListHtml } from '../utils/normalizeArticleListHtml'
@@ -316,6 +322,7 @@ export function AdminPage() {
   const [campaignTitle, setCampaignTitle] = useState('')
   const [campaignSubject, setCampaignSubject] = useState('')
   const [campaignBody, setCampaignBody] = useState('')
+  const [activeSection, setActiveSection] = useState<AdminSectionId>('overview')
 
   const sb = useMemo(() => getSupabaseBrowserClient(), [])
 
@@ -325,6 +332,21 @@ export function AdminPage() {
   )
   const seoAudit = useMemo(() => computeSeoScore(form), [form])
   const markdownImages = useMemo(() => extractMarkdownImages(form.bodyMarkdown), [form.bodyMarkdown])
+  const pendingRefundCount = useMemo(
+    () => refundRequests.filter((r) => r.status === 'pending' || r.status === 'in_progress').length,
+    [refundRequests],
+  )
+  const moderationAlertCount = useMemo(
+    () => commentsToModerate.filter((c) => c.reportedCount > 0 || c.status === 'pending').length,
+    [commentsToModerate],
+  )
+  const sectionBadges = useMemo(
+    () => ({
+      moderation: moderationAlertCount,
+      operations: pendingRefundCount,
+    }),
+    [moderationAlertCount, pendingRefundCount],
+  )
 
   const statusLabel = useCallback((status: AdminArticle['status']) => {
     if (status === 'published') return 'Publié'
@@ -652,238 +674,37 @@ export function AdminPage() {
     setCampaigns(newsletter)
   }
 
-  return (
-    <div className="space-y-6">
-      <header className="space-y-1 border-b border-tf-grey-pastel/50 pb-4">
-        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Accès restreint</p>
-        <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">Éditeur d’articles</h1>
-        <p className="text-sm font-medium text-tf-grey">
-          Connecté en tant que <strong className="text-tf-dark">{user?.email ?? user?.displayName}</strong>
-        </p>
-      </header>
+  const setRefundStatus = async (id: string, status: RefundRequestRow['status']) => {
+    if (!sb) return
+    const ok = await updateRefundRequestStatus(sb, id, status)
+    if (!ok) {
+      setError('Impossible de mettre à jour le statut du remboursement.')
+      return
+    }
+    setRefundRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
+    setError(null)
+  }
 
-      <div
-        aria-live="polite"
-        className={cn(
-          'rounded-2xl border p-3 text-sm font-semibold',
-          status === 'saving' && 'border-sky-300/80 bg-sky-50 text-sky-900',
-          status === 'saved' && 'border-emerald-300/80 bg-emerald-50 text-emerald-900',
-          status === 'error' && 'border-rose-300/80 bg-rose-50 text-rose-900',
-          status === 'idle' && 'border-slate-200/80 bg-white text-slate-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200',
-        )}
-      >
-        {status === 'saving' && 'Sauvegarde en cours...'}
-        {status === 'saved' && 'Enregistré.'}
-        {status === 'error' && 'Erreur de sauvegarde.'}
-        {status === 'idle' && 'Crée un brouillon ou sélectionne un article pour éditer.'}
-      </div>
+  const editorialStatusBanner = (
+    <div
+      aria-live="polite"
+      className={cn(
+        'rounded-2xl border p-3 text-sm font-semibold',
+        status === 'saving' && 'border-sky-300/80 bg-sky-50 text-sky-900',
+        status === 'saved' && 'border-emerald-300/80 bg-emerald-50 text-emerald-900',
+        status === 'error' && 'border-rose-300/80 bg-rose-50 text-rose-900',
+        status === 'idle' && 'border-slate-200/80 bg-white text-slate-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200',
+      )}
+    >
+      {status === 'saving' && 'Sauvegarde en cours...'}
+      {status === 'saved' && 'Enregistré.'}
+      {status === 'error' && 'Erreur de sauvegarde.'}
+      {status === 'idle' && 'Crée un brouillon ou sélectionne un article pour éditer.'}
+    </div>
+  )
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Card className="p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 7 jours</p>
-          <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views7d ?? 0}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 30 jours</p>
-          <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views30d ?? 0}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Clics CTA 30 jours</p>
-          <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.ctaClicks30d ?? 0}</p>
-        </Card>
-      </div>
-
-      <Card className="p-4">
-        <h2 className="font-display text-lg font-black text-tf-dark">Top articles (30 jours)</h2>
-        <div className="mt-3 space-y-2">
-          {dashboard?.topArticles30d?.length ? (
-            dashboard.topArticles30d.map((a) => (
-              <div key={a.articleId} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900">
-                <p className="line-clamp-1 text-sm font-bold text-slate-900 dark:text-slate-100">{a.title}</p>
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300">{a.views} vues</span>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Pas encore de données.</p>
-          )}
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card className="p-4">
-          <h2 className="font-display text-lg font-black text-tf-dark">Rôles éditoriaux</h2>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto]">
-            <Input
-              value={roleEmail}
-              onChange={(e) => setRoleEmail(e.target.value)}
-              placeholder="email@exemple.com"
-            />
-            <select
-              value={roleValue}
-              onChange={(e) => setRoleValue(e.target.value as EditorialRole)}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            >
-              <option value="redacteur">Rédacteur</option>
-              <option value="relecteur">Relecteur</option>
-              <option value="admin">Admin éditorial</option>
-            </select>
-            <Button variant="soft" className="rounded-xl" onClick={() => void addEditorialRole()}>
-              Ajouter
-            </Button>
-          </div>
-          <div className="mt-3 space-y-2">
-            {editorialUsers.map((u) => (
-              <div key={u.email} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{u.email}</span>
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300">{u.role}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="p-4">
-          <h2 className="font-display text-lg font-black text-tf-dark">Newsletter</h2>
-          <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            Une <strong>campagne</strong> = un email groupé envoyé aux abonnés newsletter.
-            Cette zone sert aux emails marketing/infos, pas à publier un article.
-          </p>
-          <div className="mt-3 space-y-2">
-            <Input
-              value={campaignTitle}
-              onChange={(e) => setCampaignTitle(e.target.value)}
-              placeholder="Nom interne de la campagne (ex: Coupe du monde 2026)"
-            />
-            <Input value={campaignSubject} onChange={(e) => setCampaignSubject(e.target.value)} placeholder="Objet email" />
-            <textarea
-              value={campaignBody}
-              onChange={(e) => setCampaignBody(e.target.value)}
-              className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-              placeholder="Message email (markdown)"
-            />
-            <Button variant="soft" className="rounded-xl" onClick={() => void createCampaign()}>
-              Créer le brouillon d'email
-            </Button>
-          </div>
-          <div className="mt-3 space-y-2">
-            {campaigns.length === 0 ? (
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucune campagne créée.</p>
-            ) : (
-              campaigns.map((c) => (
-                <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-                  <p className="text-sm font-black text-slate-900 dark:text-slate-100">{c.title}</p>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-300">Statut: {c.status}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
-      </div>
-
-      <Card className="p-4">
-        <h2 className="font-display text-lg font-black text-tf-dark">Demandes de remboursement</h2>
-        <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          Saisies depuis les pages packs médailles et formules. Traite le remboursement dans Stripe puis mets à jour le statut ici si besoin.
-        </p>
-        <div className="mt-3 space-y-2">
-          {refundRequests.length === 0 ? (
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucune demande pour le moment.</p>
-          ) : (
-            refundRequests.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-black text-slate-900 dark:text-slate-100">
-                    {r.purchaseKind === 'subscription' ? 'Abonnement' : 'Pack médailles'}
-                  </p>
-                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
-                    {r.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  {r.userEmail ?? 'E-mail non fourni'}
-                  {r.userId ? ` · ${r.userId.slice(0, 12)}…` : ''}
-                </p>
-                {r.paymentRef ? (
-                  <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">Stripe : {r.paymentRef}</p>
-                ) : null}
-                <p className="mt-1 text-sm text-slate-800 dark:text-slate-100">{r.reason}</p>
-                <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                  {new Date(r.createdAt).toLocaleString('fr-FR')}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <h2 className="font-display text-lg font-black text-tf-dark">Modération commentaires</h2>
-        <div className="mt-3 space-y-2">
-          {commentsToModerate.length === 0 ? (
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucun commentaire à modérer.</p>
-          ) : (
-            commentsToModerate.map((c) => (
-              <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-black text-slate-700 dark:text-slate-300">
-                    {c.authorName} · {c.reportedCount} signalement(s) · {c.status}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void publishComment(c.id)}>
-                      Publier
-                    </Button>
-                    <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void hideComment(c.id)}>
-                      Masquer
-                    </Button>
-                  </div>
-                </div>
-                <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{c.body}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </Card>
-
-      {error ? (
-        <Card className="border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-900">{error}</Card>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <Card className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-display text-lg font-black text-tf-dark">Articles</h2>
-            <Button variant="primary" className="rounded-xl px-3 py-2 text-xs" onClick={() => void createNew()}>
-              Nouveau
-            </Button>
-          </div>
-          {loading ? <p className="text-sm font-semibold text-tf-grey">Chargement...</p> : null}
-          <div className="space-y-2">
-            {articles.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className={cn(
-                  'w-full rounded-xl border p-2.5 text-left transition',
-                  selectedId === a.id
-                    ? 'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40'
-                    : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500',
-                )}
-                onClick={() => {
-                  setSelectedId(a.id)
-                  setForm(formFromArticle(a))
-                  setStatus('idle')
-                }}
-              >
-                <p className="line-clamp-1 text-sm font-black text-tf-dark">{a.title}</p>
-                <p className="mt-0.5 text-xs font-semibold text-tf-grey">{statusLabel(a.status)}</p>
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="space-y-4 p-4">
+  const articleEditorPanel = (
+    <Card className="space-y-4 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Titre</label>
@@ -1206,7 +1027,360 @@ export function AdminPage() {
               </div>
             </Card>
           ) : null}
+    </Card>
+  )
+
+  const articleListPanel = (
+    <Card className="space-y-3 p-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-black text-tf-dark">Articles</h2>
+        <Button variant="primary" className="rounded-xl px-3 py-2 text-xs" onClick={() => void createNew()}>
+          Nouveau
+        </Button>
+      </div>
+      {loading ? <p className="text-sm font-semibold text-tf-grey">Chargement...</p> : null}
+      <div className="space-y-2">
+        {articles.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            className={cn(
+              'w-full rounded-xl border p-2.5 text-left transition',
+              selectedId === a.id
+                ? 'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40'
+                : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500',
+            )}
+            onClick={() => {
+              setSelectedId(a.id)
+              setForm(formFromArticle(a))
+              setStatus('idle')
+            }}
+          >
+            <p className="line-clamp-1 text-sm font-black text-tf-dark">{a.title}</p>
+            <p className="mt-0.5 text-xs font-semibold text-tf-grey">{statusLabel(a.status)}</p>
+          </button>
+        ))}
+      </div>
+    </Card>
+  )
+
+  return (
+    <div className="space-y-6">
+      <header className="space-y-1 border-b border-tf-grey-pastel/50 pb-4">
+        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Accès restreint</p>
+        <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">Administration Talk Foot</h1>
+        <p className="text-sm font-medium text-tf-grey">
+          Connecté en tant que <strong className="text-tf-dark">{user?.email ?? user?.displayName}</strong>
+        </p>
+      </header>
+
+      {error ? (
+        <Card className="border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100">
+          {error}
         </Card>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <AdminSectionNav active={activeSection} onChange={setActiveSection} badges={sectionBadges} />
+
+        <div className="min-w-0 space-y-4">
+          {activeSection === 'overview' ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Card className="p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 7 jours</p>
+                  <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views7d ?? 0}</p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 30 jours</p>
+                  <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views30d ?? 0}</p>
+                </Card>
+                <Card className="p-4">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Clics CTA 30 jours</p>
+                  <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.ctaClicks30d ?? 0}</p>
+                </Card>
+              </div>
+
+              {(pendingRefundCount > 0 || moderationAlertCount > 0) && (
+                <Card className="space-y-2 p-4">
+                  <h2 className="font-display text-lg font-black text-tf-dark">À traiter</h2>
+                  {pendingRefundCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('operations')}
+                      className={cn(
+                        TF_FOCUS_VISIBLE,
+                        'flex w-full items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-left dark:border-amber-900/50 dark:bg-amber-950/30',
+                      )}
+                    >
+                      <span className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                        {pendingRefundCount} demande{pendingRefundCount > 1 ? 's' : ''} de remboursement
+                      </span>
+                      <span className="text-xs font-black text-amber-800 dark:text-amber-200">Voir →</span>
+                    </button>
+                  ) : null}
+                  {moderationAlertCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('moderation')}
+                      className={cn(
+                        TF_FOCUS_VISIBLE,
+                        'flex w-full items-center justify-between rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-left dark:border-sky-900/50 dark:bg-sky-950/30',
+                      )}
+                    >
+                      <span className="text-sm font-bold text-sky-950 dark:text-sky-100">
+                        {moderationAlertCount} commentaire{moderationAlertCount > 1 ? 's' : ''} à modérer
+                      </span>
+                      <span className="text-xs font-black text-sky-800 dark:text-sky-200">Voir →</span>
+                    </button>
+                  ) : null}
+                </Card>
+              )}
+
+              <Card className="p-4">
+                <h2 className="font-display text-lg font-black text-tf-dark">Top articles (30 jours)</h2>
+                <div className="mt-3 space-y-2">
+                  {dashboard?.topArticles30d?.length ? (
+                    dashboard.topArticles30d.map((a) => (
+                      <div
+                        key={a.articleId}
+                        className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5 dark:border-slate-700 dark:bg-slate-900"
+                      >
+                        <p className="line-clamp-1 text-sm font-bold text-slate-900 dark:text-slate-100">{a.title}</p>
+                        <span className="text-xs font-black text-slate-600 dark:text-slate-300">{a.views} vues</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Pas encore de données.</p>
+                  )}
+                </div>
+              </Card>
+            </>
+          ) : null}
+
+          {activeSection === 'editorial' ? (
+            <>
+              {editorialStatusBanner}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+                {articleListPanel}
+                {articleEditorPanel}
+              </div>
+            </>
+          ) : null}
+
+          {activeSection === 'moderation' ? (
+            <Card className="p-4">
+              <h2 className="font-display text-lg font-black text-tf-dark">Modération commentaires</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Commentaires signalés ou en attente de validation.
+              </p>
+              <div className="mt-3 space-y-2">
+                {commentsToModerate.length === 0 ? (
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucun commentaire à modérer.</p>
+                ) : (
+                  commentsToModerate.map((c) => (
+                    <div
+                      key={c.id}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-black text-slate-700 dark:text-slate-300">
+                          {c.authorName} · {c.reportedCount} signalement(s) · {c.status}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void publishComment(c.id)}>
+                            Publier
+                          </Button>
+                          <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void hideComment(c.id)}>
+                            Masquer
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{c.body}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          ) : null}
+
+          {activeSection === 'operations' ? (
+            <div className="space-y-4">
+              <Card className="p-4">
+                <h2 className="font-display text-lg font-black text-tf-dark">Demandes de remboursement</h2>
+                <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  1. Ouvre le paiement dans Stripe et effectue le remboursement. 2. Préviens l’utilisateur par e-mail. 3. Mets à jour le statut ci-dessous.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {refundRequests.length === 0 ? (
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucune demande pour le moment.</p>
+                  ) : (
+                    refundRequests.map((r) => {
+                      const stripeUrl = stripeDashboardUrl(r.paymentRef)
+                      return (
+                        <div
+                          key={r.id}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-sm font-black text-slate-900 dark:text-slate-100">
+                              {r.purchaseKind === 'subscription' ? 'Abonnement' : 'Pack médailles'}
+                            </p>
+                            <span
+                              className={cn(
+                                'rounded-md px-2 py-0.5 text-[10px] font-black uppercase',
+                                r.status === 'resolved' && 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100',
+                                r.status === 'rejected' && 'bg-rose-100 text-rose-900 dark:bg-rose-950/60 dark:text-rose-100',
+                                (r.status === 'pending' || r.status === 'in_progress') &&
+                                  'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-100',
+                              )}
+                            >
+                              {refundStatusLabel(r.status)}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            {r.userEmail ?? 'E-mail non fourni'}
+                            {r.userId ? ` · ${r.userId.slice(0, 12)}…` : ''}
+                          </p>
+                          {r.paymentRef ? (
+                            <p className="mt-1 text-xs font-mono text-slate-500 dark:text-slate-400">
+                              Stripe : {r.paymentRef}
+                              {stripeUrl ? (
+                                <>
+                                  {' · '}
+                                  <a
+                                    href={stripeUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-semibold text-sky-700 underline dark:text-sky-300"
+                                  >
+                                    Ouvrir dans Stripe
+                                  </a>
+                                </>
+                              ) : null}
+                            </p>
+                          ) : null}
+                          <p className="mt-1 text-sm text-slate-800 dark:text-slate-100">{r.reason}</p>
+                          <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                            {new Date(r.createdAt).toLocaleString('fr-FR')}
+                          </p>
+                          {r.status !== 'resolved' && r.status !== 'rejected' ? (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {r.status === 'pending' ? (
+                                <Button
+                                  variant="soft"
+                                  className="rounded-lg px-2 py-1 text-xs"
+                                  onClick={() => void setRefundStatus(r.id, 'in_progress')}
+                                >
+                                  Marquer en cours
+                                </Button>
+                              ) : null}
+                              <Button
+                                variant="soft"
+                                className="rounded-lg px-2 py-1 text-xs"
+                                onClick={() => void setRefundStatus(r.id, 'resolved')}
+                              >
+                                Résolu
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="rounded-lg px-2 py-1 text-xs"
+                                onClick={() => void setRefundStatus(r.id, 'rejected')}
+                              >
+                                Refuser
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </Card>
+
+              <Card className="border-dashed p-4">
+                <h2 className="font-display text-lg font-black text-tf-dark">Gestion utilisateurs</h2>
+                <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  Recherche de comptes, abonnements et sanctions — section prévue pour les prochaines versions.
+                </p>
+              </Card>
+            </div>
+          ) : null}
+
+          {activeSection === 'team' ? (
+            <Card className="p-4">
+              <h2 className="font-display text-lg font-black text-tf-dark">Rôles éditoriaux</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Accès rédaction, relecture et publication des articles.
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <Input value={roleEmail} onChange={(e) => setRoleEmail(e.target.value)} placeholder="email@exemple.com" />
+                <select
+                  value={roleValue}
+                  onChange={(e) => setRoleValue(e.target.value as EditorialRole)}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                >
+                  <option value="redacteur">Rédacteur</option>
+                  <option value="relecteur">Relecteur</option>
+                  <option value="admin">Admin éditorial</option>
+                </select>
+                <Button variant="soft" className="rounded-xl" onClick={() => void addEditorialRole()}>
+                  Ajouter
+                </Button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {editorialUsers.map((u) => (
+                  <div
+                    key={u.email}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{u.email}</span>
+                    <span className="text-xs font-black text-slate-600 dark:text-slate-300">{u.role}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+
+          {activeSection === 'newsletter' ? (
+            <Card className="p-4">
+              <h2 className="font-display text-lg font-black text-tf-dark">Newsletter</h2>
+              <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                Une <strong>campagne</strong> = un email groupé envoyé aux abonnés newsletter. Cette zone sert aux emails
+                marketing/infos, pas à publier un article.
+              </p>
+              <div className="mt-3 space-y-2">
+                <Input
+                  value={campaignTitle}
+                  onChange={(e) => setCampaignTitle(e.target.value)}
+                  placeholder="Nom interne de la campagne (ex: Coupe du monde 2026)"
+                />
+                <Input value={campaignSubject} onChange={(e) => setCampaignSubject(e.target.value)} placeholder="Objet email" />
+                <textarea
+                  value={campaignBody}
+                  onChange={(e) => setCampaignBody(e.target.value)}
+                  className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  placeholder="Message email (markdown)"
+                />
+                <Button variant="soft" className="rounded-xl" onClick={() => void createCampaign()}>
+                  Créer le brouillon d&apos;email
+                </Button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {campaigns.length === 0 ? (
+                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucune campagne créée.</p>
+                ) : (
+                  campaigns.map((c) => (
+                    <div key={c.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                      <p className="text-sm font-black text-slate-900 dark:text-slate-100">{c.title}</p>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-300">Statut: {c.status}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          ) : null}
+        </div>
       </div>
 
       <Link
