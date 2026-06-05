@@ -49,7 +49,7 @@ export function StripeRefundRequestPanel({ className, purchaseKind = 'medal_pack
           : result.error === 'reason_too_short'
             ? 'Le motif est trop court.'
             : result.error === 'save_failed'
-              ? 'Enregistrement impossible — la base n’est peut‑être pas à jour. Écris à support@talkfoot.app en attendant.'
+              ? `Enregistrement impossible — la base n’est peut‑être pas à jour. Écris à ${LEGAL_CONTACT_EMAIL} en attendant.`
               : 'Envoi impossible — réessaie ou contacte le support par e-mail.'
       setFeedback({ tone: 'err', text: message })
       return

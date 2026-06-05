@@ -9,7 +9,7 @@ export const LEGAL_PUBLIC_SITE =
 export const LEGAL_CONTACT_EMAIL =
   (typeof import.meta.env.VITE_LEGAL_CONTACT_EMAIL === 'string' &&
     import.meta.env.VITE_LEGAL_CONTACT_EMAIL.trim()) ||
-  'support@talkfoot.app'
+  'app.talkfoot@gmail.com'
 
 export const LEGAL_LAST_UPDATED_LABEL = '22 mai 2026'
 
