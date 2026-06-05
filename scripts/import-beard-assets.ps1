@@ -6,6 +6,8 @@ $destDir = "$root\assets\beard"
 
 # Ordre : motifs les plus longs en premier (évite beard_full__2_ → beard_full)
 $map = [ordered]@{
+  'images_moustache__1_-'   = 'beard_mustache.png'
+  'images_beard_full__1_-' = 'beard_full.png'
   'images_beard_full__2_-' = 'beard_mustache.png'
   'images_beard_3days-'    = 'beard_3days.png'
   'images_beard_goatee-'   = 'beard_goatee.png'
