@@ -6,15 +6,11 @@ import {
   resolveBoutiqueGarmentShow,
 } from '../../utils/boutiqueModularState'
 
-const GARMENTS_ZOOM = {
-  both: 1.42,
-  jersey: 1.58,
-  shorts: 1.58,
-  shoes: 1.85,
-} as const
+const SHOES_ZOOM = 1.85
 
 /**
- * Aperçu modale boutique — même logique que la grille, avec le personnage de l’utilisateur.
+ * Aperçu modale boutique — personnage complet de l’utilisateur avec la pièce équipée.
+ * (La grille catalogue reste en mode vêtements seuls ; ici on montre « sur ton avatar ».)
  */
 export function BoutiqueModalStudioPreview({
   item,
@@ -33,22 +29,20 @@ export function BoutiqueModalStudioPreview({
         className={
           isShoes
             ? 'relative h-[min(56vw,260px)] min-h-[220px] w-full pt-1 sm:h-[300px] sm:min-h-0'
-            : 'relative h-[min(52vw,240px)] min-h-[200px] w-full pt-1 sm:h-[340px] sm:min-h-0'
+            : 'relative h-[min(52vw,240px)] min-h-[200px] w-full pt-1 sm:h-[340px] sm:min-h-0 sm:max-h-[340px]'
         }
       >
-          <ModularAvatarCanvas
-            state={previewState}
-            crop="full"
-            layersMode={isShoes ? 'full' : 'garments'}
-            garmentsFocus={!isShoes}
-            garmentsShow={garmentsShow}
-            garmentsZoom={GARMENTS_ZOOM[garmentsShow]}
-            feetFocus={isShoes}
-            garmentFallbackSrc={shoeFallbackSrc}
-            imagePriority
-            fill
-            className="h-full w-full"
-          />
+        <ModularAvatarCanvas
+          state={previewState}
+          crop="full"
+          layersMode="full"
+          feetFocus={isShoes}
+          garmentsZoom={isShoes ? SHOES_ZOOM : undefined}
+          garmentFallbackSrc={shoeFallbackSrc}
+          imagePriority
+          fill
+          className="h-full w-full"
+        />
       </div>
     </div>
   )
