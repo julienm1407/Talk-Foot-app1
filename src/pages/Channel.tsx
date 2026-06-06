@@ -41,6 +41,7 @@ import { buildChatPeerMenuTarget } from '../utils/chatPeerSocial'
 import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import type { User } from '../types/chat'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
+import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
@@ -350,8 +351,8 @@ export function ChannelPage() {
     ? 'border-slate-200/90 bg-white/95 shadow-[0_10px_28px_rgba(15,40,70,0.1)] backdrop-blur-sm'
     : 'border-[#3a6690] bg-[#0a1f35]/92 shadow-2xl backdrop-blur-sm'
   const chDockBtn = L
-    ? 'rounded-md border border-slate-200 bg-sky-50 px-1 py-1.5 text-[9px] font-bold leading-tight text-[#023458] shadow-sm'
-    : 'rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-1 py-1.5 text-[9px] font-bold leading-tight text-sky-100'
+    ? 'min-h-9 rounded-md border border-slate-200 bg-sky-50 px-1 py-1.5 text-[9px] font-bold leading-tight text-[#023458] shadow-sm max-[360px]:min-h-8 max-[360px]:px-0.5 max-[360px]:text-[8px]'
+    : 'min-h-9 rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-1 py-1.5 text-[9px] font-bold leading-tight text-sky-100 max-[360px]:min-h-8 max-[360px]:px-0.5 max-[360px]:text-[8px]'
   const chSheetBackdrop = L ? 'bg-slate-900/30 backdrop-blur-[2px]' : 'bg-slate-900/60 backdrop-blur-[2px]'
   const chSheetPanel = L ? 'border-slate-200 bg-white' : 'border-[#3a6690] bg-[#0b2440]'
   const chSheetGhostBtn = L
@@ -642,6 +643,7 @@ export function ChannelPage() {
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
   const [standingsModalOpen, setStandingsModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
+  const showMobileChannelChrome = useIsMobileTouchViewport()
   const betCardRef = useRef<HTMLDivElement | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
   const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
@@ -2749,11 +2751,11 @@ export function ChannelPage() {
         </div>
       </main>
 
-      {typeof document !== 'undefined'
+      {showMobileChannelChrome && typeof document !== 'undefined'
         ? createPortal(
             <>
               <div
-                className={`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] left-1/2 z-[200] grid w-[calc(100%-1rem)] max-w-[440px] -translate-x-1/2 grid-cols-4 gap-1 rounded-xl border p-1 touch-manipulation lg:hidden ${chDockShell}`}
+                className={`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] left-1/2 z-[200] grid w-[min(calc(100vw-1rem),28rem)] max-w-[min(100vw-1rem,28rem)] -translate-x-1/2 grid-cols-4 gap-1 rounded-xl border p-1 touch-manipulation max-[360px]:gap-0.5 max-[360px]:p-0.5 ${chDockShell}`}
                 role="toolbar"
                 aria-label="Navigation match mobile"
                 data-tf-channel-dock="true"
@@ -2787,7 +2789,7 @@ export function ChannelPage() {
               </div>
 
               {mobilePanel ? (
-                <div className={`fixed inset-0 z-[201] flex items-end p-2 touch-manipulation lg:hidden ${chSheetBackdrop}`}>
+                <div className={`fixed inset-0 z-[201] flex items-end p-2 touch-manipulation ${chSheetBackdrop}`}>
           <div className={`w-full rounded-2xl border p-3 shadow-2xl ${chSheetPanel}`}>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-wider text-sky-100">

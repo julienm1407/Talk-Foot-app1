@@ -10,6 +10,7 @@ import {
 import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { BottomNavMoreSheet } from './BottomNavMoreSheet'
+import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
@@ -21,6 +22,7 @@ export function BottomNav() {
   const location = useLocation()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+  const showMobileNav = useIsMobileTouchViewport()
   const [moreOpen, setMoreOpen] = useState(false)
 
   useEffect(() => {
@@ -35,11 +37,13 @@ export function BottomNav() {
     [location.pathname, location.hash],
   )
 
+  if (!showMobileNav) return null
+
   return (
     <>
       <nav
         className={cn(
-          'tf-app-bottomnav fixed inset-x-0 bottom-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden',
+          'tf-app-bottomnav fixed inset-x-0 bottom-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl',
           L
             ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-[0_-8px_32px_rgba(2,52,88,0.08)]'
             : 'border-tf-dark-alt/50 bg-tf-dark shadow-[0_-12px_40px_rgba(0,0,0,0.35)]',

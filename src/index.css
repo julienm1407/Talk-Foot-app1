@@ -2328,6 +2328,17 @@ body::before {
   touch-action: manipulation;
 }
 
+/* iPhone « site bureau » ou largeurs atypiques : garder les barres tactiles visibles */
+@media (hover: none) and (pointer: coarse) {
+  .tf-app-bottomnav {
+    display: block !important;
+  }
+
+  [data-tf-channel-dock='true'] {
+    display: grid !important;
+  }
+}
+
 @media (max-width: 1023px) {
   .tf-mobile-app-shell .tf-app-bottomnav {
     box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06), 0 -12px 40px rgba(0, 0, 0, 0.28);
