@@ -47,13 +47,13 @@ export function MesParisEncart({ className, compact = false }: { className?: str
     <Link
       to="/pronostic"
       className={cn(
-        'group relative flex overflow-hidden outline-none transition',
+        'group relative flex flex-col overflow-hidden outline-none transition',
         TF_FOCUS_VISIBLE,
         compact
           ? cn(
               'rounded-xl border',
               L
-                ? 'border-tf-cta/22 bg-gradient-to-br from-white via-white to-tf-cta/[0.06] hover:border-tf-cta/35 hover:from-white hover:to-tf-cta/[0.09]'
+                ? 'border-tf-cta/30 bg-white hover:border-tf-cta/45 hover:bg-tf-cta/[0.04] shadow-sm'
                 : 'border-tf-cta/30 bg-gradient-to-br from-[#0d2135]/95 to-[#061018]/90 hover:border-tf-cta/45',
             )
           : cn(
@@ -88,16 +88,23 @@ export function MesParisEncart({ className, compact = false }: { className?: str
           🎯
         </span>
         <div className="min-w-0 flex-1 text-left">
+          {!compact ? (
+            <p
+              className={cn(
+                'text-[9px] font-black uppercase tracking-[0.14em]',
+                L ? 'text-tf-cta' : 'text-red-300',
+              )}
+            >
+              Pronostic
+            </p>
+          ) : null}
+          <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
           <p
             className={cn(
-              'text-[9px] font-black uppercase tracking-[0.14em]',
-              L ? 'text-tf-cta' : 'text-red-300',
+              'truncate text-[10px] font-semibold leading-snug',
+              L ? 'text-tf-dark/78' : 'text-sky-200/85',
             )}
           >
-            Pronostic
-          </p>
-          <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
-          <p className={cn('truncate text-[10px] font-semibold leading-snug', L ? 'text-tf-dark/60' : 'text-sky-200/75')}>
             {detailLine}
           </p>
         </div>
