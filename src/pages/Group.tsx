@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { useSubscription } from '../hooks/useSubscription'
+import { canCreateDebate } from '../utils/subscriptionEntitlements'
 import { TribuneLimitPopup } from '../components/subscription/TribuneLimitPopup'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { getGroupAccess } from '../utils/groupAccess'
@@ -400,7 +401,7 @@ export function GroupPage() {
   const [groupChatLimitHint, setGroupChatLimitHint] = useState<string | null>(null)
   const [joinOtherError, setJoinOtherError] = useState<string | null>(null)
   const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | 'debate' | null>(null)
-  const { tier } = useSubscription()
+  const { tier, subscription, plan } = useSubscription()
 
   const openDebatePicker = useCallback((tab: 'browse' | 'create') => {
     setDebatePickerInitialTab(tab)
@@ -408,12 +409,32 @@ export function GroupPage() {
   }, [])
 
   const handleCreateMyDebate = useCallback(() => {
-    if (!canAddDebate) {
+    const next = `${location.pathname}${location.search}`
+    if (!authUser?.id || authUser.isAnonymous) {
+      navigate(`/login?next=${encodeURIComponent(next)}`)
+      return
+    }
+    if (!plan.flags.canCreateDebates) {
+      navigate('/formules')
+      return
+    }
+    const gate = canCreateDebate(tier, subscription.usage ?? {})
+    if (!gate.ok) {
       setTribuneLimitPopup('debate')
       return
     }
     openDebatePicker('create')
-  }, [canAddDebate, openDebatePicker])
+  }, [
+    authUser?.id,
+    authUser?.isAnonymous,
+    location.pathname,
+    location.search,
+    navigate,
+    plan.flags.canCreateDebates,
+    tier,
+    subscription.usage,
+    openDebatePicker,
+  ])
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
   const handleJoinGroup = useCallback(async () => {
@@ -873,6 +894,18 @@ export function GroupPage() {
     (groupMainClubId ? sportMonksTeamLogoUrlForClubId(groupMainClubId) : null) ??
     (groupMainClubId ? CLUB_OFFICIAL_LOGO_BY_ID[groupMainClubId] : null) ??
     null
+
+  const createDebateBtnClass = (size: 'default' | 'compact' | 'banner' = 'default') =>
+    cn(
+      size === 'compact' && 'h-8 rounded-xl px-2.5 text-[10px]',
+      size === 'default' && 'rounded-2xl px-4 py-3 text-sm tracking-tight',
+      size === 'banner' && 'mt-3 w-full rounded-2xl font-black sm:w-auto',
+      'shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
+      size !== 'banner' && 'w-full',
+      L
+        ? 'border-violet-300/70 !bg-violet-50 !text-violet-950 ring-violet-200/80 hover:!bg-violet-100'
+        : 'border-violet-300/55 !bg-violet-950/70 !text-white ring-violet-400/35 hover:!bg-violet-900/85 shadow-[0_4px_16px_rgba(88,28,135,0.42)]',
+    )
 
   return (
     <>
@@ -1709,13 +1742,8 @@ export function GroupPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="soft"
-                    className={cn(
-                      'w-full shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black tracking-tight',
-                      L
-                        ? 'border-violet-300/50 bg-violet-50 text-violet-950 ring-1 ring-violet-200/80'
-                        : 'border-violet-400/35 bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/25',
-                    )}
+                    variant="ghost"
+                    className={createDebateBtnClass('default')}
                     onClick={handleCreateMyDebate}
                   >
                     <span aria-hidden className="text-base leading-none">
@@ -1786,13 +1814,8 @@ export function GroupPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="soft"
-                    className={cn(
-                      'h-8 shrink-0 rounded-xl px-2.5 text-[10px] font-black',
-                      L
-                        ? 'border-violet-300/50 bg-violet-50 text-violet-950'
-                        : 'border-violet-400/35 bg-violet-500/15 text-violet-100',
-                    )}
+                    variant="ghost"
+                    className={createDebateBtnClass('compact')}
                     onClick={handleCreateMyDebate}
                   >
                     <span aria-hidden className="mr-1">
@@ -1871,7 +1894,7 @@ export function GroupPage() {
                   'mx-3 mt-3 hidden rounded-2xl border px-4 py-3 sm:mx-5 lg:block',
                   L
                     ? 'border-violet-200/80 bg-violet-50/80'
-                    : 'border-violet-400/25 bg-violet-500/10',
+                    : 'border-violet-400/35 bg-violet-950/35',
                 )}
               >
                 <p className={cn('text-sm font-black', TF_TEXT_FG)}>Lancer un débat dans ce groupe</p>
@@ -1880,13 +1903,8 @@ export function GroupPage() {
                 </p>
                 <Button
                   type="button"
-                  variant="soft"
-                  className={cn(
-                    'mt-3 w-full rounded-2xl font-black sm:w-auto',
-                    L
-                      ? 'border-violet-300/50 bg-white text-violet-950'
-                      : 'border-violet-400/35 bg-violet-500/20 text-violet-50',
-                  )}
+                  variant="ghost"
+                  className={createDebateBtnClass('banner')}
                   onClick={handleCreateMyDebate}
                 >
                   ✍️ Créer mon débat
