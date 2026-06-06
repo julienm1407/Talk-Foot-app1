@@ -9,20 +9,27 @@ import {
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 
+const EMBEDDED_PREVIEW_LIMIT = 10
+
 export function BettorLeaderboard({
   embedded,
   extended,
+  previewLimit,
 }: {
   embedded?: boolean
   /** Page pronostic (onglet classement) : plus de lignes + stats perso */
   extended?: boolean
+  /** Nombre max de lignes affichées (défaut : 10 en encart, 40 étendu, 12 sinon). */
+  previewLimit?: number
 }) {
   const { appearance } = useAppearance()
   const dark = appearance === 'dark'
   const { top12, top250, myRank, myEntry, totalActive } = useLeaderboard()
   const { profile } = useProfile()
-  const rows = extended ? top250.slice(0, 40) : top12
-  const titleCount = extended ? totalActive : Math.min(totalActive, 12)
+  const limit = previewLimit ?? (extended ? 40 : embedded ? EMBEDDED_PREVIEW_LIMIT : 12)
+  const rows = (extended ? top250 : top12).slice(0, limit)
+  const titleCount = extended ? totalActive : Math.min(totalActive, limit)
+  const listScrollable = embedded || extended
 
   return (
     <div
@@ -46,9 +53,11 @@ export function BettorLeaderboard({
         >
           {extended
             ? 'Classement public'
-            : titleCount > 0
-              ? `Top ${titleCount} parieur${titleCount > 1 ? 's' : ''}`
-              : 'Classement parieurs'}
+            : embedded
+              ? `Top ${EMBEDDED_PREVIEW_LIMIT} parieurs`
+              : titleCount > 0
+                ? `Top ${titleCount} parieur${titleCount > 1 ? 's' : ''}`
+                : 'Classement parieurs'}
         </h3>
         <span className={cn('text-[10px] font-bold', dark ? 'text-sky-300/80' : 'text-tf-grey')}>
           Paris réels
@@ -57,7 +66,9 @@ export function BettorLeaderboard({
       <p className={cn('mt-0.5 text-[11px] font-medium', dark ? 'text-sky-200/75' : 'text-tf-grey')}>
         {extended
           ? 'Tous les parieurs Talk Foot — top 40 affichés'
-          : 'Parieurs actifs sur Talk Foot'}
+          : embedded
+            ? `${totalActive} parieur${totalActive !== 1 ? 's' : ''} actif${totalActive !== 1 ? 's' : ''} — fais défiler`
+            : 'Parieurs actifs sur Talk Foot'}
       </p>
 
       {extended ? (
@@ -112,8 +123,10 @@ export function BettorLeaderboard({
         <ol
           className={cn(
             'mt-3 space-y-1.5',
+            listScrollable &&
+              'max-h-[min(17.5rem,42vh)] overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]',
             extended &&
-              'max-h-[min(520px,55vh)] overflow-y-auto pr-1 sm:grid sm:max-h-none sm:grid-cols-2 sm:gap-x-4 sm:gap-y-1.5 sm:space-y-0',
+              'sm:grid sm:max-h-[min(520px,55vh)] sm:grid-cols-2 sm:gap-x-4 sm:gap-y-1.5 sm:space-y-0',
           )}
           role="list"
         >
@@ -175,24 +188,39 @@ export function BettorLeaderboard({
 
       <div
         className={cn(
-          'mt-3 flex items-center justify-between border-t pt-3',
+          'mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3',
           dark ? 'border-white/12' : 'border-tf-grey-pastel/40',
         )}
       >
         <span className={cn('text-[10px] font-medium', dark ? 'text-sky-300/80' : 'text-tf-grey')}>
           Ton rang : #{myRank}
         </span>
-        <Link
-          to="/profile"
-          className={cn(
-            'text-[11px] font-bold underline underline-offset-2',
-            dark
-              ? 'text-sky-200 decoration-sky-500/50 hover:text-sky-50'
-              : 'text-tf-dark decoration-tf-grey-pastel hover:text-tf-dark/80',
-          )}
-        >
-          Voir ton profil →
-        </Link>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {embedded && !extended ? (
+            <Link
+              to="/pronostic?vue=classement"
+              className={cn(
+                'text-[11px] font-bold underline underline-offset-2',
+                dark
+                  ? 'text-sky-200 decoration-sky-500/50 hover:text-sky-50'
+                  : 'text-tf-dark decoration-tf-grey-pastel hover:text-tf-dark/80',
+              )}
+            >
+              Classement complet →
+            </Link>
+          ) : null}
+          <Link
+            to="/profile"
+            className={cn(
+              'text-[11px] font-bold underline underline-offset-2',
+              dark
+                ? 'text-sky-200 decoration-sky-500/50 hover:text-sky-50'
+                : 'text-tf-dark decoration-tf-grey-pastel hover:text-tf-dark/80',
+            )}
+          >
+            Voir ton profil →
+          </Link>
+        </div>
       </div>
     </div>
   )
