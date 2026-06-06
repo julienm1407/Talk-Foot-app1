@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 import { Link } from 'react-router-dom'
 import type { SubscriptionTierId } from '../../types/subscription'
 import { Button } from '../ui/Button'
@@ -78,12 +79,10 @@ export function TribuneLimitPopup({
     }
   }, [open, onClose])
 
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
-  useLayoutEffect(() => {
-    setPortalTarget(document.body)
-  }, [])
+  if (!open) return null
 
-  if (!open || !portalTarget) return null
+  const portalTarget = getModalPortalRoot()
+  if (!portalTarget) return null
 
   const { title, body } = copyForKind(kind, tier, message)
   const showUpgradeToUltra = kind === 'join' && tier === 'freemium'
@@ -92,7 +91,8 @@ export function TribuneLimitPopup({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-[300] grid w-full place-items-center overflow-hidden',
+        'fixed inset-0 z-[400] grid w-full place-items-center overflow-hidden',
+        'data-tf-modal',
         'h-[100dvh] max-h-[100dvh]',
         'p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]',
       )}

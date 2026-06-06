@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -43,18 +44,12 @@ export function DebatePickerModal({
   const [excerpt, setExcerpt] = useState('')
   const [accent, setAccent] = useState('#6366f1')
   const [formError, setFormError] = useState<string | null>(null)
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
-
   const { debates: catalogDebates, refresh, loading } = useDebates()
 
   const groupDebates = useMemo(
     () => mergeDebatesForGroup(catalogDebates, customForGroup, groupId),
     [catalogDebates, customForGroup, groupId],
   )
-
-  useLayoutEffect(() => {
-    setPortalTarget(document.body)
-  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -75,7 +70,10 @@ export function DebatePickerModal({
     void refresh()
   }, [open, initialTab, refresh])
 
-  if (!open || !portalTarget) return null
+  if (!open) return null
+
+  const portalTarget = getModalPortalRoot()
+  if (!portalTarget) return null
 
   const submitCreate = () => {
     setFormError(null)

@@ -414,6 +414,7 @@ export function GroupPage() {
       navigate(`/login?next=${encodeURIComponent(next)}`)
       return
     }
+    setDebatePickerOpen(false)
     if (!plan.flags.canCreateDebates) {
       setTribuneLimitPopup('debate')
       return
@@ -423,6 +424,7 @@ export function GroupPage() {
       setTribuneLimitPopup('debate')
       return
     }
+    setTribuneLimitPopup(null)
     openDebatePicker('create')
   }, [
     authUser?.id,
@@ -431,7 +433,6 @@ export function GroupPage() {
     location.search,
     navigate,
     plan.flags.canCreateDebates,
-    setTribuneLimitPopup,
     tier,
     subscription.usage,
     openDebatePicker,
@@ -896,13 +897,11 @@ export function GroupPage() {
     (groupMainClubId ? CLUB_OFFICIAL_LOGO_BY_ID[groupMainClubId] : null) ??
     null
 
-  const createDebateBtnClass = (size: 'default' | 'compact' | 'banner' = 'default') =>
+  const createDebateBtnClass = (size: 'default' | 'compact' = 'default') =>
     cn(
       size === 'compact' && 'h-8 rounded-xl px-2.5 text-[10px]',
       size === 'default' && 'rounded-2xl px-4 py-3 text-sm tracking-tight',
-      size === 'banner' && 'mt-3 w-full rounded-2xl font-black sm:w-auto',
-      'shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
-      size !== 'banner' && 'w-full',
+      'w-full shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
       L
         ? 'border-violet-300/70 !bg-violet-50 !text-violet-950 ring-violet-200/80 hover:!bg-violet-100'
         : 'border-violet-300/55 !bg-violet-950/70 !text-white ring-violet-400/35 hover:!bg-violet-900/85 shadow-[0_4px_16px_rgba(88,28,135,0.42)]',
@@ -1889,30 +1888,6 @@ export function GroupPage() {
               </details>
             </div>
 
-            {channel?.id === 'general' && !debate ? (
-              <div
-                className={cn(
-                  'mx-3 mt-3 hidden rounded-2xl border px-4 py-3 sm:mx-5 lg:block',
-                  L
-                    ? 'border-violet-200/80 bg-violet-50/80'
-                    : 'border-violet-400/35 bg-violet-950/35',
-                )}
-              >
-                <p className={cn('text-sm font-black', TF_TEXT_FG)}>Lancer un débat dans ce groupe</p>
-                <p className={cn('mt-1 text-xs font-semibold', TF_TEXT_MUTED)}>
-                  Publie ton sujet et lie-le à la tribune générale pour que tout le monde puisse en parler.
-                </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={createDebateBtnClass('banner')}
-                  onClick={handleCreateMyDebate}
-                >
-                  ✍️ Créer mon débat
-                </Button>
-              </div>
-            ) : null}
-
             {debate && channel?.id === 'general' ? (
               <>
                 <LinkedDebateBanner
@@ -2176,14 +2151,8 @@ export function GroupPage() {
       />
 
       <TribuneLimitPopup
-        open={tribuneLimitPopup === 'join'}
-        kind="join"
-        tier={tier}
-        onClose={() => setTribuneLimitPopup(null)}
-      />
-      <TribuneLimitPopup
-        open={tribuneLimitPopup === 'debate'}
-        kind="debate"
+        open={tribuneLimitPopup !== null}
+        kind={tribuneLimitPopup ?? 'debate'}
         tier={tier}
         onClose={() => setTribuneLimitPopup(null)}
       />
