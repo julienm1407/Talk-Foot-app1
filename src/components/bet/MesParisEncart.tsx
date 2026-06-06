@@ -43,11 +43,30 @@ export function MesParisEncart({ className, compact = false }: { className?: str
       </span>
     )
 
+  const compactDetail =
+    open > 0 ? (
+      <span className={cn('font-black tabular-nums', L ? 'text-emerald-700' : 'text-emerald-300')}>
+        {open} en cours
+      </span>
+    ) : settled > 0 ? (
+      <span className="tabular-nums">
+        {settled} validé{settled > 1 ? 's' : ''}
+      </span>
+    ) : (
+      <span>
+        <span className={cn('font-black tabular-nums', L ? 'text-emerald-700' : 'text-emerald-300')}>
+          {tokens.toLocaleString('fr-FR')} jetons
+        </span>
+        <span className="opacity-45"> · pronos</span>
+      </span>
+    )
+
   return (
     <Link
       to="/pronostic"
       className={cn(
-        'group relative flex flex-col overflow-hidden outline-none transition',
+        'group relative flex flex-col outline-none transition',
+        compact ? 'overflow-visible' : 'overflow-hidden',
         TF_FOCUS_VISIBLE,
         compact
           ? cn(
@@ -71,24 +90,50 @@ export function MesParisEncart({ className, compact = false }: { className?: str
       }
     >
       <span className={cn('block w-full shrink-0', pronoTheme.shellStripe)} aria-hidden />
-      <div
-        className={cn(
-          'flex w-full min-w-0 items-center gap-2',
-          compact ? 'px-2 py-2' : 'px-2.5 py-2.5',
-        )}
-      >
-        <span
-          className={cn(
-            'flex shrink-0 items-center justify-center rounded-lg text-base leading-none',
-            compact ? 'size-8' : 'size-9',
-            L ? 'bg-tf-cta/12 ring-1 ring-tf-cta/20' : 'bg-tf-cta/20 ring-1 ring-tf-cta/35',
-          )}
-          aria-hidden
-        >
-          🎯
-        </span>
-        <div className="min-w-0 flex-1 text-left">
-          {!compact ? (
+      {compact ? (
+        <div className="flex w-full min-w-0 items-start gap-2 px-2.5 py-2.5">
+          <span
+            className={cn(
+              'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg text-base leading-none',
+              L ? 'bg-tf-cta/12 ring-1 ring-tf-cta/20' : 'bg-tf-cta/20 ring-1 ring-tf-cta/35',
+            )}
+            aria-hidden
+          >
+            🎯
+          </span>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
+            <p
+              className={cn(
+                'mt-0.5 text-[10px] font-semibold leading-snug',
+                L ? 'text-tf-dark/78' : 'text-sky-200/85',
+              )}
+            >
+              {compactDetail}
+            </p>
+          </div>
+          <span
+            className={cn(
+              'mt-0.5 shrink-0 text-base font-black leading-none transition group-hover:translate-x-0.5',
+              L ? 'text-tf-cta' : 'text-red-300',
+            )}
+            aria-hidden
+          >
+            ›
+          </span>
+        </div>
+      ) : (
+        <div className="flex w-full min-w-0 items-center gap-2 px-2.5 py-2.5">
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-lg text-base leading-none',
+              L ? 'bg-tf-cta/12 ring-1 ring-tf-cta/20' : 'bg-tf-cta/20 ring-1 ring-tf-cta/35',
+            )}
+            aria-hidden
+          >
+            🎯
+          </span>
+          <div className="min-w-0 flex-1 text-left">
             <p
               className={cn(
                 'text-[9px] font-black uppercase tracking-[0.14em]',
@@ -97,38 +142,38 @@ export function MesParisEncart({ className, compact = false }: { className?: str
             >
               Pronostic
             </p>
-          ) : null}
-          <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
-          <p
-            className={cn(
-              'truncate text-[10px] font-semibold leading-snug',
-              L ? 'text-tf-dark/78' : 'text-sky-200/85',
-            )}
-          >
-            {detailLine}
-          </p>
+            <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
+            <p
+              className={cn(
+                'truncate text-[10px] font-semibold leading-snug',
+                L ? 'text-tf-dark/78' : 'text-sky-200/85',
+              )}
+            >
+              {detailLine}
+            </p>
+          </div>
+          {open > 0 ? (
+            <span
+              className={cn(
+                'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums',
+                L ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-emerald-950',
+              )}
+            >
+              {open}
+            </span>
+          ) : (
+            <span
+              className={cn(
+                'shrink-0 text-base font-black leading-none transition group-hover:translate-x-0.5',
+                L ? 'text-tf-cta' : 'text-red-300',
+              )}
+              aria-hidden
+            >
+              ›
+            </span>
+          )}
         </div>
-        {open > 0 ? (
-          <span
-            className={cn(
-              'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-black tabular-nums',
-              L ? 'bg-emerald-600 text-white' : 'bg-emerald-500 text-emerald-950',
-            )}
-          >
-            {open}
-          </span>
-        ) : (
-          <span
-            className={cn(
-              'shrink-0 text-base font-black leading-none transition group-hover:translate-x-0.5',
-              L ? 'text-tf-cta' : 'text-red-300',
-            )}
-            aria-hidden
-          >
-            ›
-          </span>
-        )}
-      </div>
+      )}
     </Link>
   )
 }
