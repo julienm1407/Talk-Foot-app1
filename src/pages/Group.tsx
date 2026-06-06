@@ -899,9 +899,9 @@ export function GroupPage() {
 
   const createDebateBtnClass = (size: 'default' | 'compact' = 'default') =>
     cn(
-      size === 'compact' && 'h-8 rounded-xl px-2.5 text-[10px]',
-      size === 'default' && 'rounded-2xl px-4 py-3 text-sm tracking-tight',
-      'w-full shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
+      'shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
+      size === 'compact' && 'h-7 w-auto rounded-lg px-2 text-[9px]',
+      size === 'default' && 'w-full rounded-2xl px-4 py-3 text-sm tracking-tight',
       L
         ? 'border-violet-300/70 !bg-violet-50 !text-violet-950 ring-violet-200/80 hover:!bg-violet-100'
         : 'border-violet-300/55 !bg-violet-950/70 !text-white ring-violet-400/35 hover:!bg-violet-900/85 shadow-[0_4px_16px_rgba(88,28,135,0.42)]',
@@ -912,7 +912,7 @@ export function GroupPage() {
       <div
         className={cn(
           'flex min-w-0 max-w-full flex-col overflow-x-clip',
-          'max-lg:h-full max-lg:min-h-0 max-lg:flex-1 max-lg:gap-2 max-lg:overflow-hidden',
+          'max-lg:h-full max-lg:min-h-0 max-lg:flex-1 max-lg:gap-1 max-lg:overflow-hidden',
           'lg:gap-7',
         )}
         data-no-swipe="true"
@@ -1258,8 +1258,8 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-2 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
-        <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 lg:hidden">
+      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-1 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
+        <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 lg:hidden">
           <div className="flex min-w-0 items-center gap-1">
             <Link
               to="/groups"
@@ -1319,9 +1319,9 @@ export function GroupPage() {
           </div>
         </div>
 
-        <div className="min-w-0 shrink-0 space-y-1 lg:hidden">
+        <div className="min-w-0 shrink-0 space-y-0.5 lg:hidden">
           <div
-            className="flex gap-1.5 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex gap-1 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="tablist"
             aria-label="Choisir un salon"
           >
@@ -1334,7 +1334,7 @@ export function GroupPage() {
                   role="tab"
                   aria-selected={active}
                   className={cn(
-                    'shrink-0 rounded-xl border px-2.5 py-1.5 text-left text-[11px] font-black transition',
+                    'shrink-0 rounded-lg border px-2 py-1 text-left text-[10px] font-black transition',
                     active
                       ? L
                         ? 'border-tf-dark/25 bg-white shadow-sm ring-2 ring-tf-electric/25'
@@ -1359,14 +1359,14 @@ export function GroupPage() {
           </div>
           <details
             className={cn(
-              'overflow-hidden rounded-xl border px-2 py-1.5',
+              'overflow-hidden rounded-lg border px-2 py-1',
               L ? 'border-tf-grey-pastel/40 bg-tf-white/95' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
             )}
             data-no-swipe="true"
           >
             <summary
               className={cn(
-                'cursor-pointer list-none text-[10px] font-black uppercase tracking-wide [&::-webkit-details-marker]:hidden',
+                'cursor-pointer list-none text-[9px] font-black uppercase tracking-wide [&::-webkit-details-marker]:hidden',
                 TF_TEXT_MUTED,
               )}
             >
@@ -1678,7 +1678,7 @@ export function GroupPage() {
           <div
             className={cn(
               tfSalonHeader(L, 'shrink-0 p-3 sm:p-4 lg:p-5'),
-              'max-lg:row-start-1 max-lg:border-b max-lg:p-2 max-lg:sm:p-3',
+              'max-lg:row-start-1 max-lg:border-b max-lg:p-1.5',
               L ? 'max-lg:border-tf-grey-pastel/40' : 'max-lg:border-white/10',
             )}
           >
@@ -1791,19 +1791,19 @@ export function GroupPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 lg:hidden">
+            <div className="flex flex-nowrap items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
               {channel?.id === 'general' ? (
                 <>
                   <Button
                     type="button"
                     variant="primary"
                     className={cn(
-                      'h-8 shrink-0 rounded-xl px-2.5 text-[10px] font-black',
-                      'shadow-[0_4px_16px_rgba(255,59,59,0.28)]',
+                      'h-7 shrink-0 rounded-lg px-2 text-[9px] font-black',
+                      'shadow-[0_2px_10px_rgba(255,59,59,0.28)]',
                     )}
                     onClick={() => openDebatePicker('browse')}
                   >
-                    <span aria-hidden className="mr-1">
+                    <span aria-hidden className="mr-0.5">
                       {debateFromQuery ? '↻' : '🗣️'}
                     </span>
                     {debateFromQuery
@@ -1818,7 +1818,7 @@ export function GroupPage() {
                     className={createDebateBtnClass('compact')}
                     onClick={handleCreateMyDebate}
                   >
-                    <span aria-hidden className="mr-1">
+                    <span aria-hidden className="mr-0.5">
                       ✍️
                     </span>
                     Créer
@@ -1830,7 +1830,7 @@ export function GroupPage() {
                   type="button"
                   onClick={() => setVirageMode(!virageMode)}
                   className={cn(
-                    'h-8 shrink-0 rounded-full border px-2 py-1 text-[9px] font-black',
+                    'h-7 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-black',
                     virageMode
                       ? 'border-tf-dark bg-tf-dark text-white'
                       : tfChipSurface(L, 'hover:opacity-95'),
@@ -1844,7 +1844,7 @@ export function GroupPage() {
                 <button
                   type="button"
                   className={cn(
-                    'h-8 shrink-0 rounded-xl border px-2 py-1 text-[9px] font-bold',
+                    'h-7 shrink-0 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold',
                     tfChipSurface(L, 'hover:opacity-95'),
                   )}
                   onClick={() => {
@@ -1859,12 +1859,12 @@ export function GroupPage() {
                 </button>
               ) : null}
               <details
-                className={cn('min-w-[5.5rem] shrink-0', L ? 'text-tf-grey' : 'text-sky-200/90')}
+                className={cn('min-w-[2.25rem] shrink-0', L ? 'text-tf-grey' : 'text-sky-200/90')}
                 data-no-swipe="true"
               >
                 <summary
                   className={cn(
-                    'flex h-8 cursor-pointer list-none items-center justify-center rounded-xl border px-2 text-[10px] font-black [&::-webkit-details-marker]:hidden',
+                    'flex h-7 cursor-pointer list-none items-center justify-center rounded-lg border px-1.5 text-[10px] font-black [&::-webkit-details-marker]:hidden',
                     tfChipSurface(L),
                   )}
                 >
@@ -1897,12 +1897,12 @@ export function GroupPage() {
                 />
                 <details
                   className={cn(
-                    'mt-1.5 rounded-xl border lg:hidden',
+                    'mt-1 rounded-lg border lg:hidden',
                     L ? 'border-tf-dark/12 bg-white' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
                   )}
                   data-no-swipe="true"
                 >
-                  <summary className="cursor-pointer list-none px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                  <summary className="cursor-pointer list-none px-2 py-1.5 [&::-webkit-details-marker]:hidden">
                     <p
                       className={cn(
                         'text-[9px] font-black uppercase tracking-[0.14em]',
@@ -1985,7 +1985,7 @@ export function GroupPage() {
           <div
             ref={feedRef}
             className={cn(
-              'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-2 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
+              'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
               'max-lg:row-start-2 max-lg:mt-0',
               'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',
@@ -2068,7 +2068,7 @@ export function GroupPage() {
           ) : (
             <div
               className={cn(
-                'min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-2 backdrop-blur-md max-lg:row-start-3 sm:px-5 sm:py-3',
+                'min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-1.5 backdrop-blur-md max-lg:row-start-3 sm:px-5 sm:py-3',
                 L ? 'bg-white/95' : 'bg-[#041a2d]/95',
               )}
               style={salonSurface?.backdrop}
