@@ -66,7 +66,7 @@ export function TribuneLimitPopup({
   message?: string
   onClose: () => void
 }) {
-  const { shouldIgnoreBackdropClose } = useModalBackdropGuard(open)
+  const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
 
   useEffect(() => {
     if (!open) return
@@ -107,6 +107,7 @@ export function TribuneLimitPopup({
       <button
         type="button"
         className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+        style={{ pointerEvents: backdropPointerEvents }}
         aria-label="Fermer"
         onClick={() => {
           if (shouldIgnoreBackdropClose()) return

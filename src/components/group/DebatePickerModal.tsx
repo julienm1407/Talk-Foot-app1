@@ -45,7 +45,7 @@ export function DebatePickerModal({
   const [excerpt, setExcerpt] = useState('')
   const [accent, setAccent] = useState('#6366f1')
   const [formError, setFormError] = useState<string | null>(null)
-  const { shouldIgnoreBackdropClose } = useModalBackdropGuard(open)
+  const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
   const { debates: catalogDebates, refresh, loading } = useDebates()
 
   const groupDebates = useMemo(
@@ -154,6 +154,7 @@ export function DebatePickerModal({
       <button
         type="button"
         className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
+        style={{ pointerEvents: backdropPointerEvents }}
         onClick={() => {
           if (shouldIgnoreBackdropClose()) return
           onClose()

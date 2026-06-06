@@ -410,9 +410,7 @@ export function GroupPage() {
 
   const openDebateLimitPopup = useCallback(() => {
     setDebatePickerOpen(false)
-    requestAnimationFrame(() => {
-      setTribuneLimitPopup('debate')
-    })
+    setTribuneLimitPopup('debate')
   }, [])
 
   const handleCreateMyDebate = useCallback(() => {
@@ -432,9 +430,7 @@ export function GroupPage() {
     }
     setTribuneLimitPopup(null)
     setDebatePickerInitialTab('create')
-    requestAnimationFrame(() => {
-      setDebatePickerOpen(true)
-    })
+    window.setTimeout(() => setDebatePickerOpen(true), 50)
   }, [
     authUser?.id,
     authUser?.isAnonymous,
@@ -1753,6 +1749,7 @@ export function GroupPage() {
                   <button
                     type="button"
                     className={createDebateBtnClass('default')}
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -1828,6 +1825,7 @@ export function GroupPage() {
                   <button
                     type="button"
                     className={createDebateBtnClass('compact')}
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()

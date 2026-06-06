@@ -1,14 +1,29 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+
+const DEFAULT_GUARD_MS = 500
 
 /** Évite la fermeture immédiate d’une modale par le « ghost click » du même tap/clic. */
-export function useModalBackdropGuard(open: boolean, guardMs = 320) {
+export function useModalBackdropGuard(open: boolean, guardMs = DEFAULT_GUARD_MS) {
   const openedAtRef = useRef(0)
+  const [backdropInteractive, setBackdropInteractive] = useState(false)
 
-  useEffect(() => {
-    if (open) openedAtRef.current = performance.now()
-  }, [open])
+  useLayoutEffect(() => {
+    if (!open) {
+      setBackdropInteractive(false)
+      return
+    }
 
-  const shouldIgnoreBackdropClose = () => performance.now() - openedAtRef.current < guardMs
+    openedAtRef.current = performance.now()
+    setBackdropInteractive(false)
+    const timer = window.setTimeout(() => setBackdropInteractive(true), guardMs)
+    return () => window.clearTimeout(timer)
+  }, [open, guardMs])
 
-  return { shouldIgnoreBackdropClose }
+  const shouldIgnoreBackdropClose = () =>
+    !backdropInteractive || performance.now() - openedAtRef.current < guardMs
+
+  return {
+    shouldIgnoreBackdropClose,
+    backdropPointerEvents: backdropInteractive ? ('auto' as const) : ('none' as const),
+  }
 }
