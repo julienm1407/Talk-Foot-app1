@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
+import { useModalBackdropGuard } from '../../utils/modalBackdropGuard'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -44,6 +45,7 @@ export function DebatePickerModal({
   const [excerpt, setExcerpt] = useState('')
   const [accent, setAccent] = useState('#6366f1')
   const [formError, setFormError] = useState<string | null>(null)
+  const { shouldIgnoreBackdropClose } = useModalBackdropGuard(open)
   const { debates: catalogDebates, refresh, loading } = useDebates()
 
   const groupDebates = useMemo(
@@ -139,7 +141,7 @@ export function DebatePickerModal({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-[280] grid w-full place-items-center overflow-hidden',
+        'pointer-events-auto fixed inset-0 z-[9998] grid w-full place-items-center overflow-hidden',
         'h-[100dvh] max-h-[100dvh]',
         'p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]',
       )}
@@ -152,7 +154,10 @@ export function DebatePickerModal({
       <button
         type="button"
         className="absolute inset-0 bg-black/25 backdrop-blur-[2px]"
-        onClick={onClose}
+        onClick={() => {
+          if (shouldIgnoreBackdropClose()) return
+          onClose()
+        }}
         aria-label="Fermer"
       />
       <Card className="relative z-10 flex max-h-[min(calc(100dvh-2rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),40rem)] w-full max-w-[min(100%,26rem)] flex-col overflow-hidden p-4 sm:p-5">

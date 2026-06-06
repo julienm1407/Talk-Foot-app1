@@ -408,34 +408,43 @@ export function GroupPage() {
     setDebatePickerOpen(true)
   }, [])
 
+  const openDebateLimitPopup = useCallback(() => {
+    setDebatePickerOpen(false)
+    requestAnimationFrame(() => {
+      setTribuneLimitPopup('debate')
+    })
+  }, [])
+
   const handleCreateMyDebate = useCallback(() => {
     const next = `${location.pathname}${location.search}`
     if (!authUser?.id || authUser.isAnonymous) {
       navigate(`/login?next=${encodeURIComponent(next)}`)
       return
     }
-    setDebatePickerOpen(false)
     if (!plan.flags.canCreateDebates) {
-      setTribuneLimitPopup('debate')
+      openDebateLimitPopup()
       return
     }
     const gate = canCreateDebate(tier, subscription.usage ?? {})
     if (!gate.ok) {
-      setTribuneLimitPopup('debate')
+      openDebateLimitPopup()
       return
     }
     setTribuneLimitPopup(null)
-    openDebatePicker('create')
+    setDebatePickerInitialTab('create')
+    requestAnimationFrame(() => {
+      setDebatePickerOpen(true)
+    })
   }, [
     authUser?.id,
     authUser?.isAnonymous,
     location.pathname,
     location.search,
     navigate,
+    openDebateLimitPopup,
     plan.flags.canCreateDebates,
     tier,
     subscription.usage,
-    openDebatePicker,
   ])
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
@@ -899,6 +908,7 @@ export function GroupPage() {
 
   const createDebateBtnClass = (size: 'default' | 'compact' = 'default') =>
     cn(
+      'inline-flex min-h-tf-touch items-center justify-center gap-1.5 font-display outline-none focus-visible:ring-2 focus-visible:ring-tf-dark/45 focus-visible:ring-offset-2',
       'shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
       size === 'compact' && 'h-7 w-auto rounded-lg px-2 text-[9px]',
       size === 'default' && 'w-full rounded-2xl px-4 py-3 text-sm tracking-tight',
@@ -1740,17 +1750,20 @@ export function GroupPage() {
                           : 'Débat tribune'}
                     </span>
                   </Button>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
                     className={createDebateBtnClass('default')}
-                    onClick={handleCreateMyDebate}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleCreateMyDebate()
+                    }}
                   >
                     <span aria-hidden className="text-base leading-none">
                       ✍️
                     </span>
                     Créer mon débat
-                  </Button>
+                  </button>
                   </>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
@@ -1812,17 +1825,20 @@ export function GroupPage() {
                         ? `Débat (${groupDebates.length})`
                         : 'Débat'}
                   </Button>
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
                     className={createDebateBtnClass('compact')}
-                    onClick={handleCreateMyDebate}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleCreateMyDebate()
+                    }}
                   >
                     <span aria-hidden className="mr-0.5">
                       ✍️
                     </span>
                     Créer
-                  </Button>
+                  </button>
                 </>
               ) : null}
               {preferencesComplete && favoriteClubIds.length > 0 ? (
@@ -2139,15 +2155,13 @@ export function GroupPage() {
         onPublishCustom={(input) => {
           const r = addCustomDebate(input)
           if (!r.ok) {
-            setTribuneLimitPopup('debate')
+            openDebateLimitPopup()
             return null
           }
           return r.debate
         }}
         canCreateDebate={canAddDebate}
-        onBlockedCreate={() => {
-          setTribuneLimitPopup('debate')
-        }}
+        onBlockedCreate={openDebateLimitPopup}
       />
 
       <TribuneLimitPopup

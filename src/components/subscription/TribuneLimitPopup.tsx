@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
+import { useModalBackdropGuard } from '../../utils/modalBackdropGuard'
 import { Link } from 'react-router-dom'
 import type { SubscriptionTierId } from '../../types/subscription'
 import { Button } from '../ui/Button'
@@ -65,6 +66,8 @@ export function TribuneLimitPopup({
   message?: string
   onClose: () => void
 }) {
+  const { shouldIgnoreBackdropClose } = useModalBackdropGuard(open)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -91,7 +94,7 @@ export function TribuneLimitPopup({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-[400] grid w-full place-items-center overflow-hidden',
+        'pointer-events-auto fixed inset-0 z-[9999] grid w-full place-items-center overflow-hidden',
         'data-tf-modal',
         'h-[100dvh] max-h-[100dvh]',
         'p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]',
@@ -105,7 +108,10 @@ export function TribuneLimitPopup({
         type="button"
         className="absolute inset-0 bg-black/55 backdrop-blur-sm"
         aria-label="Fermer"
-        onClick={onClose}
+        onClick={() => {
+          if (shouldIgnoreBackdropClose()) return
+          onClose()
+        }}
       />
       <div
         className={cn(
