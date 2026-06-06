@@ -42,6 +42,9 @@ export function HomeMonEspacePanel({
   density = 'full',
   /** Grille accueil : le corps du panneau défile dans la hauteur de la cellule (pas toute la page). */
   railScrollBody = false,
+  /** Tiroir mobile (logo) : même avatar que la bande accueil + fermeture au clic lien. */
+  mobileDrawer = false,
+  onNavigate,
 }: {
   myCreatedGroups: SupporterGroup[]
   onCreateTribune: () => void
@@ -50,6 +53,8 @@ export function HomeMonEspacePanel({
   showTopHeading?: boolean
   density?: 'full' | 'hubSlim'
   railScrollBody?: boolean
+  mobileDrawer?: boolean
+  onNavigate?: () => void
 }) {
   const { favoriteClubIds } = useFanPreferences()
   const { matches } = useMatches()
@@ -88,6 +93,8 @@ export function HomeMonEspacePanel({
 
   const railBoutiqueOffers = useMemo(() => getHomeRailBoutiqueOffers(), [])
 
+  const navClick = onNavigate ? () => onNavigate() : undefined
+
   return (
     <ShellTag
       className={cn(
@@ -117,6 +124,7 @@ export function HomeMonEspacePanel({
 
         <Link
           to="/profile"
+          onClick={navClick}
           className={cn(
             'flex items-center gap-3 rounded-xl border px-2.5 py-2.5 outline-none transition',
             slim && 'py-2',
@@ -128,11 +136,16 @@ export function HomeMonEspacePanel({
         >
           <ProfileCharacterThumb
             profile={profile}
-            size="sm"
+            size={mobileDrawer ? 'md' : 'sm'}
+            imagePriority={mobileDrawer}
             {...MODULAR_PP_NAV_FRAMING}
             className={cn(
               '!shrink-0 !rounded-full !border-0 p-0 ring-2 ring-white/25',
-              slim ? '!h-9 !w-9 !min-h-9 !min-w-9' : '!h-10 !w-10 !min-h-10 !min-w-10',
+              mobileDrawer
+                ? '!size-12 !min-h-12 !min-w-12'
+                : slim
+                  ? '!h-9 !w-9 !min-h-9 !min-w-9'
+                  : '!h-10 !w-10 !min-h-10 !min-w-10',
             )}
             aria-label="Mon avatar in-app"
           />
@@ -148,7 +161,7 @@ export function HomeMonEspacePanel({
           </span>
         </Link>
 
-        <MesParisEncart compact={slim} />
+        <MesParisEncart compact={slim} onNavigate={onNavigate} />
 
         <div>
           <p className={cn('px-1 text-[10px] font-black uppercase tracking-[0.18em]', hubCaps)}>
@@ -162,7 +175,7 @@ export function HomeMonEspacePanel({
             ) : (
               favoriteClubs.slice(0, slim ? 4 : 6).map((club) => (
                 <li key={club.id}>
-                  <Link to={clubPathForId(club.id)} className={favRow} title={`Hub ${club.name}`}>
+                  <Link to={clubPathForId(club.id)} onClick={navClick} className={favRow} title={`Hub ${club.name}`}>
                     <ClubCrest
                       id={club.id}
                       shortName={club.shortName}
@@ -178,7 +191,7 @@ export function HomeMonEspacePanel({
           </ul>
           {!slim ? (
             <>
-              <Link to="/profile" className={cn(hubPillLink(appearance, 'sm'), 'mt-2 inline-flex')}>
+              <Link to="/profile" onClick={navClick} className={cn(hubPillLink(appearance, 'sm'), 'mt-2 inline-flex')}>
                 + Plus de favoris
               </Link>
               <button
@@ -237,6 +250,7 @@ export function HomeMonEspacePanel({
                   <Link
                     key={f.id}
                     to={`/user/${f.id}`}
+                    onClick={navClick}
                     className={cn(
                       'relative z-[1] rounded-2xl ring-2 ring-white transition hover:z-10 hover:opacity-95 focus-visible:outline focus-visible:ring-2 focus-visible:ring-sky-400',
                       TF_FOCUS_VISIBLE,
@@ -255,6 +269,7 @@ export function HomeMonEspacePanel({
               </div>
               <Link
                 to={firstLiveMatch ? `/channel/${firstLiveMatch.id}` : '/match'}
+                onClick={navClick}
                 className={cn(
                   'min-w-0 flex-1 rounded-lg py-0.5 text-left outline-none transition',
                   TF_FOCUS_VISIBLE,
@@ -288,7 +303,7 @@ export function HomeMonEspacePanel({
           >
             <p className={cn('text-[10px] font-black uppercase tracking-[0.2em]', hubCaps)}>Mes tribunes</p>
             {!slim ? (
-              <Link to="/groups" className={hubPillLink(appearance, 'sm')}>
+              <Link to="/groups" onClick={navClick} className={hubPillLink(appearance, 'sm')}>
                 Tous les groupes
               </Link>
             ) : null}
@@ -303,6 +318,7 @@ export function HomeMonEspacePanel({
                 <li key={g.id}>
                   <Link
                     to={`/group/${g.id}`}
+                    onClick={navClick}
                     className={cn(
                       'flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-bold transition',
                       L ? 'text-tf-app-fg hover:bg-tf-dark/[0.05]' : 'text-tf-app-fg hover:bg-white/[0.08]',
@@ -356,6 +372,7 @@ export function HomeMonEspacePanel({
                 <li key={o.id}>
                   <Link
                     to={o.href}
+                    onClick={navClick}
                     className={cn(
                       'flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 outline-none transition',
                       TF_FOCUS_VISIBLE,
@@ -393,6 +410,7 @@ export function HomeMonEspacePanel({
             </ul>
             <Link
               to="/boutique"
+              onClick={navClick}
               className={cn(hubPillLink(appearance, 'xs'), 'mt-1.5 w-full justify-center text-center')}
             >
               Toute la boutique
@@ -403,12 +421,13 @@ export function HomeMonEspacePanel({
 
       {!slim ? (
         <div className={cn('p-3 sm:p-3.5', railSep)}>
-          <HomeBoutiqueEncart layout="narrow" />
+          <HomeBoutiqueEncart layout="narrow" onNavigate={onNavigate} />
         </div>
       ) : (
         <div className={cn('border-t px-4 pb-4', L ? 'border-tf-dark/10' : 'border-white/10')}>
           <Link
             to="/boutique"
+            onClick={navClick}
             className={cn(hubPillLink(appearance, 'sm'), 'w-full justify-center text-center')}
           >
             Boutique

@@ -10,15 +10,18 @@ type Layout = 'banner' | 'narrow'
 export function HomeBoutiqueEncart({
   className,
   layout = 'banner',
+  onNavigate,
 }: {
   className?: string
   layout?: Layout
+  onNavigate?: () => void
 }) {
   const narrow = layout === 'narrow'
 
   return (
     <Link
       to="/boutique"
+      onClick={onNavigate ? () => onNavigate() : undefined}
       className={cn(
         'tf-interactive-press group relative isolate flex w-full min-w-0 overflow-hidden border-2 border-amber-400/75 text-white shadow-lg outline-none transition',
         'bg-gradient-to-br from-violet-800 via-fuchsia-700 to-orange-600',

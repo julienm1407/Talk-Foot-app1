@@ -9,7 +9,15 @@ import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 const pronoTheme = getAppSectionTheme('pronostic')
 
 /** Raccourci vers la page Pronostic (paris en cours + validés). */
-export function MesParisEncart({ className, compact = false }: { className?: string; compact?: boolean }) {
+export function MesParisEncart({
+  className,
+  compact = false,
+  onNavigate,
+}: {
+  className?: string
+  compact?: boolean
+  onNavigate?: () => void
+}) {
   const [bets] = useUserBets()
   const { wallet } = useWallet()
   const { appearance } = useAppearance()
@@ -64,6 +72,7 @@ export function MesParisEncart({ className, compact = false }: { className?: str
   return (
     <Link
       to="/pronostic"
+      onClick={onNavigate ? () => onNavigate() : undefined}
       className={cn(
         'group relative flex flex-col outline-none transition',
         compact ? 'overflow-visible' : 'overflow-hidden',

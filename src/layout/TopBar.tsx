@@ -133,7 +133,7 @@ export function TopBar() {
             onClick={(e) => {
               if (belowXl && isHomePath && monEspace) {
                 e.preventDefault()
-                monEspace.openMonEspaceDrawer()
+                monEspace.toggleMonEspaceDrawer()
               }
             }}
             className={cn(

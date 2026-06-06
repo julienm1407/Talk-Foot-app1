@@ -404,8 +404,9 @@ export function GroupPage() {
   const { tier, subscription, plan } = useSubscription()
 
   const openDebatePicker = useCallback((tab: 'browse' | 'create') => {
+    setTribuneLimitPopup(null)
     setDebatePickerInitialTab(tab)
-    setDebatePickerOpen(true)
+    window.setTimeout(() => setDebatePickerOpen(true), 50)
   }, [])
 
   const openDebateLimitPopup = useCallback(() => {
@@ -1749,7 +1750,6 @@ export function GroupPage() {
                   <button
                     type="button"
                     className={createDebateBtnClass('default')}
-                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
@@ -1801,17 +1801,20 @@ export function GroupPage() {
               </div>
             </div>
 
-            <div className="flex flex-nowrap items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
+            <div className="relative z-[2] flex flex-nowrap touch-manipulation items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
               {channel?.id === 'general' ? (
                 <>
-                  <Button
+                  <button
                     type="button"
-                    variant="primary"
                     className={cn(
-                      'h-7 shrink-0 rounded-lg px-2 text-[9px] font-black',
-                      'shadow-[0_2px_10px_rgba(255,59,59,0.28)]',
+                      'inline-flex h-7 shrink-0 touch-manipulation items-center justify-center rounded-lg border-2 border-tf-cta-hover/40 px-2 text-[9px] font-black text-white',
+                      'bg-tf-cta shadow-[0_2px_10px_rgba(255,59,59,0.28)] active:scale-[0.98]',
                     )}
-                    onClick={() => openDebatePicker('browse')}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      openDebatePicker('browse')
+                    }}
                   >
                     <span aria-hidden className="mr-0.5">
                       {debateFromQuery ? '↻' : '🗣️'}
@@ -1821,11 +1824,10 @@ export function GroupPage() {
                       : groupDebates.length > 0
                         ? `Débat (${groupDebates.length})`
                         : 'Débat'}
-                  </Button>
+                  </button>
                   <button
                     type="button"
-                    className={createDebateBtnClass('compact')}
-                    onPointerDown={(e) => e.stopPropagation()}
+                    className={cn(createDebateBtnClass('compact'), 'touch-manipulation')}
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()

@@ -94,7 +94,7 @@ export function TribuneLimitPopup({
   return createPortal(
     <div
       className={cn(
-        'pointer-events-auto fixed inset-0 z-[9999] grid w-full place-items-center overflow-hidden',
+        'pointer-events-auto fixed inset-0 z-[2] grid w-full touch-manipulation place-items-center overflow-hidden',
         'data-tf-modal',
         'h-[100dvh] max-h-[100dvh]',
         'p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]',

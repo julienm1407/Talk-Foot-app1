@@ -7,16 +7,21 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppearance } from './AppearanceContext'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { HomeMonEspacePanel } from '../components/home/HomeMonEspacePanel'
 import { CreateGroupModal } from '../components/group/CreateGroupModal'
 import { cn } from '../utils/cn'
+import { getModalPortalRoot } from '../utils/modalPortalRoot'
+import { useModalBackdropGuard } from '../utils/modalBackdropGuard'
 
 type Ctx = {
+  isMonEspaceDrawerOpen: boolean
   openMonEspaceDrawer: () => void
   closeMonEspaceDrawer: () => void
+  toggleMonEspaceDrawer: () => void
 }
 
 const MonEspaceDrawerContext = createContext<Ctx | null>(null)
@@ -36,19 +41,31 @@ export function MonEspaceDrawerProvider({ children }: { children: ReactNode }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const navigate = useNavigate()
+  const location = useLocation()
   const { groups, createGroup } = useSupporterGroups()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(drawerOpen)
 
   const myCreatedGroups = useMemo(() => groups.filter((g) => g.createdBy === 'me'), [groups])
 
   const openMonEspaceDrawer = useCallback(() => setDrawerOpen(true), [])
   const closeMonEspaceDrawer = useCallback(() => setDrawerOpen(false), [])
+  const toggleMonEspaceDrawer = useCallback(() => setDrawerOpen((v) => !v), [])
 
   const ctx = useMemo(
-    () => ({ openMonEspaceDrawer, closeMonEspaceDrawer }),
-    [openMonEspaceDrawer, closeMonEspaceDrawer],
+    () => ({
+      isMonEspaceDrawerOpen: drawerOpen,
+      openMonEspaceDrawer,
+      closeMonEspaceDrawer,
+      toggleMonEspaceDrawer,
+    }),
+    [drawerOpen, openMonEspaceDrawer, closeMonEspaceDrawer, toggleMonEspaceDrawer],
   )
+
+  useEffect(() => {
+    closeMonEspaceDrawer()
+  }, [location.pathname, location.search, closeMonEspaceDrawer])
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -64,28 +81,35 @@ export function MonEspaceDrawerProvider({ children }: { children: ReactNode }) {
     }
   }, [drawerOpen, closeMonEspaceDrawer])
 
-  return (
-    <MonEspaceDrawerContext.Provider value={ctx}>
-      {children}
+  const portalTarget = drawerOpen ? getModalPortalRoot() : null
 
-      {drawerOpen ? (
+  const drawerUi =
+    drawerOpen && portalTarget
+      ? createPortal(
         <div
-          className="fixed inset-0 z-[55] xl:hidden"
+          className="pointer-events-auto fixed inset-0 z-[1] touch-manipulation xl:hidden"
           role="dialog"
           aria-modal="true"
           aria-labelledby="mon-espace-drawer-title"
+          data-tf-modal="true"
+          data-no-swipe="true"
         >
           <button
             type="button"
             className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+            style={{ pointerEvents: backdropPointerEvents }}
             aria-label="Fermer Mon espace"
-            onClick={closeMonEspaceDrawer}
+            onClick={() => {
+              if (shouldIgnoreBackdropClose()) return
+              closeMonEspaceDrawer()
+            }}
           />
           <div
             className={cn(
-              'absolute left-0 top-0 flex h-full w-[min(100%,22rem)] flex-col shadow-2xl',
+              'absolute left-0 top-0 z-10 flex h-full w-[min(88vw,20rem)] max-w-[20rem] flex-col shadow-2xl',
               L ? 'bg-[color:var(--tf-page-bg-light)]' : 'bg-tf-dark',
             )}
+            onClick={(e) => e.stopPropagation()}
           >
             <div
               className={cn(
@@ -116,7 +140,9 @@ export function MonEspaceDrawerProvider({ children }: { children: ReactNode }) {
               <HomeMonEspacePanel
                 as="section"
                 showTopHeading={false}
+                mobileDrawer
                 myCreatedGroups={myCreatedGroups}
+                onNavigate={closeMonEspaceDrawer}
                 onCreateTribune={() => {
                   closeMonEspaceDrawer()
                   setCreateOpen(true)
@@ -125,8 +151,16 @@ export function MonEspaceDrawerProvider({ children }: { children: ReactNode }) {
               />
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+        portalTarget,
+      )
+      : null
+
+  return (
+    <MonEspaceDrawerContext.Provider value={ctx}>
+      {children}
+
+      {drawerUi}
 
       <CreateGroupModal
         open={createOpen}
