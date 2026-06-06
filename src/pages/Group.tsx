@@ -1868,7 +1868,7 @@ export function GroupPage() {
             {channel?.id === 'general' && !debate ? (
               <div
                 className={cn(
-                  'mx-3 mt-3 rounded-2xl border px-4 py-3 sm:mx-5',
+                  'mx-3 mt-3 hidden rounded-2xl border px-4 py-3 sm:mx-5 lg:block',
                   L
                     ? 'border-violet-200/80 bg-violet-50/80'
                     : 'border-violet-400/25 bg-violet-500/10',
