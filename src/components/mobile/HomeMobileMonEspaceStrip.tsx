@@ -6,10 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useProfile } from '../../hooks/useProfile'
 import { useMonEspaceDrawerOptional } from '../../contexts/MonEspaceDrawerContext'
 import { currentUser } from '../../data/users'
-import {
-  MODULAR_PP_NAV_FRAMING,
-  ProfileCharacterThumb,
-} from '../profile/ProfileCharacterThumb'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 
 /** Entrée Mon espace visible — évite de cacher tout derrière le logo seul. */
 export function HomeMobileMonEspaceStrip({ className }: { className?: string }) {
@@ -35,9 +32,12 @@ export function HomeMobileMonEspaceStrip({ className }: { className?: string }) 
       >
         <ProfileCharacterThumb
           profile={profile}
-          size="sm"
-          {...MODULAR_PP_NAV_FRAMING}
-          className="!size-11 !min-h-11 !min-w-11"
+          size="md"
+          imagePriority
+          framingMode="auto"
+          headOffsetPx={-2}
+          headScale={1.12}
+          className="!size-12 !min-h-12 !min-w-12"
         />
       </Link>
       <div className="min-w-0 flex-1">

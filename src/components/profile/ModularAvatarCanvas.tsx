@@ -401,11 +401,21 @@ export function ModularAvatarCanvas({
 export function ModularAvatarHeadThumb({
   state,
   size = 56,
+  imagePriority = false,
   className,
 }: {
   state?: ModularAvatarState
   size?: number
+  imagePriority?: boolean
   className?: string
 }) {
-  return <ModularAvatarCanvas state={state} crop="head" fitSize={size} className={className} />
+  return (
+    <ModularAvatarCanvas
+      state={state}
+      crop="head"
+      fitSize={size}
+      imagePriority={imagePriority}
+      className={className}
+    />
+  )
 }

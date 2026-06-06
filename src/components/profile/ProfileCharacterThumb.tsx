@@ -20,6 +20,7 @@ export function ProfileCharacterThumb({
   framingMode = 'auto',
   headOffsetPx = 0,
   headScale = 1,
+  imagePriority = false,
   className,
   'aria-label': ariaLabel,
 }: {
@@ -28,6 +29,8 @@ export function ProfileCharacterThumb({
   framingMode?: 'auto' | 'topbar'
   headOffsetPx?: number
   headScale?: number
+  /** Chargement immédiat des calques (vignette visible au-dessus de la ligne de flottaison). */
+  imagePriority?: boolean
   peerFanClubId?: string | null
   className?: string
   'aria-label'?: string
@@ -48,7 +51,7 @@ export function ProfileCharacterThumb({
       const shellSize = Math.max(16, measured || thumbPx)
       const renderSize =
         framingMode === 'topbar'
-          ? MODULAR_PP_HEAD_RENDER_BASE_PX
+          ? Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, shellSize)
           : measured < 32
             ? thumbPx
             : shellSize
@@ -84,7 +87,11 @@ export function ProfileCharacterThumb({
             transformOrigin: 'center center',
           }}
         >
-          <ModularAvatarHeadThumb state={modularState} size={renderState.renderSize} />
+          <ModularAvatarHeadThumb
+            state={modularState}
+            size={renderState.renderSize}
+            imagePriority={imagePriority}
+          />
         </div>
       </div>
     </div>
