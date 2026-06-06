@@ -36,8 +36,9 @@ function copyForKind(
   }
   if (tier === 'freemium') {
     return {
-      title: 'Limite atteinte',
-      body: 'La création de débats est réservée aux formules Ultra et Ambassadeur.',
+      title: 'Formule Supporter',
+      body:
+        'Tu as la formule gratuite : la création de débats n’est pas disponible avec cette offre. Passe à Ultra ou Ambassadeur pour publier ton sujet dans le groupe.',
     }
   }
   return {
@@ -138,6 +139,18 @@ export function TribuneLimitPopup({
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button
+              variant="soft"
+              className={cn(
+                'min-h-12 w-full rounded-2xl text-base font-black sm:w-auto sm:min-w-[10rem]',
+                showPlansLink
+                  ? 'border-2 border-tf-dark/15 bg-white text-tf-dark shadow-tf-elev-1 hover:bg-tf-electric-soft'
+                  : 'border-2 border-tf-cta-hover/40 bg-tf-cta text-white shadow-tf-cta hover:bg-tf-cta-hover',
+              )}
+              onClick={onClose}
+            >
+              {showPlansLink ? 'Retour' : 'Compris'}
+            </Button>
             {showPlansLink ? (
               <Link
                 to="/formules"
@@ -151,17 +164,6 @@ export function TribuneLimitPopup({
                 {showUpgradeToUltra ? 'Passer à Ultra' : 'Voir les abonnements'}
               </Link>
             ) : null}
-            <Button
-              variant={showPlansLink ? 'soft' : 'primary'}
-              className={cn(
-                'min-h-12 w-full rounded-2xl text-base font-black sm:w-auto sm:min-w-[10rem]',
-                !showPlansLink &&
-                  'border-2 border-tf-cta-hover/40 bg-tf-cta text-white shadow-tf-cta hover:bg-tf-cta-hover',
-              )}
-              onClick={onClose}
-            >
-              Compris
-            </Button>
           </div>
         </div>
       </div>

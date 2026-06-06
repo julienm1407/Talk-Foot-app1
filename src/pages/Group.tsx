@@ -415,7 +415,7 @@ export function GroupPage() {
       return
     }
     if (!plan.flags.canCreateDebates) {
-      navigate('/formules')
+      setTribuneLimitPopup('debate')
       return
     }
     const gate = canCreateDebate(tier, subscription.usage ?? {})
@@ -431,6 +431,7 @@ export function GroupPage() {
     location.search,
     navigate,
     plan.flags.canCreateDebates,
+    setTribuneLimitPopup,
     tier,
     subscription.usage,
     openDebatePicker,
