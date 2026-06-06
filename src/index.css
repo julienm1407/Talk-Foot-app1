@@ -64,7 +64,12 @@
   display: none !important;
 }
 
+/* Ne pas bloquer toute la page : seuls les enfants portés reçoivent les clics. */
 #tf-app-modal-root:not(:empty) {
+  pointer-events: none;
+}
+
+#tf-app-modal-root:not(:empty) > * {
   pointer-events: auto;
 }
 

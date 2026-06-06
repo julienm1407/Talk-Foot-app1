@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { clubPathForId } from '../utils/clubRoute'
@@ -2748,9 +2749,15 @@ export function ChannelPage() {
         </div>
       </main>
 
-      <div
-        className={`fixed bottom-3 left-1/2 z-[88] grid w-[calc(100%-1rem)] max-w-[440px] -translate-x-1/2 grid-cols-4 gap-1 rounded-xl border p-1 md:hidden ${chDockShell}`}
-      >
+      {typeof document !== 'undefined'
+        ? createPortal(
+            <>
+              <div
+                className={`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] left-1/2 z-[200] grid w-[calc(100%-1rem)] max-w-[440px] -translate-x-1/2 grid-cols-4 gap-1 rounded-xl border p-1 touch-manipulation lg:hidden ${chDockShell}`}
+                role="toolbar"
+                aria-label="Navigation match mobile"
+                data-tf-channel-dock="true"
+              >
         <button
           type="button"
           onClick={() => {
@@ -2777,10 +2784,10 @@ export function ChannelPage() {
         <button type="button" onClick={() => setMobilePanel('tribune')} className={chDockBtn}>
           Tribune
         </button>
-      </div>
+              </div>
 
-      {mobilePanel ? (
-        <div className={`fixed inset-0 z-[89] flex items-end p-2 md:hidden ${chSheetBackdrop}`}>
+              {mobilePanel ? (
+                <div className={`fixed inset-0 z-[201] flex items-end p-2 touch-manipulation lg:hidden ${chSheetBackdrop}`}>
           <div className={`w-full rounded-2xl border p-3 shadow-2xl ${chSheetPanel}`}>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-wider text-sky-100">
@@ -2970,8 +2977,12 @@ export function ChannelPage() {
               </div>
             ) : null}
           </div>
-        </div>
-      ) : null}
+                </div>
+              ) : null}
+            </>,
+            document.body,
+          )
+        : null}
 
       {standingsModalOpen ? (
         <div
