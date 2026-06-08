@@ -429,3 +429,30 @@ export function ModularAvatarHeadThumb({
     />
   )
 }
+
+/** Portrait buste (tête + maillot) — page profil public, fiches joueur. */
+export function ModularAvatarPortrait({
+  state,
+  width = 136,
+  height = 196,
+  imagePriority = false,
+  className,
+}: {
+  state?: ModularAvatarState
+  width?: number
+  height?: number
+  imagePriority?: boolean
+  className?: string
+}) {
+  return (
+    <div className={cn('relative overflow-hidden', className)} style={{ width, height }}>
+      <ModularAvatarCanvas
+        state={state}
+        crop="full"
+        fill
+        imagePriority={imagePriority}
+        className="h-full w-full"
+      />
+    </div>
+  )
+}
