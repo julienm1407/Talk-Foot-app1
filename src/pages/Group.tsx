@@ -48,6 +48,7 @@ import {
 } from '../utils/groupThreadMessages'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { EditGroupModal } from '../components/group/EditGroupModal'
+import { GroupJoinWriteFooter } from '../components/group/GroupJoinWriteFooter'
 import { DebatePickerModal } from '../components/group/DebatePickerModal'
 import { LinkedDebateBanner } from '../components/group/LinkedDebateBanner'
 import { mergeDebatesForGroup } from '../utils/mergeGroupDebates'
@@ -469,6 +470,14 @@ export function GroupPage() {
     setJoinOtherError(null)
     setTribuneLimitPopup(null)
   }, [group, joinGroup])
+
+  const onJoinGroupClick = useCallback(() => {
+    if (atJoinLimit) {
+      setTribuneLimitPopup('join')
+      return
+    }
+    void handleJoinGroup()
+  }, [atJoinLimit, handleJoinGroup])
 
   /** Groupe public : adhésion locale + Supabase pour « Mes groupes » et cohérence RLS membre. */
   useEffect(() => {
@@ -1074,15 +1083,8 @@ export function GroupPage() {
                 <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
                   <Button
                     variant="primary"
-                    className="rounded-2xl text-xs font-black"
-                    disabled={atJoinLimit}
-                    onClick={() => {
-                      if (atJoinLimit) {
-                        setTribuneLimitPopup('join')
-                        return
-                      }
-                      void handleJoinGroup()
-                    }}
+                    className="min-h-12 touch-manipulation rounded-2xl text-xs font-black"
+                    onClick={onJoinGroupClick}
                   >
                     Rejoindre cette tribune
                   </Button>
@@ -2017,7 +2019,7 @@ export function GroupPage() {
             ref={feedRef}
             className={cn(
               'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
-              'max-lg:row-start-2 max-lg:mt-0',
+              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0',
               'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',
             )}
@@ -2069,37 +2071,19 @@ export function GroupPage() {
               Écriture désactivée sur cette tribune (mode lecture seule).
             </div>
           ) : !canWriteInTribune ? (
-            <div className="shrink-0 border-t border-tf-grey-pastel/50 bg-gradient-to-b from-slate-50/95 to-tf-ice/90 px-4 py-4 max-lg:row-start-3 sm:px-5">
-              <p className="text-center text-sm font-bold text-tf-dark">
-                {debate && channel?.id === 'general' && debate.salonAccess === 'members'
+            <GroupJoinWriteFooter
+              message={
+                debate && channel?.id === 'general' && debate.salonAccess === 'members'
                   ? 'Ce débat est réservé aux membres du groupe — rejoins pour participer.'
-                  : 'Tu n’as pas rejoint cette tribune — lecture seule jusqu’à adhésion.'}
-              </p>
-              <Button
-                type="button"
-                variant="primary"
-                className="mx-auto mt-3 block w-full max-w-sm rounded-2xl text-sm font-black"
-                disabled={atJoinLimit}
-                onClick={() => {
-                  if (atJoinLimit) {
-                    setTribuneLimitPopup('join')
-                    return
-                  }
-                  void handleJoinGroup()
-                }}
-              >
-                Rejoindre pour écrire
-              </Button>
-              {joinOtherError ? (
-                <p className="mx-auto mt-2 max-w-sm text-center text-xs font-semibold text-amber-800">
-                  {joinOtherError}
-                </p>
-              ) : null}
-            </div>
+                  : 'Tu n’as pas rejoint cette tribune — lecture seule jusqu’à adhésion.'
+              }
+              joinOtherError={joinOtherError}
+              onJoin={onJoinGroupClick}
+            />
           ) : (
             <div
               className={cn(
-                'min-w-0 shrink-0 border-t border-tf-grey-pastel/50 px-3 py-1.5 backdrop-blur-md max-lg:row-start-3 sm:px-5 sm:py-3',
+                'relative z-20 min-w-0 shrink-0 touch-manipulation border-t border-tf-grey-pastel/50 px-3 py-1.5 backdrop-blur-md max-lg:row-start-3 sm:px-5 sm:py-3',
                 L ? 'bg-white/95' : 'bg-[#041a2d]/95',
               )}
               style={salonSurface?.backdrop}

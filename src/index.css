@@ -2339,6 +2339,21 @@ body::before {
   }
 }
 
+/* Barre « Rejoindre pour écrire » — tribune groupe mobile (portail body, au-dessus du scroll). */
+.tf-group-join-mobile-shell {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem) !important;
+  z-index: 2147482400 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  padding-inline: max(0.75rem, env(safe-area-inset-left, 0px))
+    max(0.75rem, env(safe-area-inset-right, 0px));
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
 /* Barre Match / Compo / Paris / Tribune — live mobile (portail body, au-dessus du scroll). */
 .tf-channel-mobile-dock-shell {
   position: fixed !important;
