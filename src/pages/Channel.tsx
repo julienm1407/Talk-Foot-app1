@@ -350,9 +350,20 @@ export function ChannelPage() {
   const chDockShell = L
     ? 'border-slate-200/90 bg-white/95 shadow-[0_10px_28px_rgba(15,40,70,0.1)] backdrop-blur-sm'
     : 'border-[#3a6690] bg-[#0a1f35]/92 shadow-2xl backdrop-blur-sm'
-  const chDockBtn = L
-    ? 'min-h-9 rounded-md border border-slate-200 bg-sky-50 px-1 py-1.5 text-[9px] font-bold leading-tight text-[#023458] shadow-sm max-[360px]:min-h-8 max-[360px]:px-0.5 max-[360px]:text-[8px]'
-    : 'min-h-9 rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-1 py-1.5 text-[9px] font-bold leading-tight text-sky-100 max-[360px]:min-h-8 max-[360px]:px-0.5 max-[360px]:text-[8px]'
+  const chDockBtn = (active: boolean) =>
+    cn(
+      'min-h-11 rounded-lg border px-1.5 py-2 text-[10px] font-black leading-tight transition active:scale-[0.97]',
+      'touch-manipulation select-none [-webkit-tap-highlight-color:transparent]',
+      'max-[360px]:min-h-10 max-[360px]:px-1 max-[360px]:text-[9px]',
+      L
+        ? active
+          ? 'border-sky-500 bg-sky-200 text-[#023458] shadow-sm ring-2 ring-sky-400/40'
+          : 'border-slate-200 bg-sky-50 text-[#023458] shadow-sm'
+        : active
+          ? 'border-sky-300 bg-sky-400/25 text-white ring-2 ring-sky-300/35'
+          : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-100',
+    )
+  const chSheetTitle = L ? 'text-[#023458]' : 'text-sky-100'
   const chSheetBackdrop = L ? 'bg-slate-900/30 backdrop-blur-[2px]' : 'bg-slate-900/60 backdrop-blur-[2px]'
   const chSheetPanel = L ? 'border-slate-200 bg-white' : 'border-[#3a6690] bg-[#0b2440]'
   const chSheetGhostBtn = L
@@ -1518,8 +1529,8 @@ export function ChannelPage() {
       className={cn(
         'tf-channel-live relative flex min-h-0 w-full flex-1 flex-col bg-[#03172a]',
         isUpcoming
-          ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-3'
-          : 'max-md:overflow-y-auto p-3 pb-24 md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
+          ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-3'
+          : 'max-md:overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
       )}
       style={
         {
@@ -2755,45 +2766,81 @@ export function ChannelPage() {
         ? createPortal(
             <>
               <div
-                className={`fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] left-1/2 z-[200] grid w-[min(calc(100vw-1rem),28rem)] max-w-[min(100vw-1rem,28rem)] -translate-x-1/2 grid-cols-4 gap-1 rounded-xl border p-1 touch-manipulation max-[360px]:gap-0.5 max-[360px]:p-0.5 ${chDockShell}`}
+                className={cn('tf-channel-mobile-dock-shell', chDockShell)}
                 role="toolbar"
                 aria-label="Navigation match mobile"
                 data-tf-channel-dock="true"
               >
-        <button
-          type="button"
-          onClick={() => {
-            setMobilePanel('match')
-            setMobileMatchTab('stats')
-          }}
-          className={chDockBtn}
-        >
-          Match
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMobilePanel('match')
-            setMobileMatchTab('compo')
-          }}
-          className={chDockBtn}
-        >
-          Compo
-        </button>
-        <button type="button" onClick={() => setMobilePanel('paris')} className={chDockBtn}>
-          Paris
-        </button>
-        <button type="button" onClick={() => setMobilePanel('tribune')} className={chDockBtn}>
-          Tribune
-        </button>
+                <button
+                  type="button"
+                  className={chDockBtn(mobilePanel === 'match' && mobileMatchTab === 'stats')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => {
+                    setMobilePanel('match')
+                    setMobileMatchTab('stats')
+                  }}
+                >
+                  Match
+                </button>
+                <button
+                  type="button"
+                  className={chDockBtn(mobilePanel === 'match' && mobileMatchTab === 'compo')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => {
+                    setMobilePanel('match')
+                    setMobileMatchTab('compo')
+                  }}
+                >
+                  Compo
+                </button>
+                <button
+                  type="button"
+                  className={chDockBtn(mobilePanel === 'paris')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setMobilePanel('paris')}
+                >
+                  Paris
+                </button>
+                <button
+                  type="button"
+                  className={chDockBtn(mobilePanel === 'tribune')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setMobilePanel('tribune')}
+                >
+                  Tribune
+                </button>
               </div>
 
               {mobilePanel ? (
-                <div className={`fixed inset-0 z-[201] flex items-end p-2 touch-manipulation ${chSheetBackdrop}`}>
-          <div className={`w-full rounded-2xl border p-3 shadow-2xl ${chSheetPanel}`}>
+                <div
+                  className={cn('tf-channel-mobile-sheet-layer', chSheetBackdrop)}
+                  data-tf-modal="true"
+                  data-no-swipe="true"
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <button
+                    type="button"
+                    className="absolute inset-0"
+                    aria-label="Fermer le panneau"
+                    onClick={() => setMobilePanel(null)}
+                  />
+                  <div
+                    className={cn(
+                      'relative z-10 w-full max-h-[min(78dvh,calc(100dvh-7rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto rounded-2xl border p-3 shadow-2xl',
+                      chSheetPanel,
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                  >
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-black uppercase tracking-wider text-sky-100">
-                {mobilePanel === 'match' ? 'Match' : mobilePanel === 'paris' ? 'Paris' : 'Tribune'}
+              <p className={cn('text-xs font-black uppercase tracking-wider', chSheetTitle)}>
+                {mobilePanel === 'match'
+                  ? mobileMatchTab === 'compo'
+                    ? 'Composition'
+                    : 'Match'
+                  : mobilePanel === 'paris'
+                    ? 'Paris'
+                    : 'Tribune'}
               </p>
               <button type="button" onClick={() => setMobilePanel(null)} className={chSheetGhostBtn}>
                 Fermer
@@ -2978,7 +3025,7 @@ export function ChannelPage() {
                 </button>
               </div>
             ) : null}
-          </div>
+                  </div>
                 </div>
               ) : null}
             </>,

@@ -2339,6 +2339,39 @@ body::before {
   }
 }
 
+/* Barre Match / Compo / Paris / Tribune — live mobile (portail body, au-dessus du scroll). */
+.tf-channel-mobile-dock-shell {
+  position: fixed !important;
+  left: 50% !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+  z-index: 2147482500 !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  width: min(calc(100vw - 1rem), 28rem);
+  max-width: min(calc(100vw - 1rem), 28rem);
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  transform: translateX(-50%) translateZ(0);
+  -webkit-transform: translateX(-50%) translateZ(0);
+  isolation: isolate;
+}
+
+.tf-channel-mobile-sheet-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482501 !important;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0.5rem;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+  pointer-events: auto !important;
+  touch-action: manipulation;
+}
+
 @media (max-width: 1023px) {
   .tf-mobile-app-shell .tf-app-bottomnav {
     box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06), 0 -12px 40px rgba(0, 0, 0, 0.28);
