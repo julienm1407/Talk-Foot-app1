@@ -84,7 +84,7 @@ export function UserProfilePage() {
   }
 
   const displayUsername = liveName ?? peer.username
-  const cloudProfile = usePeerPublicProfile(peer, authUser?.id)
+  const { cloudProfile, loading: profileLoading } = usePeerPublicProfile(peer, authUser?.id)
   const club = peer.fanClubId ? ALL_CLUBS_BY_ID[peer.fanClubId] : undefined
 
   const useCloudFriends = isSupabaseConfigured() && Boolean(authUser?.id)
@@ -167,7 +167,7 @@ export function UserProfilePage() {
           )}
         >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-            <UserProfileAvatar peer={peer} cloudProfile={cloudProfile} />
+            <UserProfileAvatar peer={peer} cloudProfile={cloudProfile} profileLoading={profileLoading} />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <h1
