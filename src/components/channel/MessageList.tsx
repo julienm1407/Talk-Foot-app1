@@ -161,7 +161,11 @@ export function MessageList({
                 {peer.peerSocial ? (
                   <button
                     type="button"
-                    onClick={openPeerMenuHandler}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      openPeerMenuHandler?.()
+                    }}
                     className={cn(
                       'max-w-[42%] truncate text-sm font-bold sm:max-w-none',
                       nameClass(kind, u?.accent, dark),

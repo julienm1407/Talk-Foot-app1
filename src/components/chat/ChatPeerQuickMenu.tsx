@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
@@ -6,6 +6,8 @@ import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
 import { friendDmThreadId } from '../../data/directMessageConstants'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
+import { useModalBackdropGuard } from '../../utils/modalBackdropGuard'
 
 export type ChatPeerQuickMenuTarget = {
   id: string
@@ -29,8 +31,28 @@ export function ChatPeerQuickMenu({
   const dm = useDirectMessagesContext()
   const [hint, setHint] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
+
+  useEffect(() => {
+    if (!open) return
+    setHint(null)
+    setBusy(false)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [open, onClose])
 
   if (!open || !peer) return null
+
+  const portalTarget = getModalPortalRoot()
+  if (!portalTarget) return null
 
   const isFriend = dm.isCloudFriend(peer.id)
   const outgoing = dm.hasOutgoingFriendRequestTo(peer.id)
@@ -62,21 +84,21 @@ export function ChatPeerQuickMenu({
   }
 
   const shell = dark
-    ? 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)] text-tf-app-fg shadow-2xl'
-    : 'border-tf-dark/12 bg-white text-tf-app-fg shadow-xl'
-  const muted = 'text-tf-app-muted'
+    ? 'border-slate-600/50 bg-[#0d2135] text-slate-50 shadow-2xl'
+    : 'border-tf-dark/12 bg-white text-tf-dark shadow-xl'
+  const muted = dark ? 'text-sky-200/80' : 'text-tf-grey'
   const btn = cn(
     'w-full rounded-xl border px-4 py-3 text-left text-sm font-black transition',
     TF_FOCUS_VISIBLE,
     dark
-      ? 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-fg hover:bg-[color:color-mix(in_srgb,var(--tf-c30-surface-soft)_88%,white)]'
-      : 'border-tf-dark/10 bg-tf-grey-pastel/25 text-tf-app-fg hover:bg-tf-grey-pastel/45',
+      ? 'border-slate-500/40 bg-[#112a42] text-slate-50 hover:bg-[#163452]'
+      : 'border-tf-dark/10 bg-tf-grey-pastel/25 text-tf-dark hover:bg-tf-grey-pastel/45',
   )
 
   return createPortal(
     <div
       className={cn(
-        'pointer-events-auto fixed inset-0 z-[220] grid w-full touch-manipulation place-items-end sm:place-items-center',
+        'pointer-events-auto fixed inset-0 z-[2] grid w-full touch-manipulation place-items-end sm:place-items-center',
         'h-[100dvh] max-h-[100dvh]',
         'p-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]',
       )}
@@ -87,28 +109,28 @@ export function ChatPeerQuickMenu({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
-        onClick={onClose}
+        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+        style={{ pointerEvents: backdropPointerEvents }}
+        onClick={() => {
+          if (shouldIgnoreBackdropClose()) return
+          onClose()
+        }}
         aria-label="Fermer"
       />
       <div
         className={cn(
-          'relative z-10 flex w-full max-w-[min(100%,24rem)] max-h-[min(calc(100dvh-1.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),28rem)] flex-col overflow-hidden rounded-2xl',
+          'relative z-10 w-full max-w-[min(100%,24rem)] overflow-hidden rounded-2xl',
+          'max-h-[min(calc(100dvh-1.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),32rem)]',
           shell,
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className={cn(
-            'shrink-0 border-b px-4 py-3',
-            dark ? 'border-[color:var(--tf-c30-border)]' : 'border-tf-dark/10',
-          )}
-        >
+        <div className={cn('border-b px-4 py-3', dark ? 'border-slate-600/40' : 'border-tf-dark/10')}>
           <p className="text-base font-black">{peer.username}</p>
           <p className={cn('mt-0.5 text-xs font-semibold', muted)}>Message privé ou demande d’ami</p>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
+        <div className="max-h-[min(22rem,60dvh)] overflow-y-auto overscroll-y-contain p-4">
           <div className="flex flex-col gap-2">
             <button type="button" className={btn} onClick={openPrivateChat}>
               Message privé
@@ -144,7 +166,7 @@ export function ChatPeerQuickMenu({
               className={cn(
                 'mt-1 w-full rounded-xl py-2.5 text-xs font-black',
                 TF_FOCUS_VISIBLE,
-                dark ? 'text-sky-200 hover:text-tf-app-fg' : 'text-sky-700 hover:text-sky-800',
+                dark ? 'text-sky-200 hover:text-white' : 'text-sky-700 hover:text-sky-800',
               )}
             >
               Fermer
@@ -153,6 +175,6 @@ export function ChatPeerQuickMenu({
         </div>
       </div>
     </div>,
-    document.body,
+    portalTarget,
   )
 }

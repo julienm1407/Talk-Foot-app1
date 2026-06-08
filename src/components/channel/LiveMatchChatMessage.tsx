@@ -98,7 +98,11 @@ export function LiveMatchChatMessage({
             {peer.peerSocial ? (
               <button
                 type="button"
-                onClick={onOpenPeerMenu}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onOpenPeerMenu?.()
+                }}
                 className={cn(
                   'truncate text-xs font-semibold underline-offset-2 hover:underline',
                   light ? 'text-tf-app-fg' : 'text-tf-app-fg',

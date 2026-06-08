@@ -115,7 +115,11 @@ export function ChatCharacterThumb({
     return (
       <button
         type="button"
-        onClick={onPeerMenu}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onPeerMenu()
+        }}
         className={cn(shellClass, TF_FOCUS_VISIBLE, 'cursor-pointer')}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
