@@ -11,6 +11,14 @@ import { TribuneLimitLeavePicker } from './TribuneLimitLeavePicker'
 
 export type TribuneLimitPopupKind = 'join' | 'create' | 'debate'
 
+function groupLimitsFallbackCount(
+  tribunes: SupporterGroup[] | undefined,
+  orphanJoinedIds: string[] | undefined,
+): number | undefined {
+  const n = (tribunes?.length ?? 0) + (orphanJoinedIds?.length ?? 0)
+  return n > 0 ? n : undefined
+}
+
 /** Libellé affiché pour la formule de l’utilisateur. */
 export function subscriptionFormulaDisplayName(tier: SubscriptionTierId): string {
   if (tier === 'freemium') return 'Supporter'
@@ -22,17 +30,21 @@ function copyForKind(
   kind: TribuneLimitPopupKind,
   tier: SubscriptionTierId,
   messageOverride?: string,
+  joinedCount?: number,
+  maxJoined?: number,
 ): { title: string; body: string } {
   if (messageOverride?.trim()) {
     return { title: 'Limite atteinte', body: messageOverride.trim() }
   }
   if (kind === 'join') {
+    const limit = maxJoined ?? 5
+    const count = joinedCount ?? limit
     return {
       title: 'Limite atteinte',
       body:
         tier === 'freemium'
-          ? 'Tu es dans 5 tribunes au maximum avec la formule Supporter (celles que tu crées comptent dans ce total). Passe à Ultra pour en rejoindre davantage.'
-          : 'Vous ne pouvez pas rejoindre plus de groupes. Vous avez atteint la limite de votre abonnement.',
+          ? `Tu utilises ${count}/${limit} tribunes avec la formule Supporter (celles que tu crées comptent). Libère une place ci-dessous ou passe à Ultra.`
+          : `Vous avez atteint la limite de tribunes (${count}/${limit}).`,
     }
   }
   if (kind === 'create') {
@@ -64,6 +76,8 @@ export function TribuneLimitPopup({
   message,
   onClose,
   myTribunes,
+  orphanJoinedIds,
+  joinedCount,
   maxJoined = 5,
   onLeaveTribune,
   leavingTribuneId,
@@ -76,6 +90,9 @@ export function TribuneLimitPopup({
   onClose: () => void
   /** Tribunes actuelles — affichées quand le plafond de rejoindre est atteint. */
   myTribunes?: SupporterGroup[]
+  /** Adhésions sans fiche tribune (ex. tribune supprimée) — comptent quand même dans le plafond. */
+  orphanJoinedIds?: string[]
+  joinedCount?: number
   maxJoined?: number
   onLeaveTribune?: (groupId: string) => void
   leavingTribuneId?: string | null
@@ -101,15 +118,15 @@ export function TribuneLimitPopup({
   const portalTarget = getModalPortalRoot()
   if (!portalTarget) return null
 
-  const { title, body } = copyForKind(kind, tier, message)
+  const effectiveJoined = joinedCount ?? groupLimitsFallbackCount(myTribunes, orphanJoinedIds)
+  const { title, body } = copyForKind(kind, tier, message, effectiveJoined, maxJoined)
   const showUpgradeToUltra = kind === 'join' && tier === 'freemium'
   const showPlansLink = kind === 'create' || kind === 'debate' || showUpgradeToUltra
   const showLeavePicker =
     kind === 'join' &&
     tier === 'freemium' &&
-    myTribunes != null &&
-    myTribunes.length > 0 &&
-    onLeaveTribune != null
+    onLeaveTribune != null &&
+    ((myTribunes?.length ?? 0) > 0 || (orphanJoinedIds?.length ?? 0) > 0)
 
   return createPortal(
     <div
@@ -167,7 +184,9 @@ export function TribuneLimitPopup({
 
           {showLeavePicker ? (
             <TribuneLimitLeavePicker
-              tribunes={myTribunes}
+              tribunes={myTribunes ?? []}
+              orphanJoinedIds={orphanJoinedIds}
+              joinedCount={effectiveJoined ?? maxJoined}
               maxJoined={maxJoined}
               onLeave={onLeaveTribune}
               leavingId={leavingTribuneId}

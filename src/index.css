@@ -1045,6 +1045,18 @@ html[data-tf-appearance='light'] .tf-channel-shell {
   border-color: rgba(92, 146, 191, 0.35) !important;
 }
 
+/* Paris channel sidebar : boutons 1N2 compacts (une ligne, ~32px) */
+.tf-channel-live .tf-bet-pick.tf-bet-pick--compact {
+  min-height: 0 !important;
+  height: 2rem !important;
+  max-height: 2rem !important;
+  padding: 0 0.5rem !important;
+  gap: 0.25rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+}
+
 .tf-channel-live:not(.tf-channel-live-light) .tf-live-control {
   background: #0a2742 !important;
   border-color: rgba(92, 146, 191, 0.45) !important;

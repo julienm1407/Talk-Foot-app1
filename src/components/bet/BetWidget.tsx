@@ -546,11 +546,12 @@ export function BetWidget({
                 title={`Pari 1N2 — ${label}`}
                 disabled={!x12Ready || !x12Displayed}
                 className={cn(
-                  'tf-bet-pick min-w-0 overflow-hidden rounded-xl border-2 font-bold shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)]',
+                  'tf-bet-pick min-w-0 overflow-hidden font-bold',
                   compact
-                    ? 'flex min-h-0 flex-col items-stretch gap-0.5 px-1.5 py-1.5 text-[10px] leading-tight'
-                    : 'min-h-11 flex-col items-stretch gap-1 px-3 py-2 text-sm sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10',
+                    ? 'tf-bet-pick--compact !flex !h-8 !min-h-0 !max-h-8 flex-row items-center justify-between gap-1 !rounded-lg !px-2 !py-0 text-[9px] leading-none shadow-[0_2px_8px_rgba(2,12,28,0.14),inset_0_1px_0_rgba(255,255,255,0.9)]'
+                    : 'min-h-11 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10',
                   visual.shell,
+                  compact && '!border',
                   'disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
                 )}
                 onClick={() => pickQuick(side)}
@@ -558,26 +559,31 @@ export function BetWidget({
                 <span
                   className={cn(
                     'tf-bet-pick-name min-w-0 truncate font-extrabold',
-                    compact ? 'text-[10px]' : 'overflow-hidden text-ellipsis',
+                    compact ? 'text-[9px]' : 'overflow-hidden text-ellipsis',
                   )}
                 >
                   {label}
                 </span>
                 <div
                   className={cn(
-                    'flex min-w-0 items-center',
-                    compact ? 'w-full justify-end gap-1' : 'shrink-0 gap-1.5 self-end sm:self-auto',
+                    'flex min-w-0 shrink-0 items-center',
+                    compact ? 'gap-0.5' : 'gap-1.5 self-end sm:self-auto',
                   )}
                 >
                   {visual.badge ? (
-                    <span className="shrink-0 rounded-md px-1 py-0.5 text-[8px] font-black uppercase tracking-wide sm:text-[9px]">
+                    <span
+                      className={cn(
+                        'shrink-0 rounded px-0.5 font-black uppercase tracking-wide',
+                        compact ? 'text-[7px]' : 'rounded-md px-1 py-0.5 text-[8px] sm:text-[9px]',
+                      )}
+                    >
                       {visual.badge}
                     </span>
                   ) : null}
                   <span
                     className={cn(
-                      'tf-bet-pick-odd shrink-0 rounded-md border px-1.5 py-0.5 font-black tabular-nums',
-                      compact ? 'text-[10px]' : 'text-xs',
+                      'tf-bet-pick-odd shrink-0 rounded border font-black tabular-nums',
+                      compact ? 'px-1 py-0 text-[9px]' : 'rounded-md px-1.5 py-0.5 text-xs',
                       visual.odd,
                     )}
                   >

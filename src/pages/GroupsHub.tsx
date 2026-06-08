@@ -23,7 +23,14 @@ type HubTab = 'mine' | 'discover'
 
 export function GroupsHubPage() {
   const navigate = useNavigate()
-  const { groups, createGroup, isJoined, leaveGroup, groupLimits } = useSupporterGroups()
+  const {
+    groups,
+    createGroup,
+    isJoined,
+    leaveGroup,
+    groupLimits,
+    orphanJoinedGroupIds,
+  } = useSupporterGroups()
   const {
     favoriteClubIds,
     favoriteLeagueId,
@@ -85,10 +92,9 @@ export function GroupsHubPage() {
   const focusClub = clubParam ? findTeamInAnyLeague(clubParam) : null
 
   const myGroups = useMemo(() => {
-    return visibleDiscover.filter(
-      (g) => isJoined(g.id) || g.createdBy === 'me',
-    )
-  }, [visibleDiscover, isJoined])
+    const mine = groups.filter((g) => isJoined(g.id) || g.createdBy === 'me')
+    return sortGroupsByFanAffinity(mine, accessPrefs)
+  }, [groups, isJoined, accessPrefs])
 
   const discoverFiltered = useMemo(() => {
     const q = interestFilter.trim()
@@ -170,16 +176,49 @@ export function GroupsHubPage() {
           <h2 id="hub-mine-heading" className="sr-only">
             Mes tribunes
           </h2>
-          {atJoinLimit ? (
-            <div className="rounded-2xl border border-amber-300/55 bg-amber-50/95 px-4 py-3 sm:px-5">
-              <p className="text-sm font-black text-amber-950">
-                {groupLimits.maxJoined} tribunes max — libère une place pour en rejoindre une autre
+          {groupLimits.maxJoined != null ? (
+            <div
+              className={cn(
+                'rounded-2xl border px-4 py-3 sm:px-5',
+                atJoinLimit
+                  ? 'border-amber-300/55 bg-amber-50/95'
+                  : 'border-slate-200/80 bg-slate-50/90',
+              )}
+            >
+              <p className="text-sm font-black text-tf-dark">
+                {groupLimits.joined}/{groupLimits.maxJoined} tribunes utilisées
               </p>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-900/85">
-                Utilise le bouton <strong className="font-black">Quitter la tribune</strong> sur une tribune rejointe.
-                Pour une tribune que tu as créée, ouvre-la puis supprime-la.
-              </p>
+              {atJoinLimit ? (
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-900/85">
+                  Libère une place avec <strong className="font-black">Quitter la tribune</strong> (y compris tribunes
+                  masquées ou fantômes ci-dessous).
+                </p>
+              ) : (
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-tf-grey">
+                  Tu peux encore rejoindre {groupLimits.maxJoined - groupLimits.joined} tribune
+                  {groupLimits.maxJoined - groupLimits.joined > 1 ? 's' : ''}.
+                </p>
+              )}
             </div>
+          ) : null}
+          {orphanJoinedGroupIds.length > 0 ? (
+            <Card className="space-y-2 border-amber-200/80 bg-amber-50/80 p-4 sm:p-5" elevation="soft">
+              <p className="text-sm font-black text-amber-950">
+                {orphanJoinedGroupIds.length} adhésion
+                {orphanJoinedGroupIds.length > 1 ? 's' : ''} fantôme
+                {orphanJoinedGroupIds.length > 1 ? 's' : ''}
+              </p>
+              <p className="text-xs font-semibold leading-relaxed text-amber-900/85">
+                Ces anciennes tribunes comptent encore dans ton plafond sans apparaître dans la liste.
+              </p>
+              {orphanJoinedGroupIds.map((id) => (
+                <LeaveTribuneButton
+                  key={id}
+                  groupName="cette ancienne tribune"
+                  onLeave={() => leaveGroup(id)}
+                />
+              ))}
+            </Card>
           ) : null}
           {myGroups.length === 0 ? (
             <Card className="p-8 text-center" elevation="soft">
@@ -219,7 +258,14 @@ export function GroupsHubPage() {
                     />
                   </Link>
                   {isJoined(g.id) && g.createdBy !== 'me' ? (
-                    <LeaveTribuneButton groupName={g.name} onLeave={() => leaveGroup(g.id)} />
+                    <>
+                      {getGroupAccess(g, accessPrefs) === 'hidden' ? (
+                        <p className="px-1 text-[11px] font-bold text-amber-800">
+                          Tribune masquée (rival) — compte dans ton plafond
+                        </p>
+                      ) : null}
+                      <LeaveTribuneButton groupName={g.name} onLeave={() => leaveGroup(g.id)} />
+                    </>
                   ) : null}
                 </div>
               ))}

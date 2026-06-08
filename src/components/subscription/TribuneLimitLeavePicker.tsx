@@ -5,6 +5,8 @@ import { cn } from '../../utils/cn'
 
 type TribuneLimitLeavePickerProps = {
   tribunes: SupporterGroup[]
+  orphanJoinedIds?: string[]
+  joinedCount: number
   maxJoined: number
   onLeave: (groupId: string) => void
   leavingId?: string | null
@@ -13,17 +15,19 @@ type TribuneLimitLeavePickerProps = {
 
 export function TribuneLimitLeavePicker({
   tribunes,
+  orphanJoinedIds = [],
+  joinedCount,
   maxJoined,
   onLeave,
   leavingId,
   className,
 }: TribuneLimitLeavePickerProps) {
-  if (tribunes.length === 0) return null
+  if (tribunes.length === 0 && orphanJoinedIds.length === 0) return null
 
   return (
     <div className={cn('mt-5 text-left', className)}>
       <p className="text-center text-sm font-black text-slate-800">
-        Libère une place ({tribunes.length}/{maxJoined})
+        Libère une place ({joinedCount}/{maxJoined})
       </p>
       <p className="mt-1 text-center text-xs font-semibold leading-relaxed text-slate-500">
         Choisis une tribune à quitter pour en rejoindre une autre.
@@ -77,6 +81,28 @@ export function TribuneLimitLeavePicker({
             </li>
           )
         })}
+        {orphanJoinedIds.map((id) => (
+          <li
+            key={id}
+            className="rounded-2xl border border-amber-200/90 bg-amber-50/90 p-3 shadow-sm"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-black text-amber-950">Tribune fantôme</p>
+              <p className="mt-0.5 text-[11px] font-semibold leading-relaxed text-amber-900/85">
+                Une ancienne adhésion compte encore dans ton plafond. Libère-la pour débloquer une place.
+              </p>
+            </div>
+            <div className="mt-3">
+              <LeaveTribuneButton
+                groupName="cette ancienne tribune"
+                onLeave={() => onLeave(id)}
+                layout="card"
+                busy={leavingId === id}
+                disabled={leavingId != null && leavingId !== id}
+              />
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   )

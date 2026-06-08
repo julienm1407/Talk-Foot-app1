@@ -130,7 +130,10 @@ export function GroupPage() {
     updateGroup,
     deleteGroup,
     joinedGroupIds,
+    myJoinedGroups,
+    orphanJoinedGroupIds,
     refreshGroupActivity,
+    refreshCloudGroups,
     groupLimits,
   } = useSupporterGroups()
 
@@ -415,14 +418,6 @@ export function GroupPage() {
   const [leavingTribuneId, setLeavingTribuneId] = useState<string | null>(null)
   const { tier, subscription, plan } = useSubscription()
 
-  const myTribunes = useMemo(
-    () =>
-      joinedGroupIds
-        .map((id) => byId(id))
-        .filter((g): g is NonNullable<ReturnType<typeof byId>> => g != null),
-    [joinedGroupIds, byId],
-  )
-
   const openDebatePicker = useCallback((tab: 'browse' | 'create') => {
     setTribuneLimitPopup(null)
     setDebatePickerInitialTab(tab)
@@ -465,12 +460,16 @@ export function GroupPage() {
   ])
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
+  const openJoinLimitPopup = useCallback(() => {
+    void refreshCloudGroups().finally(() => setTribuneLimitPopup('join'))
+  }, [refreshCloudGroups])
+
   const handleJoinGroup = useCallback(async () => {
     if (!group) return
     const r = await joinGroup(group.id)
     if (!r.ok) {
       if (r.limitKind === 'join') {
-        setTribuneLimitPopup('join')
+        openJoinLimitPopup()
         setJoinOtherError(null)
       } else {
         setJoinOtherError(r.reason)
@@ -479,15 +478,15 @@ export function GroupPage() {
     }
     setJoinOtherError(null)
     setTribuneLimitPopup(null)
-  }, [group, joinGroup])
+  }, [group, joinGroup, openJoinLimitPopup])
 
   const onJoinGroupClick = useCallback(() => {
     if (atJoinLimit) {
-      setTribuneLimitPopup('join')
+      openJoinLimitPopup()
       return
     }
     void handleJoinGroup()
-  }, [atJoinLimit, handleJoinGroup])
+  }, [atJoinLimit, handleJoinGroup, openJoinLimitPopup])
 
   const handleLeaveTribune = useCallback(
     async (id: string, options?: { retryJoin?: boolean }) => {
@@ -516,16 +515,6 @@ export function GroupPage() {
     },
     [group, isJoined, joinGroup, joinedGroupIds, leaveGroup, tier],
   )
-
-  /** Groupe public : adhésion locale + Supabase pour « Mes groupes » et cohérence RLS membre. */
-  useEffect(() => {
-    if (!group || !authUser?.id || authUser.isAnonymous) return
-    if (!isPublicGroup) return
-    if (isJoined(group.id)) return
-    void joinGroup(group.id).then((r) => {
-      if (!r.ok && r.limitKind === 'join') setTribuneLimitPopup('join')
-    })
-  }, [group?.id, isPublicGroup, authUser?.id, authUser?.isAnonymous, isJoined, joinGroup])
 
   useEffect(() => {
     if (!group || !channel || !threadKey) return
@@ -2204,7 +2193,9 @@ export function GroupPage() {
         kind={tribuneLimitPopup ?? 'debate'}
         tier={tier}
         onClose={() => setTribuneLimitPopup(null)}
-        myTribunes={myTribunes}
+        myTribunes={myJoinedGroups}
+        orphanJoinedIds={orphanJoinedGroupIds}
+        joinedCount={groupLimits.joined}
         maxJoined={groupLimits.maxJoined ?? 5}
         onLeaveTribune={(id) => void handleLeaveTribune(id, { retryJoin: true })}
         leavingTribuneId={leavingTribuneId}

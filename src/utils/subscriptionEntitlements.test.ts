@@ -36,7 +36,8 @@ describe('subscriptionEntitlements', () => {
   })
 
   it('messages de limite tribunes freemium', () => {
-    expect(joinGroupLimitMessage('freemium', 5)).toContain('5 tribunes au maximum')
+    expect(joinGroupLimitMessage('freemium', 5, 5)).toContain('5/5')
+    expect(joinGroupLimitMessage('freemium', 5, 4)).toContain('4/5')
     expect(createGroupLimitMessage('freemium', 2)).toContain('tribunes créées')
   })
 

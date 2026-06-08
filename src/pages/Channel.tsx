@@ -3178,7 +3178,9 @@ export function ChannelPage() {
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-bold text-sky-100">Carte des tribunes</h3>
+              <h3 className={cn('text-sm font-bold', L ? 'text-[#023458]' : 'text-sky-100')}>
+                Carte des tribunes
+              </h3>
               <button
                 type="button"
                 onClick={() => setTribuneModalOpen(false)}
@@ -3187,8 +3189,8 @@ export function ChannelPage() {
                 Fermer
               </button>
             </div>
-            <p className="mt-1 text-[11px] text-sky-200/80">
-              Selectionne ta zone pour vivre le match dans le groupe qui te correspond.
+            <p className={cn('mt-1 text-[11px]', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
+              Sélectionne ta zone pour vivre le match dans le groupe qui te correspond.
               {chatClosedAfterMatch
                 ? ' Le match est terminé : consultation seule, sans changement de tribune.'
                 : chatDebriefOpen
@@ -3197,7 +3199,7 @@ export function ChannelPage() {
             </p>
 
             <div className="relative mt-3 h-[220px] overflow-hidden rounded-xl border border-[#2a5a84] bg-[#061524]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(125,211,252,0.18),transparent_52%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(125,211,252,0.1),transparent_55%)]" />
               <div className="absolute left-1/2 top-1/2 h-[196px] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-sky-200/20 bg-gradient-to-b from-[#12324f] to-[#0a2238]" />
               <div className="absolute left-1/2 top-1/2 h-[168px] w-[84%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-sky-200/15 bg-gradient-to-b from-[#0f2e49] to-[#0a2136]" />
               <div className="absolute left-1/2 top-1/2 h-[142px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-sky-200/20 bg-[#0c2740]" />
@@ -3220,32 +3222,38 @@ export function ChannelPage() {
                     if (!chatClosedAfterMatch) setSelectedTribune(opt.id)
                   }}
                   disabled={chatClosedAfterMatch}
-                  className={`absolute border text-[10px] font-bold transition-all duration-300 ${
+                  className={cn(
+                    'absolute border text-[10px] font-black transition-all duration-300 [text-shadow:0_1px_3px_rgba(0,0,0,0.75)]',
                     i === 0
                       ? 'left-[14%] right-[14%] top-[5%] h-[17%] rounded-b-[1.2rem] rounded-t-md'
                       : i === 1
                         ? 'left-[14%] right-[14%] bottom-[5%] h-[17%] rounded-t-[1.2rem] rounded-b-md'
                         : i === 2
                           ? 'left-[4%] top-[24%] bottom-[24%] w-[13%] rounded-r-[1.2rem] rounded-l-md'
-                          : 'right-[4%] top-[24%] bottom-[24%] w-[13%] rounded-l-[1.2rem] rounded-r-md'
-                  } ${
+                          : 'right-[4%] top-[24%] bottom-[24%] w-[13%] rounded-l-[1.2rem] rounded-r-md',
                     selectedTribune === opt.id
-                      ? 'border-sky-200 bg-sky-300/28 text-sky-50 shadow-[0_0_20px_rgba(125,211,252,0.35)]'
-                      : 'border-white/20 bg-white/[0.06] text-sky-100/90 hover:border-sky-300/70 hover:bg-sky-300/15'
-                  } ${chatClosedAfterMatch ? 'cursor-not-allowed opacity-55' : ''}`}
+                      ? 'border-sky-100 bg-sky-500/45 text-white shadow-[0_0_18px_rgba(125,211,252,0.45),inset_0_1px_0_rgba(255,255,255,0.2)] ring-1 ring-sky-200/55'
+                      : 'border-white/40 bg-black/40 text-white hover:border-sky-200/80 hover:bg-sky-900/50',
+                    chatClosedAfterMatch && 'cursor-not-allowed opacity-55',
+                  )}
                 >
-                  <span className="flex h-full w-full items-center justify-center px-1 text-center leading-tight">
+                  <span className="flex h-full w-full items-center justify-center px-1 text-center leading-tight tracking-tight">
                     {opt.label}
                   </span>
                 </button>
               ))}
             </div>
 
-            <div className={`mt-3 rounded-lg px-3 py-2 ${L ? 'bg-slate-100' : 'bg-[#0e253d]/85'}`}>
-              <p className="text-xs font-bold text-sky-100">
+            <div
+              className={cn(
+                'mt-3 rounded-lg border px-3 py-2',
+                L ? 'border-slate-200/90 bg-slate-50' : 'border-[#3a6690]/50 bg-[#0e253d]/85',
+              )}
+            >
+              <p className={cn('text-xs font-bold', L ? 'text-[#023458]' : 'text-sky-100')}>
                 {tribuneOptions.find((t) => t.id === selectedTribune)?.label}
               </p>
-              <p className="mt-0.5 text-[11px] text-sky-200/75">
+              <p className={cn('mt-0.5 text-[11px]', L ? 'text-[#3d5670]' : 'text-sky-200/75')}>
                 {tribuneOptions.find((t) => t.id === selectedTribune)?.vibe}
               </p>
             </div>

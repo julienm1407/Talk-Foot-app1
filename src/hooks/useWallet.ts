@@ -16,7 +16,6 @@ import {
   isWalletStandardizeExempt,
   isWalletTestAdmin,
   readLocalWalletStandardizedFlag,
-  standardizedWalletForUser,
   writeLocalWalletStandardizedFlag,
 } from '../utils/walletStandardize'
 import { useSubscription } from './useSubscription'
@@ -100,14 +99,12 @@ export function useWallet() {
       cloud.patchApp((prev) => ({
         ...prev,
         walletStandardizedV2: true,
-        wallet: standardizedWalletForUser(normalizeWallet(prev.wallet)),
       }))
       void cloud.flushAppSave()
       return
     }
 
     if (readLocalWalletStandardizedFlag()) return
-    patchWallet((w) => standardizedWalletForUser(w))
     writeLocalWalletStandardizedFlag()
   }, [
     user?.id,
@@ -327,6 +324,8 @@ export function useWallet() {
 
     claimInFlightRef.current = true
     try {
+      cloud?.cancelScheduledSave?.()
+
       if (useCloudWallet && user?.id && isSupabaseConfigured()) {
         const sb = getSupabaseBrowserClient()
         if (sb) {
@@ -334,7 +333,8 @@ export function useWallet() {
           if (rpc.ok) {
             patchWallet(() => rpc.wallet)
             writeLocalDailyTokenGrant(user.id, rpc.claimDayKey)
-            // Le RPC a déjà persisté app_state — pas de flush (évite d'écraser avec un état stale).
+            // Aligner app_state client sur le wallet serveur (évite qu’un flush différé écrase le RPC).
+            await cloud?.flushAppSave?.()
             return { ok: true, amount: rpc.amount }
           }
           if (rpc.reason === 'already_claimed') {
@@ -342,6 +342,7 @@ export function useWallet() {
             if (rpc.wallet) {
               const synced = rpc.wallet
               patchWallet(() => synced)
+              await cloud?.flushAppSave?.()
             }
             return { ok: false, reason: 'already_claimed' }
           }

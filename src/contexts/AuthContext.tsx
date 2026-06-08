@@ -13,6 +13,8 @@ import {
   type TalkFootOauthProviderId,
 } from '../config/oauthProviders'
 import { containsBannedWord } from '../utils/bannedWords'
+import { checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
+import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
@@ -429,15 +431,29 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         return { status: 'error', message: 'Supabase non configuré.' }
       }
       setAuthNotice(null)
-      const name = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
+      const name = sanitizeDisplayNameInput(
+        (displayName || email.trim().split('@')[0]).trim() || 'Supporteur',
+      )
+      const formatErr = validateDisplayNameFormat(name)
+      if (formatErr) {
+        return { status: 'error', message: formatErr }
+      }
       if (containsBannedWord(name)) {
         return { status: 'error', message: 'Pseudo ou nom d’affichage non autorisé.' }
+      }
+      const availability = await checkDisplayNameAvailabilityCloud(sb, name)
+      if (!availability.available) {
+        const hint =
+          availability.error === 'taken' && availability.suggestions?.length
+            ? ` Suggestions : ${availability.suggestions.join(', ')}`
+            : ''
+        return { status: 'error', message: `${availability.message}${hint}` }
       }
       const { data, error } = await sb.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: { display_name: name },
+          data: { display_name: availability.displayName },
           // Même logique que OAuth : le mail de confirmation doit renvoyer vers l’URL réelle (Vercel, etc.)
           emailRedirectTo: getSupabaseOAuthRedirectTo(),
         },

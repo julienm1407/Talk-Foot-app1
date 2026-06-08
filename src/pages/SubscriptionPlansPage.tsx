@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
+import { useAppearance } from '../contexts/AppearanceContext'
+import { TF_TEXT_FG, TF_TEXT_MUTED } from '../theme/appearanceClasses'
 import { cn } from '../utils/cn'
 import type { SubscriptionTierId } from '../types/subscription'
 import { isStripePublishableConfigured, stripeModeLabel } from '../config/stripe'
@@ -16,6 +18,8 @@ import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { StripeRefundRequestPanel } from '../components/shop/StripeRefundRequestPanel'
 
 export function SubscriptionPlansPage() {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   const { user } = useAuth()
   const supabaseActorId = useTalkFootChatActorId()
   const { tier, setTier } = useSubscription()
@@ -54,17 +58,24 @@ export function SubscriptionPlansPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 pb-10">
       <header className="space-y-2 text-center sm:text-left">
-        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-violet-300/90">
+        <p
+          className={cn(
+            'text-[11px] font-black uppercase tracking-[0.2em]',
+            L ? 'text-violet-700' : 'text-violet-300/90',
+          )}
+        >
           Formules Talk Foot
         </p>
-        <h1 className="text-2xl font-black text-white sm:text-3xl">Supporter · Ultra · Ambassadeur</h1>
-        <p className="max-w-2xl text-sm text-white/70">
+        <h1 className={cn('text-2xl font-black sm:text-3xl', TF_TEXT_FG)}>
+          Supporter · Ultra · Ambassadeur
+        </h1>
+        <p className={cn('max-w-2xl text-sm', TF_TEXT_MUTED)}>
           Trois niveaux : Supporter (gratuit) pour rejoindre la communauté, Ultra à 4,99 €/mois pour les
           membres actifs, Ambassadeur à 14,99 €/mois pour les créateurs. Paiement sécurisé par Stripe.
           {isStripePublishableConfigured() ? (
             <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
           ) : (
-            <> Ajoute <code className="text-white/90">VITE_STRIPE_PUBLISHABLE_KEY</code> sur Vercel pour activer le paiement.</>
+            <> Ajoute <code className={TF_TEXT_FG}>VITE_STRIPE_PUBLISHABLE_KEY</code> sur Vercel pour activer le paiement.</>
           )}
         </p>
         {checkoutMessage ? (
@@ -85,10 +96,15 @@ export function SubscriptionPlansPage() {
           </div>
         ) : null}
         <StripeRefundRequestPanel className="mt-4 max-w-xl" purchaseKind="subscription" />
-        {payError ? <p className="text-sm font-semibold text-rose-200/95">{payError}</p> : null}
+        {payError ? (
+          <p className={cn('text-sm font-semibold', L ? 'text-rose-700' : 'text-rose-200/95')}>
+            {payError}
+          </p>
+        ) : null}
         {user && (
-          <p className="text-sm font-semibold text-emerald-200/90">
-            Ta formule actuelle : <span className="text-white">{SUBSCRIPTION_PLANS[tier].name}</span>
+          <p className={cn('text-sm font-semibold', L ? 'text-emerald-800' : 'text-emerald-200/90')}>
+            Ta formule actuelle :{' '}
+            <span className={TF_TEXT_FG}>{SUBSCRIPTION_PLANS[tier].name}</span>
           </p>
         )}
       </header>
@@ -138,14 +154,19 @@ export function SubscriptionPlansPage() {
                 {plan.features
                   .filter((f) => f.included)
                   .map((f) => (
-                  <li key={f.id} className="flex gap-2 text-sm text-white/90">
+                  <li key={f.id} className={cn('flex gap-2 text-sm font-medium', TF_TEXT_FG)}>
                     <span aria-hidden className="shrink-0">
                       {plan.featureIcon ?? '✓'}
                     </span>
                     <span>
                       {f.label}
                       {f.comingSoon ? (
-                        <span className="ml-1 text-[10px] font-bold uppercase text-amber-300/90">
+                        <span
+                          className={cn(
+                            'ml-1 text-[10px] font-bold uppercase',
+                            L ? 'text-amber-700' : 'text-amber-300/90',
+                          )}
+                        >
                           (bientôt)
                         </span>
                       ) : null}
@@ -153,7 +174,12 @@ export function SubscriptionPlansPage() {
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-white/10 px-5 py-4">
+              <div
+                className={cn(
+                  'border-t px-5 py-4',
+                  L ? 'border-tf-grey-pastel/55' : 'border-white/10',
+                )}
+              >
                 {setTier && id !== tier ? (
                   <Button
                     type="button"
@@ -164,7 +190,7 @@ export function SubscriptionPlansPage() {
                     Tester {plan.name} (admin)
                   </Button>
                 ) : id === 'freemium' ? (
-                  <p className="text-center text-xs text-white/50">Inclus à l’inscription</p>
+                  <p className={cn('text-center text-xs', TF_TEXT_MUTED)}>Inclus à l’inscription</p>
                 ) : isStripePublishableConfigured() ? (
                   <Button
                     type="button"
@@ -201,19 +227,25 @@ export function SubscriptionPlansPage() {
             constituer leur collection plus vite.
           </li>
           <li>
-            <strong className="text-white">Supporter :</strong> idéal pour découvrir TalkFoot — groupes,
+            <strong className={TF_TEXT_FG}>Supporter :</strong> idéal pour découvrir TalkFoot — groupes,
             avatar de base, jetons live et messages du jour inclus.
           </li>
           <li>
-            <strong className="text-white">Ultra :</strong> badge vérifié, plus de groupes, salons VIP et
+            <strong className={TF_TEXT_FG}>Ultra :</strong> badge vérifié, plus de groupes, salons VIP et
             double récompense sur les pronostics.
           </li>
           <li>
-            <strong className="text-white">Ambassadeur :</strong> statut exclusif, débats quotidiens, salons
+            <strong className={TF_TEXT_FG}>Ambassadeur :</strong> statut exclusif, débats quotidiens, salons
             vocaux, articles et live privé — récompenses créateurs bientôt disponibles.
           </li>
         </ul>
-        <Link to="/profile" className="inline-block text-sm font-semibold text-sky-300 hover:underline">
+        <Link
+          to="/profile"
+          className={cn(
+            'inline-block text-sm font-semibold hover:underline',
+            L ? 'text-tf-electric' : 'text-sky-300',
+          )}
+        >
           ← Retour au profil
         </Link>
       </Card>

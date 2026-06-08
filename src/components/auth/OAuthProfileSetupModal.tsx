@@ -8,6 +8,7 @@ import { Input } from '../ui/Input'
 import { cn } from '../../utils/cn'
 import { LogoEncart } from '../../layout/LogoMark'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
+import { validateDisplayNameFormat, sanitizeDisplayNameInput } from '../../utils/displayNameRules'
 
 /**
  * Première connexion Google / Apple (Supabase) : pseudo + ligne perso avant le reste de l’app.
@@ -19,6 +20,7 @@ export function OAuthProfileSetupModal() {
   const [displayName, setDisplayName] = useState('')
   const [aboutLine, setAboutLine] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -26,6 +28,7 @@ export function OAuthProfileSetupModal() {
     setDisplayName(user.displayName || '')
     setAboutLine(cloud.app.profile.aboutLine ?? '')
     setError(null)
+    setSuggestions([])
   }, [cloud?.oauthNeedsProfile, user?.id, user?.displayName, cloud?.app.profile.aboutLine])
 
   if (!cloud?.oauthNeedsProfile) return null
@@ -37,9 +40,10 @@ export function OAuthProfileSetupModal() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const name = displayName.trim()
-    if (name.length < 2) {
-      setError('Choisis un pseudo d’au moins 2 caractères.')
+    const name = sanitizeDisplayNameInput(displayName)
+    const formatErr = validateDisplayNameFormat(name)
+    if (formatErr) {
+      setError(formatErr)
       return
     }
     if (containsBannedWord(name) || (aboutLine.trim() && containsBannedWord(aboutLine))) {
@@ -54,7 +58,17 @@ export function OAuthProfileSetupModal() {
         if (!preferencesComplete) openOnboarding()
       })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Enregistrement impossible. Réessaie.')
+      const msg = e instanceof Error ? e.message : 'Enregistrement impossible. Réessaie.'
+      setError(msg)
+      const match = msg.match(/Suggestions\s*:\s*(.+)$/i)
+      if (match?.[1]) {
+        setSuggestions(
+          match[1]
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+        )
+      }
     } finally {
       setBusy(false)
     }
@@ -128,7 +142,31 @@ export function OAuthProfileSetupModal() {
             <p className="mt-1 text-[10px] font-semibold text-tf-grey">{aboutLine.length}/160</p>
           </div>
 
-          {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
+          {error ? (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-rose-600">
+                {error.replace(/\s*Suggestions\s*:.+$/i, '')}
+              </p>
+              {suggestions.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setDisplayName(s)
+                        setError(null)
+                        setSuggestions([])
+                      }}
+                      className="rounded-lg border border-emerald-300/80 bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <Button type="submit" variant="primary" className="w-full rounded-2xl py-3 font-black" disabled={busy}>
             {busy ? 'Enregistrement…' : 'Continuer'}

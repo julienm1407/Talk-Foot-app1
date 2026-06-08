@@ -14,6 +14,7 @@ import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { TALKFOOT_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../config/oauthProviders'
 import { OAuthProviderIcon } from '../components/auth/OAuthProviderIcon'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
+import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 
 type Mode = 'login' | 'signup'
 
@@ -101,7 +102,14 @@ export function LoginPage() {
         setError('Le mot de passe doit contenir au moins 6 caractères.')
         return
       }
-      const signupName = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
+      const signupName = sanitizeDisplayNameInput(
+        (displayName || email.trim().split('@')[0]).trim() || 'Supporteur',
+      )
+      const formatErr = validateDisplayNameFormat(signupName)
+      if (formatErr) {
+        setError(formatErr)
+        return
+      }
       if (containsBannedWord(signupName)) {
         setError(MODERATION_REFUSED_MESSAGE_FR)
         return
@@ -271,17 +279,23 @@ export function LoginPage() {
                   {mode === 'signup' && (
                     <div>
                       <label htmlFor="signup-displayName" className="mb-1 block text-xs font-bold text-tf-grey">
-                        Nom d&apos;affichage (optionnel)
+                        Pseudo <span className="text-rose-600">*</span>
                       </label>
                       <Input
                         id="signup-displayName"
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="Ton pseudo"
+                        placeholder="Ton pseudo (unique sur Talk Foot)"
                         autoComplete="username"
+                        required
+                        minLength={2}
+                        maxLength={24}
                         className="w-full rounded-xl border-tf-grey-pastel/50"
                       />
+                      <p className="mt-1 text-[10px] font-semibold text-tf-grey">
+                        2 à 24 caractères. S&apos;il est déjà pris, tu pourras en choisir un autre.
+                      </p>
                     </div>
                   )}
                   <div>

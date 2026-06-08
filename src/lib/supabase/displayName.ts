@@ -14,6 +14,15 @@ export type DisplayNameStatus = {
   canChange: boolean
 }
 
+export type CheckDisplayNameAvailabilityResult =
+  | { available: true; displayName: string }
+  | {
+      available: false
+      error: 'taken' | 'invalid_length' | 'invalid_format' | 'banned' | 'unavailable'
+      message: string
+      suggestions?: string[]
+    }
+
 export type ChangeDisplayNameResult =
   | {
       ok: true
@@ -36,6 +45,92 @@ export type ChangeDisplayNameResult =
       nextAllowedAt?: string | null
       changesUsed?: number
     }
+
+export async function checkDisplayNameAvailabilityCloud(
+  sb: SupabaseClient,
+  rawName: string,
+): Promise<CheckDisplayNameAvailabilityResult> {
+  const name = sanitizeDisplayNameInput(rawName)
+  const formatErr = validateDisplayNameFormat(name)
+  if (formatErr) {
+    return { available: false, error: 'invalid_format', message: formatErr }
+  }
+  if (containsBannedWord(name)) {
+    return {
+      available: false,
+      error: 'banned',
+      message: MODERATION_REFUSED_MESSAGE_FR,
+    }
+  }
+
+  const { data, error } = await sb.rpc('check_display_name_available', { p_new_name: name })
+
+  if (error) {
+    const missingRpc =
+      error.code === 'PGRST202' ||
+      /check_display_name_available|could not find the function/i.test(error.message ?? '')
+    if (missingRpc) {
+      console.warn('[Talk Foot] check_display_name_available absent — vérification ignorée')
+      return { available: true, displayName: name }
+    }
+    console.warn('[Talk Foot] check_display_name_available:', error.message)
+    return {
+      available: false,
+      error: 'unavailable',
+      message: 'Impossible de vérifier ce pseudo pour le moment. Réessaie dans un instant.',
+    }
+  }
+
+  if (!data || typeof data !== 'object') {
+    return {
+      available: false,
+      error: 'unavailable',
+      message: 'Réponse serveur invalide.',
+    }
+  }
+
+  const row = data as Record<string, unknown>
+
+  if (row.available === true) {
+    return {
+      available: true,
+      displayName: String(row.display_name ?? name),
+    }
+  }
+
+  const err = String(row.error ?? 'unavailable')
+
+  if (err === 'taken') {
+    return {
+      available: false,
+      error: 'taken',
+      message: 'Ce pseudo est déjà pris. Choisis-en un autre.',
+      suggestions: suggestAlternateDisplayNames(name),
+    }
+  }
+
+  if (err === 'invalid_length') {
+    return {
+      available: false,
+      error: 'invalid_length',
+      message: 'Le pseudo doit contenir entre 2 et 24 caractères.',
+    }
+  }
+
+  if (err === 'banned') {
+    return {
+      available: false,
+      error: 'banned',
+      message: MODERATION_REFUSED_MESSAGE_FR,
+    }
+  }
+
+  return {
+    available: false,
+    error: 'unavailable',
+    message: 'Impossible de vérifier ce pseudo.',
+  }
+}
 
 export async function fetchDisplayNameStatus(
   sb: SupabaseClient,

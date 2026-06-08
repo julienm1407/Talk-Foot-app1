@@ -55,12 +55,14 @@ export function canJoinGroup(
 export function joinGroupLimitMessage(
   tier: SubscriptionTierId,
   limit: number,
+  currentCount?: number,
 ): string {
   const planName = getSubscriptionPlan(tier).name
+  const count = currentCount ?? limit
   if (tier === 'freemium') {
-    return `Tu es dans ${limit} tribunes au maximum avec ${planName} (celles que tu crées comptent dans ce total). Passe à Ultra pour en rejoindre davantage.`
+    return `Tu utilises ${count}/${limit} tribunes avec ${planName} (celles que tu crées comptent). Libère une place ou passe à Ultra.`
   }
-  return `Vous avez atteint la limite de tribunes (${limit} max avec ${planName}).`
+  return `Vous avez atteint la limite de tribunes (${count}/${limit} avec ${planName}).`
 }
 
 /** Message affiché quand l’utilisateur tente de créer une tribune au-delà du plafond de sa formule. */

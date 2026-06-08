@@ -40,6 +40,8 @@ type CloudUserStateValue = {
   completeOauthProfile: (displayName: string, aboutLine?: string) => Promise<void>
   /** Force l’écriture cloud immédiate (ex. achat boutique). */
   flushAppSave: () => Promise<{ ok: boolean; error?: string }>
+  /** Annule une sauvegarde différée en attente (évite d’écraser un RPC serveur). */
+  cancelScheduledSave: () => void
 }
 
 const CloudUserStateContext = createContext<CloudUserStateValue | undefined>(undefined)
@@ -111,13 +113,20 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
     }
   }, [user?.id])
 
+  const cancelScheduledSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
+  }, [])
+
   const scheduleSave = useCallback(() => {
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    cancelScheduledSave()
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null
       void flushSave()
     }, SAVE_DEBOUNCE_MS)
-  }, [flushSave])
+  }, [flushSave, cancelScheduledSave])
 
   useEffect(() => {
     return () => {
@@ -143,7 +152,7 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         return
       }
       setLoadError(null)
-      const displayName = user.email?.split('@')[0] ?? 'Supporter'
+      const displayName = user.displayName?.trim() || user.email?.split('@')[0] || 'Supporter'
 
       const applySnapshot = (appState: unknown, onboardingComplete: boolean, oauthCompleted: boolean) => {
         if (!hasLocalEditsRef.current) {
@@ -339,8 +348,19 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       setOnboardingComplete,
       completeOauthProfile,
       flushAppSave: flushSave,
+      cancelScheduledSave,
     }),
-    [ready, app, oauthNeedsProfile, patchApp, patchFanPreferences, setOnboardingComplete, completeOauthProfile, flushSave],
+    [
+      ready,
+      app,
+      oauthNeedsProfile,
+      patchApp,
+      patchFanPreferences,
+      setOnboardingComplete,
+      completeOauthProfile,
+      flushSave,
+      cancelScheduledSave,
+    ],
   )
 
   if (!user?.id) {

@@ -15,7 +15,7 @@ type Props = {
  */
 export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
   const { appearance } = useAppearance()
-  const { claimDailyTokenBonus, dailyBonus } = useWallet()
+  const { wallet, claimDailyTokenBonus, dailyBonus } = useWallet()
   const [dailyClaimHint, setDailyClaimHint] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
   const L = appearance === 'light'
@@ -53,11 +53,14 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
           <div className="min-w-0 flex-1">
             <p className={cn('font-black text-tf-app-fg', prominent ? 'text-sm' : 'text-[10px]')}>
               +{dailyBonus.amount} jetons
-              <span className={cn('font-bold', hubSecondary)}> · disponible à 10h</span>
+              <span className={cn('font-bold', hubSecondary)}> · s&apos;ajoutent à ton solde</span>
+            </p>
+            <p className={cn('mt-0.5 font-semibold tabular-nums', prominent ? 'text-xs' : 'text-[9px]', hubSecondary)}>
+              Solde actuel : {wallet.tokens.toLocaleString('fr-FR')} jetons
             </p>
             {prominent && dailyBonus.canClaim ? (
               <p className={cn('mt-0.5 text-xs font-semibold', hubSecondary)}>
-                Tes jetons du jour t&apos;attendent — récupère-les maintenant.
+                Bonus du jour (10h) — cumulatif, ton solde ne repart pas à zéro.
               </p>
             ) : null}
           </div>

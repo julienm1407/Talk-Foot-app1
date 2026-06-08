@@ -1,7 +1,7 @@
 import type { UserProfile } from '../types/profile'
 import type { Wallet } from '../types/bet'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from './characterPresets'
-import { DEFAULT_WALLET } from '../utils/walletNormalize'
+import { DEFAULT_WALLET, normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import type { SubscriptionState } from '../types/subscription'
 import { DEFAULT_SUBSCRIPTION } from '../types/subscription'
@@ -48,7 +48,7 @@ export type UserAppStateV1 = {
   subscription?: SubscriptionState
   /** Portefeuille test admin initialisé une seule fois (évite de re-créditer après achat). */
   adminWalletBootstrapped?: boolean
-  /** Réalignement unique 100 jetons / 0 médailles (hors admins & bonus quotidien déjà pris). */
+  /** Migration portefeuille v2 marquée (sans réinitialiser les jetons accumulés). */
   walletStandardizedV2?: boolean
 }
 
@@ -85,10 +85,9 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
             }
           })()
         : base.profile,
-    wallet:
-      o.wallet !== null && typeof o.wallet === 'object' && !Array.isArray(o.wallet)
-        ? { ...base.wallet, ...(o.wallet as Wallet) }
-        : base.wallet,
+    wallet: normalizeWallet(
+      o.wallet !== null && typeof o.wallet === 'object' && !Array.isArray(o.wallet) ? o.wallet : base.wallet,
+    ),
     bets: Array.isArray(o.bets) ? (o.bets as UserAppStateV1['bets']) : base.bets,
     subscription: normalizeSubscription(o.subscription ?? DEFAULT_SUBSCRIPTION),
     adminWalletBootstrapped:

@@ -81,7 +81,7 @@ export function useSupporterGroups() {
   )
   const [supabaseActorId, setSupabaseActorId] = useState<string | null>(null)
   const cloudRefreshSeq = useRef(0)
-  const refreshCloudGroupsRef = useRef<() => Promise<void>>(async () => {})
+  const refreshCloudGroupsRef = useRef<() => Promise<string[]>>(async () => [])
   const refreshMemberCountsRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
   const refreshGroupPresenceRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
   const rawGroupIdsRef = useRef<string[]>([])
@@ -239,13 +239,13 @@ export function useSupporterGroups() {
     [userId],
   )
 
-  const refreshCloudGroups = useCallback(async () => {
-    if (!isSupabaseConfigured() || !userId) return
+  const refreshCloudGroups = useCallback(async (): Promise<string[]> => {
+    if (!isSupabaseConfigured() || !userId) return []
     const sb = getSupabaseBrowserClient()
-    if (!sb) return
+    if (!sb) return []
     const seq = ++cloudRefreshSeq.current
     const session = await ensureTalkFootSupabaseSession(sb)
-    if (!session || seq !== cloudRefreshSeq.current) return
+    if (!session || seq !== cloudRefreshSeq.current) return []
     await syncRealtimeAuth(sb)
     setSupabaseActorId(session.user.id)
 
@@ -258,7 +258,7 @@ export function useSupporterGroups() {
       sb.from('supporter_group_members').select('group_id').eq('user_id', session.user.id),
       fetchCloudSupporterGroups(sb, viewer),
     ])
-    if (seq !== cloudRefreshSeq.current) return
+    if (seq !== cloudRefreshSeq.current) return []
     setCloudGroups(cloud)
 
     const { data, error } = membersRes
@@ -268,7 +268,9 @@ export function useSupporterGroups() {
         .filter((id): id is string => typeof id === 'string' && id.length > 0)
       setJoinedGroupIds(cloudJoined)
       persistJoined(cloudJoined)
+      return cloudJoined
     }
+    return []
   }, [userId, persistJoined])
 
   useEffect(() => {
@@ -349,7 +351,7 @@ export function useSupporterGroups() {
         if (!gate.ok && gate.limit != null) {
           return {
             ok: false,
-            reason: joinGroupLimitMessage(tier, gate.limit),
+            reason: joinGroupLimitMessage(tier, gate.limit, joinedGroupIds.length),
             limitKind: 'join',
           }
         }
@@ -360,9 +362,14 @@ export function useSupporterGroups() {
         const cloudRes = await upsertCloudGroupMembership(sb, id)
         if (!cloudRes.ok) {
           if (cloudRes.code === 'subscription_join_limit') {
+            const synced = await refreshCloudGroups()
             return {
               ok: false,
-              reason: joinGroupLimitMessage(tier, plan.limits.maxGroupsJoined ?? 5),
+              reason: joinGroupLimitMessage(
+                tier,
+                plan.limits.maxGroupsJoined ?? 5,
+                synced.length || joinedGroupIds.length,
+              ),
               limitKind: 'join',
             }
           }
@@ -393,6 +400,7 @@ export function useSupporterGroups() {
       joinedGroupIds,
       tier,
       plan.limits.maxGroupsJoined,
+      refreshCloudGroups,
     ],
   )
 
@@ -451,7 +459,7 @@ export function useSupporterGroups() {
       if (!totalGate.ok && totalGate.limit != null) {
         return {
           ok: false,
-          reason: joinGroupLimitMessage(tier, totalGate.limit),
+          reason: joinGroupLimitMessage(tier, totalGate.limit, joinedGroupIds.length),
           limitKind: 'join',
         }
       }
@@ -641,6 +649,22 @@ export function useSupporterGroups() {
     return ids.size
   }, [custom, cloudGroups])
 
+  const knownGroupIds = useMemo(() => new Set(groups.map((g) => g.id)), [groups])
+
+  const orphanJoinedGroupIds = useMemo(
+    () => joinedGroupIds.filter((id) => !knownGroupIds.has(id)),
+    [joinedGroupIds, knownGroupIds],
+  )
+
+  const myJoinedGroups = useMemo(() => {
+    const out: SupporterGroup[] = []
+    for (const id of joinedGroupIds) {
+      const g = groups.find((group) => group.id === id)
+      if (g) out.push(g)
+    }
+    return out
+  }, [joinedGroupIds, groups])
+
   return {
     groups,
     subscriptionTier: tier,
@@ -650,6 +674,8 @@ export function useSupporterGroups() {
       joined: joinedGroupIds.length,
       maxJoined: plan.limits.maxGroupsJoined,
     },
+    myJoinedGroups,
+    orphanJoinedGroupIds,
     createGroup,
     updateGroup,
     deleteGroup,
