@@ -129,6 +129,6 @@ create trigger talkfoot_group_create_limit
 comment on function public.talkfoot_effective_tier_for_user is
   'Formule effective depuis profiles.app_state.subscription (expiration activeUntil).';
 comment on function public.talkfoot_enforce_group_join_limit is
-  'Supporter: 5 groupes rejoints max. Ultra/Ambassadeur: illimité.';
+  'Supporter: 5 tribunes max au total (créées + rejointes). Ultra/Ambassadeur: illimité.';
 comment on function public.talkfoot_enforce_group_create_limit is
   'Supporter: 2 créés max. Ultra: 10. Ambassadeur: illimité.';

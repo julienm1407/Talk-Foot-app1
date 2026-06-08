@@ -107,8 +107,8 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
       handRaiseOnLive: true,
     },
     features: [
-      { id: 'groups-create', label: 'Crée jusqu’à 2 groupes', included: true },
-      { id: 'groups-join', label: 'Rejoins jusqu’à 5 groupes', included: true },
+      { id: 'groups-create', label: 'Crée jusqu’à 2 tribunes', included: true },
+      { id: 'groups-join', label: '5 tribunes max au total (créées incluses)', included: true },
       { id: 'avatar-base', label: 'Personnalisation de base de ton avatar', included: true },
       { id: 'tokens-live', label: '40 jetons / heure pendant les matchs', included: true },
       { id: 'chat-day', label: '100 messages par jour', included: true },

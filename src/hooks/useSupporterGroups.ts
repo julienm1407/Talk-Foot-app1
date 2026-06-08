@@ -447,6 +447,14 @@ export function useSupporterGroups() {
           limitKind: 'create',
         }
       }
+      const totalGate = canJoinGroup(tier, joinedGroupIds.length)
+      if (!totalGate.ok && totalGate.limit != null) {
+        return {
+          ok: false,
+          reason: joinGroupLimitMessage(tier, totalGate.limit),
+          limitKind: 'join',
+        }
+      }
       const id = `g-me-${Date.now()}-${Math.random().toString(16).slice(2)}`
       const hashtags =
         g.hashtags?.length ? normalizeHashtagList(g.hashtags) : undefined
@@ -519,7 +527,7 @@ export function useSupporterGroups() {
       }
       return { ok: true, group: next }
     },
-    [userId, persistCustom, persistJoined, refreshCloudGroups, custom, cloudGroups, tier],
+    [userId, persistCustom, persistJoined, refreshCloudGroups, custom, cloudGroups, tier, joinedGroupIds],
   )
 
   const byId = useCallback(

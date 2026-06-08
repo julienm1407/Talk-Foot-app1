@@ -27,7 +27,10 @@ function copyForKind(
   if (kind === 'join') {
     return {
       title: 'Limite atteinte',
-      body: 'Vous ne pouvez pas rejoindre plus de groupes. Vous avez atteint la limite de votre abonnement.',
+      body:
+        tier === 'freemium'
+          ? 'Tu es dans 5 tribunes au maximum avec la formule Supporter (celles que tu crées comptent dans ce total). Passe à Ultra pour en rejoindre davantage.'
+          : 'Vous ne pouvez pas rejoindre plus de groupes. Vous avez atteint la limite de votre abonnement.',
     }
   }
   if (kind === 'create') {

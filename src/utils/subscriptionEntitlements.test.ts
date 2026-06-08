@@ -29,13 +29,14 @@ describe('subscriptionEntitlements', () => {
     expect(canCreateGroup('freemium', 1).ok).toBe(true)
   })
 
-  it('canJoinGroup freemium max 5', () => {
+  it('canJoinGroup freemium max 5 tribunes au total', () => {
     expect(canJoinGroup('freemium', 5).ok).toBe(false)
+    expect(canJoinGroup('freemium', 4).ok).toBe(true)
     expect(canJoinGroup('supporter_plus', 99).ok).toBe(true)
   })
 
   it('messages de limite tribunes freemium', () => {
-    expect(joinGroupLimitMessage('freemium', 5)).toContain('tribunes à rejoindre')
+    expect(joinGroupLimitMessage('freemium', 5)).toContain('5 tribunes au maximum')
     expect(createGroupLimitMessage('freemium', 2)).toContain('tribunes créées')
   })
 

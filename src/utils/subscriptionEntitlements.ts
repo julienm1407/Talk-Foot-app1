@@ -51,13 +51,16 @@ export function canJoinGroup(
   return { ok: joinedCount < limit, limit }
 }
 
-/** Message affiché quand l’utilisateur tente de rejoindre une tribune au-delà du plafond de sa formule. */
+/** Message quand le plafond de tribunes (total adhésions) est atteint. */
 export function joinGroupLimitMessage(
   tier: SubscriptionTierId,
   limit: number,
 ): string {
   const planName = getSubscriptionPlan(tier).name
-  return `Vous avez atteint la limite de tribunes à rejoindre (${limit} max avec ${planName}).`
+  if (tier === 'freemium') {
+    return `Tu es dans ${limit} tribunes au maximum avec ${planName} (celles que tu crées comptent dans ce total). Passe à Ultra pour en rejoindre davantage.`
+  }
+  return `Vous avez atteint la limite de tribunes (${limit} max avec ${planName}).`
 }
 
 /** Message affiché quand l’utilisateur tente de créer une tribune au-delà du plafond de sa formule. */
