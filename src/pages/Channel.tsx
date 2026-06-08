@@ -34,6 +34,7 @@ import {
 import { ChatPeerMenuHost } from '../components/chat/ChatPeerMenuHost'
 import { useChatPeerMenu } from '../hooks/useChatPeerMenu'
 import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatars'
+import { useProfile } from '../hooks/useProfile'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -431,6 +432,14 @@ export function ChannelPage() {
   const chatActorId = useTalkFootChatActorId()
   const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
   const selfUserId = selfChatUserId
+  const { profile: selfProfile } = useProfile()
+  const selfAvatarKeys = useMemo(() => {
+    const keys = new Set<string>(['me'])
+    if (authUser?.id) keys.add(authUser.id)
+    if (chatActorId) keys.add(chatActorId)
+    if (selfChatUserId) keys.add(selfChatUserId)
+    return [...keys]
+  }, [authUser?.id, chatActorId, selfChatUserId])
   const dm = useDirectMessagesOptional()
   const chatPeerMenu = useChatPeerMenu()
   const chatSocialEnabled = isSupabaseConfigured() && Boolean(dm)
@@ -710,21 +719,83 @@ export function ChannelPage() {
   const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
+    {
+      selfModularAvatar: selfProfile.modularAvatar,
+      selfUserKeys: selfAvatarKeys,
+    },
   )
   const chatUsersById = useMemo(() => {
     const map: Record<string, User> = {}
     for (const m of chatMessages) {
-      const modularAvatar = modularByAuthor[m.userId]
+      if (map[m.userId]) continue
       map[m.userId] = {
         id: m.userId,
-        username: resolveChatDisplayLabel(m.username, cloudAuthorNames[m.userId]),
+        username: m.username,
         avatarSeed: m.avatarSeed,
         accent: m.avatarAccent ?? 'violet',
-        ...(modularAvatar ? { modularAvatar } : {}),
+      }
+    }
+    if (authUser) {
+      const seed =
+        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      const meEntry: User = {
+        id: authUser.id,
+        username: authUser.displayName,
+        avatarSeed: seed,
+        accent: 'emerald',
+        modularAvatar: selfProfile.modularAvatar,
+      }
+      map[authUser.id] = {
+        ...map[authUser.id],
+        ...meEntry,
+        username: resolveChatDisplayLabel(map[authUser.id]?.username, meEntry.username),
+      }
+      if (chatActorId && chatActorId !== authUser.id) {
+        map[chatActorId] = {
+          ...map[chatActorId],
+          ...meEntry,
+          id: chatActorId,
+          username: resolveChatDisplayLabel(map[chatActorId]?.username, meEntry.username),
+        }
+      }
+      map.me = {
+        ...map.me,
+        ...meEntry,
+        id: 'me',
+        username: resolveChatDisplayLabel(map.me?.username, meEntry.username),
+      }
+    }
+    for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
+      const label = resolveChatDisplayLabel(map[id]?.username, cloudAuthorNames[id])
+      if (map[id]) {
+        map[id] = { ...map[id], username: label, modularAvatar }
+      } else {
+        map[id] = {
+          id,
+          username: label || id.replace(/-/g, '').slice(0, 12),
+          avatarSeed: id.replace(/-/g, '').slice(0, 12),
+          accent: 'violet',
+          modularAvatar,
+        }
+      }
+    }
+    for (const id of chatAuthorIds) {
+      if (!map[id] || !cloudAuthorNames[id]) continue
+      map[id] = {
+        ...map[id],
+        username: resolveChatDisplayLabel(map[id].username, cloudAuthorNames[id]),
       }
     }
     return map
-  }, [chatMessages, modularByAuthor, cloudAuthorNames])
+  }, [
+    chatMessages,
+    chatAuthorIds,
+    modularByAuthor,
+    cloudAuthorNames,
+    authUser,
+    chatActorId,
+    selfProfile.modularAvatar,
+  ])
   const { publishReaction } = useLiveMatchReactionsSync({
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),

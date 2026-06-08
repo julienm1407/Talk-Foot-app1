@@ -165,6 +165,7 @@ export function LiveCommentator({
     <ProfileCharacterThumb
       profile={profile}
       size="sm"
+      imagePriority
       {...MODULAR_PP_NAV_FRAMING}
       className={cn(
         'rounded-2xl border-0 p-0',

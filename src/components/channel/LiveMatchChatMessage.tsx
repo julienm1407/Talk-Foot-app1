@@ -78,7 +78,6 @@ export function LiveMatchChatMessage({
       )}
     >
       <ChatCharacterThumb
-        size="compact"
         to={peer.profileTo}
         onPeerMenu={peer.peerSocial ? onOpenPeerMenu : undefined}
         user={chatUser}
