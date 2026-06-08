@@ -128,7 +128,7 @@ export function createDefaultAvatarData(assetMap: AvatarAssetMap = avatarAssetMa
     body: firstAssetId(assetMap, 'body'),
     hair: firstAssetId(assetMap, 'hair'),
     eyes: firstAssetId(assetMap, 'eyes'),
-    eyebrows: firstAssetId(assetMap, 'eyebrows'),
+    eyebrows: null,
     nose: firstAssetId(assetMap, 'nose'),
     mouth: firstAssetId(assetMap, 'mouth'),
     beard: firstAssetId(assetMap, 'beard'),

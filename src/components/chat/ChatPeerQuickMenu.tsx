@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
 import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
@@ -72,21 +73,34 @@ export function ChatPeerQuickMenu({
       : 'border-tf-dark/10 bg-tf-grey-pastel/25 text-tf-app-fg hover:bg-tf-grey-pastel/45',
   )
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[210] flex items-end justify-center bg-black/45 p-4 sm:items-center"
+      className={cn(
+        'pointer-events-auto fixed inset-0 z-[220] grid w-full touch-manipulation place-items-end sm:place-items-center',
+        'h-[100dvh] max-h-[100dvh]',
+        'p-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+      )}
+      data-tf-modal="true"
       role="dialog"
       aria-modal="true"
       aria-label={`Actions pour ${peer.username}`}
-      onClick={onClose}
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-label="Fermer"
+      />
       <div
-        className={cn('w-full max-w-sm overflow-hidden rounded-2xl', shell)}
+        className={cn(
+          'relative z-10 flex w-full max-w-[min(100%,24rem)] max-h-[min(calc(100dvh-1.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),28rem)] flex-col overflow-hidden rounded-2xl',
+          shell,
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         <div
           className={cn(
-            'border-b px-4 py-3',
+            'shrink-0 border-b px-4 py-3',
             dark ? 'border-[color:var(--tf-c30-border)]' : 'border-tf-dark/10',
           )}
         >
@@ -94,48 +108,51 @@ export function ChatPeerQuickMenu({
           <p className={cn('mt-0.5 text-xs font-semibold', muted)}>Message privé ou demande d’ami</p>
         </div>
 
-        <div className="flex flex-col gap-2 p-4">
-          <button type="button" className={btn} onClick={openPrivateChat}>
-            Message privé
-          </button>
-
-          {incoming ? (
-            <button type="button" className={btn} disabled={busy} onClick={() => void onAcceptFriend()}>
-              Accepter la demande d’ami
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4">
+          <div className="flex flex-col gap-2">
+            <button type="button" className={btn} onClick={openPrivateChat}>
+              Message privé
             </button>
-          ) : isFriend ? (
-            <p className={cn('px-1 text-xs font-semibold', muted)}>Déjà dans tes amis.</p>
-          ) : outgoing ? (
-            <p className={cn('px-1 text-xs font-semibold', muted)}>Demande d’ami en attente.</p>
-          ) : (
-            <button type="button" className={btn} disabled={busy} onClick={() => void onAddFriend()}>
-              Demander en ami
-            </button>
-          )}
 
-          <Link
-            to={`/user/${peer.id}`}
-            className={cn(btn, 'inline-block text-center no-underline')}
-            onClick={onClose}
-          >
-            Voir le profil
-          </Link>
-
-          {hint ? <p className={cn('text-xs font-semibold', muted)}>{hint}</p> : null}
-
-          <button
-            type="button"
-            onClick={onClose}
-            className={cn(
-              'mt-1 w-full rounded-xl py-2.5 text-xs font-black',
-              TF_FOCUS_VISIBLE,
-              dark ? 'text-sky-200 hover:text-tf-app-fg' : 'text-sky-700 hover:text-sky-800',
+            {incoming ? (
+              <button type="button" className={btn} disabled={busy} onClick={() => void onAcceptFriend()}>
+                Accepter la demande d’ami
+              </button>
+            ) : isFriend ? (
+              <p className={cn('px-1 text-xs font-semibold', muted)}>Déjà dans tes amis.</p>
+            ) : outgoing ? (
+              <p className={cn('px-1 text-xs font-semibold', muted)}>Demande d’ami en attente.</p>
+            ) : (
+              <button type="button" className={btn} disabled={busy} onClick={() => void onAddFriend()}>
+                Demander en ami
+              </button>
             )}
-          >
-            Fermer
-          </button>
+
+            <Link
+              to={`/user/${peer.id}`}
+              className={cn(btn, 'inline-block text-center no-underline')}
+              onClick={onClose}
+            >
+              Voir le profil
+            </Link>
+
+            {hint ? <p className={cn('text-xs font-semibold', muted)}>{hint}</p> : null}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn(
+                'mt-1 w-full rounded-xl py-2.5 text-xs font-black',
+                TF_FOCUS_VISIBLE,
+                dark ? 'text-sky-200 hover:text-tf-app-fg' : 'text-sky-700 hover:text-sky-800',
+              )}
+            >
+              Fermer
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

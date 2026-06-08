@@ -81,7 +81,6 @@ function resolveSelectedAssets(avatar: AvatarData) {
     body: findAssetById(avatarAssetMap, 'body', avatar.body),
     hair: findAssetById(avatarAssetMap, 'hair', avatar.hair),
     eyes: findAssetById(avatarAssetMap, 'eyes', avatar.eyes),
-    eyebrows: findAssetById(avatarAssetMap, 'eyebrows', avatar.eyebrows),
     nose: findAssetById(avatarAssetMap, 'nose', avatar.nose),
     mouth: findAssetById(avatarAssetMap, 'mouth', avatar.mouth),
     beard: findAssetById(avatarAssetMap, 'beard', avatar.beard),
@@ -247,7 +246,6 @@ export function ModularAvatarCanvas({
         <LayerImage src={shoesLayerSrc} alt="" filter={filterFor('shoes')} {...imgProps} />
       ) : null}
       {selectedAssets.eyes?.src ? <LayerImage src={selectedAssets.eyes.src} alt="" {...imgProps} /> : null}
-      {selectedAssets.eyebrows?.src ? <LayerImage src={selectedAssets.eyebrows.src} alt="" {...imgProps} /> : null}
       {selectedAssets.nose?.src ? <LayerImage src={selectedAssets.nose.src} alt="" {...imgProps} /> : null}
       {selectedAssets.mouth?.src ? <LayerImage src={selectedAssets.mouth.src} alt="" {...imgProps} /> : null}
       {selectedAssets.beard?.src ? (

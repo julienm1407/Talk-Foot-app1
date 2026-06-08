@@ -32,7 +32,6 @@ const SLOT_ORDER: AvatarSlotKey[] = [
   'body',
   'hair',
   'eyes',
-  'eyebrows',
   'nose',
   'mouth',
   'beard',
@@ -390,7 +389,15 @@ export function AvatarModularStudio() {
       goToBoutiqueForCategory(cat)
       return
     }
-    patchModular((prev) => ({ ...prev, data: { ...prev.data, [slot]: value } }))
+    patchModular((prev) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        [slot]: value,
+        // Les packs yeux incluent déjà les sourcils — pas de calque séparé.
+        ...(slot === 'eyes' ? { eyebrows: null } : {}),
+      },
+    }))
   }
 
   useEffect(() => {
@@ -492,7 +499,7 @@ export function AvatarModularStudio() {
         body: pick('body'),
         hair: pick('hair'),
         eyes: pick('eyes'),
-        eyebrows: pick('eyebrows'),
+        eyebrows: null,
         nose: pick('nose'),
         mouth: pick('mouth'),
         beard: pick('beard'),
