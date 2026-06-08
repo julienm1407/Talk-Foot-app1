@@ -70,8 +70,13 @@ export async function checkDisplayNameAvailabilityCloud(
       error.code === 'PGRST202' ||
       /check_display_name_available|could not find the function/i.test(error.message ?? '')
     if (missingRpc) {
-      console.warn('[Talk Foot] check_display_name_available absent — vérification ignorée')
-      return { available: true, displayName: name }
+      console.warn('[Talk Foot] check_display_name_available absent — migration Supabase non appliquée')
+      return {
+        available: false,
+        error: 'unavailable',
+        message:
+          'Vérification du pseudo indisponible. Applique la migration Supabase check_display_name_available.',
+      }
     }
     console.warn('[Talk Foot] check_display_name_available:', error.message)
     return {

@@ -9,6 +9,8 @@ import { cn } from '../../utils/cn'
 import { LogoEncart } from '../../layout/LogoMark'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/bannedWords'
 import { validateDisplayNameFormat, sanitizeDisplayNameInput } from '../../utils/displayNameRules'
+import { getSupabaseBrowserClient } from '../../lib/supabase/client'
+import { checkDisplayNameAvailabilityCloud } from '../../lib/supabase/displayName'
 
 /**
  * Première connexion Google / Apple (Supabase) : pseudo + ligne perso avant le reste de l’app.
@@ -50,8 +52,18 @@ export function OAuthProfileSetupModal() {
       setError(MODERATION_REFUSED_MESSAGE_FR)
       return
     }
+    const sb = getSupabaseBrowserClient()
+    if (sb) {
+      const availability = await checkDisplayNameAvailabilityCloud(sb, name)
+      if (!availability.available) {
+        setError(availability.message)
+        setSuggestions(availability.error === 'taken' ? (availability.suggestions ?? []) : [])
+        return
+      }
+    }
     setBusy(true)
     setError(null)
+    setSuggestions([])
     try {
       await cloud.completeOauthProfile(name, aboutLine)
       queueMicrotask(() => {

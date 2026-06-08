@@ -20,7 +20,7 @@ import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
-import { changeDisplayNameCloud } from '../lib/supabase/displayName'
+import { changeDisplayNameCloud, checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import {
   ensureTalkfootProfile,
   fetchTalkfootProfileSnapshot,
@@ -299,6 +299,14 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
       const about = aboutLine?.trim().slice(0, 160) ?? ''
       if (containsBannedWord(name) || (about && containsBannedWord(about))) {
         throw new Error(MODERATION_REFUSED_MESSAGE_FR)
+      }
+      const availability = await checkDisplayNameAvailabilityCloud(sb, name)
+      if (!availability.available) {
+        const hint =
+          availability.error === 'taken' && availability.suggestions?.length
+            ? ` Suggestions : ${availability.suggestions.join(', ')}`
+            : ''
+        throw new Error(`${availability.message}${hint}`)
       }
       const claimed = await changeDisplayNameCloud(sb, user.id, name)
       if (!claimed.ok) {
