@@ -112,8 +112,15 @@ function Card({
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  const appearance = useAppearanceOptional()
+  const light = appearance?.appearance === 'light'
   return (
-    <h3 className="inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide text-sky-100">
+    <h3
+      className={cn(
+        'inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide',
+        light ? 'text-[#023458]' : 'text-sky-100',
+      )}
+    >
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#32d4ff] shadow-[0_0_8px_rgba(50,212,255,0.45)]" />
       {children}
     </h3>
@@ -364,6 +371,12 @@ export function ChannelPage() {
           : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-100',
     )
   const chSheetTitle = L ? 'text-[#023458]' : 'text-sky-100'
+  const chSideInset =
+    'rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] text-center text-xs font-semibold leading-snug text-sky-100'
+  const chSideSelect =
+    'tf-live-control w-full rounded-lg border border-[#4a7faa]/60 bg-[#0c2d4a] px-2.5 py-2 text-xs font-semibold text-white outline-none focus:border-cyan-300/60'
+  const chSideActionBtn =
+    'tf-live-control mt-2 w-full rounded-lg border border-[#4a7faa]/55 bg-[#1a3d5c] px-2.5 py-2 text-xs font-bold text-sky-100 transition hover:bg-[#234d6d] disabled:cursor-not-allowed disabled:border-[#3a5a78]/50 disabled:bg-[#0a1f35] disabled:text-sky-200/80'
   const chSheetBackdrop = L ? 'bg-slate-900/30 backdrop-blur-[2px]' : 'bg-slate-900/60 backdrop-blur-[2px]'
   const chSheetPanel = L ? 'border-slate-200 bg-white' : 'border-[#3a6690] bg-[#0b2440]'
   const chSheetGhostBtn = L
@@ -1528,6 +1541,7 @@ export function ChannelPage() {
       ref={pageScrollRef}
       className={cn(
         'tf-channel-live relative flex min-h-0 w-full flex-1 flex-col bg-[#03172a]',
+        L && 'tf-channel-live-light',
         isUpcoming
           ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-3'
           : 'max-md:overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
@@ -1851,14 +1865,14 @@ export function ChannelPage() {
                 </div>
               </Card>
 
-              <Card className="tf-card-community shrink-0 !p-2.5 border border-[#5f4be2]/45 bg-[#14253c]">
+              <Card className="tf-card-community shrink-0 !p-2.5">
                 <SectionTitle>En direct · Matchs</SectionTitle>
                 {liveMatches.length > 0 ? (
                   <div className="mt-2">
                     <select
                       value={selectedLiveMatchId}
                       onChange={(e) => setSelectedLiveMatchId(e.target.value)}
-                      className="w-full rounded-lg border border-[#4a7faa]/60 bg-[#0c2d4a] px-2.5 py-2 text-xs font-semibold text-white outline-none focus:border-cyan-300/60"
+                      className={chSideSelect}
                     >
                       {liveMatches.map((m) => (
                         <option key={m.id} value={m.id}>
@@ -1877,7 +1891,7 @@ export function ChannelPage() {
                       awayScore={selectedLiveMatch.score?.away ?? 0}
                     />
                   ) : (
-                    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-2.5 py-2.5 text-center text-xs font-semibold leading-snug text-sky-100">
+                    <div className={cn(chSideInset, 'px-2.5 py-2.5')}>
                       Aucun autre match en direct
                     </div>
                   )}
@@ -1888,7 +1902,7 @@ export function ChannelPage() {
                     if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
                   }}
                   disabled={!selectedLiveMatch}
-                  className="mt-2 w-full rounded-lg border border-[#4a7faa]/55 bg-[#1a3d5c] px-2.5 py-2 text-xs font-bold text-sky-100 transition hover:bg-[#234d6d] disabled:cursor-not-allowed disabled:border-[#3a5a78]/50 disabled:bg-[#0a1f35] disabled:text-sky-200/45"
+                  className={chSideActionBtn}
                 >
                   Rejoindre le live
                 </button>
@@ -1963,14 +1977,14 @@ export function ChannelPage() {
                 </div>
               </Card>
 
-              <Card className="tf-card-community !p-3.5 border border-[#5f4be2]/45 bg-[#14253c]">
+              <Card className="tf-card-community shrink-0 !p-3.5">
                 <SectionTitle>En direct · Matchs</SectionTitle>
                 {liveMatches.length > 1 ? (
                   <div className="mt-2.5">
                     <select
                       value={selectedLiveMatchId}
                       onChange={(e) => setSelectedLiveMatchId(e.target.value)}
-                      className="w-full rounded-lg border border-[#4a7faa]/60 bg-[#0c2d4a] px-2.5 py-2 text-xs font-semibold text-white outline-none focus:border-cyan-300/60"
+                      className={chSideSelect}
                     >
                       {liveMatches.map((m) => (
                         <option key={m.id} value={m.id}>
@@ -1989,7 +2003,7 @@ export function ChannelPage() {
                       awayScore={selectedLiveMatch.score?.away ?? 0}
                     />
                   ) : (
-                    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-3 text-center text-xs font-semibold leading-snug text-sky-100">
+                    <div className={cn(chSideInset, 'px-3 py-3')}>
                       Aucun autre match en direct
                     </div>
                   )}
@@ -2000,7 +2014,7 @@ export function ChannelPage() {
                     if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
                   }}
                   disabled={!selectedLiveMatch}
-                  className="mt-2 w-full rounded-lg border border-[#4a7faa]/55 bg-[#1a3d5c] px-3 py-2 text-xs font-bold text-sky-100 transition hover:bg-[#234d6d] disabled:cursor-not-allowed disabled:border-[#3a5a78]/50 disabled:bg-[#0a1f35] disabled:text-sky-200/45"
+                  className={cn(chSideActionBtn, 'px-3')}
                 >
                   Rejoindre le live
                 </button>

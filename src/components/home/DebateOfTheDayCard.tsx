@@ -30,7 +30,7 @@ export function DebateOfTheDayCard({
       <Card className={cn('border-dashed px-4 py-8 text-center', className)} elevation="soft">
         <p className="text-sm font-black text-tf-dark">Pas de débat du jour</p>
         <p className="mt-2 text-xs font-semibold text-tf-grey">
-          Dès qu’un débat est publié dans un groupe, le plus haut du classement s’affiche ici.
+          Dès qu’un débat est publié, il peut être mis en avant ici — la sélection change chaque jour.
         </p>
         <Link
           to="/debates"

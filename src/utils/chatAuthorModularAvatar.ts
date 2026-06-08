@@ -5,6 +5,7 @@ import {
   type ModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
 import type { TalkfootProfileSnapshot } from '../lib/supabase/profileAppState'
+import { sanitizeModularGarmentAccess } from './modularGarmentAccess'
 
 export function modularAvatarFromSnapshot(
   snapshot: TalkfootProfileSnapshot | null,
@@ -13,7 +14,10 @@ export function modularAvatarFromSnapshot(
   const merged = mergeUserAppState(snapshot.appState)
   const raw = merged.profile.modularAvatar
   if (!raw?.data) return undefined
-  return sanitizeModularAvatarState(resolveModularAvatarState(raw))
+  const ownedItemIds = Array.isArray(merged.profile.ownedItemIds) ? merged.profile.ownedItemIds : []
+  return sanitizeModularAvatarState(
+    sanitizeModularGarmentAccess(resolveModularAvatarState(raw), ownedItemIds),
+  )
 }
 
 /** Identifiants démo / bots : pas de lecture cloud pour la PP modulaire. */

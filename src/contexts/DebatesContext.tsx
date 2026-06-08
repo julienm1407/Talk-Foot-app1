@@ -14,6 +14,8 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { fetchDebatesWithStats } from '../lib/supabase/debates'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { findCustomDebateById, readCustomDebatesBucket } from '../utils/customGroupDebatesStorage'
+import { pickDailyDebateOfTheDay, pickDailyTrendingDebates } from '../utils/dailyDebateRotation'
+import { toParisDayKey } from '../utils/dailyTokenBonus'
 
 const TRENDING_TOP_N = 8
 const REFRESH_INTERVAL_MS = 45_000
@@ -50,23 +52,11 @@ function mergeCustomDebates(cloud: Debate[]): Debate[] {
   return applyDebateLeaderboardRanks(Array.from(byId.values()))
 }
 
-function pickDebateOfTheDay(ranked: Debate[]): Debate | null {
-  if (!ranked.length) return null
-  const featured = ranked.find((d) => d.featured)
-  if (featured) return featured
-  return ranked[0] ?? null
-}
-
-/** Suite du classement (sans le débat du jour) — tous les débats publiés comptent, sans minimum. */
-function pickTrending(ranked: Debate[], debateOfTheDay: Debate | null): Debate[] {
-  const pool = debateOfTheDay ? ranked.filter((d) => d.id !== debateOfTheDay.id) : ranked
-  return pool.slice(0, TRENDING_TOP_N)
-}
-
 export function DebatesProvider({ children }: { children: ReactNode }) {
   const [debates, setDebates] = useState<Debate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dayKey, setDayKey] = useState(() => toParisDayKey())
   const refreshInFlight = useRef(false)
 
   const refresh = useCallback(async () => {
@@ -116,10 +106,27 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
     }
   }, [refresh])
 
-  const debateOfTheDay = useMemo(() => pickDebateOfTheDay(debates), [debates])
+  /** Bascule à minuit (heure de Paris) pour renouveler débat du jour + top débats. */
+  useEffect(() => {
+    const syncDayKey = () => {
+      const next = toParisDayKey()
+      setDayKey((prev) => (prev === next ? prev : next))
+    }
+    const id = window.setInterval(syncDayKey, 60_000)
+    document.addEventListener('visibilitychange', syncDayKey)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', syncDayKey)
+    }
+  }, [])
+
+  const debateOfTheDay = useMemo(
+    () => pickDailyDebateOfTheDay(debates, dayKey),
+    [debates, dayKey],
+  )
   const trendingDebates = useMemo(
-    () => pickTrending(debates, debateOfTheDay),
-    [debates, debateOfTheDay],
+    () => pickDailyTrendingDebates(debates, debateOfTheDay, TRENDING_TOP_N, dayKey),
+    [debates, debateOfTheDay, dayKey],
   )
 
   const getDebateById = useCallback(

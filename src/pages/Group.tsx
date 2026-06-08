@@ -34,6 +34,7 @@ import type { Message, User } from '../types/chat'
 import { useSupporterGroupMessageLikesSync } from '../hooks/useSupporterGroupMessageLikesSync'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatars'
+import { useProfile } from '../hooks/useProfile'
 import { useCloudFriends } from '../hooks/useCloudFriends'
 import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
@@ -102,6 +103,14 @@ export function GroupPage() {
   const L = appearance === 'light'
   const chatActorId = useTalkFootChatActorId()
   const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
+  const { profile: selfProfile } = useProfile()
+  const selfAvatarKeys = useMemo(() => {
+    const keys = new Set<string>(['me'])
+    if (authUser?.id) keys.add(authUser.id)
+    if (chatActorId) keys.add(chatActorId)
+    if (selfChatUserId) keys.add(selfChatUserId)
+    return [...keys]
+  }, [authUser?.id, chatActorId, selfChatUserId])
   /** Compte connecté pour mémoriser les messages bot d’accueil (une fois par tribune). */
   const botSeedUserId = authUser?.id && !authUser.isAnonymous ? authUser.id : null
   const botSeedUserIdRef = useRef(botSeedUserId)
@@ -531,6 +540,10 @@ export function GroupPage() {
   const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
+    {
+      selfModularAvatar: selfProfile.modularAvatar,
+      selfUserKeys: selfAvatarKeys,
+    },
   )
   const cloudFriends = useCloudFriends()
 
@@ -562,6 +575,7 @@ export function GroupPage() {
         username: authUser.displayName,
         avatarSeed: seed,
         accent: 'emerald',
+        modularAvatar: selfProfile.modularAvatar,
         ...(meClub ? { fanClubId: meClub } : {}),
       }
       base[authUser.id] = meEntry
@@ -615,6 +629,7 @@ export function GroupPage() {
     cloudAuthorNames,
     cloudFriends.acceptedPeers,
     authorNameByUserId,
+    selfProfile.modularAvatar,
   ])
 
   const visibleMessages = useMemo(() => {

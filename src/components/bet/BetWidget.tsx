@@ -316,9 +316,9 @@ export function BetWidget({
     maxStake > 0 ? Math.round((Math.min(maxStake, Math.max(0, stake)) / maxStake) * 100) : 0
   const settled = useMemo(() => matchBets.filter((b) => b.status !== 'open'), [matchBets])
 
-  const resultBetForSide = useCallback(
+  const resultBetsForSide = useCallback(
     (side: BetSelection) =>
-      matchBets.find(
+      matchBets.filter(
         (b) =>
           b.market === 'result_1x2' &&
           b.selection === side &&
@@ -329,16 +329,15 @@ export function BetWidget({
 
   const pickTeamVisual = useCallback(
     (side: 'home' | 'away' | 'draw') => {
-      const bet = resultBetForSide(side)
-      if (!bet) {
-        return {
-          shell:
-            'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
-          odd: 'border-emerald-700/35 bg-emerald-600/12 text-emerald-950',
-          badge: null as string | null,
-        }
+      const bets = resultBetsForSide(side)
+      const defaultVisual = {
+        shell:
+          'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
+        odd: 'border-emerald-700/35 bg-emerald-600/12 text-emerald-950',
+        badge: null as string | null,
       }
-      if (bet.status === 'won') {
+      if (!bets.length) return defaultVisual
+      if (bets.some((b) => b.status === 'won')) {
         return {
           shell:
             'border-2 border-emerald-500/80 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-400/35',
@@ -346,7 +345,7 @@ export function BetWidget({
           badge: 'Gagné ✓',
         }
       }
-      if (bet.status === 'lost') {
+      if (bets.some((b) => b.status === 'lost')) {
         return {
           shell:
             'border-2 border-rose-500/80 bg-rose-100 text-rose-950 ring-2 ring-rose-400/35',
@@ -354,19 +353,14 @@ export function BetWidget({
           badge: 'Perdu',
         }
       }
-      return {
-        shell:
-          'border-2 border-amber-400/70 bg-amber-50 text-amber-950 hover:border-amber-500/80',
-        odd: 'border-amber-700/35 bg-amber-500/15 text-amber-950',
-        badge: 'En cours',
-      }
+      return defaultVisual
     },
-    [resultBetForSide],
+    [resultBetsForSide],
   )
 
-  const scorerBetForSelection = useCallback(
+  const scorerBetsForSelection = useCallback(
     (selection: BetSelection) =>
-      matchBets.find(
+      matchBets.filter(
         (b) =>
           b.market === 'anytime_scorer' &&
           b.selection === selection &&
@@ -377,16 +371,15 @@ export function BetWidget({
 
   const pickScorerVisual = useCallback(
     (selection: BetSelection) => {
-      const bet = scorerBetForSelection(selection)
-      if (!bet) {
-        return {
-          shell:
-            'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
-          badge: null as string | null,
-          odd: 'text-slate-500',
-        }
+      const bets = scorerBetsForSelection(selection)
+      const defaultVisual = {
+        shell:
+          'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
+        badge: null as string | null,
+        odd: 'text-slate-500',
       }
-      if (bet.status === 'won') {
+      if (!bets.length) return defaultVisual
+      if (bets.some((b) => b.status === 'won')) {
         return {
           shell:
             'border-2 border-emerald-500/80 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-400/35',
@@ -394,7 +387,7 @@ export function BetWidget({
           odd: 'text-emerald-800',
         }
       }
-      if (bet.status === 'lost') {
+      if (bets.some((b) => b.status === 'lost')) {
         return {
           shell:
             'border-2 border-rose-500/80 bg-rose-100 text-rose-950 ring-2 ring-rose-400/35',
@@ -402,14 +395,9 @@ export function BetWidget({
           odd: 'text-rose-800',
         }
       }
-      return {
-        shell:
-          'border-2 border-amber-400/70 bg-amber-50 text-amber-950 hover:border-amber-500/80',
-        badge: 'En cours',
-        odd: 'text-amber-800',
-      }
+      return defaultVisual
     },
-    [scorerBetForSelection],
+    [scorerBetsForSelection],
   )
 
   const openSheet = () => setSheetOpen(true)
@@ -543,7 +531,7 @@ export function BetWidget({
           compact ? 'mt-2.5' : 'mt-3',
         )}
       >
-        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+        <div className={cn('grid grid-cols-2', compact ? 'gap-1.5' : 'gap-2 sm:gap-2.5')}>
           {(['home', 'away'] as const).map((side) => {
             const visual = pickTeamVisual(side)
             const label = side === 'home' ? match.home.shortName : match.away.shortName
@@ -558,25 +546,38 @@ export function BetWidget({
                 title={`Pari 1N2 — ${label}`}
                 disabled={!x12Ready || !x12Displayed}
                 className={cn(
-                  'tf-bet-pick min-h-11 min-w-0 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm font-bold shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2',
+                  'tf-bet-pick min-w-0 overflow-hidden rounded-xl border-2 font-bold shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)]',
+                  compact
+                    ? 'flex min-h-0 flex-col items-stretch gap-0.5 px-1.5 py-1.5 text-[10px] leading-tight'
+                    : 'min-h-11 flex-col items-stretch gap-1 px-3 py-2 text-sm sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10',
                   visual.shell,
                   'disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
-                  compact ? 'sm:h-10' : 'sm:h-10',
                 )}
                 onClick={() => pickQuick(side)}
               >
-                <span className="tf-bet-pick-name min-w-0 overflow-hidden text-ellipsis font-extrabold">
+                <span
+                  className={cn(
+                    'tf-bet-pick-name min-w-0 truncate font-extrabold',
+                    compact ? 'text-[10px]' : 'overflow-hidden text-ellipsis',
+                  )}
+                >
                   {label}
                 </span>
-                <div className="flex shrink-0 items-center gap-1.5 self-end sm:self-auto">
+                <div
+                  className={cn(
+                    'flex min-w-0 items-center',
+                    compact ? 'w-full justify-end gap-1' : 'shrink-0 gap-1.5 self-end sm:self-auto',
+                  )}
+                >
                   {visual.badge ? (
-                    <span className="rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide">
+                    <span className="shrink-0 rounded-md px-1 py-0.5 text-[8px] font-black uppercase tracking-wide sm:text-[9px]">
                       {visual.badge}
                     </span>
                   ) : null}
                   <span
                     className={cn(
-                      'tf-bet-pick-odd rounded-lg border px-2 py-0.5 text-xs font-black tabular-nums',
+                      'tf-bet-pick-odd shrink-0 rounded-md border px-1.5 py-0.5 font-black tabular-nums',
+                      compact ? 'text-[10px]' : 'text-xs',
                       visual.odd,
                     )}
                   >
@@ -928,9 +929,9 @@ export function BetWidget({
                                 <div className="mt-2 grid grid-cols-2 gap-2">
                                   {side.picks.map((p) => {
                                     const visual = pickScorerVisual(p.id)
-                                    const bet = scorerBetForSelection(p.id)
+                                    const bets = scorerBetsForSelection(p.id)
                                     const scoredLive =
-                                      p.disabled && !bet && m.id === 'anytime_scorer'
+                                      p.disabled && !bets.length && m.id === 'anytime_scorer'
                                     return (
                                       <Button
                                         key={p.id}
@@ -939,7 +940,7 @@ export function BetWidget({
                                           'h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold',
                                           visual.shell,
                                         )}
-                                        disabled={!m.enabled || p.disabled || Boolean(bet)}
+                                        disabled={!m.enabled || p.disabled}
                                         onClick={() => {
                                           setPending({
                                             market: m.id,
@@ -962,11 +963,7 @@ export function BetWidget({
                                             </span>
                                           ) : null}
                                           <span className={cn('font-black tabular-nums', visual.odd)}>
-                                            {scoredLive
-                                              ? 'But ✓'
-                                              : bet
-                                                ? fmtOdds(p.odds)
-                                                : fmtOdds(p.odds)}
+                                            {scoredLive ? 'But ✓' : fmtOdds(p.odds)}
                                           </span>
                                         </div>
                                       </Button>
@@ -988,8 +985,8 @@ export function BetWidget({
                         {m.picks.map((p) => {
                           const isScorer = m.id === 'anytime_scorer'
                           const visual = isScorer ? pickScorerVisual(p.id) : null
-                          const bet = isScorer ? scorerBetForSelection(p.id) : null
-                          const scoredLive = isScorer && p.disabled && !bet
+                          const scorerBets = isScorer ? scorerBetsForSelection(p.id) : []
+                          const scoredLive = isScorer && p.disabled && scorerBets.length === 0
                           return (
                             <Button
                               key={p.id}
@@ -999,7 +996,7 @@ export function BetWidget({
                                 isScorer ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
                                 visual?.shell,
                               )}
-                              disabled={!m.enabled || p.disabled || Boolean(bet)}
+                              disabled={!m.enabled || p.disabled}
                               onClick={() => {
                                 setPending({
                                   market: m.id,

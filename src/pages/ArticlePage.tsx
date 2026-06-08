@@ -396,8 +396,8 @@ export function ArticlePage() {
             </button>
             <LogoEncartLink to={appHome} isLight={isLight} />
           </div>
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-            <ThemeAppearanceToggle variant="floating" className="shadow-sm" />
+          <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">
+            <ThemeAppearanceToggle variant="headerIcon" />
             <Link to={toLive} className="shrink-0">
               <span
                 className={cn(

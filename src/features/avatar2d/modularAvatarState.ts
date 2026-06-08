@@ -40,8 +40,24 @@ export function resolveModularAvatarState(
   stored: ModularAvatarState | undefined,
 ): ModularAvatarState {
   if (!stored?.data) return createDefaultModularAvatarState()
+  const defaults = createDefaultAvatarData()
+  const d = stored.data
   return {
-    data: stored.data,
+    data: {
+      skinTone: d.skinTone || defaults.skinTone,
+      body: d.body ?? defaults.body,
+      hair: d.hair ?? defaults.hair,
+      eyes: d.eyes ?? defaults.eyes,
+      eyebrows: d.eyebrows ?? defaults.eyebrows,
+      nose: d.nose ?? defaults.nose,
+      mouth: d.mouth ?? defaults.mouth,
+      beard: d.beard ?? defaults.beard,
+      jersey: d.jersey ?? defaults.jersey,
+      shorts: d.shorts ?? defaults.shorts,
+      socks: null,
+      shoes: d.shoes ?? defaults.shoes,
+      accessory: null,
+    },
     slotColors: { ...DEFAULT_MODULAR_SLOT_COLORS, ...stored.slotColors },
   }
 }
@@ -76,25 +92,32 @@ export function isModularAvatarState(value: unknown): value is ModularAvatarStat
 
 /** Vérifie que les ids d’assets existent encore (après import PNG). */
 export function sanitizeModularAvatarState(state: ModularAvatarState): ModularAvatarState {
+  const defaults = createDefaultAvatarData()
   const pick = (category: keyof typeof avatarAssetMap, id: string | null) => {
     if (!id) return null
     return avatarAssetMap[category].some((a) => a.id === id) ? id : null
   }
+  const withFallback = <K extends keyof AvatarData>(
+    category: keyof typeof avatarAssetMap,
+    id: string | null,
+    fallbackKey: K,
+  ) => pick(category, id) ?? defaults[fallbackKey]
+
   const d = state.data
   return {
     data: {
-      skinTone: d.skinTone,
-      body: pick('body', d.body),
-      hair: pick('hair', d.hair),
-      eyes: pick('eyes', d.eyes),
-      eyebrows: pick('eyebrows', d.eyebrows),
-      nose: pick('nose', d.nose),
-      mouth: pick('mouth', d.mouth),
+      skinTone: d.skinTone || defaults.skinTone,
+      body: withFallback('body', d.body, 'body'),
+      hair: withFallback('hair', d.hair, 'hair'),
+      eyes: withFallback('eyes', d.eyes, 'eyes'),
+      eyebrows: withFallback('eyebrows', d.eyebrows, 'eyebrows'),
+      nose: withFallback('nose', d.nose, 'nose'),
+      mouth: withFallback('mouth', d.mouth, 'mouth'),
       beard: pick('beard', d.beard),
-      jersey: pick('jerseys', d.jersey),
-      shorts: pick('shorts', d.shorts),
+      jersey: withFallback('jerseys', d.jersey, 'jersey'),
+      shorts: withFallback('shorts', d.shorts, 'shorts'),
       socks: null,
-      shoes: pick('shoes', d.shoes),
+      shoes: withFallback('shoes', d.shoes, 'shoes'),
       accessory: null,
     },
     slotColors: { ...DEFAULT_MODULAR_SLOT_COLORS, ...state.slotColors },

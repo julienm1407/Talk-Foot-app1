@@ -99,7 +99,7 @@ export function TrendingDebatesSection({
             Top débats
           </h2>
           <p className="max-w-xl text-sm font-semibold leading-relaxed text-tf-app-muted line-clamp-2 sm:line-clamp-none">
-            Classement en direct — même avec peu de messages, chaque débat publié apparaît ici.
+            Sélection renouvelée chaque jour — classement activité en arrière-plan.
           </p>
         </div>
         <Link

@@ -16,14 +16,35 @@ type AuthorCacheEntry = {
 
 const authorCache = new Map<string, AuthorCacheEntry>()
 
+export function clearChatAuthorAvatarCache(userId?: string) {
+  if (userId) {
+    authorCache.delete(userId)
+    return
+  }
+  authorCache.clear()
+}
+
+type SelfAvatarOptions = {
+  /** Profil modulaire local (compte connecté) — prioritaire sur le cache cloud. */
+  selfModularAvatar?: ModularAvatarState | null
+  /** Tous les ids possibles pour « moi » (Clerk, UUID Supabase, `me`). */
+  selfUserKeys?: string[]
+}
+
 /** PP modulaire + pseudo cloud des auteurs de messages tribune / live. */
-export function useChatAuthorModularAvatars(userIds: string[], selfUserId: string) {
+export function useChatAuthorModularAvatars(
+  userIds: string[],
+  selfUserId: string,
+  options?: SelfAvatarOptions,
+) {
   const [tick, setTick] = useState(0)
+  const selfUserKeys = options?.selfUserKeys
+  const selfModularAvatar = options?.selfModularAvatar
 
   const pendingKey = useMemo(() => {
     return [...new Set(userIds)]
       .filter((id) => shouldFetchCloudChatAvatar(id, selfUserId))
-      .filter((id) => !authorCache.has(id))
+      .filter((id) => !authorCache.get(id)?.modularAvatar)
       .sort()
       .join(',')
   }, [userIds, selfUserId])
@@ -33,7 +54,7 @@ export function useChatAuthorModularAvatars(userIds: string[], selfUserId: strin
     const sb = getSupabaseBrowserClient()
     if (!sb) return
 
-    const ids = pendingKey.split(',')
+    const ids = pendingKey.split(',').filter(Boolean)
     let cancelled = false
 
     void (async () => {
@@ -52,7 +73,11 @@ export function useChatAuthorModularAvatars(userIds: string[], selfUserId: strin
             })
           } catch {
             const fromTable = profileNames.get(actorKey)?.display_name?.trim() || null
-            authorCache.set(actorKey, { modularAvatar: null, displayName: fromTable })
+            const prev = authorCache.get(actorKey)
+            authorCache.set(actorKey, {
+              modularAvatar: prev?.modularAvatar ?? null,
+              displayName: fromTable ?? prev?.displayName ?? null,
+            })
           }
         }),
       )
@@ -67,11 +92,18 @@ export function useChatAuthorModularAvatars(userIds: string[], selfUserId: strin
   return useMemo(() => {
     const avatars: Record<string, ModularAvatarState> = {}
     const displayNames: Record<string, string> = {}
+
+    if (selfModularAvatar && selfUserKeys?.length) {
+      for (const id of selfUserKeys) {
+        if (id) avatars[id] = selfModularAvatar
+      }
+    }
+
     for (const id of userIds) {
       const cached = authorCache.get(id)
-      if (cached?.modularAvatar) avatars[id] = cached.modularAvatar
+      if (cached?.modularAvatar && !avatars[id]) avatars[id] = cached.modularAvatar
       if (cached?.displayName) displayNames[id] = cached.displayName
     }
     return { avatars, displayNames }
-  }, [userIds, tick])
+  }, [userIds, tick, selfModularAvatar, selfUserKeys])
 }
