@@ -53,13 +53,15 @@ export function OAuthProfileSetupModal() {
       return
     }
     const sb = getSupabaseBrowserClient()
-    if (sb) {
-      const availability = await checkDisplayNameAvailabilityCloud(sb, name)
-      if (!availability.available) {
-        setError(availability.message)
-        setSuggestions(availability.error === 'taken' ? (availability.suggestions ?? []) : [])
-        return
-      }
+    if (!sb) {
+      setError('Service cloud indisponible. Recharge la page puis réessaie.')
+      return
+    }
+    const availability = await checkDisplayNameAvailabilityCloud(sb, name, user?.id)
+    if (!availability.available) {
+      setError(availability.message)
+      setSuggestions(availability.error === 'taken' ? (availability.suggestions ?? []) : [])
+      return
     }
     setBusy(true)
     setError(null)

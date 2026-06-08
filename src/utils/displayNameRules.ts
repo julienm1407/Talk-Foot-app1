@@ -4,6 +4,11 @@ export function sanitizeDisplayNameInput(raw: string): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, 24)
 }
 
+/** Même logique que `normalize_display_name` côté Supabase. */
+export function normalizeDisplayNameLookup(raw: string): string {
+  return sanitizeDisplayNameInput(raw).toLowerCase()
+}
+
 export function validateDisplayNameFormat(name: string): string | null {
   const n = sanitizeDisplayNameInput(name)
   if (n.length < 2) return 'Le pseudo doit faire au moins 2 caractères.'

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import {
   changeDisplayNameCloud,
+  checkDisplayNameAvailabilityCloud,
   fetchDisplayNameStatus,
   type ChangeDisplayNameResult,
   type DisplayNameStatus,
@@ -147,6 +148,16 @@ export function useDisplayNameChange() {
             ok: false,
             error: 'profile_not_found',
             message: ensured.message,
+          }
+        }
+        const availability = await checkDisplayNameAvailabilityCloud(sb, name, user.id)
+        if (!availability.available) {
+          setLoading(false)
+          return {
+            ok: false,
+            error: availability.error,
+            message: availability.message,
+            suggestions: availability.suggestions,
           }
         }
         const result = await changeDisplayNameCloud(sb, user.id, name)

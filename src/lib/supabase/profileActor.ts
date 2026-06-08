@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { checkDisplayNameAvailabilityCloud } from './displayName'
+import { normalizeDisplayNameLookup } from '../../utils/displayNameRules'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -24,18 +26,25 @@ export async function ensureProfileForActor(
   if (existing) return { ok: true }
 
   const name = displayName.trim() || 'Supporteur'
+  const availability = await checkDisplayNameAvailabilityCloud(sb, name, actorKey)
+  if (!availability.available) {
+    return { ok: false, message: availability.message }
+  }
+  const normalized = normalizeDisplayNameLookup(availability.displayName)
   const payload = isProfileActorUuid(actorKey)
     ? {
         id: actorKey,
         clerk_id: actorKey,
-        display_name: name,
+        display_name: availability.displayName,
+        display_name_normalized: normalized,
         onboarding_complete: false,
         app_state: {},
         oauth_profile_completed: true,
       }
     : {
         clerk_id: actorKey,
-        display_name: name,
+        display_name: availability.displayName,
+        display_name_normalized: normalized,
         onboarding_complete: false,
         app_state: {},
         oauth_profile_completed: true,

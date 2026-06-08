@@ -49,6 +49,7 @@ export type ChangeDisplayNameResult =
 export async function checkDisplayNameAvailabilityCloud(
   sb: SupabaseClient,
   rawName: string,
+  excludeActorKey?: string | null,
 ): Promise<CheckDisplayNameAvailabilityResult> {
   const name = sanitizeDisplayNameInput(rawName)
   const formatErr = validateDisplayNameFormat(name)
@@ -63,7 +64,10 @@ export async function checkDisplayNameAvailabilityCloud(
     }
   }
 
-  const { data, error } = await sb.rpc('check_display_name_available', { p_new_name: name })
+  const { data, error } = await sb.rpc('check_display_name_available', {
+    p_new_name: name,
+    p_exclude_actor_key: excludeActorKey?.trim() || null,
+  })
 
   if (error) {
     const missingRpc =
@@ -95,17 +99,18 @@ export async function checkDisplayNameAvailabilityCloud(
   }
 
   const row = data as Record<string, unknown>
+  const err = String(row.error ?? 'unavailable')
+  const explicitlyAvailable = row.available === true || row.available === 'true'
+  const explicitlyTaken = row.available === false || row.available === 'false' || err === 'taken'
 
-  if (row.available === true) {
+  if (explicitlyAvailable && !explicitlyTaken) {
     return {
       available: true,
       displayName: String(row.display_name ?? name),
     }
   }
 
-  const err = String(row.error ?? 'unavailable')
-
-  if (err === 'taken') {
+  if (explicitlyTaken || err === 'taken') {
     return {
       available: false,
       error: 'taken',

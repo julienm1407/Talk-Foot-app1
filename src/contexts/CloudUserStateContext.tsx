@@ -19,6 +19,7 @@ import {
 import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
+import { isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 import { changeDisplayNameCloud, checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import {
@@ -219,7 +220,8 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         if (!data) {
           const { data: authPayload } = await sb.auth.getUser()
           const prov = authPayload.user?.app_metadata?.provider
-          const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
+          const oauthIncomplete =
+            isClerkAuthMode() || Boolean(prov && isTalkFootOAuthProvider(prov))
           try {
             const created = await ensureTalkfootProfile(sb, user.id, displayName, !oauthIncomplete)
             if (cancelled) return
@@ -294,13 +296,15 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
   const completeOauthProfile = useCallback(
     async (displayName: string, aboutLine?: string) => {
       const sb = getSupabaseBrowserClient()
-      if (!sb || !user?.id) return
+      if (!sb || !user?.id) {
+        throw new Error('Connexion cloud indisponible. Recharge la page puis réessaie.')
+      }
       const name = displayName.trim() || 'Supporteur'
       const about = aboutLine?.trim().slice(0, 160) ?? ''
       if (containsBannedWord(name) || (about && containsBannedWord(about))) {
         throw new Error(MODERATION_REFUSED_MESSAGE_FR)
       }
-      const availability = await checkDisplayNameAvailabilityCloud(sb, name)
+      const availability = await checkDisplayNameAvailabilityCloud(sb, name, user.id)
       if (!availability.available) {
         const hint =
           availability.error === 'taken' && availability.suggestions?.length
