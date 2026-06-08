@@ -15,6 +15,8 @@ import { TALKFOOT_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../confi
 import { OAuthProviderIcon } from '../components/auth/OAuthProviderIcon'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
+import { useDisplayNameAvailabilityHint } from '../hooks/useDisplayNameAvailabilityHint'
+import { DisplayNameAvailabilityHint } from '../components/auth/DisplayNameAvailabilityHint'
 
 type Mode = 'login' | 'signup'
 
@@ -72,6 +74,15 @@ export function LoginPage() {
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<null | TalkFootOauthProviderId>(null)
+  const pseudoHint = useDisplayNameAvailabilityHint(displayName, {
+    enabled: mode === 'signup' && isSupabaseConfigured(),
+  })
+  const pseudoBlocked =
+    mode === 'signup' &&
+    (pseudoHint.status === 'taken' ||
+      pseudoHint.status === 'invalid' ||
+      pseudoHint.status === 'checking' ||
+      pseudoHint.status === 'error')
   const backLabel = nextPath ? 'Retour' : 'Retour à l’accueil'
 
   if (!isReady) {
@@ -112,6 +123,10 @@ export function LoginPage() {
       }
       if (containsBannedWord(signupName)) {
         setError(MODERATION_REFUSED_MESSAGE_FR)
+        return
+      }
+      if (pseudoBlocked) {
+        setError(pseudoHint.message ?? 'Ce pseudo n’est pas utilisable.')
         return
       }
       setSubmitting(true)
@@ -285,17 +300,39 @@ export function LoginPage() {
                         id="signup-displayName"
                         type="text"
                         value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
+                        onChange={(e) => {
+                          setDisplayName(e.target.value)
+                          setError(null)
+                        }}
                         placeholder="Ton pseudo (unique sur Talk Foot)"
                         autoComplete="username"
                         required
                         minLength={2}
                         maxLength={24}
-                        className="w-full rounded-xl border-tf-grey-pastel/50"
+                        className={cn(
+                          'w-full rounded-xl border-tf-grey-pastel/50',
+                          pseudoHint.status === 'taken' || pseudoHint.status === 'invalid'
+                            ? 'border-rose-300 ring-1 ring-rose-200'
+                            : pseudoHint.status === 'available'
+                              ? 'border-emerald-300 ring-1 ring-emerald-200'
+                              : null,
+                        )}
+                        aria-invalid={pseudoHint.status === 'taken' || pseudoHint.status === 'invalid'}
                       />
-                      <p className="mt-1 text-[10px] font-semibold text-tf-grey">
-                        2 à 24 caractères. S&apos;il est déjà pris, tu pourras en choisir un autre.
-                      </p>
+                      <DisplayNameAvailabilityHint
+                        status={pseudoHint.status}
+                        message={pseudoHint.message}
+                        suggestions={pseudoHint.suggestions}
+                        onPickSuggestion={(s) => {
+                          setDisplayName(s)
+                          setError(null)
+                        }}
+                      />
+                      {pseudoHint.status === 'idle' ? (
+                        <p className="mt-1 text-[10px] font-semibold text-tf-grey">
+                          2 à 24 caractères — vérification automatique pendant la saisie.
+                        </p>
+                      ) : null}
                     </div>
                   )}
                   <div>
@@ -368,9 +405,15 @@ export function LoginPage() {
                     type="submit"
                     variant="primary"
                     className="w-full rounded-xl py-3 font-bold"
-                    disabled={submitting}
+                    disabled={submitting || pseudoBlocked}
                   >
-                    {submitting ? 'Patience…' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+                    {submitting
+                      ? 'Patience…'
+                      : mode === 'login'
+                        ? 'Se connecter'
+                        : pseudoHint.status === 'checking'
+                          ? 'Vérification du pseudo…'
+                          : 'Créer mon compte'}
                   </Button>
                 </form>
               </section>

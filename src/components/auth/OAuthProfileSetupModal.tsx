@@ -11,6 +11,8 @@ import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../../utils/b
 import { validateDisplayNameFormat, sanitizeDisplayNameInput } from '../../utils/displayNameRules'
 import { getSupabaseBrowserClient } from '../../lib/supabase/client'
 import { checkDisplayNameAvailabilityCloud } from '../../lib/supabase/displayName'
+import { useDisplayNameAvailabilityHint } from '../../hooks/useDisplayNameAvailabilityHint'
+import { DisplayNameAvailabilityHint } from './DisplayNameAvailabilityHint'
 
 /**
  * Première connexion Google / Apple (Supabase) : pseudo + ligne perso avant le reste de l’app.
@@ -24,6 +26,15 @@ export function OAuthProfileSetupModal() {
   const [error, setError] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
+  const pseudoHint = useDisplayNameAvailabilityHint(displayName, {
+    excludeActorKey: user?.id,
+    enabled: Boolean(cloud?.oauthNeedsProfile),
+  })
+  const pseudoBlocked =
+    pseudoHint.status === 'taken' ||
+    pseudoHint.status === 'invalid' ||
+    pseudoHint.status === 'checking' ||
+    pseudoHint.status === 'error'
 
   useEffect(() => {
     if (!cloud?.oauthNeedsProfile || !user) return
@@ -55,6 +66,11 @@ export function OAuthProfileSetupModal() {
     const sb = getSupabaseBrowserClient()
     if (!sb) {
       setError('Service cloud indisponible. Recharge la page puis réessaie.')
+      return
+    }
+    if (pseudoBlocked) {
+      setError(pseudoHint.message ?? 'Ce pseudo n’est pas utilisable.')
+      setSuggestions(pseudoHint.suggestions)
       return
     }
     const availability = await checkDisplayNameAvailabilityCloud(sb, name, user?.id)
@@ -130,12 +146,38 @@ export function OAuthProfileSetupModal() {
             <Input
               id="oauth-pseudo"
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => {
+                setDisplayName(e.target.value)
+                setError(null)
+                setSuggestions([])
+              }}
               placeholder="Ton pseudo sur les tribunes et le live"
               autoComplete="username"
-              className="w-full rounded-xl border-tf-grey-pastel/50"
-              maxLength={40}
+              className={cn(
+                'w-full rounded-xl border-tf-grey-pastel/50',
+                pseudoHint.status === 'taken' || pseudoHint.status === 'invalid'
+                  ? 'border-rose-300 ring-1 ring-rose-200'
+                  : pseudoHint.status === 'available'
+                    ? 'border-emerald-300 ring-1 ring-emerald-200'
+                    : null,
+              )}
+              maxLength={24}
+              aria-invalid={pseudoHint.status === 'taken' || pseudoHint.status === 'invalid'}
+              aria-describedby="oauth-pseudo-hint"
             />
+            <DisplayNameAvailabilityHint
+              status={pseudoHint.status}
+              message={pseudoHint.message}
+              suggestions={pseudoHint.suggestions}
+              onPickSuggestion={(s) => {
+                setDisplayName(s)
+                setError(null)
+                setSuggestions([])
+              }}
+            />
+            <p id="oauth-pseudo-hint" className="sr-only">
+              Le pseudo est vérifié automatiquement pendant la saisie.
+            </p>
           </div>
 
           <div>
@@ -182,8 +224,13 @@ export function OAuthProfileSetupModal() {
             </div>
           ) : null}
 
-          <Button type="submit" variant="primary" className="w-full rounded-2xl py-3 font-black" disabled={busy}>
-            {busy ? 'Enregistrement…' : 'Continuer'}
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full rounded-2xl py-3 font-black"
+            disabled={busy || pseudoBlocked}
+          >
+            {busy ? 'Enregistrement…' : pseudoHint.status === 'checking' ? 'Vérification…' : 'Continuer'}
           </Button>
         </form>
       </div>
