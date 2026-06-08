@@ -99,6 +99,7 @@ function LiveFanFaceRow({
           <ProfileCharacterThumb
             profile={meProfile}
             size="sm"
+            imagePriority
             {...MODULAR_PP_NAV_FRAMING}
             className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-0 p-0"
             aria-label="Mon avatar in-app"

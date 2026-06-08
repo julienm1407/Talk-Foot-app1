@@ -44,11 +44,14 @@ function LayerImage({
     <img
       src={src}
       alt={alt}
-      className="pointer-events-none absolute left-0 top-0 h-auto w-auto max-w-none"
+      className={cn(
+        'pointer-events-none absolute left-0 top-0 h-auto w-auto max-w-none',
+        priority && '[transform:translateZ(0)]',
+      )}
       style={{ filter }}
       loading={priority ? 'eager' : 'lazy'}
       fetchPriority={priority ? 'high' : undefined}
-      decoding="async"
+      decoding={priority ? 'sync' : 'async'}
       draggable={false}
     />
   )
@@ -208,7 +211,16 @@ export function ModularAvatarCanvas({
   const showShoesLayer = garmentsShow === 'shoes'
   const shoesLayerSrc = selectedAssets.shoes?.src ?? garmentFallbackSrc
 
-  const imgProps = { priority: imagePriority }
+  const eagerLayers = imagePriority || (isHead && Boolean(fitSize))
+  const imgProps = { priority: eagerLayers }
+
+  const bodyWithSkinTint =
+    selectedAssets.body?.src ? (
+      <div className="absolute inset-0 isolate">
+        <LayerImage src={selectedAssets.body.src} alt="" {...imgProps} />
+        <SkinTintLayer maskSrc={selectedAssets.body.src} skinTone={avatar.skinTone} />
+      </div>
+    ) : null
 
   const layers = garmentsOnly ? (
     <>
@@ -224,10 +236,7 @@ export function ModularAvatarCanvas({
     </>
   ) : (
     <>
-      {selectedAssets.body?.src ? <LayerImage src={selectedAssets.body.src} alt="" {...imgProps} /> : null}
-      {selectedAssets.body?.src ? (
-        <SkinTintLayer maskSrc={selectedAssets.body.src} skinTone={avatar.skinTone} />
-      ) : null}
+      {bodyWithSkinTint}
       {!isHead && selectedAssets.shorts?.src ? (
         <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} {...imgProps} />
       ) : null}
@@ -267,11 +276,14 @@ export function ModularAvatarCanvas({
             height: canvasSize.height,
             marginLeft: -canvasSize.width / 2,
             marginTop,
-            transform: `scale(${baseScale})`,
+            transform: `scale(${baseScale}) translateZ(0)`,
             transformOrigin: MODULAR_PP_HEAD_ORIGIN,
           }}
         >
-          <div className="relative" style={{ width: canvasSize.width, height: canvasSize.height }}>
+          <div
+            className="relative isolate"
+            style={{ width: canvasSize.width, height: canvasSize.height }}
+          >
             {layers}
           </div>
         </div>
