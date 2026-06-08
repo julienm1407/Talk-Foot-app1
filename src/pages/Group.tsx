@@ -8,8 +8,9 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { useSubscription } from '../hooks/useSubscription'
-import { canCreateDebate } from '../utils/subscriptionEntitlements'
+import { canCreateDebate, canJoinGroup } from '../utils/subscriptionEntitlements'
 import { TribuneLimitPopup } from '../components/subscription/TribuneLimitPopup'
+import { LeaveTribuneButton } from '../components/group/LeaveTribuneButton'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { getGroupAccess } from '../utils/groupAccess'
 import { isRivalClub } from '../data/fanRivals'
@@ -411,7 +412,16 @@ export function GroupPage() {
   const [groupChatLimitHint, setGroupChatLimitHint] = useState<string | null>(null)
   const [joinOtherError, setJoinOtherError] = useState<string | null>(null)
   const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | 'debate' | null>(null)
+  const [leavingTribuneId, setLeavingTribuneId] = useState<string | null>(null)
   const { tier, subscription, plan } = useSubscription()
+
+  const myTribunes = useMemo(
+    () =>
+      joinedGroupIds
+        .map((id) => byId(id))
+        .filter((g): g is NonNullable<ReturnType<typeof byId>> => g != null),
+    [joinedGroupIds, byId],
+  )
 
   const openDebatePicker = useCallback((tab: 'browse' | 'create') => {
     setTribuneLimitPopup(null)
@@ -478,6 +488,34 @@ export function GroupPage() {
     }
     void handleJoinGroup()
   }, [atJoinLimit, handleJoinGroup])
+
+  const handleLeaveTribune = useCallback(
+    async (id: string, options?: { retryJoin?: boolean }) => {
+      setLeavingTribuneId(id)
+      leaveGroup(id)
+      setLeavingTribuneId(null)
+
+      if (!options?.retryJoin || !group || group.createdBy === 'me' || isJoined(group.id)) {
+        return
+      }
+
+      const nextCount = joinedGroupIds.filter((gid) => gid !== id).length
+      if (!canJoinGroup(tier, nextCount).ok) return
+
+      const r = await joinGroup(group.id)
+      if (r.ok) {
+        setJoinOtherError(null)
+        setTribuneLimitPopup(null)
+        return
+      }
+      if (r.limitKind === 'join') {
+        setTribuneLimitPopup('join')
+      } else {
+        setJoinOtherError(r.reason)
+      }
+    },
+    [group, isJoined, joinGroup, joinedGroupIds, leaveGroup, tier],
+  )
 
   /** Groupe public : adhésion locale + Supabase pour « Mes groupes » et cohérence RLS membre. */
   useEffect(() => {
@@ -1094,16 +1132,14 @@ export function GroupPage() {
                 </div>
               ) : null}
               {group.createdBy !== 'me' && isJoined(group.id) ? (
-                <Button
-                  variant="ghost"
-                  className="rounded-2xl text-xs font-black text-tf-grey hover:bg-rose-50 hover:text-rose-700"
-                  onClick={() => {
-                    leaveGroup(group.id)
-                    navigate('/groups')
+                <LeaveTribuneButton
+                  layout="inline"
+                  groupName={group.name}
+                  onLeave={() => {
+                    void handleLeaveTribune(group.id)
+                    navigate('/groups?tab=mine')
                   }}
-                >
-                  Retirer de mes groupes
-                </Button>
+                />
               ) : null}
               {canManageGroup ? (
                 <Button
@@ -2168,6 +2204,10 @@ export function GroupPage() {
         kind={tribuneLimitPopup ?? 'debate'}
         tier={tier}
         onClose={() => setTribuneLimitPopup(null)}
+        myTribunes={myTribunes}
+        maxJoined={groupLimits.maxJoined ?? 5}
+        onLeaveTribune={(id) => void handleLeaveTribune(id, { retryJoin: true })}
+        leavingTribuneId={leavingTribuneId}
       />
     </>
   )

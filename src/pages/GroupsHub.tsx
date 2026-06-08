@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Input'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { sortGroupsByFanAffinity, getGroupAccess } from '../utils/groupAccess'
 import { CreateGroupModal } from '../components/group/CreateGroupModal'
+import { LeaveTribuneButton } from '../components/group/LeaveTribuneButton'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { cn } from '../utils/cn'
 import {
@@ -22,7 +23,7 @@ type HubTab = 'mine' | 'discover'
 
 export function GroupsHubPage() {
   const navigate = useNavigate()
-  const { groups, createGroup, isJoined } = useSupporterGroups()
+  const { groups, createGroup, isJoined, leaveGroup, groupLimits } = useSupporterGroups()
   const {
     favoriteClubIds,
     favoriteLeagueId,
@@ -107,6 +108,9 @@ export function GroupsHubPage() {
 
   const discoverListCount = clubParam ? discoverVisibleForContext.length : visibleDiscover.length
 
+  const atJoinLimit =
+    groupLimits.maxJoined != null && groupLimits.joined >= groupLimits.maxJoined
+
   const tabBtn = (t: HubTab, label: string) => (
     <button
       type="button"
@@ -166,6 +170,17 @@ export function GroupsHubPage() {
           <h2 id="hub-mine-heading" className="sr-only">
             Mes tribunes
           </h2>
+          {atJoinLimit ? (
+            <div className="rounded-2xl border border-amber-300/55 bg-amber-50/95 px-4 py-3 sm:px-5">
+              <p className="text-sm font-black text-amber-950">
+                {groupLimits.maxJoined} tribunes max — libère une place pour en rejoindre une autre
+              </p>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-amber-900/85">
+                Utilise le bouton <strong className="font-black">Quitter la tribune</strong> sur une tribune rejointe.
+                Pour une tribune que tu as créée, ouvre-la puis supprime-la.
+              </p>
+            </div>
+          ) : null}
           {myGroups.length === 0 ? (
             <Card className="p-8 text-center" elevation="soft">
               <p className="text-4xl" aria-hidden>
@@ -191,18 +206,22 @@ export function GroupsHubPage() {
           ) : (
             <Card className="space-y-3 p-4 sm:p-5" elevation="soft">
               {myGroups.map((g) => (
-                <Link
-                  key={g.id}
-                  to={`/group/${g.id}`}
-                  className="group block tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
-                  aria-label={`Ouvrir le groupe ${g.name}`}
-                >
-                  <GroupCard
-                    group={g}
-                    accessLevel={getGroupAccess(g, accessPrefs)}
-                    member={isJoined(g.id) || g.createdBy === 'me'}
-                  />
-                </Link>
+                <div key={g.id} className="space-y-2">
+                  <Link
+                    to={`/group/${g.id}`}
+                    className="group block tf-card-hover rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-blue-600/20"
+                    aria-label={`Ouvrir le groupe ${g.name}`}
+                  >
+                    <GroupCard
+                      group={g}
+                      accessLevel={getGroupAccess(g, accessPrefs)}
+                      member={isJoined(g.id) || g.createdBy === 'me'}
+                    />
+                  </Link>
+                  {isJoined(g.id) && g.createdBy !== 'me' ? (
+                    <LeaveTribuneButton groupName={g.name} onLeave={() => leaveGroup(g.id)} />
+                  ) : null}
+                </div>
               ))}
             </Card>
           )}

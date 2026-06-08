@@ -3,9 +3,11 @@ import { createPortal } from 'react-dom'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 import { useModalBackdropGuard } from '../../utils/modalBackdropGuard'
 import { Link } from 'react-router-dom'
+import type { SupporterGroup } from '../../types/group'
 import type { SubscriptionTierId } from '../../types/subscription'
 import { Button } from '../ui/Button'
 import { cn } from '../../utils/cn'
+import { TribuneLimitLeavePicker } from './TribuneLimitLeavePicker'
 
 export type TribuneLimitPopupKind = 'join' | 'create' | 'debate'
 
@@ -61,6 +63,10 @@ export function TribuneLimitPopup({
   tier = 'freemium',
   message,
   onClose,
+  myTribunes,
+  maxJoined = 5,
+  onLeaveTribune,
+  leavingTribuneId,
 }: {
   open: boolean
   kind: TribuneLimitPopupKind
@@ -68,6 +74,11 @@ export function TribuneLimitPopup({
   /** Message personnalisé (ex. quota débat). */
   message?: string
   onClose: () => void
+  /** Tribunes actuelles — affichées quand le plafond de rejoindre est atteint. */
+  myTribunes?: SupporterGroup[]
+  maxJoined?: number
+  onLeaveTribune?: (groupId: string) => void
+  leavingTribuneId?: string | null
 }) {
   const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
 
@@ -93,6 +104,12 @@ export function TribuneLimitPopup({
   const { title, body } = copyForKind(kind, tier, message)
   const showUpgradeToUltra = kind === 'join' && tier === 'freemium'
   const showPlansLink = kind === 'create' || kind === 'debate' || showUpgradeToUltra
+  const showLeavePicker =
+    kind === 'join' &&
+    tier === 'freemium' &&
+    myTribunes != null &&
+    myTribunes.length > 0 &&
+    onLeaveTribune != null
 
   return createPortal(
     <div
@@ -148,7 +165,16 @@ export function TribuneLimitPopup({
             {body}
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          {showLeavePicker ? (
+            <TribuneLimitLeavePicker
+              tribunes={myTribunes}
+              maxJoined={maxJoined}
+              onLeave={onLeaveTribune}
+              leavingId={leavingTribuneId}
+            />
+          ) : null}
+
+          <div className={cn('flex flex-col gap-3 sm:flex-row sm:justify-center', showLeavePicker ? 'mt-5' : 'mt-6')}>
             <Button
               variant="soft"
               className={cn(
