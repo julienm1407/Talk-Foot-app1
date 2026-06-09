@@ -1,13 +1,64 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useState } from 'react'
 import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 import { useDebates } from '../contexts/DebatesContext'
 import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { cn } from '../utils/cn'
 import { DebateRankBadge } from '../components/debate/DebateRankBadge'
+import { CreateDebateHubModal } from '../components/debate/CreateDebateHubModal'
+import { TribuneLimitPopup } from '../components/subscription/TribuneLimitPopup'
+import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../hooks/useSubscription'
+import { useSupporterGroups } from '../hooks/useSupporterGroups'
+import { canCreateDebate } from '../utils/subscriptionEntitlements'
 
 export function DebatesPage() {
   const { debates: all, loading } = useDebates()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user: authUser } = useAuth()
+  const { tier, subscription, plan } = useSubscription()
+  const { myJoinedGroups, orphanJoinedGroupIds, groupLimits } = useSupporterGroups()
+  const [createOpen, setCreateOpen] = useState(false)
+  const [limitPopupOpen, setLimitPopupOpen] = useState(false)
+  const isAdmin = Boolean(authUser?.isAdmin)
+  const canAddDebate = canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin).ok
+
+  const openLimitPopup = useCallback(() => {
+    setCreateOpen(false)
+    setLimitPopupOpen(true)
+  }, [])
+
+  const handleCreateClick = useCallback(() => {
+    const next = `${location.pathname}${location.search}`
+    if (!authUser?.id || authUser.isAnonymous) {
+      navigate(`/login?next=${encodeURIComponent(next)}`)
+      return
+    }
+    if (!isAdmin && !plan.flags.canCreateDebates) {
+      openLimitPopup()
+      return
+    }
+    if (!canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin).ok) {
+      openLimitPopup()
+      return
+    }
+    setLimitPopupOpen(false)
+    setCreateOpen(true)
+  }, [
+    authUser?.id,
+    authUser?.isAnonymous,
+    isAdmin,
+    location.pathname,
+    location.search,
+    navigate,
+    openLimitPopup,
+    plan.flags.canCreateDebates,
+    subscription.usage,
+    tier,
+  ])
 
   return (
     <div className="space-y-6">
@@ -18,6 +69,23 @@ export function DebatesPage() {
         eyebrow="Débats"
         title="Tribunes & polémiques"
         description="Classement de tous les débats publiés — pas de minimum de messages : les plus actifs (ou les plus récents) en tête."
+        actions={
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <Link
+              to="/groups"
+              className="tf-interactive-press inline-flex min-h-11 items-center justify-center rounded-3xl border-2 border-violet-300/55 bg-violet-50/90 px-4 text-xs font-black text-tf-dark shadow-sm hover:bg-violet-100 sm:px-5 sm:text-sm"
+            >
+              👥 Tribunes
+            </Link>
+            <Button
+              variant="primary"
+              className="tf-interactive-press shrink-0 rounded-3xl px-5"
+              onClick={handleCreateClick}
+            >
+              ➕ Créer un débat
+            </Button>
+          </div>
+        }
       />
 
       {loading ? (
@@ -29,12 +97,17 @@ export function DebatesPage() {
             Rejoins un groupe et lance un sujet dans la tribune Général — les compteurs participants et messages
             sont calculés en temps réel.
           </p>
-          <Link
-            to="/groups"
-            className="mt-4 inline-flex rounded-2xl bg-tf-dark px-5 py-2.5 text-sm font-black text-white"
-          >
-            Groupes supporters
-          </Link>
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Button variant="primary" className="rounded-2xl" onClick={handleCreateClick}>
+              Créer un débat
+            </Button>
+            <Link
+              to="/groups"
+              className="tf-interactive-press inline-flex min-h-11 items-center justify-center rounded-2xl border border-tf-dark/15 bg-white px-5 py-2.5 text-sm font-black text-tf-dark"
+            >
+              Groupes supporters
+            </Link>
+          </div>
         </Card>
       ) : null}
 
@@ -116,6 +189,24 @@ export function DebatesPage() {
           )
         })}
       </ul>
+
+      <CreateDebateHubModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        canCreateDebate={canAddDebate}
+        onBlockedCreate={openLimitPopup}
+      />
+
+      <TribuneLimitPopup
+        open={limitPopupOpen}
+        kind="debate"
+        tier={tier}
+        onClose={() => setLimitPopupOpen(false)}
+        myTribunes={myJoinedGroups}
+        orphanJoinedIds={orphanJoinedGroupIds}
+        joinedCount={groupLimits.joined}
+        maxJoined={groupLimits.maxJoined ?? 5}
+      />
     </div>
   )
 }

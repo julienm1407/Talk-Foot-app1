@@ -435,11 +435,12 @@ export function GroupPage() {
       navigate(`/login?next=${encodeURIComponent(next)}`)
       return
     }
-    if (!plan.flags.canCreateDebates) {
+    const isAdmin = Boolean(authUser?.isAdmin)
+    if (!isAdmin && !plan.flags.canCreateDebates) {
       openDebateLimitPopup()
       return
     }
-    const gate = canCreateDebate(tier, subscription.usage ?? {})
+    const gate = canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin)
     if (!gate.ok) {
       openDebateLimitPopup()
       return
@@ -449,6 +450,7 @@ export function GroupPage() {
     window.setTimeout(() => setDebatePickerOpen(true), 50)
   }, [
     authUser?.id,
+    authUser?.isAdmin,
     authUser?.isAnonymous,
     location.pathname,
     location.search,

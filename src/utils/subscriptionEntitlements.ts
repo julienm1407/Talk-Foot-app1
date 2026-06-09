@@ -83,7 +83,9 @@ export function canCreateDebate(
   tier: SubscriptionTierId,
   usage: SubscriptionUsageCounters,
   now = new Date(),
+  isAdmin = false,
 ): { ok: boolean; reason?: string } {
+  if (isAdmin) return { ok: true }
   const plan = getSubscriptionPlan(tier)
   if (!plan.flags.canCreateDebates) {
     return { ok: false, reason: 'Les débats nécessitent Ultra ou Ambassadeur.' }

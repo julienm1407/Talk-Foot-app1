@@ -46,6 +46,18 @@ describe('subscriptionEntitlements', () => {
     expect(canCreateDebate('supporter_plus', {}).ok).toBe(true)
   })
 
+  it('admin contourne les limites de débats', () => {
+    expect(canCreateDebate('freemium', {}, new Date(), true).ok).toBe(true)
+    expect(
+      canCreateDebate(
+        'supporter_plus',
+        { debatesWeekKey: '2099-W01', debatesCreatedThisWeek: 99 },
+        new Date('2099-01-10T12:00:00'),
+        true,
+      ).ok,
+    ).toBe(true)
+  })
+
   it('betWinTokenCredit double le profit au ×2', () => {
     expect(betWinTokenCredit(200, 100, 2)).toBe(300)
     expect(betWinTokenCredit(200, 100, 1)).toBe(200)

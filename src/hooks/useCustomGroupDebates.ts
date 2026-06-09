@@ -22,6 +22,7 @@ const isBucket = (p: unknown): p is CustomDebatesBucket =>
 
 export function useCustomGroupDebates(groupId: string | undefined) {
   const { user: authUser } = useAuth()
+  const isAdmin = Boolean(authUser?.isAdmin)
   const { tier, subscription, patchUsage } = useSubscription()
   const { favoriteClubIds } = useFanPreferences()
   const { refresh: refreshDebates } = useDebates()
@@ -44,14 +45,14 @@ export function useCustomGroupDebates(groupId: string | undefined) {
       input: { title: string; excerpt: string; accent: string },
     ): { ok: true; debate: Debate } | { ok: false; reason: string } => {
       if (!groupId) return { ok: false, reason: 'Groupe introuvable.' }
-      const debateGate = canCreateDebate(tier, subscription.usage ?? {})
+      const debateGate = canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin)
       if (!debateGate.ok) {
         return { ok: false, reason: debateGate.reason ?? 'Limite de débats atteinte.' }
       }
       if (!moderateDebateInput(input).ok) {
         return { ok: false, reason: 'Contenu refusé par la modération.' }
       }
-      patchUsage((u) => bumpDebateUsage(u))
+      if (!isAdmin) patchUsage((u) => bumpDebateUsage(u))
       const debate = createCustomGroupDebateRecord(
         groupId,
         input,
@@ -84,10 +85,10 @@ export function useCustomGroupDebates(groupId: string | undefined) {
       }
       return { ok: true, debate }
     },
-    [fanClubId, groupId, refreshDebates, setBucket, username, tier, subscription.usage, patchUsage],
+    [fanClubId, groupId, isAdmin, refreshDebates, setBucket, username, tier, subscription.usage, patchUsage],
   )
 
-  const canAddDebate = canCreateDebate(tier, subscription.usage ?? {}).ok
+  const canAddDebate = canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin).ok
 
   return { customForGroup, addCustomDebate, canAddDebate }
 }
