@@ -17,6 +17,7 @@ import { moderateDebateInput } from '../utils/bannedWords'
 import { useLocalStorageState } from './useLocalStorage'
 import { useSubscription } from './useSubscription'
 import { bumpDebateUsage, canCreateDebate } from '../utils/subscriptionEntitlements'
+import { useXpGrant } from './useXpGrant'
 
 const isBucket = (p: unknown): p is CustomDebatesBucket =>
   p !== null && typeof p === 'object' && !Array.isArray(p)
@@ -36,6 +37,7 @@ export function useCustomGroupDebates(groupId: string | null | undefined) {
   const { user: authUser } = useAuth()
   const isAdmin = Boolean(authUser?.isAdmin)
   const { tier, subscription, patchUsage } = useSubscription()
+  const { grantDebateCreated } = useXpGrant()
   const { favoriteClubIds } = useFanPreferences()
   const { refresh: refreshDebates } = useDebates()
   const fanClubId = favoriteClubIds[0] ?? 'psg'
@@ -94,11 +96,13 @@ export function useCustomGroupDebates(groupId: string | null | undefined) {
       } else {
         void refreshDebates()
       }
+      grantDebateCreated(debate.id)
       return { ok: true, debate }
     },
     [
       bucketKey,
       fanClubId,
+      grantDebateCreated,
       isAdmin,
       linkedGroupId,
       refreshDebates,

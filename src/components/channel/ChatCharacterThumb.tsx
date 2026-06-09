@@ -5,7 +5,6 @@ import type { UserProfile } from '../../types/profile'
 import { buildChatPeerProfile } from '../../utils/chatPeerProfile'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
-import { DressableCharacter } from '../profile/DressableCharacter'
 import {
   MODULAR_PP_NAV_FRAMING,
   ProfileCharacterThumb,
@@ -22,6 +21,13 @@ function peerProfileKey(u: User | undefined): string {
     JSON.stringify(u.characterLook ?? {}),
     JSON.stringify(u.modularAvatar ?? {}),
   ].join('|')
+}
+
+function avatarInitial(username?: string): string {
+  const trimmed = username?.trim() ?? ''
+  if (!trimmed) return '?'
+  const letter = trimmed.replace(/^\p{Extended_Pictographic}+\s*/u, '').trim()[0]
+  return (letter ?? trimmed[0] ?? '?').toUpperCase()
 }
 
 /** Extrait l’emoji affiché dans le pseudo bot tribune (ex. « 🍺 Nom »). */
@@ -75,9 +81,7 @@ export function ChatCharacterThumb({
       ? useModularThumb || isBot
         ? 'size-7 min-h-7 min-w-7'
         : 'min-h-7 w-7 overflow-visible pt-px'
-      : useModularThumb || isBot
-        ? 'size-[2.65rem] min-h-[2.65rem] min-w-[2.65rem] sm:size-[2.85rem] sm:min-h-[2.85rem] sm:min-w-[2.85rem]'
-        : 'min-h-[3.5rem] w-[2.65rem] overflow-visible pt-px sm:min-h-[3.65rem] sm:w-[2.85rem]',
+      : 'size-[2.65rem] min-h-[2.65rem] min-w-[2.65rem] overflow-hidden rounded-full sm:size-[2.85rem] sm:min-h-[2.85rem] sm:min-w-[2.85rem]',
     className,
   )
 
@@ -100,14 +104,10 @@ export function ChatCharacterThumb({
     />
   ) : (
     <div
-      className="pointer-events-none absolute left-1/2 top-0 origin-top"
-      style={{ transform: `translateX(-50%) scale(${size === 'compact' ? 0.32 : 0.42})` }}
+      className="flex size-full items-center justify-center rounded-full border-2 border-white/20 bg-gradient-to-br from-slate-600 to-slate-800 text-sm font-black text-white shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
+      aria-hidden
     >
-      <DressableCharacter
-        profile={profile}
-        variant="front"
-        supporterFanClubId={isSelf ? undefined : (user?.fanClubId ?? null)}
-      />
+      {avatarInitial(user?.username)}
     </div>
   )
 

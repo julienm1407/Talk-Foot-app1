@@ -24,6 +24,8 @@ import {
 } from '../features/avatar2d/modularAvatarState'
 import { isBoutiqueShopItemOwned, repairPackOwnedItemIds } from '../data/boutiqueEconomy'
 import { sanitizeModularGarmentAccess } from '../utils/modularGarmentAccess'
+import { XP_REWARDS } from '../data/xpRewards'
+import { isXpEventCredited, markXpEventCredited, xpDedupeKey } from '../utils/xpGrant'
 
 function catalogItemOwned(itemId: string, ownedItemIds: string[]): boolean {
   return isBoutiqueShopItemOwned(itemId, ownedItemIds)
@@ -394,17 +396,21 @@ export function useProfile() {
 
   const creditWonBets = useCallback(
     (wonBetIds: string[]) => {
-      const credited = profile.creditedBetIds ?? []
-      const toCredit = wonBetIds.filter((id) => !credited.includes(id))
-      if (toCredit.length === 0) return
-      const xpGain = toCredit.length * 35
-      setProfileStore((p) => ({
-        ...p,
-        xp: p.xp + xpGain,
-        creditedBetIds: [...(p.creditedBetIds ?? []), ...toCredit],
-      }))
+      if (wonBetIds.length === 0) return
+      setProfileStore((p) => {
+        let next = p
+        let xpGain = 0
+        for (const id of wonBetIds) {
+          const key = xpDedupeKey('bet', id)
+          if (isXpEventCredited(next, key)) continue
+          next = markXpEventCredited(next, key)
+          xpGain += XP_REWARDS.betWon
+        }
+        if (xpGain <= 0) return p
+        return { ...next, xp: next.xp + xpGain }
+      })
     },
-    [profile.creditedBetIds, setProfileStore],
+    [setProfileStore],
   )
 
   const safeProfile = useMemo(() => {

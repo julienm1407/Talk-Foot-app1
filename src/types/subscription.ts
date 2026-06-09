@@ -17,6 +17,12 @@ export type SubscriptionUsageCounters = {
   /** Heure locale YYYY-MM-DDTHH — jetons gagnés en tribune live */
   liveTokensHourKey?: string | null
   liveTokensThisHour?: number
+  /** XP gagné via messages (plafond journalier). */
+  xpChatDayKey?: string | null
+  xpChatGrantedToday?: number
+  /** XP gagné en tribune live (plafond horaire). */
+  xpLiveHourKey?: string | null
+  xpLiveGrantedThisHour?: number
 }
 
 export type SubscriptionState = {

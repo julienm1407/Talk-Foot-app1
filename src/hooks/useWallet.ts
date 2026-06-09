@@ -19,6 +19,7 @@ import {
   writeLocalWalletStandardizedFlag,
 } from '../utils/walletStandardize'
 import { useSubscription } from './useSubscription'
+import { useXpGrant } from './useXpGrant'
 import {
   monthlyTokenGrantEligible,
   normalizeSubscription,
@@ -59,6 +60,7 @@ function buildDailyBonusStatus(wallet: Wallet, userId?: string): DailyTokenBonus
 export function useWallet() {
   const { user } = useAuth()
   const { tier, monthlyTokens, subscription, plan, patchUsage } = useSubscription()
+  const { grantDailyBonus } = useXpGrant()
   const monthlyAutoGrantRef = useRef<string | null>(null)
   const cloud = useOptionalCloudUserState()
   const persistLocal = !isSupabaseConfigured()
@@ -318,7 +320,10 @@ export function useWallet() {
           lastDailyTokenGrant: claimDayKey,
         }
       })
-      if (out.ok) writeLocalDailyTokenGrant(user?.id, claimDayKey)
+      if (out.ok) {
+        writeLocalDailyTokenGrant(user?.id, claimDayKey)
+        grantDailyBonus(claimDayKey)
+      }
       return out
     }
 
@@ -333,6 +338,7 @@ export function useWallet() {
           if (rpc.ok) {
             patchWallet(() => rpc.wallet)
             writeLocalDailyTokenGrant(user.id, rpc.claimDayKey)
+            grantDailyBonus(rpc.claimDayKey)
             // Aligner app_state client sur le wallet serveur (évite qu’un flush différé écrase le RPC).
             await cloud?.flushAppSave?.()
             return { ok: true, amount: rpc.amount }
@@ -364,7 +370,7 @@ export function useWallet() {
     } finally {
       claimInFlightRef.current = false
     }
-  }, [wallet, user?.id, useCloudWallet, patchWallet, cloud])
+  }, [wallet, user?.id, useCloudWallet, patchWallet, cloud, grantDailyBonus])
 
   return {
     wallet,

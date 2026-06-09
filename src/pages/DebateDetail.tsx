@@ -71,8 +71,13 @@ export function DebateDetailPage() {
   const linkedGroupId = debate.groupId?.trim() || null
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3 text-sm font-bold">
+    <div
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-4 max-lg:overflow-hidden lg:space-y-6',
+      )}
+      data-no-swipe="true"
+    >
+      <div className="hidden flex-wrap items-center gap-3 text-sm font-bold lg:flex">
         <Link to="/" className="text-tf-grey hover:text-tf-dark">
           Accueil
         </Link>
@@ -88,11 +93,11 @@ export function DebateDetailPage() {
       </div>
 
       <header
-        className="overflow-hidden rounded-2xl border border-orange-200/40 shadow-tf-card"
+        className="shrink-0 overflow-hidden rounded-2xl border border-orange-200/40 shadow-tf-card max-lg:rounded-xl"
         style={{ ['--debate-accent' as string]: debate.accent }}
       >
         <div
-          className="relative px-4 py-5 sm:px-6 sm:py-6"
+          className="relative px-4 py-4 sm:px-6 sm:py-6 max-lg:py-3.5"
           style={{
             background: `linear-gradient(155deg, ${debate.accent} 0%, color-mix(in srgb, ${debate.accent} 42%, #0a1628) 52%, #061018 100%)`,
           }}
@@ -116,7 +121,7 @@ export function DebateDetailPage() {
               </span>
               {linkedGroupId ? <DebateGroupBadge groupId={linkedGroupId} /> : null}
             </div>
-            <h1 className="mt-3 font-display text-2xl font-black leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.55)] sm:text-3xl sm:leading-[1.12]">
+            <h1 className="mt-2 font-display text-xl font-black leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.55)] max-lg:line-clamp-3 sm:mt-3 sm:text-3xl sm:leading-[1.12]">
               {debate.title}
             </h1>
             <p
@@ -141,9 +146,9 @@ export function DebateDetailPage() {
         </div>
       </header>
 
-      <DebateSalonPanel debate={debate} />
+      <DebateSalonPanel debate={debate} className="min-h-0 flex-1" />
 
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="hidden shrink-0 flex-wrap justify-center gap-3 lg:flex">
         <Link to="/debates">
           <Button variant="soft" className="tf-interactive-press rounded-2xl px-5 py-3 text-sm font-black">
             Autres débats

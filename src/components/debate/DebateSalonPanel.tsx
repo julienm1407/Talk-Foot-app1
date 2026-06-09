@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Debate } from '../../data/debates'
 import type { Message } from '../../types/chat'
@@ -9,8 +9,14 @@ import { useChatSendGuard } from '../../hooks/useChatSendGuard'
 import { useAutoScroll } from '../../hooks/useAutoScroll'
 import { useSupporterGroupChannelSync } from '../../hooks/useSupporterGroupChannelSync'
 import { useSupporterGroupMessageLikesSync } from '../../hooks/useSupporterGroupMessageLikesSync'
+import type { User } from '../../types/chat'
+import { useProfile } from '../../hooks/useProfile'
+import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
+import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAvatars'
+import { resolveChatDisplayLabel } from '../../utils/chatDisplayName'
 import { MessageList } from '../channel/MessageList'
 import { MessageComposer } from '../channel/MessageComposer'
+import { MobileChatComposerDock } from '../channel/MobileChatComposerDock'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { debateMessageGroupId } from '../../utils/debateAccess'
@@ -23,13 +29,28 @@ import { cn } from '../../utils/cn'
 const MAX_DEBATE_MESSAGES = 2000
 const CHANNEL_ID = 'general'
 
-export function DebateSalonPanel({ debate }: { debate: Debate }) {
+export function DebateSalonPanel({
+  debate,
+  className,
+}: {
+  debate: Debate
+  className?: string
+}) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { user: authUser } = useAuth()
   const { refresh: refreshDebates } = useDebates()
+  const chatActorId = useTalkFootChatActorId()
+  const { profile: selfProfile } = useProfile()
   const messageGroupId = debateMessageGroupId(debate)
-  const selfChatUserId = authUser?.id ?? 'me'
+  const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
+  const selfAvatarKeys = useMemo(() => {
+    const keys = new Set<string>(['me'])
+    if (authUser?.id) keys.add(authUser.id)
+    if (chatActorId) keys.add(chatActorId)
+    if (selfChatUserId) keys.add(selfChatUserId)
+    return [...keys]
+  }, [authUser?.id, chatActorId, selfChatUserId])
   const chatEnabled =
     isSupabaseConfigured() && Boolean(authUser?.id) && !authUser?.isAnonymous
 
@@ -99,6 +120,90 @@ export function DebateSalonPanel({ debate }: { debate: Debate }) {
     if (!cloud.length) return null
     return new Date(Math.min(...cloud.map((m) => m.createdAt))).toISOString()
   }, [messages])
+
+  const chatAuthorIds = useMemo(
+    () => [...new Set(messages.map((m) => m.userId))],
+    [messages],
+  )
+  const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
+    chatAuthorIds,
+    selfChatUserId,
+    {
+      selfModularAvatar: selfProfile.modularAvatar,
+      selfUserKeys: selfAvatarKeys,
+    },
+  )
+
+  const authorNameByUserId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const m of messages) {
+      const n = m.authorDisplayName?.trim()
+      if (n) map.set(m.userId, n)
+    }
+    return map
+  }, [messages])
+
+  const usersById = useMemo(() => {
+    const base: Record<string, User> = {}
+    if (authUser) {
+      const seed =
+        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      const meEntry: User = {
+        id: authUser.id,
+        username: authUser.displayName,
+        avatarSeed: seed,
+        accent: 'emerald',
+        modularAvatar: selfProfile.modularAvatar,
+      }
+      base[authUser.id] = meEntry
+      base.me = { ...meEntry, id: 'me' }
+      if (chatActorId && chatActorId !== authUser.id) {
+        base[chatActorId] = { ...meEntry, id: chatActorId }
+      }
+      if (selfChatUserId && !base[selfChatUserId]) {
+        base[selfChatUserId] = { ...meEntry, id: selfChatUserId }
+      }
+    }
+    for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
+      const label = resolveChatDisplayLabel(authorNameByUserId.get(id), cloudAuthorNames[id])
+      if (base[id]) {
+        base[id] = { ...base[id], username: label, modularAvatar }
+      } else {
+        base[id] = {
+          id,
+          username: label,
+          avatarSeed: id.replace(/-/g, '').slice(0, 12),
+          accent: 'violet',
+          modularAvatar,
+        }
+      }
+    }
+    for (const [userId, name] of authorNameByUserId) {
+      if (base[userId]) {
+        base[userId] = {
+          ...base[userId],
+          username: resolveChatDisplayLabel(name, base[userId].username),
+        }
+      } else {
+        base[userId] = {
+          id: userId,
+          username: resolveChatDisplayLabel(name, cloudAuthorNames[userId]),
+          avatarSeed: userId.replace(/-/g, '').slice(0, 12),
+          accent: 'violet',
+          modularAvatar: modularByAuthor[userId],
+        }
+      }
+    }
+    return base
+  }, [
+    authUser,
+    authorNameByUserId,
+    chatActorId,
+    cloudAuthorNames,
+    modularByAuthor,
+    selfChatUserId,
+    selfProfile.modularAvatar,
+  ])
 
   const feedRef = useAutoScroll<HTMLDivElement>([messages.length])
 
@@ -170,13 +275,23 @@ export function DebateSalonPanel({ debate }: { debate: Debate }) {
     }
   }, [chatEnabled, loadOlderMessages, mergeRemote, oldestCloudIso, olderLoading])
 
-  const usersById = useRef({}).current
+  const composerShellClass = cn(
+    L ? 'border-tf-grey-pastel/50 bg-white/98' : 'border-white/12 bg-[#041a2d]/95',
+  )
 
   return (
-    <Card className="flex min-h-[min(70vh,42rem)] flex-col overflow-hidden p-0" elevation="soft">
+    <Card
+      className={cn(
+        'flex min-h-0 flex-col overflow-hidden p-0',
+        'max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[auto_minmax(0,1fr)_auto]',
+        'lg:min-h-[min(70vh,42rem)]',
+        className,
+      )}
+      elevation="soft"
+    >
       <div
         className={cn(
-          'border-b px-4 py-3 sm:px-5',
+          'shrink-0 border-b px-4 py-3 sm:px-5 max-lg:row-start-1',
           L ? 'border-tf-grey-pastel/50 bg-white/95' : 'border-white/12 bg-[color:var(--tf-c30-surface-soft)]',
         )}
       >
@@ -190,7 +305,7 @@ export function DebateSalonPanel({ debate }: { debate: Debate }) {
 
       <div
         ref={feedRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3 sm:px-4 [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3 sm:px-4 max-lg:row-start-2 [-webkit-overflow-scrolling:touch]"
         role="log"
         aria-label="Messages du débat"
         aria-live="polite"
@@ -215,6 +330,7 @@ export function DebateSalonPanel({ debate }: { debate: Debate }) {
             messages={messages}
             usersById={usersById}
             selfUserId={selfChatUserId}
+            selfChatActorId={chatActorId}
             selfClerkUserId={authUser?.id}
             salonTone={L ? 'light' : 'dark'}
             getLikes={(id) => (isUuidMessageId(id) ? messageLikes.getLikeState(id).likes : 0)}
@@ -231,11 +347,10 @@ export function DebateSalonPanel({ debate }: { debate: Debate }) {
         )}
       </div>
 
-      <div
-        className={cn(
-          'border-t px-3 py-3 sm:px-4',
-          L ? 'border-tf-grey-pastel/50 bg-white/98' : 'border-white/12 bg-[color:var(--tf-c30-surface-soft)]',
-        )}
+      <MobileChatComposerDock
+        gridRowClassName="max-lg:row-start-3"
+        className={composerShellClass}
+        ariaLabel="Écrire dans le débat"
       >
         {!authUser?.id || authUser.isAnonymous ? (
           <div className="space-y-2 text-center">
@@ -262,7 +377,7 @@ export function DebateSalonPanel({ debate }: { debate: Debate }) {
             />
           </>
         )}
-      </div>
+      </MobileChatComposerDock>
     </Card>
   )
 }

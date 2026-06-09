@@ -11,6 +11,7 @@ import {
 } from '../utils/subscriptionEntitlements'
 import { useSubscription } from './useSubscription'
 import { useWallet } from './useWallet'
+import { useXpGrant } from './useXpGrant'
 
 /** 40 jetons / h → 1 jeton toutes les 90 s (page tribune live, match en cours). */
 const LIVE_TOKEN_TICK_MS = 90_000
@@ -19,6 +20,7 @@ export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boole
   const { user } = useAuth()
   const { tier, subscription, patchUsage } = useSubscription()
   const { patchWallet } = useWallet()
+  const { grantLiveTick } = useXpGrant()
   const cloud = useOptionalCloudUserState()
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -47,12 +49,14 @@ export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boole
           wallet: { ...w, tokens: w.tokens + 1 },
         }
       })
+      grantLiveTick()
       return
     }
 
     patchUsage((u) => bumpLiveTokenUsage(u, 1))
     patchWallet((w) => ({ ...w, tokens: w.tokens + 1 }))
-  }, [user?.id, matchId, isLive, tier, subscription.usage, cloud, patchUsage, patchWallet])
+    grantLiveTick()
+  }, [user?.id, matchId, isLive, tier, subscription.usage, cloud, patchUsage, patchWallet, grantLiveTick])
 
   useEffect(() => {
     if (tickRef.current) {

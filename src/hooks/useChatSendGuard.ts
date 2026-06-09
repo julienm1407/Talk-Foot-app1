@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { useSubscription } from './useSubscription'
 import { bumpChatUsage, chatSendAllowed } from '../utils/subscriptionEntitlements'
+import { useXpGrant } from './useXpGrant'
 
 export function useChatSendGuard() {
   const { tier, subscription, patchUsage } = useSubscription()
+  const { grantChatMessage } = useXpGrant()
   const usage = subscription.usage ?? {}
 
   const check = useCallback(() => chatSendAllowed(tier, usage), [tier, usage])
@@ -15,7 +17,8 @@ export function useChatSendGuard() {
 
   const recordSend = useCallback(() => {
     patchUsage((u) => bumpChatUsage(u ?? {}))
-  }, [patchUsage])
+    grantChatMessage()
+  }, [patchUsage, grantChatMessage])
 
   const trySend = useCallback(
     (send: () => void): boolean => {

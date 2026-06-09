@@ -291,7 +291,7 @@ export function hasPlanFlag(
   return Boolean(getSubscriptionPlan(tier).flags[flag])
 }
 
-function toLocalDayKey(date: Date): string {
+export function toLocalDayKey(date: Date): string {
   const y = date.getFullYear()
   const m = `${date.getMonth() + 1}`.padStart(2, '0')
   const d = `${date.getDate()}`.padStart(2, '0')

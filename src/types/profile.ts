@@ -165,7 +165,9 @@ export type UserProfile = {
   xp: number
   equippedItems: Record<AvatarSlot, string | null> // itemId par slot
   ownedItemIds: string[]
-  creditedBetIds?: string[] // paris déjà crédités en XP
+  creditedBetIds?: string[] // paris déjà crédités en XP (legacy)
+  /** Clés anti-doublon pour tous les gains XP (`bet:`, `bet-placed:`, `debate:`, `daily:`, …). */
+  creditedXpKeys?: string[]
   /** Apparence du personnage (SVG) */
   characterLook?: AvatarCharacterLook
   /** Style de fond du portrait (derrière le SVG / photo). */

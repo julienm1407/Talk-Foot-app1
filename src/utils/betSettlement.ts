@@ -1,6 +1,7 @@
 import type { Bet, BetMarket } from '../types/bet'
 import { scorerLineupMatchesScoredGoal } from './liveFootballOdds'
 import { betWinTokenCredit } from './subscriptionEntitlements'
+import { newlyWonBetIds } from './xpGrant'
 
 const SCORE_KEY_MAP: Record<string, [number, number]> = {
   '00': [0, 0],
@@ -25,7 +26,7 @@ export function settleOpenBetsForMatch(
   finalScore: { home: number; away: number },
   tokenMultiplier: number,
   opts?: SettleMatchBetsOptions,
-): { bets: Bet[]; tokenDelta: number } {
+): { bets: Bet[]; tokenDelta: number; newlyWonBetIds: string[] } {
   const now = opts?.now ?? new Date().toISOString()
   const allowedMarkets = opts?.markets ? new Set(opts.markets) : null
   const { home, away } = finalScore
@@ -97,5 +98,5 @@ export function settleOpenBetsForMatch(
     return b
   })
 
-  return { bets: next, tokenDelta }
+  return { bets: next, tokenDelta, newlyWonBetIds: newlyWonBetIds(bets, next) }
 }

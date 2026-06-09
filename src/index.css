@@ -2351,6 +2351,26 @@ body::before {
   }
 }
 
+/* Barre de saisie chat — mobile (portail body, au-dessus de la BottomNav). */
+.tf-chat-compose-mobile-shell {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem) !important;
+  z-index: 2147482350 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  padding-inline: max(0.75rem, env(safe-area-inset-left, 0px))
+    max(0.75rem, env(safe-area-inset-right, 0px));
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.tf-chat-compose-mobile-shell input,
+.tf-chat-compose-mobile-shell textarea {
+  font-size: 16px;
+}
+
 /* Barre « Rejoindre pour écrire » — tribune groupe mobile (portail body, au-dessus du scroll). */
 .tf-group-join-mobile-shell {
   position: fixed !important;

@@ -30,6 +30,7 @@ export function AppShell() {
   const isChannel = location.pathname.startsWith('/channel/')
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
   const isGroupTribune = /^\/group\/[^/]+/.test(location.pathname)
+  const isDebatePage = /^\/debate\/[^/]+/.test(location.pathname)
 
   useSwipeNavigate({
     enabled: !isChannel && !isGroupTribune,
@@ -71,7 +72,7 @@ export function AppShell() {
               <SiteLegalFooter compact className="rounded-t-2xl" />
             </div>
           </div>
-        ) : isGroupTribune ? (
+        ) : isGroupTribune || isDebatePage ? (
           <div
             className={cn(
               'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col min-h-0 px-[var(--tf-page-gutter)]',

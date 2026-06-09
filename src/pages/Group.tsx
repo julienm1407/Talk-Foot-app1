@@ -19,6 +19,7 @@ import { useDebates } from '../contexts/DebatesContext'
 import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
+import { MobileChatComposerDock } from '../components/channel/MobileChatComposerDock'
 import { chatPersonasPool, currentUser } from '../data/users'
 import {
   useSupporterGroupChannelSync,
@@ -2098,12 +2099,13 @@ export function GroupPage() {
               onJoin={onJoinGroupClick}
             />
           ) : (
-            <div
+            <MobileChatComposerDock
+              gridRowClassName="max-lg:row-start-3"
               className={cn(
-                'relative z-20 min-w-0 shrink-0 touch-manipulation border-t border-tf-grey-pastel/50 px-3 py-1.5 backdrop-blur-md max-lg:row-start-3 sm:px-5 sm:py-3',
-                L ? 'bg-white/95' : 'bg-[#041a2d]/95',
+                'min-w-0 touch-manipulation backdrop-blur-md',
+                L ? 'border-tf-grey-pastel/50 bg-white/95' : 'border-white/12 bg-[#041a2d]/95',
               )}
-              style={salonSurface?.backdrop}
+              ariaLabel={`Écrire dans ${channel?.name ?? 'la tribune'}`}
             >
               {groupChatModerationHint ? (
                 <p className="mb-2 rounded-xl border border-rose-200/80 bg-rose-50/95 px-3 py-2 text-xs font-semibold text-rose-800">
@@ -2139,7 +2141,7 @@ export function GroupPage() {
                 }
                 onSendScarf={group.scarf ? onSendScarf : undefined}
               />
-            </div>
+            </MobileChatComposerDock>
           )}
         </Card>
       </div>

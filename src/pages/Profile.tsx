@@ -409,7 +409,7 @@ export function ProfilePage() {
                 <div className="text-xs font-bold text-tf-app-muted">Progression</div>
                 <ProgressBar value={xpProgress} tone="blue" className="mt-1 max-w-[min(200px,80vw)]" />
                 <div className="mt-0.5 text-[10px] font-medium text-tf-app-muted">
-                  {xpProgress}% vers le niveau {profile.level + 1} • XP : paris gagnés, pronos
+                  {xpProgress}% vers le niveau {profile.level + 1} • XP : paris, chat, live, débats, bonus quotidien
                 </div>
               </div>
             </div>
