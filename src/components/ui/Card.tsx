@@ -1,5 +1,6 @@
 import { cn } from '../../utils/cn'
 import { motion, useReducedMotion } from 'framer-motion'
+import { useAppearance } from '../../contexts/AppearanceContext'
 
 export function Card({
   className,
@@ -8,7 +9,7 @@ export function Card({
   style,
   id,
   /**
-   * `light` (défaut) : carte standard — le fond suit `--tf-card-bg-light` (blanc le jour, verre 30 % la nuit).
+   * `light` (défaut) : carte standard — blanc léger le jour, surface 30 % opaque la nuit.
    * `dark` : carte verre explicite (même look nuit) — ne pose pas `data-tf-card-surface`.
    */
   surface = 'light',
@@ -27,6 +28,8 @@ export function Card({
   tone?: 'default' | 'solid'
 }) {
   const reducedMotion = useReducedMotion()
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   return (
     <motion.div
       id={id}
@@ -38,7 +41,7 @@ export function Card({
       data-tf-card-tone={tone === 'solid' ? 'solid' : undefined}
       className={cn(
         'rounded-tf-3xl border border-[color:var(--tf-c30-border)] text-tf-app-fg backdrop-blur-sm',
-        tone === 'solid'
+        tone === 'solid' || !L
           ? 'bg-[color:var(--tf-c30-surface-soft)]'
           : 'bg-[color:color-mix(in_srgb,var(--tf-card-bg-light)_96%,transparent)]',
         elevation === 'soft' && 'shadow-tf-elev-3',

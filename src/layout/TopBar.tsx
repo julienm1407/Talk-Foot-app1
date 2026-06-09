@@ -325,7 +325,7 @@ export function TopBar() {
                 : cn(
                     L
                       ? 'border-tf-dark/14 bg-tf-white text-tf-dark shadow-sm hover:border-tf-dark/30 hover:bg-tf-electric-soft'
-                      : 'border-white/15 bg-white/10 text-white shadow-sm hover:border-white/25 hover:bg-white/14',
+                      : 'border-white/22 bg-[color:var(--tf-c30-surface-soft)] text-white shadow-sm hover:border-white/32 hover:bg-[color:color-mix(in_srgb,var(--tf-c30-surface-soft)_88%,white)]',
                     profileTheme.nav.inactiveHover,
                   ),
             )}

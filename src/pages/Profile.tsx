@@ -51,7 +51,7 @@ function profileIncard(appearance: Appearance) {
     'border',
     L
       ? 'border-tf-dark/10 bg-white/88 shadow-[0_1px_0_rgba(1,30,51,0.05)]'
-      : 'border-white/10 bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]',
+      : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]',
   )
 }
 
@@ -124,11 +124,16 @@ export function ProfilePage() {
       <header
         className={cn(
           'flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
-          pr.page.borderBottomClass,
+          L ? pr.page.borderBottomClass : 'border-white/15',
         )}
       >
         <div className="min-w-0 space-y-1.5">
-          <div className={cn('text-[11px] font-black tracking-[0.18em]', pr.page.eyebrowClass)}>
+          <div
+            className={cn(
+              'text-[11px] font-black tracking-[0.18em]',
+              L ? pr.page.eyebrowClass : 'text-sky-200/90',
+            )}
+          >
             Profil
           </div>
           <div className="flex flex-wrap items-center gap-2">
