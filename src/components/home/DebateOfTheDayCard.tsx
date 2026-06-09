@@ -147,7 +147,7 @@ export function DebateOfTheDayCard({
             )}
           >
             <Link
-              to={`/group/${debate.groupId}?debate=${encodeURIComponent(debate.id)}`}
+              to={`/debate/${debate.id}`}
               className={cn(
                 'tf-interactive-press inline-flex w-full items-center justify-center gap-2 rounded-2xl text-center font-black text-white shadow-lg sm:w-auto',
                 hubCompact
@@ -156,7 +156,7 @@ export function DebateOfTheDayCard({
                 'bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800',
               )}
             >
-              ✍️ Écrire dans la tribune
+              ✍️ Participer au débat
             </Link>
             <Link
               to={`/debate/${debate.id}`}

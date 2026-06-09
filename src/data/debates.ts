@@ -17,7 +17,8 @@ export type Debate = {
   id: string
   title: string
   excerpt: string
-  groupId: string
+  /** Tribune associée (facultatif) — le débat reste accessible sans adhésion. */
+  groupId?: string | null
   accent: string
   messagesCount: number
   participantsCount: number

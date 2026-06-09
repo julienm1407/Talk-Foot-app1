@@ -4,7 +4,7 @@ import { isSupabaseModerationError } from '../../utils/bannedWords'
 
 export type DebateStatsRow = {
   id: string
-  group_id: string
+  group_id: string | null
   title: string
   excerpt: string
   accent: string
@@ -47,7 +47,7 @@ export function debateRowToDebate(row: DebateStatsRow, previewMessages: DebatePr
     id: row.id,
     title: row.title,
     excerpt: row.excerpt,
-    groupId: row.group_id,
+    groupId: row.group_id ?? null,
     accent: row.accent,
     messagesCount: row.messages_count,
     participantsCount: row.participants_count,
@@ -127,7 +127,7 @@ async function fetchDebatePreviewMap(
 
 export type UpsertDebateInput = {
   id: string
-  groupId: string
+  groupId?: string | null
   title: string
   excerpt: string
   accent: string
@@ -141,11 +141,11 @@ export async function upsertPublishedDebate(
   const { error } = await sb.from('debates').upsert(
     {
       id: input.id,
-      group_id: input.groupId,
+      group_id: input.groupId?.trim() || null,
       title: input.title,
       excerpt: input.excerpt,
       accent: input.accent,
-      salon_access: input.salonAccess ?? 'members',
+      salon_access: input.salonAccess ?? 'public',
       status: 'published',
       updated_at: new Date().toISOString(),
     },

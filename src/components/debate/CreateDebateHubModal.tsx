@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../ui/Button'
 import { DebatePickerModal } from '../group/DebatePickerModal'
 import { useSupporterGroups } from '../../hooks/useSupporterGroups'
 import { useCustomGroupDebates } from '../../hooks/useCustomGroupDebates'
 import { useModalBackdropGuard } from '../../utils/modalBackdropGuard'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
+import { debatePageHref } from '../../utils/debateAccess'
 import { cn } from '../../utils/cn'
 
-type Phase = 'pick-group' | 'create'
+type Phase = 'choose' | 'pick-group' | 'create'
 
 export function CreateDebateHubModal({
   open,
@@ -24,10 +25,13 @@ export function CreateDebateHubModal({
 }) {
   const navigate = useNavigate()
   const { groups, isJoined } = useSupporterGroups()
-  const [phase, setPhase] = useState<Phase>('pick-group')
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+  const [phase, setPhase] = useState<Phase>('choose')
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null | undefined>(undefined)
   const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
-  const { customForGroup, addCustomDebate } = useCustomGroupDebates(selectedGroupId ?? undefined)
+
+  const hookGroupId =
+    phase === 'create' && selectedGroupId !== undefined ? selectedGroupId : undefined
+  const { customForGroup, addCustomDebate } = useCustomGroupDebates(hookGroupId)
 
   const eligibleGroups = useMemo(
     () => groups.filter((g) => isJoined(g.id) || g.createdBy === 'me'),
@@ -45,18 +49,13 @@ export function CreateDebateHubModal({
 
   useEffect(() => {
     if (!open) return
-    if (eligibleGroups.length === 1) {
-      setSelectedGroupId(eligibleGroups[0]!.id)
-      setPhase('create')
-      return
-    }
-    setSelectedGroupId(null)
-    setPhase('pick-group')
-  }, [open, eligibleGroups])
+    setPhase('choose')
+    setSelectedGroupId(undefined)
+  }, [open])
 
   if (!open) return null
 
-  if (phase === 'create' && selectedGroupId) {
+  if (phase === 'create' && selectedGroupId !== undefined) {
     return (
       <DebatePickerModal
         open
@@ -67,7 +66,7 @@ export function CreateDebateHubModal({
         onClose={onClose}
         onBlockedCreate={onBlockedCreate}
         onPick={(debateId) => {
-          navigate(`/group/${selectedGroupId}?debate=${encodeURIComponent(debateId)}`)
+          navigate(debatePageHref(debateId))
         }}
         onPublishCustom={(input) => {
           const r = addCustomDebate(input)
@@ -113,10 +112,12 @@ export function CreateDebateHubModal({
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Nouveau débat</p>
               <h2 id="create-debate-hub-title" className="mt-1 text-lg font-black text-slate-900">
-                Choisir une tribune
+                {phase === 'pick-group' ? 'Associer à une tribune' : 'Lancer un débat ouvert'}
               </h2>
               <p className="mt-1 text-xs font-semibold text-slate-600">
-                Le débat sera publié dans la tribune Général du groupe choisi.
+                {phase === 'pick-group'
+                  ? 'Optionnel : étiquette vers une communauté (PSG, CDM…). L’accès reste ouvert à tous.'
+                  : 'Espace temporaire autour d’un sujet — participation immédiate, sans rejoindre de groupe.'}
               </p>
             </div>
             <Button variant="ghost" className="h-9 shrink-0 rounded-2xl" onClick={onClose}>
@@ -126,51 +127,80 @@ export function CreateDebateHubModal({
         </div>
 
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-          {eligibleGroups.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-center">
-              <p className="text-sm font-black text-slate-800">Aucune tribune disponible</p>
-              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">
-                Rejoins ou crée un groupe supporters pour publier un débat — il apparaîtra ici et dans le classement.
-              </p>
-              <div className="mt-4 flex flex-col gap-2">
-                <Link
-                  to="/groups"
-                  onClick={onClose}
-                  className="tf-interactive-press inline-flex min-h-11 items-center justify-center rounded-2xl bg-tf-dark px-4 text-sm font-black text-white"
-                >
-                  Voir les tribunes
-                </Link>
-                <Link
-                  to="/groups?tab=discover"
-                  onClick={onClose}
-                  className="tf-interactive-press inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-800"
-                >
-                  Parcourir les groupes
-                </Link>
-              </div>
+          {phase === 'choose' ? (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedGroupId(null)
+                  setPhase('create')
+                }}
+                className="tf-interactive-press w-full rounded-2xl border-2 border-violet-300/70 bg-violet-50 px-3 py-4 text-left transition hover:border-violet-400 hover:bg-violet-100/80"
+              >
+                <span className="text-lg" aria-hidden>
+                  💬
+                </span>
+                <span className="mt-1 block text-sm font-black text-slate-900">Débat ouvert (recommandé)</span>
+                <span className="mt-0.5 block text-xs font-semibold text-slate-600">
+                  Sans tribune liée — visible par toute la communauté Talk Foot.
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPhase('pick-group')}
+                className="tf-interactive-press w-full rounded-2xl border border-slate-200/90 bg-white px-3 py-4 text-left transition hover:border-violet-300 hover:bg-violet-50/50"
+              >
+                <span className="text-lg" aria-hidden>
+                  👥
+                </span>
+                <span className="mt-1 block text-sm font-black text-slate-900">Associer à une tribune</span>
+                <span className="mt-0.5 block text-xs font-semibold text-slate-600">
+                  Étiquette vers un groupe — le débat reste accessible sans adhésion.
+                </span>
+              </button>
             </div>
           ) : (
             <ul className="space-y-2" role="list">
-              {eligibleGroups.map((g) => (
-                <li key={g.id}>
-                  <button
+              {eligibleGroups.length === 0 ? (
+                <li className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-center">
+                  <p className="text-sm font-black text-slate-800">Aucune tribune disponible</p>
+                  <p className="mt-2 text-xs font-semibold text-slate-600">
+                    Crée un débat ouvert ci-dessus, ou rejoins une tribune depuis l’onglet Groupes.
+                  </p>
+                  <Button
                     type="button"
+                    variant="soft"
+                    className="mt-3 w-full rounded-2xl font-black"
                     onClick={() => {
-                      setSelectedGroupId(g.id)
+                      setSelectedGroupId(null)
                       setPhase('create')
                     }}
-                    className="tf-interactive-press w-full rounded-2xl border border-slate-200/90 bg-white px-3 py-3 text-left transition hover:border-violet-300 hover:bg-violet-50/50"
                   >
-                    <span className="text-lg" aria-hidden>
-                      {g.emoji}
-                    </span>
-                    <span className="mt-1 block text-sm font-black text-slate-900">{g.name}</span>
-                    <span className="mt-0.5 block text-xs font-semibold text-slate-600">
-                      {g.createdBy === 'me' ? 'Ta tribune' : 'Membre'} · {g.location}
-                    </span>
-                  </button>
+                    Débat sans tribune
+                  </Button>
                 </li>
-              ))}
+              ) : (
+                eligibleGroups.map((g) => (
+                  <li key={g.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedGroupId(g.id)
+                        setPhase('create')
+                      }}
+                      className="tf-interactive-press w-full rounded-2xl border border-slate-200/90 bg-white px-3 py-3 text-left transition hover:border-violet-300 hover:bg-violet-50/50"
+                    >
+                      <span className="text-lg" aria-hidden>
+                        {g.emoji}
+                      </span>
+                      <span className="mt-1 block text-sm font-black text-slate-900">{g.name}</span>
+                      <span className="mt-0.5 block text-xs font-semibold text-slate-600">
+                        {g.createdBy === 'me' ? 'Ta tribune' : 'Membre'} · {g.location}
+                      </span>
+                    </button>
+                  </li>
+                ))
+              )}
             </ul>
           )}
         </div>

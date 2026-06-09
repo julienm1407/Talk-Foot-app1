@@ -13,6 +13,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../hooks/useSubscription'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { canCreateDebate } from '../utils/subscriptionEntitlements'
+import { debatePageHref } from '../utils/debateAccess'
+import { DebateGroupBadge } from '../components/debate/DebateGroupBadge'
 
 export function DebatesPage() {
   const { debates: all, loading } = useDebates()
@@ -68,7 +70,7 @@ export function DebatesPage() {
         uppercaseTitle={false}
         eyebrow="Débats"
         title="Tribunes & polémiques"
-        description="Classement de tous les débats publiés — pas de minimum de messages : les plus actifs (ou les plus récents) en tête."
+        description="Espaces de discussion ouverts autour d’un sujet — participe sans rejoindre de tribune. Classement par activité récente."
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <Link
@@ -94,8 +96,7 @@ export function DebatesPage() {
         <Card elevation="soft" className="border-dashed p-8 text-center">
           <p className="font-black text-tf-dark">Aucun débat pour le moment</p>
           <p className="mt-2 text-sm font-semibold text-tf-grey">
-            Rejoins un groupe et lance un sujet dans la tribune Général — les compteurs participants et messages
-            sont calculés en temps réel.
+            Lance un sujet ouvert — les compteurs participants et messages sont calculés en temps réel.
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <Button variant="primary" className="rounded-2xl" onClick={handleCreateClick}>
@@ -138,6 +139,7 @@ export function DebatesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         {d.leaderboardRank ? <DebateRankBadge rank={d.leaderboardRank} /> : null}
+                        {d.groupId ? <DebateGroupBadge groupId={d.groupId} /> : null}
                         {d.trending ? (
                           <span className="inline-flex rounded-full bg-white/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/35">
                             🔥 Top 3
@@ -164,16 +166,10 @@ export function DebatesPage() {
                     </div>
                     <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                       <Link
-                        to={`/group/${d.groupId}?debate=${encodeURIComponent(d.id)}`}
+                        to={debatePageHref(d.id)}
                         className="tf-interactive-press rounded-2xl bg-white px-5 py-2.5 text-center text-sm font-black text-tf-dark shadow-md transition hover:bg-orange-50"
                       >
-                        Écrire dans la tribune
-                      </Link>
-                      <Link
-                        to={`/debate/${d.id}`}
-                        className="tf-interactive-press rounded-2xl border-2 border-white/55 bg-white/12 px-5 py-2.5 text-center text-sm font-black text-white shadow-sm backdrop-blur-sm transition hover:border-white/75 hover:bg-white/20"
-                      >
-                        Lire le fil
+                        Participer au débat
                       </Link>
                     </div>
                   </div>

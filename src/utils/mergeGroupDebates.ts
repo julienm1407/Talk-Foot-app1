@@ -6,9 +6,9 @@ export function mergeDebatesForGroup(
   local: Debate[],
   groupId: string,
 ): Debate[] {
-  const fromCloud = cloud.filter((d) => d.groupId === groupId)
+  const fromCloud = cloud.filter((d) => (d.groupId ?? null) === groupId)
   const ids = new Set(fromCloud.map((d) => d.id))
-  const extra = local.filter((d) => d.groupId === groupId && !ids.has(d.id))
+  const extra = local.filter((d) => (d.groupId ?? null) === groupId && !ids.has(d.id))
   return [...extra, ...fromCloud].sort(
     (a, b) => (b.messagesCount ?? 0) - (a.messagesCount ?? 0) || a.title.localeCompare(b.title),
   )

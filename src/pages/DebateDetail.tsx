@@ -5,13 +5,11 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { fetchDebateById } from '../lib/supabase/debates'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { Debate } from '../data/debates'
-import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { DebateMessagePreview } from '../components/debate/DebateMessagePreview'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
-import { AdSlot } from '../components/ui/AdSlot'
-import { EditorialProse } from '../components/ads/EditorialProse'
+import { DebateSalonPanel } from '../components/debate/DebateSalonPanel'
+import { DebateGroupBadge } from '../components/debate/DebateGroupBadge'
 
 export function DebateDetailPage() {
   const { debateId } = useParams()
@@ -70,6 +68,7 @@ export function DebateDetailPage() {
   }
 
   const dth = getAppSectionTheme('debates')
+  const linkedGroupId = debate.groupId?.trim() || null
 
   return (
     <div className="space-y-6">
@@ -106,11 +105,17 @@ export function DebateDetailPage() {
             aria-hidden
           />
           <div className="relative">
-            {debate.trending ? (
-              <span className="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white ring-1 ring-white/35">
-                🔥 Tendance
+            <div className="flex flex-wrap items-center gap-2">
+              {debate.trending ? (
+                <span className="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white ring-1 ring-white/35">
+                  🔥 Tendance
+                </span>
+              ) : null}
+              <span className="inline-flex rounded-full bg-emerald-500/25 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white ring-1 ring-emerald-300/40">
+                Ouvert à tous
               </span>
-            ) : null}
+              {linkedGroupId ? <DebateGroupBadge groupId={linkedGroupId} /> : null}
+            </div>
             <h1 className="mt-3 font-display text-2xl font-black leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.55)] sm:text-3xl sm:leading-[1.12]">
               {debate.title}
             </h1>
@@ -136,51 +141,22 @@ export function DebateDetailPage() {
         </div>
       </header>
 
-      <EditorialProse
-        title="Contexte du débat"
-        className="border-orange-200/35 bg-orange-50/50"
-        paragraphs={[
-          `Ce fil rassemble les arguments des supporters autour de « ${debate.title} ». Les extraits ci-dessous proviennent de la communauté Talk Foot ; la discussion complète se poursuit dans la tribune de groupe associé.`,
-          'Talk Foot propose des débats modérés, des sondages et des tribunes live par match. Les pages de simple navigation (liste des débats, calendrier, connexion) restent sans publicité.',
-        ]}
-      />
+      <DebateSalonPanel debate={debate} />
 
-      <AdSlot
-        compact
-        tone="navy"
-        brand="Talk Foot"
-        body="Espace partenaire sur la page débat."
-        imageSeed="debate-inline"
-        contentReady
-      />
-
-      <Card className="p-5 sm:p-6" elevation="soft">
-        <h2 className="font-display text-sm font-black uppercase tracking-[0.18em] text-tf-grey">
-          Aperçu des messages
-        </h2>
-        <ul className="mt-4 space-y-3" role="list">
-          {debate.previewMessages.map((m, i) => (
-            <li key={`${debate.id}-pv-${i}`}>
-              <DebateMessagePreview message={m} />
-            </li>
-          ))}
-        </ul>
-        <p className="mt-4 text-xs font-semibold text-tf-grey">
-          La suite de la discussion se poursuit dans la tribune groupe — réactions, sondages et modération.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link to={`/group/${debate.groupId}?debate=${encodeURIComponent(debate.id)}`}>
-            <Button variant="primary" className="tf-interactive-press rounded-2xl px-6 py-3 text-sm font-black">
-              💬 Écrire dans la tribune
+      <div className="flex flex-wrap justify-center gap-3">
+        <Link to="/debates">
+          <Button variant="soft" className="tf-interactive-press rounded-2xl px-5 py-3 text-sm font-black">
+            Autres débats
+          </Button>
+        </Link>
+        {linkedGroupId ? (
+          <Link to={`/group/${linkedGroupId}`}>
+            <Button variant="ghost" className="tf-interactive-press rounded-2xl px-5 py-3 text-sm font-black">
+              Voir la tribune liée
             </Button>
           </Link>
-          <Link to="/debates">
-            <Button variant="soft" className="tf-interactive-press rounded-2xl px-5 py-3 text-sm font-black">
-              Autres débats
-            </Button>
-          </Link>
-        </div>
-      </Card>
+        ) : null}
+      </div>
     </div>
   )
 }

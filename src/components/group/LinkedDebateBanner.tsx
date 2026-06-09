@@ -61,7 +61,7 @@ export function LinkedDebateBanner({ debate, debateId, className }: Props) {
               L ? 'text-tf-cta' : 'text-sky-300',
             )}
           >
-            Voir la fiche débat
+            Participer sur la page débat
           </Link>
         ) : null}
         <span
@@ -71,7 +71,7 @@ export function LinkedDebateBanner({ debate, debateId, className }: Props) {
           )}
         >
           {debateId ? '· ' : ''}
-          Messages ci-dessous dans la tribune général
+          Accès ouvert — aucune adhésion à la tribune requise
         </span>
       </div>
     </div>

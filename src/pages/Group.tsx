@@ -348,13 +348,9 @@ export function GroupPage() {
     [],
   )
 
-  const isOpenPublicDebateSalon = Boolean(
-    group &&
-      channel &&
-      channel.id === 'general' &&
-      debate &&
-      (debate.salonAccess ?? 'public') === 'public',
-  )
+  const isDebateSalon = Boolean(group && channel && channel.id === 'general' && debate)
+  /** Tous les débats sont ouverts : participation sans adhésion à la tribune. */
+  const isOpenPublicDebateSalon = isDebateSalon
 
   const isPublicGroup = (group?.groupKind ?? 'public') === 'public'
 
@@ -749,7 +745,7 @@ export function GroupPage() {
           channelId: channel.id,
           debateId: channel.id === 'general' ? (debate?.id ?? null) : null,
           groupScarf: msg.groupScarf,
-          tfPublicDebate: isOpenPublicDebateSalon,
+          tfPublicDebate: channel.id === 'general' && Boolean(debate?.id),
           displayName: authUser?.displayName,
         })
         if (r.ok) {
@@ -807,10 +803,7 @@ export function GroupPage() {
       }
       recordChatSend()
       setGroupChatLimitHint(null)
-      const openDebateToAll =
-        debate != null &&
-        channel.id === 'general' &&
-        (debate.salonAccess ?? 'public') === 'public'
+      const openDebateToAll = debate != null && channel.id === 'general'
       if (
         !openDebateToAll &&
         group.createdBy !== 'me' &&
@@ -853,10 +846,7 @@ export function GroupPage() {
       }
       recordChatSend()
       setGroupChatLimitHint(null)
-      const openDebateToAll =
-        debate != null &&
-        channel.id === 'general' &&
-        (debate.salonAccess ?? 'public') === 'public'
+      const openDebateToAll = debate != null && channel.id === 'general'
       if (
         !openDebateToAll &&
         group.createdBy !== 'me' &&
@@ -936,7 +926,7 @@ export function GroupPage() {
     (debate.salonAccess ?? 'public') === 'public'
 
   const canWriteInTribune =
-    accessLevel !== 'readonly' && (isGroupMember || isPublicDebateInGeneral)
+    accessLevel !== 'readonly' && (isGroupMember || isDebateSalon || isPublicDebateInGeneral)
   const groupMainClubId = group.fanTags?.clubIds?.[0] ?? null
   const groupMainClubLabel = groupMainClubId ? ALL_CLUBS_BY_ID[groupMainClubId]?.name ?? groupMainClubId : null
   const matchedForGroupLogo = groupMainClubId

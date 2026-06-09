@@ -24,7 +24,8 @@ export function DebatePickerModal({
   onBlockedCreate,
 }: {
   open: boolean
-  groupId: string
+  /** `null` = débat autonome sans tribune liée. */
+  groupId: string | null
   customForGroup: Debate[]
   /** Formule + quota : false pour Supporter ou quota épuisé. */
   canCreateDebate?: boolean
@@ -47,10 +48,10 @@ export function DebatePickerModal({
   const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
   const { debates: catalogDebates, refresh, loading } = useDebates()
 
-  const groupDebates = useMemo(
-    () => mergeDebatesForGroup(catalogDebates, customForGroup, groupId),
-    [catalogDebates, customForGroup, groupId],
-  )
+  const groupDebates = useMemo(() => {
+    if (groupId === null) return customForGroup
+    return mergeDebatesForGroup(catalogDebates, customForGroup, groupId)
+  }, [catalogDebates, customForGroup, groupId])
 
   useEffect(() => {
     if (!open) return
@@ -164,12 +165,16 @@ export function DebatePickerModal({
         <div className="shrink-0">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Tribune général</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                {groupId ? 'Tribune liée' : 'Débat ouvert'}
+              </p>
               <h2 id="debate-picker-title" className="mt-1 text-lg font-black text-slate-900">
-                Débat dans le groupe
+                {groupId ? 'Débat associé au groupe' : 'Nouveau débat communautaire'}
               </h2>
               <p className="mt-1 text-xs font-semibold text-slate-600">
-                Sujets publiés dans ce groupe — visibles par tous les membres.
+                {groupId
+                  ? 'Accès ouvert à tous — la tribune sert d’étiquette, pas de barrière.'
+                  : 'Participation immédiate pour toute la communauté Talk Foot.'}
               </p>
             </div>
             <Button variant="ghost" className="h-9 shrink-0 rounded-2xl" onClick={onClose}>
@@ -251,7 +256,7 @@ export function DebatePickerModal({
                 onClick={submitCreate}
                 disabled={!canCreateDebate}
               >
-                Publier et lier à la tribune
+                Publier le débat
               </Button>
               <p className="text-[11px] font-semibold text-slate-500">
                 Partagé avec le groupe dès publication (base Talk Foot).

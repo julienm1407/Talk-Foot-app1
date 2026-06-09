@@ -37,10 +37,10 @@ export function findCustomDebateById(id: string): Debate | undefined {
 }
 
 export function createCustomGroupDebateRecord(
-  groupId: string,
   input: { title: string; excerpt: string; accent: string },
   username: string,
   fanClubId: string,
+  linkedGroupId?: string | null,
 ): Debate {
   const ts = Date.now()
   const now = new Date(ts).toISOString()
@@ -48,10 +48,10 @@ export function createCustomGroupDebateRecord(
     id: `d-c-${ts}-${Math.random().toString(36).slice(2, 9)}`,
     createdAt: now,
     title: input.title.trim().slice(0, 120),
-    excerpt: input.excerpt.trim().slice(0, 280) || 'Débat lancé dans la tribune.',
-    groupId,
+    excerpt: input.excerpt.trim().slice(0, 280) || 'Débat ouvert — donne ton avis.',
+    groupId: linkedGroupId?.trim() || null,
     accent: input.accent.trim().slice(0, 20) || '#6366f1',
-    salonAccess: 'members',
+    salonAccess: 'public',
     messagesCount: 1,
     participantsCount: 1,
     previewMessages: [
