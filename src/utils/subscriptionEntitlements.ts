@@ -34,7 +34,9 @@ export function effectiveTier(sub: SubscriptionState): SubscriptionTierId {
 export function canCreateGroup(
   tier: SubscriptionTierId,
   createdCount: number,
+  isAdmin = false,
 ): { ok: boolean; limit: number } {
+  if (isAdmin) return { ok: true, limit: Number.POSITIVE_INFINITY }
   const plan = getSubscriptionPlan(tier)
   const limit = plan.limits.maxGroupsCreated
   if (!Number.isFinite(limit)) return { ok: true, limit }
@@ -44,7 +46,9 @@ export function canCreateGroup(
 export function canJoinGroup(
   tier: SubscriptionTierId,
   joinedCount: number,
+  isAdmin = false,
 ): { ok: boolean; limit: number | null } {
+  if (isAdmin) return { ok: true, limit: null }
   const plan = getSubscriptionPlan(tier)
   const limit = plan.limits.maxGroupsJoined
   if (limit === null) return { ok: true, limit: null }
@@ -213,7 +217,8 @@ export function monthlyTokenGrantEligible(
   return usage.monthlyTokensMonthKey !== monthKey
 }
 
-export function groupMemberCapForTier(tier: SubscriptionTierId): number {
+export function groupMemberCapForTier(tier: SubscriptionTierId, isAdmin = false): number {
+  if (isAdmin) return 10_000
   return maxGroupMembersForTier(tier)
 }
 

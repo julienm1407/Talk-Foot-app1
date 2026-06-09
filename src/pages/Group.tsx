@@ -501,7 +501,7 @@ export function GroupPage() {
       }
 
       const nextCount = joinedGroupIds.filter((gid) => gid !== id).length
-      if (!canJoinGroup(tier, nextCount).ok) return
+      if (!canJoinGroup(tier, nextCount, Boolean(authUser?.isAdmin)).ok) return
 
       const r = await joinGroup(group.id)
       if (r.ok) {

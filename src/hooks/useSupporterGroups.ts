@@ -64,6 +64,7 @@ const isSupporterGroupArray = (p: unknown): p is SupporterGroup[] =>
 
 export function useSupporterGroups() {
   const { user: authUser } = useAuth()
+  const isAdmin = Boolean(authUser?.isAdmin)
   const { tier, plan } = useSubscription()
   const userId = authUser?.id && !authUser.isAnonymous ? authUser.id : null
 
@@ -347,7 +348,7 @@ export function useSupporterGroups() {
         }
       }
       if (!joinedGroupIds.includes(id)) {
-        const gate = canJoinGroup(tier, joinedGroupIds.length)
+        const gate = canJoinGroup(tier, joinedGroupIds.length, isAdmin)
         if (!gate.ok && gate.limit != null) {
           return {
             ok: false,
@@ -398,6 +399,7 @@ export function useSupporterGroups() {
       refreshMemberCounts,
       refreshGroupPresence,
       joinedGroupIds,
+      isAdmin,
       tier,
       plan.limits.maxGroupsJoined,
       refreshCloudGroups,
@@ -447,7 +449,7 @@ export function useSupporterGroups() {
       for (const g of cloudGroups) {
         if (g.createdBy === 'me') createdIds.add(g.id)
       }
-      const gate = canCreateGroup(tier, createdIds.size)
+      const gate = canCreateGroup(tier, createdIds.size, isAdmin)
       if (!gate.ok) {
         return {
           ok: false,
@@ -455,7 +457,7 @@ export function useSupporterGroups() {
           limitKind: 'create',
         }
       }
-      const totalGate = canJoinGroup(tier, joinedGroupIds.length)
+      const totalGate = canJoinGroup(tier, joinedGroupIds.length, isAdmin)
       if (!totalGate.ok && totalGate.limit != null) {
         return {
           ok: false,
@@ -471,7 +473,7 @@ export function useSupporterGroups() {
         id,
         createdBy: 'me',
         createdAt: new Date().toISOString(),
-        maxMembers: groupMemberCapForTier(tier),
+        maxMembers: groupMemberCapForTier(tier, isAdmin),
         onlineNow: 0,
         messagesToday: 0,
         reactionsToday: 0,
@@ -535,7 +537,7 @@ export function useSupporterGroups() {
       }
       return { ok: true, group: next }
     },
-    [userId, persistCustom, persistJoined, refreshCloudGroups, custom, cloudGroups, tier, joinedGroupIds],
+    [userId, isAdmin, persistCustom, persistJoined, refreshCloudGroups, custom, cloudGroups, tier, joinedGroupIds],
   )
 
   const byId = useCallback(
@@ -670,9 +672,9 @@ export function useSupporterGroups() {
     subscriptionTier: tier,
     groupLimits: {
       created: createdByMeCount,
-      maxCreated: plan.limits.maxGroupsCreated,
+      maxCreated: isAdmin ? null : plan.limits.maxGroupsCreated,
       joined: joinedGroupIds.length,
-      maxJoined: plan.limits.maxGroupsJoined,
+      maxJoined: isAdmin ? null : plan.limits.maxGroupsJoined,
     },
     myJoinedGroups,
     orphanJoinedGroupIds,

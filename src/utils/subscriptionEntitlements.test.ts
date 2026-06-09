@@ -46,6 +46,11 @@ describe('subscriptionEntitlements', () => {
     expect(canCreateDebate('supporter_plus', {}).ok).toBe(true)
   })
 
+  it('admin contourne les limites de tribunes', () => {
+    expect(canCreateGroup('freemium', 99, true).ok).toBe(true)
+    expect(canJoinGroup('freemium', 99, true).ok).toBe(true)
+  })
+
   it('admin contourne les limites de débats', () => {
     expect(canCreateDebate('freemium', {}, new Date(), true).ok).toBe(true)
     expect(
