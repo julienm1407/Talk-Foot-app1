@@ -10,6 +10,7 @@ import {
   MODULAR_PP_NAV_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
+import { tfGhostOnCard } from '../../theme/appearanceClasses'
 
 /** Entrée Mon espace visible — évite de cacher tout derrière le logo seul. */
 export function HomeMobileMonEspaceStrip({ className }: { className?: string }) {
@@ -23,8 +24,10 @@ export function HomeMobileMonEspaceStrip({ className }: { className?: string }) 
   return (
     <div
       className={cn(
-        'sticky top-0 z-20 mb-1 flex items-center gap-3 rounded-2xl border px-3 py-2.5',
-        L ? 'border-tf-dark/12 bg-white/95' : 'border-white/15 bg-white/[0.12]',
+        'sticky top-0 z-20 mb-1 flex items-center gap-3 rounded-2xl border px-3 py-2.5 backdrop-blur-md',
+        L
+          ? 'border-tf-dark/12 bg-white/95 shadow-sm'
+          : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] shadow-[0_8px_24px_rgba(0,0,0,0.42)]',
         className,
       )}
     >
@@ -52,10 +55,8 @@ export function HomeMobileMonEspaceStrip({ className }: { className?: string }) 
         onClick={() => monEspace?.openMonEspaceDrawer()}
         className={cn(
           TF_FOCUS_VISIBLE,
-          'tf-interactive-press shrink-0 rounded-xl px-3 py-2 text-[11px] font-black',
-          L
-            ? 'bg-tf-dark text-white active:bg-tf-dark-alt'
-            : 'bg-white/12 text-white ring-1 ring-white/15 active:bg-white/18',
+          'tf-interactive-press shrink-0 px-3 py-2 text-[11px] font-black',
+          L ? 'rounded-xl bg-tf-dark text-white active:bg-tf-dark-alt' : tfGhostOnCard(false),
         )}
       >
         Mon espace
