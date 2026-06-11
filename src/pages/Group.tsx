@@ -51,6 +51,7 @@ import {
 } from '../utils/groupThreadMessages'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { EditGroupModal } from '../components/group/EditGroupModal'
+import { GroupIdentityBackdrop } from '../components/group/GroupIdentityBackdrop'
 import { GroupJoinWriteFooter } from '../components/group/GroupJoinWriteFooter'
 import { DebatePickerModal } from '../components/group/DebatePickerModal'
 import { LinkedDebateBanner } from '../components/group/LinkedDebateBanner'
@@ -67,8 +68,6 @@ import {
 } from '../utils/groupBotSeedAck'
 import { isUuidMessageId } from '../utils/isUuidMessageId'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../utils/bannedWords'
-import { sportMonksTeamLogoUrlForClubId } from '../data/sportMonksLogoUrls'
-import { CLUB_OFFICIAL_LOGO_BY_ID } from '../data/clubOfficialLogoUrls'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { isDemoPresentationMedia } from '../utils/groupPresentationMedia'
 import {
@@ -946,15 +945,12 @@ export function GroupPage() {
           (m.away.id === groupMainClubId && Boolean(m.away.logoUrl)),
       )
     : null
-  const groupMainClubLogoUrl =
-    (matchedForGroupLogo
+  const apiLogoFromMatches =
+    matchedForGroupLogo && groupMainClubId
       ? matchedForGroupLogo.home.id === groupMainClubId
         ? matchedForGroupLogo.home.logoUrl
         : matchedForGroupLogo.away.logoUrl
-      : null) ??
-    (groupMainClubId ? sportMonksTeamLogoUrlForClubId(groupMainClubId) : null) ??
-    (groupMainClubId ? CLUB_OFFICIAL_LOGO_BY_ID[groupMainClubId] : null) ??
-    null
+      : null
 
   return (
     <>
@@ -988,24 +984,12 @@ export function GroupPage() {
                     : `linear-gradient(90deg, color-mix(in srgb, var(--p) 18%, transparent), transparent 70%)`,
             }}
           />
-          {groupMainClubLogoUrl ? (
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[42%] overflow-hidden" aria-hidden>
-              <div
-                className="absolute inset-y-0 right-[-8%] w-[92%] opacity-[0.12]"
-                style={{
-                  backgroundImage: `url(${groupMainClubLogoUrl})`,
-                  backgroundPosition: 'right center',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundSize: 'contain',
-                  filter: 'grayscale(10%) saturate(75%)',
-                  WebkitMaskImage:
-                    'linear-gradient(to left, rgba(0,0,0,0.95) 22%, rgba(0,0,0,0.5) 58%, rgba(0,0,0,0) 100%)',
-                  maskImage:
-                    'linear-gradient(to left, rgba(0,0,0,0.95) 22%, rgba(0,0,0,0.5) 58%, rgba(0,0,0,0) 100%)',
-                }}
-              />
-            </div>
-          ) : null}
+          <GroupIdentityBackdrop
+            group={group}
+            light={L}
+            apiLogoUrl={apiLogoFromMatches}
+            widthClass="w-[42%]"
+          />
           <Link
             to="/groups"
             className={cn(

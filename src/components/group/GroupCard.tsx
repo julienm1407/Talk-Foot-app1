@@ -5,10 +5,9 @@ import type { GroupActivePresence, SupporterGroup } from '../../types/group'
 import type { GroupAccessLevel } from '../../utils/groupAccess'
 import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
-import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
-import { CLUB_OFFICIAL_LOGO_BY_ID } from '../../data/clubOfficialLogoUrls'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { formatGroupAmbianceLabel } from '../../utils/groupIntensity'
+import { GroupIdentityBackdrop } from './GroupIdentityBackdrop'
 
 const kindLabel: Record<NonNullable<SupporterGroup['groupKind']>, string> = {
   public: 'Public',
@@ -30,42 +29,6 @@ function ThemeBackdrop({ group, subtle }: { group: SupporterGroup; subtle?: bool
               : `linear-gradient(90deg, color-mix(in srgb, var(--p) 14%, transparent), transparent 60%)`,
       }}
     />
-  )
-}
-
-function ClubLogoBackdrop({
-  group,
-  light,
-  apiLogoUrl,
-}: {
-  group: SupporterGroup
-  light: boolean
-  apiLogoUrl?: string | null
-}) {
-  const mainClubId = group.fanTags?.clubIds?.[0]
-  if (!mainClubId) return null
-  const logoUrl = resolveTeamLogoUrl(mainClubId, { apiLogoUrl }) ?? CLUB_OFFICIAL_LOGO_BY_ID[mainClubId]
-  if (!logoUrl) return null
-  return (
-    <div className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[46%] overflow-hidden" aria-hidden="true">
-      <div
-        className={cn(
-          'absolute inset-y-0 right-[-8%] w-[92%]',
-          light ? 'opacity-[0.13]' : 'opacity-[0.11]',
-        )}
-        style={{
-          backgroundImage: `url(${logoUrl})`,
-          backgroundPosition: 'right center',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'contain',
-          filter: light ? 'grayscale(6%) saturate(85%)' : 'grayscale(10%) saturate(70%)',
-          WebkitMaskImage:
-            'linear-gradient(to left, rgba(0,0,0,0.95) 22%, rgba(0,0,0,0.5) 58%, rgba(0,0,0,0) 100%)',
-          maskImage:
-            'linear-gradient(to left, rgba(0,0,0,0.95) 22%, rgba(0,0,0,0.5) 58%, rgba(0,0,0,0) 100%)',
-        }}
-      />
-    </div>
   )
 }
 
@@ -220,7 +183,7 @@ export function GroupCard({
     return (
       <div className={shell} style={themeStyle}>
         <ThemeBackdrop group={group} subtle={rail} />
-        <ClubLogoBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
+        <GroupIdentityBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
         {railDense ? (
           <div
             className="pointer-events-none absolute inset-x-0 top-0 z-[3] h-[3px] rounded-t-[0.65rem]"
@@ -398,7 +361,7 @@ export function GroupCard({
     return (
       <div className={shell} style={themeStyle}>
         <ThemeBackdrop group={group} subtle />
-        <ClubLogoBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
+        <GroupIdentityBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
 
         <div className="relative flex min-h-0 flex-1 flex-col gap-3">
           <div className="flex items-start gap-2.5">
@@ -554,7 +517,7 @@ export function GroupCard({
   return (
     <div className={shell} style={themeStyle}>
       <ThemeBackdrop group={group} />
-      <ClubLogoBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
+      <GroupIdentityBackdrop group={group} light={L} apiLogoUrl={apiLogoFromMatches} />
 
       <div className="relative flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
