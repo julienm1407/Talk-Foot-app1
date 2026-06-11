@@ -109,6 +109,7 @@ export type SmFixtureEventRow = {
   type?: { developer_name?: string; name?: string }
   player?: { display_name?: string; name?: string }
   related_player?: { display_name?: string; name?: string }
+  relatedPlayer?: { display_name?: string; name?: string }
   related_player_name?: string | null
 }
 

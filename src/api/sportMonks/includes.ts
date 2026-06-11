@@ -40,14 +40,14 @@ export const SM_INCLUDE_FIXTURE_LIST =
 
 /** Timeline live légère : événements + score + minute (sans stats / commentaires). */
 export const SM_INCLUDE_FIXTURE_EVENTS_TIMELINE =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.related_player' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer' as const
 
 /** Détail match : xG, events, compos. */
 export const SM_INCLUDE_FIXTURE_XG =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.related_player;xGFixture.type;lineups.player;lineups.xGlineup.type;lineups.details.type' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;xGFixture.type;lineups.player;lineups.xGlineup.type;lineups.details.type' as const
 
 export const SM_INCLUDE_FIXTURE_EVENTS =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.related_player;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport' as const
 
 /** Même base que `SM_INCLUDE_FIXTURE_EVENTS` + textes commentaire live (include `comments` sur la fixture). */
 export const SM_INCLUDE_FIXTURE_EVENTS_COMMENTS =
@@ -58,7 +58,7 @@ export const SM_INCLUDE_FIXTURE_EVENTS_COMMENTS =
  * @example `…/fixtures/19427199?include=…;trends.type;trends.participant`
  */
 export const SM_INCLUDE_FIXTURE_TRENDS =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.related_player;trends.type;trends.participant' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;trends.type;trends.participant' as const
 
 /**
  * GET `/fixtures/{id}` — compos, systèmes, staff + **tendances** (forme récente par équipe).

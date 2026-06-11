@@ -180,14 +180,18 @@ function sideFromParticipant(
 function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   const player = String(ev.player?.display_name ?? ev.player?.name ?? '').trim()
   if (player.length >= 2) return player
-  const related = String(ev.related_player?.display_name ?? ev.related_player?.name ?? ev.related_player_name ?? '').trim()
+  const relatedPlayerObj = ev.relatedPlayer ?? ev.related_player
+  const related = String(
+    relatedPlayerObj?.display_name ?? relatedPlayerObj?.name ?? ev.related_player_name ?? '',
+  ).trim()
   if (related.length >= 2) return related
   const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
   return parseGoalScorerName(dev) ?? undefined
 }
 
 function assistFromEvent(ev: SmFixtureEventRow): string | undefined {
-  const fromObj = String(ev.related_player?.display_name ?? ev.related_player?.name ?? '').trim()
+  const rp = ev.relatedPlayer ?? ev.related_player
+  const fromObj = String(rp?.display_name ?? rp?.name ?? '').trim()
   if (fromObj.length >= 2) return fromObj
   const fromName = String(ev.related_player_name ?? '').trim()
   if (fromName.length >= 2) return fromName
