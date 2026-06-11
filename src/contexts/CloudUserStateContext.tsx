@@ -55,8 +55,26 @@ export function useOptionalCloudUserState(): CloudUserStateValue | undefined {
 }
 
 const SAVE_DEBOUNCE_MS = 650
+const CLOUD_LOAD_RETRIES = 3
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isTransientAuthLockError(message: string): boolean {
+  const m = message.toLowerCase()
+  return m.includes('lock broken') || m.includes("'steal'") || m.includes('navigator lock')
+}
+
+function cloudErrorMessageFr(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err ?? 'cloud_load_failed')
+  if (isTransientAuthLockError(raw)) {
+    return 'Synchronisation interrompue (onglet ou connexion). Recharge la page si ça persiste.'
+  }
+  return raw
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 function isUuid(value: string | undefined | null): boolean {
   if (!value) return false
@@ -172,62 +190,76 @@ function CloudUserStateLoader({
         setReady(true)
       }
 
-      try {
-        await ensureTalkFootSupabaseSession(sb)
-        if (cancelled) return
-
-        if (isClerkAuthMode()) {
-          const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
+      let lastErr: unknown = null
+      for (let attempt = 0; attempt < CLOUD_LOAD_RETRIES; attempt += 1) {
+        try {
+          if (attempt > 0) await sleep(400 * attempt)
           if (cancelled) return
-          if (!bindResult.ok) {
-            setApp(defaultUserAppState())
-            setLoadError(`Liaison session cloud échouée (${bindResult.error}). Recharge la page.`)
-            setOnboardingCompleteCol(false)
-            setOauthNeedsProfile(false)
-            setReady(true)
-            return
-          }
-        }
 
-        let snapshot = await fetchTalkfootProfileSnapshot(sb, user.id)
-        if (cancelled) return
+          await ensureTalkFootSupabaseSession(sb)
+          if (cancelled) return
 
-        if (!snapshot) {
-          const { data: authPayload } = await sb.auth.getUser()
-          const prov = authPayload.user?.app_metadata?.provider
-          const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
-          snapshot = await ensureTalkfootProfile(
-            sb,
-            user.id,
-            displayName,
-            !oauthIncomplete,
-          )
-        }
-
-        if (cancelled) return
-        const mergedApp = mergeUserAppState(snapshot.appState)
-        applySnapshot(snapshot.appState, snapshot.onboardingComplete, snapshot.oauthProfileCompleted)
-
-        if (!hasLocalEditsRef.current) {
-          try {
-            const rawJson = JSON.stringify(snapshot.appState ?? {})
-            const mergedJson = JSON.stringify(mergedApp)
-            if (rawJson !== mergedJson) {
-              await saveTalkfootProfileAppState(sb, user.id, mergedApp, snapshot.onboardingComplete)
+          if (isClerkAuthMode()) {
+            const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
+            if (cancelled) return
+            if (!bindResult.ok) {
+              setApp(defaultUserAppState())
+              setLoadError(`Liaison session cloud échouée (${bindResult.error}). Recharge la page.`)
+              setOnboardingCompleteCol(false)
+              setOauthNeedsProfile(false)
+              setReady(true)
+              return
             }
-          } catch (err) {
-            console.warn('[Talk Foot] Migration app_state cloud:', err)
           }
+
+          let snapshot = await fetchTalkfootProfileSnapshot(sb, user.id)
+          if (cancelled) return
+
+          if (!snapshot) {
+            const { data: authPayload } = await sb.auth.getUser()
+            const prov = authPayload.user?.app_metadata?.provider
+            const oauthIncomplete = Boolean(prov && isTalkFootOAuthProvider(prov))
+            snapshot = await ensureTalkfootProfile(sb, user.id, displayName, !oauthIncomplete)
+          }
+
+          if (cancelled) return
+          const mergedApp = mergeUserAppState(snapshot.appState)
+          applySnapshot(snapshot.appState, snapshot.onboardingComplete, snapshot.oauthProfileCompleted)
+
+          if (!hasLocalEditsRef.current) {
+            try {
+              const rawJson = JSON.stringify(snapshot.appState ?? {})
+              const mergedJson = JSON.stringify(mergedApp)
+              if (rawJson !== mergedJson) {
+                await saveTalkfootProfileAppState(sb, user.id, mergedApp, snapshot.onboardingComplete)
+              }
+            } catch (err) {
+              console.warn('[Talk Foot] Migration app_state cloud:', err)
+            }
+          }
+          return
+        } catch (err) {
+          lastErr = err
+          const message = err instanceof Error ? err.message : String(err ?? '')
+          if (isTransientAuthLockError(message) && attempt < CLOUD_LOAD_RETRIES - 1) {
+            continue
+          }
+          break
         }
-      } catch (err) {
-        if (cancelled) return
-        const message = err instanceof Error ? err.message : 'cloud_load_failed'
-        setApp(defaultUserAppState())
-        setLoadError(message)
-        setOnboardingCompleteCol(false)
-        setOauthNeedsProfile(false)
-        setReady(true)
       }
+
+      if (cancelled) return
+      const friendly = cloudErrorMessageFr(lastErr)
+      if (isTransientAuthLockError(friendly)) {
+        applySnapshot({}, false, true)
+        setLoadError(friendly)
+        return
+      }
+      setApp(defaultUserAppState())
+      setLoadError(friendly)
+      setOnboardingCompleteCol(false)
+      setOauthNeedsProfile(false)
+      setReady(true)
     })()
     return () => {
       cancelled = true
@@ -366,7 +398,7 @@ function CloudUserStateLoader({
       ) : null}
       {loadError ? (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-bold text-amber-950">
-          Cloud partiellement indisponible ({loadError}). Tes changements peuvent ne pas être enregistrés.
+          Cloud partiellement indisponible — {loadError}
         </div>
       ) : null}
       {children}

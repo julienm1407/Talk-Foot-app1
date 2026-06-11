@@ -160,6 +160,8 @@ function sideFromParticipant(
 function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   const player = String(ev.player?.display_name ?? ev.player?.name ?? '').trim()
   if (player.length >= 2) return player
+  const related = String(ev.related_player?.display_name ?? ev.related_player?.name ?? ev.related_player_name ?? '').trim()
+  if (related.length >= 2) return related
   const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
   return parseGoalScorerName(dev) ?? undefined
 }
@@ -338,17 +340,26 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
     const minute = displayMinute(ev)
     const side = sideFromParticipant(ev.participant_id, homeId, awayId)
     const scorerName = scorerFromEvent(ev)
-    if (!scorerName) continue
+    if (!scorerName && !side) continue
+    const label = scorerName || 'Buteur à confirmer'
     rows.push({
       id: `sm-event-goal-${ev.id ?? minute}`,
       matchId: 'direct',
       minute,
       type: 'But',
-      title: scorerName,
-      detail: `${minute}' · ${scorerName}`,
+      title: label,
+      detail: `${minute}' · ${label}`,
       ...(side ? { side } : {}),
-      scorerName,
+      scorerName: label,
     })
   }
-  return parseLiveGoalRowsFromHighlights(rows, home, away, scoreHint)
+  const fromEvents = parseLiveGoalRowsFromHighlights(rows, home, away, scoreHint)
+  if (fromEvents.length > 0) return fromEvents
+  const timeline = extractTimelineHighlightsFromSmFixture(fixture, 'direct')
+  return parseLiveGoalRowsFromHighlights(
+    timeline.filter((h) => h.type === 'But'),
+    home,
+    away,
+    scoreHint,
+  )
 }

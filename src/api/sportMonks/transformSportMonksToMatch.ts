@@ -200,6 +200,27 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
   return goalsFromScores(f.scores)
 }
 
+/** États SM « 2e mi-temps » (≠ minute 68 — ancien bug affichait 68 dès le state 22). */
+const SECOND_HALF_STATE_IDS = new Set([4, 6, 9, 21, 22, 25])
+
+/**
+ * Estimation depuis le coup d’envoi quand SM n’envoie ni `minute` ni `periods.minutes`.
+ * Ne confond plus state_id 2 (= 1re mi-temps) avec « 25e minute ».
+ */
+function minuteFromKickoffElapsed(f: SmFixture): number {
+  const kickoffMs = Date.parse(startingAtIso(f))
+  if (!Number.isFinite(kickoffMs)) return 0
+  const elapsedMin = Math.floor((Date.now() - kickoffMs) / 60_000)
+  if (elapsedMin < 0) return 0
+  const sid = stateIdOf(f)
+  if (sid === 3) return 45
+  const halftimeBreakMin = 15
+  if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
+    return Math.min(99, Math.max(46, elapsedMin - halftimeBreakMin))
+  }
+  return Math.min(50, elapsedMin)
+}
+
 function minuteFromFixture(f: SmFixture): number {
   if (typeof f.minute === 'number' && f.minute >= 0) return f.minute
   const periods = f.periods
@@ -211,11 +232,7 @@ function minuteFromFixture(f: SmFixture): number {
     const last = periods[periods.length - 1]
     if (typeof last?.minutes === 'number') return last.minutes
   }
-  const sid = stateIdOf(f)
-  if (sid === 3) return 45
-  if (sid === 2) return 25
-  if (sid === 22) return 68
-  return 0
+  return minuteFromKickoffElapsed(f)
 }
 
 /** Minute affichée (période / `fixture.minute`) pour caler l’encart sur le live SM. */
