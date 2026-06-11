@@ -754,8 +754,19 @@ html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft {
   color: #153f63 !important;
 }
 
-html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft * {
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft *:not(.tf-bet-pick-odd) {
   color: #153f63 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-pick.tf-bet-pick--compact .tf-bet-pick-name {
+  color: #011522 !important;
+  font-weight: 800 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-pick.tf-bet-pick--compact .tf-bet-pick-odd {
+  color: #064e3b !important;
+  background: #ffffff !important;
+  border-color: rgba(6, 95, 70, 0.38) !important;
 }
 
 /* Hard override for residual dark blocks in live day mode */
@@ -1045,16 +1056,43 @@ html[data-tf-appearance='light'] .tf-channel-shell {
   border-color: rgba(92, 146, 191, 0.35) !important;
 }
 
-/* Paris channel sidebar : boutons 1N2 compacts (une ligne, ~32px) */
+/* Paris channel sidebar : boutons 1N2 compacts (une ligne, ~36px) */
 .tf-channel-live .tf-bet-pick.tf-bet-pick--compact {
   min-height: 0 !important;
-  height: 2rem !important;
-  max-height: 2rem !important;
-  padding: 0 0.5rem !important;
-  gap: 0.25rem !important;
+  height: 2.25rem !important;
+  max-height: 2.25rem !important;
+  padding: 0 0.625rem !important;
+  gap: 0.375rem !important;
   border-radius: 0.5rem !important;
-  font-size: 9px !important;
-  line-height: 1 !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-bet-chip {
+  color: #eef6ff !important;
+  font-weight: 700 !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-bet-chip--tokens {
+  background: #0e2a45 !important;
+  border-color: rgba(107, 156, 196, 0.8) !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-bet-chip--stats {
+  background: rgba(106, 91, 215, 0.3) !important;
+  border-color: rgba(139, 123, 255, 0.75) !important;
+  color: #f3efff !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-bet-pick.tf-bet-pick--compact .tf-bet-pick-name {
+  color: #011522 !important;
+  font-weight: 800 !important;
+}
+
+.tf-channel-live:not(.tf-channel-live-light) .tf-bet-pick.tf-bet-pick--compact .tf-bet-pick-odd {
+  color: #064e3b !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(6, 95, 70, 0.4) !important;
 }
 
 .tf-channel-live:not(.tf-channel-live-light) .tf-live-control {
@@ -1317,6 +1355,94 @@ body::before {
     transform: scaleY(1);
     opacity: 1;
   }
+}
+
+@keyframes tf-phone-flash {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+  5% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  14% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+  22% {
+    opacity: 0;
+  }
+  32% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+  42% {
+    opacity: 0.08;
+  }
+  50% {
+    opacity: 0;
+  }
+  62% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+  72% {
+    opacity: 0;
+  }
+}
+
+@keyframes tf-phone-flash-beam {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0.25);
+  }
+  7% {
+    opacity: 0.9;
+    transform: translateX(-50%) scaleY(1);
+  }
+  16% {
+    opacity: 0;
+  }
+  34% {
+    opacity: 0.75;
+    transform: translateX(-50%) scaleY(0.92);
+  }
+  44% {
+    opacity: 0;
+  }
+}
+
+.tf-phone-flash {
+  position: absolute;
+  width: var(--w, 12px);
+  height: var(--w, 12px);
+  margin-left: calc(var(--w, 12px) / -2);
+  margin-top: calc(var(--w, 12px) / -2);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, rgba(255, 255, 255, 0.72) 38%, transparent 72%);
+  box-shadow:
+    0 0 16px rgba(255, 255, 255, 0.9),
+    0 0 28px rgba(186, 230, 253, 0.42);
+  animation: tf-phone-flash 2s ease-out forwards;
+  animation-delay: var(--d, 0ms);
+  pointer-events: none;
+}
+
+.tf-phone-flash-beam {
+  position: absolute;
+  width: 26px;
+  height: 68px;
+  margin-top: -6px;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.28) 48%, transparent);
+  filter: blur(0.5px);
+  animation: tf-phone-flash-beam 2s ease-out forwards;
+  animation-delay: var(--d, 0ms);
+  pointer-events: none;
 }
 
 @keyframes tf-live-dot {

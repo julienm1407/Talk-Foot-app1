@@ -7,7 +7,10 @@ import { TALKFOOT_BOT_DM_THREAD_ID, friendDmThreadId } from '../data/directMessa
 import { resolveProfilePeer } from '../data/users'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { UserProfileAvatar } from '../components/profile/UserProfileAvatar'
+import { FriendPronosticsPanel } from '../components/social/FriendPronosticsPanel'
+import { useFriendPronostics } from '../hooks/useFriendPronostics'
 import { usePeerPublicProfile } from '../hooks/usePeerPublicProfile'
+import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { cn } from '../utils/cn'
@@ -28,6 +31,7 @@ export function UserProfilePage() {
   const L = appearance === 'light'
 
   const peer = resolveProfilePeer(userId)
+  const viewerActorId = useTalkFootChatActorId()
   const [liveName, setLiveName] = useState<string | null>(null)
   const [friendActionHint, setFriendActionHint] = useState<string | null>(null)
   const [friendBusy, setFriendBusy] = useState(false)
@@ -66,6 +70,24 @@ export function UserProfilePage() {
       })
   }, [userId, authUser?.id, peer])
 
+  const { cloudProfile, loading: profileLoading } = usePeerPublicProfile(peer ?? undefined, authUser?.id)
+
+  const useCloudFriends = isSupabaseConfigured() && Boolean(authUser?.id)
+  const isFriend = Boolean(
+    peer &&
+      (peer.isTalkFootBot ||
+        dm.isCloudFriend(peer.id) ||
+        (!useCloudFriends && Boolean(peer.isMockFriend))),
+  )
+
+  const canViewFriendPronostics = Boolean(peer && isFriend && !peer.isTalkFootBot && viewerActorId)
+
+  const friendPronostics = useFriendPronostics({
+    friendActorKey: peer?.id,
+    viewerActorKey: viewerActorId,
+    enabled: canViewFriendPronostics,
+  })
+
   if (!peer) {
     return (
       <div className="mx-auto max-w-lg space-y-4 text-center">
@@ -84,14 +106,7 @@ export function UserProfilePage() {
   }
 
   const displayUsername = liveName ?? peer.username
-  const { cloudProfile, loading: profileLoading } = usePeerPublicProfile(peer, authUser?.id)
   const club = peer.fanClubId ? ALL_CLUBS_BY_ID[peer.fanClubId] : undefined
-
-  const useCloudFriends = isSupabaseConfigured() && Boolean(authUser?.id)
-  const isFriend =
-    peer.isTalkFootBot ||
-    dm.isCloudFriend(peer.id) ||
-    (!useCloudFriends && Boolean(peer.isMockFriend))
 
   const canMessage =
     isFriend ||
@@ -277,6 +292,16 @@ export function UserProfilePage() {
           ) : null}
         </div>
       </Card>
+
+      {canViewFriendPronostics ? (
+        <FriendPronosticsPanel
+          displayName={displayUsername}
+          bets={friendPronostics.bets}
+          loading={friendPronostics.loading}
+          error={friendPronostics.error}
+          counts={friendPronostics.counts}
+        />
+      ) : null}
     </div>
   )
 }

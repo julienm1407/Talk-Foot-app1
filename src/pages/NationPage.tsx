@@ -13,6 +13,7 @@ import { NationSquadList } from '../components/cdm/NationSquadList'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { NationFavoriteButton } from '../components/cdm/NationFavoriteButton'
 import { NationTribuneCard } from '../components/cdm/NationTribuneCard'
+import { MatchTeamsVsInline } from '../components/match/MatchTeamSideLabel'
 import { cn } from '../utils/cn'
 
 /**
@@ -210,9 +211,12 @@ export function NationPage() {
                       <span aria-hidden>·</span>
                       <span>{formatKickoff(m.kickoffAt)}</span>
                     </div>
-                    <div className="mt-0.5 truncate font-display text-sm font-black text-tf-app-fg">
-                      {m.home.name} <span className="text-tf-app-muted">vs</span> {m.away.name}
-                    </div>
+                    <MatchTeamsVsInline
+                      className="mt-0.5"
+                      home={m.home}
+                      away={m.away}
+                      competitionId={m.competition.id}
+                    />
                   </div>
                   <div className="text-xs font-black uppercase tracking-wide text-tf-app-muted">→</div>
                 </Link>

@@ -7,7 +7,7 @@ import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
 import { themeForCompetition } from '../../data/competitionThemes'
-import { ClubCrest } from '../brand/ClubCrest'
+import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { ShareButton } from '../ui/ShareButton'
 
 function patternFor(seed: string): 0 | 1 | 2 | 3 {
@@ -325,7 +325,12 @@ export function MatchCard({
 
           <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 sm:grid-cols-[minmax(5rem,1fr)_auto_minmax(5rem,1fr)]">
             <div className="min-w-0 overflow-hidden">
-              <TeamStack team={match.home} align="left" size={compact ? 58 : 64} />
+              <TeamStack
+                team={match.home}
+                competitionId={match.competition.id}
+                align="left"
+                size={compact ? 58 : 64}
+              />
             </div>
             <div
               className="relative flex min-w-[6rem] shrink-0 flex-col items-center justify-center gap-1 rounded-lg bg-white/50 px-2.5 py-2 text-center backdrop-blur-md border border-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:min-w-[7.25rem] sm:px-3 sm:py-2"
@@ -382,7 +387,12 @@ export function MatchCard({
               )}
             </div>
             <div className="min-w-0 overflow-hidden">
-              <TeamStack team={match.away} align="right" size={compact ? 58 : 64} />
+              <TeamStack
+                team={match.away}
+                competitionId={match.competition.id}
+                align="right"
+                size={compact ? 58 : 64}
+              />
             </div>
           </div>
           <div className="mt-4 flex w-full gap-2">
@@ -415,27 +425,20 @@ export function MatchCard({
 
 function TeamStack({
   team,
+  competitionId,
   align,
   size = 56,
 }: {
-  team: {
-    id?: string
-    shortName: string
-    colors: { primary: string; secondary: string }
-    logoUrl?: string
-    sportMonksTeamId?: number
-  }
+  team: Match['home']
+  competitionId: string
   align: 'left' | 'right'
   size?: number
 }) {
   return (
     <div className={cn('flex justify-center', align === 'right' && 'justify-end')}>
-      <ClubCrest
-        id={team.id ?? team.shortName}
-        shortName={team.shortName}
-        colors={team.colors}
-        logoUrl={team.logoUrl}
-        sportMonksTeamId={team.sportMonksTeamId}
+      <MatchTeamCrest
+        team={team}
+        competitionId={competitionId}
         size={size}
         className="shrink-0"
       />

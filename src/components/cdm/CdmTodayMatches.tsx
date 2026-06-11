@@ -5,6 +5,7 @@ import { matchCalendarDayKeyParis, formatKickoff } from '../../utils/time'
 import { WC_2026_COMP_ID } from '../../utils/seasonMode'
 import { cn } from '../../utils/cn'
 import { useFavoriteNationsLookup } from '../../hooks/useFavoriteNationsMatches'
+import { MatchTeamsVsInline } from '../match/MatchTeamSideLabel'
 
 /**
  * Bandeau « Matchs CDM du jour » — vu sur la home en mode CDM.
@@ -97,11 +98,14 @@ export function CdmTodayMatches() {
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-0.5 truncate font-display text-sm font-black text-tf-app-fg">
-                    <span className={favHome ? 'text-tf-cdm-gold' : undefined}>{m.home.name}</span>{' '}
-                    <span className="text-tf-app-muted">vs</span>{' '}
-                    <span className={favAway ? 'text-tf-cdm-gold' : undefined}>{m.away.name}</span>
-                  </div>
+                  <MatchTeamsVsInline
+                    className="mt-0.5"
+                    home={m.home}
+                    away={m.away}
+                    competitionId={m.competition.id}
+                    homeHighlight={Boolean(favHome)}
+                    awayHighlight={Boolean(favAway)}
+                  />
                 </div>
                 {m.score ? (
                   <div className="font-display text-xl font-black tabular-nums text-tf-app-fg">

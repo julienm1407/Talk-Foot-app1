@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { clubPathForId } from '../utils/clubRoute'
+import { teamHubPathForMatch } from '../utils/teamHubRoute'
+import { resolveNationForTeam } from '../utils/resolveMatchNation'
+import { tifoGroupIdForMatchChannel } from '../utils/tifoGroupScope'
+import { nationFlagUrl } from '../utils/nationFlagUrl'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
 import {
@@ -13,6 +16,7 @@ import { useSportMonksTeamLatestFormPair } from '../hooks/useSportMonksTeamLates
 import { extractSidelinedCountsFromSmFixture } from '../api/sportMonks/extractSidelinedFromSm'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
 import { BetWidget } from '../components/bet/BetWidget'
+import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
 import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandings'
@@ -49,7 +53,7 @@ import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { useLiveMatchMessageLikesSync } from '../hooks/useLiveMatchMessageLikesSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import { useLiveMatchSalonStats } from '../hooks/useLiveMatchSalonStats'
-import type { Message, ReactionType, MatchTribuneZone } from '../types/chat'
+import type { FlareColor, Message, ReactionType, MatchTribuneZone } from '../types/chat'
 import type { Highlight } from '../data/highlights'
 import {
   extractCurrentGoalsFromSmFixture,
@@ -71,6 +75,8 @@ import {
 
 /** Débrief tchat après le coup de sifflet final. */
 const POST_MATCH_CHAT_MS = 8 * 60 * 1000
+/** Ouverture du tchat tribune avant coup d'envoi. */
+const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
 
 type ChannelMatchTab = 'stats' | 'infos' | 'compo' | 'actions' | 'classement'
 
@@ -91,6 +97,139 @@ type ActivePaidFx = {
   id: PaidAnimation['id']
   label: string
   tifoSide?: 'home' | 'away'
+  flareColor?: FlareColor
+}
+
+const FLARE_COLOR_OPTIONS: { id: FlareColor; label: string; swatch: string }[] = [
+  { id: 'red', label: 'Rouge', swatch: '#ef4444' },
+  { id: 'blue', label: 'Bleu', swatch: '#3b82f6' },
+  { id: 'green', label: 'Vert', swatch: '#22c55e' },
+  { id: 'yellow', label: 'Jaune', swatch: '#eab308' },
+]
+
+const FLARE_COLOR_LABELS: Record<FlareColor, string> = {
+  red: 'rouge',
+  blue: 'bleu',
+  green: 'vert',
+  yellow: 'jaune',
+}
+
+function flareSmokeLayers(color: FlareColor) {
+  const layers: Record<
+    FlareColor,
+    { plumeA: string; plumeB: string; mistA: string; mistB: string }
+  > = {
+    red: {
+      plumeA: 'linear-gradient(to top, rgba(234,88,12,0.55), rgba(244,63,94,0.42), transparent)',
+      plumeB: 'linear-gradient(to top, rgba(225,29,72,0.55), rgba(239,68,68,0.45), transparent)',
+      mistA: 'rgba(255,255,255,0.14)',
+      mistB: 'rgba(254,243,199,0.14)',
+    },
+    blue: {
+      plumeA: 'linear-gradient(to top, rgba(37,99,235,0.55), rgba(56,189,248,0.42), transparent)',
+      plumeB: 'linear-gradient(to top, rgba(29,78,216,0.55), rgba(14,165,233,0.45), transparent)',
+      mistA: 'rgba(191,219,254,0.16)',
+      mistB: 'rgba(224,242,254,0.14)',
+    },
+    green: {
+      plumeA: 'linear-gradient(to top, rgba(22,163,74,0.55), rgba(52,211,153,0.42), transparent)',
+      plumeB: 'linear-gradient(to top, rgba(21,128,61,0.55), rgba(34,197,94,0.45), transparent)',
+      mistA: 'rgba(187,247,208,0.16)',
+      mistB: 'rgba(220,252,231,0.14)',
+    },
+    yellow: {
+      plumeA: 'linear-gradient(to top, rgba(234,179,8,0.58), rgba(250,204,21,0.44), transparent)',
+      plumeB: 'linear-gradient(to top, rgba(202,138,4,0.55), rgba(253,224,71,0.45), transparent)',
+      mistA: 'rgba(254,249,195,0.18)',
+      mistB: 'rgba(255,255,255,0.14)',
+    },
+  }
+  return layers[color]
+}
+
+const CONFETTI_BURST_COLORS = ['#0a3dff', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#f472b6']
+
+function PaidConfettiBurst({ seed }: { seed: number }) {
+  const pieces = useMemo(() => {
+    const rand = (n: number) => {
+      const x = Math.sin(seed * 9999 + n * 12345) * 10000
+      return x - Math.floor(x)
+    }
+    return Array.from({ length: 42 }, (_, i) => ({
+      id: i,
+      side: (i % 2 === 0 ? 'left' : 'right') as 'left' | 'right',
+      x: (rand(i) - 0.5) * 320,
+      delay: rand(i + 50) * 220,
+      color: CONFETTI_BURST_COLORS[i % CONFETTI_BURST_COLORS.length],
+    }))
+  }, [seed])
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {pieces.map((p) => (
+        <i
+          key={p.id}
+          className={`tf-confetti tf-confetti--${p.side}`}
+          style={
+            {
+              ['--x' as string]: `${p.x}px`,
+              ['--d' as string]: `${p.delay}ms`,
+              ['--c' as string]: p.color,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  )
+}
+
+function PaidPhoneFlashBurst({ seed }: { seed: number }) {
+  const flashes = useMemo(() => {
+    const rand = (n: number) => {
+      const x = Math.sin(seed * 7777 + n * 54321) * 10000
+      return x - Math.floor(x)
+    }
+    return Array.from({ length: 54 }, (_, i) => ({
+      id: i,
+      left: rand(i) * 100,
+      top: 12 + rand(i + 11) * 78,
+      size: 7 + rand(i + 22) * 14,
+      delay: rand(i + 33) * 1200,
+      beam: rand(i + 44) > 0.68,
+    }))
+  }, [seed])
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-black/10" aria-hidden>
+      {flashes.map((f) => (
+        <span key={f.id}>
+          <span
+            className="tf-phone-flash"
+            style={
+              {
+                left: `${f.left}%`,
+                top: `${f.top}%`,
+                ['--w' as string]: `${f.size}px`,
+                ['--d' as string]: `${f.delay}ms`,
+              } as React.CSSProperties
+            }
+          />
+          {f.beam ? (
+            <span
+              className="tf-phone-flash-beam"
+              style={
+                {
+                  left: `${f.left}%`,
+                  top: `${f.top}%`,
+                  ['--d' as string]: `${f.delay + 35}ms`,
+                } as React.CSSProperties
+              }
+            />
+          ) : null}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 function Card({
@@ -255,39 +394,54 @@ function paidAnimationToReactionType(id: PaidAnimation['id']): ReactionType {
   return 'rage'
 }
 
-function reactionTypeToPaidFx(type: ReactionType, tifoSide?: 'home' | 'away'): ActivePaidFx {
-  if (type === 'flare') return { id: 'fumigene', label: 'Fumigène (pyro)' }
-  if (type === 'confetti') return { id: 'ola', label: 'Ola du virage' }
+function reactionTypeToPaidFx(
+  type: ReactionType,
+  opts?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
+): ActivePaidFx {
+  if (type === 'flare') {
+    const flareColor = opts?.flareColor ?? 'red'
+    return {
+      id: 'fumigene',
+      label: `Fumigène ${FLARE_COLOR_LABELS[flareColor]}`,
+      flareColor,
+    }
+  }
+  if (type === 'confetti') return { id: 'ola', label: 'Confettis' }
   if (type === 'goal') {
     return {
       id: 'tifo-geant',
       label: 'Tifo géant',
-      ...(tifoSide ? { tifoSide } : {}),
+      ...(opts?.tifoSide ? { tifoSide: opts.tifoSide } : {}),
     }
   }
-  return { id: 'stroboscope', label: 'Stroboscope' }
+  return { id: 'stroboscope', label: 'Flash téléphones' }
 }
 
 function TeamLogoLink({
-  clubId,
+  to,
   label,
   logoUrl,
+  clubId,
   sportMonksTeamId,
+  nationFlagSrc,
 }: {
-  clubId?: string
+  to?: string | null
   label: string
   logoUrl?: string
+  clubId?: string
   sportMonksTeamId?: number
+  nationFlagSrc?: string
 }) {
   const resolved =
-    clubId != null
+    nationFlagSrc ??
+    (clubId != null
       ? resolveTeamLogoUrl(clubId, { apiLogoUrl: logoUrl, sportMonksTeamId }) ?? logoUrl
-      : logoUrl
+      : logoUrl)
   const inner = <TeamLogo label={label} logoUrl={resolved} />
-  if (!clubId) return inner
+  if (!to) return inner
   return (
     <Link
-      to={clubPathForId(clubId)}
+      to={to}
       className="shrink-0 rounded-full outline-none ring-offset-2 transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400/80"
       aria-label={`Page ${label}`}
     >
@@ -525,6 +679,12 @@ export function ChannelPage() {
   )
   const homeHeaderLabel = match?.home.shortName ?? homeName
   const awayHeaderLabel = match?.away.shortName ?? awayName
+  const homeNation = match ? resolveNationForTeam(match.home, match.competition.id) : null
+  const awayNation = match ? resolveNationForTeam(match.away, match.competition.id) : null
+  const homeTeamPath = match ? teamHubPathForMatch(match.home, match.competition.id) : null
+  const awayTeamPath = match ? teamHubPathForMatch(match.away, match.competition.id) : null
+  const homeFlagSrc = homeNation ? (nationFlagUrl(homeNation.iso, 40) ?? undefined) : undefined
+  const awayFlagSrc = awayNation ? (nationFlagUrl(awayNation.iso, 40) ?? undefined) : undefined
   const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? '', match ?? null)
@@ -651,7 +811,7 @@ export function ChannelPage() {
     () => (match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null),
     [match?.kickoffAt],
   )
-  const chatOpenAtMs = kickoffMs != null ? kickoffMs - 5 * 60 * 1000 : null
+  const chatOpenAtMs = kickoffMs != null ? kickoffMs - MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS : null
   const chatLocked = status === 'upcoming' && chatOpenAtMs != null && nowMs < chatOpenAtMs
   const chatCountdownText = useMemo(() => {
     if (!chatLocked || chatOpenAtMs == null) return null
@@ -673,6 +833,7 @@ export function ChannelPage() {
   const [draft, setDraft] = useState('')
   const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
+  const [flareColor, setFlareColor] = useState<FlareColor>('red')
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
   const [standingsModalOpen, setStandingsModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
@@ -683,6 +844,7 @@ export function ChannelPage() {
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
   const [activePaidFx, setActivePaidFx] = useState<ActivePaidFx | null>(null)
+  const [paidFxSeed, setPaidFxSeed] = useState(0)
   const seenReactionIdsRef = useRef(new Set<string>())
   const [livePanelOpen, setLivePanelOpen] = useState(false)
   const [liveMicEnabled, setLiveMicEnabled] = useState(true)
@@ -804,15 +966,31 @@ export function ChannelPage() {
     },
     onLiveInsert: (event) => {
       if (seenReactionIdsRef.current.has(event.id)) {
-        if (event.tifoSide) {
-          setActivePaidFx((prev) =>
-            prev?.id === 'tifo-geant' ? { ...prev, tifoSide: event.tifoSide } : prev,
-          )
+        if (event.tifoSide || event.flareColor) {
+          setActivePaidFx((prev) => {
+            if (prev?.id === 'tifo-geant' && event.tifoSide) {
+              return { ...prev, tifoSide: event.tifoSide }
+            }
+            if (prev?.id === 'fumigene' && event.flareColor) {
+              return {
+                ...prev,
+                flareColor: event.flareColor,
+                label: `Fumigène ${FLARE_COLOR_LABELS[event.flareColor]}`,
+              }
+            }
+            return prev
+          })
         }
         return
       }
       seenReactionIdsRef.current.add(event.id)
-      setActivePaidFx(reactionTypeToPaidFx(event.type, event.tifoSide))
+      setPaidFxSeed((n) => n + 1)
+      setActivePaidFx(
+        reactionTypeToPaidFx(event.type, {
+          tifoSide: event.tifoSide,
+          flareColor: event.flareColor,
+        }),
+      )
     },
   })
   const chatBottomRef = useRef<HTMLDivElement | null>(null)
@@ -1408,6 +1586,11 @@ export function ChannelPage() {
     ],
     [homeName, awayName],
   )
+  const channelTifoGroupId = useMemo(
+    () => (match ? tifoGroupIdForMatchChannel(match, selectedTribune) : null),
+    [match, selectedTribune],
+  )
+  const showChannelTifo = match != null && (status === 'live' || status === 'upcoming')
   const possessionRow = useMemo(
     () => liveStatRows.find((r) => r.key === 'ball_possession' || r.key === 'possession') ?? null,
     [liveStatRows],
@@ -1483,10 +1666,10 @@ export function ChannelPage() {
   }, [livePitchPressure])
   const paidAnimations = useMemo<PaidAnimation[]>(
     () => [
-      { id: 'fumigene', label: 'Fumigène rouge', cost: 20, emoji: '💨' },
-      { id: 'ola', label: 'Ola du virage', cost: 12, emoji: '👏' },
+      { id: 'fumigene', label: 'Fumigène', cost: 20, emoji: '💨' },
+      { id: 'ola', label: 'Confettis', cost: 12, emoji: '🎊' },
       { id: 'tifo-geant', label: 'Tifo géant', cost: 35, emoji: '🏴' },
-      { id: 'stroboscope', label: 'Stroboscope', cost: 18, emoji: '⚡' },
+      { id: 'stroboscope', label: 'Flash téléphones', cost: 18, emoji: '📱' },
     ],
     [],
   )
@@ -1499,7 +1682,7 @@ export function ChannelPage() {
 
   const triggerPaidAnimation = async (
     anim: PaidAnimation,
-    opts?: { tifoSide?: 'home' | 'away' },
+    opts?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
   ) => {
     const res = betting.spendTokens(anim.cost, `chat_animation:${anim.id}`)
     if (!res.ok) {
@@ -1510,9 +1693,13 @@ export function ChannelPage() {
     if (match?.id) {
       const tifoSideForSync =
         anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
+      const flareColorForSync =
+        anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
       const sent = await publishReaction(
         paidAnimationToReactionType(anim.id),
-        tifoSideForSync ? { tifoSide: tifoSideForSync } : undefined,
+        tifoSideForSync || flareColorForSync
+          ? { ...(tifoSideForSync ? { tifoSide: tifoSideForSync } : {}), ...(flareColorForSync ? { flareColor: flareColorForSync } : {}) }
+          : undefined,
       )
       if (sent.ok && sent.event) {
         seenReactionIdsRef.current.add(sent.event.id)
@@ -1522,10 +1709,17 @@ export function ChannelPage() {
       }
     }
     const tifoSide = anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
+    const flareColorChosen =
+      anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
+    setPaidFxSeed((n) => n + 1)
     setActivePaidFx({
       id: anim.id,
-      label: anim.label,
+      label:
+        anim.id === 'fumigene' && flareColorChosen
+          ? `Fumigène ${FLARE_COLOR_LABELS[flareColorChosen]}`
+          : anim.label,
       ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
+      ...(flareColorChosen ? { flareColor: flareColorChosen } : {}),
     })
     setAnimationsOpen(false)
     setAnimationNotice(`${anim.emoji} ${anim.label} activee`)
@@ -1674,13 +1868,15 @@ export function ChannelPage() {
             <div className="flex min-w-0 flex-col gap-0.5">
               <div className="flex min-w-0 items-center gap-1.5">
                 <TeamLogoLink
+                  to={homeTeamPath}
                   clubId={match?.home.id}
                   label={homeHeaderLabel}
                   logoUrl={match?.home.logoUrl}
                   sportMonksTeamId={match?.home.sportMonksTeamId}
+                  nationFlagSrc={homeFlagSrc}
                 />
                 <Link
-                  to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+                  to={homeTeamPath ?? '#'}
                   title={homeName}
                   className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
                     L ? 'text-[#052032]' : 'text-white'
@@ -1690,9 +1886,19 @@ export function ChannelPage() {
                 </Link>
               </div>
               {isUpcoming ? (
-                <p className={`truncate pl-11 text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
-                  {homeFullName}
-                </p>
+                homeTeamPath ? (
+                  <Link
+                    to={homeTeamPath}
+                    title={homeFullName}
+                    className={`truncate pl-11 text-[11px] font-bold leading-tight hover:underline ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}
+                  >
+                    {homeFullName}
+                  </Link>
+                ) : (
+                  <p className={`truncate pl-11 text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
+                    {homeFullName}
+                  </p>
+                )
               ) : null}
             </div>
             <div className="flex flex-col items-center gap-0.5 px-1">
@@ -1712,7 +1918,7 @@ export function ChannelPage() {
             <div className="flex min-w-0 flex-col items-end gap-0.5">
               <div className="flex min-w-0 items-center justify-end gap-1.5">
                 <Link
-                  to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                  to={awayTeamPath ?? '#'}
                   title={awayName}
                   className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
                     L ? 'text-[#052032]' : 'text-white'
@@ -1721,16 +1927,28 @@ export function ChannelPage() {
                   {awayHeaderLabel}
                 </Link>
                 <TeamLogoLink
+                  to={awayTeamPath}
                   clubId={match?.away.id}
                   label={awayHeaderLabel}
                   logoUrl={match?.away.logoUrl}
                   sportMonksTeamId={match?.away.sportMonksTeamId}
+                  nationFlagSrc={awayFlagSrc}
                 />
               </div>
               {isUpcoming ? (
-                <p className={`truncate pr-11 text-right text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
-                  {awayFullName}
-                </p>
+                awayTeamPath ? (
+                  <Link
+                    to={awayTeamPath}
+                    title={awayFullName}
+                    className={`truncate pr-11 text-right text-[11px] font-bold leading-tight hover:underline ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}
+                  >
+                    {awayFullName}
+                  </Link>
+                ) : (
+                  <p className={`truncate pr-11 text-right text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
+                    {awayFullName}
+                  </p>
+                )
               ) : null}
             </div>
             <div />
@@ -1770,13 +1988,15 @@ export function ChannelPage() {
           <div className="col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5 justify-self-start">
             <div className="flex min-w-0 items-center gap-3">
               <TeamLogoLink
+                to={homeTeamPath}
                 clubId={match?.home.id}
                 label={homeHeaderLabel}
                 logoUrl={match?.home.logoUrl}
                 sportMonksTeamId={match?.home.sportMonksTeamId}
+                nationFlagSrc={homeFlagSrc}
               />
               <Link
-                to={match?.home.id ? clubPathForId(match.home.id) : '#'}
+                to={homeTeamPath ?? '#'}
                 title={homeName}
                 className={`truncate text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
               >
@@ -1784,14 +2004,26 @@ export function ChannelPage() {
               </Link>
             </div>
             {isUpcoming ? (
-              <p
-                className={`max-w-[min(100%,14rem)] truncate pl-[3.25rem] text-xs font-bold leading-tight ${
-                  L ? 'text-[#3d5670]' : 'text-sky-200/85'
-                }`}
-                title={homeFullName}
-              >
-                {homeFullName}
-              </p>
+              homeTeamPath ? (
+                <Link
+                  to={homeTeamPath}
+                  className={`max-w-[min(100%,14rem)] truncate pl-[3.25rem] text-xs font-bold leading-tight hover:underline ${
+                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                  }`}
+                  title={homeFullName}
+                >
+                  {homeFullName}
+                </Link>
+              ) : (
+                <p
+                  className={`max-w-[min(100%,14rem)] truncate pl-[3.25rem] text-xs font-bold leading-tight ${
+                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                  }`}
+                  title={homeFullName}
+                >
+                  {homeFullName}
+                </p>
+              )
             ) : null}
           </div>
           <div className="col-start-2 row-start-1 flex flex-col items-center justify-self-center self-start gap-1 pt-0.5 text-center">
@@ -1811,28 +2043,42 @@ export function ChannelPage() {
           <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end">
             <div className="flex min-w-0 items-center justify-end gap-3">
               <Link
-                to={match?.away.id ? clubPathForId(match.away.id) : '#'}
+                to={awayTeamPath ?? '#'}
                 title={awayName}
                 className={`truncate text-right text-lg font-semibold hover:underline ${L ? 'text-[#052032]' : 'text-white'}`}
               >
                 {awayHeaderLabel}
               </Link>
               <TeamLogoLink
+                to={awayTeamPath}
                 clubId={match?.away.id}
                 label={awayHeaderLabel}
                 logoUrl={match?.away.logoUrl}
                 sportMonksTeamId={match?.away.sportMonksTeamId}
+                nationFlagSrc={awayFlagSrc}
               />
             </div>
             {isUpcoming ? (
-              <p
-                className={`max-w-[min(100%,14rem)] truncate pr-[3.25rem] text-right text-xs font-bold leading-tight ${
-                  L ? 'text-[#3d5670]' : 'text-sky-200/85'
-                }`}
-                title={awayFullName}
-              >
-                {awayFullName}
-              </p>
+              awayTeamPath ? (
+                <Link
+                  to={awayTeamPath}
+                  className={`max-w-[min(100%,14rem)] truncate pr-[3.25rem] text-right text-xs font-bold leading-tight hover:underline ${
+                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                  }`}
+                  title={awayFullName}
+                >
+                  {awayFullName}
+                </Link>
+              ) : (
+                <p
+                  className={`max-w-[min(100%,14rem)] truncate pr-[3.25rem] text-right text-xs font-bold leading-tight ${
+                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                  }`}
+                  title={awayFullName}
+                >
+                  {awayFullName}
+                </p>
+              )
             ) : null}
           </div>
           <div className="col-start-2 row-start-2 flex flex-col items-center gap-1">
@@ -2259,7 +2505,7 @@ export function ChannelPage() {
                       Tchat verrouillé
                     </p>
                     <p className="mt-1 text-[11px] font-semibold text-sky-200/80">
-                      Ouverture 5 min avant le coup d&apos;envoi
+                      Ouverture 1 h avant le coup d&apos;envoi
                     </p>
                     <p className="mt-2 text-2xl font-black text-cyan-200">{chatCountdownText ?? '00:00'}</p>
                   </div>
@@ -2407,18 +2653,41 @@ export function ChannelPage() {
                   <p className={`mb-0.5 shrink-0 px-0.5 text-[9px] font-bold uppercase tracking-wide ${chFxSectionLabel}`}>
                     Pyro · fumigènes
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => void triggerPaidAnimation(paidAnimations[0])}
-                    className={`${chFxPanelBtn} shrink-0`}
-                  >
-                    <p className="text-[11px] font-bold text-sky-50">
-                      {paidAnimations[0].emoji} {paidAnimations[0].label}
-                    </p>
-                    <p className={`mt-0.5 text-[10px] ${chFxSectionLabel}`}>{paidAnimations[0].cost} jetons</p>
-                  </button>
+                  <div className="grid shrink-0 grid-cols-4 gap-1">
+                    {FLARE_COLOR_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        title={`Fumigène ${opt.label}`}
+                        onClick={() => {
+                          setFlareColor(opt.id)
+                          void triggerPaidAnimation(paidAnimations[0], { flareColor: opt.id })
+                        }}
+                        className={cn(
+                          'flex min-h-[2.75rem] flex-col items-center justify-center rounded-md border px-1 py-1.5 text-center transition',
+                          flareColor === opt.id
+                            ? L
+                              ? 'border-orange-500/70 bg-orange-50 text-orange-950'
+                              : 'border-orange-400/70 bg-orange-500/20 text-orange-50'
+                            : L
+                              ? 'border-slate-200 bg-slate-50 text-[#1a3a52] hover:border-orange-300'
+                              : 'border-[#4b6f90] bg-[#0b2741] text-sky-200 hover:border-orange-400/50',
+                        )}
+                      >
+                        <span
+                          className="mb-0.5 block size-3.5 rounded-full border border-white/25 shadow-sm"
+                          style={{ backgroundColor: opt.swatch }}
+                          aria-hidden
+                        />
+                        <span className="text-[9px] font-bold leading-tight">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className={`mt-1 shrink-0 px-0.5 text-[10px] ${chFxSectionLabel}`}>
+                    {paidAnimations[0].emoji} {paidAnimations[0].label} · {paidAnimations[0].cost} jetons
+                  </p>
                   <p className={`mb-0.5 mt-2 shrink-0 px-0.5 text-[9px] font-bold uppercase tracking-wide ${chFxSectionLabel}`}>
-                    Ola / chants
+                    Confettis
                   </p>
                   <button
                     type="button"
@@ -2474,7 +2743,7 @@ export function ChannelPage() {
                     </button>
                   </div>
                   <p className={`mb-0.5 mt-2 shrink-0 px-0.5 text-[9px] font-bold uppercase tracking-wide ${chFxSectionLabel}`}>
-                    Lumières
+                    Flashs tribune
                   </p>
                   <button
                     type="button"
@@ -2505,7 +2774,7 @@ export function ChannelPage() {
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder={
                   chatLocked
-                    ? 'Tchat ouvert 5 min avant le match'
+                    ? 'Tchat ouvert 1 h avant le match'
                     : !isCloudChatConfigured
                       ? 'Chat cloud indisponible'
                       : 'Écrire un message…'
@@ -2844,6 +3113,20 @@ export function ChannelPage() {
             </div>
           </Card>
           </div>
+
+          {showChannelTifo && channelTifoGroupId ? (
+            <div id="tf-channel-tifo" className="scroll-mt-4 shrink-0">
+              <Card className="tf-card-tribune !p-2.5">
+                <GroupTifoPanel
+                  embedded
+                  groupId={channelTifoGroupId}
+                  matches={matches}
+                  fixedMatchId={match.id}
+                  isGroupAdmin={false}
+                />
+              </Card>
+            </div>
+          ) : null}
         </div>
       </main>
 
@@ -3108,6 +3391,17 @@ export function ChannelPage() {
                 >
                   Ouvrir la carte du stade
                 </button>
+                {showChannelTifo && channelTifoGroupId && match ? (
+                  <div className="max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                    <GroupTifoPanel
+                      embedded
+                      groupId={channelTifoGroupId}
+                      matches={matches}
+                      fixedMatchId={match.id}
+                      isGroupAdmin={false}
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : null}
                   </div>
@@ -3280,43 +3574,36 @@ export function ChannelPage() {
       ) : null}
       {!isFinished && activePaidFx ? (
         <div className="tf-paid-fx-portal pointer-events-none fixed inset-0 z-[94] overflow-hidden">
-          {activePaidFx.id === 'stroboscope' ? (
-            <>
-              <div className="absolute inset-0 animate-pulse bg-white/10" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(56,189,248,0.32),transparent_50%),radial-gradient(circle_at_50%_55%,rgba(167,139,250,0.26),transparent_48%)]" />
-            </>
-          ) : null}
+          {activePaidFx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={paidFxSeed} /> : null}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
             aria-hidden
           >
             <div className="relative mx-auto flex h-[min(46dvh,360px)] w-full max-w-[min(94vw,22rem)] shrink-0 items-end justify-center sm:h-[min(50dvh,420px)] sm:max-w-lg">
-              {activePaidFx.id === 'fumigene' ? (
-                <>
-                  <div className="absolute bottom-0 left-1/2 h-[58%] w-[40%] max-w-[150px] -translate-x-[calc(100%+10px)] -rotate-6 rounded-t-[50%] bg-gradient-to-t from-orange-600/55 via-rose-500/42 to-transparent blur-2xl sm:-translate-x-[calc(100%+14px)]" />
-                  <div className="absolute bottom-0 left-1/2 h-[60%] w-[42%] max-w-[155px] translate-x-[10px] rotate-6 rounded-t-[48%] bg-gradient-to-t from-rose-600/55 via-red-500/45 to-transparent blur-2xl sm:translate-x-[14px]" />
-                  <div className="absolute bottom-4 left-1/2 h-24 w-[72px] max-w-[22%] -translate-x-[calc(200%+18px)] rounded-full bg-white/14 blur-lg sm:-translate-x-[calc(200%+24px)]" />
-                  <div className="absolute bottom-5 left-1/2 h-28 w-20 max-w-[26%] translate-x-[calc(100%+18px)] rounded-full bg-amber-100/14 blur-lg sm:translate-x-[calc(100%+24px)]" />
-                </>
-              ) : null}
-              {activePaidFx.id === 'ola' ? (
-                <div
-                  className="absolute bottom-[8%] left-1/2 flex w-[min(92vw,28rem)] -translate-x-1/2 items-end justify-center gap-1 sm:bottom-[12%] sm:gap-1.5"
-                  aria-hidden
-                >
-                  {Array.from({ length: 14 }, (_, i) => (
+              {activePaidFx.id === 'fumigene' ? (() => {
+                const smoke = flareSmokeLayers(activePaidFx.flareColor ?? 'red')
+                return (
+                  <>
                     <div
-                      key={i}
-                      className="w-2 origin-bottom rounded-full bg-gradient-to-t from-cyan-400/90 to-violet-400/75 shadow-[0_0_12px_rgba(34,211,238,0.35)] sm:w-2.5"
-                      style={{
-                        height: '2.75rem',
-                        animation: 'tf-ola-wave 1.1s ease-in-out infinite',
-                        animationDelay: `${i * 0.07}s`,
-                      }}
+                      className="absolute bottom-0 left-1/2 h-[58%] w-[40%] max-w-[150px] -translate-x-[calc(100%+10px)] -rotate-6 rounded-t-[50%] blur-2xl sm:-translate-x-[calc(100%+14px)]"
+                      style={{ background: smoke.plumeA }}
                     />
-                  ))}
-                </div>
-              ) : null}
+                    <div
+                      className="absolute bottom-0 left-1/2 h-[60%] w-[42%] max-w-[155px] translate-x-[10px] rotate-6 rounded-t-[48%] blur-2xl sm:translate-x-[14px]"
+                      style={{ background: smoke.plumeB }}
+                    />
+                    <div
+                      className="absolute bottom-4 left-1/2 h-24 w-[72px] max-w-[22%] -translate-x-[calc(200%+18px)] rounded-full blur-lg sm:-translate-x-[calc(200%+24px)]"
+                      style={{ backgroundColor: smoke.mistA }}
+                    />
+                    <div
+                      className="absolute bottom-5 left-1/2 h-28 w-20 max-w-[26%] translate-x-[calc(100%+18px)] rounded-full blur-lg sm:translate-x-[calc(100%+24px)]"
+                      style={{ backgroundColor: smoke.mistB }}
+                    />
+                  </>
+                )
+              })() : null}
+              {activePaidFx.id === 'ola' ? <PaidConfettiBurst seed={paidFxSeed} /> : null}
               {activePaidFx.id === 'tifo-geant' ? (
                 <div
                   className="absolute left-1/2 top-1/2 w-[min(92vw,20rem)] max-w-full -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"

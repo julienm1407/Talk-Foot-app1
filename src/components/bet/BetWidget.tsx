@@ -332,8 +332,8 @@ export function BetWidget({
       const bets = resultBetsForSide(side)
       const defaultVisual = {
         shell:
-          'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
-        odd: 'border-emerald-700/35 bg-emerald-600/12 text-emerald-950',
+          'border-2 border-sky-300/80 bg-[#f4f9ff] text-[#011522] hover:border-sky-200 hover:bg-white',
+        odd: 'border-emerald-800/40 bg-white text-emerald-900 shadow-sm',
         badge: null as string | null,
       }
       if (!bets.length) return defaultVisual
@@ -374,9 +374,9 @@ export function BetWidget({
       const bets = scorerBetsForSelection(selection)
       const defaultVisual = {
         shell:
-          'border-2 border-sky-400/55 bg-[#e8f3fc] text-[#04202f] hover:border-sky-300/90 hover:bg-[#f2f8ff]',
+          'border-2 border-sky-300/80 bg-[#f4f9ff] text-[#011522] hover:border-sky-200 hover:bg-white',
         badge: null as string | null,
-        odd: 'text-slate-500',
+        odd: 'border-emerald-800/40 bg-white text-emerald-900 shadow-sm',
       }
       if (!bets.length) return defaultVisual
       if (bets.some((b) => b.status === 'won')) {
@@ -504,10 +504,20 @@ export function BetWidget({
           )}
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className={cn('tf-bet-chip border-[#557da3]/70 bg-[#0e2a45] text-sky-100', compact ? 'px-2 py-0.5 text-[10px]' : '')}>
+            <Badge
+              className={cn(
+                'tf-bet-chip tf-bet-chip--tokens !border-[#6b9cc4]/80 !bg-[#0e2a45] !font-bold !text-sky-50',
+                compact ? 'px-2.5 py-0.5 text-[11px]' : '!text-xs',
+              )}
+            >
               {wallet.tokens} jetons
             </Badge>
-            <Badge className={cn('tf-bet-chip border-[#6a5bd7]/70 bg-[#6a5bd7]/18 text-violet-100', compact ? 'px-2 py-0.5 text-[10px]' : '')}>
+            <Badge
+              className={cn(
+                'tf-bet-chip tf-bet-chip--stats !border-[#8b7bff]/70 !bg-[#6a5bd7]/28 !font-bold !text-violet-50',
+                compact ? 'px-2.5 py-0.5 text-[11px]' : '!text-xs',
+              )}
+            >
               {stats.won}/{Math.max(1, stats.total)} ✓
             </Badge>
           </div>
@@ -548,7 +558,7 @@ export function BetWidget({
                 className={cn(
                   'tf-bet-pick min-w-0 overflow-hidden font-bold',
                   compact
-                    ? 'tf-bet-pick--compact !flex !h-8 !min-h-0 !max-h-8 flex-row items-center justify-between gap-1 !rounded-lg !px-2 !py-0 text-[9px] leading-none shadow-[0_2px_8px_rgba(2,12,28,0.14),inset_0_1px_0_rgba(255,255,255,0.9)]'
+                    ? 'tf-bet-pick--compact !flex !h-9 !min-h-0 !max-h-9 flex-row items-center justify-between gap-1.5 !rounded-lg !px-2.5 !py-0 text-[11px] leading-tight shadow-[0_2px_8px_rgba(2,12,28,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]'
                     : 'min-h-11 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10',
                   visual.shell,
                   compact && '!border',
@@ -558,8 +568,8 @@ export function BetWidget({
               >
                 <span
                   className={cn(
-                    'tf-bet-pick-name min-w-0 truncate font-extrabold',
-                    compact ? 'text-[9px]' : 'overflow-hidden text-ellipsis',
+                    'tf-bet-pick-name min-w-0 truncate font-extrabold text-[#011522]',
+                    compact ? 'text-[11px]' : 'overflow-hidden text-ellipsis',
                   )}
                 >
                   {label}
@@ -583,7 +593,7 @@ export function BetWidget({
                   <span
                     className={cn(
                       'tf-bet-pick-odd shrink-0 rounded border font-black tabular-nums',
-                      compact ? 'px-1 py-0 text-[9px]' : 'rounded-md px-1.5 py-0.5 text-xs',
+                      compact ? 'px-1.5 py-0.5 text-[10px]' : 'rounded-md px-1.5 py-0.5 text-xs',
                       visual.odd,
                     )}
                   >

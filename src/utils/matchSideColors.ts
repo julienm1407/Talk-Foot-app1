@@ -1,11 +1,15 @@
 import type { Match, Team } from '../types/match'
-import { findNationByName } from '../data/nations'
+import { findNationByName, getNationByIso } from '../data/nations'
 import { isWorldCupCompetitionId } from './seasonMode'
 
 export type SideColors = { primary: string; secondary: string }
 
 function nationForTeam(team: Team) {
-  return findNationByName(team.name)
+  if (team.shortName?.length === 3) {
+    const byIso = getNationByIso(team.shortName)
+    if (byIso) return byIso
+  }
+  return findNationByName(team.name) ?? findNationByName(team.shortName)
 }
 
 /** Libellé affiché : nom FR pour les sélections CDM quand connues. */

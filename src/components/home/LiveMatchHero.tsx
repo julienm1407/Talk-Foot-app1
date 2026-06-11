@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import { useCarouselSwipe } from '../../hooks/useCarouselSwipe'
-import { clubPathForId } from '../../utils/clubRoute'
+import { teamHubPathForMatch } from '../../utils/teamHubRoute'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
-import { ClubCrest } from '../brand/ClubCrest'
+import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { formatRelativeMinute } from '../../utils/time'
 import { getSportMonksToken } from '../../utils/apiTokens'
 import { cn } from '../../utils/cn'
@@ -327,16 +327,13 @@ export function LiveMatchHero({
               )}
             >
               <Link
-                to={clubPathForId(match.home.id)}
+                to={teamHubPathForMatch(match.home, match.competition.id) ?? '#'}
                 className="group/home flex min-w-0 flex-1 flex-col items-center gap-1 text-center outline-none"
                 title={`Hub ${match.home.name}`}
               >
-                <ClubCrest
-                  id={match.home.id}
-                  shortName={match.home.shortName}
-                  colors={match.home.colors}
-                  logoUrl={match.home.logoUrl}
-                  sportMonksTeamId={match.home.sportMonksTeamId}
+                <MatchTeamCrest
+                  team={match.home}
+                  competitionId={match.competition.id}
                   size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
@@ -382,16 +379,13 @@ export function LiveMatchHero({
                 </span>
               </div>
               <Link
-                to={clubPathForId(match.away.id)}
+                to={teamHubPathForMatch(match.away, match.competition.id) ?? '#'}
                 className="group/away flex min-w-0 flex-1 flex-col items-center gap-1 text-center outline-none"
                 title={`Hub ${match.away.name}`}
               >
-                <ClubCrest
-                  id={match.away.id}
-                  shortName={match.away.shortName}
-                  colors={match.away.colors}
-                  logoUrl={match.away.logoUrl}
-                  sportMonksTeamId={match.away.sportMonksTeamId}
+                <MatchTeamCrest
+                  team={match.away}
+                  competitionId={match.competition.id}
                   size={crestSize}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',

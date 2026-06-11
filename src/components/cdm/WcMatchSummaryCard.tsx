@@ -1,8 +1,9 @@
 import type { WcMatch, WcVenue } from '../../types/wc2026'
 import { WC_ROUND_LABELS } from '../../types/wc2026'
-import { getNationByIso } from '../../data/nations'
 import { formatHubDayLabel, formatKickoff } from '../../utils/time'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
+import { resolveNationForWcSlot } from '../../utils/resolveMatchNation'
+import { MatchTeamSideLabel } from '../match/MatchTeamSideLabel'
 import { cn } from '../../utils/cn'
 
 /**
@@ -22,16 +23,16 @@ export function WcMatchSummaryCard({
   className?: string
   size?: 'sm' | 'md'
 }) {
-  const homeNation = match.home.iso ? getNationByIso(match.home.iso) : null
-  const awayNation = match.away.iso ? getNationByIso(match.away.iso) : null
+  const homeNation = resolveNationForWcSlot(match.home)
+  const awayNation = resolveNationForWcSlot(match.away)
 
   const isLive = match.status === 'live'
   const isFinished = match.status === 'finished'
 
   const { favoriteNationIsos } = useFanPreferences()
   const favSet = new Set(favoriteNationIsos)
-  const homeIsFav = Boolean(match.home.iso && favSet.has(match.home.iso))
-  const awayIsFav = Boolean(match.away.iso && favSet.has(match.away.iso))
+  const homeIsFav = Boolean(homeNation && favSet.has(homeNation.iso))
+  const awayIsFav = Boolean(awayNation && favSet.has(awayNation.iso))
   const hasFav = homeIsFav || awayIsFav
 
   return (
@@ -70,9 +71,9 @@ export function WcMatchSummaryCard({
       </header>
 
       <div className="flex items-center justify-between gap-3">
-        <TeamSide
+        <MatchTeamSideLabel
           label={homeNation?.nameFr ?? match.home.label ?? 'À déterminer'}
-          flag={homeNation?.flag}
+          nation={homeNation}
         />
         <div className="flex flex-col items-center">
           {match.home.goals !== undefined && match.away.goals !== undefined ? (
@@ -88,9 +89,9 @@ export function WcMatchSummaryCard({
             </span>
           ) : null}
         </div>
-        <TeamSide
+        <MatchTeamSideLabel
           label={awayNation?.nameFr ?? match.away.label ?? 'À déterminer'}
-          flag={awayNation?.flag}
+          nation={awayNation}
           align="right"
         />
       </div>
@@ -101,31 +102,5 @@ export function WcMatchSummaryCard({
         </footer>
       ) : null}
     </article>
-  )
-}
-
-function TeamSide({
-  label,
-  flag,
-  align = 'left',
-}: {
-  label: string
-  flag?: string
-  align?: 'left' | 'right'
-}) {
-  return (
-    <div
-      className={cn(
-        'flex min-w-0 flex-1 items-center gap-1.5 truncate text-xs font-bold text-tf-app-fg',
-        align === 'right' && 'flex-row-reverse text-right',
-      )}
-    >
-      {flag ? (
-        <span aria-hidden className="text-base">
-          {flag}
-        </span>
-      ) : null}
-      <span className="truncate">{label}</span>
-    </div>
   )
 }

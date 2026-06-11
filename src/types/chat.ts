@@ -7,6 +7,9 @@ export type MatchTribuneZone = 'home-ultras' | 'away-ultras' | 'analystes' | 'ne
 
 export type ReactionType = 'flare' | 'confetti' | 'goal' | 'rage'
 
+/** Couleur du fumigène (diffusée en broadcast, pas en base). */
+export type FlareColor = 'red' | 'blue' | 'green' | 'yellow'
+
 export type User = {
   id: string
   username: string
@@ -64,5 +67,7 @@ export type ReactionEvent = {
   createdAt: number
   /** Tifo géant : camp choisi (diffusé en broadcast, pas en base). */
   tifoSide?: 'home' | 'away'
+  /** Fumigène : couleur choisie (diffusée en broadcast, pas en base). */
+  flareColor?: FlareColor
 }
 

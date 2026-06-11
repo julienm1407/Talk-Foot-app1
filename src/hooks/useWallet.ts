@@ -36,6 +36,7 @@ import {
   readLocalDailyTokenGrant,
   writeLocalDailyTokenGrant,
 } from '../utils/dailyTokenGrantLocal'
+import { canUseWalletRewards } from '../utils/walletAuth'
 
 export { DAILY_TOKEN_BONUS_AMOUNT, DAILY_TOKEN_BONUS_HOUR } from '../utils/dailyTokenBonus'
 export type { DailyTokenBonusStatus } from '../utils/dailyTokenBonus'
@@ -43,14 +44,18 @@ export type { DailyTokenBonusStatus } from '../utils/dailyTokenBonus'
 const DEV_ADMIN_TEST_MEDALS = 3000
 const DEV_ADMIN_TEST_TOKENS = 100_000
 
-function buildDailyBonusStatus(wallet: Wallet, userId?: string): DailyTokenBonusStatus {
+function buildDailyBonusStatus(
+  wallet: Wallet,
+  userId: string | undefined,
+  rewardsEnabled: boolean,
+): DailyTokenBonusStatus {
   const now = new Date()
   const { claimDayKey, nextClaimAt } = nextDailyBonusWindow(now)
   const lastGrant = mergeDailyTokenGrant(wallet.lastDailyTokenGrant, userId)
-  const alreadyClaimedToday = lastGrant === claimDayKey
+  const alreadyClaimedToday = rewardsEnabled && lastGrant === claimDayKey
   return {
     amount: DAILY_TOKEN_BONUS_AMOUNT,
-    canClaim: isDailyBonusOpenNow(now) && !alreadyClaimedToday,
+    canClaim: rewardsEnabled && isDailyBonusOpenNow(now) && !alreadyClaimedToday,
     alreadyClaimedToday,
     nextClaimAt,
     claimDayKey,
@@ -212,9 +217,11 @@ export function useWallet() {
 
   const claimInFlightRef = useRef(false)
 
+  const walletRewardsEnabled = canUseWalletRewards(user)
+
   const dailyBonus = useMemo(
-    () => buildDailyBonusStatus(wallet, user?.id),
-    [wallet, user?.id],
+    () => buildDailyBonusStatus(wallet, user?.id, walletRewardsEnabled),
+    [wallet, user?.id, walletRewardsEnabled],
   )
 
   const dailyTokenBonusStatus = useCallback(() => dailyBonus, [dailyBonus])
@@ -224,6 +231,9 @@ export function useWallet() {
     amount?: number
     reason?: string
   } => {
+    if (!walletRewardsEnabled) {
+      return { ok: false, reason: 'login_required' }
+    }
     if (!monthlyTokenGrantEligible(tier, subscription.usage ?? {})) {
       return {
         ok: false,
@@ -265,10 +275,10 @@ export function useWallet() {
       return { ...w, tokens: w.tokens + monthlyTokens }
     })
     return out
-  }, [monthlyTokens, subscription.usage, tier, patchUsage, patchWallet, cloud, useCloudWallet])
+  }, [monthlyTokens, subscription.usage, tier, patchUsage, patchWallet, cloud, useCloudWallet, walletRewardsEnabled])
 
   useEffect(() => {
-    if (!user?.id || !plan.flags.monthlyTokenGrant || monthlyTokens <= 0) return
+    if (!walletRewardsEnabled || !plan.flags.monthlyTokenGrant || monthlyTokens <= 0) return
     if (useCloudWallet && cloud && !cloud.syncReady) return
     const monthKey = toLocalMonthKey()
     if (monthlyAutoGrantRef.current === monthKey) return
@@ -280,7 +290,7 @@ export function useWallet() {
       monthlyAutoGrantRef.current = null
     }
   }, [
-    user?.id,
+    walletRewardsEnabled,
     plan.flags.monthlyTokenGrant,
     monthlyTokens,
     tier,
@@ -296,6 +306,9 @@ export function useWallet() {
     amount?: number
     reason?: string
   }> => {
+    if (!walletRewardsEnabled || !user?.id) {
+      return { ok: false, reason: 'login_required' }
+    }
     if (claimInFlightRef.current) return { ok: false, reason: 'in_flight' }
 
     const now = new Date()
@@ -321,7 +334,7 @@ export function useWallet() {
         }
       })
       if (out.ok) {
-        writeLocalDailyTokenGrant(user?.id, claimDayKey)
+        writeLocalDailyTokenGrant(user.id, claimDayKey)
         grantDailyBonus(claimDayKey)
       }
       return out
@@ -331,7 +344,7 @@ export function useWallet() {
     try {
       cloud?.cancelScheduledSave?.()
 
-      if (useCloudWallet && user?.id && isSupabaseConfigured()) {
+      if (useCloudWallet && isSupabaseConfigured()) {
         const sb = getSupabaseBrowserClient()
         if (sb) {
           const rpc = await claimDailyTokenBonusCloud(sb, user.id)
@@ -370,7 +383,7 @@ export function useWallet() {
     } finally {
       claimInFlightRef.current = false
     }
-  }, [wallet, user?.id, useCloudWallet, patchWallet, cloud, grantDailyBonus])
+  }, [wallet, user?.id, walletRewardsEnabled, useCloudWallet, patchWallet, cloud, grantDailyBonus])
 
   return {
     wallet,

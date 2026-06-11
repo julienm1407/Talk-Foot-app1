@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveMirrorForCard } from '../../types/liveSimulation'
-import { ClubCrest } from '../brand/ClubCrest'
+import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { cn } from '../../utils/cn'
 import { formatKickoff } from '../../utils/time'
 import { themeForCompetition } from '../../data/competitionThemes'
@@ -139,12 +139,9 @@ export function MatchSpotlightCard({
               )}
             >
               <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
-                <ClubCrest
-                  id={match.home.id}
-                  shortName={match.home.shortName}
-                  colors={match.home.colors}
-                  logoUrl={match.home.logoUrl}
-                  sportMonksTeamId={match.home.sportMonksTeamId}
+                <MatchTeamCrest
+                  team={match.home}
+                  competitionId={match.competition.id}
                   size={grid ? 30 : 44}
                   className={grid ? 'md:!size-11' : undefined}
                 />
@@ -171,12 +168,9 @@ export function MatchSpotlightCard({
                 </span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
-                <ClubCrest
-                  id={match.away.id}
-                  shortName={match.away.shortName}
-                  colors={match.away.colors}
-                  logoUrl={match.away.logoUrl}
-                  sportMonksTeamId={match.away.sportMonksTeamId}
+                <MatchTeamCrest
+                  team={match.away}
+                  competitionId={match.competition.id}
                   size={grid ? 30 : 44}
                   className={grid ? 'md:!size-11' : undefined}
                 />
@@ -314,12 +308,9 @@ export function MatchSpotlightCard({
                 grid ? 'gap-1 md:gap-2.5' : 'gap-2.5',
               )}
             >
-              <ClubCrest
-                id={match.home.id}
-                shortName={match.home.shortName}
-                colors={match.home.colors}
-                logoUrl={match.home.logoUrl}
-                sportMonksTeamId={match.home.sportMonksTeamId}
+              <MatchTeamCrest
+                team={match.home}
+                competitionId={match.competition.id}
                 size={grid ? 30 : 48}
                 className={grid ? 'md:!size-12' : undefined}
               />
@@ -360,12 +351,9 @@ export function MatchSpotlightCard({
                 grid ? 'gap-1 md:gap-2.5' : 'gap-2.5',
               )}
             >
-              <ClubCrest
-                id={match.away.id}
-                shortName={match.away.shortName}
-                colors={match.away.colors}
-                logoUrl={match.away.logoUrl}
-                sportMonksTeamId={match.away.sportMonksTeamId}
+              <MatchTeamCrest
+                team={match.away}
+                competitionId={match.competition.id}
                 size={grid ? 30 : 48}
                 className={grid ? 'md:!size-12' : undefined}
               />

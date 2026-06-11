@@ -8,6 +8,7 @@ import { matchCalendarDayKeyParis, formatKickoff } from '../../utils/time'
 import { WC_2026_COMP_ID } from '../../utils/seasonMode'
 import { cn } from '../../utils/cn'
 import { useFavoriteNationsLookup } from '../../hooks/useFavoriteNationsMatches'
+import { MatchTeamsVsInline } from '../match/MatchTeamSideLabel'
 import type { Match } from '../../types/match'
 
 function CdmMatchPreviewRow({ match }: { match: Match }) {
@@ -48,11 +49,14 @@ function CdmMatchPreviewRow({ match }: { match: Match }) {
             </span>
           ) : null}
         </div>
-        <div className="mt-0.5 truncate font-display text-sm font-black text-tf-app-fg">
-          <span className={favHome ? 'text-tf-cdm-gold' : undefined}>{match.home.name}</span>{' '}
-          <span className="text-tf-app-muted">vs</span>{' '}
-          <span className={favAway ? 'text-tf-cdm-gold' : undefined}>{match.away.name}</span>
-        </div>
+        <MatchTeamsVsInline
+          className="mt-0.5"
+          home={match.home}
+          away={match.away}
+          competitionId={match.competition.id}
+          homeHighlight={Boolean(favHome)}
+          awayHighlight={Boolean(favAway)}
+        />
       </div>
       {match.score ? (
         <div className="font-display text-xl font-black tabular-nums text-tf-app-fg">

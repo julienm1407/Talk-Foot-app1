@@ -15,6 +15,7 @@ import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { getGroupAccess } from '../utils/groupAccess'
 import { isRivalClub } from '../data/fanRivals'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { getNationByIso } from '../data/nations'
 import { useDebates } from '../contexts/DebatesContext'
 import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
@@ -930,6 +931,8 @@ export function GroupPage() {
     accessLevel !== 'readonly' && (isGroupMember || isDebateSalon || isPublicDebateInGeneral)
   const groupMainClubId = group.fanTags?.clubIds?.[0] ?? null
   const groupMainClubLabel = groupMainClubId ? ALL_CLUBS_BY_ID[groupMainClubId]?.name ?? groupMainClubId : null
+  const groupNationIso = group.fanTags?.nationIso ?? null
+  const groupNationLabel = groupNationIso ? getNationByIso(groupNationIso)?.nameFr ?? groupNationIso : null
   const matchedForGroupLogo = groupMainClubId
     ? matches.find(
         (m) =>
@@ -1452,6 +1455,8 @@ export function GroupPage() {
                   matches={matches}
                   groupClubId={groupMainClubId}
                   groupClubLabel={groupMainClubLabel ?? undefined}
+                  groupNationIso={groupNationIso}
+                  groupNationLabel={groupNationLabel ?? undefined}
                   isGroupAdmin={group.createdBy === 'me'}
                 />
               </div>
@@ -1627,6 +1632,8 @@ export function GroupPage() {
               matches={matches}
               groupClubId={groupMainClubId}
               groupClubLabel={groupMainClubLabel ?? undefined}
+              groupNationIso={groupNationIso}
+              groupNationLabel={groupNationLabel ?? undefined}
               isGroupAdmin={group.createdBy === 'me'}
             />
           </details>

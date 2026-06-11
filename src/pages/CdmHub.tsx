@@ -11,6 +11,7 @@ import { useMatches } from '../contexts/MatchesContext'
 import { useOptionalCdm2026Data } from '../contexts/Cdm2026DataContext'
 import { matchCalendarDayKeyParis, formatHubDayLabel, formatKickoff } from '../utils/time'
 import { WC_2026_COMP_ID } from '../utils/seasonMode'
+import { MatchTeamsVsInline } from '../components/match/MatchTeamSideLabel'
 import { cn } from '../utils/cn'
 
 /**
@@ -103,9 +104,12 @@ export function CdmHubPage() {
                             <div className="text-[10px] font-black uppercase tracking-wider text-tf-app-muted">
                               {formatKickoff(m.kickoffAt)}
                             </div>
-                            <div className="mt-0.5 truncate font-display text-sm font-black text-tf-app-fg">
-                              {m.home.name} <span className="text-tf-app-muted">vs</span> {m.away.name}
-                            </div>
+                            <MatchTeamsVsInline
+                              className="mt-0.5"
+                              home={m.home}
+                              away={m.away}
+                              competitionId={m.competition.id}
+                            />
                           </div>
                           <div className="text-xs font-black uppercase tracking-wide text-tf-app-muted">
                             →

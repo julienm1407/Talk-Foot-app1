@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
+import { useAuth } from '../contexts/AuthContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useWallet } from '../hooks/useWallet'
+import { canUseWalletRewards } from '../utils/walletAuth'
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
@@ -21,8 +23,10 @@ export function NavWalletBalances({
   /** Une ligne icône + chiffre (nav). Labels empilés si false. */
   compact?: boolean
 }) {
+  const { user } = useAuth()
   const { appearance } = useAppearance()
   const { wallet, dailyBonus, claimDailyTokenBonus } = useWallet()
+  const rewardsEnabled = canUseWalletRewards(user)
   const [claimHint, setClaimHint] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
   const L = appearance === 'light'
@@ -40,7 +44,8 @@ export function NavWalletBalances({
   const divider = cn('h-4 w-px shrink-0 sm:h-5', L ? 'bg-tf-dark/12' : 'bg-white/20')
   const value = 'text-[13px] font-black tabular-nums leading-none sm:text-sm'
 
-  const dailyPendingMobile = !dailyBonus.alreadyClaimedToday && !dailyBonus.canClaim
+  const dailyPendingMobile =
+    rewardsEnabled && !dailyBonus.alreadyClaimedToday && !dailyBonus.canClaim
 
   const runClaim = async () => {
     if (claiming) return
@@ -77,7 +82,7 @@ export function NavWalletBalances({
     return (
       <div className="relative z-[1] inline-flex max-w-[min(100%,14rem)] flex-col items-end gap-0.5">
         {/* Mobile : bonus récupérable */}
-        {dailyBonus.canClaim ? (
+        {rewardsEnabled && dailyBonus.canClaim ? (
           <button
             type="button"
             onClick={() => void runClaim()}
@@ -120,7 +125,9 @@ export function NavWalletBalances({
           className={cn(
             shell,
             'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5',
-            dailyBonus.canClaim || dailyPendingMobile ? 'hidden lg:inline-flex' : 'inline-flex',
+            rewardsEnabled && (dailyBonus.canClaim || dailyPendingMobile)
+              ? 'hidden lg:inline-flex'
+              : 'inline-flex',
           )}
           title={`${wallet.tokens} jetons · ${wallet.medals} médailles`}
           aria-label={`${wallet.tokens} jetons, ${wallet.medals} médailles`}

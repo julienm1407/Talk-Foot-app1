@@ -1,6 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useWallet } from '../../hooks/useWallet'
+import { canUseWalletRewards } from '../../utils/walletAuth'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { TokenGlyph } from '../ui/TokenGlyph'
 import { cn } from '../../utils/cn'
 
@@ -14,8 +18,10 @@ type Props = {
  * Récompense jetons quotidienne (10h) — à placer en haut sur mobile pour rester visible.
  */
 export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
+  const { user } = useAuth()
   const { appearance } = useAppearance()
   const { wallet, claimDailyTokenBonus, dailyBonus } = useWallet()
+  const rewardsEnabled = canUseWalletRewards(user)
   const [dailyClaimHint, setDailyClaimHint] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
   const L = appearance === 'light'
@@ -65,43 +71,57 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
             ) : null}
           </div>
         </div>
-        <button
-          type="button"
-          className={cn(
-            'mt-2.5 w-full rounded-lg font-black transition',
-            prominent ? 'px-3 py-2.5 text-sm' : 'rounded-md px-2 py-1.5 text-[10px]',
-            dailyBonus.canClaim
-              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-              : L
-                ? 'bg-slate-200 text-slate-600'
-                : 'bg-white/15 text-white/70',
-          )}
-          disabled={!dailyBonus.canClaim || claiming}
-          onClick={() => {
-            void (async () => {
-              if (claiming) return
-              setClaiming(true)
-              try {
-                const r = await claimDailyTokenBonus()
-                if (r.ok) setDailyClaimHint(`+${r.amount} jetons récupérés !`)
-                else if (r.reason === 'already_claimed') setDailyClaimHint('Déjà récupéré pour cette journée.')
-                else if (r.reason === 'not_open_yet') setDailyClaimHint('Le bonus ouvre tous les jours à 10h.')
-                else setDailyClaimHint('Impossible pour le moment.')
-                window.setTimeout(() => setDailyClaimHint(null), 3200)
-              } finally {
-                setClaiming(false)
-              }
-            })()
-          }}
-        >
-          {claiming
-            ? 'Récupération…'
-            : dailyBonus.canClaim
-              ? 'Récupérer mes jetons'
-              : dailyBonus.alreadyClaimedToday
-                ? 'Déjà récupéré'
-                : 'À 10h'}
-        </button>
+        {!rewardsEnabled ? (
+          <Link
+            to="/login"
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'mt-2.5 flex w-full items-center justify-center rounded-lg bg-tf-cta font-black text-white transition hover:bg-tf-cta-hover',
+              prominent ? 'px-3 py-2.5 text-sm' : 'rounded-md px-2 py-1.5 text-[10px]',
+            )}
+          >
+            Se connecter pour récupérer
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className={cn(
+              'mt-2.5 w-full rounded-lg font-black transition',
+              prominent ? 'px-3 py-2.5 text-sm' : 'rounded-md px-2 py-1.5 text-[10px]',
+              dailyBonus.canClaim
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : L
+                  ? 'bg-slate-200 text-slate-600'
+                  : 'bg-white/15 text-white/70',
+            )}
+            disabled={!dailyBonus.canClaim || claiming}
+            onClick={() => {
+              void (async () => {
+                if (claiming) return
+                setClaiming(true)
+                try {
+                  const r = await claimDailyTokenBonus()
+                  if (r.ok) setDailyClaimHint(`+${r.amount} jetons récupérés !`)
+                  else if (r.reason === 'already_claimed') setDailyClaimHint('Déjà récupéré pour cette journée.')
+                  else if (r.reason === 'not_open_yet') setDailyClaimHint('Le bonus ouvre tous les jours à 10h.')
+                  else if (r.reason === 'login_required') setDailyClaimHint('Connexion requise.')
+                  else setDailyClaimHint('Impossible pour le moment.')
+                  window.setTimeout(() => setDailyClaimHint(null), 3200)
+                } finally {
+                  setClaiming(false)
+                }
+              })()
+            }}
+          >
+            {claiming
+              ? 'Récupération…'
+              : dailyBonus.canClaim
+                ? 'Récupérer mes jetons'
+                : dailyBonus.alreadyClaimedToday
+                  ? 'Déjà récupéré'
+                  : 'À 10h'}
+          </button>
+        )}
         {dailyClaimHint ? (
           <p
             className={cn(

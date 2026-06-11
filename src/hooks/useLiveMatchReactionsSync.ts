@@ -5,7 +5,7 @@ import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
-import type { ReactionEvent, ReactionType } from '../types/chat'
+import type { FlareColor, ReactionEvent, ReactionType } from '../types/chat'
 
 type ReactionRow = {
   id: string
@@ -43,10 +43,15 @@ function tifoSideFromPayload(payload: Record<string, unknown> | undefined): 'hom
   return v === 'home' || v === 'away' ? v : undefined
 }
 
+function flareColorFromPayload(payload: Record<string, unknown> | undefined): FlareColor | undefined {
+  const v = payload?.flare_color
+  return v === 'red' || v === 'blue' || v === 'green' || v === 'yellow' ? v : undefined
+}
+
 export function rowToReactionEvent(
   row: ReactionRow,
   matchId: string,
-  meta?: { tifoSide?: 'home' | 'away' },
+  meta?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
 ): ReactionEvent | null {
   const t = row.reaction_type
   if (t !== 'flare' && t !== 'confetti' && t !== 'goal' && t !== 'rage') return null
@@ -59,6 +64,7 @@ export function rowToReactionEvent(
     type: t as ReactionType,
     createdAt,
     ...(t === 'goal' && meta?.tifoSide ? { tifoSide: meta.tifoSide } : {}),
+    ...(t === 'flare' && meta?.flareColor ? { flareColor: meta.flareColor } : {}),
   }
 }
 
@@ -81,7 +87,10 @@ export function useLiveMatchReactionsSync(options: {
   const reactionChannelRef = useRef<ReactionRealtimeChannel | null>(null)
 
   const publishReaction = useCallback(
-    async (reactionType: ReactionType, meta?: { tifoSide?: 'home' | 'away' }) => {
+    async (
+      reactionType: ReactionType,
+      meta?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
+    ) => {
       if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
@@ -116,6 +125,7 @@ export function useLiveMatchReactionsSync(options: {
             reaction_type: row.reaction_type,
             created_at: row.created_at,
             ...(meta?.tifoSide ? { tifo_side: meta.tifoSide } : {}),
+            ...(meta?.flareColor ? { flare_color: meta.flareColor } : {}),
           },
         })
       }
@@ -189,6 +199,7 @@ export function useLiveMatchReactionsSync(options: {
               : undefined
           const ev = rowToReactionEvent(row, matchId, {
             tifoSide: tifoSideFromPayload(inner),
+            flareColor: flareColorFromPayload(inner),
           })
           if (ev) onLiveInsertRef.current(ev)
         })

@@ -3,6 +3,8 @@ import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { matchInvolvesNation } from '../../utils/resolveMatchNation'
+import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 
 const CELL_PX = 11
 
@@ -11,6 +13,9 @@ export function GroupTifoPanel({
   matches,
   groupClubId,
   groupClubLabel,
+  groupNationIso,
+  groupNationLabel,
+  fixedMatchId,
   isGroupAdmin,
   /** Dans un panneau repliable mobile : marges réduites, grille scrollable. */
   embedded = false,
@@ -19,24 +24,47 @@ export function GroupTifoPanel({
   matches: Match[]
   groupClubId?: string | null
   groupClubLabel?: string
+  /** Tribunes CDM nation : filtre les matchs de la sélection. */
+  groupNationIso?: string | null
+  groupNationLabel?: string
+  /** Page match : une seule grille, sans sélecteur. */
+  fixedMatchId?: string | null
   isGroupAdmin: boolean
   embedded?: boolean
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const candidates = useMemo(() => {
-    const scoped = groupClubId
-      ? matches.filter((m) => m.home.id === groupClubId || m.away.id === groupClubId)
-      : matches
+    let scoped = matches
+    if (groupNationIso) {
+      scoped = matches.filter(
+        (m) => isWorldCupCompetitionId(m.competition.id) && matchInvolvesNation(m, groupNationIso),
+      )
+    } else if (groupClubId) {
+      scoped = matches.filter((m) => m.home.id === groupClubId || m.away.id === groupClubId)
+    }
     const live = scoped.filter((m) => m.status === 'live')
     const up = scoped.filter((m) => m.status === 'upcoming')
     return [...live, ...up].slice(0, 12)
-  }, [matches, groupClubId])
+  }, [matches, groupClubId, groupNationIso])
 
-  const [matchId, setMatchId] = useState<string | null>(() => candidates[0]?.id ?? null)
+  const fixedMatch = useMemo(
+    () => (fixedMatchId ? matches.find((m) => m.id === fixedMatchId) ?? null : null),
+    [fixedMatchId, matches],
+  )
+  const fixedMatchActive =
+    fixedMatch != null && (fixedMatch.status === 'live' || fixedMatch.status === 'upcoming')
+
+  const [matchId, setMatchId] = useState<string | null>(() => fixedMatchId ?? candidates[0]?.id ?? null)
   const [moderationMode, setModerationMode] = useState(false)
 
-  const activeId = matchId && candidates.some((m) => m.id === matchId) ? matchId : candidates[0]?.id ?? null
+  const activeId = fixedMatchId
+    ? fixedMatchActive
+      ? fixedMatchId
+      : null
+    : matchId && candidates.some((m) => m.id === matchId)
+      ? matchId
+      : candidates[0]?.id ?? null
 
   useEffect(() => {
     const first = candidates[0]?.id ?? null
@@ -67,7 +95,7 @@ export function GroupTifoPanel({
 
   const [color, setColor] = useState(palette[3]!)
 
-  if (candidates.length === 0) {
+  if (!activeId) {
     return (
       <div
         className={cn(
@@ -78,9 +106,13 @@ export function GroupTifoPanel({
             : 'border-white/20 bg-slate-900/60 text-sky-200/80',
         )}
       >
-        {groupClubId
-          ? `Aucun match a venir pour ${groupClubLabel ?? 'ce club'} : le tifo pixel sera disponible au prochain match.`
-          : 'Aucun match en cours : le tifo pixel revient avec le prochain live.'}
+        {groupNationIso
+          ? `Aucun match CDM à venir pour ${groupNationLabel ?? 'cette sélection'} : le tifo pixel revient au prochain match.`
+          : groupClubId
+            ? `Aucun match a venir pour ${groupClubLabel ?? 'ce club'} : le tifo pixel sera disponible au prochain match.`
+            : fixedMatchId
+              ? 'Le tifo pixel est disponible pendant les matchs à venir et en direct.'
+              : 'Aucun match en cours : le tifo pixel revient avec le prochain live.'}
       </div>
     )
   }
@@ -138,29 +170,33 @@ export function GroupTifoPanel({
         </div>
       ) : null}
 
-      <label className={cn('mt-2 block text-[10px] font-black uppercase tracking-wide', L ? 'text-tf-grey/70' : 'text-sky-200/75')}>
-        Match cible
-      </label>
-      <select
-        className={cn(
-          'mt-1 w-full rounded-xl border px-2 py-1.5 text-xs font-bold',
-          L
-            ? 'border-tf-grey-pastel/60 bg-white text-tf-dark'
-            : 'border-white/20 bg-slate-900/75 text-sky-100',
-        )}
-        value={activeId ?? ''}
-        onChange={(e) => {
-          clearNotice()
-          setMatchId(e.target.value || null)
-        }}
-      >
-        {candidates.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.status === 'live' ? '🔴 ' : ''}
-            {m.home.shortName} – {m.away.shortName}
-          </option>
-        ))}
-      </select>
+      {!fixedMatchId && candidates.length > 1 ? (
+        <>
+          <label className={cn('mt-2 block text-[10px] font-black uppercase tracking-wide', L ? 'text-tf-grey/70' : 'text-sky-200/75')}>
+            Match cible
+          </label>
+          <select
+            className={cn(
+              'mt-1 w-full rounded-xl border px-2 py-1.5 text-xs font-bold',
+              L
+                ? 'border-tf-grey-pastel/60 bg-white text-tf-dark'
+                : 'border-white/20 bg-slate-900/75 text-sky-100',
+            )}
+            value={activeId ?? ''}
+            onChange={(e) => {
+              clearNotice()
+              setMatchId(e.target.value || null)
+            }}
+          >
+            {candidates.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.status === 'live' ? '🔴 ' : ''}
+                {m.home.shortName} – {m.away.shortName}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : null}
 
       {!moderationMode ? (
         <div className="mt-2 flex flex-wrap gap-1.5">
