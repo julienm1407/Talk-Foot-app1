@@ -72,6 +72,7 @@ export {
   type LiveFixtureStatRow,
 } from './extractLiveFixtureStatistics'
 export {
+  extractLiveCardDisplayRowsFromSmFixture,
   extractLiveGoalDisplayRowsFromSmFixture,
   extractTimelineHighlightsFromSmFixture,
   highlightFullscreenDedupeKey,

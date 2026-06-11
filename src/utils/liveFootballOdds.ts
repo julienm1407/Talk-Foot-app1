@@ -254,6 +254,77 @@ export function parseLiveGoalRowsFromHighlights(
   return out
 }
 
+/** Cartons affichables sous le score (style Flashscore). */
+export type LiveCardDisplayRow = {
+  side: 'home' | 'away'
+  name: string
+  minute: number
+  color: 'yellow' | 'red'
+}
+
+export function cardColorFromHighlightText(raw: string): 'yellow' | 'red' {
+  const u = raw.toLowerCase()
+  if (
+    u.includes('rouge') ||
+    u.includes('red card') ||
+    u.includes('2e jaune') ||
+    u.includes('second yellow') ||
+    u.includes('second_yellow')
+  ) {
+    return 'red'
+  }
+  return 'yellow'
+}
+
+/** Extrait le joueur depuis un libellé carton SM / FR / EN. */
+export function parseCardPlayerName(raw: string): string | null {
+  const s = raw.replace(/\s+/g, ' ').trim()
+  if (!s) return null
+  const patterns = [
+    /carton\s+(?:jaune|rouge)\s+(?:pour|à)\s+(.+?)(?:[.!]|$)/i,
+    /(?:yellow|red)\s+card\s+(?:for|to)\s+(.+?)(?:[.!]|$)/i,
+    /second\s+yellow\s+card\s+for\s+(.+?)(?:[.!]|$)/i,
+    /(?:yellowcard|redcard)[^A-Za-zÀ-ÿ]*(.+?)(?:[.!]|$)/i,
+  ]
+  for (const re of patterns) {
+    const m = s.match(re)
+    const name = m?.[1]?.replace(/\s+\d{1,2}['']?\s*$/u, '').trim()
+    if (name && name.length >= 2) return name
+  }
+  return parseGoalScorerName(s)
+}
+
+export function parseLiveCardRowsFromHighlights(
+  highlights: Highlight[],
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): LiveCardDisplayRow[] {
+  const out: LiveCardDisplayRow[] = []
+  const seen = new Set<string>()
+
+  for (const h of highlights) {
+    if (h.type !== 'Carton') continue
+    const raw = `${h.title ?? ''} ${h.detail ?? ''}`
+    const name =
+      h.scorerName?.trim() ||
+      parseCardPlayerName(raw) ||
+      parseCardPlayerName(String(h.detail ?? '')) ||
+      parseCardPlayerName(String(h.title ?? '')) ||
+      'Joueur à confirmer'
+    const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
+    const side = h.side ?? guessSideFromTeams(raw, home, away)
+    if (!side) continue
+    const color = cardColorFromHighlightText(raw)
+    const key = `${side}:${color}:${slugScorer(name)}:${minute}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push({ side, name: compactScorerDisplayName(name), minute, color })
+  }
+
+  out.sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))
+  return out
+}
+
 /** Buteurs déduits des moments forts (pour règlement faux-argent). */
 export function extractScorerEventsFromHighlights(
   highlights: Highlight[],

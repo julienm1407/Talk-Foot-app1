@@ -2,10 +2,13 @@ import type { Highlight } from '../../data/highlights'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
 import {
   compactScorerDisplayName,
+  parseCardPlayerName,
   parseGoalAssistFromText,
   parseGoalScorerName,
+  parseLiveCardRowsFromHighlights,
   parseLiveGoalRowsFromHighlights,
   slugScorer,
+  type LiveCardDisplayRow,
   type LiveGoalDisplayRow,
   type LiveGoalTeamHints,
 } from '../../utils/liveFootballOdds'
@@ -29,6 +32,23 @@ function displayMinute(row: { minute?: number | null; extra_minute?: number | nu
   const x = typeof row.extra_minute === 'number' ? row.extra_minute : 0
   if (m <= 0 && x <= 0) return 0
   return m + x
+}
+
+function eventDevLooksLikeCard(u: string): boolean {
+  if (u.includes('VAR')) return false
+  if (u.includes('GOAL') && !u.includes('CARD')) return false
+  if (u.includes('YELLOW')) return true
+  if (u.includes('REDCARD') || u.includes('RED_CARD')) return true
+  if (u.includes('RED') && u.includes('CARD')) return true
+  if (/\bRED\b/.test(u) && !u.includes('SUB') && !u.includes('SAVE')) return true
+  return false
+}
+
+function cardColorFromEventDev(dev: string): 'yellow' | 'red' {
+  const u = dev.toUpperCase()
+  if (u.includes('YELLOW') && u.includes('SECOND')) return 'red'
+  if (u.includes('RED')) return 'red'
+  return 'yellow'
 }
 
 function eventDevLooksLikeGoal(u: string): boolean {
@@ -220,17 +240,22 @@ export function extractTimelineHighlightsFromSmFixture(
       const minute = displayMinute(ev)
       const side = sideFromParticipant(ev.participant_id, homeId, awayId)
       const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
+      const cardPlayer = type === 'Carton' ? scorerFromEvent(ev) ?? parseCardPlayerName(dev) ?? undefined : undefined
       const assistName = type === 'But' ? assistFromEvent(ev) : undefined
       const title =
         type === 'But' && scorerName
           ? scorerName
-          : translateSportMonksLiveTextToFr(
-              scorerName ? `${dev} · ${scorerName}`.trim() : (dev || 'Événement').trim(),
-            )
+          : type === 'Carton' && cardPlayer
+            ? cardPlayer
+            : translateSportMonksLiveTextToFr(
+                scorerName ? `${dev} · ${scorerName}`.trim() : (dev || 'Événement').trim(),
+              )
       const detail =
         type === 'But' && scorerName
           ? `${minute}' · ${scorerName}`
-          : translateSportMonksLiveTextToFr((dev || 'Événement').trim())
+          : type === 'Carton' && cardPlayer
+            ? `${minute}' · ${cardColorFromEventDev(dev) === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${cardPlayer}`
+            : translateSportMonksLiveTextToFr((dev || 'Événement').trim())
       out.push({
         id: `sm-event-${ev.id ?? `${minute}-${dev}`}`,
         matchId,
@@ -241,6 +266,7 @@ export function extractTimelineHighlightsFromSmFixture(
         detail,
         ...(side ? { side } : {}),
         ...(scorerName ? { scorerName } : {}),
+        ...(cardPlayer ? { scorerName: cardPlayer } : {}),
         ...(assistName ? { assistName } : {}),
       })
     }
@@ -269,6 +295,7 @@ export function extractTimelineHighlightsFromSmFixture(
           : highlightTypeFromComment(rawComment, Boolean(c.is_important))
       const detail = translateSportMonksLiveTextToFr(rawComment)
       const scorerName = type === 'But' ? parseGoalScorerName(rawComment) ?? undefined : undefined
+      const cardPlayer = type === 'Carton' ? parseCardPlayerName(rawComment) ?? undefined : undefined
       const assistName = type === 'But' ? parseGoalAssistFromText(rawComment) ?? undefined : undefined
       out.push({
         id: `sm-comment-${c.id ?? order}-${order}`,
@@ -276,9 +303,10 @@ export function extractTimelineHighlightsFromSmFixture(
         minute,
         order,
         type,
-        title: scorerName ?? '',
+        title: scorerName ?? cardPlayer ?? '',
         detail,
         ...(scorerName ? { scorerName } : {}),
+        ...(cardPlayer ? { scorerName: cardPlayer } : {}),
         ...(assistName ? { assistName } : {}),
       })
     }
@@ -361,5 +389,43 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
     home,
     away,
     scoreHint,
+  )
+}
+
+/** Cartons + minute sous le score (style Flashscore). */
+export function extractLiveCardDisplayRowsFromSmFixture(
+  fixture: SmFixture | null | undefined,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): LiveCardDisplayRow[] {
+  if (!fixture) return []
+  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+  const rows: Highlight[] = []
+  for (const ev of fixture.events ?? []) {
+    const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+    const u = dev.toUpperCase()
+    if (!eventDevLooksLikeCard(u)) continue
+    const minute = displayMinute(ev)
+    const side = sideFromParticipant(ev.participant_id, homeId, awayId)
+    const playerName = scorerFromEvent(ev) || parseCardPlayerName(dev) || 'Joueur à confirmer'
+    const color = cardColorFromEventDev(dev)
+    rows.push({
+      id: `sm-event-card-${ev.id ?? minute}-${color}`,
+      matchId: 'direct',
+      minute,
+      type: 'Carton',
+      title: playerName,
+      detail: `${minute}' · ${color === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${playerName}`,
+      ...(side ? { side } : {}),
+      scorerName: playerName,
+    })
+  }
+  const fromEvents = parseLiveCardRowsFromHighlights(rows, home, away)
+  if (fromEvents.length > 0) return fromEvents
+  const timeline = extractTimelineHighlightsFromSmFixture(fixture, 'direct')
+  return parseLiveCardRowsFromHighlights(
+    timeline.filter((h) => h.type === 'Carton'),
+    home,
+    away,
   )
 }

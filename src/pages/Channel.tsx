@@ -64,6 +64,7 @@ import type { FlareColor, Message, ReactionType, MatchTribuneZone } from '../typ
 import type { Highlight } from '../data/highlights'
 import {
   extractCurrentGoalsFromSmFixture,
+  extractLiveCardDisplayRowsFromSmFixture,
   extractLiveGoalDisplayRowsFromSmFixture,
   extractLiveMinuteFromSmFixture,
   highlightFullscreenDedupeKey,
@@ -78,6 +79,7 @@ import {
   extractScorerEventsFromHighlights,
   formatGoalScorerLabel,
   parseLiveGoalRowsFromHighlights,
+  parseLiveCardRowsFromHighlights,
 } from '../utils/liveFootballOdds'
 
 /** Débrief tchat après le coup de sifflet final. */
@@ -351,13 +353,85 @@ function LiveHeaderScorers({
             light ? 'text-emerald-800' : 'text-cyan-100',
           )}
         >
-          <span className="min-w-0 truncate">{g.name}</span>
+          <span className="min-w-0 truncate">⚽ {g.name}</span>
           <span className={cn('shrink-0 tabular-nums opacity-90', light ? 'text-emerald-900/75' : 'text-cyan-200/80')}>
             {`${g.minute}'`}
           </span>
         </li>
       ))}
     </ul>
+  )
+}
+
+/** Cartons jaunes / rouges sous le camp concerné (style Flashscore). */
+function LiveHeaderCards({
+  cards,
+  align,
+  light,
+}: {
+  cards: { name: string; minute: number; color: 'yellow' | 'red' }[]
+  align: 'left' | 'right'
+  light: boolean
+}) {
+  if (!cards.length) return null
+  return (
+    <ul
+      className={cn(
+        'mt-0.5 flex w-full flex-col gap-0.5',
+        align === 'right' ? 'items-end text-right' : 'items-start text-left',
+      )}
+      aria-label={align === 'right' ? 'Cartons extérieur' : 'Cartons domicile'}
+    >
+      {cards.map((c, i) => (
+        <li
+          key={`${c.color}-${c.name}-${c.minute}-${i}`}
+          className={cn(
+            'flex max-w-[min(100%,11rem)] items-baseline gap-1 text-[10px] font-bold leading-tight sm:max-w-[min(100%,14rem)] sm:text-[11px]',
+            align === 'right' ? 'flex-row-reverse' : 'flex-row',
+            light
+              ? c.color === 'red'
+                ? 'text-rose-800'
+                : 'text-amber-900'
+              : c.color === 'red'
+                ? 'text-rose-200'
+                : 'text-amber-200',
+          )}
+        >
+          <span className="shrink-0" aria-hidden>
+            {c.color === 'red' ? '🟥' : '🟨'}
+          </span>
+          <span className="min-w-0 truncate">{c.name}</span>
+          <span
+            className={cn(
+              'shrink-0 tabular-nums opacity-90',
+              light ? 'text-slate-700/80' : 'text-slate-200/75',
+            )}
+          >
+            {`${c.minute}'`}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function LiveHeaderTeamEvents({
+  goals,
+  cards,
+  align,
+  light,
+}: {
+  goals: { name: string; minute: number }[]
+  cards: { name: string; minute: number; color: 'yellow' | 'red' }[]
+  align: 'left' | 'right'
+  light: boolean
+}) {
+  if (!goals.length && !cards.length) return null
+  return (
+    <div className="w-full">
+      <LiveHeaderScorers goals={goals} align={align} light={light} />
+      <LiveHeaderCards cards={cards} align={align} light={light} />
+    </div>
   )
 }
 
@@ -1396,6 +1470,32 @@ export function ChannelPage() {
     [liveGoalDisplayRows],
   )
 
+  const liveCardDisplayRows = useMemo(() => {
+    if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
+    const fromTimeline = parseLiveCardRowsFromHighlights(
+      smTimelineHighlights.filter((h) => h.type === 'Carton'),
+      goalTeamHints.home,
+      goalTeamHints.away,
+    )
+    if (fromTimeline.length > 0) return fromTimeline
+    return extractLiveCardDisplayRowsFromSmFixture(liveBundleFixture, goalTeamHints.home, goalTeamHints.away)
+  }, [smTimelineHighlights, status, match, goalTeamHints, liveBundleFixture])
+
+  const headerHomeCards = useMemo(
+    () =>
+      liveCardDisplayRows
+        .filter((r) => r.side === 'home')
+        .map(({ name, minute, color }) => ({ name, minute, color })),
+    [liveCardDisplayRows],
+  )
+  const headerAwayCards = useMemo(
+    () =>
+      liveCardDisplayRows
+        .filter((r) => r.side === 'away')
+        .map(({ name, minute, color }) => ({ name, minute, color })),
+    [liveCardDisplayRows],
+  )
+
   const settledFinishedMatchRef = useRef<string | null>(null)
   useEffect(() => {
     if (status !== 'finished' || !match) return
@@ -1991,9 +2091,9 @@ export function ChannelPage() {
             <div />
             {status === 'live' || status === 'finished' ? (
               <>
-                <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
+                <LiveHeaderTeamEvents goals={headerHomeScorers} cards={headerHomeCards} align="left" light={L} />
                 <div />
-                <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
+                <LiveHeaderTeamEvents goals={headerAwayScorers} cards={headerAwayCards} align="right" light={L} />
               </>
             ) : null}
           </div>
@@ -2120,10 +2220,10 @@ export function ChannelPage() {
           {status === 'live' || status === 'finished' ? (
             <>
               <div className="col-start-1 row-start-3 justify-self-start">
-                <LiveHeaderScorers goals={headerHomeScorers} align="left" light={L} />
+                <LiveHeaderTeamEvents goals={headerHomeScorers} cards={headerHomeCards} align="left" light={L} />
               </div>
               <div className="col-start-3 row-start-3 justify-self-end">
-                <LiveHeaderScorers goals={headerAwayScorers} align="right" light={L} />
+                <LiveHeaderTeamEvents goals={headerAwayScorers} cards={headerAwayCards} align="right" light={L} />
               </div>
             </>
           ) : null}
