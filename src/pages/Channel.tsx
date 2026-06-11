@@ -18,10 +18,17 @@ import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLive
 import { BetWidget } from '../components/bet/BetWidget'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
+import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
 import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
+import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandings'
 import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
-import { projectStandingsWithLiveMatch } from '../utils/liveStandingsProjection'
+import {
+  projectStandingsWithLiveMatch,
+  projectWcStandingsWithLiveMatch,
+} from '../utils/liveStandingsProjection'
+import { useOptionalCdm2026Data } from '../contexts/Cdm2026DataContext'
+import { isWorldCupCompetitionId } from '../utils/seasonMode'
 import { useBetting } from '../hooks/useBetting'
 import { writeBetMatchCacheEntry } from '../utils/betMatchResolve'
 import { useChannelRouteMatch } from '../hooks/useChannelRouteMatch'
@@ -316,15 +323,6 @@ function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | nu
   return null
 }
 
-function compactPlayerLabel(name: string, maxLen = 12) {
-  const cleaned = name.replace(/\s+/g, ' ').trim()
-  if (!cleaned) return 'Joueur'
-  const parts = cleaned.split(' ')
-  const last = parts[parts.length - 1] ?? cleaned
-  const candidate = last.length >= 3 ? last : cleaned
-  return candidate.length > maxLen ? `${candidate.slice(0, maxLen - 1)}…` : candidate
-}
-
 /** Buteurs uniquement, sous le camp qui a marqué. */
 function LiveHeaderScorers({
   goals,
@@ -478,32 +476,6 @@ function MatchRow({
   )
 }
 
-function PlayerBadge({
-  name,
-  className,
-  style,
-  light,
-}: {
-  name: string
-  className?: string
-  style?: React.CSSProperties
-  light?: boolean
-}) {
-  return (
-    <div
-      className={`absolute max-w-[44%] truncate rounded-md border px-1.5 py-1 text-[10px] font-bold leading-tight backdrop-blur-[1px] ${
-        light
-          ? 'border-sky-400/40 bg-white/95 text-[#023458] shadow-[0_4px_12px_rgba(15,40,70,0.12)]'
-          : 'border-cyan-200/55 bg-[#062235]/92 text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)]'
-      } ${className ?? ''}`}
-      style={style}
-      title={name}
-    >
-      {compactPlayerLabel(name)}
-    </div>
-  )
-}
-
 export function ChannelPage() {
   const appearance = useAppearanceOptional()
   const isLight = appearance?.appearance === 'light'
@@ -550,9 +522,6 @@ export function ChannelPage() {
   const chLineupTabIdle = L
     ? 'border-slate-200 bg-slate-100 text-[#2a4f68]'
     : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-200/85'
-  const chMutedLine = L
-    ? 'rounded-md border border-slate-100 bg-slate-50 px-2 py-1.5 text-[11px] font-medium leading-snug text-[#0a223a]'
-    : 'rounded-md bg-[#0a1f35]/70 px-2 py-1.5 text-[11px] font-medium leading-snug text-sky-100'
   const chAlertBox = L
     ? 'rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold text-[#0a223a]'
     : 'rounded-md border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-2 text-xs font-semibold text-sky-100'
@@ -598,6 +567,7 @@ export function ChannelPage() {
   const chatPeerMenu = useChatPeerMenu()
   const chatSocialEnabled = isSupabaseConfigured() && Boolean(dm)
   const { matches } = useMatches()
+  const cdm = useOptionalCdm2026Data()
   const { routeMatch, hasRouteMatchId, waitingRouteResolution, routeNotFound } =
     useChannelRouteMatch(matchId)
   const fallbackMatch = useMemo(
@@ -715,6 +685,25 @@ export function ChannelPage() {
       awayScore,
     })
   }, [standingsLeagueId, standingsRows, match, status, homeScore, awayScore])
+
+  const matchWcGroup = useMemo(() => {
+    if (!match || !isWorldCupCompetitionId(match.competition.id) || !cdm?.dataset) return null
+    const isos = new Set([homeNation?.iso, awayNation?.iso].filter(Boolean) as string[])
+    if (!isos.size) return null
+    return cdm.dataset.groups.find((g) => g.teams.some((t) => isos.has(t.iso))) ?? null
+  }, [match, cdm?.dataset, homeNation?.iso, awayNation?.iso])
+  const wcStandingsBase = matchWcGroup ? (cdm?.getStanding(matchWcGroup.id) ?? []) : []
+  const displayedWcStandings = useMemo(() => {
+    if (!matchWcGroup || !wcStandingsBase.length || !homeNation || !awayNation) return wcStandingsBase
+    if (status !== 'live') return wcStandingsBase
+    return projectWcStandingsWithLiveMatch(wcStandingsBase, {
+      homeIso: homeNation.iso,
+      awayIso: awayNation.iso,
+      homeScore,
+      awayScore,
+    })
+  }, [matchWcGroup, wcStandingsBase, homeNation, awayNation, status, homeScore, awayScore])
+  const hasChannelStandings = Boolean(standingsLeagueId || matchWcGroup)
 
   const liveMatches = useMemo(
     () => matches.filter((m) => m.status === 'live' && m.id !== match?.id),
@@ -1746,25 +1735,55 @@ export function ChannelPage() {
     setLivePanelOpen(false)
   }
 
-  const channelStandingsContent = (scrollMaxClassName?: string) =>
-    standingsLeagueId ? (
-      <LiveMatchStandingsPanel
-        leagueId={standingsLeagueId}
-        rows={displayedStandingsRows}
-        homeTeamId={match?.home.id}
-        awayTeamId={match?.away.id}
-        loading={standingsLoading}
-        error={standingsError}
-        dataSourceLabel={standingsSourceLabel}
-        projectedLive={status === 'live'}
-        light={L}
-        scrollMaxClassName={scrollMaxClassName}
-      />
-    ) : (
+  const channelStandingsContent = (scrollMaxClassName?: string) => {
+    if (matchWcGroup) {
+      if (cdm?.loading) {
+        return (
+          <p className={cn('text-xs font-semibold', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
+            Chargement du classement de poule…
+          </p>
+        )
+      }
+      if (cdm?.error && !displayedWcStandings.length) {
+        return (
+          <p className={cn('text-xs font-semibold', L ? 'text-rose-700' : 'text-rose-200/90')}>
+            Classement indisponible ({cdm.error})
+          </p>
+        )
+      }
+      return (
+        <div className={cn('space-y-2', scrollMaxClassName)}>
+          <WcGroupCard group={matchWcGroup} standing={displayedWcStandings} compact />
+          {status === 'live' ? (
+            <p className={cn('text-[9px] font-medium', L ? 'text-[#5a7088]' : 'text-sky-300/70')}>
+              Projection live · +3 si mène, +1 chacun si nul
+            </p>
+          ) : null}
+        </div>
+      )
+    }
+    if (standingsLeagueId) {
+      return (
+        <LiveMatchStandingsPanel
+          leagueId={standingsLeagueId}
+          rows={displayedStandingsRows}
+          homeTeamId={match?.home.id}
+          awayTeamId={match?.away.id}
+          loading={standingsLoading}
+          error={standingsError}
+          dataSourceLabel={standingsSourceLabel}
+          projectedLive={status === 'live'}
+          light={L}
+          scrollMaxClassName={scrollMaxClassName}
+        />
+      )
+    }
+    return (
       <p className={cn('text-xs font-semibold', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
-        Classement disponible pour Ligue 1, Premier League, LaLiga, Serie A et Bundesliga.
+        Pas de classement pour cette compétition.
       </p>
     )
+  }
 
   const openStandingsPopup = () => setStandingsModalOpen(true)
 
@@ -2153,13 +2172,13 @@ export function ChannelPage() {
                     }
                   />
                 </div>
-                {standingsLeagueId ? (
+                {hasChannelStandings ? (
                   <button
                     type="button"
                     onClick={openStandingsPopup}
                     className="mt-2 w-full rounded-lg border border-cyan-300/45 bg-cyan-500/12 px-2.5 py-2 text-xs font-bold text-cyan-50 transition hover:bg-cyan-500/22"
                   >
-                    Voir le classement
+                    {matchWcGroup ? `Voir la poule ${matchWcGroup.id}` : 'Voir le classement'}
                   </button>
                 ) : null}
               </Card>
@@ -3052,29 +3071,14 @@ export function ChannelPage() {
                 </button>
               </div>
             </div>
-            <div
-              className={cn(
-                'tf-lineup-pitch relative mt-2 overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
-                isUpcoming ? 'h-[200px] md:h-[min(28vh,200px)]' : 'h-[250px] md:h-[min(34vh,250px)]',
-              )}
-              style={{
-                background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
-              }}
-            >
-              <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
-              <div className="absolute left-7 right-7 top-5 h-[41%] rounded-md border border-white/20" />
-              <div className="absolute bottom-5 left-7 right-7 h-[41%] rounded-md border border-white/20" />
-
-              {displayedLineupBadges.map((p, i) => (
-                <PlayerBadge
-                  key={`lineup-badge-${lineupSide}-${i}-${p.name}`}
-                  name={p.name}
-                  light={L}
-                  className="-translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${p.left}%`, top: `${p.top}%` }}
-                />
-              ))}
-            </div>
+            <MatchLineupPitch
+              className="mt-2"
+              badges={displayedLineupBadges}
+              homeToneColor={homeToneColor}
+              awayToneColor={awayToneColor}
+              isUpcoming={isUpcoming}
+              light={L}
+            />
           </Card>
 
           <div ref={betCardRef} id="tf-channel-paris" className="scroll-mt-4">
@@ -3228,13 +3232,7 @@ export function ChannelPage() {
                   <button
                     key={tab}
                     type="button"
-                    onClick={() => {
-                      if (tab === 'classement' && isUpcoming) {
-                        setStandingsModalOpen(true)
-                        return
-                      }
-                      setMobileMatchTab(tab)
-                    }}
+                    onClick={() => setMobileMatchTab(tab)}
                     className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold ${
                       mobileMatchTab === tab ? chSheetTabActive : chSheetTabIdle
                     }`}
@@ -3304,7 +3302,7 @@ export function ChannelPage() {
                 />
               </div>
             ) : null}
-            {mobilePanel === 'match' && mobileMatchTab === 'classement' && !isUpcoming ? (
+            {mobilePanel === 'match' && mobileMatchTab === 'classement' ? (
               <div className="max-h-[58vh] overflow-y-auto pr-0.5">{channelStandingsContent()}</div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'compo' ? (
@@ -3335,17 +3333,15 @@ export function ChannelPage() {
                     {match?.away.shortName ?? teamShortChip(awayName)} · {awayName}
                   </button>
                 </div>
-                <p className="text-[10px] font-semibold text-sky-200/80">
-                  Titulaires ({lineupSide === 'home' ? homeLineupNames.length : awayLineupNames.length})
-                </p>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {(lineupSide === 'home' ? homeLineupNames : awayLineupNames).map((p, i) => (
-                    <div key={`mobile-lineup-full-${lineupSide}-${i}-${p}`} className={chMutedLine}>
-                      <span className="font-black text-sky-200/90">{i + 1}.</span> {p}
-                    </div>
-                  ))}
-                </div>
-                {(lineupSide === 'home' ? homeLineupNames : awayLineupNames).length === 0 ? (
+                <MatchLineupPitch
+                  badges={displayedLineupBadges}
+                  homeToneColor={homeToneColor}
+                  awayToneColor={awayToneColor}
+                  isUpcoming={isUpcoming}
+                  light={L}
+                  className={isUpcoming ? 'h-[min(46dvh,280px)]' : 'h-[min(52dvh,320px)]'}
+                />
+                {displayedLineupBadges.length === 0 ? (
                   <p className="text-center text-[11px] font-semibold text-sky-200/75">Composition non disponible.</p>
                 ) : null}
               </div>
