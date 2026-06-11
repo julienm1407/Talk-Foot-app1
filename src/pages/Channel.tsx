@@ -123,6 +123,24 @@ const FLARE_COLOR_LABELS: Record<FlareColor, string> = {
   yellow: 'jaune',
 }
 
+/** Positions % sur le terrain (y = 0 haut / attaque, 88 = gardien). */
+const LINEUP_FALLBACK_POSITIONS: Array<{ left: number; top: number }> = [
+  { left: 35, top: 16 },
+  { left: 65, top: 16 },
+  { left: 14, top: 40 },
+  { left: 38, top: 40 },
+  { left: 62, top: 40 },
+  { left: 86, top: 40 },
+  { left: 14, top: 64 },
+  { left: 38, top: 64 },
+  { left: 62, top: 64 },
+  { left: 86, top: 64 },
+  { left: 50, top: 86 },
+]
+
+const CHANNEL_DESKTOP_GRID =
+  'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(14.5rem,0.95fr)] md:gap-2.5'
+
 function flareSmokeLayers(color: FlareColor) {
   const layers: Record<
     FlareColor,
@@ -184,6 +202,79 @@ function PaidConfettiBurst({ seed }: { seed: number }) {
               ['--x' as string]: `${p.x}px`,
               ['--d' as string]: `${p.delay}ms`,
               ['--c' as string]: p.color,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </div>
+  )
+}
+
+function flareParticleGradient(color: FlareColor): string {
+  const map: Record<FlareColor, string> = {
+    red: 'radial-gradient(circle at 35% 35%, rgba(255,90,70,0.92), rgba(239,68,68,0.55) 45%, rgba(255,59,48,0.18) 68%, transparent 78%)',
+    blue: 'radial-gradient(circle at 35% 35%, rgba(96,165,250,0.92), rgba(59,130,246,0.55) 45%, rgba(37,99,235,0.18) 68%, transparent 78%)',
+    green: 'radial-gradient(circle at 35% 35%, rgba(74,222,128,0.92), rgba(34,197,94,0.55) 45%, rgba(22,163,74,0.18) 68%, transparent 78%)',
+    yellow: 'radial-gradient(circle at 35% 35%, rgba(253,224,71,0.95), rgba(234,179,8,0.58) 45%, rgba(202,138,4,0.2) 68%, transparent 78%)',
+  }
+  return map[color]
+}
+
+function flareScreenTint(color: FlareColor): string {
+  const map: Record<FlareColor, string> = {
+    red: 'radial-gradient(circle at 50% 85%, rgba(239,68,68,0.42), rgba(220,38,38,0.12) 42%, transparent 72%)',
+    blue: 'radial-gradient(circle at 50% 85%, rgba(59,130,246,0.4), rgba(37,99,235,0.1) 42%, transparent 72%)',
+    green: 'radial-gradient(circle at 50% 85%, rgba(34,197,94,0.38), rgba(22,163,74,0.1) 42%, transparent 72%)',
+    yellow: 'radial-gradient(circle at 50% 85%, rgba(234,179,8,0.4), rgba(202,138,4,0.12) 42%, transparent 72%)',
+  }
+  return map[color]
+}
+
+function PaidFlareBurst({ seed, color }: { seed: number; color: FlareColor }) {
+  const smoke = flareSmokeLayers(color)
+  const particles = useMemo(() => {
+    const rand = (n: number) => {
+      const x = Math.sin(seed * 8888 + n * 24680) * 10000
+      return x - Math.floor(x)
+    }
+    return Array.from({ length: 28 }, (_, i) => ({
+      id: i,
+      left: `${6 + rand(i) * 88}%`,
+      x: (rand(i + 17) - 0.5) * 260,
+      delay: rand(i + 31) * 520,
+    }))
+  }, [seed])
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div
+        className="tf-flare-screen-pulse"
+        style={{ background: flareScreenTint(color) }}
+      />
+      <div
+        className="tf-flare-plume tf-flare-plume--left"
+        style={{ background: smoke.plumeA }}
+      />
+      <div
+        className="tf-flare-plume tf-flare-plume--right"
+        style={{ background: smoke.plumeB }}
+      />
+      <div
+        className="tf-flare-plume tf-flare-plume--center"
+        style={{
+          background: `linear-gradient(to top, ${smoke.mistA}, ${smoke.mistB}, transparent)`,
+        }}
+      />
+      {particles.map((p) => (
+        <i
+          key={p.id}
+          className="tf-flare-particle"
+          style={
+            {
+              left: p.left,
+              ['--x' as string]: `${p.x}px`,
+              ['--d' as string]: `${p.delay}ms`,
+              ['--flare-bg' as string]: flareParticleGradient(color),
             } as React.CSSProperties
           }
         />
@@ -522,6 +613,37 @@ function TeamLogoLink({
   )
 }
 
+function ChannelLiveStatBar({
+  row,
+}: {
+  row: { label: string; home: number; away: number }
+}) {
+  const total = (row.home ?? 0) + (row.away ?? 0)
+  const homePct =
+    total > 0 ? Math.max(8, Math.round(((row.home ?? 0) / total) * 100)) : 50
+  const awayPct =
+    total > 0 ? Math.max(8, Math.round(((row.away ?? 0) / total) * 100)) : 50
+  return (
+    <div className="rounded-lg border border-white/12 bg-[#0a1f35]/80 px-2.5 py-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-sm font-black tabular-nums text-white">{row.home}</span>
+        <span className="text-[11px] font-bold text-sky-100">{row.label}</span>
+        <span className="text-sm font-black tabular-nums text-white">{row.away}</span>
+      </div>
+      <div className="relative h-2 overflow-hidden rounded-full bg-black/35 ring-1 ring-white/10">
+        <div
+          className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500/90 to-emerald-400/70"
+          style={{ width: `${homePct}%` }}
+        />
+        <div
+          className="absolute inset-y-0 right-0 bg-gradient-to-l from-rose-500/90 to-rose-400/70"
+          style={{ width: `${awayPct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 function MatchRow({
   home,
   away,
@@ -732,7 +854,7 @@ export function ChannelPage() {
   const isFinished = status === 'finished'
   const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? '', match ?? null)
-  const { liveStatRows, smTimelineHighlights } = useSportMonksFixtureLiveStats(
+  const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
     status,
     match?.id,
@@ -1088,7 +1210,7 @@ export function ChannelPage() {
   }, [match?.id])
   useEffect(() => {
     if (!activePaidFx) return
-    const timeout = window.setTimeout(() => setActivePaidFx(null), 2200)
+    const timeout = window.setTimeout(() => setActivePaidFx(null), 3400)
     return () => window.clearTimeout(timeout)
   }, [activePaidFx])
   const onSend = async (e: FormEvent) => {
@@ -1547,19 +1669,7 @@ export function ChannelPage() {
     [lineupSide, starters],
   )
   const displayedLineupBadges = useMemo(() => {
-    const fallback = [
-      { left: 50, top: 18 },
-      { left: 23, top: 50 },
-      { left: 77, top: 50 },
-      { left: 20, top: 92 },
-      { left: 50, top: 86 },
-      { left: 80, top: 92 },
-      { left: 13, top: 136 },
-      { left: 36, top: 144 },
-      { left: 64, top: 144 },
-      { left: 87, top: 136 },
-      { left: 50, top: 232 },
-    ]
+    const fallback = LINEUP_FALLBACK_POSITIONS
 
     const parsed = displayedLineupPlayers
       .slice(0, 11)
@@ -1719,6 +1829,15 @@ export function ChannelPage() {
     () => tacticalRows.filter((r) => r.label !== 'Att. dangereuses').slice(0, 6),
     [tacticalRows],
   )
+  const mobileStatRows = useMemo(() => {
+    if (tacticalRows.length > 0) return tacticalRows.slice(0, 10)
+    return liveStatRows.slice(0, 10).map((r) => ({
+      key: r.key,
+      label: r.label,
+      home: r.home,
+      away: r.away,
+    }))
+  }, [tacticalRows, liveStatRows])
   const livePitchPressure = useMemo(() => {
     const dh = dangerousRow?.home ?? 0
     const da = dangerousRow?.away ?? 0
@@ -2233,9 +2352,7 @@ export function ChannelPage() {
       <main
         className={cn(
           'relative z-10 mt-2 grid min-h-0 flex-1 grid-cols-1 md:items-stretch md:overflow-hidden',
-          isUpcoming
-            ? 'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(14.5rem,0.95fr)] md:gap-2.5'
-            : 'gap-2 md:grid-cols-[0.5fr_2.5fr_0.5fr]',
+          CHANNEL_DESKTOP_GRID,
         )}
       >
         <div
@@ -3178,7 +3295,13 @@ export function ChannelPage() {
               awayToneColor={awayToneColor}
               isUpcoming={isUpcoming}
               light={L}
+              compact
             />
+            {displayedLineupBadges.length === 0 ? (
+              <p className="mt-2 text-center text-[10px] font-semibold text-sky-200/70">
+                Composition non disponible.
+              </p>
+            ) : null}
           </Card>
 
           <div ref={betCardRef} id="tf-channel-paris" className="scroll-mt-4">
@@ -3344,43 +3467,44 @@ export function ChannelPage() {
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
               <div className="space-y-2">
-                {tacticalRows.slice(0, 6).map((row, i) => (
-                  <div key={`mobile-stat-${i}`} className="rounded-lg border border-white/12 bg-[#0a1f35]/80 px-2.5 py-2">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="text-sm font-black tabular-nums text-white">{row.home}</span>
-                      <span className="text-[11px] font-bold text-sky-100">{row.label}</span>
-                      <span className="text-sm font-black tabular-nums text-white">{row.away}</span>
-                    </div>
-                    <div className="relative h-2 overflow-hidden rounded-full bg-black/35 ring-1 ring-white/10">
-                      <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500/90 to-emerald-400/70"
-                        style={{
-                          width: `${Math.max(
-                            8,
-                            Math.round(
-                              (((row.home ?? 0) + (row.away ?? 0)) > 0
-                                ? (row.home / ((row.home ?? 0) + (row.away ?? 0))) * 100
-                                : 50),
-                            ),
-                          )}%`,
-                        }}
-                      />
-                      <div
-                        className="absolute inset-y-0 right-0 bg-gradient-to-l from-rose-500/90 to-rose-400/70"
-                        style={{
-                          width: `${Math.max(
-                            8,
-                            Math.round(
-                              (((row.home ?? 0) + (row.away ?? 0)) > 0
-                                ? (row.away / ((row.home ?? 0) + (row.away ?? 0))) * 100
-                                : 50),
-                            ),
-                          )}%`,
-                        }}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-white/10 bg-[#0a1f35]/70 px-2.5 py-2 text-center">
+                  <span className="truncate text-xs font-black text-white">{homeName}</span>
+                  <span className="text-lg font-black tabular-nums text-sky-50">
+                    {homeScore} – {awayScore}
+                  </span>
+                  <span className="truncate text-xs font-black text-white">{awayName}</span>
+                </div>
+                {liveStatsLoading && mobileStatRows.length === 0 ? (
+                  <p className="rounded-lg border border-white/10 bg-[#0a1f35]/70 px-3 py-2 text-center text-[11px] font-semibold text-sky-200/80">
+                    Chargement des stats…
+                  </p>
+                ) : null}
+                {mobileStatRows.map((row, i) => (
+                  <ChannelLiveStatBar key={`mobile-stat-${row.key ?? i}`} row={row} />
+                ))}
+                {!liveStatsLoading && mobileStatRows.length === 0 ? (
+                  <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-[11px] font-semibold text-amber-100/90">
+                    Stats SportMonks indisponibles pour ce match (tirs, possession, etc.).
+                  </p>
+                ) : null}
+                {smTimelineHighlights.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-sky-200/80">
+                      Fil du match
+                    </p>
+                    <div className="max-h-[38vh] overflow-y-auto pr-0.5">
+                      <MatchHighlights
+                        items={smTimelineHighlights}
+                        activeId={latestHighlight?.id}
+                        variant="channel"
                       />
                     </div>
                   </div>
-                ))}
+                ) : !liveStatsLoading && mobileStatRows.length === 0 ? (
+                  <p className="text-center text-[11px] font-semibold text-sky-200/70">
+                    Les actions (buts, cartons, remplacements) apparaissent dans l’onglet Actions.
+                  </p>
+                ) : null}
               </div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'infos' ? (
@@ -3669,68 +3793,46 @@ export function ChannelPage() {
         </div>
       ) : null}
       {!isFinished && activePaidFx ? (
-        <div className="tf-paid-fx-portal pointer-events-none fixed inset-0 z-[94] overflow-hidden">
+        <div className="tf-paid-fx-portal pointer-events-none fixed inset-0 z-[102] overflow-hidden">
           {activePaidFx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={paidFxSeed} /> : null}
+          {activePaidFx.id === 'fumigene' ? (
+            <PaidFlareBurst seed={paidFxSeed} color={activePaidFx.flareColor ?? 'red'} />
+          ) : null}
+          {activePaidFx.id === 'ola' ? <PaidConfettiBurst seed={paidFxSeed} /> : null}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
             aria-hidden
           >
-            <div className="relative mx-auto flex h-[min(46dvh,360px)] w-full max-w-[min(94vw,22rem)] shrink-0 items-end justify-center sm:h-[min(50dvh,420px)] sm:max-w-lg">
-              {activePaidFx.id === 'fumigene' ? (() => {
-                const smoke = flareSmokeLayers(activePaidFx.flareColor ?? 'red')
-                return (
-                  <>
-                    <div
-                      className="absolute bottom-0 left-1/2 h-[58%] w-[40%] max-w-[150px] -translate-x-[calc(100%+10px)] -rotate-6 rounded-t-[50%] blur-2xl sm:-translate-x-[calc(100%+14px)]"
-                      style={{ background: smoke.plumeA }}
-                    />
-                    <div
-                      className="absolute bottom-0 left-1/2 h-[60%] w-[42%] max-w-[155px] translate-x-[10px] rotate-6 rounded-t-[48%] blur-2xl sm:translate-x-[14px]"
-                      style={{ background: smoke.plumeB }}
-                    />
-                    <div
-                      className="absolute bottom-4 left-1/2 h-24 w-[72px] max-w-[22%] -translate-x-[calc(200%+18px)] rounded-full blur-lg sm:-translate-x-[calc(200%+24px)]"
-                      style={{ backgroundColor: smoke.mistA }}
-                    />
-                    <div
-                      className="absolute bottom-5 left-1/2 h-28 w-20 max-w-[26%] translate-x-[calc(100%+18px)] rounded-full blur-lg sm:translate-x-[calc(100%+24px)]"
-                      style={{ backgroundColor: smoke.mistB }}
-                    />
-                  </>
-                )
-              })() : null}
-              {activePaidFx.id === 'ola' ? <PaidConfettiBurst seed={paidFxSeed} /> : null}
-              {activePaidFx.id === 'tifo-geant' ? (
-                <div
-                  className="absolute left-1/2 top-1/2 w-[min(92vw,20rem)] max-w-full -translate-x-1/2 -translate-y-1/2 rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"
+            {activePaidFx.id === 'tifo-geant' ? (
+              <div
+                className="w-[min(92vw,20rem)] max-w-full rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"
+                style={{
+                  borderColor:
+                    activePaidFx.tifoSide === 'away'
+                      ? `color-mix(in srgb, ${awayColor} 85%, white)`
+                      : `color-mix(in srgb, ${homeColor} 85%, white)`,
+                  background:
+                    activePaidFx.tifoSide === 'away'
+                      ? `linear-gradient(125deg, color-mix(in srgb, ${awayColor} 55%, #041a2d), #0a2540 55%, #061a2e)`
+                      : `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 55%, #041a2d), #0a2540 55%, #061a2e)`,
+                  boxShadow: L
+                    ? '0 0 0 2px rgba(255,255,255,0.95), 0 18px 48px rgba(2,12,28,0.45)'
+                    : '0 14px 40px rgba(0,0,0,0.45)',
+                }}
+              >
+                <p
+                  className="text-xs font-black leading-snug tracking-wide sm:text-base sm:tracking-wide"
                   style={{
-                    borderColor:
-                      activePaidFx.tifoSide === 'away'
-                        ? `color-mix(in srgb, ${awayColor} 85%, white)`
-                        : `color-mix(in srgb, ${homeColor} 85%, white)`,
-                    background:
-                      activePaidFx.tifoSide === 'away'
-                        ? `linear-gradient(125deg, color-mix(in srgb, ${awayColor} 55%, #041a2d), #0a2540 55%, #061a2e)`
-                        : `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 55%, #041a2d), #0a2540 55%, #061a2e)`,
-                    boxShadow: L
-                      ? '0 0 0 2px rgba(255,255,255,0.95), 0 18px 48px rgba(2,12,28,0.45)'
-                      : '0 14px 40px rgba(0,0,0,0.45)',
+                    color: '#ffffff',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.5)',
                   }}
                 >
-                  <p
-                    className="text-xs font-black leading-snug tracking-wide sm:text-base sm:tracking-wide"
-                    style={{
-                      color: '#ffffff',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.5)',
-                    }}
-                  >
-                    ALLEZ {(activePaidFx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
-                  </p>
-                </div>
-              ) : null}
-            </div>
+                  ALLEZ {(activePaidFx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
+                </p>
+              </div>
+            ) : null}
             <div
-              className={`mt-4 max-w-[min(92vw,22rem)] rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
+              className={`absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
                 L
                   ? 'border-slate-300/90 bg-[#062a48] text-sky-50'
                   : 'border-white/15 bg-[#041a2d]/90 text-sky-100'

@@ -15,16 +15,21 @@ function PlayerBadge({
   className,
   style,
   light,
+  compact,
 }: {
   name: string
   className?: string
   style?: CSSProperties
   light?: boolean
+  compact?: boolean
 }) {
   return (
     <div
       className={cn(
-        'absolute max-w-[44%] truncate rounded-md border px-1.5 py-1 text-[10px] font-bold leading-tight backdrop-blur-[1px]',
+        'absolute truncate rounded-md border font-bold leading-tight backdrop-blur-[1px]',
+        compact
+          ? 'max-w-[38%] px-1 py-0.5 text-[8px] sm:text-[9px]'
+          : 'max-w-[44%] px-1.5 py-1 text-[10px]',
         light
           ? 'border-sky-400/40 bg-white/95 text-[#023458] shadow-[0_4px_12px_rgba(15,40,70,0.12)]'
           : 'border-cyan-200/55 bg-[#062235]/92 text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)]',
@@ -33,7 +38,7 @@ function PlayerBadge({
       style={style}
       title={name}
     >
-      {compactPlayerLabel(name)}
+      {compactPlayerLabel(name, compact ? 9 : 12)}
     </div>
   )
 }
@@ -44,6 +49,7 @@ export function MatchLineupPitch({
   awayToneColor,
   isUpcoming,
   light,
+  compact,
   className,
 }: {
   badges: Array<{ name: string; left: number; top: number }>
@@ -51,13 +57,18 @@ export function MatchLineupPitch({
   awayToneColor: string
   isUpcoming?: boolean
   light?: boolean
+  compact?: boolean
   className?: string
 }) {
   return (
     <div
       className={cn(
         'tf-lineup-pitch relative overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
-        isUpcoming ? 'h-[200px] md:h-[min(28vh,200px)]' : 'h-[250px] md:h-[min(34vh,250px)]',
+        compact
+          ? 'aspect-[3/4] min-h-[200px] w-full'
+          : isUpcoming
+            ? 'h-[200px] md:h-[min(28vh,200px)]'
+            : 'h-[250px] md:h-[min(34vh,250px)]',
         className,
       )}
       style={{
@@ -73,6 +84,7 @@ export function MatchLineupPitch({
           key={`lineup-badge-${i}-${p.name}`}
           name={p.name}
           light={light}
+          compact={compact}
           className="-translate-x-1/2 -translate-y-1/2"
           style={{ left: `${p.left}%`, top: `${p.top}%` }}
         />
