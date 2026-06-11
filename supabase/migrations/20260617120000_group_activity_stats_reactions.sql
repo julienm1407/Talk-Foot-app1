@@ -1,6 +1,9 @@
 -- Ambiance tribune : messages du jour (Paris), réactions et présence 30 min.
+-- DROP requis : le type de retour change (ajout reactions_today).
 
-create or replace function public.get_group_activity_stats(p_group_ids text[])
+drop function if exists public.get_group_activity_stats(text[]);
+
+create function public.get_group_activity_stats(p_group_ids text[])
 returns table (
   group_id text,
   messages_today integer,
