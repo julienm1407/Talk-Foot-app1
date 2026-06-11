@@ -251,8 +251,8 @@ function CloudUserStateLoader({
       if (cancelled) return
       const friendly = cloudErrorMessageFr(lastErr)
       if (isTransientAuthLockError(friendly)) {
-        applySnapshot({}, false, true)
         setLoadError(friendly)
+        setReady(true)
         return
       }
       setApp(defaultUserAppState())

@@ -466,11 +466,14 @@ export function AvatarModularStudio() {
   useEffect(() => {
     const el = previewWrapRef.current
     if (!el) return
+    let locked: number | null = null
     const update = () => {
       const w = el.clientWidth
       const h = el.clientHeight
       if (w < 1) return
-      setPreviewMax(Math.max(200, Math.min(404, Math.floor(Math.min(w, h || w) - 8))))
+      const next = Math.max(200, Math.min(404, Math.floor(Math.min(w, h || w) - 8)))
+      if (locked == null && w >= 120) locked = next
+      setPreviewMax(locked ?? next)
     }
     update()
     const ro = new ResizeObserver(update)

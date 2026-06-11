@@ -253,19 +253,29 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
 
   const spendTokens = useCallback(
     (amount: number, _reason: string) => {
-      if (wallet.tokens < amount) return { ok: false as const, reason: 'not_enough_tokens' as const }
       if (isSupabaseConfigured() && cloud) {
+        let ok = false
         cloud.patchApp((prev) => {
           const w = normalizeWallet(prev.wallet)
           if (w.tokens < amount) return prev
+          ok = true
           return { ...prev, wallet: { ...w, tokens: w.tokens - amount } }
         })
-      } else {
-        patchWallet((w) => ({ ...w, tokens: w.tokens - amount }))
+        return ok
+          ? { ok: true as const }
+          : { ok: false as const, reason: 'not_enough_tokens' as const }
       }
-      return { ok: true as const }
+      let ok = false
+      patchWallet((w) => {
+        if (w.tokens < amount) return w
+        ok = true
+        return { ...w, tokens: w.tokens - amount }
+      })
+      return ok
+        ? { ok: true as const }
+        : { ok: false as const, reason: 'not_enough_tokens' as const }
     },
-    [patchWallet, wallet.tokens, cloud],
+    [patchWallet, cloud],
   )
 
   const stats = useMemo(() => {

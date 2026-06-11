@@ -9,6 +9,7 @@ import { normalizeSubscription } from '../utils/subscriptionEntitlements'
 import { AVATAR_2D_DEFAULTS } from './avatar2dCatalog'
 import {
   createDefaultModularAvatarState,
+  isModularAvatarState,
   sanitizeModularAvatarState,
   resolveModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
@@ -75,13 +76,14 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
       o.profile !== null && typeof o.profile === 'object' && !Array.isArray(o.profile)
         ? (() => {
             const incoming = o.profile as UserProfile
+            const modularSource = isModularAvatarState(incoming.modularAvatar)
+              ? incoming.modularAvatar
+              : base.profile.modularAvatar
             return {
               ...base.profile,
               ...incoming,
               characterLook: mergeCharacterLook(incoming.characterLook ?? base.profile.characterLook),
-              modularAvatar: sanitizeModularAvatarState(
-                resolveModularAvatarState(incoming.modularAvatar ?? base.profile.modularAvatar),
-              ),
+              modularAvatar: sanitizeModularAvatarState(resolveModularAvatarState(modularSource)),
             }
           })()
         : base.profile,

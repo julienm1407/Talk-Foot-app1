@@ -2637,6 +2637,55 @@ body::before {
   pointer-events: none !important;
   overflow: hidden;
   isolation: isolate;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.tf-paid-fx-portal .tf-confetti {
+  animation-duration: 2.6s;
+}
+
+.tf-paid-fx-portal .tf-phone-flash,
+.tf-paid-fx-portal .tf-phone-flash-beam {
+  animation-duration: 3.4s;
+}
+
+@media (max-width: 767px) {
+  .tf-paid-fx-portal .tf-confetti {
+    width: 14px;
+    height: 10px;
+    animation-duration: 3s;
+    box-shadow: 0 0 12px color-mix(in srgb, var(--c, #fff) 65%, transparent);
+  }
+
+  .tf-flare-plume {
+    width: 78%;
+    max-width: none;
+    height: 88%;
+    bottom: -8%;
+    filter: blur(26px);
+    animation-duration: 4s;
+  }
+
+  .tf-flare-particle {
+    width: 150px;
+    height: 150px;
+    margin-left: -75px;
+    bottom: 4%;
+    animation-duration: 3.4s;
+  }
+
+  .tf-flare-screen-pulse {
+    animation-duration: 4s;
+  }
+
+  .tf-paid-fx-portal .tf-phone-flash {
+    width: calc(var(--w, 12px) * 1.35);
+    height: calc(var(--w, 12px) * 1.35);
+    box-shadow:
+      0 0 22px rgba(255, 255, 255, 0.95),
+      0 0 36px rgba(186, 230, 253, 0.55);
+  }
 }
 
 .tf-channel-mobile-sheet-layer {

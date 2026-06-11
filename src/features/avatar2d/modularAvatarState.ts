@@ -36,6 +36,14 @@ export function createDefaultModularAvatarState(): ModularAvatarState {
   }
 }
 
+/** Garde une teinte de peau valide (#RRGGBB) — évite reset visuel du picker à #000000. */
+export function normalizeModularSkinTone(value: string | undefined | null): string {
+  const defaults = createDefaultAvatarData()
+  const raw = String(value ?? '').trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw
+  return defaults.skinTone
+}
+
 export function resolveModularAvatarState(
   stored: ModularAvatarState | undefined,
 ): ModularAvatarState {
@@ -44,7 +52,7 @@ export function resolveModularAvatarState(
   const d = stored.data
   return {
     data: {
-      skinTone: d.skinTone || defaults.skinTone,
+      skinTone: normalizeModularSkinTone(d.skinTone),
       body: d.body ?? defaults.body,
       hair: d.hair ?? defaults.hair,
       eyes: d.eyes ?? defaults.eyes,
@@ -106,7 +114,7 @@ export function sanitizeModularAvatarState(state: ModularAvatarState): ModularAv
   const d = state.data
   return {
     data: {
-      skinTone: d.skinTone || defaults.skinTone,
+      skinTone: normalizeModularSkinTone(d.skinTone),
       body: withFallback('body', d.body, 'body'),
       hair: withFallback('hair', d.hair, 'hair'),
       eyes: withFallback('eyes', d.eyes, 'eyes'),

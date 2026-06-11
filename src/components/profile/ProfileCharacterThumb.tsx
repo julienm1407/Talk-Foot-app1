@@ -44,17 +44,17 @@ export function ProfileCharacterThumb({
   })
 
   useEffect(() => {
+    if (framingMode === 'topbar') {
+      const renderSize = Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, thumbPx)
+      setRenderState({ shellSize: thumbPx, renderSize })
+      return
+    }
     const el = shellRef.current
     if (!el) return
     const update = () => {
       const measured = Math.round(Math.min(el.clientWidth, el.clientHeight))
       const shellSize = Math.max(16, measured || thumbPx)
-      const renderSize =
-        framingMode === 'topbar'
-          ? Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, shellSize)
-          : measured < 32
-            ? thumbPx
-            : shellSize
+      const renderSize = measured < 32 ? thumbPx : shellSize
       setRenderState({ shellSize, renderSize })
     }
     update()

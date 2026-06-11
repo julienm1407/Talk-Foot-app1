@@ -109,6 +109,15 @@ type ActivePaidFx = {
   flareColor?: FlareColor
 }
 
+type PaidFxLayer = {
+  layerId: string
+  fx: ActivePaidFx
+  seed: number
+}
+
+const PAID_FX_LAYER_MS = 4200
+const MAX_PAID_FX_LAYERS = 16
+
 const FLARE_COLOR_OPTIONS: { id: FlareColor; label: string; swatch: string }[] = [
   { id: 'red', label: 'Rouge', swatch: '#ef4444' },
   { id: 'blue', label: 'Bleu', swatch: '#3b82f6' },
@@ -182,7 +191,7 @@ function PaidConfettiBurst({ seed }: { seed: number }) {
       const x = Math.sin(seed * 9999 + n * 12345) * 10000
       return x - Math.floor(x)
     }
-    return Array.from({ length: 42 }, (_, i) => ({
+    return Array.from({ length: 58 }, (_, i) => ({
       id: i,
       side: (i % 2 === 0 ? 'left' : 'right') as 'left' | 'right',
       x: (rand(i) - 0.5) * 320,
@@ -237,7 +246,7 @@ function PaidFlareBurst({ seed, color }: { seed: number; color: FlareColor }) {
       const x = Math.sin(seed * 8888 + n * 24680) * 10000
       return x - Math.floor(x)
     }
-    return Array.from({ length: 28 }, (_, i) => ({
+    return Array.from({ length: 36 }, (_, i) => ({
       id: i,
       left: `${6 + rand(i) * 88}%`,
       x: (rand(i + 17) - 0.5) * 260,
@@ -1028,9 +1037,19 @@ export function ChannelPage() {
   const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
-  const [activePaidFx, setActivePaidFx] = useState<ActivePaidFx | null>(null)
-  const [paidFxSeed, setPaidFxSeed] = useState(0)
+  const [paidFxLayers, setPaidFxLayers] = useState<PaidFxLayer[]>([])
   const seenReactionIdsRef = useRef(new Set<string>())
+  const lastLocalFxAtRef = useRef(0)
+  const pushPaidFxLayer = useCallback((fx: ActivePaidFx, seed = Date.now()) => {
+    const layerId = `fx-${seed}-${Math.random().toString(16).slice(2)}`
+    setPaidFxLayers((prev) => {
+      const next = [...prev, { layerId, fx, seed }]
+      return next.length > MAX_PAID_FX_LAYERS ? next.slice(-MAX_PAID_FX_LAYERS) : next
+    })
+    window.setTimeout(() => {
+      setPaidFxLayers((prev) => prev.filter((l) => l.layerId !== layerId))
+    }, PAID_FX_LAYER_MS)
+  }, [])
   const [livePanelOpen, setLivePanelOpen] = useState(false)
   const [liveMicEnabled, setLiveMicEnabled] = useState(true)
   const [liveCamEnabled, setLiveCamEnabled] = useState(false)
@@ -1150,31 +1169,22 @@ export function ChannelPage() {
       for (const e of events) seenReactionIdsRef.current.add(e.id)
     },
     onLiveInsert: (event) => {
-      if (seenReactionIdsRef.current.has(event.id)) {
-        if (event.tifoSide || event.flareColor) {
-          setActivePaidFx((prev) => {
-            if (prev?.id === 'tifo-geant' && event.tifoSide) {
-              return { ...prev, tifoSide: event.tifoSide }
-            }
-            if (prev?.id === 'fumigene' && event.flareColor) {
-              return {
-                ...prev,
-                flareColor: event.flareColor,
-                label: `Fumigène ${FLARE_COLOR_LABELS[event.flareColor]}`,
-              }
-            }
-            return prev
-          })
-        }
+      const isOwnFxEcho =
+        Boolean(event.userId) &&
+        (event.userId === authUser?.id || event.userId === chatActorId) &&
+        Date.now() - lastLocalFxAtRef.current < 4500
+      if (isOwnFxEcho) {
+        seenReactionIdsRef.current.add(event.id)
         return
       }
+      if (seenReactionIdsRef.current.has(event.id)) return
       seenReactionIdsRef.current.add(event.id)
-      setPaidFxSeed((n) => n + 1)
-      setActivePaidFx(
+      pushPaidFxLayer(
         reactionTypeToPaidFx(event.type, {
           tifoSide: event.tifoSide,
           flareColor: event.flareColor,
         }),
+        Date.now() + Math.random(),
       )
     },
   })
@@ -1208,11 +1218,6 @@ export function ChannelPage() {
     setChatMessages([])
     seenReactionIdsRef.current = new Set()
   }, [match?.id])
-  useEffect(() => {
-    if (!activePaidFx) return
-    const timeout = window.setTimeout(() => setActivePaidFx(null), 4000)
-    return () => window.clearTimeout(timeout)
-  }, [activePaidFx])
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
     if (chatClosedAfterMatch) return
@@ -1881,7 +1886,7 @@ export function ChannelPage() {
     ],
     [],
   )
-  const fxActiveCount = activePaidFx ? 1 : 0
+  const fxActiveCount = paidFxLayers.length
   const liveSalonStats = useLiveMatchSalonStats(match?.id)
   const viewersDisplay =
     liveSalonStats != null
@@ -1892,8 +1897,9 @@ export function ChannelPage() {
     anim: PaidAnimation,
     opts?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
   ) => {
-    setAnimationsOpen(false)
+    if (anim.id !== 'fumigene') setAnimationsOpen(false)
     setLivePanelOpen(false)
+    lastLocalFxAtRef.current = Date.now()
     const res = betting.spendTokens(anim.cost, `chat_animation:${anim.id}`)
     if (!res.ok) {
       setAnimationNotice('Pas assez de jetons pour lancer cette animation.')
@@ -1903,16 +1909,19 @@ export function ChannelPage() {
     const tifoSide = anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
     const flareColorChosen =
       anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
-    setPaidFxSeed((n) => n + 1)
-    setActivePaidFx({
-      id: anim.id,
-      label:
-        anim.id === 'fumigene' && flareColorChosen
-          ? `Fumigène ${FLARE_COLOR_LABELS[flareColorChosen]}`
-          : anim.label,
-      ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
-      ...(flareColorChosen ? { flareColor: flareColorChosen } : {}),
-    })
+    const fxSeed = Date.now() + Math.random()
+    pushPaidFxLayer(
+      {
+        id: anim.id,
+        label:
+          anim.id === 'fumigene' && flareColorChosen
+            ? `Fumigène ${FLARE_COLOR_LABELS[flareColorChosen]}`
+            : anim.label,
+        ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
+        ...(flareColorChosen ? { flareColor: flareColorChosen } : {}),
+      },
+      fxSeed,
+    )
     setAnimationNotice(`${anim.emoji} ${anim.label} activee`)
     window.setTimeout(() => setAnimationNotice(null), 1600)
 
@@ -3794,55 +3803,61 @@ export function ChannelPage() {
           </div>
         </div>
       ) : null}
-      {typeof document !== 'undefined' && !isFinished && activePaidFx
+      {typeof document !== 'undefined' && !isFinished && paidFxLayers.length > 0
         ? createPortal(
             <div className="tf-paid-fx-portal-layer tf-paid-fx-portal" aria-hidden>
-              {activePaidFx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={paidFxSeed} /> : null}
-              {activePaidFx.id === 'fumigene' ? (
-                <PaidFlareBurst seed={paidFxSeed} color={activePaidFx.flareColor ?? 'red'} />
-              ) : null}
-              {activePaidFx.id === 'ola' ? <PaidConfettiBurst seed={paidFxSeed} /> : null}
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
-              >
-                {activePaidFx.id === 'tifo-geant' ? (
+              {paidFxLayers.map((layer, layerIndex) => (
+                <div key={layer.layerId} className="pointer-events-none absolute inset-0 overflow-hidden">
+                  {layer.fx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={layer.seed} /> : null}
+                  {layer.fx.id === 'fumigene' ? (
+                    <PaidFlareBurst seed={layer.seed} color={layer.fx.flareColor ?? 'red'} />
+                  ) : null}
+                  {layer.fx.id === 'ola' ? <PaidConfettiBurst seed={layer.seed} /> : null}
                   <div
-                    className="w-[min(92vw,20rem)] max-w-full rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"
-                    style={{
-                      borderColor:
-                        activePaidFx.tifoSide === 'away'
-                          ? `color-mix(in srgb, ${awayColor} 85%, white)`
-                          : `color-mix(in srgb, ${homeColor} 85%, white)`,
-                      background:
-                        activePaidFx.tifoSide === 'away'
-                          ? `linear-gradient(125deg, color-mix(in srgb, ${awayColor} 55%, #041a2d), #0a2540 55%, #061a2e)`
-                          : `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 55%, #041a2d), #0a2540 55%, #061a2e)`,
-                      boxShadow: L
-                        ? '0 0 0 2px rgba(255,255,255,0.95), 0 18px 48px rgba(2,12,28,0.45)'
-                        : '0 14px 40px rgba(0,0,0,0.45)',
-                    }}
+                    className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
                   >
-                    <p
-                      className="text-xs font-black leading-snug tracking-wide sm:text-base sm:tracking-wide"
-                      style={{
-                        color: '#ffffff',
-                        textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.5)',
-                      }}
-                    >
-                      ALLEZ {(activePaidFx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
-                    </p>
+                    {layer.fx.id === 'tifo-geant' ? (
+                      <div
+                        className="w-[min(92vw,20rem)] max-w-full rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"
+                        style={{
+                          borderColor:
+                            layer.fx.tifoSide === 'away'
+                              ? `color-mix(in srgb, ${awayColor} 85%, white)`
+                              : `color-mix(in srgb, ${homeColor} 85%, white)`,
+                          background:
+                            layer.fx.tifoSide === 'away'
+                              ? `linear-gradient(125deg, color-mix(in srgb, ${awayColor} 55%, #041a2d), #0a2540 55%, #061a2e)`
+                              : `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 55%, #041a2d), #0a2540 55%, #061a2e)`,
+                          boxShadow: L
+                            ? '0 0 0 2px rgba(255,255,255,0.95), 0 18px 48px rgba(2,12,28,0.45)'
+                            : '0 14px 40px rgba(0,0,0,0.45)',
+                        }}
+                      >
+                        <p
+                          className="text-xs font-black leading-snug tracking-wide sm:text-base sm:tracking-wide"
+                          style={{
+                            color: '#ffffff',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.5)',
+                          }}
+                        >
+                          ALLEZ {(layer.fx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
+                        </p>
+                      </div>
+                    ) : null}
+                    {layerIndex === paidFxLayers.length - 1 ? (
+                      <div
+                        className={`absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
+                          L
+                            ? 'border-slate-300/90 bg-[#062a48] text-sky-50'
+                            : 'border-white/15 bg-[#041a2d]/90 text-sky-100'
+                        }`}
+                      >
+                        FX: {layer.fx.label}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-                <div
-                  className={`absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
-                    L
-                      ? 'border-slate-300/90 bg-[#062a48] text-sky-50'
-                      : 'border-white/15 bg-[#041a2d]/90 text-sky-100'
-                  }`}
-                >
-                  FX: {activePaidFx.label}
                 </div>
-              </div>
+              ))}
             </div>,
             document.body,
           )
