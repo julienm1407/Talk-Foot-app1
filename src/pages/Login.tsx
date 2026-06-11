@@ -21,6 +21,7 @@ import {
   EmailVerificationDialog,
   type EmailVerificationDialogKind,
 } from '../components/auth/EmailVerificationDialog'
+import { ForgotPasswordDialog } from '../components/auth/ForgotPasswordDialog'
 
 type Mode = 'login' | 'signup'
 type VerificationDialogState = {
@@ -44,6 +45,7 @@ export function LoginPage() {
     isReady,
     loginWithEmail,
     signUpWithEmail,
+    requestPasswordReset,
     loginWithOAuthProvider,
     authNotice,
     clearAuthNotice,
@@ -60,6 +62,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
   const [verificationDialog, setVerificationDialog] = useState<VerificationDialogState>(null)
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
   const pseudoHint = useDisplayNameAvailabilityHint(displayName, {
     enabled: mode === 'signup' && isSupabaseConfigured() && !clerkEnabled,
   })
@@ -149,7 +152,7 @@ export function LoginPage() {
           return
         }
         if (!authNotice) {
-          setError(result.message ?? 'Email ou mot de passe incorrect.')
+          setError(result.message ?? 'Email, pseudo ou mot de passe incorrect.')
         }
       } finally {
         setSubmitting(false)
@@ -275,7 +278,9 @@ export function LoginPage() {
 
           <h2 className="mt-6 text-lg font-black text-tf-dark">Choisis ton entrée dans le match</h2>
           <p className="mt-1 text-sm font-medium text-tf-grey">
-            Email + mot de passe, ou connexion Google.
+            {mode === 'login'
+              ? 'Email ou pseudo + mot de passe, ou connexion Google.'
+              : 'Email + mot de passe, ou connexion Google.'}
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 md:items-stretch">
@@ -284,7 +289,7 @@ export function LoginPage() {
                 {mode === 'login' ? 'Connexion email' : 'Créer un compte'}
               </h3>
               <p className="mt-1 text-[11px] font-medium text-tf-grey">
-                {mode === 'login' ? 'Email + mot de passe' : 'Inscription rapide en 30 secondes'}
+                {mode === 'login' ? 'Email ou pseudo + mot de passe' : 'Inscription rapide en 30 secondes'}
               </p>
               <form onSubmit={handleEmailSubmit} className="mt-4 space-y-4">
                 {mode === 'signup' && (
@@ -343,23 +348,37 @@ export function LoginPage() {
                 )}
                 <div>
                   <label htmlFor="login-email" className="mb-1 block text-xs font-bold text-tf-grey">
-                    Email
+                    {mode === 'login' ? 'Email ou pseudo' : 'Email'}
                   </label>
                   <Input
                     id="login-email"
-                    type="email"
+                    type={mode === 'login' ? 'text' : 'email'}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="toi@exemple.com"
-                    autoComplete="email"
+                    placeholder={mode === 'login' ? 'toi@exemple.com ou ton pseudo' : 'toi@exemple.com'}
+                    autoComplete={mode === 'login' ? 'username' : 'email'}
                     required
                     className="w-full rounded-xl border-tf-grey-pastel/50"
                   />
                 </div>
                 <div>
-                  <label htmlFor="login-password" className="mb-1 block text-xs font-bold text-tf-grey">
-                    Mot de passe
-                  </label>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <label htmlFor="login-password" className="block text-xs font-bold text-tf-grey">
+                      Mot de passe
+                    </label>
+                    {mode === 'login' && (isSupabaseConfigured() || clerkEnabled) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError(null)
+                          setForgotPasswordOpen(true)
+                        }}
+                        className="text-[11px] font-bold text-tf-cta underline-offset-2 hover:underline"
+                      >
+                        Mot de passe oublié ?
+                      </button>
+                    ) : null}
+                  </div>
                   <Input
                     id="login-password"
                     type="password"
@@ -498,6 +517,12 @@ export function LoginPage() {
         kind={verificationDialog?.kind ?? 'signup_sent'}
         email={verificationDialog?.email ?? email}
         onClose={() => setVerificationDialog(null)}
+      />
+      <ForgotPasswordDialog
+        open={forgotPasswordOpen}
+        initialIdentifier={email}
+        onClose={() => setForgotPasswordOpen(false)}
+        onSubmit={requestPasswordReset}
       />
     </div>
   )

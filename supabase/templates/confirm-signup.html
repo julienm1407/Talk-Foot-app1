@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Talk Foot — Confirme ton inscription</title>
+</head>
+<body style="margin:0;padding:0;background:#041424;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">
+    Confirme ton adresse email pour activer ton compte Talk Foot.
+  </div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:linear-gradient(180deg,#041424 0%,#061a2e 100%);padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;">
+          <tr>
+            <td align="center" style="padding-bottom:20px;">
+              <div style="display:inline-block;background:#ffffff;border-radius:16px;padding:12px 18px;border:2px solid rgba(255,255,255,0.18);">
+                <img src="{{ .SiteURL }}/logo-talk-foot.png" alt="Talk Foot" width="148" style="display:block;height:auto;border:0;" />
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#0a223a;border:1px solid rgba(125,211,252,0.22);border-radius:20px;padding:28px 24px 24px;">
+              <p style="margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#7dd3fc;">Talk Foot</p>
+              <h1 style="margin:0 0 14px;font-size:26px;line-height:1.15;font-weight:900;color:#f8fafc;">Bienvenue dans la tribune !</h1>
+              <p style="margin:0 0 22px;font-size:15px;line-height:1.55;font-weight:600;color:#cbd5e1;">
+                Tu es à un clic de rejoindre Talk Foot. Active ton compte pour accéder aux salons, paris et débats entre supporters.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 22px;">
+                <tr>
+                  <td align="center" style="border-radius:14px;background:#ff3b3b;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:14px 24px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:14px;">Activer mon compte</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 8px;font-size:12px;line-height:1.5;font-weight:600;color:#94a3b8;">Si le bouton ne fonctionne pas, copie ce lien dans ton navigateur :</p>
+              <p style="margin:0 0 18px;font-size:12px;line-height:1.5;word-break:break-all;">
+                <a href="{{ .ConfirmationURL }}" target="_blank" style="color:#38bdf8;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+              </p>
+              <p style="margin:0;font-size:11px;line-height:1.5;font-weight:600;color:#64748b;">
+                Tu n'as pas créé de compte ? Ignore simplement cet email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:18px 8px 0;font-size:11px;line-height:1.5;font-weight:600;color:#64748b;">
+              © Talk Foot — La communauté foot en direct<br />
+              <a href="{{ .SiteURL }}" style="color:#7dd3fc;text-decoration:none;">talk-foot.com</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

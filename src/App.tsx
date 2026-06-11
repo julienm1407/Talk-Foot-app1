@@ -5,6 +5,7 @@ import { PageLoader } from './components/ui/PageLoader'
 import { AppShell } from './layout/AppShell'
 import { LoginPage } from './pages/Login'
 import { LoginSsoCallbackPage } from './pages/LoginSsoCallback'
+import { ResetPasswordPage } from './pages/ResetPassword'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { AboutPage } from './pages/AboutPage'
@@ -95,6 +96,7 @@ export default function App() {
       <AdsenseScriptLoader />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/login/reset-password" element={<ResetPasswordPage />} />
         <Route path="/login/sso-callback" element={<LoginSsoCallbackPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />

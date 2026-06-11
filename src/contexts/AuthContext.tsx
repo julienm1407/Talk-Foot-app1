@@ -5,7 +5,8 @@ import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
-import { getSupabaseOAuthRedirectTo } from '../lib/supabase/oauthRedirect'
+import { getSupabaseOAuthRedirectTo, getSupabasePasswordResetRedirectTo } from '../lib/supabase/oauthRedirect'
+import { resolveLocalLoginEmail, resolveLoginEmail } from '../lib/supabase/loginIdentifier'
 import { logSiteActivity } from '../lib/activityLog'
 import { isCloudAdminEmail } from '../lib/supabase/adminUsers'
 import {
@@ -59,10 +60,17 @@ export type LoginEmailResult =
   | { status: 'email_not_verified'; email: string }
   | { status: 'failure'; message?: string }
 
+export type PasswordResetRequestResult =
+  | { status: 'sent' }
+  | { status: 'error'; message: string }
+
 export type AuthContextValue = AuthState & {
   login: (user: AuthUser) => void
-  loginWithEmail: (email: string, password: string) => Promise<LoginEmailResult>
+  /** Connexion par email ou pseudo + mot de passe. */
+  loginWithEmail: (identifier: string, password: string) => Promise<LoginEmailResult>
   signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<SignUpEmailResult>
+  /** Demande de réinitialisation (email ou pseudo). */
+  requestPasswordReset: (identifier: string) => Promise<PasswordResetRequestResult>
   loginWithOAuthProvider: (provider: TalkFootOauthProviderId) => Promise<boolean>
   logout: () => void
   updateProfile: (displayName: string) => void
@@ -194,41 +202,54 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithEmail = useCallback(
-    async (email: string, password: string): Promise<LoginEmailResult> => {
-      if (!email.trim() || !password) {
-        return { status: 'failure', message: 'Email et mot de passe requis.' }
+    async (identifier: string, password: string): Promise<LoginEmailResult> => {
+      if (!identifier.trim() || !password) {
+        return { status: 'failure', message: 'Identifiant et mot de passe requis.' }
       }
-      const key = email.trim().toLowerCase()
       const registry = loadRegistry()
+      const key = resolveLocalLoginEmail(identifier, registry)
+      if (!key) {
+        return { status: 'failure', message: 'Email, pseudo ou mot de passe incorrect.' }
+      }
       const existing = registry[key]
       if (existing) {
         const ok = await verifyEmailPassword(existing, password)
-        if (!ok) return { status: 'failure', message: 'Email ou mot de passe incorrect.' }
+        if (!ok) return { status: 'failure', message: 'Email, pseudo ou mot de passe incorrect.' }
         if (existing.password !== undefined && !existing.passwordHash) {
           await migrateLegacyPassword(registry, key, existing, password)
         }
         login({
           id: existing.id,
-          email: email.trim(),
+          email: key,
           displayName: existing.displayName,
           provider: 'email',
         })
         return { status: 'success' }
       }
+      if (!identifier.trim().includes('@')) {
+        return { status: 'failure', message: 'Email, pseudo ou mot de passe incorrect.' }
+      }
       const { salt, passwordHash } = await hashPasswordForStorage(password)
       const reg: StoredEmailUser = {
         id: `email-${Date.now()}`,
-        displayName: email.trim().split('@')[0],
+        displayName: identifier.trim().split('@')[0],
         salt,
         passwordHash,
       }
       registry[key] = reg
       saveRegistry(registry)
-      login({ id: reg.id, email: email.trim(), displayName: reg.displayName, provider: 'email' })
+      login({ id: reg.id, email: key, displayName: reg.displayName, provider: 'email' })
       return { status: 'success' }
     },
     [login],
   )
+
+  const requestPasswordReset = useCallback(async (): Promise<PasswordResetRequestResult> => {
+    return {
+      status: 'error',
+      message: 'Réinitialisation indisponible en mode local. Utilise Supabase pour cette fonctionnalité.',
+    }
+  }, [])
 
   const signUpWithEmail = useCallback(
     async (email: string, password: string, displayName?: string): Promise<SignUpEmailResult> => {
@@ -324,6 +345,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
     login,
     loginWithEmail,
     signUpWithEmail,
+    requestPasswordReset,
     loginWithOAuthProvider,
     logout,
     updateProfile,
@@ -417,19 +439,50 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     /* réservé au mode local */
   }, [])
 
-  const loginWithEmail = useCallback(async (email: string, password: string): Promise<LoginEmailResult> => {
+  const loginWithEmail = useCallback(async (identifier: string, password: string): Promise<LoginEmailResult> => {
     const sb = getSupabaseBrowserClient()
     if (!sb) return { status: 'failure', message: 'Supabase non configuré.' }
     setAuthNotice(null)
-    const trimmed = email.trim()
-    const { data, error } = await sb.auth.signInWithPassword({ email: trimmed, password })
+    const trimmed = identifier.trim()
+    if (!trimmed || !password) {
+      return { status: 'failure', message: 'Identifiant et mot de passe requis.' }
+    }
+    const resolvedEmail = await resolveLoginEmail(sb, trimmed)
+    if (!resolvedEmail) {
+      return { status: 'failure', message: 'Email, pseudo ou mot de passe incorrect.' }
+    }
+    const { data, error } = await sb.auth.signInWithPassword({ email: resolvedEmail, password })
     if (error || !data.user) {
       if (isEmailNotVerifiedMessage(error?.code, error?.message)) {
-        return { status: 'email_not_verified', email: trimmed }
+        return { status: 'email_not_verified', email: resolvedEmail }
       }
-      return { status: 'failure', message: error?.message ?? 'Email ou mot de passe incorrect.' }
+      return { status: 'failure', message: 'Email, pseudo ou mot de passe incorrect.' }
     }
     return { status: 'success' }
+  }, [])
+
+  const requestPasswordReset = useCallback(async (identifier: string): Promise<PasswordResetRequestResult> => {
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return { status: 'error', message: 'Supabase non configuré.' }
+    const trimmed = identifier.trim()
+    if (!trimmed) {
+      return { status: 'error', message: 'Indique ton email ou ton pseudo.' }
+    }
+    const resolvedEmail = await resolveLoginEmail(sb, trimmed)
+    if (!resolvedEmail) {
+      // Ne pas révéler si le compte existe.
+      return { status: 'sent' }
+    }
+    const { error } = await sb.auth.resetPasswordForEmail(resolvedEmail, {
+      redirectTo: getSupabasePasswordResetRedirectTo(),
+    })
+    if (error) {
+      const msg = /rate limit/i.test(error.message ?? '')
+        ? 'Trop de mails envoyés récemment. Réessaie dans une heure.'
+        : error.message
+      return { status: 'error', message: msg }
+    }
+    return { status: 'sent' }
   }, [])
 
   const signUpWithEmail = useCallback(
@@ -552,6 +605,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     login,
     loginWithEmail,
     signUpWithEmail,
+    requestPasswordReset,
     loginWithOAuthProvider,
     logout,
     updateProfile,
@@ -613,19 +667,19 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithEmail = useCallback(
-    async (email: string, password: string): Promise<LoginEmailResult> => {
+    async (identifier: string, password: string): Promise<LoginEmailResult> => {
       if (!signIn) return { status: 'failure', message: 'Connexion indisponible.' }
       setAuthNotice(null)
-      const trimmed = email.trim()
+      const trimmed = identifier.trim()
       try {
         const result = await signIn.create({ identifier: trimmed, password })
         if (result.status === 'complete' && result.createdSessionId) {
           await setSignInActive({ session: result.createdSessionId })
           return { status: 'success' }
         }
-        return { status: 'failure', message: 'Connexion impossible. Vérifie ton email et ton mot de passe.' }
+        return { status: 'failure', message: 'Connexion impossible. Vérifie ton identifiant et ton mot de passe.' }
       } catch (err) {
-        const message = clerkAuthProviderErrorMessage(err, 'Email ou mot de passe incorrect.')
+        const message = clerkAuthProviderErrorMessage(err, 'Email, pseudo ou mot de passe incorrect.')
         if (isEmailNotVerifiedMessage(null, message)) {
           return { status: 'email_not_verified', email: trimmed }
         }
@@ -634,6 +688,27 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
       }
     },
     [signIn, setSignInActive],
+  )
+
+  const requestPasswordReset = useCallback(
+    async (identifier: string): Promise<PasswordResetRequestResult> => {
+      if (!signIn) return { status: 'error', message: 'Réinitialisation indisponible.' }
+      const trimmed = identifier.trim()
+      if (!trimmed) return { status: 'error', message: 'Indique ton email ou ton pseudo.' }
+      try {
+        await signIn.create({
+          strategy: 'reset_password_email_code',
+          identifier: trimmed,
+        })
+        return { status: 'sent' }
+      } catch (err) {
+        return {
+          status: 'error',
+          message: clerkAuthProviderErrorMessage(err, 'Impossible d’envoyer le mail de réinitialisation.'),
+        }
+      }
+    },
+    [signIn],
   )
 
   const signUpWithEmail = useCallback(
@@ -729,6 +804,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     login,
     loginWithEmail,
     signUpWithEmail,
+    requestPasswordReset,
     loginWithOAuthProvider,
     logout,
     updateProfile,

@@ -41,6 +41,12 @@ const LOGIN: RouteSeoConfig = {
   robots: 'noindex, nofollow',
 }
 
+const RESET_PASSWORD: RouteSeoConfig = {
+  title: `Nouveau mot de passe — ${SITE_NAME}`,
+  description: `Choisis un nouveau mot de passe pour ton compte ${SITE_NAME}.`,
+  robots: 'noindex, nofollow',
+}
+
 const MATCH: RouteSeoConfig = {
   title: `Matchs & agenda — ${SITE_NAME}`,
   description:
@@ -139,7 +145,9 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/privacy') return PRIVACY
   if (pathname === '/terms') return TERMS
   if (pathname === '/about') return ABOUT
-  if (pathname === '/login') return LOGIN
+  if (pathname === '/login' || pathname === '/login/reset-password') {
+    return pathname === '/login/reset-password' ? RESET_PASSWORD : LOGIN
+  }
   if (pathname === '/match' || pathname === '/matches' || pathname === '/agenda' || pathname === '/calendar')
     return MATCH
   if (pathname === '/pronostic') return PRONOSTIC

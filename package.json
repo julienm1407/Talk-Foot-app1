@@ -16,7 +16,8 @@
     "preview:pages": "vite preview --base /Talk-Foot-app1/ --outDir docs",
     "test:avatar-zones": "npx tsx --test src/components/profile/avatarHeadZones.test.ts",
     "test:mascot": "npx vite-node --test src/components/mascot/mascotGallery.test.ts src/components/mascot/mascotAnchorRandom.test.ts src/components/mascot/hair/hairAssetParser.test.ts",
-    "boutique:assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/import-boutique-design-assets.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-boutique-kit-images.ps1"
+    "boutique:assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/import-boutique-design-assets.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-boutique-kit-images.ps1",
+    "auth:email-templates": "node scripts/apply-auth-email-templates.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.6",
