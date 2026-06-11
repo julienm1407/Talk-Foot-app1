@@ -126,9 +126,8 @@ export function TopBar() {
       <div
         className="relative mx-auto w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] py-2 sm:py-2.5 md:py-3"
       >
-        <div className="flex w-full min-w-0 flex-col gap-2 min-[700px]:gap-2.5 xl:flex-row xl:items-center xl:gap-4">
-        <div className="flex min-w-0 items-center justify-between gap-2 xl:contents">
-        <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3 xl:order-1 xl:shrink-0">
+        <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-4">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
           <LogoEncartLink
             to="/"
             isLight={L}
@@ -169,9 +168,52 @@ export function TopBar() {
           ) : null}
         </div>
 
+        <nav
+          className="hidden min-w-0 xl:flex xl:items-center xl:justify-center"
+          aria-label="Primary"
+        >
+          <div
+            className={cn(
+              'flex h-10 max-w-full min-h-10 min-w-0 items-center overflow-hidden rounded-[22px] border p-1 backdrop-blur-md',
+              L
+                ? 'border-tf-dark/12 bg-tf-white shadow-sm ring-1 ring-tf-dark/[0.04]'
+                : 'border-white/12 bg-black/25 shadow-sm ring-1 ring-white/10',
+            )}
+          >
+            <div className="h-full max-w-full min-w-0 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex h-full w-max min-w-full items-center justify-center gap-0.5 px-1">
+                {TOP_NAV_ROUTES.map(({ to, end, section }) => {
+                  const th = getAppSectionTheme(section)
+                  const active = isRouteActiveForSection(
+                    section,
+                    location.pathname,
+                    location.hash,
+                  )
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={end}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        navPillBase,
+                        active
+                          ? navActiveClasses(section)
+                          : cn(th.nav.focus, navInactiveHoverTint(section), 'hover:text-tf-app-fg'),
+                      )}
+                    >
+                      {th.label}
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </nav>
+
         <div
           className={cn(
-            'flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2 xl:order-3 xl:pl-3 xl:gap-2.5',
+            'col-start-2 row-start-1 flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2 xl:col-start-3 xl:pl-3 xl:gap-2.5',
             L ? 'xl:border-l xl:border-tf-dark/10' : 'xl:border-l xl:border-white/10',
           )}
         >
@@ -311,50 +353,6 @@ export function TopBar() {
           </NavLink>
           </div>
         </div>
-        </div>
-
-        <nav
-          className="hidden min-w-0 w-full min-[700px]:flex min-[700px]:items-center min-[700px]:justify-center xl:order-2 xl:flex-1"
-          aria-label="Primary"
-        >
-          <div
-            className={cn(
-              'flex h-10 w-full max-w-full min-h-10 min-w-0 items-center overflow-hidden rounded-[22px] border p-1 backdrop-blur-md xl:w-auto xl:max-w-full',
-              L
-                ? 'border-tf-dark/12 bg-tf-white shadow-sm ring-1 ring-tf-dark/[0.04]'
-                : 'border-white/12 bg-black/25 shadow-sm ring-1 ring-white/10',
-            )}
-          >
-            <div className="h-full w-full min-w-0 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex h-full w-max min-w-full items-center justify-center gap-0.5 px-1">
-                {TOP_NAV_ROUTES.map(({ to, end, section }) => {
-                  const th = getAppSectionTheme(section)
-                  const active = isRouteActiveForSection(
-                    section,
-                    location.pathname,
-                    location.hash,
-                  )
-                  return (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={end}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        navPillBase,
-                        active
-                          ? navActiveClasses(section)
-                          : cn(th.nav.focus, navInactiveHoverTint(section), 'hover:text-tf-app-fg'),
-                      )}
-                    >
-                      {th.label}
-                    </NavLink>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </nav>
         </div>
       </div>
       <div
