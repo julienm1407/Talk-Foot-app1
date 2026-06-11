@@ -1210,7 +1210,7 @@ export function ChannelPage() {
   }, [match?.id])
   useEffect(() => {
     if (!activePaidFx) return
-    const timeout = window.setTimeout(() => setActivePaidFx(null), 3400)
+    const timeout = window.setTimeout(() => setActivePaidFx(null), 4000)
     return () => window.clearTimeout(timeout)
   }, [activePaidFx])
   const onSend = async (e: FormEvent) => {
@@ -1892,29 +1892,13 @@ export function ChannelPage() {
     anim: PaidAnimation,
     opts?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
   ) => {
+    setAnimationsOpen(false)
+    setLivePanelOpen(false)
     const res = betting.spendTokens(anim.cost, `chat_animation:${anim.id}`)
     if (!res.ok) {
       setAnimationNotice('Pas assez de jetons pour lancer cette animation.')
-      window.setTimeout(() => setAnimationNotice(null), 1800)
+      window.setTimeout(() => setAnimationNotice(null), 2200)
       return
-    }
-    if (match?.id) {
-      const tifoSideForSync =
-        anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
-      const flareColorForSync =
-        anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
-      const sent = await publishReaction(
-        paidAnimationToReactionType(anim.id),
-        tifoSideForSync || flareColorForSync
-          ? { ...(tifoSideForSync ? { tifoSide: tifoSideForSync } : {}), ...(flareColorForSync ? { flareColor: flareColorForSync } : {}) }
-          : undefined,
-      )
-      if (sent.ok && sent.event) {
-        seenReactionIdsRef.current.add(sent.event.id)
-      } else if (!sent.ok) {
-        setAnimationNotice('Animation non synchronisée (cloud indisponible).')
-        window.setTimeout(() => setAnimationNotice(null), 1800)
-      }
     }
     const tifoSide = anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
     const flareColorChosen =
@@ -1929,9 +1913,27 @@ export function ChannelPage() {
       ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
       ...(flareColorChosen ? { flareColor: flareColorChosen } : {}),
     })
-    setAnimationsOpen(false)
     setAnimationNotice(`${anim.emoji} ${anim.label} activee`)
     window.setTimeout(() => setAnimationNotice(null), 1600)
+
+    if (!match?.id) return
+
+    const tifoSideForSync =
+      anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
+    const flareColorForSync =
+      anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
+    const sent = await publishReaction(
+      paidAnimationToReactionType(anim.id),
+      tifoSideForSync || flareColorForSync
+        ? { ...(tifoSideForSync ? { tifoSide: tifoSideForSync } : {}), ...(flareColorForSync ? { flareColor: flareColorForSync } : {}) }
+        : undefined,
+    )
+    if (sent.ok && sent.event) {
+      seenReactionIdsRef.current.add(sent.event.id)
+    } else if (!sent.ok) {
+      setAnimationNotice('Animation locale OK · synchro tribune indisponible.')
+      window.setTimeout(() => setAnimationNotice(null), 2200)
+    }
   }
 
   const startLiveBroadcast = async () => {
@@ -3792,57 +3794,59 @@ export function ChannelPage() {
           </div>
         </div>
       ) : null}
-      {!isFinished && activePaidFx ? (
-        <div className="tf-paid-fx-portal pointer-events-none fixed inset-0 z-[102] overflow-hidden">
-          {activePaidFx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={paidFxSeed} /> : null}
-          {activePaidFx.id === 'fumigene' ? (
-            <PaidFlareBurst seed={paidFxSeed} color={activePaidFx.flareColor ?? 'red'} />
-          ) : null}
-          {activePaidFx.id === 'ola' ? <PaidConfettiBurst seed={paidFxSeed} /> : null}
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
-            aria-hidden
-          >
-            {activePaidFx.id === 'tifo-geant' ? (
+      {typeof document !== 'undefined' && !isFinished && activePaidFx
+        ? createPortal(
+            <div className="tf-paid-fx-portal-layer tf-paid-fx-portal" aria-hidden>
+              {activePaidFx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={paidFxSeed} /> : null}
+              {activePaidFx.id === 'fumigene' ? (
+                <PaidFlareBurst seed={paidFxSeed} color={activePaidFx.flareColor ?? 'red'} />
+              ) : null}
+              {activePaidFx.id === 'ola' ? <PaidConfettiBurst seed={paidFxSeed} /> : null}
               <div
-                className="w-[min(92vw,20rem)] max-w-full rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"
-                style={{
-                  borderColor:
-                    activePaidFx.tifoSide === 'away'
-                      ? `color-mix(in srgb, ${awayColor} 85%, white)`
-                      : `color-mix(in srgb, ${homeColor} 85%, white)`,
-                  background:
-                    activePaidFx.tifoSide === 'away'
-                      ? `linear-gradient(125deg, color-mix(in srgb, ${awayColor} 55%, #041a2d), #0a2540 55%, #061a2e)`
-                      : `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 55%, #041a2d), #0a2540 55%, #061a2e)`,
-                  boxShadow: L
-                    ? '0 0 0 2px rgba(255,255,255,0.95), 0 18px 48px rgba(2,12,28,0.45)'
-                    : '0 14px 40px rgba(0,0,0,0.45)',
-                }}
+                className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
               >
-                <p
-                  className="text-xs font-black leading-snug tracking-wide sm:text-base sm:tracking-wide"
-                  style={{
-                    color: '#ffffff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.5)',
-                  }}
+                {activePaidFx.id === 'tifo-geant' ? (
+                  <div
+                    className="w-[min(92vw,20rem)] max-w-full rounded-xl border-2 px-3 py-2.5 text-center shadow-2xl backdrop-blur-sm sm:w-[min(90vw,24rem)] sm:px-4 sm:py-3"
+                    style={{
+                      borderColor:
+                        activePaidFx.tifoSide === 'away'
+                          ? `color-mix(in srgb, ${awayColor} 85%, white)`
+                          : `color-mix(in srgb, ${homeColor} 85%, white)`,
+                      background:
+                        activePaidFx.tifoSide === 'away'
+                          ? `linear-gradient(125deg, color-mix(in srgb, ${awayColor} 55%, #041a2d), #0a2540 55%, #061a2e)`
+                          : `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 55%, #041a2d), #0a2540 55%, #061a2e)`,
+                      boxShadow: L
+                        ? '0 0 0 2px rgba(255,255,255,0.95), 0 18px 48px rgba(2,12,28,0.45)'
+                        : '0 14px 40px rgba(0,0,0,0.45)',
+                    }}
+                  >
+                    <p
+                      className="text-xs font-black leading-snug tracking-wide sm:text-base sm:tracking-wide"
+                      style={{
+                        color: '#ffffff',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.85), 0 0 18px rgba(0,0,0,0.5)',
+                      }}
+                    >
+                      ALLEZ {(activePaidFx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
+                    </p>
+                  </div>
+                ) : null}
+                <div
+                  className={`absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
+                    L
+                      ? 'border-slate-300/90 bg-[#062a48] text-sky-50'
+                      : 'border-white/15 bg-[#041a2d]/90 text-sky-100'
+                  }`}
                 >
-                  ALLEZ {(activePaidFx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
-                </p>
+                  FX: {activePaidFx.label}
+                </div>
               </div>
-            ) : null}
-            <div
-              className={`absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
-                L
-                  ? 'border-slate-300/90 bg-[#062a48] text-sky-50'
-                  : 'border-white/15 bg-[#041a2d]/90 text-sky-100'
-              }`}
-            >
-              FX: {activePaidFx.label}
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
       {!isFinished && fullscreenEvent ? (
         <div className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
           <div className="absolute inset-0 bg-black/46 backdrop-blur-[4px]" />

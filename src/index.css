@@ -2095,14 +2095,14 @@ body::before {
   100% {
     opacity: 0;
   }
-  10% {
-    opacity: 0.72;
+  8% {
+    opacity: 0.95;
   }
-  28% {
-    opacity: 0.34;
+  22% {
+    opacity: 0.5;
   }
-  55% {
-    opacity: 0.08;
+  45% {
+    opacity: 0.15;
   }
 }
 
@@ -2626,6 +2626,16 @@ body::before {
   touch-action: manipulation;
   transform: translateX(-50%) translateZ(0);
   -webkit-transform: translateX(-50%) translateZ(0);
+  isolation: isolate;
+}
+
+/* FX tribune plein écran — au-dessus du dock mobile et hors overflow channel */
+.tf-paid-fx-portal-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482502 !important;
+  pointer-events: none !important;
+  overflow: hidden;
   isolation: isolate;
 }
 
