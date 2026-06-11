@@ -17,8 +17,16 @@ import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bann
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 import { useDisplayNameAvailabilityHint } from '../hooks/useDisplayNameAvailabilityHint'
 import { DisplayNameAvailabilityHint } from '../components/auth/DisplayNameAvailabilityHint'
+import {
+  EmailVerificationDialog,
+  type EmailVerificationDialogKind,
+} from '../components/auth/EmailVerificationDialog'
 
 type Mode = 'login' | 'signup'
+type VerificationDialogState = {
+  kind: EmailVerificationDialogKind
+  email: string
+} | null
 
 const GOOGLE_BUTTON_CLASS = cn(
   'flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2',
@@ -51,6 +59,7 @@ export function LoginPage() {
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [oauthLoading, setOauthLoading] = useState(false)
+  const [verificationDialog, setVerificationDialog] = useState<VerificationDialogState>(null)
   const pseudoHint = useDisplayNameAvailabilityHint(displayName, {
     enabled: mode === 'signup' && isSupabaseConfigured() && !clerkEnabled,
   })
@@ -116,7 +125,9 @@ export function LoginPage() {
         }
         setError(null)
         if (signup.status === 'confirm_email') {
+          setVerificationDialog({ kind: 'signup_sent', email: signup.email })
           setMode('login')
+          clearAuthNotice()
           return
         }
         markPendingFanOnboardingAfterLogin()
@@ -126,12 +137,20 @@ export function LoginPage() {
     } else {
       setSubmitting(true)
       try {
-        const ok = await loginWithEmail(email, password)
-        if (!ok) {
-          if (!authNotice) setError('Email ou mot de passe incorrect.')
+        const result = await loginWithEmail(email, password)
+        if (result.status === 'success') {
+          markPendingFanOnboardingAfterLogin()
           return
         }
-        markPendingFanOnboardingAfterLogin()
+        if (result.status === 'email_not_verified') {
+          setError(null)
+          setVerificationDialog({ kind: 'login_pending', email: result.email })
+          clearAuthNotice()
+          return
+        }
+        if (!authNotice) {
+          setError(result.message ?? 'Email ou mot de passe incorrect.')
+        }
       } finally {
         setSubmitting(false)
       }
@@ -473,6 +492,13 @@ export function LoginPage() {
           </p>
         </Card>
       </div>
+
+      <EmailVerificationDialog
+        open={verificationDialog != null}
+        kind={verificationDialog?.kind ?? 'signup_sent'}
+        email={verificationDialog?.email ?? email}
+        onClose={() => setVerificationDialog(null)}
+      />
     </div>
   )
 }

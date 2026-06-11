@@ -51,12 +51,17 @@ type AuthState = {
 /** Inscription email : session immédiate, confirmation mail, ou échec. */
 export type SignUpEmailResult =
   | { status: 'signed_in' }
-  | { status: 'confirm_email' }
+  | { status: 'confirm_email'; email: string }
   | { status: 'error'; message: string }
+
+export type LoginEmailResult =
+  | { status: 'success' }
+  | { status: 'email_not_verified'; email: string }
+  | { status: 'failure'; message?: string }
 
 export type AuthContextValue = AuthState & {
   login: (user: AuthUser) => void
-  loginWithEmail: (email: string, password: string) => Promise<boolean>
+  loginWithEmail: (email: string, password: string) => Promise<LoginEmailResult>
   signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<SignUpEmailResult>
   loginWithOAuthProvider: (provider: TalkFootOauthProviderId) => Promise<boolean>
   logout: () => void
@@ -189,14 +194,16 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithEmail = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
-      if (!email.trim() || !password) return false
+    async (email: string, password: string): Promise<LoginEmailResult> => {
+      if (!email.trim() || !password) {
+        return { status: 'failure', message: 'Email et mot de passe requis.' }
+      }
       const key = email.trim().toLowerCase()
       const registry = loadRegistry()
       const existing = registry[key]
       if (existing) {
         const ok = await verifyEmailPassword(existing, password)
-        if (!ok) return false
+        if (!ok) return { status: 'failure', message: 'Email ou mot de passe incorrect.' }
         if (existing.password !== undefined && !existing.passwordHash) {
           await migrateLegacyPassword(registry, key, existing, password)
         }
@@ -206,7 +213,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
           displayName: existing.displayName,
           provider: 'email',
         })
-        return true
+        return { status: 'success' }
       }
       const { salt, passwordHash } = await hashPasswordForStorage(password)
       const reg: StoredEmailUser = {
@@ -218,7 +225,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
       registry[key] = reg
       saveRegistry(registry)
       login({ id: reg.id, email: email.trim(), displayName: reg.displayName, provider: 'email' })
-      return true
+      return { status: 'success' }
     },
     [login],
   )
@@ -410,13 +417,19 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     /* réservé au mode local */
   }, [])
 
-  const loginWithEmail = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const loginWithEmail = useCallback(async (email: string, password: string): Promise<LoginEmailResult> => {
     const sb = getSupabaseBrowserClient()
-    if (!sb) return false
+    if (!sb) return { status: 'failure', message: 'Supabase non configuré.' }
     setAuthNotice(null)
-    const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password })
-    if (error || !data.user) return false
-    return true
+    const trimmed = email.trim()
+    const { data, error } = await sb.auth.signInWithPassword({ email: trimmed, password })
+    if (error || !data.user) {
+      if (isEmailNotVerifiedMessage(error?.code, error?.message)) {
+        return { status: 'email_not_verified', email: trimmed }
+      }
+      return { status: 'failure', message: error?.message ?? 'Email ou mot de passe incorrect.' }
+    }
+    return { status: 'success' }
   }, [])
 
   const signUpWithEmail = useCallback(
@@ -471,9 +484,9 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         }
       }
       setAuthNotice(
-        'Compte créé : vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.',
+        'Compte créé : un lien de confirmation vient d’être envoyé par email. Ouvre ta boîte mail pour activer ton compte.',
       )
-      return { status: 'confirm_email' }
+      return { status: 'confirm_email', email: email.trim() }
     },
     [],
   )
@@ -560,6 +573,18 @@ function clerkAuthProviderErrorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
+function isEmailNotVerifiedMessage(code?: string | null, message?: string | null): boolean {
+  const c = (code ?? '').toLowerCase()
+  const m = (message ?? '').toLowerCase()
+  return (
+    c === 'email_not_confirmed' ||
+    m.includes('email not confirmed') ||
+    m.includes('not verified') ||
+    m.includes('email address is not verified') ||
+    (m.includes('confirm') && m.includes('email'))
+  )
+}
+
 function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded: userLoaded } = useUser()
   const clerk = useClerk()
@@ -588,20 +613,24 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithEmail = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
-      if (!signIn) return false
+    async (email: string, password: string): Promise<LoginEmailResult> => {
+      if (!signIn) return { status: 'failure', message: 'Connexion indisponible.' }
       setAuthNotice(null)
+      const trimmed = email.trim()
       try {
-        const result = await signIn.create({ identifier: email.trim(), password })
+        const result = await signIn.create({ identifier: trimmed, password })
         if (result.status === 'complete' && result.createdSessionId) {
           await setSignInActive({ session: result.createdSessionId })
-          return true
+          return { status: 'success' }
         }
-        setAuthNotice('Connexion impossible. Vérifie ton email et ton mot de passe.')
-        return false
+        return { status: 'failure', message: 'Connexion impossible. Vérifie ton email et ton mot de passe.' }
       } catch (err) {
-        setAuthNotice(clerkAuthProviderErrorMessage(err, 'Email ou mot de passe incorrect.'))
-        return false
+        const message = clerkAuthProviderErrorMessage(err, 'Email ou mot de passe incorrect.')
+        if (isEmailNotVerifiedMessage(null, message)) {
+          return { status: 'email_not_verified', email: trimmed }
+        }
+        setAuthNotice(message)
+        return { status: 'failure', message }
       }
     },
     [signIn, setSignInActive],
@@ -632,9 +661,9 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
           })
         }
         setAuthNotice(
-          'Compte créé : vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.',
+          'Compte créé : un lien de confirmation vient d’être envoyé par email. Ouvre ta boîte mail pour activer ton compte.',
         )
-        return { status: 'confirm_email' }
+        return { status: 'confirm_email', email: email.trim() }
       } catch (err) {
         return {
           status: 'error',

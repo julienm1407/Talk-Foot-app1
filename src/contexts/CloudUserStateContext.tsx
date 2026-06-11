@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { useAuth } from './AuthContext'
+import { useSession } from '@clerk/clerk-react'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
@@ -20,6 +20,7 @@ import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
 import { isClerkAuthMode } from '../lib/supabase/talkfootSession'
+import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 import { changeDisplayNameCloud, checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import {
@@ -27,6 +28,8 @@ import {
   fetchTalkfootProfileSnapshot,
   saveTalkfootProfileAppState,
 } from '../lib/supabase/profileAppState'
+import { bindTalkfootActorSession } from '../lib/supabase/bindTalkfootActorSession'
+import { useAuth } from './AuthContext'
 
 type CloudUserStateValue = {
   /** Profil cloud chargé (évite d’écraser le serveur avant hydratation). */
@@ -60,16 +63,32 @@ function isUuid(value: string | undefined | null): boolean {
   return UUID_RE.test(value)
 }
 
-function profileEq(query: any, userId: string) {
+function profileScopeUpdate(sb: ReturnType<typeof getSupabaseBrowserClient>, userId: string) {
+  if (!sb) return null
+  const query = sb.from('profiles').update({ oauth_profile_completed: true })
   return isUuid(userId) ? query.eq('id', userId) : query.eq('clerk_id', userId)
 }
 
 export function CloudUserStateGate({ children }: { children: ReactNode }) {
   if (!isSupabaseConfigured()) return <>{children}</>
-  return <CloudUserStateLoader>{children}</CloudUserStateLoader>
+  if (isClerkAuthMode()) {
+    return <CloudUserStateLoaderClerk>{children}</CloudUserStateLoaderClerk>
+  }
+  return <CloudUserStateLoader clerkSessionId={null}>{children}</CloudUserStateLoader>
 }
 
-function CloudUserStateLoader({ children }: { children: ReactNode }) {
+function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
+  const { session } = useSession()
+  return <CloudUserStateLoader clerkSessionId={session?.id ?? null}>{children}</CloudUserStateLoader>
+}
+
+function CloudUserStateLoader({
+  children,
+  clerkSessionId,
+}: {
+  children: ReactNode
+  clerkSessionId: string | null
+}) {
   const { user, refreshAuthUser } = useAuth()
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -96,21 +115,10 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
     try {
       await saveTalkfootProfileAppState(sb, user.id, appRef.current, ocRef.current)
       return { ok: true }
-    } catch (rpcErr) {
-      const rpcMessage = rpcErr instanceof Error ? rpcErr.message : 'rpc_save_failed'
-      const { error } = await profileEq(
-        sb.from('profiles').update({
-          app_state: appRef.current,
-          onboarding_complete: ocRef.current,
-        }),
-        user.id,
-      )
-      if (error) {
-        const message = `${rpcMessage}; ${error.message}`
-        console.error('[Talk Foot] Sauvegarde profil cloud:', message)
-        return { ok: false, error: message }
-      }
-      return { ok: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'rpc_save_failed'
+      console.error('[Talk Foot] Sauvegarde profil cloud:', message)
+      return { ok: false, error: message }
     }
   }, [user?.id])
 
@@ -164,16 +172,23 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         setReady(true)
       }
 
-      const loadViaTable = async () => {
-        let { data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle()
-        if (error) {
-          await new Promise((r) => setTimeout(r, 400))
-          ;({ data, error } = await profileEq(sb.from('profiles').select('*'), user.id).maybeSingle())
-        }
-        return { data, error }
-      }
-
       try {
+        await ensureTalkFootSupabaseSession(sb)
+        if (cancelled) return
+
+        if (isClerkAuthMode()) {
+          const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
+          if (cancelled) return
+          if (!bindResult.ok) {
+            setApp(defaultUserAppState())
+            setLoadError(`Liaison session cloud échouée (${bindResult.error}). Recharge la page.`)
+            setOnboardingCompleteCol(false)
+            setOauthNeedsProfile(false)
+            setReady(true)
+            return
+          }
+        }
+
         let snapshot = await fetchTalkfootProfileSnapshot(sb, user.id)
         if (cancelled) return
 
@@ -200,62 +215,24 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
             if (rawJson !== mergedJson) {
               await saveTalkfootProfileAppState(sb, user.id, mergedApp, snapshot.onboardingComplete)
             }
-          } catch {
-            void profileEq(sb.from('profiles').update({ app_state: mergedApp }), user.id)
+          } catch (err) {
+            console.warn('[Talk Foot] Migration app_state cloud:', err)
           }
         }
-        return
-      } catch (rpcLoadErr) {
-        const rpcMessage = rpcLoadErr instanceof Error ? rpcLoadErr.message : 'rpc_load_failed'
-        const { data, error } = await loadViaTable()
+      } catch (err) {
         if (cancelled) return
-        if (error) {
-          setApp(defaultUserAppState())
-          setLoadError(`${rpcMessage}; ${error.message}`)
-          setOnboardingCompleteCol(false)
-          setOauthNeedsProfile(false)
-          setReady(true)
-          return
-        }
-        if (!data) {
-          const { data: authPayload } = await sb.auth.getUser()
-          const prov = authPayload.user?.app_metadata?.provider
-          const oauthIncomplete =
-            isClerkAuthMode() || Boolean(prov && isTalkFootOAuthProvider(prov))
-          try {
-            const created = await ensureTalkfootProfile(sb, user.id, displayName, !oauthIncomplete)
-            if (cancelled) return
-            applySnapshot(created.appState, created.onboardingComplete, created.oauthProfileCompleted)
-            return
-          } catch (ensureErr) {
-            const ensureMessage = ensureErr instanceof Error ? ensureErr.message : 'ensure_failed'
-            setApp(defaultUserAppState())
-            setLoadError(`${rpcMessage}; ${ensureMessage}`)
-            setOnboardingCompleteCol(false)
-            setOauthNeedsProfile(false)
-            setReady(true)
-            return
-          }
-        }
-        applySnapshot(data.app_state, Boolean(data.onboarding_complete), data.oauth_profile_completed !== false)
-        if (!hasLocalEditsRef.current) {
-          const mergedApp = mergeUserAppState(data.app_state)
-          try {
-            const rawJson = JSON.stringify(data.app_state ?? {})
-            const mergedJson = JSON.stringify(mergedApp)
-            if (rawJson !== mergedJson) {
-              await saveTalkfootProfileAppState(sb, user.id, mergedApp, Boolean(data.onboarding_complete))
-            }
-          } catch {
-            void profileEq(sb.from('profiles').update({ app_state: mergedApp }), user.id)
-          }
-        }
+        const message = err instanceof Error ? err.message : 'cloud_load_failed'
+        setApp(defaultUserAppState())
+        setLoadError(message)
+        setOnboardingCompleteCol(false)
+        setOauthNeedsProfile(false)
+        setReady(true)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [user?.id])
+  }, [user?.id, user?.displayName, user?.email, clerkSessionId])
 
   const patchApp = useCallback(
     (fn: (prev: UserAppStateV1) => UserAppStateV1) => {
@@ -325,11 +302,8 @@ function CloudUserStateLoader({ children }: { children: ReactNode }) {
         console.error('[Talk Foot] Auth metadata:', authErr.message)
         throw new Error(authErr.message)
       }
-      const scopedUpdate = profileEq(
-        sb.from('profiles').update({ oauth_profile_completed: true }),
-        user.id,
-      )
-      const { error } = await scopedUpdate
+      const scopedUpdate = profileScopeUpdate(sb, user.id)
+      const { error } = scopedUpdate ? await scopedUpdate : { error: null }
       if (error) {
         console.error('[Talk Foot] Profil OAuth:', error.message)
         throw new Error(error.message)
