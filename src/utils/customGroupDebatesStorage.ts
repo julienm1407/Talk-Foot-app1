@@ -15,6 +15,26 @@ export function removeCustomDebatesForGroup(groupId: string): void {
   }
 }
 
+export function removeCustomDebateById(debateId: string): void {
+  const id = debateId.trim()
+  if (!id) return
+  try {
+    const bucket = readCustomDebatesBucket()
+    let changed = false
+    for (const [groupId, list] of Object.entries(bucket)) {
+      const next = list.filter((d) => d.id !== id)
+      if (next.length !== list.length) {
+        if (next.length) bucket[groupId] = next
+        else delete bucket[groupId]
+        changed = true
+      }
+    }
+    if (changed) localStorage.setItem(CUSTOM_GROUP_DEBATES_KEY, JSON.stringify(bucket))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function readCustomDebatesBucket(): CustomDebatesBucket {
   try {
     const raw = localStorage.getItem(CUSTOM_GROUP_DEBATES_KEY)

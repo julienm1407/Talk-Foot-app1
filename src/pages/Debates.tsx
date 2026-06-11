@@ -17,7 +17,7 @@ import { debatePageHref } from '../utils/debateAccess'
 import { DebateGroupBadge } from '../components/debate/DebateGroupBadge'
 
 export function DebatesPage() {
-  const { debates: all, loading } = useDebates()
+  const { debates: all, loading, deleteDebateAsAdmin } = useDebates()
   const navigate = useNavigate()
   const location = useLocation()
   const { user: authUser } = useAuth()
@@ -25,6 +25,7 @@ export function DebatesPage() {
   const { myJoinedGroups, orphanJoinedGroupIds, groupLimits } = useSupporterGroups()
   const [createOpen, setCreateOpen] = useState(false)
   const [limitPopupOpen, setLimitPopupOpen] = useState(false)
+  const [deletingDebateId, setDeletingDebateId] = useState<string | null>(null)
   const isAdmin = Boolean(authUser?.isAdmin)
   const canAddDebate = canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin).ok
 
@@ -171,6 +172,29 @@ export function DebatesPage() {
                       >
                         Participer au débat
                       </Link>
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          disabled={deletingDebateId === d.id}
+                          className="rounded-2xl border border-rose-200/70 bg-rose-500/20 px-4 py-2.5 text-center text-xs font-black text-white transition hover:bg-rose-500/35 disabled:opacity-60"
+                          onClick={() => {
+                            if (deletingDebateId) return
+                            const ok = window.confirm(
+                              `Supprimer le débat « ${d.title} » ? Action admin irréversible.`,
+                            )
+                            if (!ok) return
+                            setDeletingDebateId(d.id)
+                            void deleteDebateAsAdmin(d.id).then((result) => {
+                              setDeletingDebateId(null)
+                              if (!result.ok) {
+                                window.alert('Suppression impossible.')
+                              }
+                            })
+                          }}
+                        >
+                          {deletingDebateId === d.id ? '…' : 'Supprimer (admin)'}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,4 @@
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useDebates } from '../contexts/DebatesContext'
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
@@ -10,14 +10,19 @@ import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { DebateSalonPanel } from '../components/debate/DebateSalonPanel'
 import { DebateGroupBadge } from '../components/debate/DebateGroupBadge'
+import { useAuth } from '../contexts/AuthContext'
 
 export function DebateDetailPage() {
   const { debateId } = useParams()
-  const { getDebateById, refresh } = useDebates()
+  const navigate = useNavigate()
+  const { user: authUser } = useAuth()
+  const isSiteAdmin = Boolean(authUser?.isAdmin)
+  const { getDebateById, refresh, deleteDebateAsAdmin } = useDebates()
   const [debate, setDebate] = useState<Debate | undefined>(
     debateId ? getDebateById(debateId) : undefined,
   )
   const [loading, setLoading] = useState(Boolean(debateId && !debate))
+  const [deleteBusy, setDeleteBusy] = useState(false)
 
   useEffect(() => {
     if (!debateId) {
@@ -141,6 +146,31 @@ export function DebateDetailPage() {
               <span className="rounded-xl border border-white/30 bg-white/14 px-3 py-1.5 text-white/95 backdrop-blur-sm sm:px-4 sm:py-2">
                 💬 {debate.messagesCount.toLocaleString('fr-FR')} messages
               </span>
+              {isSiteAdmin ? (
+                <button
+                  type="button"
+                  disabled={deleteBusy}
+                  className="rounded-xl border border-rose-300/50 bg-rose-500/25 px-3 py-1.5 text-white backdrop-blur-sm transition hover:bg-rose-500/40 disabled:opacity-60 sm:px-4 sm:py-2"
+                  onClick={() => {
+                    if (deleteBusy) return
+                    const ok = window.confirm(
+                      `Supprimer définitivement le débat « ${debate.title} » ?\n\nTous les messages du fil seront effacés. Action admin irréversible.`,
+                    )
+                    if (!ok) return
+                    setDeleteBusy(true)
+                    void deleteDebateAsAdmin(debate.id).then((result) => {
+                      setDeleteBusy(false)
+                      if (!result.ok) {
+                        window.alert('Suppression impossible (droits admin requis).')
+                        return
+                      }
+                      navigate('/debates', { replace: true })
+                    })
+                  }}
+                >
+                  {deleteBusy ? 'Suppression…' : '🗑 Supprimer (admin)'}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

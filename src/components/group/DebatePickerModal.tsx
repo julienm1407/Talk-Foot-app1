@@ -18,6 +18,7 @@ export function DebatePickerModal({
   customForGroup,
   canCreateDebate = true,
   initialTab = 'browse',
+  adminLinkMode = false,
   onClose,
   onPick,
   onPublishCustom,
@@ -31,6 +32,8 @@ export function DebatePickerModal({
   canCreateDebate?: boolean
   /** Onglet affiché à l’ouverture. */
   initialTab?: Tab
+  /** Admin : parcourir tous les débats publiés pour lier la tribune. */
+  adminLinkMode?: boolean
   onClose: () => void
   onPick: (debateId: string) => void
   onPublishCustom: (input: {
@@ -41,6 +44,7 @@ export function DebatePickerModal({
   onBlockedCreate?: () => void
 }) {
   const [tab, setTab] = useState<Tab>('browse')
+  const [search, setSearch] = useState('')
   const [title, setTitle] = useState('')
   const [excerpt, setExcerpt] = useState('')
   const [accent, setAccent] = useState('#6366f1')
@@ -49,9 +53,20 @@ export function DebatePickerModal({
   const { debates: catalogDebates, refresh, loading } = useDebates()
 
   const groupDebates = useMemo(() => {
+    if (adminLinkMode) {
+      const q = search.trim().toLowerCase()
+      const list = catalogDebates
+      if (!q) return list
+      return list.filter(
+        (d) =>
+          d.title.toLowerCase().includes(q) ||
+          d.excerpt.toLowerCase().includes(q) ||
+          d.id.toLowerCase().includes(q),
+      )
+    }
     if (groupId === null) return customForGroup
     return mergeDebatesForGroup(catalogDebates, customForGroup, groupId)
-  }, [catalogDebates, customForGroup, groupId])
+  }, [adminLinkMode, catalogDebates, customForGroup, groupId, search])
 
   useEffect(() => {
     if (!open) return
@@ -65,6 +80,7 @@ export function DebatePickerModal({
   useEffect(() => {
     if (!open) return
     setTab(initialTab)
+    setSearch('')
     setTitle('')
     setExcerpt('')
     setAccent('#6366f1')
@@ -166,15 +182,21 @@ export function DebatePickerModal({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                {groupId ? 'Tribune liée' : 'Débat ouvert'}
+                {adminLinkMode ? 'Admin Talk Foot' : groupId ? 'Tribune liée' : 'Débat ouvert'}
               </p>
               <h2 id="debate-picker-title" className="mt-1 text-lg font-black text-slate-900">
-                {groupId ? 'Débat associé au groupe' : 'Nouveau débat communautaire'}
+                {adminLinkMode
+                  ? 'Lier un débat à cette tribune'
+                  : groupId
+                    ? 'Débat associé au groupe'
+                    : 'Nouveau débat communautaire'}
               </h2>
               <p className="mt-1 text-xs font-semibold text-slate-600">
-                {groupId
-                  ? 'Accès ouvert à tous — la tribune sert d’étiquette, pas de barrière.'
-                  : 'Participation immédiate pour toute la communauté Talk Foot.'}
+                {adminLinkMode
+                  ? 'Le débat sera visible dans le salon général. Tout le monde peut participer sans rejoindre la tribune.'
+                  : groupId
+                    ? 'Accès ouvert à tous — la tribune sert d’étiquette, pas de barrière.'
+                    : 'Participation immédiate pour toute la communauté Talk Foot.'}
               </p>
             </div>
             <Button variant="ghost" className="h-9 shrink-0 rounded-2xl" onClick={onClose}>
@@ -183,9 +205,17 @@ export function DebatePickerModal({
           </div>
 
           <div className="mt-4 flex gap-2">
-            {tabBtn('browse', `Parcourir (${groupDebates.length})`)}
-            {tabBtn('create', 'Publier le mien')}
+            {tabBtn('browse', adminLinkMode ? `Débats (${groupDebates.length})` : `Parcourir (${groupDebates.length})`)}
+            {!adminLinkMode ? tabBtn('create', 'Publier le mien') : null}
           </div>
+          {adminLinkMode ? (
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un débat…"
+              className="mt-3"
+            />
+          ) : null}
         </div>
 
         <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
@@ -282,19 +312,24 @@ export function DebatePickerModal({
                 </ul>
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-center">
-                  <p className="text-sm font-black text-slate-800">Aucun débat dans ce groupe</p>
-                  <p className="mt-2 text-xs font-semibold text-slate-600">
-                    Publie le tien ou demande à ton ami de le lier à la tribune générale — il apparaîtra ici pour
-                    tout le monde.
+                  <p className="text-sm font-black text-slate-800">
+                    {adminLinkMode ? 'Aucun débat trouvé' : 'Aucun débat dans ce groupe'}
                   </p>
-                  <Button
-                    type="button"
-                    variant="soft"
-                    className="mt-3 w-full rounded-2xl font-black"
-                    onClick={() => selectTab('create')}
-                  >
-                    Publier le mien
-                  </Button>
+                  <p className="mt-2 text-xs font-semibold text-slate-600">
+                    {adminLinkMode
+                      ? 'Essaie un autre mot-clé ou publie d’abord le débat depuis l’onglet Débats.'
+                      : 'Publie le tien ou demande à ton ami de le lier à la tribune générale — il apparaîtra ici pour tout le monde.'}
+                  </p>
+                  {!adminLinkMode ? (
+                    <Button
+                      type="button"
+                      variant="soft"
+                      className="mt-3 w-full rounded-2xl font-black"
+                      onClick={() => selectTab('create')}
+                    >
+                      Publier le mien
+                    </Button>
+                  ) : null}
                 </div>
               )}
             </div>

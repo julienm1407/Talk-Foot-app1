@@ -10,6 +10,7 @@ import {
   fetchCloudSupporterGroups,
   upsertCloudSupporterGroup,
 } from '../lib/supabase/supporterGroupsRegistry'
+import { adminDeleteGroup, fetchAdminRemovedGroupIds } from '../lib/supabase/adminContent'
 import { removeCustomDebatesForGroup } from '../utils/customGroupDebatesStorage'
 import { fetchGroupActivityStats } from '../lib/supabase/groupActivityStats'
 import { fetchGroupActivePresence } from '../lib/supabase/groupActivePresence'
@@ -80,6 +81,7 @@ export function useSupporterGroups() {
   const [presenceByGroupId, setPresenceByGroupId] = useState<Map<string, GroupActivePresence[]>>(
     () => new Map(),
   )
+  const [adminRemovedGroupIds, setAdminRemovedGroupIds] = useState<Set<string>>(() => new Set())
   const [supabaseActorId, setSupabaseActorId] = useState<string | null>(null)
   const cloudRefreshSeq = useRef(0)
   const refreshCloudGroupsRef = useRef<() => Promise<string[]>>(async () => [])
@@ -111,11 +113,20 @@ export function useSupporterGroups() {
 
   const rawGroups = useMemo(() => {
     const byId = new Map<string, SupporterGroup>()
-    for (const g of starterGroups) byId.set(g.id, enrichChannels(g))
-    for (const g of cloudGroups) byId.set(g.id, enrichChannels(g))
-    for (const g of custom) byId.set(g.id, enrichChannels(g))
+    for (const g of starterGroups) {
+      if (adminRemovedGroupIds.has(g.id)) continue
+      byId.set(g.id, enrichChannels(g))
+    }
+    for (const g of cloudGroups) {
+      if (adminRemovedGroupIds.has(g.id)) continue
+      byId.set(g.id, enrichChannels(g))
+    }
+    for (const g of custom) {
+      if (adminRemovedGroupIds.has(g.id)) continue
+      byId.set(g.id, enrichChannels(g))
+    }
     return Array.from(byId.values())
-  }, [custom, cloudGroups, enrichChannels])
+  }, [adminRemovedGroupIds, custom, cloudGroups, enrichChannels])
 
   const refreshGroupActivity = useCallback(async (groupIds: string[]) => {
     if (!groupIds.length) {
@@ -175,6 +186,21 @@ export function useSupporterGroups() {
     const map = await fetchSupporterGroupMemberCounts(sb, groupIds)
     setMemberCountsByGroupId(map)
   }, [])
+
+  const refreshAdminRemovedGroups = useCallback(async () => {
+    if (!isSupabaseConfigured()) {
+      setAdminRemovedGroupIds(new Set())
+      return
+    }
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    const ids = await fetchAdminRemovedGroupIds(sb)
+    setAdminRemovedGroupIds(ids)
+  }, [])
+
+  useEffect(() => {
+    void refreshAdminRemovedGroups()
+  }, [refreshAdminRemovedGroups])
 
   useEffect(() => {
     refreshGroupActivityRef.current = refreshGroupActivity
@@ -581,7 +607,11 @@ export function useSupporterGroups() {
   const deleteGroup = useCallback(
     async (id: string): Promise<{ ok: true } | { ok: false; error: string }> => {
       const target = groups.find((g) => g.id === id)
-      if (!target || target.createdBy !== 'me') {
+      if (!target) {
+        return { ok: false, error: 'not_found' }
+      }
+      const isOwner = target.createdBy === 'me'
+      if (!isOwner && !isAdmin) {
         return { ok: false, error: 'not_owner' }
       }
 
@@ -591,11 +621,18 @@ export function useSupporterGroups() {
         if (!session) {
           return { ok: false, error: 'no_session' }
         }
-        const del = await deleteCloudSupporterGroup(sb, id)
-        if (!del.ok) {
-          return { ok: false, error: del.error ?? 'cloud_delete_failed' }
+        if (isAdmin) {
+          const del = await adminDeleteGroup(sb, id)
+          if (!del.ok) {
+            return { ok: false, error: del.error ?? 'cloud_delete_failed' }
+          }
+        } else {
+          const del = await deleteCloudSupporterGroup(sb, id)
+          if (!del.ok) {
+            return { ok: false, error: del.error ?? 'cloud_delete_failed' }
+          }
+          await deleteCloudGroupMembership(sb, id)
         }
-        await deleteCloudGroupMembership(sb, id)
       }
 
       setCustom((prev) => {
@@ -610,14 +647,15 @@ export function useSupporterGroups() {
         return next
       })
       removeCustomDebatesForGroup(id)
+      setAdminRemovedGroupIds((prev) => new Set([...prev, id]))
 
       if (sb && isSupabaseConfigured()) {
-        await refreshCloudGroups()
+        await Promise.all([refreshCloudGroups(), refreshAdminRemovedGroups()])
       }
 
       return { ok: true }
     },
-    [groups, persistCustom, persistJoined, refreshCloudGroups],
+    [groups, isAdmin, persistCustom, persistJoined, refreshAdminRemovedGroups, refreshCloudGroups],
   )
 
   const updateGroup = useCallback(

@@ -21,7 +21,7 @@ as $$
   day_start as (
     select (date_trunc('day', now() at time zone 'Europe/Paris') at time zone 'Europe/Paris') as ts
   )
-  select
+  select 
     i.group_id,
     coalesce((
       select count(*)::integer

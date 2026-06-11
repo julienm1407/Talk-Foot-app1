@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { useSubscription } from '../hooks/useSubscription'
-import { canCreateDebate, canJoinGroup } from '../utils/subscriptionEntitlements'
+import { canJoinGroup } from '../utils/subscriptionEntitlements'
 import { TribuneLimitPopup } from '../components/subscription/TribuneLimitPopup'
 import { LeaveTribuneButton } from '../components/group/LeaveTribuneButton'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
@@ -54,6 +54,7 @@ import { EditGroupModal } from '../components/group/EditGroupModal'
 import { GroupJoinWriteFooter } from '../components/group/GroupJoinWriteFooter'
 import { DebatePickerModal } from '../components/group/DebatePickerModal'
 import { LinkedDebateBanner } from '../components/group/LinkedDebateBanner'
+import { useGroupFeaturedDebate } from '../hooks/useGroupFeaturedDebate'
 import { mergeDebatesForGroup } from '../utils/mergeGroupDebates'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { ShareButton } from '../components/ui/ShareButton'
@@ -208,18 +209,21 @@ export function GroupPage() {
     () => (group ? getGroupQuickEmotes(group) : []),
     [group],
   )
-  const { customForGroup, addCustomDebate, canAddDebate } = useCustomGroupDebates(group?.id)
+  const { customForGroup } = useCustomGroupDebates(group?.id)
 
   const { debates: cloudDebates, getDebateById: resolveDebate, refresh: refreshDebates } = useDebates()
   const groupDebates = useMemo(
     () => (group ? mergeDebatesForGroup(cloudDebates, customForGroup, group.id) : []),
     [cloudDebates, customForGroup, group],
   )
+  const isSiteAdmin = Boolean(authUser?.isAdmin)
+  const { featuredDebateId, linkDebate, unlinkDebate } = useGroupFeaturedDebate(group?.id)
+  const effectiveDebateId = debateFromQuery ?? featuredDebateId ?? null
   const debate =
-    debateFromQuery && group
-      ? groupDebates.find((d) => d.id === debateFromQuery) ??
-        resolveDebate(debateFromQuery) ??
-        customForGroup.find((d) => d.id === debateFromQuery)
+    effectiveDebateId && group
+      ? groupDebates.find((d) => d.id === effectiveDebateId) ??
+        resolveDebate(effectiveDebateId) ??
+        customForGroup.find((d) => d.id === effectiveDebateId)
       : undefined
 
   const {
@@ -404,7 +408,7 @@ export function GroupPage() {
 
   const [personalizeOpen, setPersonalizeOpen] = useState(false)
   const [debatePickerOpen, setDebatePickerOpen] = useState(false)
-  const [debatePickerInitialTab, setDebatePickerInitialTab] = useState<'browse' | 'create'>('browse')
+  const [adminDebateLinkError, setAdminDebateLinkError] = useState<string | null>(null)
   const [salonFormOpen, setSalonFormOpen] = useState(false)
   const [newSalonName, setNewSalonName] = useState('')
   const [newSalonDesc, setNewSalonDesc] = useState('')
@@ -415,50 +419,47 @@ export function GroupPage() {
   const [joinOtherError, setJoinOtherError] = useState<string | null>(null)
   const [tribuneLimitPopup, setTribuneLimitPopup] = useState<'join' | 'debate' | null>(null)
   const [leavingTribuneId, setLeavingTribuneId] = useState<string | null>(null)
-  const { tier, subscription, plan } = useSubscription()
+  const { tier } = useSubscription()
 
-  const openDebatePicker = useCallback((tab: 'browse' | 'create') => {
+  const openAdminDebatePicker = useCallback(() => {
+    setAdminDebateLinkError(null)
     setTribuneLimitPopup(null)
-    setDebatePickerInitialTab(tab)
     window.setTimeout(() => setDebatePickerOpen(true), 50)
   }, [])
 
-  const openDebateLimitPopup = useCallback(() => {
-    setDebatePickerOpen(false)
-    setTribuneLimitPopup('debate')
-  }, [])
+  const handleAdminUnlinkDebate = useCallback(async () => {
+    setAdminDebateLinkError(null)
+    const result = await unlinkDebate()
+    if (!result.ok) {
+      setAdminDebateLinkError('Impossible de détacher le débat (droits admin requis).')
+      return
+    }
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('debate')
+      return next
+    })
+  }, [unlinkDebate, setSearchParams])
 
-  const handleCreateMyDebate = useCallback(() => {
-    const next = `${location.pathname}${location.search}`
-    if (!authUser?.id || authUser.isAnonymous) {
-      navigate(`/login?next=${encodeURIComponent(next)}`)
-      return
-    }
-    const isAdmin = Boolean(authUser?.isAdmin)
-    if (!isAdmin && !plan.flags.canCreateDebates) {
-      openDebateLimitPopup()
-      return
-    }
-    const gate = canCreateDebate(tier, subscription.usage ?? {}, new Date(), isAdmin)
-    if (!gate.ok) {
-      openDebateLimitPopup()
-      return
-    }
-    setTribuneLimitPopup(null)
-    setDebatePickerInitialTab('create')
-    window.setTimeout(() => setDebatePickerOpen(true), 50)
-  }, [
-    authUser?.id,
-    authUser?.isAdmin,
-    authUser?.isAnonymous,
-    location.pathname,
-    location.search,
-    navigate,
-    openDebateLimitPopup,
-    plan.flags.canCreateDebates,
-    tier,
-    subscription.usage,
-  ])
+  const handleAdminPickDebate = useCallback(
+    async (debateId: string) => {
+      setAdminDebateLinkError(null)
+      const result = await linkDebate(debateId)
+      if (!result.ok) {
+        setAdminDebateLinkError('Impossible de lier ce débat (droits admin requis).')
+        return
+      }
+      setDebatePickerOpen(false)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('debate')
+        return next
+      })
+    },
+    [linkDebate, setSearchParams],
+  )
+
+
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
 
   const openJoinLimitPopup = useCallback(() => {
@@ -925,6 +926,7 @@ export function GroupPage() {
   const isGroupMember = group.createdBy === 'me' || isJoined(group.id)
   /** Créateur / gérant de la tribune (tribune que tu as créée). */
   const canManageGroup = group.createdBy === 'me'
+  const canDeleteGroup = group.createdBy === 'me' || isSiteAdmin
   const isPublicDebateInGeneral =
     channel != null &&
     channel.id === 'general' &&
@@ -953,17 +955,6 @@ export function GroupPage() {
     (groupMainClubId ? sportMonksTeamLogoUrlForClubId(groupMainClubId) : null) ??
     (groupMainClubId ? CLUB_OFFICIAL_LOGO_BY_ID[groupMainClubId] : null) ??
     null
-
-  const createDebateBtnClass = (size: 'default' | 'compact' = 'default') =>
-    cn(
-      'inline-flex min-h-tf-touch items-center justify-center gap-1.5 font-display outline-none focus-visible:ring-2 focus-visible:ring-tf-dark/45 focus-visible:ring-offset-2',
-      'shrink-0 font-black whitespace-nowrap border ring-1 transition-colors',
-      size === 'compact' && 'h-7 w-auto rounded-lg px-2 text-[9px]',
-      size === 'default' && 'w-full rounded-2xl px-4 py-3 text-sm tracking-tight',
-      L
-        ? 'border-violet-300/70 !bg-violet-50 !text-violet-950 ring-violet-200/80 hover:!bg-violet-100'
-        : 'border-violet-300/55 !bg-violet-950/70 !text-white ring-violet-400/35 hover:!bg-violet-900/85 shadow-[0_4px_16px_rgba(88,28,135,0.42)]',
-    )
 
   return (
     <>
@@ -1141,7 +1132,7 @@ export function GroupPage() {
                   Personnaliser
                 </Button>
               ) : null}
-              {group.createdBy === 'me' ? (
+              {canDeleteGroup ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -1150,7 +1141,9 @@ export function GroupPage() {
                   onClick={() => {
                     if (deleteBusy) return
                     const ok = window.confirm(
-                      `Supprimer définitivement la tribune « ${group.name} » ?\n\nCette action est irréversible. Les membres ne pourront plus y accéder.`,
+                      isSiteAdmin && group.createdBy !== 'me'
+                        ? `Supprimer définitivement la tribune « ${group.name} » (action admin) ?\n\nTous les messages et membres seront effacés. Irréversible.`
+                        : `Supprimer définitivement la tribune « ${group.name} » ?\n\nCette action est irréversible. Les membres ne pourront plus y accéder.`,
                     )
                     if (!ok) return
                     setDeleteBusy(true)
@@ -1159,7 +1152,9 @@ export function GroupPage() {
                       setDeleteBusy(false)
                       if (!result.ok) {
                         window.alert(
-                          'Impossible de supprimer la tribune pour le moment. Réessaie dans un instant.',
+                          result.error === 'admin_only' || result.error === 'not_owner'
+                            ? 'Suppression réservée aux administrateurs ou au créateur de la tribune.'
+                            : 'Impossible de supprimer la tribune pour le moment. Réessaie dans un instant.',
                         )
                         return
                       }
@@ -1167,7 +1162,11 @@ export function GroupPage() {
                     })()
                   }}
                 >
-                  {deleteBusy ? 'Suppression…' : 'Supprimer la tribune'}
+                  {deleteBusy
+                    ? 'Suppression…'
+                    : isSiteAdmin && group.createdBy !== 'me'
+                      ? 'Supprimer (admin)'
+                      : 'Supprimer la tribune'}
                 </Button>
               ) : null}
             </div>
@@ -1339,17 +1338,19 @@ export function GroupPage() {
                 <span aria-hidden>⚙️</span>
               </Button>
             ) : null}
-            {group.createdBy === 'me' ? (
+            {canDeleteGroup ? (
               <Button
                 type="button"
                 variant="ghost"
                 className="size-8 shrink-0 rounded-xl p-0 text-base text-rose-700"
-                title="Supprimer la tribune"
+                title={isSiteAdmin && group.createdBy !== 'me' ? 'Supprimer (admin)' : 'Supprimer la tribune'}
                 disabled={deleteBusy}
                 onClick={() => {
                   if (deleteBusy) return
                   const ok = window.confirm(
-                    `Supprimer « ${group.name} » ? Action irréversible.`,
+                    isSiteAdmin && group.createdBy !== 'me'
+                      ? `Supprimer « ${group.name} » (admin) ? Action irréversible.`
+                      : `Supprimer « ${group.name} » ? Action irréversible.`,
                   )
                   if (!ok) return
                   setDeleteBusy(true)
@@ -1764,50 +1765,43 @@ export function GroupPage() {
                 </div>
               </div>
               <div className="flex w-full flex-col gap-2.5 pt-1 sm:w-auto sm:min-w-[min(100%,18rem)] sm:items-stretch sm:pt-0">
-                {channel?.id === 'general' ? (
+                {channel?.id === 'general' && isSiteAdmin ? (
                   <>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className={cn(
-                      'w-full shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black tracking-tight',
-                      'shadow-[0_8px_28px_rgba(255,59,59,0.32)] ring-2 ring-white/20',
-                      !L && 'border-orange-400/45 hover:shadow-[0_10px_32px_rgba(255,59,59,0.4)]',
-                    )}
-                    onClick={() => openDebatePicker('browse')}
-                  >
-                    <span aria-hidden className="text-base leading-none">
-                      {debateFromQuery ? '↻' : '🗣️'}
-                    </span>
-                    <span className="max-sm:hidden">
-                      {debateFromQuery
-                        ? 'Changer le débat de la tribune'
-                        : groupDebates.length > 0
-                          ? `Débat de la tribune (${groupDebates.length})`
-                          : 'Débat de la tribune'}
-                    </span>
-                    <span className="sm:hidden">
-                      {debateFromQuery
-                        ? 'Changer le débat'
-                        : groupDebates.length > 0
-                          ? `Débat (${groupDebates.length})`
-                          : 'Débat tribune'}
-                    </span>
-                  </Button>
-                  <button
-                    type="button"
-                    className={createDebateBtnClass('default')}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleCreateMyDebate()
-                    }}
-                  >
-                    <span aria-hidden className="text-base leading-none">
-                      ✍️
-                    </span>
-                    Créer mon débat
-                  </button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className={cn(
+                        'w-full shrink-0 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black tracking-tight',
+                        'shadow-[0_8px_28px_rgba(255,59,59,0.32)] ring-2 ring-white/20',
+                        !L && 'border-orange-400/45 hover:shadow-[0_10px_32px_rgba(255,59,59,0.4)]',
+                      )}
+                      onClick={openAdminDebatePicker}
+                    >
+                      <span aria-hidden className="text-base leading-none">
+                        {effectiveDebateId ? '↻' : '🗣️'}
+                      </span>
+                      <span className="max-sm:hidden">
+                        {effectiveDebateId ? 'Changer le débat lié' : 'Lier un débat (admin)'}
+                      </span>
+                      <span className="sm:hidden">
+                        {effectiveDebateId ? 'Changer débat' : 'Lier débat'}
+                      </span>
+                    </Button>
+                    {effectiveDebateId ? (
+                      <button
+                        type="button"
+                        className={cn(
+                          'w-full shrink-0 whitespace-nowrap rounded-2xl border px-4 py-3 text-sm font-bold transition',
+                          tfChipSurface(L, 'hover:opacity-95'),
+                        )}
+                        onClick={() => void handleAdminUnlinkDebate()}
+                      >
+                        Détacher le débat
+                      </button>
+                    ) : null}
+                    {adminDebateLinkError ? (
+                      <p className="text-xs font-semibold text-rose-600">{adminDebateLinkError}</p>
+                    ) : null}
                   </>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
@@ -1826,30 +1820,12 @@ export function GroupPage() {
                       {virageMode ? `✓ ${LIVE_FIL_EQUIPE_COEUR.labelOn}` : LIVE_FIL_EQUIPE_COEUR.label}
                     </button>
                   ) : null}
-                  {channel?.id === 'general' && debateFromQuery ? (
-                    <button
-                      type="button"
-                      className={cn(
-                        'shrink-0 whitespace-nowrap rounded-2xl border px-2.5 py-1.5 text-[10px] font-bold transition sm:px-3 sm:text-[11px]',
-                        tfChipSurface(L, 'hover:opacity-95'),
-                      )}
-                      onClick={() => {
-                        setSearchParams((prev) => {
-                          const next = new URLSearchParams(prev)
-                          next.delete('debate')
-                          return next
-                        })
-                      }}
-                    >
-                      Détacher
-                    </button>
-                  ) : null}
                 </div>
               </div>
             </div>
 
             <div className="relative z-[2] flex flex-nowrap touch-manipulation items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
-              {channel?.id === 'general' ? (
+              {channel?.id === 'general' && isSiteAdmin ? (
                 <>
                   <button
                     type="button"
@@ -1860,32 +1836,26 @@ export function GroupPage() {
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      openDebatePicker('browse')
+                      openAdminDebatePicker()
                     }}
                   >
                     <span aria-hidden className="mr-0.5">
-                      {debateFromQuery ? '↻' : '🗣️'}
+                      {effectiveDebateId ? '↻' : '🗣️'}
                     </span>
-                    {debateFromQuery
-                      ? 'Changer'
-                      : groupDebates.length > 0
-                        ? `Débat (${groupDebates.length})`
-                        : 'Débat'}
+                    {effectiveDebateId ? 'Changer' : 'Lier débat'}
                   </button>
-                  <button
-                    type="button"
-                    className={cn(createDebateBtnClass('compact'), 'touch-manipulation')}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleCreateMyDebate()
-                    }}
-                  >
-                    <span aria-hidden className="mr-0.5">
-                      ✍️
-                    </span>
-                    Créer
-                  </button>
+                  {effectiveDebateId ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        'h-7 shrink-0 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold',
+                        tfChipSurface(L, 'hover:opacity-95'),
+                      )}
+                      onClick={() => void handleAdminUnlinkDebate()}
+                    >
+                      Détacher
+                    </button>
+                  ) : null}
                 </>
               ) : null}
               {preferencesComplete && favoriteClubIds.length > 0 ? (
@@ -1901,24 +1871,6 @@ export function GroupPage() {
                   title={LIVE_FIL_EQUIPE_COEUR.title}
                 >
                   {virageMode ? '✓ Cœur' : 'Cœur'}
-                </button>
-              ) : null}
-              {channel?.id === 'general' && debateFromQuery ? (
-                <button
-                  type="button"
-                  className={cn(
-                    'h-7 shrink-0 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold',
-                    tfChipSurface(L, 'hover:opacity-95'),
-                  )}
-                  onClick={() => {
-                    setSearchParams((prev) => {
-                      const next = new URLSearchParams(prev)
-                      next.delete('debate')
-                      return next
-                    })
-                  }}
-                >
-                  Détacher
                 </button>
               ) : null}
               <details
@@ -1955,7 +1907,7 @@ export function GroupPage() {
               <>
                 <LinkedDebateBanner
                   debate={debate}
-                  debateId={debateFromQuery}
+                  debateId={effectiveDebateId}
                   className="mt-3 hidden lg:mt-4 lg:block"
                 />
                 <details
@@ -1989,7 +1941,7 @@ export function GroupPage() {
                       L ? 'border-tf-dark/10' : 'border-white/10',
                     )}
                   >
-                    <LinkedDebateBanner debate={debate} debateId={debateFromQuery} className="!border-0 !bg-transparent !p-0 !shadow-none !ring-0" />
+                    <LinkedDebateBanner debate={debate} debateId={effectiveDebateId} className="!border-0 !bg-transparent !p-0 !shadow-none !ring-0" />
                   </div>
                 </details>
               </>
@@ -2168,33 +2120,17 @@ export function GroupPage() {
         onSave={(patch) => updateGroup(group.id, patch)}
       />
 
-      <DebatePickerModal
-        open={debatePickerOpen}
-        initialTab={debatePickerInitialTab}
-        groupId={group.id}
-        customForGroup={customForGroup}
-        onClose={() => {
-          setDebatePickerOpen(false)
-          setDebatePickerInitialTab('browse')
-        }}
-        onPick={(debateId) => {
-          setSearchParams((prev) => {
-            const next = new URLSearchParams(prev)
-            next.set('debate', debateId)
-            return next
-          })
-        }}
-        onPublishCustom={(input) => {
-          const r = addCustomDebate(input)
-          if (!r.ok) {
-            openDebateLimitPopup()
-            return null
-          }
-          return r.debate
-        }}
-        canCreateDebate={canAddDebate}
-        onBlockedCreate={openDebateLimitPopup}
-      />
+      {isSiteAdmin ? (
+        <DebatePickerModal
+          open={debatePickerOpen}
+          adminLinkMode
+          groupId={group.id}
+          customForGroup={[]}
+          onClose={() => setDebatePickerOpen(false)}
+          onPick={(debateId) => void handleAdminPickDebate(debateId)}
+          onPublishCustom={() => null}
+        />
+      ) : null}
 
       <TribuneLimitPopup
         open={tribuneLimitPopup !== null}
