@@ -11,6 +11,8 @@ import { useProfile } from '../../hooks/useProfile'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { LIVE_FIL_EQUIPE_COEUR } from '../../data/tribunes'
 import { useSupporterTintMode } from '../../hooks/useSupporterTintMode'
+import { useAppearance } from '../../contexts/AppearanceContext'
+import { TF_TEXT_FG, TF_TEXT_MUTED, TF_TEXT_SUBTLE, tfGhostOnCard } from '../../theme/appearanceClasses'
 import { cn } from '../../utils/cn'
 
 const usersById = Object.fromEntries(
@@ -26,6 +28,8 @@ export function TopCommentsFeed({
   const { profile } = useProfile()
   const { virageMode, favoriteClubIds } = useFanPreferences()
   const { supporterTintActive, team } = useSupporterTintMode()
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
 
   const filtered = useMemo(() => {
     const active = favoriteClubIds.length > 0 && virageMode
@@ -42,7 +46,7 @@ export function TopCommentsFeed({
 
   const filterHint =
     favoriteClubIds.length > 0 && virageMode ? (
-      <p className="text-[10px] font-bold text-violet-700 sm:text-xs">
+      <p className={cn('text-[10px] font-bold sm:text-xs', L ? 'text-violet-700' : 'text-violet-200')}>
         {LIVE_FIL_EQUIPE_COEUR.label} : commentaires liés à tes clubs favoris.
       </p>
     ) : null
@@ -50,13 +54,16 @@ export function TopCommentsFeed({
   const empty = (
     <div className={cn('text-center', embedded ? 'px-4 py-8 sm:py-10' : 'px-5 py-12 sm:px-6')}>
       <div className="text-3xl opacity-40 sm:text-4xl">💬</div>
-      <p className="mt-2 text-sm font-bold text-slate-600">Aucun commentaire liké pour l’instant</p>
-      <p className="mt-1 text-xs font-medium text-slate-500">
+      <p className={cn('mt-2 text-sm font-bold', TF_TEXT_FG)}>Aucun commentaire liké pour l’instant</p>
+      <p className={cn('mt-1 text-xs font-medium', TF_TEXT_MUTED)}>
         Like des commentaires dans les lives pour les voir ici
       </p>
       <Link
         to="/match"
-        className="mt-3 inline-flex rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-xs font-black text-slate-900 transition hover:bg-white sm:mt-4 sm:px-4 sm:text-sm"
+        className={cn(
+          'mt-3 inline-flex rounded-xl px-3 py-2 text-xs font-black sm:mt-4 sm:px-4 sm:text-sm',
+          tfGhostOnCard(L, 'hover:opacity-95'),
+        )}
       >
         Voir les matchs →
       </Link>
@@ -78,8 +85,9 @@ export function TopCommentsFeed({
               embedded
                 ? 'px-3 py-2.5 sm:px-3.5 sm:py-3'
                 : 'px-5 py-4 sm:px-6',
-              'border-slate-200/80 bg-white/95 hover:border-slate-300 hover:bg-white',
-              'dark:border-white/12 dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:bg-white/[0.06]',
+              L
+                ? 'border-slate-200/80 bg-white/95 hover:border-slate-300 hover:bg-white'
+                : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] hover:border-sky-300/35 hover:bg-[color:color-mix(in_srgb,var(--tf-c30-surface-soft)_92%,white)]',
             )}
           >
             <ProfileCharacterThumb
@@ -91,15 +99,20 @@ export function TopCommentsFeed({
             />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="text-xs font-bold text-slate-800 sm:text-sm">{c.username}</span>
-                <span className="text-[10px] font-medium text-slate-500 sm:text-[11px]">
+                <span className={cn('text-xs font-bold sm:text-sm', TF_TEXT_FG)}>{c.username}</span>
+                <span className={cn('text-[10px] font-medium sm:text-[11px]', TF_TEXT_SUBTLE)}>
                   • {c.matchLabel}
                 </span>
               </div>
-              <p className="mt-1 line-clamp-2 text-xs font-medium leading-snug text-slate-700 sm:text-sm">
+              <p className={cn('mt-1 line-clamp-2 text-xs font-medium leading-snug sm:text-sm', TF_TEXT_FG)}>
                 {c.text}
               </p>
-              <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-300 sm:mt-2 sm:text-xs">
+              <div
+                className={cn(
+                  'mt-1.5 flex items-center gap-1 text-[11px] font-semibold sm:mt-2 sm:text-xs',
+                  L ? 'text-rose-600' : 'text-rose-300',
+                )}
+              >
                 <span aria-hidden>❤️</span>
                 <span>
                   {c.likes} like{c.likes > 1 ? 's' : ''}
@@ -114,8 +127,17 @@ export function TopCommentsFeed({
 
   if (embedded) {
     return (
-      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-50/70 dark:border-white/12 dark:bg-white/[0.02]">
-        {filterHint ? <div className="border-b border-slate-200/60 px-4 py-2 dark:border-white/10">{filterHint}</div> : null}
+      <div
+        className={cn(
+          'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border',
+          L ? 'border-slate-200/70 bg-slate-50/70' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
+        )}
+      >
+        {filterHint ? (
+          <div className={cn('border-b px-4 py-2', L ? 'border-slate-200/60' : 'border-[color:var(--tf-c30-border)]')}>
+            {filterHint}
+          </div>
+        ) : null}
         {list}
       </div>
     )
@@ -124,13 +146,13 @@ export function TopCommentsFeed({
   return (
     <Card className="overflow-hidden">
       <div className="space-y-1.5 px-5 py-4 sm:space-y-2 sm:px-6 sm:py-5">
-        <div className="text-[11px] font-black tracking-wide text-slate-600">COMMUNAUTÉ</div>
-        <div className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+        <div className={cn('text-[11px] font-black tracking-wide', TF_TEXT_MUTED)}>COMMUNAUTÉ</div>
+        <div className={cn('text-2xl font-black tracking-tight sm:text-3xl', TF_TEXT_FG)}>
           {supporterTintActive && team?.shortName
             ? `Top com. ${team.shortName}`
             : 'Top commentaires'}
         </div>
-        <div className="text-sm font-semibold text-slate-700 sm:text-base">
+        <div className={cn('text-sm font-semibold sm:text-base', TF_TEXT_MUTED)}>
           Les meilleurs commentaires des lives, likés par la communauté
           {filterHint ? <span className="mt-1 block">{filterHint}</span> : null}
         </div>
