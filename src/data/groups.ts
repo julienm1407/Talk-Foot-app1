@@ -1,4 +1,5 @@
 import type { SupporterGroup } from '../types/group'
+import { nationSupporterGroups } from './nationSupporterGroups'
 import { teamColors } from './teams'
 
 const now = Date.now()
@@ -37,7 +38,7 @@ const baseChannels = [
   },
 ] as const
 
-export const starterGroups: SupporterGroup[] = [
+const clubStarterGroups: SupporterGroup[] = [
   {
     id: 'g-roazhon-kop',
     name: 'Kop Roazhon',
@@ -527,4 +528,7 @@ export const starterGroups: SupporterGroup[] = [
     lastMessagePreview: 'Südtribüne mood : qui mène le chant dans le chat ?',
   },
 ]
+
+/** Tribunes clubs + une tribune publique par sélection CDM 2026. */
+export const starterGroups: SupporterGroup[] = [...clubStarterGroups, ...nationSupporterGroups]
 

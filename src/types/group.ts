@@ -48,6 +48,8 @@ export type GroupFanTags = {
   clubIds: string[]
   /** Libellés libres pour rattachement pays/zone (ex: France, Maghreb, Europe). */
   countryLabels?: string[]
+  /** Code ISO de la sélection (tribunes CDM nation). */
+  nationIso?: string
 }
 
 /** Soutien actif sur la tribune (facepile — auteurs réels des 30 dernières minutes). */

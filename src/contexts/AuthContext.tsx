@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
-import { useClerk, useUser } from '@clerk/clerk-react'
+import { useClerk, useSignIn, useSignUp, useUser } from '@clerk/clerk-react'
 import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -248,15 +248,10 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithOAuthProvider = useCallback(
     async (provider: TalkFootOauthProviderId) => {
-      const demoEmail =
-        provider === 'github'
-          ? 'dev@users.noreply.github.com'
-          : provider === 'apple'
-            ? undefined
-            : `${provider}@demo.talkfoot.local`
+      if (provider !== 'google') return false
       login({
         id: `${provider}-${Date.now()}`,
-        email: demoEmail,
+        email: `${provider}@demo.talkfoot.local`,
         displayName: 'You',
         provider,
       })
@@ -484,6 +479,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   )
 
   const loginWithOAuthProvider = useCallback(async (provider: TalkFootOauthProviderId): Promise<boolean> => {
+    if (provider !== 'google') return false
     const sb = getSupabaseBrowserClient()
     if (!sb) {
       setAuthNotice('Supabase non configuré (VITE_SUPABASE_URL / ANON_KEY).')
@@ -555,11 +551,23 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+function clerkAuthProviderErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'errors' in err) {
+    const first = (err as { errors?: { longMessage?: string; message?: string }[] }).errors?.[0]
+    return first?.longMessage || first?.message || fallback
+  }
+  if (err instanceof Error && err.message.trim()) return err.message
+  return fallback
+}
+
 function ClerkAuthProvider({ children }: { children: ReactNode }) {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded: userLoaded } = useUser()
   const clerk = useClerk()
+  const { isLoaded: signInLoaded, signIn, setActive: setSignInActive } = useSignIn()
+  const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp()
   const [authNotice, setAuthNotice] = useState<string | null>(null)
   const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
+  const isLoaded = userLoaded && signInLoaded && signUpLoaded
 
   const mappedUser: AuthUser | null = user
     ? withAdminFlag({
@@ -570,7 +578,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
           user.username ||
           user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
           'Supporteur',
-        provider: 'oauth',
+        provider: user.externalAccounts?.some((a) => a.provider === 'google') ? 'google' : 'email',
         avatarUrl: user.imageUrl,
       })
     : null
@@ -579,32 +587,87 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     /* géré par Clerk */
   }, [])
 
-  const loginWithEmail = useCallback(async (_email: string, _password: string): Promise<boolean> => {
-    setAuthNotice('Connexion email désactivée ici. Utilise Google via Clerk.')
-    return false
-  }, [])
+  const loginWithEmail = useCallback(
+    async (email: string, password: string): Promise<boolean> => {
+      if (!signIn) return false
+      setAuthNotice(null)
+      try {
+        const result = await signIn.create({ identifier: email.trim(), password })
+        if (result.status === 'complete' && result.createdSessionId) {
+          await setSignInActive({ session: result.createdSessionId })
+          return true
+        }
+        setAuthNotice('Connexion impossible. Vérifie ton email et ton mot de passe.')
+        return false
+      } catch (err) {
+        setAuthNotice(clerkAuthProviderErrorMessage(err, 'Email ou mot de passe incorrect.'))
+        return false
+      }
+    },
+    [signIn, setSignInActive],
+  )
 
   const signUpWithEmail = useCallback(
-    async (_email: string, _password: string, _displayName?: string): Promise<SignUpEmailResult> => {
-      setAuthNotice('Inscription email désactivée ici. Utilise Google via Clerk.')
-      return { status: 'error', message: 'Inscription email désactivée ici. Utilise Google via Clerk.' }
+    async (email: string, password: string, displayName?: string): Promise<SignUpEmailResult> => {
+      if (!signUp) {
+        return { status: 'error', message: 'Inscription indisponible, réessaie dans un instant.' }
+      }
+      setAuthNotice(null)
+      const name = (displayName || email.trim().split('@')[0]).trim() || 'Supporteur'
+      try {
+        await signUp.create({
+          emailAddress: email.trim(),
+          password,
+          firstName: name,
+        })
+        if (signUp.status === 'complete' && signUp.createdSessionId) {
+          await setSignUpActive({ session: signUp.createdSessionId })
+          return { status: 'signed_in' }
+        }
+        if (signUp.unverifiedFields?.includes('email_address')) {
+          const base = window.location.origin + (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
+          await signUp.prepareEmailAddressVerification({
+            strategy: 'email_link',
+            redirectUrl: `${base}/login`,
+          })
+        }
+        setAuthNotice(
+          'Compte créé : vérifie ta boîte mail pour confirmer ton adresse, puis connecte-toi.',
+        )
+        return { status: 'confirm_email' }
+      } catch (err) {
+        return {
+          status: 'error',
+          message: clerkAuthProviderErrorMessage(err, 'Inscription impossible. Réessaie avec un autre email.'),
+        }
+      }
     },
-    [],
+    [signUp, setSignUpActive],
   )
 
   const loginWithOAuthProvider = useCallback(
     async (provider: TalkFootOauthProviderId): Promise<boolean> => {
-      if (provider !== 'google') {
-        setAuthNotice('Seule la connexion Google est activée sur Clerk.')
-        return false
-      }
+      if (provider !== 'google') return false
       const next = new URLSearchParams(window.location.search).get('next') || '/'
-      await clerk.redirectToSignIn({
-        signInFallbackRedirectUrl: next.startsWith('/') ? next : '/',
-      })
+      const fallback = next.startsWith('/') ? next : '/'
+      setAuthNotice(null)
+      if (signIn) {
+        try {
+          const base = window.location.origin + (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
+          await signIn.authenticateWithRedirect({
+            strategy: 'oauth_google',
+            redirectUrl: `${base}/login/sso-callback`,
+            redirectUrlComplete: fallback,
+          })
+          return true
+        } catch {
+          /* repli Clerk hébergé */
+        }
+      }
+      await clerk.redirectToSignIn({ signInFallbackRedirectUrl: fallback })
       return true
     },
-    [clerk],
+    [clerk, signIn],
   )
 
   const logout = useCallback(async () => {

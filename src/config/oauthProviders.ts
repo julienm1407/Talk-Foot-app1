@@ -1,8 +1,7 @@
 import type { Provider } from '@supabase/supabase-js'
 
 /**
- * Fournisseurs OAuth affichés sur la page de connexion et reconnus côté profil Talk Foot.
- * À activer un par un dans Supabase → Authentication → Providers (Google, Apple, Facebook, Discord, GitHub).
+ * Fournisseurs OAuth reconnus côté profil (comptes créés avant simplification login).
  */
 export const TALKFOOT_OAUTH_IDS = ['google', 'apple', 'facebook', 'discord', 'github'] as const satisfies readonly Provider[]
 
@@ -12,18 +11,13 @@ export function isTalkFootOAuthProvider(p: string): p is TalkFootOauthProviderId
   return (TALKFOOT_OAUTH_IDS as readonly string[]).includes(p)
 }
 
-export const TALKFOOT_OAUTH_PROVIDERS: readonly {
-  id: TalkFootOauthProviderId
-  label: string
-  /** Variante visuelle du bouton */
-  variant: 'google' | 'apple' | 'facebook' | 'discord' | 'github'
-}[] = [
-  { id: 'google', label: 'Continuer avec Google', variant: 'google' },
-  { id: 'apple', label: 'Continuer avec Apple', variant: 'apple' },
-  { id: 'facebook', label: 'Continuer avec Facebook', variant: 'facebook' },
-  { id: 'discord', label: 'Continuer avec Discord', variant: 'discord' },
-  { id: 'github', label: 'Continuer avec GitHub', variant: 'github' },
+/** Seul OAuth proposé à l’inscription / connexion. */
+export const LOGIN_OAUTH_PROVIDERS = [
+  { id: 'google' as const, label: 'Continuer avec Google', variant: 'google' as const },
 ]
+
+/** @deprecated Utiliser {@link LOGIN_OAUTH_PROVIDERS} */
+export const TALKFOOT_OAUTH_PROVIDERS = LOGIN_OAUTH_PROVIDERS
 
 /** Libellé court pour les textes (modale profil OAuth, etc.) */
 export function oauthProviderDisplayName(id: TalkFootOauthProviderId | string): string {

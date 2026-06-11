@@ -12,6 +12,7 @@ import { WC_2026_COMP_ID } from '../utils/seasonMode'
 import { NationSquadList } from '../components/cdm/NationSquadList'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { NationFavoriteButton } from '../components/cdm/NationFavoriteButton'
+import { NationTribuneCard } from '../components/cdm/NationTribuneCard'
 import { cn } from '../utils/cn'
 
 /**
@@ -258,10 +259,7 @@ export function NationPage() {
         <NationSquadList squad={wcSquad ?? null} loading={squadLoading} />
       </section>
 
-      <section
-        aria-label="À venir bientôt"
-        className="grid gap-3 sm:grid-cols-2"
-      >
+      <section aria-label="Communauté et parcours" className="grid gap-3 sm:grid-cols-2">
         <article className="rounded-tf-xl border border-dashed border-tf-c30-border bg-tf-c30-surface-soft px-4 py-5 text-sm font-medium text-tf-app-muted">
           <p className="text-[11px] font-black uppercase tracking-[0.2em] text-tf-cdm-gold">
             Bientôt
@@ -274,17 +272,7 @@ export function NationPage() {
             agrégés sur cette page.
           </p>
         </article>
-        <article className="rounded-tf-xl border border-dashed border-tf-c30-border bg-tf-c30-surface-soft px-4 py-5 text-sm font-medium text-tf-app-muted">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-tf-cdm-gold">
-            Bientôt
-          </p>
-          <p className="mt-1 font-display text-lg font-black text-tf-app-fg">
-            Tribune {nation.nameFr}
-          </p>
-          <p className="mt-1.5 leading-snug">
-            Une tribune dédié aux supporters de cette sélection avec débats, pronos et chants.
-          </p>
-        </article>
+        <NationTribuneCard nation={nation} />
       </section>
     </div>
   )
