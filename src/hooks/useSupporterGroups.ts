@@ -19,7 +19,7 @@ import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import type { GroupActivePresence, SupporterGroup } from '../types/group'
 import { normalizeHashtagList } from '../utils/groupHashtags'
-import { computeGroupIntensity } from '../utils/groupIntensity'
+import { computeGroupIntensity, type GroupIntensityInput } from '../utils/groupIntensity'
 import { useSubscription } from './useSubscription'
 import {
   canCreateGroup,
@@ -83,6 +83,7 @@ export function useSupporterGroups() {
   const [supabaseActorId, setSupabaseActorId] = useState<string | null>(null)
   const cloudRefreshSeq = useRef(0)
   const refreshCloudGroupsRef = useRef<() => Promise<string[]>>(async () => [])
+  const refreshGroupActivityRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
   const refreshMemberCountsRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
   const refreshGroupPresenceRef = useRef<(groupIds: string[]) => Promise<void>>(async () => {})
   const rawGroupIdsRef = useRef<string[]>([])
@@ -131,6 +132,20 @@ export function useSupporterGroups() {
     setActivityByGroupId(map)
   }, [])
 
+  const bumpGroupActivity = useCallback((groupId: string, patch: Partial<GroupIntensityInput>) => {
+    if (!groupId) return
+    setActivityByGroupId((prev) => {
+      const next = new Map(prev)
+      const cur = next.get(groupId) ?? { messagesToday: 0, reactionsToday: 0, onlineNow: 0 }
+      next.set(groupId, {
+        messagesToday: cur.messagesToday + (patch.messagesToday ?? 0),
+        reactionsToday: cur.reactionsToday + (patch.reactionsToday ?? 0),
+        onlineNow: patch.onlineNow != null ? Math.max(cur.onlineNow, patch.onlineNow) : cur.onlineNow,
+      })
+      return next
+    })
+  }, [])
+
   const refreshGroupPresence = useCallback(async (groupIds: string[]) => {
     if (!groupIds.length) {
       setPresenceByGroupId(new Map())
@@ -162,6 +177,10 @@ export function useSupporterGroups() {
   }, [])
 
   useEffect(() => {
+    refreshGroupActivityRef.current = refreshGroupActivity
+  }, [refreshGroupActivity])
+
+  useEffect(() => {
     refreshMemberCountsRef.current = refreshMemberCounts
   }, [refreshMemberCounts])
 
@@ -182,7 +201,7 @@ export function useSupporterGroups() {
       void refreshGroupActivity(ids)
       void refreshMemberCounts(ids)
       void refreshGroupPresence(ids)
-    }, 45_000)
+    }, 30_000)
     return () => window.clearInterval(t)
   }, [rawGroups, refreshGroupActivity, refreshMemberCounts, refreshGroupPresence])
 
@@ -311,6 +330,20 @@ export function useSupporterGroups() {
             const ids = rawGroupIdsRef.current
             void refreshMemberCountsRef.current(ids)
             void refreshGroupPresenceRef.current(ids)
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'supporter_group_channel_messages' },
+          () => {
+            void refreshGroupActivityRef.current(rawGroupIdsRef.current)
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'supporter_group_message_likes' },
+          () => {
+            void refreshGroupActivityRef.current(rawGroupIdsRef.current)
           },
         )
         .subscribe((status) => {
@@ -688,5 +721,6 @@ export function useSupporterGroups() {
     isJoined,
     refreshCloudGroups,
     refreshGroupActivity: refreshGroupActivityNow,
+    bumpGroupActivity,
   }
 }

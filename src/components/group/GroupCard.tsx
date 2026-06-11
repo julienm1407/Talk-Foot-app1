@@ -8,6 +8,7 @@ import { Avatar } from '../ui/Avatar'
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { CLUB_OFFICIAL_LOGO_BY_ID } from '../../data/clubOfficialLogoUrls'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
+import { formatGroupAmbianceLabel } from '../../utils/groupIntensity'
 
 const kindLabel: Record<NonNullable<SupporterGroup['groupKind']>, string> = {
   public: 'Public',
@@ -139,6 +140,7 @@ export function GroupCard({
   const L = appearance === 'light'
   const online = group.onlineNow ?? 0
   const msgs = group.messagesToday ?? 0
+  const ambianceLabel = formatGroupAmbianceLabel(group.intensity)
   const preview = group.lastMessagePreview
   const rail = variant === 'encartRail'
   const encart = variant === 'encart'
@@ -361,7 +363,7 @@ export function GroupCard({
             <div
               className={cn('flex items-center justify-between gap-2 text-[10px] font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}
             >
-              <span>{group.intensity}% ambiance</span>
+              {ambianceLabel ? <span>{ambianceLabel}</span> : <span className="opacity-80">Tribune calme</span>}
               <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}</span>
             </div>
           ) : null}
@@ -528,7 +530,11 @@ export function GroupCard({
                 L ? 'text-slate-600' : 'text-tf-app-muted',
               )}
             >
-              <span className="tabular-nums">{group.intensity}% ambiance</span>
+              {ambianceLabel ? (
+                <span className="tabular-nums">{ambianceLabel}</span>
+              ) : (
+                <span className="opacity-80">Tribune calme</span>
+              )}
               <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}</span>
             </div>
             <span
@@ -670,14 +676,16 @@ export function GroupCard({
               Lecture seule
             </Badge>
           ) : null}
-          <Badge
-            className={cn(
-              'hidden px-1.5 py-0 text-[9px] sm:inline-flex sm:px-2 sm:py-0.5 sm:text-[10px]',
-              L ? 'border-slate-200 bg-white/80 text-slate-900' : 'border-white/10 bg-white/[0.1] text-sky-100',
-            )}
-          >
-            {group.intensity}% ambiance
-          </Badge>
+          {ambianceLabel ? (
+            <Badge
+              className={cn(
+                'hidden px-1.5 py-0 text-[9px] sm:inline-flex sm:px-2 sm:py-0.5 sm:text-[10px]',
+                L ? 'border-slate-200 bg-white/80 text-slate-900' : 'border-white/10 bg-white/[0.1] text-sky-100',
+              )}
+            >
+              {ambianceLabel}
+            </Badge>
+          ) : null}
           <div className={cn('hidden text-xs font-bold sm:block', L ? 'text-slate-600' : 'text-tf-app-muted')}>
             {group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}
           </div>

@@ -135,6 +135,7 @@ export function GroupPage() {
     myJoinedGroups,
     orphanJoinedGroupIds,
     refreshGroupActivity,
+    bumpGroupActivity,
     refreshCloudGroups,
     groupLimits,
   } = useSupporterGroups()
@@ -763,6 +764,7 @@ export function GroupPage() {
           if (channel.id === 'general' && debate?.id) {
             void refreshDebates()
           }
+          bumpGroupActivity(group.id, { messagesToday: 1, onlineNow: 1 })
           refreshGroupActivity()
           return
         }
@@ -775,6 +777,7 @@ export function GroupPage() {
         )
         return
       }
+      if (group) bumpGroupActivity(group.id, { messagesToday: 1, onlineNow: 1 })
       setMessagesByThread((prev) => ({
         ...prev,
         [threadKey]: [...(prev[threadKey] ?? []), msg],
@@ -791,6 +794,7 @@ export function GroupPage() {
       authUser?.displayName,
       refreshDebates,
       refreshGroupActivity,
+      bumpGroupActivity,
     ],
   )
 
@@ -1053,7 +1057,8 @@ export function GroupPage() {
                         )}
                       >
                         {group.location ? `${group.location} • ` : ''}
-                        {group.members.toLocaleString('fr-FR')} membres • {group.intensity}% ambiance
+                        {group.members.toLocaleString('fr-FR')} membres
+                        {group.intensity > 0 ? ` • ${group.intensity}% ambiance` : ''}
                       </p>
                       <div
                         className="flex shrink-0 flex-wrap items-center justify-end gap-1.5"
@@ -2082,8 +2087,10 @@ export function GroupPage() {
               onToggleLike={
                 groupMessageLikes.isConfigured
                   ? (m) => {
-                      if (!isUuidMessageId(m.id)) return
-                      void groupMessageLikes.toggleLike(m.id)
+                      if (!isUuidMessageId(m.id) || !group) return
+                      const liked = groupMessageLikes.getLikeState(m.id).likedByMe
+                      if (!liked) bumpGroupActivity(group.id, { reactionsToday: 1 })
+                      void groupMessageLikes.toggleLike(m.id).finally(() => refreshGroupActivity())
                     }
                   : undefined
               }
