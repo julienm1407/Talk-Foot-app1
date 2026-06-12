@@ -26,6 +26,7 @@ import {
 } from '../components/profile/ProfileCharacterThumb'
 import { NavWalletBalances } from './NavWalletBalances'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
+import { TopBarBackButton } from './TopBarBackButton'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -128,6 +129,7 @@ export function TopBar() {
       >
         <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-4">
         <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
+          <TopBarBackButton pathname={location.pathname} />
           <LogoEncartLink
             to="/"
             isLight={L}
