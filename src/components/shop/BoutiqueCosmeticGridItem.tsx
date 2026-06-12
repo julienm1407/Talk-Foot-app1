@@ -70,9 +70,9 @@ function EncartBody({
       {studioCard ? (
         <div
           className={cn(
-            'pointer-events-none relative flex w-full flex-col items-center justify-end overflow-hidden',
-            'min-h-[220px] bg-[radial-gradient(circle_at_50%_16%,rgba(56,189,248,0.26),transparent_58%)]',
-            'px-2 pb-1 pt-5 sm:min-h-[300px] sm:px-3 sm:pt-6 lg:min-h-[340px]',
+            'pointer-events-none relative flex w-full max-w-full flex-col items-center justify-end overflow-hidden',
+            'min-h-[200px] bg-[radial-gradient(circle_at_50%_16%,rgba(56,189,248,0.26),transparent_58%)]',
+            'px-2 pb-1 pt-5 sm:min-h-[280px] sm:px-3 sm:pt-6 lg:min-h-[320px]',
           )}
         >
           <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />

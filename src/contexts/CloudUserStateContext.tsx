@@ -16,6 +16,7 @@ import {
   mergeUserAppState,
   type UserAppStateV1,
 } from '../data/userAppStateDefaults'
+import { coerceModularAvatarFromStored } from '../features/avatar2d/modularAvatarState'
 import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
@@ -118,6 +119,7 @@ function CloudUserStateLoader({
   const ocRef = useRef(onboardingCompleteCol)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasLocalEditsRef = useRef(false)
+  const pendingCloudSaveRef = useRef(false)
   const loadUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -160,6 +162,12 @@ function CloudUserStateLoader({
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!ready || !pendingCloudSaveRef.current) return
+    pendingCloudSaveRef.current = false
+    scheduleSave()
+  }, [ready, scheduleSave])
 
   useEffect(() => {
     if (!user?.id) {
@@ -223,14 +231,38 @@ function CloudUserStateLoader({
           }
 
           if (cancelled) return
-          const mergedApp = mergeUserAppState(snapshot.appState)
           applySnapshot(snapshot.appState, snapshot.onboardingComplete, snapshot.oauthProfileCompleted)
 
           if (!hasLocalEditsRef.current) {
             try {
+              const mergedApp = mergeUserAppState(snapshot.appState)
+              const rawProfile =
+                snapshot.appState !== null &&
+                typeof snapshot.appState === 'object' &&
+                !Array.isArray(snapshot.appState)
+                  ? (snapshot.appState as Record<string, unknown>).profile
+                  : undefined
+              const rawHadModular =
+                rawProfile !== null &&
+                typeof rawProfile === 'object' &&
+                !Array.isArray(rawProfile) &&
+                (rawProfile as Record<string, unknown>).modularAvatar != null
+              const mergedModularOk =
+                !rawHadModular ||
+                coerceModularAvatarFromStored(
+                  (rawProfile as Record<string, unknown>).modularAvatar,
+                ) != null
+              const rawBets =
+                snapshot.appState !== null &&
+                typeof snapshot.appState === 'object' &&
+                !Array.isArray(snapshot.appState)
+                  ? (snapshot.appState as Record<string, unknown>).bets
+                  : undefined
+              const mergedLostBets =
+                Array.isArray(rawBets) && rawBets.length > 0 && mergedApp.bets.length === 0
               const rawJson = JSON.stringify(snapshot.appState ?? {})
               const mergedJson = JSON.stringify(mergedApp)
-              if (rawJson !== mergedJson) {
+              if (mergedModularOk && !mergedLostBets && rawJson !== mergedJson) {
                 await saveTalkfootProfileAppState(sb, user.id, mergedApp, snapshot.onboardingComplete)
               }
             } catch (err) {
@@ -255,7 +287,9 @@ function CloudUserStateLoader({
         setReady(true)
         return
       }
-      setApp(defaultUserAppState())
+      if (!hasLocalEditsRef.current) {
+        setApp(defaultUserAppState())
+      }
       setLoadError(friendly)
       setOnboardingCompleteCol(false)
       setOauthNeedsProfile(false)
@@ -272,9 +306,10 @@ function CloudUserStateLoader({
       setApp((prev) => {
         const next = fn(prev)
         appRef.current = next
-        if (ready) scheduleSave()
         return next
       })
+      if (ready) scheduleSave()
+      else pendingCloudSaveRef.current = true
     },
     [scheduleSave, ready],
   )

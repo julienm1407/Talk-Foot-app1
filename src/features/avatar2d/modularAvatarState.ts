@@ -98,6 +98,48 @@ export function isModularAvatarState(value: unknown): value is ModularAvatarStat
   return true
 }
 
+function coerceNullableAssetId(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'string') return value.trim() || null
+  return null
+}
+
+/** Reprend un avatar cloud même si le JSON est légèrement hors spec (évite reset par défaut). */
+export function coerceModularAvatarFromStored(value: unknown): ModularAvatarState | null {
+  if (isModularAvatarState(value)) {
+    return sanitizeModularAvatarState(resolveModularAvatarState(value))
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
+  const o = value as Record<string, unknown>
+  if (o.data === null || typeof o.data !== 'object' || Array.isArray(o.data)) return null
+  const d = o.data as Record<string, unknown>
+  const defaults = createDefaultAvatarData()
+  const slotColorsRaw = o.slotColors
+  const slotColors =
+    slotColorsRaw !== null && typeof slotColorsRaw === 'object' && !Array.isArray(slotColorsRaw)
+      ? { ...DEFAULT_MODULAR_SLOT_COLORS, ...(slotColorsRaw as Partial<ModularSlotColors>) }
+      : { ...DEFAULT_MODULAR_SLOT_COLORS }
+  const partial: ModularAvatarState = {
+    data: {
+      skinTone: normalizeModularSkinTone(typeof d.skinTone === 'string' ? d.skinTone : defaults.skinTone),
+      body: coerceNullableAssetId(d.body) ?? defaults.body,
+      hair: coerceNullableAssetId(d.hair) ?? defaults.hair,
+      eyes: coerceNullableAssetId(d.eyes) ?? defaults.eyes,
+      eyebrows: coerceNullableAssetId(d.eyebrows),
+      nose: coerceNullableAssetId(d.nose) ?? defaults.nose,
+      mouth: coerceNullableAssetId(d.mouth) ?? defaults.mouth,
+      beard: coerceNullableAssetId(d.beard),
+      jersey: coerceNullableAssetId(d.jersey) ?? defaults.jersey,
+      shorts: coerceNullableAssetId(d.shorts) ?? defaults.shorts,
+      socks: coerceNullableAssetId(d.socks),
+      shoes: coerceNullableAssetId(d.shoes) ?? defaults.shoes,
+      accessory: coerceNullableAssetId(d.accessory),
+    },
+    slotColors,
+  }
+  return sanitizeModularAvatarState(resolveModularAvatarState(partial))
+}
+
 /** Vérifie que les ids d’assets existent encore (après import PNG). */
 export function sanitizeModularAvatarState(state: ModularAvatarState): ModularAvatarState {
   const defaults = createDefaultAvatarData()

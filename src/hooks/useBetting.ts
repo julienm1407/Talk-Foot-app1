@@ -61,6 +61,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
             bets: [bet, ...prev.bets].slice(0, 200),
           }
         })
+        void cloud.flushAppSave?.()
       } else {
         patchWallet((w) => ({ ...w, tokens: w.tokens - stake }))
         setBets((prev) => [bet, ...prev].slice(0, 200))

@@ -127,7 +127,38 @@ export function parseGoalScorerName(raw: string): string | null {
   }
   const fromSep = cut('·') ?? cut('–') ?? cut('-') ?? cut(':')
   if (fromSep) return fromSep
-  const badLast = new Set(['goal', 'gol', 'but', 'score', 'minute', 'penalty', 'own', 'var'])
+  const badLast = new Set([
+    'goal',
+    'gol',
+    'but',
+    'score',
+    'minute',
+    'penalty',
+    'own',
+    'var',
+    'foul',
+    'fouls',
+    'fouled',
+    'faute',
+    'fautes',
+    'yellow',
+    'red',
+    'card',
+    'carton',
+    'jaune',
+    'rouge',
+    'booking',
+    'booked',
+    'receives',
+    'receive',
+    'received',
+    'commits',
+    'commit',
+    'awarded',
+    'shown',
+    'caution',
+    'second',
+  ])
   const parts = s.split(/[\s|]+/).filter((p) => p.length >= 2)
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     const p = parts[i].replace(/[^A-Za-zÀ-ÿ'-]/g, '')
@@ -142,6 +173,38 @@ export type LiveGoalTeamHints = {
   shortName: string
   name: string
   sportMonksTeamId?: number
+  /** Variantes (ex. Mexique + Mexico pour les sélections). */
+  aliases?: string[]
+}
+
+function teamLabelTokens(home: LiveGoalTeamHints, away: LiveGoalTeamHints): Set<string> {
+  const tokens = new Set<string>()
+  for (const team of [home, away]) {
+    for (const raw of [team.name, team.shortName, ...(team.aliases ?? [])]) {
+      const label = String(raw ?? '').trim()
+      if (!label) continue
+      tokens.add(label.toLowerCase())
+      const slug = slugScorer(label)
+      if (slug) tokens.add(slug)
+    }
+  }
+  return tokens
+}
+
+/** Vrai si le libellé correspond à une équipe du match (pas un joueur). */
+export function isMatchTeamLabel(
+  name: string,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): boolean {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  if (!cleaned) return false
+  const tokens = teamLabelTokens(home, away)
+  const lower = cleaned.toLowerCase()
+  const slug = slugScorer(cleaned)
+  if (tokens.has(lower)) return true
+  if (slug && tokens.has(slug)) return true
+  return false
 }
 
 function guessSideFromTeams(
@@ -192,6 +255,24 @@ export type LiveGoalDisplayRow = {
   assistName?: string
 }
 
+/** Limite les buteurs affichés au score réel (évite les faux buts des commentaires). */
+export function clampLiveGoalRowsToScore(
+  rows: LiveGoalDisplayRow[],
+  homeScore: number,
+  awayScore: number,
+): LiveGoalDisplayRow[] {
+  if (homeScore + awayScore <= 0) return []
+  const home = rows
+    .filter((r) => r.side === 'home')
+    .sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))
+  const away = rows
+    .filter((r) => r.side === 'away')
+    .sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))
+  return [...home.slice(0, homeScore), ...away.slice(0, awayScore)].sort(
+    (a, b) => a.minute - b.minute || a.name.localeCompare(b.name),
+  )
+}
+
 /**
  * Liste ordonnée des buts avec minute et camp, à partir de la timeline SM.
  * Déduplication par camp + slug buteur + minute (deux lignes identiques API).
@@ -214,11 +295,12 @@ export function parseLiveGoalRowsFromHighlights(
       parseGoalScorerName(raw) ||
       parseGoalScorerName(String(h.detail ?? '')) ||
       parseGoalScorerName(String(h.title ?? ''))
-    if (!name) continue
+    if (!name || !isPlausibleGoalScorerName(name)) continue
+    const displayName = compactScorerDisplayName(name)
+    if (isMatchTeamLabel(displayName, home, away)) continue
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
     const slug = slugScorer(name)
     if (!slug) continue
-    const displayName = compactScorerDisplayName(name)
     const side = h.side ?? guessSideFromTeams(raw, home, away)
     if (!side) {
       pendingNoSide.push({ name: displayName, minute })
@@ -262,6 +344,109 @@ export type LiveCardDisplayRow = {
   color: 'yellow' | 'red'
 }
 
+const CARD_PLAYER_NAME_NOISE = new Set([
+  'foul',
+  'fouls',
+  'fouled',
+  'faute',
+  'fautes',
+  'yellow',
+  'red',
+  'card',
+  'carton',
+  'jaune',
+  'rouge',
+  'booking',
+  'booked',
+  'player',
+  'joueur',
+  'var',
+  'offside',
+  'corner',
+  'substitution',
+  'evenement',
+  'event',
+  'receives',
+  'receive',
+  'received',
+  'reçoit',
+  'recoit',
+  'commits',
+  'commit',
+  'committed',
+  'awarded',
+  'given',
+  'shown',
+  'caution',
+  'cautioned',
+  'warned',
+  'warning',
+  'second',
+  'missed',
+  'saved',
+  'blocked',
+  'after',
+  'before',
+  'during',
+  'africa',
+  'america',
+  'asia',
+  'europe',
+  'guinea',
+  'islands',
+  'republic',
+  'states',
+])
+
+const GEO_NAME_FRAGMENTS = new Set([
+  'africa',
+  'america',
+  'asia',
+  'europe',
+  'guinea',
+  'islands',
+  'republic',
+  'states',
+  'south',
+  'north',
+  'east',
+  'west',
+  'arab',
+  'korea',
+])
+
+export function isLikelyGeographicFragment(name: string): boolean {
+  const cleaned = name.replace(/\s+/g, ' ').trim().toLowerCase()
+  const slug = slugScorer(cleaned)
+  return GEO_NAME_FRAGMENTS.has(cleaned) || (slug ? GEO_NAME_FRAGMENTS.has(slug) : false)
+}
+
+function looksLikePlayerDisplayName(name: string): boolean {
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (!parts.length) return false
+  const last = parts[parts.length - 1] ?? name
+  if (/^[A-ZÀ-ÖØ-Þ]/.test(last)) return true
+  if (/^[A-ZÀ-ÖØ-Þ]{2,}$/.test(last)) return true
+  if (parts.length >= 2) return true
+  return false
+}
+
+export function isPlausibleCardPlayerName(name: string): boolean {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  if (cleaned.length < 2) return false
+  const slug = slugScorer(cleaned)
+  if (!slug) return false
+  if (CARD_PLAYER_NAME_NOISE.has(slug)) return false
+  if (CARD_PLAYER_NAME_NOISE.has(cleaned.toLowerCase())) return false
+  if (isLikelyGeographicFragment(cleaned)) return false
+  if (!looksLikePlayerDisplayName(cleaned)) return false
+  return true
+}
+
+export function isPlausibleGoalScorerName(name: string): boolean {
+  return isPlausibleCardPlayerName(name)
+}
+
 export function cardColorFromHighlightText(raw: string): 'yellow' | 'red' {
   const u = raw.toLowerCase()
   if (
@@ -276,22 +461,66 @@ export function cardColorFromHighlightText(raw: string): 'yellow' | 'red' {
   return 'yellow'
 }
 
+/** Déduplication timeline : un carton par minute / camp / couleur. */
+export function cardCoarseDedupeKey(
+  h: Pick<Highlight, 'type' | 'minute' | 'side' | 'title' | 'detail'>,
+): string | null {
+  if (h.type !== 'Carton') return null
+  const color = cardColorFromHighlightText(`${h.title ?? ''} ${h.detail ?? ''}`)
+  return `${h.minute}|${h.side ?? '?'}|${color}`
+}
+
+/** Nom affiché carton (prénom + nom quand dispo). */
+export function formatCardPlayerDisplayName(name: string): string {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  if (!cleaned) return ''
+  const parts = cleaned.split(' ').filter(Boolean)
+  if (parts.length >= 2) return cleaned
+  return compactScorerDisplayName(cleaned)
+}
+
 /** Extrait le joueur depuis un libellé carton SM / FR / EN. */
 export function parseCardPlayerName(raw: string): string | null {
   const s = raw.replace(/\s+/g, ' ').trim()
   if (!s) return null
   const patterns = [
+    /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,48})\s+receives\s+(?:a\s+)?(?:yellow|red|second)/i,
+    /([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,48})\s+(?:reçoit|recoit)\s+(?:un\s+)?(?:carton|second)/i,
     /carton\s+(?:jaune|rouge)\s+(?:pour|à)\s+(.+?)(?:[.!]|$)/i,
     /(?:yellow|red)\s+card\s+(?:for|to)\s+(.+?)(?:[.!]|$)/i,
     /second\s+yellow\s+card\s+for\s+(.+?)(?:[.!]|$)/i,
-    /(?:yellowcard|redcard)[^A-Za-zÀ-ÿ]*(.+?)(?:[.!]|$)/i,
+    /(?:yellowcard|redcard)[^A-Za-zÀ-ÿ]*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,48})(?:[.!]|$)/i,
+    /(?:foul(?:ed)?|fouls?)\s+(?:by|on|to)\s+(.+?)(?:[.!]|$)/i,
+    /(?:faute|fautes)\s+(?:de|sur)\s+(.+?)(?:[.!]|$)/i,
+    /after\s+(?:a|the)\s+foul\s+by\s+(.+?)(?:[.!]|$)/i,
+    /(?:après\s+)?(?:une|la)\s+faute\s+de\s+(.+?)(?:[.!]|$)/i,
   ]
   for (const re of patterns) {
     const m = s.match(re)
     const name = m?.[1]?.replace(/\s+\d{1,2}['']?\s*$/u, '').trim()
-    if (name && name.length >= 2) return name
+    if (name && name.length >= 2 && isPlausibleCardPlayerName(name)) return name
   }
-  return parseGoalScorerName(s)
+  return null
+}
+
+function resolveCardPlayerNameFromHighlight(
+  h: Pick<Highlight, 'scorerName' | 'title' | 'detail'>,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): string | null {
+  const raw = `${h.title ?? ''} ${h.detail ?? ''}`
+  const candidates = [
+    h.scorerName?.trim(),
+    parseCardPlayerName(raw),
+    parseCardPlayerName(String(h.detail ?? '')),
+    parseCardPlayerName(String(h.title ?? '')),
+  ].filter(Boolean) as string[]
+  for (const candidate of candidates) {
+    const displayName = compactScorerDisplayName(candidate)
+    if (isMatchTeamLabel(displayName, home, away)) continue
+    if (isPlausibleCardPlayerName(displayName)) return displayName
+  }
+  return null
 }
 
 export function parseLiveCardRowsFromHighlights(
@@ -304,13 +533,9 @@ export function parseLiveCardRowsFromHighlights(
 
   for (const h of highlights) {
     if (h.type !== 'Carton') continue
+    const name = resolveCardPlayerNameFromHighlight(h, home, away)
+    if (!name) continue
     const raw = `${h.title ?? ''} ${h.detail ?? ''}`
-    const name =
-      h.scorerName?.trim() ||
-      parseCardPlayerName(raw) ||
-      parseCardPlayerName(String(h.detail ?? '')) ||
-      parseCardPlayerName(String(h.title ?? '')) ||
-      'Joueur à confirmer'
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
     const side = h.side ?? guessSideFromTeams(raw, home, away)
     if (!side) continue
@@ -341,7 +566,7 @@ export function extractScorerEventsFromHighlights(
       parseGoalScorerName(raw) ||
       parseGoalScorerName(String(h.detail ?? '')) ||
       parseGoalScorerName(String(h.title ?? ''))
-    if (!name) continue
+    if (!name || !isPlausibleGoalScorerName(name)) continue
     const slug = slugScorer(name)
     if (!slug) continue
     const side = h.side ?? guessSideFromTeams(raw, home, away)

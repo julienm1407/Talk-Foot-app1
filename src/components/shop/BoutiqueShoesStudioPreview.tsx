@@ -3,9 +3,9 @@ import { resolveBoutiqueShoeSrc } from '../../utils/boutiqueShoeAssets'
 import { cn } from '../../utils/cn'
 
 const STUDIO_FRAME =
-  'overflow-hidden rounded-xl border border-white/15 bg-black/20 p-2 shadow-[0_16px_50px_rgba(2,8,23,0.55)] backdrop-blur-sm'
+  'mx-auto w-full max-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-black/20 p-2 shadow-[0_16px_50px_rgba(2,8,23,0.55)] backdrop-blur-sm'
 
-const VIEWPORT = 'h-[min(72vw,260px)] w-[min(58vw,210px)] sm:h-[280px] sm:w-[220px]'
+const VIEWPORT = 'relative aspect-[11/14] w-full'
 
 /**
  * Aperçu chaussures — PNG crampons centré et zoomé dans le cadre studio.
@@ -20,9 +20,9 @@ export function BoutiqueShoesStudioPreview({
   const src = resolveBoutiqueShoeSrc(item)
 
   return (
-    <div className={cn('flex w-full items-end justify-center', className)}>
+    <div className={cn('flex w-full max-w-full items-end justify-center', className)}>
       <div className={STUDIO_FRAME}>
-        <div className={cn('relative flex items-center justify-center overflow-hidden', VIEWPORT)}>
+        <div className={cn('flex items-center justify-center overflow-hidden', VIEWPORT)}>
           {src ? (
             <img
               src={src}

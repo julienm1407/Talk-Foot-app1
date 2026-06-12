@@ -76,14 +76,15 @@ import { cn } from '../utils/cn'
 import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/bannedWords'
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
+  clampLiveGoalRowsToScore,
   extractScorerEventsFromHighlights,
   formatGoalScorerLabel,
   parseLiveGoalRowsFromHighlights,
   parseLiveCardRowsFromHighlights,
 } from '../utils/liveFootballOdds'
 
-/** Débrief tchat après le coup de sifflet final. */
-const POST_MATCH_CHAT_MS = 8 * 60 * 1000
+/** Débrief tchat après le coup de sifflet final (30 min max). */
+const POST_MATCH_CHAT_MS = 30 * 60 * 1000
 /** Ouverture du tchat tribune avant coup d'envoi. */
 const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
 
@@ -834,28 +835,39 @@ export function ChannelPage() {
   }, [match?.id, liveSnapshot?.score?.home, liveSnapshot?.score?.away, match?.score?.home, match?.score?.away, initialHomeScore, initialAwayScore])
   const homeScore = displayScore.home
   const awayScore = displayScore.away
-  const goalTeamHints = useMemo(
-    () =>
-      match
-        ? {
-            home: {
-              shortName: match.home.shortName,
-              name: match.home.name,
-              sportMonksTeamId: match.home.sportMonksTeamId,
-            },
-            away: {
-              shortName: match.away.shortName,
-              name: match.away.name,
-              sportMonksTeamId: match.away.sportMonksTeamId,
-            },
-          }
-        : null,
-    [match],
-  )
+  const goalTeamHints = useMemo(() => {
+    if (!match) return null
+    const homeNation = resolveNationForTeam(match.home, match.competition.id)
+    const awayNation = resolveNationForTeam(match.away, match.competition.id)
+    return {
+      home: {
+        shortName: match.home.shortName,
+        name: match.home.name,
+        sportMonksTeamId: match.home.sportMonksTeamId,
+        aliases: [homeNation?.nameEn, homeNation?.nameFr].filter(Boolean) as string[],
+      },
+      away: {
+        shortName: match.away.shortName,
+        name: match.away.name,
+        sportMonksTeamId: match.away.sportMonksTeamId,
+        aliases: [awayNation?.nameEn, awayNation?.nameFr].filter(Boolean) as string[],
+      },
+    }
+  }, [match])
   const homeHeaderLabel = match?.home.shortName ?? homeName
   const awayHeaderLabel = match?.away.shortName ?? awayName
   const homeNation = match ? resolveNationForTeam(match.home, match.competition.id) : null
   const awayNation = match ? resolveNationForTeam(match.away, match.competition.id) : null
+  const highlightTeamLabels = useMemo(
+    () =>
+      match
+        ? {
+            home: homeNation?.nameFr ?? match.home.name,
+            away: awayNation?.nameFr ?? match.away.name,
+          }
+        : undefined,
+    [match, homeNation, awayNation],
+  )
   const homeTeamPath = match ? teamHubPathForMatch(match.home, match.competition.id) : null
   const awayTeamPath = match ? teamHubPathForMatch(match.away, match.competition.id) : null
   const homeFlagSrc = homeNation ? (nationFlagUrl(homeNation.iso, 40) ?? undefined) : undefined
@@ -984,6 +996,10 @@ export function ChannelPage() {
   const chatDebriefOpen =
     isFinished && finishedAtMs != null && nowMs - finishedAtMs < POST_MATCH_CHAT_MS
   const chatClosedAfterMatch = isFinished && !chatDebriefOpen
+  const debriefMinutesLeft = useMemo(() => {
+    if (!chatDebriefOpen || finishedAtMs == null) return 0
+    return Math.max(1, Math.ceil((POST_MATCH_CHAT_MS - (nowMs - finishedAtMs)) / 60_000))
+  }, [chatDebriefOpen, finishedAtMs, nowMs])
   const showLiveChat = !chatClosedAfterMatch
   const timerText = useMemo(() => {
     const kickoffTs = match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null
@@ -1559,20 +1575,27 @@ export function ChannelPage() {
   const liveGoalDisplayRows = useMemo(() => {
     if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
     const scoreHint = { home: homeScore, away: awayScore }
-    const fromTimeline = parseLiveGoalRowsFromHighlights(
-      smTimelineHighlights,
-      goalTeamHints.home,
-      goalTeamHints.away,
-      scoreHint,
-    )
-    if (fromTimeline.length > 0) return fromTimeline
+
     const fromEvents = extractLiveGoalDisplayRowsFromSmFixture(
       liveBundleFixture,
       goalTeamHints.home,
       goalTeamHints.away,
       scoreHint,
     )
-    return fromEvents
+    if (fromEvents.length > 0) {
+      return clampLiveGoalRowsToScore(fromEvents, homeScore, awayScore)
+    }
+
+    const structuredTimeline = smTimelineHighlights.filter(
+      (h) => h.type === 'But' && h.id.startsWith('sm-event-'),
+    )
+    const fromStructured = parseLiveGoalRowsFromHighlights(
+      structuredTimeline,
+      goalTeamHints.home,
+      goalTeamHints.away,
+      scoreHint,
+    )
+    return clampLiveGoalRowsToScore(fromStructured, homeScore, awayScore)
   }, [
     smTimelineHighlights,
     status,
@@ -1599,13 +1622,21 @@ export function ChannelPage() {
 
   const liveCardDisplayRows = useMemo(() => {
     if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
-    const fromTimeline = parseLiveCardRowsFromHighlights(
-      smTimelineHighlights.filter((h) => h.type === 'Carton'),
+    const fromEvents = extractLiveCardDisplayRowsFromSmFixture(
+      liveBundleFixture,
       goalTeamHints.home,
       goalTeamHints.away,
     )
-    if (fromTimeline.length > 0) return fromTimeline
-    return extractLiveCardDisplayRowsFromSmFixture(liveBundleFixture, goalTeamHints.home, goalTeamHints.away)
+    if (fromEvents.length > 0) return fromEvents
+
+    const structuredTimeline = smTimelineHighlights.filter(
+      (h) => h.type === 'Carton' && h.id.startsWith('sm-event-'),
+    )
+    return parseLiveCardRowsFromHighlights(
+      structuredTimeline,
+      goalTeamHints.home,
+      goalTeamHints.away,
+    )
   }, [smTimelineHighlights, status, match, goalTeamHints, liveBundleFixture])
 
   const headerHomeCards = useMemo(
@@ -2670,7 +2701,7 @@ export function ChannelPage() {
             <SectionTitle>Chat live</SectionTitle>
             {chatDebriefOpen ? (
               <p className="mt-1 rounded-lg border border-amber-400/35 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-100">
-                Match terminé — débrief ouvert encore quelques minutes.
+                Match terminé — débrief ouvert encore ~{debriefMinutesLeft} min (30 min max).
               </p>
             ) : null}
             <div className="mt-0.5 flex items-start justify-end gap-1.5 md:items-center md:justify-between md:gap-2">
@@ -3237,6 +3268,7 @@ export function ChannelPage() {
                     items={smTimelineHighlights}
                     activeId={latestHighlight?.id}
                     variant="channel"
+                    teamLabels={highlightTeamLabels}
                   />
                 ) : (
                   channelStandingsContent()
@@ -3508,6 +3540,7 @@ export function ChannelPage() {
                         items={smTimelineHighlights}
                         activeId={latestHighlight?.id}
                         variant="channel"
+                        teamLabels={highlightTeamLabels}
                       />
                     </div>
                   </div>
@@ -3534,6 +3567,7 @@ export function ChannelPage() {
                   items={smTimelineHighlights}
                   activeId={latestHighlight?.id}
                   variant="channel"
+                  teamLabels={highlightTeamLabels}
                 />
               </div>
             ) : null}
@@ -3719,7 +3753,7 @@ export function ChannelPage() {
               {chatClosedAfterMatch
                 ? ' Le match est terminé : consultation seule, sans changement de tribune.'
                 : chatDebriefOpen
-                  ? ' Débrief : le tchat reste ouvert quelques minutes.'
+                  ? ` Débrief : le tchat reste ouvert encore ~${debriefMinutesLeft} min (30 min max).`
                   : ''}
             </p>
 

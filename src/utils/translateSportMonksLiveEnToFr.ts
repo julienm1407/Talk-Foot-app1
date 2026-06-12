@@ -3,7 +3,107 @@
  * Règles par motifs : noms d’équipes / joueurs conservés via groupes de capture.
  */
 
+import { NATIONS } from '../data/nations'
+
+const NATION_EN_TO_FR = [...NATIONS]
+  .filter((n) => n.nameEn && n.nameFr)
+  .sort((a, b) => b.nameEn.length - a.nameEn.length)
+
+/** Préfixes numérotés ou « Info » renvoyés tels quels par l’API. */
+export function stripSportMonksCommentPrefix(raw: string): string {
+  return String(raw ?? '')
+    .trim()
+    .replace(/^\d+\.\s*[—–-]\s*/, '')
+    .replace(/^Info\s+\d+\.\s*[—–-]\s*/i, '')
+    .replace(/^Info\s*[—–-]\s*/i, '')
+    .trim()
+}
+
 const SENTENCE_RULES: Array<{ re: RegExp; fr: string }> = [
+  {
+    re: /^The second half ends with (.+?) leading (.+?) (\d+-\d+)\.?$/i,
+    fr: 'Fin de la deuxième mi-temps : $1 mène $3 face à $2.',
+  },
+  {
+    re: /^The first half ends with the score at (\d+-\d+)\.?$/i,
+    fr: 'Fin de la première mi-temps sur le score de $1.',
+  },
+  {
+    re: /^The first half ends with (.+?) leading (.+?) (\d+-\d+)\.?$/i,
+    fr: 'Fin de la première mi-temps : $1 mène $3 face à $2.',
+  },
+  {
+    re: /^The match ends with (.+?) beating (.+?) (\d+-\d+)\.?$/i,
+    fr: 'Fin du match : $1 bat $2 ($3).',
+  },
+  {
+    re: /^(.+?) of (.+?) won a free kick in (?:the )?(defense|defensive third|attack|attacking third)\.?$/i,
+    fr: '$1 ($2) obtient un coup franc en $3.',
+  },
+  {
+    re: /^(.+?) of (.+?) wins a free kick in (?:the )?(defense|defensive third|attack|attacking third)\.?$/i,
+    fr: '$1 ($2) obtient un coup franc en $3.',
+  },
+  {
+    re: /^(.+?) won a free kick in (?:the )?(defense|defensive third|attack|attacking third)\.?$/i,
+    fr: '$1 obtient un coup franc en $2.',
+  },
+  {
+    re: /^(.+?) wins a free kick in (?:the )?(defense|defensive third|attack|attacking third)\.?$/i,
+    fr: '$1 obtient un coup franc en $2.',
+  },
+  {
+    re: /^(.+?) of (.+?) won a corner in (?:the )?(defense|defensive third|attack|attacking third)\.?$/i,
+    fr: 'Corner pour $2 — $1 en $3.',
+  },
+  {
+    re: /^(.+?) has been shown a (yellow|red) card\.?$/i,
+    fr: '$1 reçoit un carton $2.',
+  },
+  {
+    re: /^(.+?) is shown a (yellow|red) card\.?$/i,
+    fr: '$1 reçoit un carton $2.',
+  },
+  {
+    re: /^Great save by (.+?)\.?$/i,
+    fr: 'Bel arrêt de $1.',
+  },
+  {
+    re: /^Save by (.+?)\.?$/i,
+    fr: 'Arrêt de $1.',
+  },
+  {
+    re: /^The match is underway\.?$/i,
+    fr: 'Le match est lancé.',
+  },
+  {
+    re: /^Kick-?off(?: for (?:the )?match)?\.?$/i,
+    fr: 'Coup d’envoi.',
+  },
+  {
+    re: /^(.+?) with an? (?:attempt|shot|header|strike)\.?$/i,
+    fr: 'Tir de $1.',
+  },
+  {
+    re: /^Dangerous attack by (.+?)\.?$/i,
+    fr: 'Attaque dangereuse de $1.',
+  },
+  {
+    re: /^(.+?) is caught offside\.?$/i,
+    fr: 'Hors-jeu de $1.',
+  },
+  {
+    re: /^VAR(?: check)?:?\s*(.+)$/i,
+    fr: 'VAR — $1',
+  },
+  {
+    re: /^Goal (?:confirmed|allowed|awarded)\.?$/i,
+    fr: 'But validé.',
+  },
+  {
+    re: /^Goal (?:disallowed|cancelled|canceled)\.?$/i,
+    fr: 'But annulé.',
+  },
   {
     re: /^Corner awarded to (.+?) after a concession by (.+?)\.?$/i,
     fr: 'Corner pour $1 après une concession de $2.',
@@ -136,8 +236,23 @@ const INLINE_PHRASES: Array<[RegExp, string]> = [
   [/ after an infringement by /gi, ' après une faute de '],
   [/ after a foul by /gi, ' après une faute de '],
   [/ after (?:a|the) foul by /gi, ' après une faute de '],
+  [/The second half ends with /gi, 'Fin de la deuxième mi-temps : '],
+  [/The first half ends with /gi, 'Fin de la première mi-temps : '],
+  [/ leading /gi, ' mène '],
+  [/ won a free kick /gi, ' obtient un coup franc '],
+  [/ wins a free kick /gi, ' obtient un coup franc '],
+  [/ won a corner /gi, ' obtient un corner '],
+  [/ wins a corner /gi, ' obtient un corner '],
+  [/ in the defensive third/gi, ' en défense'],
+  [/ in defense/gi, ' en défense'],
+  [/ in the attacking third/gi, ' en attaque'],
+  [/ in attack/gi, ' en attaque'],
+  [/ won a coup franc /gi, ' obtient un coup franc '],
+  [/ wins a coup franc /gi, ' obtient un coup franc '],
   [/The referee/gi, "L'arbitre"],
   [/Kick-?off/gi, 'Coup d’envoi'],
+  [/second half/gi, 'deuxième mi-temps'],
+  [/first half/gi, 'première mi-temps'],
   [/half[\s-]?time/gi, 'mi-temps'],
   [/full[\s-]?time/gi, 'fin du match'],
   [/corner kick/gi, 'corner'],
@@ -148,9 +263,20 @@ const INLINE_PHRASES: Array<[RegExp, string]> = [
   [/possession/gi, 'possession'],
   [/dangerous attack/gi, 'attaque dangereuse'],
   [/attack\b/gi, 'attaque'],
+  [/defense/gi, 'défense'],
+  [/defensive third/gi, 'défense'],
+  [/attacking third/gi, 'attaque'],
+  [/great save/gi, 'bel arrêt'],
+  [/save by/gi, 'arrêt de'],
+  [/ is caught offside/gi, ' est hors-jeu'],
+  [/offside/gi, 'hors-jeu'],
+  [/underway/gi, 'lancé'],
   [/saved\.?/gi, 'arrêté.'],
   [/missed\.?/gi, 'raté.'],
   [/blocked\.?/gi, 'contré.'],
+  [/ against /gi, ' contre '],
+  [/ with /gi, ' avec '],
+  [/ ends with /gi, ' se termine avec '],
 ]
 
 /** Premiers jetons type « TYPE · joueur » (events SM). */
@@ -191,31 +317,47 @@ function translateLeadingEventToken(s: string): string {
   return nh + tail
 }
 
+function replaceNationNamesInText(s: string): string {
+  let out = s
+  for (const n of NATION_EN_TO_FR) {
+    const re = new RegExp(`\\b${n.nameEn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')
+    out = out.replace(re, n.nameFr)
+  }
+  return out
+}
+
+function finalizeLiveTextFr(s: string): string {
+  return replaceNationNamesInText(s)
+    .replace(/\bcarton yellow\b/gi, 'carton jaune')
+    .replace(/\bcarton red\b/gi, 'carton rouge')
+    .replace(/\ben defense\b/gi, 'en défense')
+    .replace(/\ben attack\b/gi, 'en attaque')
+    .replace(/\bdefense\b/gi, 'défense')
+    .replace(/\.\.$/, '.')
+    .trim()
+}
+
 /**
  * Texte brut commentaire / libellé event → français quand des motifs anglais connus sont détectés.
  */
 export function translateSportMonksLiveTextToFr(raw: string): string {
-  const s = String(raw ?? '').trim()
-  if (!s) return s
+  const stripped = stripSportMonksCommentPrefix(String(raw ?? '').trim())
+  if (!stripped) return stripped
 
-  const fromRules = applySentenceRules(s)
-  if (fromRules !== s) return fromRules
+  const fromRules = applySentenceRules(stripped)
+  if (fromRules !== stripped) return finalizeLiveTextFr(fromRules)
 
   const looksEn =
-    /\b(the|and|after|before|awarded|corner|kick|foul|card|substitution|referee|goal|goals?|offside|penalty|attempt|saved|missed|blocked|concession|injury|stoppage)\b/i.test(
-      s,
+    /\b(the|and|after|before|awarded|corner|kick|foul|card|substitution|referee|goal|goals?|offside|penalty|attempt|saved|missed|blocked|concession|injury|stoppage|leading|ends|won|wins|defense|attack|underway|save|against|with|half|match|shown|beat|beating)\b/i.test(
+      stripped,
     )
 
-  let out = s
+  let out = stripped
   if (looksEn) {
     for (const [re, rep] of INLINE_PHRASES) {
       out = out.replace(re, rep)
     }
-    out = translateLeadingEventToken(out)
-    if (out !== s) return out.trim()
-  } else {
-    out = translateLeadingEventToken(s)
   }
-
-  return out.trim()
+  out = translateLeadingEventToken(out)
+  return finalizeLiveTextFr(out)
 }

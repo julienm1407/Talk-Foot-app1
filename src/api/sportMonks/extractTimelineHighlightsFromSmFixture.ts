@@ -1,7 +1,13 @@
 import type { Highlight } from '../../data/highlights'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
 import {
+  cardColorFromHighlightText,
+  cardCoarseDedupeKey,
   compactScorerDisplayName,
+  isLikelyGeographicFragment,
+  isMatchTeamLabel,
+  isPlausibleCardPlayerName,
+  isPlausibleGoalScorerName,
   parseCardPlayerName,
   parseGoalAssistFromText,
   parseGoalScorerName,
@@ -73,8 +79,7 @@ function commentMentionsVar(text: string): boolean {
 function highlightTypeFromEventDev(dev: string): Highlight['type'] {
   const u = dev.toUpperCase()
   if (eventDevLooksLikeGoal(u)) return 'But'
-  if (u.includes('YELLOW')) return 'Carton'
-  if (u.includes('RED')) return 'Carton'
+  if (eventDevLooksLikeCard(u)) return 'Carton'
   if (u.includes('VAR')) return 'VAR'
   if (u.includes('SAVE') || u.includes('GREAT')) return 'Arrêt'
   if (u.includes('CHANCE') || u.includes('SHOT') || u.includes('ATTACK')) return 'Occasion'
@@ -105,6 +110,11 @@ function highlightTypeFromComment(rawComment: string, isImportant: boolean): Hig
 function highlightDedupeKey(h: Highlight): string {
   const goalKey = goalSemanticKey(h)
   if (goalKey) return `but|${goalKey}`
+  const cardKey = cardCoarseDedupeKey(h)
+  if (cardKey) {
+    const slug = h.scorerName ? slugScorer(h.scorerName) : ''
+    return `carton|${cardKey}|${slug}`
+  }
   const text = String(h.detail || h.title || '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -177,16 +187,29 @@ function sideFromParticipant(
   return undefined
 }
 
+function cardPlayerFromEvent(ev: SmFixtureEventRow, dev: string): string | undefined {
+  const primary = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
+  if (primary && isPlausibleCardPlayerName(primary)) return primary
+  const fromMeta =
+    parseCardPlayerName(String(ev.info ?? '')) ||
+    parseCardPlayerName(String(ev.addition ?? '')) ||
+    parseCardPlayerName(dev)
+  if (fromMeta && isPlausibleCardPlayerName(fromMeta)) return fromMeta
+  return undefined
+}
+
 function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
-  const player = String(ev.player?.display_name ?? ev.player?.name ?? '').trim()
-  if (player.length >= 2) return player
+  const player = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
+  if (player && isPlausibleGoalScorerName(player)) return player
   const relatedPlayerObj = ev.relatedPlayer ?? ev.related_player
   const related = String(
     relatedPlayerObj?.display_name ?? relatedPlayerObj?.name ?? ev.related_player_name ?? '',
   ).trim()
-  if (related.length >= 2) return related
+  if (related && isPlausibleGoalScorerName(related)) return related
   const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
-  return parseGoalScorerName(dev) ?? undefined
+  const fromDev = parseGoalScorerName(dev)
+  if (fromDev && isPlausibleGoalScorerName(fromDev)) return fromDev
+  return undefined
 }
 
 function assistFromEvent(ev: SmFixtureEventRow): string | undefined {
@@ -196,6 +219,38 @@ function assistFromEvent(ev: SmFixtureEventRow): string | undefined {
   const fromName = String(ev.related_player_name ?? '').trim()
   if (fromName.length >= 2) return fromName
   return undefined
+}
+
+function mergeCardHighlights(primary: Highlight, secondary: Highlight): Highlight {
+  const eventRow = primary.id.startsWith('sm-event-')
+    ? primary
+    : secondary.id.startsWith('sm-event-')
+      ? secondary
+      : primary
+  const other = eventRow === primary ? secondary : primary
+  const scorerName = eventRow.scorerName ?? other.scorerName
+  const minute = eventRow.minute
+  const color = cardColorFromHighlightText(`${eventRow.title ?? ''} ${eventRow.detail ?? ''}`)
+  const player = scorerName ?? ''
+  return {
+    ...eventRow,
+    ...(scorerName ? { scorerName } : {}),
+    side: eventRow.side ?? other.side,
+    title: player || eventRow.title,
+    detail: player
+      ? `${minute}' · ${color === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${player}`
+      : eventRow.detail || other.detail,
+  }
+}
+
+function cardHighlightQuality(h: Highlight): number {
+  let score = 0
+  if (h.id.startsWith('sm-event-')) score += 20
+  const name = h.scorerName?.trim() ?? ''
+  if (name && isPlausibleCardPlayerName(name) && !isLikelyGeographicFragment(name)) {
+    score += 10 + name.length
+  }
+  return score
 }
 
 function mergeGoalHighlights(primary: Highlight, secondary: Highlight): Highlight {
@@ -244,20 +299,23 @@ export function extractTimelineHighlightsFromSmFixture(
       const minute = displayMinute(ev)
       const side = sideFromParticipant(ev.participant_id, homeId, awayId)
       const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
-      const cardPlayer = type === 'Carton' ? scorerFromEvent(ev) ?? parseCardPlayerName(dev) ?? undefined : undefined
+      const cardPlayer = type === 'Carton' ? cardPlayerFromEvent(ev, dev) : undefined
       const assistName = type === 'But' ? assistFromEvent(ev) : undefined
+      let resolvedType = type
+      if (type === 'But' && !scorerName) resolvedType = 'Info'
+      if (type === 'Carton' && !cardPlayer) resolvedType = 'Info'
       const title =
-        type === 'But' && scorerName
+        resolvedType === 'But' && scorerName
           ? scorerName
-          : type === 'Carton' && cardPlayer
+          : resolvedType === 'Carton' && cardPlayer
             ? cardPlayer
             : translateSportMonksLiveTextToFr(
                 scorerName ? `${dev} · ${scorerName}`.trim() : (dev || 'Événement').trim(),
               )
       const detail =
-        type === 'But' && scorerName
+        resolvedType === 'But' && scorerName
           ? `${minute}' · ${scorerName}`
-          : type === 'Carton' && cardPlayer
+          : resolvedType === 'Carton' && cardPlayer
             ? `${minute}' · ${cardColorFromEventDev(dev) === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${cardPlayer}`
             : translateSportMonksLiveTextToFr((dev || 'Événement').trim())
       out.push({
@@ -265,7 +323,7 @@ export function extractTimelineHighlightsFromSmFixture(
         matchId,
         minute,
         order: ev.id,
-        type,
+        type: resolvedType,
         title,
         detail,
         ...(side ? { side } : {}),
@@ -293,13 +351,19 @@ export function extractTimelineHighlightsFromSmFixture(
       const minute = displayMinute(c)
       const order = typeof c.order === 'number' ? c.order : typeof c.id === 'number' ? c.id : 0
       const rawComment = String(c.comment ?? '').trim()
-      const type =
-        c.is_goal && !commentLooksLikeCorner(rawComment)
+      const scorerName = parseGoalScorerName(rawComment) ?? undefined
+      const cardPlayer =
+        (() => {
+          const parsed = parseCardPlayerName(rawComment)
+          return parsed && isPlausibleCardPlayerName(parsed) ? parsed : undefined
+        })()
+      let type =
+        c.is_goal && !commentLooksLikeCorner(rawComment) && scorerName && isPlausibleGoalScorerName(scorerName)
           ? 'But'
           : highlightTypeFromComment(rawComment, Boolean(c.is_important))
+      if (type === 'Carton' && !cardPlayer) type = 'Info'
+      if (type === 'But' && (!scorerName || !isPlausibleGoalScorerName(scorerName))) type = 'Info'
       const detail = translateSportMonksLiveTextToFr(rawComment)
-      const scorerName = type === 'But' ? parseGoalScorerName(rawComment) ?? undefined : undefined
-      const cardPlayer = type === 'Carton' ? parseCardPlayerName(rawComment) ?? undefined : undefined
       const assistName = type === 'But' ? parseGoalAssistFromText(rawComment) ?? undefined : undefined
       out.push({
         id: `sm-comment-${c.id ?? order}-${order}`,
@@ -325,10 +389,25 @@ export function extractTimelineHighlightsFromSmFixture(
       .filter((k): k is string => Boolean(k)),
   )
 
+  const eventCardKeys = new Set(
+    out
+      .filter((h) => h.type === 'Carton' && h.id.startsWith('sm-event-'))
+      .map((h) => cardCoarseDedupeKey(h))
+      .filter((k): k is string => Boolean(k)),
+  )
+
   const withoutDupComments = out.filter((h) => {
-    if (h.type !== 'But' || !h.id.startsWith('sm-comment-')) return true
-    const key = goalSemanticKey(h)
-    return !key || !eventGoalKeys.has(key)
+    if (h.type === 'But' && h.id.startsWith('sm-comment-')) {
+      const key = goalSemanticKey(h)
+      if (key && eventGoalKeys.has(key)) return false
+    }
+    if (h.type === 'Carton' && h.id.startsWith('sm-comment-')) {
+      const coarse = cardCoarseDedupeKey(h)
+      if (coarse && eventCardKeys.has(coarse)) return false
+      const name = h.scorerName?.trim() ?? ''
+      if (!name || !isPlausibleCardPlayerName(name) || isLikelyGeographicFragment(name)) return false
+    }
+    return true
   })
 
   const byKey = new Map<string, Highlight>()
@@ -343,13 +422,42 @@ export function extractTimelineHighlightsFromSmFixture(
       byKey.set(k, mergeGoalHighlights(prev, h))
       continue
     }
+    if (h.type === 'Carton' && prev.type === 'Carton') {
+      const merged = mergeCardHighlights(prev, h)
+      byKey.set(cardCoarseDedupeKey(merged) ?? k, merged)
+      continue
+    }
     const prevIsEvent = prev.id.startsWith('sm-event-')
     const nextIsEvent = h.id.startsWith('sm-event-')
     if (!prevIsEvent && nextIsEvent) byKey.set(k, h)
     else if (prevIsEvent && nextIsEvent && h.scorerName && !prev.scorerName) byKey.set(k, h)
+    else if (cardHighlightQuality(h) > cardHighlightQuality(prev)) byKey.set(k, h)
   }
 
-  const merged = Array.from(byKey.values()).sort((a, b) => {
+  const mergedCardsByCoarse = new Map<string, Highlight>()
+  const nonCardMerged: Highlight[] = []
+  for (const h of byKey.values()) {
+    if (h.type !== 'Carton') {
+      nonCardMerged.push(h)
+      continue
+    }
+    const coarse = cardCoarseDedupeKey(h)
+    if (!coarse) {
+      nonCardMerged.push(h)
+      continue
+    }
+    const prev = mergedCardsByCoarse.get(coarse)
+    if (!prev) {
+      mergedCardsByCoarse.set(coarse, h)
+      continue
+    }
+    mergedCardsByCoarse.set(
+      coarse,
+      cardHighlightQuality(h) > cardHighlightQuality(prev) ? h : prev,
+    )
+  }
+
+  const merged = [...nonCardMerged, ...mergedCardsByCoarse.values()].sort((a, b) => {
     if (a.minute !== b.minute) return a.minute - b.minute
     return (a.order ?? 0) - (b.order ?? 0)
   })
@@ -372,17 +480,17 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
     const minute = displayMinute(ev)
     const side = sideFromParticipant(ev.participant_id, homeId, awayId)
     const scorerName = scorerFromEvent(ev)
-    if (!scorerName && !side) continue
-    const label = scorerName || 'Buteur à confirmer'
+    if (!scorerName) continue
+    if (isMatchTeamLabel(scorerName, home, away)) continue
     rows.push({
       id: `sm-event-goal-${ev.id ?? minute}`,
       matchId: 'direct',
       minute,
       type: 'But',
-      title: label,
-      detail: `${minute}' · ${label}`,
+      title: scorerName,
+      detail: `${minute}' · ${scorerName}`,
       ...(side ? { side } : {}),
-      scorerName: label,
+      scorerName,
     })
   }
   const fromEvents = parseLiveGoalRowsFromHighlights(rows, home, away, scoreHint)
@@ -411,7 +519,8 @@ export function extractLiveCardDisplayRowsFromSmFixture(
     if (!eventDevLooksLikeCard(u)) continue
     const minute = displayMinute(ev)
     const side = sideFromParticipant(ev.participant_id, homeId, awayId)
-    const playerName = scorerFromEvent(ev) || parseCardPlayerName(dev) || 'Joueur à confirmer'
+    const playerName = cardPlayerFromEvent(ev, dev)
+    if (!playerName || isMatchTeamLabel(playerName, home, away)) continue
     const color = cardColorFromEventDev(dev)
     rows.push({
       id: `sm-event-card-${ev.id ?? minute}-${color}`,
