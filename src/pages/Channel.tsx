@@ -2090,44 +2090,27 @@ export function ChannelPage() {
           </div>
         ) : null}
         <div className="flex flex-col gap-1 md:hidden">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-0.5">
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <TeamLogoLink
-                  to={homeTeamPath}
-                  clubId={match?.home.id}
-                  label={homeHeaderLabel}
-                  logoUrl={match?.home.logoUrl}
-                  sportMonksTeamId={match?.home.sportMonksTeamId}
-                  nationFlagSrc={homeFlagSrc}
-                />
-                <Link
-                  to={homeTeamPath ?? '#'}
-                  title={homeName}
-                  className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
-                    L ? 'text-[#052032]' : 'text-white'
-                  }`}
-                >
-                  {homeHeaderLabel}
-                </Link>
-              </div>
-              {isUpcoming ? (
-                homeTeamPath ? (
-                  <Link
-                    to={homeTeamPath}
-                    title={homeFullName}
-                    className={`truncate pl-11 text-[11px] font-bold leading-tight hover:underline ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}
-                  >
-                    {homeFullName}
-                  </Link>
-                ) : (
-                  <p className={`truncate pl-11 text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
-                    {homeFullName}
-                  </p>
-                )
-              ) : null}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <TeamLogoLink
+                to={homeTeamPath}
+                clubId={match?.home.id}
+                label={homeHeaderLabel}
+                logoUrl={match?.home.logoUrl}
+                sportMonksTeamId={match?.home.sportMonksTeamId}
+                nationFlagSrc={homeFlagSrc}
+              />
+              <Link
+                to={homeTeamPath ?? '#'}
+                title={homeName}
+                className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
+                  L ? 'text-[#052032]' : 'text-white'
+                }`}
+              >
+                {homeHeaderLabel}
+              </Link>
             </div>
-            <div className="flex flex-col items-center gap-0.5 px-1">
+            <div className="flex shrink-0 flex-col items-center gap-0.5 px-1">
               {isUpcoming ? (
                 <span
                   className={`rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${
@@ -2141,42 +2124,80 @@ export function ChannelPage() {
                 {homeScore} - {awayScore}
               </p>
             </div>
-            <div className="flex min-w-0 flex-col items-end gap-0.5">
-              <div className="flex min-w-0 items-center justify-end gap-1.5">
-                <Link
-                  to={awayTeamPath ?? '#'}
-                  title={awayName}
-                  className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
-                    L ? 'text-[#052032]' : 'text-white'
-                  }`}
-                >
-                  {awayHeaderLabel}
-                </Link>
-                <TeamLogoLink
-                  to={awayTeamPath}
-                  clubId={match?.away.id}
-                  label={awayHeaderLabel}
-                  logoUrl={match?.away.logoUrl}
-                  sportMonksTeamId={match?.away.sportMonksTeamId}
-                  nationFlagSrc={awayFlagSrc}
-                />
-              </div>
-              {isUpcoming ? (
+            <div className="flex min-w-0 items-center justify-end gap-1.5">
+              <Link
+                to={awayTeamPath ?? '#'}
+                title={awayName}
+                className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
+                  L ? 'text-[#052032]' : 'text-white'
+                }`}
+              >
+                {awayHeaderLabel}
+              </Link>
+              <TeamLogoLink
+                to={awayTeamPath}
+                clubId={match?.away.id}
+                label={awayHeaderLabel}
+                logoUrl={match?.away.logoUrl}
+                sportMonksTeamId={match?.away.sportMonksTeamId}
+                nationFlagSrc={awayFlagSrc}
+              />
+            </div>
+          </div>
+          {isUpcoming && (homeFullName !== homeHeaderLabel || awayFullName !== awayHeaderLabel) ? (
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-2">
+              {homeFullName !== homeHeaderLabel ? (
+                homeTeamPath ? (
+                  <Link
+                    to={homeTeamPath}
+                    title={homeFullName}
+                    className={`min-w-0 truncate pl-11 text-[10px] font-bold leading-tight hover:underline ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                  >
+                    {homeFullName}
+                  </Link>
+                ) : (
+                  <p
+                    className={`min-w-0 truncate pl-11 text-[10px] font-bold leading-tight ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                    title={homeFullName}
+                  >
+                    {homeFullName}
+                  </p>
+                )
+              ) : (
+                <span aria-hidden />
+              )}
+              <span className="w-12 shrink-0" aria-hidden />
+              {awayFullName !== awayHeaderLabel ? (
                 awayTeamPath ? (
                   <Link
                     to={awayTeamPath}
                     title={awayFullName}
-                    className={`truncate pr-11 text-right text-[11px] font-bold leading-tight hover:underline ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}
+                    className={`min-w-0 truncate pr-11 text-right text-[10px] font-bold leading-tight hover:underline ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
                   >
                     {awayFullName}
                   </Link>
                 ) : (
-                  <p className={`truncate pr-11 text-right text-[11px] font-bold leading-tight ${L ? 'text-[#3d5670]' : 'text-sky-200/85'}`}>
+                  <p
+                    className={`min-w-0 truncate pr-11 text-right text-[10px] font-bold leading-tight ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                    title={awayFullName}
+                  >
                     {awayFullName}
                   </p>
                 )
-              ) : null}
+              ) : (
+                <span aria-hidden />
+              )}
             </div>
+          ) : null}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-2">
             <div />
             <div className="flex flex-col items-center gap-1">
               <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
@@ -2211,7 +2232,7 @@ export function ChannelPage() {
             isUpcoming ? 'grid-rows-[auto_auto]' : 'grid-rows-[auto_auto_auto]',
           )}
         >
-          <div className="col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5 justify-self-start">
+          <div className="col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5 justify-self-start self-start">
             <div className="flex min-w-0 items-center gap-3">
               <TeamLogoLink
                 to={homeTeamPath}
@@ -2229,28 +2250,6 @@ export function ChannelPage() {
                 {homeHeaderLabel}
               </Link>
             </div>
-            {isUpcoming ? (
-              homeTeamPath ? (
-                <Link
-                  to={homeTeamPath}
-                  className={`max-w-[min(100%,14rem)] truncate pl-[3.25rem] text-xs font-bold leading-tight hover:underline ${
-                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
-                  }`}
-                  title={homeFullName}
-                >
-                  {homeFullName}
-                </Link>
-              ) : (
-                <p
-                  className={`max-w-[min(100%,14rem)] truncate pl-[3.25rem] text-xs font-bold leading-tight ${
-                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
-                  }`}
-                  title={homeFullName}
-                >
-                  {homeFullName}
-                </p>
-              )
-            ) : null}
           </div>
           <div className="col-start-2 row-start-1 flex flex-col items-center justify-self-center self-start gap-1 pt-0.5 text-center">
             {isUpcoming ? (
@@ -2266,7 +2265,7 @@ export function ChannelPage() {
               {homeScore} - {awayScore}
             </p>
           </div>
-          <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end">
+          <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end self-start">
             <div className="flex min-w-0 items-center justify-end gap-3">
               <Link
                 to={awayTeamPath ?? '#'}
@@ -2284,29 +2283,55 @@ export function ChannelPage() {
                 nationFlagSrc={awayFlagSrc}
               />
             </div>
-            {isUpcoming ? (
-              awayTeamPath ? (
-                <Link
-                  to={awayTeamPath}
-                  className={`max-w-[min(100%,14rem)] truncate pr-[3.25rem] text-right text-xs font-bold leading-tight hover:underline ${
-                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
-                  }`}
-                  title={awayFullName}
-                >
-                  {awayFullName}
-                </Link>
-              ) : (
-                <p
-                  className={`max-w-[min(100%,14rem)] truncate pr-[3.25rem] text-right text-xs font-bold leading-tight ${
-                    L ? 'text-[#3d5670]' : 'text-sky-200/85'
-                  }`}
-                  title={awayFullName}
-                >
-                  {awayFullName}
-                </p>
-              )
-            ) : null}
           </div>
+          {isUpcoming && (homeFullName !== homeHeaderLabel || awayFullName !== awayHeaderLabel) ? (
+            <>
+              {homeFullName !== homeHeaderLabel ? (
+                homeTeamPath ? (
+                  <Link
+                    to={homeTeamPath}
+                    className={`col-start-1 row-start-2 min-w-0 max-w-full truncate pl-[3.25rem] text-[11px] font-bold leading-tight hover:underline sm:max-w-[min(100%,11rem)] ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                    title={homeFullName}
+                  >
+                    {homeFullName}
+                  </Link>
+                ) : (
+                  <p
+                    className={`col-start-1 row-start-2 min-w-0 max-w-full truncate pl-[3.25rem] text-[11px] font-bold leading-tight sm:max-w-[min(100%,11rem)] ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                    title={homeFullName}
+                  >
+                    {homeFullName}
+                  </p>
+                )
+              ) : null}
+              {awayFullName !== awayHeaderLabel ? (
+                awayTeamPath ? (
+                  <Link
+                    to={awayTeamPath}
+                    className={`col-start-3 row-start-2 min-w-0 max-w-full truncate pr-[3.25rem] text-right text-[11px] font-bold leading-tight sm:max-w-[min(100%,11rem)] ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                    title={awayFullName}
+                  >
+                    {awayFullName}
+                  </Link>
+                ) : (
+                  <p
+                    className={`col-start-3 row-start-2 min-w-0 max-w-full truncate pr-[3.25rem] text-right text-[11px] font-bold leading-tight sm:max-w-[min(100%,11rem)] ${
+                      L ? 'text-[#3d5670]' : 'text-sky-200/85'
+                    }`}
+                    title={awayFullName}
+                  >
+                    {awayFullName}
+                  </p>
+                )
+              ) : null}
+            </>
+          ) : null}
           <div className="col-start-2 row-start-2 flex flex-col items-center gap-1">
             <p className={`text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
               {status === 'live' ? (
