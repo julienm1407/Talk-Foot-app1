@@ -164,7 +164,9 @@ function highlightIcon(h: Highlight): string {
 }
 
 function highlightPillClass(h: Highlight, channel: boolean): string {
-  return (channel ? pillChannel : pillLight)[h.type]
+  if (h.type === 'Carton') return ''
+  const palette = channel ? pillChannel : pillLight
+  return palette[h.type]
 }
 
 export function MatchHighlights({
