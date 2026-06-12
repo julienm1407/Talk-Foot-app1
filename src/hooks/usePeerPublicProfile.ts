@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { User } from '../types/chat'
 import type { UserProfile } from '../types/profile'
-import { mergeCharacterLook } from '../data/characterPresets'
-import { mergeUserAppState } from '../data/userAppStateDefaults'
-import { fetchTalkfootProfileSnapshot } from '../lib/supabase/profileAppState'
+import { fetchTalkfootPublicProfiles } from '../lib/supabase/profileAppState'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { buildChatPeerProfile } from '../utils/chatPeerProfile'
 import {
-  modularAvatarFromSnapshot,
+  modularAvatarFromPublicRow,
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 
-/** Charge le profil public (avatar modulaire, photo perso) d’un autre joueur depuis Supabase. */
+/** Charge le profil public (avatar modulaire) d’un autre joueur depuis Supabase. */
 export function usePeerPublicProfile(peer: User | undefined, selfUserId: string | undefined) {
   const [cloudProfile, setCloudProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(false)
@@ -37,25 +35,18 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
     let cancelled = false
     setLoading(true)
 
-    void fetchTalkfootProfileSnapshot(sb, peer.id)
-      .then((snap) => {
-        if (cancelled || !snap) return
-        const merged = mergeUserAppState(snap.appState)
-        const modular = modularAvatarFromSnapshot(snap)
+    void fetchTalkfootPublicProfiles(sb, [peer.id])
+      .then((rows) => {
+        if (cancelled) return
+        const row = rows[0]
+        const modular = row ? modularAvatarFromPublicRow(row.modularAvatar) : undefined
         const base = buildChatPeerProfile({
           ...peer,
           ...(modular ? { modularAvatar: modular } : {}),
         })
         setCloudProfile({
           ...base,
-          ...merged.profile,
-          characterLook: mergeCharacterLook(
-            merged.profile.characterLook ?? base.characterLook,
-          ),
           ...(modular ? { modularAvatar: modular } : {}),
-          ...(merged.profile.profilePhotoDataUrl
-            ? { profilePhotoDataUrl: merged.profile.profilePhotoDataUrl }
-            : {}),
         })
       })
       .catch(() => {

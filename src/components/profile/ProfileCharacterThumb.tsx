@@ -3,11 +3,16 @@ import type { UserProfile } from '../../types/profile'
 import { cn } from '../../utils/cn'
 import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { ModularAvatarHeadThumb } from './ModularAvatarCanvas'
-import { MODULAR_PP_HEAD_RENDER_BASE_PX, MODULAR_PP_NAV_FRAMING } from './modularPPFraming'
+import {
+  MODULAR_PP_HEAD_RENDER_BASE_PX,
+  MODULAR_PP_LEADERBOARD_FRAMING,
+  MODULAR_PP_NAV_FRAMING,
+} from './modularPPFraming'
 
-export { MODULAR_PP_NAV_FRAMING }
+export { MODULAR_PP_LEADERBOARD_FRAMING, MODULAR_PP_NAV_FRAMING }
 
 const PRESETS = {
+  xs: 28,
   sm: 40,
   md: 56,
   chat: 72,
@@ -45,7 +50,10 @@ export function ProfileCharacterThumb({
 
   useEffect(() => {
     if (framingMode === 'topbar') {
-      const renderSize = Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, thumbPx)
+      const renderSize =
+        thumbPx < MODULAR_PP_HEAD_RENDER_BASE_PX
+          ? thumbPx
+          : Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, thumbPx)
       setRenderState({ shellSize: thumbPx, renderSize })
       return
     }

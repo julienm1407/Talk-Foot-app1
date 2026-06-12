@@ -1,15 +1,69 @@
+import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
+import { useAppearance } from '../../contexts/AppearanceContext'
+import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAvatars'
 import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useProfile } from '../../hooks/useProfile'
-import { useAppearance } from '../../contexts/AppearanceContext'
+import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
+import type { LeaderboardEntry } from '../../data/leaderboard'
+import type { ModularAvatarState } from '../../features/avatar2d/modularAvatarState'
+import type { UserProfile } from '../../types/profile'
+import { buildChatPeerProfile } from '../../utils/chatPeerProfile'
+import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
 import {
-  MODULAR_PP_NAV_FRAMING,
+  MODULAR_PP_LEADERBOARD_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
-import { Link } from 'react-router-dom'
-import { cn } from '../../utils/cn'
 
 const EMBEDDED_PREVIEW_LIMIT = 10
+
+function BettorRowAvatar({
+  entry,
+  isSelf,
+  selfProfile,
+  modularAvatar,
+}: {
+  entry: LeaderboardEntry
+  isSelf: boolean
+  selfProfile: UserProfile
+  modularAvatar?: ModularAvatarState
+}) {
+  const profile = useMemo(() => {
+    if (isSelf) return selfProfile
+    if (!modularAvatar) return null
+    return buildChatPeerProfile({
+      id: entry.userId,
+      username: entry.username,
+      avatarSeed: entry.avatarSeed,
+      accent: entry.accent,
+      modularAvatar,
+    })
+  }, [entry, isSelf, modularAvatar, selfProfile])
+
+  if (profile) {
+    return (
+      <ProfileCharacterThumb
+        profile={profile}
+        size="xs"
+        imagePriority={isSelf}
+        {...MODULAR_PP_LEADERBOARD_FRAMING}
+        className="!rounded-lg border-0 p-0"
+        aria-label={entry.username}
+      />
+    )
+  }
+
+  return (
+    <Avatar
+      seed={entry.avatarSeed}
+      accent={entry.accent}
+      alt={entry.username}
+      className="size-7 shrink-0 rounded-lg"
+    />
+  )
+}
 
 export function BettorLeaderboard({
   embedded,
@@ -24,10 +78,25 @@ export function BettorLeaderboard({
 }) {
   const { appearance } = useAppearance()
   const dark = appearance === 'dark'
+  const { user: authUser } = useAuth()
+  const chatActorId = useTalkFootChatActorId()
+  const selfUserId = chatActorId ?? authUser?.id ?? 'me'
   const { top12, top250, myRank, myEntry, totalActive } = useLeaderboard()
   const { profile } = useProfile()
   const limit = previewLimit ?? (extended ? 40 : embedded ? EMBEDDED_PREVIEW_LIMIT : 12)
   const rows = (extended ? top250 : top12).slice(0, limit)
+  const rowUserIds = useMemo(() => rows.map((e) => e.userId), [rows])
+  const selfAvatarKeys = useMemo(() => {
+    const keys = new Set<string>(['me'])
+    if (authUser?.id) keys.add(authUser.id)
+    if (chatActorId) keys.add(chatActorId)
+    if (selfUserId) keys.add(selfUserId)
+    return [...keys]
+  }, [authUser?.id, chatActorId, selfUserId])
+  const { avatars: modularByUserId } = useChatAuthorModularAvatars(rowUserIds, selfUserId, {
+    selfModularAvatar: profile.modularAvatar,
+    selfUserKeys: selfAvatarKeys,
+  })
   const titleCount = extended ? totalActive : Math.min(totalActive, limit)
   const listScrollable = embedded || extended
 
@@ -149,22 +218,12 @@ export function BettorLeaderboard({
               >
                 {e.rank}
               </span>
-              {e.userId === myEntry.userId ? (
-                <ProfileCharacterThumb
-                  profile={profile}
-                  size="sm"
-                  {...MODULAR_PP_NAV_FRAMING}
-                  className="!h-7 !w-7 !min-h-7 !min-w-7 shrink-0 self-start rounded-lg border-0 p-0"
-                  aria-label={e.username}
-                />
-              ) : (
-                <Avatar
-                  seed={e.avatarSeed}
-                  accent={e.accent}
-                  alt={e.username}
-                  className="size-7 shrink-0 rounded-lg"
-                />
-              )}
+              <BettorRowAvatar
+                entry={e}
+                isSelf={e.userId === myEntry.userId}
+                selfProfile={profile}
+                modularAvatar={modularByUserId[e.userId]}
+              />
               <span
                 className={cn(
                   'min-w-0 flex-1 truncate text-xs font-bold',

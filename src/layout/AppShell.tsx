@@ -14,6 +14,7 @@ import { PageAdRails } from './PageAdRails'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
 import { BetSettlementRunner } from '../components/bet/BetSettlementRunner'
+import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 
 const mainBottomPadMobile =
   'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] lg:pb-2'
@@ -26,11 +27,14 @@ const mainBottomPadHomeDesktop = 'lg:pb-2 xl:pb-3'
 
 export function AppShell() {
   const location = useLocation()
+  const isMobileTouch = useIsMobileTouchViewport()
   const isHome = location.pathname === '/' || location.pathname === ''
   const isChannel = location.pathname.startsWith('/channel/')
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
   const isGroupTribune = /^\/group\/[^/]+/.test(location.pathname)
   const isDebatePage = /^\/debate\/[^/]+/.test(location.pathname)
+  /** Dock Match / Compo / Paris / Tribune (portail fixe) — pas de footer légal en dessous. */
+  const hideChannelLegalFooter = isChannel && !isChannelStadium && isMobileTouch
 
   useSwipeNavigate({
     enabled: !isChannel && !isGroupTribune,
@@ -68,9 +72,11 @@ export function AppShell() {
             <ErrorBoundary key={location.pathname}>
               <Outlet />
             </ErrorBoundary>
-            <div className="mt-4">
-              <SiteLegalFooter compact className="rounded-t-2xl" />
-            </div>
+            {!hideChannelLegalFooter ? (
+              <div className="mt-4">
+                <SiteLegalFooter compact className="rounded-t-2xl" />
+              </div>
+            ) : null}
           </div>
         ) : isGroupTribune || isDebatePage ? (
           <div

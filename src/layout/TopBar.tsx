@@ -27,6 +27,7 @@ import {
 import { NavWalletBalances } from './NavWalletBalances'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 import { TopBarBackButton } from './TopBarBackButton'
+import { resolvePageBackTarget } from '../utils/pageBackNavigation'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -90,6 +91,8 @@ export function TopBar() {
   )
   const belowXl = useIsBelowXl()
   const isHomePath = location.pathname === '/' || location.pathname === ''
+  const backTarget = resolvePageBackTarget(location.pathname)
+  const mobileDenseHeader = belowXl && Boolean(backTarget)
   const monEspace = useMonEspaceDrawerOptional()
 
   useEffect(() => {
@@ -127,9 +130,21 @@ export function TopBar() {
       <div
         className="relative mx-auto w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] py-2 sm:py-2.5 md:py-3"
       >
-        <div className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:gap-3 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-4">
-        <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
-          <TopBarBackButton pathname={location.pathname} />
+        <div
+          className={cn(
+            'w-full min-w-0',
+            belowXl
+              ? 'flex items-center gap-1 sm:gap-1.5'
+              : 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4',
+          )}
+        >
+        <div
+          className={cn(
+            'flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3',
+            belowXl && 'min-w-0 flex-1 overflow-hidden',
+          )}
+        >
+          <TopBarBackButton pathname={location.pathname} compact={mobileDenseHeader} />
           <LogoEncartLink
             to="/"
             isLight={L}
@@ -141,6 +156,8 @@ export function TopBar() {
             }}
             className={cn(
               'group shrink-0 outline-none transition focus-visible:ring-2 focus-visible:ring-offset-2 active:opacity-95',
+              mobileDenseHeader &&
+                '!h-8 !w-[2.85rem] min-[400px]:!h-9 min-[400px]:!w-[3.25rem] sm:!h-10 sm:!w-[3.65rem]',
               L
                 ? 'focus-visible:ring-tf-dark/40 focus-visible:ring-offset-[color:var(--tf-page-bg-light)]'
                 : 'focus-visible:ring-sky-400/50 focus-visible:ring-offset-tf-dark',
@@ -215,11 +232,11 @@ export function TopBar() {
 
         <div
           className={cn(
-            'col-start-2 row-start-1 flex min-w-0 shrink-0 items-center justify-end gap-1.5 sm:gap-2 xl:col-start-3 xl:pl-3 xl:gap-2.5',
-            L ? 'xl:border-l xl:border-tf-dark/10' : 'xl:border-l xl:border-white/10',
+            'flex shrink-0 items-center justify-end gap-1 sm:gap-1.5 xl:gap-2.5',
+            !belowXl && cn('col-start-3 pl-3', L ? 'border-l border-tf-dark/10' : 'border-l border-white/10'),
           )}
         >
-          <NavWalletBalances className="relative z-[1]" compact />
+          <NavWalletBalances className="relative z-[1]" compact dense={mobileDenseHeader} />
           <div className="relative z-[1] flex items-center gap-1 sm:gap-1.5">
           <div ref={dmWrapRef} className="relative shrink-0">
             <button

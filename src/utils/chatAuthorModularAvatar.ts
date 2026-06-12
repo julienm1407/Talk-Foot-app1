@@ -13,6 +13,13 @@ export function resolveProfileModularAvatarForDisplay(
   return sanitizeModularAvatarState(resolveModularAvatarState(modular ?? undefined))
 }
 
+export function modularAvatarFromPublicRow(modular: unknown): ModularAvatarState | undefined {
+  if (!modular || typeof modular !== 'object') return undefined
+  const raw = modular as ModularAvatarState
+  if (!raw.data) return undefined
+  return resolveProfileModularAvatarForDisplay(raw)
+}
+
 export function modularAvatarFromSnapshot(
   snapshot: TalkfootProfileSnapshot | null,
 ): ModularAvatarState | undefined {

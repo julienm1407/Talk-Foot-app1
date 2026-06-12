@@ -86,6 +86,16 @@ export function useLiveMatchReactionsSync(options: {
   type ReactionRealtimeChannel = ReturnType<Sb['channel']>
   const reactionChannelRef = useRef<ReactionRealtimeChannel | null>(null)
 
+  const waitForReactionChannel = useCallback(async (maxMs = 2500) => {
+    const started = Date.now()
+    while (Date.now() - started < maxMs) {
+      const ch = reactionChannelRef.current
+      if (ch) return ch
+      await new Promise((resolve) => window.setTimeout(resolve, 50))
+    }
+    return reactionChannelRef.current
+  }, [])
+
   const publishReaction = useCallback(
     async (
       reactionType: ReactionType,
@@ -113,7 +123,7 @@ export function useLiveMatchReactionsSync(options: {
       const ev = rowToReactionEvent(row, matchId, meta)
       if (!ev) return { ok: false as const, error: 'invalid_type' }
 
-      const ch = reactionChannelRef.current
+      const ch = await waitForReactionChannel()
       if (ch) {
         void ch.send({
           type: 'broadcast',
@@ -132,7 +142,7 @@ export function useLiveMatchReactionsSync(options: {
 
       return { ok: true as const, event: ev }
     },
-    [matchId],
+    [matchId, waitForReactionChannel],
   )
 
   useEffect(() => {
@@ -182,7 +192,7 @@ export function useLiveMatchReactionsSync(options: {
           },
           (payload: RealtimePostgresChangesPayload<ReactionRow>) => {
             void payload
-            // FX joués via broadcast uniquement (évite doublon postgres + broadcast, et porte tifo_side).
+            // FX via broadcast uniquement (métadonnées tifo / couleur fumigène) — dédoublonnage par id côté Channel.
           },
         )
         .on('broadcast', { event: BROADCAST_REACTION_EVENT }, (msg: unknown) => {

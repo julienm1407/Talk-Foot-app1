@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
-import { fetchProfilesByIds } from '../lib/supabase/friendships'
-import { fetchTalkfootProfileSnapshot } from '../lib/supabase/profileAppState'
+import { fetchTalkfootPublicProfiles } from '../lib/supabase/profileAppState'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
-  modularAvatarFromSnapshot,
+  modularAvatarFromPublicRow,
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 
 type AuthorCacheEntry = {
   modularAvatar: ModularAvatarState | null
   displayName: string | null
+  loaded: boolean
 }
 
 const authorCache = new Map<string, AuthorCacheEntry>()
@@ -44,7 +44,7 @@ export function useChatAuthorModularAvatars(
   const pendingKey = useMemo(() => {
     return [...new Set(userIds)]
       .filter((id) => shouldFetchCloudChatAvatar(id, selfUserId))
-      .filter((id) => !authorCache.get(id)?.modularAvatar)
+      .filter((id) => !authorCache.get(id)?.loaded)
       .sort()
       .join(',')
   }, [userIds, selfUserId])
@@ -58,29 +58,34 @@ export function useChatAuthorModularAvatars(
     let cancelled = false
 
     void (async () => {
-      const profileNames = await fetchProfilesByIds(sb, ids).catch(() => new Map())
+      try {
+        const rows = await fetchTalkfootPublicProfiles(sb, ids)
+        if (cancelled) return
 
-      await Promise.all(
-        ids.map(async (actorKey) => {
-          try {
-            const snap = await fetchTalkfootProfileSnapshot(sb, actorKey)
-            const modularAvatar = modularAvatarFromSnapshot(snap) ?? null
-            const fromSnap = snap?.displayName?.trim() || null
-            const fromTable = profileNames.get(actorKey)?.display_name?.trim() || null
-            authorCache.set(actorKey, {
-              modularAvatar,
-              displayName: fromSnap || fromTable,
-            })
-          } catch {
-            const fromTable = profileNames.get(actorKey)?.display_name?.trim() || null
-            const prev = authorCache.get(actorKey)
-            authorCache.set(actorKey, {
-              modularAvatar: prev?.modularAvatar ?? null,
-              displayName: fromTable ?? prev?.displayName ?? null,
-            })
+        const byActorKey = new Map(rows.map((row) => [row.actorKey, row]))
+        const byProfileId = new Map(rows.map((row) => [row.profileId, row]))
+
+        for (const actorKey of ids) {
+          const row = byActorKey.get(actorKey) ?? byProfileId.get(actorKey)
+          const modularAvatar = row ? modularAvatarFromPublicRow(row.modularAvatar) ?? null : null
+          const displayName = row?.displayName?.trim() || null
+          authorCache.set(actorKey, { modularAvatar, displayName, loaded: true })
+          if (row?.profileId && row.profileId !== actorKey) {
+            authorCache.set(row.profileId, { modularAvatar, displayName, loaded: true })
           }
-        }),
-      )
+        }
+      } catch {
+        if (cancelled) return
+        for (const actorKey of ids) {
+          const prev = authorCache.get(actorKey)
+          authorCache.set(actorKey, {
+            modularAvatar: prev?.modularAvatar ?? null,
+            displayName: prev?.displayName ?? null,
+            loaded: true,
+          })
+        }
+      }
+
       if (!cancelled) setTick((n) => n + 1)
     })()
 

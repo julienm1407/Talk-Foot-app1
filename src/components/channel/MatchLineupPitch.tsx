@@ -16,29 +16,34 @@ function PlayerBadge({
   style,
   light,
   compact,
+  maxWidthPct,
 }: {
   name: string
   className?: string
   style?: CSSProperties
   light?: boolean
   compact?: boolean
+  maxWidthPct?: number
 }) {
   return (
     <div
       className={cn(
         'absolute truncate rounded-md border font-bold leading-tight backdrop-blur-[1px]',
         compact
-          ? 'max-w-[38%] px-1 py-0.5 text-[8px] sm:text-[9px]'
-          : 'max-w-[44%] px-1.5 py-1 text-[10px]',
+          ? 'px-1 py-0.5 text-[8px] sm:text-[9px]'
+          : 'px-1.5 py-1 text-[10px]',
         light
           ? 'border-sky-400/40 bg-white/95 text-[#023458] shadow-[0_4px_12px_rgba(15,40,70,0.12)]'
           : 'border-cyan-200/55 bg-[#062235]/92 text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)]',
         className,
       )}
-      style={style}
+      style={{
+        ...style,
+        maxWidth: maxWidthPct ? `${maxWidthPct}%` : compact ? '28%' : '32%',
+      }}
       title={name}
     >
-      {compactPlayerLabel(name, compact ? 9 : 12)}
+      {compactPlayerLabel(name, compact ? 8 : 12)}
     </div>
   )
 }
@@ -52,7 +57,7 @@ export function MatchLineupPitch({
   compact,
   className,
 }: {
-  badges: Array<{ name: string; left: number; top: number }>
+  badges: Array<{ name: string; left: number; top: number; maxWidthPct?: number }>
   homeToneColor: string
   awayToneColor: string
   isUpcoming?: boolean
@@ -85,6 +90,7 @@ export function MatchLineupPitch({
           name={p.name}
           light={light}
           compact={compact}
+          maxWidthPct={p.maxWidthPct}
           className="-translate-x-1/2 -translate-y-1/2"
           style={{ left: `${p.left}%`, top: `${p.top}%` }}
         />

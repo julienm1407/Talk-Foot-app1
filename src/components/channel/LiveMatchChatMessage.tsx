@@ -83,6 +83,7 @@ export function LiveMatchChatMessage({
         user={chatUser}
         selfProfile={profile}
         isSelf={peer.isSelfMessage}
+        size="compact"
         className={TF_FOCUS_VISIBLE}
         aria-label={
           peer.peerSocial

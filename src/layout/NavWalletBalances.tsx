@@ -18,10 +18,13 @@ function formatBalance(n: number): string {
 export function NavWalletBalances({
   className,
   compact = true,
+  dense = false,
 }: {
   className?: string
   /** Une ligne icône + chiffre (nav). Labels empilés si false. */
   compact?: boolean
+  /** Barre mobile avec bouton Retour — pastille plus compacte. */
+  dense?: boolean
 }) {
   const { user } = useAuth()
   const { appearance } = useAppearance()
@@ -42,7 +45,10 @@ export function NavWalletBalances({
   )
 
   const divider = cn('h-4 w-px shrink-0 sm:h-5', L ? 'bg-tf-dark/12' : 'bg-white/20')
-  const value = 'text-[13px] font-black tabular-nums leading-none sm:text-sm'
+  const value = cn(
+    'font-black tabular-nums leading-none',
+    dense ? 'text-[11px] sm:text-[13px]' : 'text-[13px] sm:text-sm',
+  )
 
   const dailyPendingMobile =
     rewardsEnabled && !dailyBonus.alreadyClaimedToday && !dailyBonus.canClaim
@@ -65,12 +71,12 @@ export function NavWalletBalances({
   const balanceRow = (
     <>
       <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <TokenGlyph className="size-4 shrink-0" variant={L ? 'solid' : 'onDark'} />
+        <TokenGlyph className={cn('shrink-0', dense ? 'size-3.5 sm:size-4' : 'size-4')} variant={L ? 'solid' : 'onDark'} />
         <span className={value}>{tokens}</span>
       </span>
       <span className={divider} aria-hidden />
       <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <span className="text-sm leading-none" aria-hidden>
+        <span className={cn('leading-none', dense ? 'text-xs sm:text-sm' : 'text-sm')} aria-hidden>
           🏅
         </span>
         <span className={value}>{medals}</span>
@@ -124,7 +130,7 @@ export function NavWalletBalances({
           to="/profile#monnaie"
           className={cn(
             shell,
-            'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5',
+            dense ? 'gap-1 px-1.5 py-1 sm:gap-2 sm:px-2.5 sm:py-1.5' : 'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5',
             rewardsEnabled && (dailyBonus.canClaim || dailyPendingMobile)
               ? 'hidden lg:inline-flex'
               : 'inline-flex',

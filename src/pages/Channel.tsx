@@ -73,6 +73,7 @@ import {
 } from '../api/sportMonks'
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
+import { computeLineupBadgePlacements } from '../utils/lineupPitchPositions'
 import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/bannedWords'
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
@@ -133,20 +134,6 @@ const FLARE_COLOR_LABELS: Record<FlareColor, string> = {
   yellow: 'jaune',
 }
 
-/** Positions % sur le terrain (y = 0 haut / attaque, 88 = gardien). */
-const LINEUP_FALLBACK_POSITIONS: Array<{ left: number; top: number }> = [
-  { left: 35, top: 16 },
-  { left: 65, top: 16 },
-  { left: 14, top: 40 },
-  { left: 38, top: 40 },
-  { left: 62, top: 40 },
-  { left: 86, top: 40 },
-  { left: 14, top: 64 },
-  { left: 38, top: 64 },
-  { left: 62, top: 64 },
-  { left: 86, top: 64 },
-  { left: 50, top: 86 },
-]
 
 const CHANNEL_DESKTOP_GRID =
   'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(14.5rem,0.95fr)] md:gap-2.5'
@@ -1704,51 +1691,10 @@ export function ChannelPage() {
     () => (lineupSide === 'home' ? starters?.home ?? [] : starters?.away ?? []),
     [lineupSide, starters],
   )
-  const displayedLineupBadges = useMemo(() => {
-    const fallback = LINEUP_FALLBACK_POSITIONS
-
-    const parsed = displayedLineupPlayers
-      .slice(0, 11)
-      .map((p, index) => {
-        if (typeof p === 'string') return { name: p, index }
-        const ff = p.formationField
-        if (!ff) return { name: p.label, index, formationPosition: p.formationPosition }
-        const [rowRaw, colRaw] = ff.split(':').map((x) => Number(x.trim()))
-        const row = Number.isFinite(rowRaw) ? rowRaw : null
-        const col = Number.isFinite(colRaw) ? colRaw : null
-        return { name: p.label, index, row, col, formationPosition: p.formationPosition }
-      })
-      .filter((p) => p.name.trim().length > 0)
-
-    const positioned = parsed.filter((p) => p.row != null && p.col != null)
-    if (positioned.length < 7) {
-      return parsed.map((p, i) => ({
-        name: p.name,
-        left: fallback[i]?.left ?? 50,
-        top: fallback[i]?.top ?? 120,
-      }))
-    }
-
-    const rows = [...new Set(positioned.map((p) => p.row as number))].sort((a, b) => a - b)
-    const gk = positioned.find((p) => p.formationPosition === 1)
-    const invert = gk ? (gk.row as number) <= Math.min(...rows) : true
-    const rowIndexByValue = new Map(rows.map((v, i) => [v, i] as const))
-    const rowCount = Math.max(1, rows.length - 1)
-
-    return parsed.map((p, i) => {
-      if (p.row == null || p.col == null) {
-        return { name: p.name, left: fallback[i]?.left ?? 50, top: fallback[i]?.top ?? 120 }
-      }
-      const rowPlayers = positioned.filter((x) => x.row === p.row).sort((a, b) => (a.col as number) - (b.col as number))
-      const slot = Math.max(0, rowPlayers.findIndex((x) => x === p))
-      const rowSlots = Math.max(1, rowPlayers.length - 1)
-      const x = rowPlayers.length === 1 ? 50 : 12 + (slot / rowSlots) * 76
-      const rowIdx = rowIndexByValue.get(p.row) ?? 0
-      const normalized = rowIdx / rowCount
-      const y = invert ? 86 - normalized * 74 : 12 + normalized * 74
-      return { name: p.name, left: x, top: y }
-    })
-  }, [displayedLineupPlayers])
+  const displayedLineupBadges = useMemo(
+    () => computeLineupBadgePlacements(displayedLineupPlayers),
+    [displayedLineupPlayers],
+  )
   const lineupAutoTimerRef = useRef<number | null>(null)
   const lineupAutoPausedUntilRef = useRef<number>(0)
   const pauseLineupAutoFor3Min = () => {
@@ -1928,7 +1874,7 @@ export function ChannelPage() {
     anim: PaidAnimation,
     opts?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
   ) => {
-    if (anim.id !== 'fumigene') setAnimationsOpen(false)
+    setAnimationsOpen(false)
     setLivePanelOpen(false)
     lastLocalFxAtRef.current = Date.now()
     const res = betting.spendTokens(anim.cost, `chat_animation:${anim.id}`)
@@ -3837,7 +3783,7 @@ export function ChannelPage() {
           </div>
         </div>
       ) : null}
-      {typeof document !== 'undefined' && !isFinished && paidFxLayers.length > 0
+      {typeof document !== 'undefined' && showLiveChat && paidFxLayers.length > 0
         ? createPortal(
             <div className="tf-paid-fx-portal-layer tf-paid-fx-portal" aria-hidden>
               {paidFxLayers.map((layer, layerIndex) => (

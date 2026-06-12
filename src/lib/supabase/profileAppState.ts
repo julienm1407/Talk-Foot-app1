@@ -14,6 +14,40 @@ function rpcFailed(message: string, code?: string): Error {
   return err
 }
 
+export type TalkfootPublicProfileRow = {
+  actorKey: string
+  profileId: string
+  displayName: string | null
+  modularAvatar: unknown
+}
+
+export async function fetchTalkfootPublicProfiles(
+  sb: SupabaseClient,
+  actorKeys: string[],
+): Promise<TalkfootPublicProfileRow[]> {
+  const keys = [...new Set(actorKeys.map((k) => k.trim()).filter(Boolean))].slice(0, 100)
+  if (keys.length === 0) return []
+
+  const { data, error } = await sb.rpc('get_talkfoot_public_profiles', { p_actor_keys: keys })
+  if (error) throw rpcFailed(error.message, error.code)
+  if (!data || data.ok !== true || !Array.isArray(data.profiles)) return []
+
+  const out: TalkfootPublicProfileRow[] = []
+  for (const row of data.profiles) {
+    if (!row || typeof row !== 'object') continue
+    const actorKey = typeof row.actor_key === 'string' ? row.actor_key : ''
+    const profileId = typeof row.profile_id === 'string' ? row.profile_id : ''
+    if (!actorKey || !profileId) continue
+    out.push({
+      actorKey,
+      profileId,
+      displayName: row.display_name != null ? String(row.display_name) : null,
+      modularAvatar: row.modular_avatar ?? null,
+    })
+  }
+  return out
+}
+
 export async function fetchTalkfootProfileSnapshot(
   sb: SupabaseClient,
   actorKey: string,
