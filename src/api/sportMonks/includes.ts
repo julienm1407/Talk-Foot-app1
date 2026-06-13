@@ -38,9 +38,9 @@ export const SM_INCLUDE_FIXTURE_PREDICTIONS_ONLY =
 export const SM_INCLUDE_FIXTURE_LIST =
   'participants;scores.type;league;state;round;stage;venue' as const
 
-/** Timeline live légère : événements + score + minute (sans stats / commentaires). */
+/** Timeline live légère : événements + score + minute (périodes pour le chrono). */
 export const SM_INCLUDE_FIXTURE_EVENTS_TIMELINE =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer' as const
+  'participants;league;venue;state;scores;periods;events.type;events.period;events.player;events.relatedPlayer' as const
 
 /** Détail match : xG, events, compos. */
 export const SM_INCLUDE_FIXTURE_XG =

@@ -4,6 +4,7 @@ import type { User } from '../../types/chat'
 import type { UserProfile } from '../../types/profile'
 import { buildChatPeerProfile } from '../../utils/chatPeerProfile'
 import { cn } from '../../utils/cn'
+import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import {
   MODULAR_PP_CHAT_FRAMING,
@@ -21,13 +22,6 @@ function peerProfileKey(u: User | undefined): string {
     JSON.stringify(u.characterLook ?? {}),
     JSON.stringify(u.modularAvatar ?? {}),
   ].join('|')
-}
-
-function avatarInitial(username?: string): string {
-  const trimmed = username?.trim() ?? ''
-  if (!trimmed) return '?'
-  const letter = trimmed.replace(/^\p{Extended_Pictographic}+\s*/u, '').trim()[0]
-  return (letter ?? trimmed[0] ?? '?').toUpperCase()
 }
 
 /** Extrait l’emoji affiché dans le pseudo bot tribune (ex. « 🍺 Nom »). */
@@ -67,6 +61,7 @@ export function ChatCharacterThumb({
   const isTalkFootBot = Boolean(user?.isTalkFootBot)
   const isBot = isSalonBot || isTalkFootBot
   const useModularThumb = !isBot && (isSelf || Boolean(user?.modularAvatar))
+  const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`
 
   const botSeed = useMemo(() => {
     if (isSalonBot && user?.id.startsWith('group-bot:')) {
@@ -80,7 +75,7 @@ export function ChatCharacterThumb({
     size === 'compact'
       ? useModularThumb || isBot
         ? 'size-7 min-h-7 min-w-7'
-        : 'min-h-7 w-7 overflow-visible pt-px'
+        : 'size-7 min-h-7 min-w-7 overflow-hidden rounded-full'
       : 'size-[2.65rem] min-h-[2.65rem] min-w-[2.65rem] overflow-hidden rounded-full sm:size-[2.85rem] sm:min-h-[2.85rem] sm:min-w-[2.85rem]',
     className,
   )
@@ -103,12 +98,11 @@ export function ChatCharacterThumb({
       aria-label={ariaLabel}
     />
   ) : (
-    <div
-      className="flex size-full items-center justify-center rounded-full border-2 border-white/20 bg-gradient-to-br from-slate-600 to-slate-800 text-sm font-black text-white shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
-      aria-hidden
-    >
-      {avatarInitial(user?.username)}
-    </div>
+    <img
+      src={dicebearAvatarUrl(dicebearSeed, 96, 0)}
+      alt=""
+      className="size-full rounded-full border-2 border-white/20 object-cover shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
+    />
   )
 
   if (onPeerMenu) {

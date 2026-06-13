@@ -6,6 +6,7 @@ import { teams, teamColors } from '../../data/teams'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { localizeMatchTeams } from '../../utils/matchSideColors'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
+import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 
 const LIVE_STATE_IDS = new Set([2, 3, 4, 6, 9, 21, 22, 25])
 const FINISHED_STATE_IDS = new Set([5, 7, 8, 10, 12, 14, 15, 17])
@@ -294,7 +295,8 @@ function minuteFromFixture(f: SmFixture): number {
 
 /** Minute affichée (période / `fixture.minute`) pour caler l’encart sur le live SM. */
 export function extractLiveMinuteFromSmFixture(f: SmFixture): number {
-  return minuteFromFixture(f)
+  const fx = normalizeSmFixtureIncludes(f) ?? f
+  return minuteFromFixture(fx)
 }
 
 function getTeam(

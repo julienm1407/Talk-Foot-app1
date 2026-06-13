@@ -831,9 +831,17 @@ export function ChannelPage() {
   const matchForClock = useMemo(() => {
     if (!match) return null
     if (!liveSnapshot) return match
+    const contextMinute = Math.min(99, Math.max(0, Math.round(Number(match.minute) || 0)))
+    const bundleMinute = Math.min(99, Math.max(0, Math.round(Number(liveSnapshot.minute) || 0)))
+    const minute =
+      bundleMinute > 0
+        ? Math.max(contextMinute, bundleMinute)
+        : contextMinute > 0
+          ? contextMinute
+          : bundleMinute
     return {
       ...match,
-      minute: liveSnapshot.minute,
+      minute,
       liveClockPaused: liveSnapshot.paused,
       liveInSecondHalf: liveSnapshot.inSecondHalf,
       score: liveSnapshot.score ?? match.score,
@@ -1097,10 +1105,12 @@ export function ChannelPage() {
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
   const [paidFxLayers, setPaidFxLayers] = useState<PaidFxLayer[]>([])
+  const [stadiumFxTotal, setStadiumFxTotal] = useState(0)
   const seenReactionIdsRef = useRef(new Set<string>())
   const lastLocalFxAtRef = useRef(0)
   const pushPaidFxLayer = useCallback((fx: ActivePaidFx, seed = Date.now()) => {
     const layerId = `fx-${seed}-${Math.random().toString(16).slice(2)}`
+    setStadiumFxTotal((n) => n + 1)
     setPaidFxLayers((prev) => {
       const next = [...prev, { layerId, fx, seed }]
       return next.length > MAX_PAID_FX_LAYERS ? next.slice(-MAX_PAID_FX_LAYERS) : next
@@ -1230,6 +1240,7 @@ export function ChannelPage() {
     enabled: Boolean(match?.id),
     onHydrate: (events) => {
       for (const e of events) seenReactionIdsRef.current.add(e.id)
+      setStadiumFxTotal((prev) => Math.max(prev, events.length))
     },
     onLiveInsert: (event) => {
       const isOwnFxEcho =
@@ -1280,6 +1291,7 @@ export function ChannelPage() {
   useEffect(() => {
     setChatMessages([])
     seenReactionIdsRef.current = new Set()
+    setStadiumFxTotal(0)
   }, [match?.id])
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
@@ -2049,7 +2061,7 @@ export function ChannelPage() {
     ],
     [],
   )
-  const fxActiveCount = paidFxLayers.length
+  const fxActiveCount = stadiumFxTotal
   const liveSalonStats = useLiveMatchSalonStats(match?.id)
   const viewersDisplay =
     liveSalonStats != null
@@ -2888,7 +2900,7 @@ export function ChannelPage() {
                 </div>
                 <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-2 py-1">
                   <p className="text-[10px] font-semibold leading-none text-sky-100/75">
-                    FX actifs <span className="ml-1 text-xs font-bold text-white">{fxActiveCount}</span>
+                    FX tribune <span className="ml-1 text-xs font-bold text-white">{fxActiveCount}</span>
                   </p>
                 </div>
               </div>
@@ -2912,7 +2924,9 @@ export function ChannelPage() {
               <div className="mt-2 rounded-lg bg-[#8b7bff]/16 px-2 py-1 text-[11px] font-semibold text-[#ece8ff]">
                 {animationNotice}
               </div>
-            ) : null}
+            ) : (
+              <div className="mt-2 min-h-0" aria-hidden />
+            )}
             <ChannelSubscriptionExtras
               matchId={match?.id}
               isLive={status === 'live'}
@@ -4053,17 +4067,6 @@ export function ChannelPage() {
                         >
                           ALLEZ {(layer.fx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
                         </p>
-                      </div>
-                    ) : null}
-                    {layerIndex === paidFxLayers.length - 1 ? (
-                      <div
-                        className={`absolute bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] left-1/2 max-w-[min(92vw,22rem)] -translate-x-1/2 rounded-full border px-4 py-1.5 text-center text-[11px] font-bold shadow-lg sm:text-xs ${
-                          L
-                            ? 'border-slate-300/90 bg-[#062a48] text-sky-50'
-                            : 'border-white/15 bg-[#041a2d]/90 text-sky-100'
-                        }`}
-                      >
-                        FX: {layer.fx.label}
                       </div>
                     ) : null}
                   </div>

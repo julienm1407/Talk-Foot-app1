@@ -1,5 +1,6 @@
 import type { Highlight } from '../../data/highlights'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
+import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import {
   cardColorFromHighlightText,
   cardCoarseDedupeKey,
@@ -60,9 +61,11 @@ function cardColorFromEventDev(dev: string): 'yellow' | 'red' {
 function eventDevLooksLikeGoal(u: string): boolean {
   if (u.includes('GOALKICK') || u.includes('GOAL KICK') || u.includes('GOALKEEPER')) return false
   if (u.includes('DISALLOWED') || u.includes('CANCELLED')) return false
+  if (u.includes('MISSED') && u.includes('PENALTY')) return false
+  if (u.includes('PENALTY') && (u.includes('AWARD') || u.includes('CONCEDED'))) return false
   if (u.includes('OWN GOAL') || u.includes('OWNGOAL') || u.includes('OWN-GOAL')) return true
   if (/\bGOAL\b/.test(u)) return true
-  if (u.includes('PENALTY') && (u.includes('SCORED') || u.includes('GOAL') || u.includes('BUT'))) return true
+  if (u.includes('PENALTY')) return true
   if (/\bGOL\b/.test(u)) return true
   return false
 }
@@ -161,8 +164,11 @@ export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' 
   }
   if (bucket === 'carton') {
     const slug = scorerSlugForHighlight(h)
-    if (slug) return `carton|${h.minute}|${sideKey}|${slug}`
     const coarse = cardCoarseDedupeKey(h)
+    if (slug) {
+      const color = coarse ?? cardColorFromHighlightText(`${h.title ?? ''} ${h.detail ?? ''}`)
+      return `carton|${sideKey}|${color}|${slug}`
+    }
     if (coarse) return `carton|${coarse}`
   }
   const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()} ${String(h.scorerName ?? '').trim()}`.trim()
@@ -206,7 +212,10 @@ function cardPlayerFromEvent(ev: SmFixtureEventRow, dev: string): string | undef
 
 function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   const player = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
-  if (player && isPlausibleGoalScorerName(player)) return player
+  if (player) {
+    if (isPlausibleGoalScorerName(player)) return player
+    if (player.length >= 3 && /[A-Za-zÀ-ÿ]/.test(player)) return player
+  }
   const relatedPlayerObj = ev.relatedPlayer ?? ev.related_player
   const related = String(
     relatedPlayerObj?.display_name ?? relatedPlayerObj?.name ?? ev.related_player_name ?? '',
@@ -285,12 +294,13 @@ export function extractTimelineHighlightsFromSmFixture(
   fixture: SmFixture | null | undefined,
   matchId: string,
 ): Highlight[] {
-  if (!fixture) return []
+  const normalized = normalizeSmFixtureIncludes(fixture)
+  if (!normalized) return []
 
-  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(normalized)
   const out: Highlight[] = []
 
-  const events = Array.isArray(fixture.events) ? fixture.events : []
+  const events = Array.isArray(normalized.events) ? normalized.events : []
   if (events.length) {
     const sortedEv = [...events].sort((a, b) => {
       const ma = displayMinute(a)
@@ -340,7 +350,7 @@ export function extractTimelineHighlightsFromSmFixture(
     }
   }
 
-  const comments = Array.isArray(fixture.comments) ? fixture.comments : []
+  const comments = Array.isArray(normalized.comments) ? normalized.comments : []
   const withText = comments.filter((c) => String(c.comment ?? '').trim())
   if (withText.length) {
     const sorted = [...withText].sort((a, b) => {
@@ -477,10 +487,11 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
   away: LiveGoalTeamHints,
   scoreHint?: { home: number; away: number },
 ): LiveGoalDisplayRow[] {
-  if (!fixture) return []
-  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+  const normalized = normalizeSmFixtureIncludes(fixture)
+  if (!normalized) return []
+  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(normalized)
   const rows: Highlight[] = []
-  for (const ev of fixture.events ?? []) {
+  for (const ev of normalized.events ?? []) {
     const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
     if (!eventDevLooksLikeGoal(dev.toUpperCase())) continue
     const minute = displayMinute(ev)
@@ -501,7 +512,7 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
   }
   const fromEvents = parseLiveGoalRowsFromHighlights(rows, home, away, scoreHint)
   if (fromEvents.length > 0) return fromEvents
-  const timeline = extractTimelineHighlightsFromSmFixture(fixture, 'direct')
+  const timeline = extractTimelineHighlightsFromSmFixture(normalized, 'direct')
   return parseLiveGoalRowsFromHighlights(
     timeline.filter((h) => h.type === 'But'),
     home,
@@ -516,10 +527,11 @@ export function extractLiveCardDisplayRowsFromSmFixture(
   home: LiveGoalTeamHints,
   away: LiveGoalTeamHints,
 ): LiveCardDisplayRow[] {
-  if (!fixture) return []
-  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+  const normalized = normalizeSmFixtureIncludes(fixture)
+  if (!normalized) return []
+  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(normalized)
   const rows: Highlight[] = []
-  for (const ev of fixture.events ?? []) {
+  for (const ev of normalized.events ?? []) {
     const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
     const u = dev.toUpperCase()
     if (!eventDevLooksLikeCard(u)) continue
@@ -541,7 +553,7 @@ export function extractLiveCardDisplayRowsFromSmFixture(
   }
   const fromEvents = parseLiveCardRowsFromHighlights(rows, home, away)
   if (fromEvents.length > 0) return fromEvents
-  const timeline = extractTimelineHighlightsFromSmFixture(fixture, 'direct')
+  const timeline = extractTimelineHighlightsFromSmFixture(normalized, 'direct')
   return parseLiveCardRowsFromHighlights(
     timeline.filter((h) => h.type === 'Carton'),
     home,

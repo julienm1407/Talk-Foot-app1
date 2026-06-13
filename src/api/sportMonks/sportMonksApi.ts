@@ -3,7 +3,6 @@ import {
   type SportMonksListEnvelope,
   sportMonksPaginationHasMore,
 } from './client'
-import type { SmFixture, SmPlayer, SmRoundWithOdds } from './types'
 import {
   SM_INCLUDE_FIXTURE_EVENTS_COMMENTS,
   SM_INCLUDE_FIXTURE_EVENTS_TIMELINE,
@@ -23,6 +22,8 @@ import {
   SM_INCLUDE_STANDINGS,
   SM_INCLUDE_TEAM_UPCOMING_AND_LATEST,
 } from './includes'
+import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
+import type { SmFixture, SmPlayer, SmRoundWithOdds } from './types'
 
 const PER_PAGE = 50
 const MAX_PAGES = 30
@@ -169,9 +170,11 @@ function envelopeDataAsFixture(data: unknown): SmFixture | null {
   if (!data || typeof data !== 'object') return null
   if (Array.isArray(data)) {
     const first = data[0]
-    return first && typeof first === 'object' && 'id' in first ? (first as SmFixture) : null
+    const raw = first && typeof first === 'object' && 'id' in first ? (first as SmFixture) : null
+    return normalizeSmFixtureIncludes(raw)
   }
-  return 'id' in data ? (data as SmFixture) : null
+  const raw = 'id' in data ? (data as SmFixture) : null
+  return normalizeSmFixtureIncludes(raw)
 }
 
 /**
@@ -273,7 +276,7 @@ export async function fetchTalkFootLiveBundleFixture(
         const body = (await res.json()) as { fixture?: unknown }
         const fx = body?.fixture
         if (!fx || typeof fx !== 'object') return null
-        return fx as SmFixture
+        return normalizeSmFixtureIncludes(fx as SmFixture)
       } catch {
         return null
       }
