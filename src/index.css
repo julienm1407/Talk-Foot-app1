@@ -2642,6 +2642,15 @@ body::before {
   overscroll-behavior-y: contain;
 }
 
+/* Force un nouveau contexte de rendu à chaque changement de route (Safari / PWA). */
+.tf-route-surface {
+  isolation: isolate;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 /* Barre de saisie chat — mobile (portail body, au-dessus de la BottomNav). */
 .tf-chat-compose-mobile-shell {
   position: fixed !important;

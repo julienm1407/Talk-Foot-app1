@@ -1,5 +1,5 @@
-import { useMemo, useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import {
   BOTTOM_NAV_MORE_ROUTES,
@@ -20,6 +20,7 @@ function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['sect
 
 export function BottomNav() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const showMobileNav = useIsMobileTouchViewport()
@@ -31,6 +32,23 @@ export function BottomNav() {
   }, [location.pathname, location.hash])
 
   const closeMore = () => setMoreOpen(false)
+
+  const goTo = useCallback(
+    (to: string) => {
+      closeMore()
+      const normalizedPath = location.pathname || '/'
+      const targetPath = to || '/'
+      const alreadyThere =
+        normalizedPath === targetPath ||
+        (targetPath === '/' && (normalizedPath === '/' || normalizedPath === ''))
+      if (alreadyThere) {
+        navigate(targetPath, { replace: true, state: { tfNavAt: Date.now() } })
+        return
+      }
+      navigate(targetPath)
+    },
+    [location.pathname, navigate],
+  )
 
   const moreActive = useMemo(
     () =>
@@ -55,15 +73,14 @@ export function BottomNav() {
         aria-label="Bottom navigation"
       >
         <div className="mx-auto grid w-full max-w-tf-content grid-cols-4 gap-1 px-2 py-2">
-          {BOTTOM_NAV_PRIMARY_ROUTES.map(({ to, end, section, icon }) => {
+          {BOTTOM_NAV_PRIMARY_ROUTES.map(({ to, section, icon }) => {
             const th = getAppSectionTheme(section)
             const active = isRouteActiveForSection(section, location.pathname, location.hash)
             return (
-              <NavLink
+              <button
                 key={to}
-                to={to}
-                end={end}
-                onClick={closeMore}
+                type="button"
+                onClick={() => goTo(to)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'tf-nav-pill flex min-h-tf-touch flex-col items-center justify-center gap-1 rounded-tf-xl px-1.5 py-2 text-[11px] font-bold leading-tight outline-none active:scale-[0.96]',
@@ -84,7 +101,7 @@ export function BottomNav() {
                   {icon}
                 </span>
                 <span className="max-w-full truncate text-center">{th.label}</span>
-              </NavLink>
+              </button>
             )
           })}
 

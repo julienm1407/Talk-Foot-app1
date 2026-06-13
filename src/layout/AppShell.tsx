@@ -15,6 +15,7 @@ import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
 import { BetSettlementRunner } from '../components/bet/BetSettlementRunner'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
+import { useRouteViewReset } from '../hooks/useRouteViewReset'
 
 const mainBottomPadMobile =
   'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] lg:pb-2'
@@ -30,7 +31,9 @@ const mainBottomPadHomeDesktop = 'lg:pb-2 xl:pb-3'
 
 export function AppShell() {
   const location = useLocation()
+  useRouteViewReset()
   const isMobileTouch = useIsMobileTouchViewport()
+  const routeSurfaceKey = `${location.pathname || '/'}:${(location.state as { tfNavAt?: number } | null)?.tfNavAt ?? 0}`
   const isHome = location.pathname === '/' || location.pathname === ''
   const isChannel = location.pathname.startsWith('/channel/')
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
@@ -49,7 +52,10 @@ export function AppShell() {
     <DirectMessagesProvider>
     <PrivateMessagesUiProvider>
     <>
-    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell">
+    <div
+      key={routeSurfaceKey}
+      className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell tf-route-surface"
+    >
       <SkipLink />
       <ActivityRouteLogger />
       <BetSettlementRunner />
@@ -68,17 +74,18 @@ export function AppShell() {
       >
         {isChannel ? (
           <div
+            data-tf-route-scroll
             className={cn(
               'tf-channel-shell mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
               /* Téléphone : scroll page. Tablette+ : hauteur cadrée, scroll dans les colonnes de la tribune. */
-              'min-h-0 max-md:touch-pan-y max-md:overflow-y-auto max-md:overscroll-y-contain max-md:[-webkit-overflow-scrolling:touch]',
+              'min-h-0 max-md:touch-pan-y max-md:overflow-y-auto max-md:overscroll-y-contain',
               'md:min-h-0 md:overflow-hidden',
               mainBottomPadChannel,
               isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',
             )}
           >
-            <ErrorBoundary key={location.pathname}>
-              <Outlet />
+            <ErrorBoundary key={routeSurfaceKey}>
+              <Outlet key={routeSurfaceKey} />
             </ErrorBoundary>
             {!hideChannelLegalFooter ? (
               <div className="mt-4">
@@ -88,10 +95,11 @@ export function AppShell() {
           </div>
         ) : isGroupTribune || isDebatePage ? (
           <div
+            data-tf-route-scroll
             className={cn(
               'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col min-h-0 px-[var(--tf-page-gutter)]',
               'max-lg:overflow-hidden max-lg:pt-2',
-              'lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-y-contain lg:pt-7 lg:[-webkit-overflow-scrolling:touch]',
+              'lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-y-contain lg:pt-7',
               mainBottomPadAboveBottomNav,
               'sm:pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
             )}
@@ -103,8 +111,8 @@ export function AppShell() {
                 'lg:rounded-tf-3xl lg:p-tf-6 tf-panel',
               )}
             >
-              <ErrorBoundary key={location.pathname}>
-                <Outlet />
+              <ErrorBoundary key={routeSurfaceKey}>
+                <Outlet key={routeSurfaceKey} />
               </ErrorBoundary>
             </div>
             <div className="mt-5 hidden shrink-0 lg:block">
@@ -113,8 +121,9 @@ export function AppShell() {
           </div>
         ) : isHome ? (
           <div
+            data-tf-route-scroll
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]',
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y',
               'lg:flex lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-y-contain',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-3 sm:pt-4 lg:pt-6',
               'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
@@ -122,8 +131,8 @@ export function AppShell() {
             )}
           >
             <PageAdRails variant="centerOnly" centerMax="ultra">
-              <ErrorBoundary key={location.pathname}>
-                <Outlet />
+              <ErrorBoundary key={routeSurfaceKey}>
+                <Outlet key={routeSurfaceKey} />
               </ErrorBoundary>
             </PageAdRails>
             <div className="mt-6 shrink-0 lg:hidden">
@@ -132,8 +141,9 @@ export function AppShell() {
           </div>
         ) : (
           <div
+            data-tf-route-scroll
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y',
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y tf-route-surface',
               isProfile && 'tf-profile-page-scroll',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-5 sm:pt-7',
               mainBottomPadMobile,
@@ -141,8 +151,8 @@ export function AppShell() {
           >
             <PageAdRails>
               <div className="tf-panel rounded-tf-3xl p-tf-4 sm:p-tf-6">
-                <ErrorBoundary key={location.pathname}>
-                  <Outlet />
+                <ErrorBoundary key={routeSurfaceKey}>
+                  <Outlet key={routeSurfaceKey} />
                 </ErrorBoundary>
               </div>
             </PageAdRails>

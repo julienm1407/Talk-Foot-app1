@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import {
   BOTTOM_NAV_MORE_ROUTES,
@@ -12,8 +12,24 @@ import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 /** Sous-menu mobile — Paris, classements, boutique (au-dessus de la BottomNav). */
 export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+
+  const goTo = useCallback(
+    (to: string) => {
+      onClose()
+      const normalizedPath = location.pathname || '/'
+      const targetPath = to || '/'
+      const alreadyThere = normalizedPath === targetPath
+      if (alreadyThere) {
+        navigate(targetPath, { replace: true, state: { tfNavAt: Date.now() } })
+        return
+      }
+      navigate(targetPath)
+    },
+    [location.pathname, navigate, onClose],
+  )
 
   useEffect(() => {
     if (!open) return
@@ -80,14 +96,14 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
             const th = getAppSectionTheme(section)
             const active = isRouteActiveForSection(section, location.pathname, location.hash)
             return (
-              <NavLink
+              <button
                 key={to}
-                to={to}
-                onClick={onClose}
+                type="button"
+                onClick={() => goTo(to)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   TF_FOCUS_VISIBLE,
-                  'tf-nav-pill flex min-h-tf-touch items-center gap-3 rounded-2xl px-3 py-2.5 outline-none transition active:scale-[0.99]',
+                  'tf-nav-pill flex min-h-tf-touch w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left outline-none transition active:scale-[0.99]',
                   th.nav.focus,
                   active
                     ? cn(
@@ -117,7 +133,7 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
                 <span className="shrink-0 text-sm text-tf-app-muted" aria-hidden>
                   →
                 </span>
-              </NavLink>
+              </button>
             )
           })}
         </nav>
