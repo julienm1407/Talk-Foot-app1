@@ -111,6 +111,8 @@ type CanvasProps = {
   garmentFallbackSrc?: string
   /** Zoom sur les pieds (aperçu chaussures sur l’avatar). */
   feetFocus?: boolean
+  /** Cadre portrait profil public : corps pleine hauteur du cadre. */
+  portraitFocus?: boolean
   /** Chargement immédiat des calques (modales boutique, iOS Safari). */
   imagePriority?: boolean
   className?: string
@@ -124,6 +126,8 @@ const GARMENT_FOCUS_CLIP: Record<BoutiqueGarmentShow, string> = {
   shoes: 'inset(44% 6% 0% 6%)',
 }
 const GARMENT_FOCUS_COVER_BOOST = 1.08
+/** Corps entier dans le cadre portrait (profil joueur). */
+const PORTRAIT_FRAME_COVER_BOOST = 2.08
 
 function garmentFocusClip(show: BoutiqueGarmentShow): string {
   return GARMENT_FOCUS_CLIP[show]
@@ -141,6 +145,7 @@ export function ModularAvatarCanvas({
   fill = false,
   garmentFallbackSrc,
   feetFocus = false,
+  portraitFocus = false,
   imagePriority = false,
   className,
 }: CanvasProps) {
@@ -309,6 +314,26 @@ export function ModularAvatarCanvas({
     </div>
   )
 
+  if (fill && portraitFocus) {
+    const baseScale =
+      Math.max(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * PORTRAIT_FRAME_COVER_BOOST
+    return (
+      <div ref={fillRef} className={cn('relative h-full w-full overflow-hidden', className)}>
+        <div
+          className="absolute left-1/2 bottom-[2%]"
+          style={{
+            width: canvasSize.width,
+            height: canvasSize.height,
+            transform: `translateX(-50%) scale(${baseScale})`,
+            transformOrigin: '50% 100%',
+          }}
+        >
+          {layerStack}
+        </div>
+      </div>
+    )
+  }
+
   if (fill && feetFocus) {
     const baseScale =
       Math.max(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * 2.35
@@ -450,6 +475,7 @@ export function ModularAvatarPortrait({
         state={state}
         crop="full"
         fill
+        portraitFocus
         imagePriority={imagePriority}
         className="h-full w-full"
       />

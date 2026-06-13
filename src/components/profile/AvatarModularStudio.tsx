@@ -5,7 +5,6 @@ import { cn } from '../../utils/cn'
 import { avatarAssetMap, findAssetById, slotToCategory } from '../../features/avatar2d/catalog'
 import type { AvatarAsset, AvatarAssetCategory, AvatarSlotKey } from '../../features/avatar2d/types'
 import {
-  isFeminineModularAvatar,
   resolveModularAvatarState,
   type ModularColorizableSlot,
   type ModularColorVariantKey,
@@ -329,10 +328,6 @@ export function AvatarModularStudio() {
   const modular = resolveModularAvatarState(profile.modularAvatar)
   const avatar = modular.data
   const slotColors = modular.slotColors
-  const visibleSlotOrder = useMemo(
-    () => (isFeminineModularAvatar(avatar) ? SLOT_ORDER.filter((s) => s !== 'beard') : SLOT_ORDER),
-    [avatar],
-  )
 
   const [activeSlot, setActiveSlot] = useState<AvatarSlotKey>('hair')
   const [purchaseBanner, setPurchaseBanner] = useState<string | null>(null)
@@ -601,7 +596,7 @@ export function AvatarModularStudio() {
           </p>
           <div className="-mx-3 mb-3 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:mb-4 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max min-w-full gap-1.5 sm:w-auto sm:flex-wrap">
-              {visibleSlotOrder.map((slot) => (
+              {SLOT_ORDER.map((slot) => (
                 <button
                   key={slot}
                   type="button"

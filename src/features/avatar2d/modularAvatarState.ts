@@ -29,7 +29,7 @@ export const DEFAULT_MODULAR_SLOT_COLORS: ModularSlotColors = {
   shoes: 'default',
 }
 
-/** Bouche « lèvres » = personnage féminin sans barbe par défaut. */
+/** Bouche « lèvres » — repère personnage féminin (randomize sans barbe par défaut). */
 export function isFeminineModularAvatar(data: AvatarData): boolean {
   const mouth = String(data.mouth ?? '').trim()
   return mouth.startsWith('mouth-lips')

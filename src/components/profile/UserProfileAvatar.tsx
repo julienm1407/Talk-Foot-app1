@@ -88,7 +88,7 @@ export function UserProfileAvatar({
 
   return (
     <div
-      className={cn(shellClass, 'flex items-end justify-center')}
+      className={cn(shellClass, 'overflow-hidden')}
       style={portraitStyle}
       role="img"
       aria-label={`Avatar de ${peer.username} — maillot et tenue`}
@@ -97,6 +97,7 @@ export function UserProfileAvatar({
         profile={profile}
         variant="front"
         supporterFanClubId={peer.fanClubId ?? null}
+        className="size-full scale-[1.12] origin-bottom"
       />
     </div>
   )
