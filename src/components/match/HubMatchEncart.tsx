@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
+import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
 import { LiveSalonPresenceStrip } from '../home/LiveSalonPresenceStrip'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { cn } from '../../utils/cn'
@@ -117,6 +118,7 @@ export function HubStripLive({
 }) {
   const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
   const linearMinute = useLinearDisplayedLiveMinute(match)
+  const clockLabel = useLiveMatchClockLabel(sim ? null : match)
   const minute = sim ? sim.minute : linearMinute
   const sc = sim ? sim.score : match.score ?? { home: 0, away: 0 }
   const bump = sim?.bumpSide ?? null
@@ -212,7 +214,7 @@ export function HubStripLive({
                   visualSize === 'hero' ? 'px-2 py-0.5 text-[11px]' : 'px-2 py-0.5 text-[10px]',
                 )}
               >
-                {formatRelativeMinute(minute) ?? `${minute}′`}
+                {sim ? (formatRelativeMinute(minute) ?? `${minute}′`) : (clockLabel || `${minute}′`)}
               </span>
             </div>
             <div className="flex min-w-0 items-center justify-end gap-2 text-right">
@@ -823,7 +825,7 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
 
 export function HubRailRowLive({ match, className }: { match: Match; className?: string }) {
   const sc = match.score ?? { home: 0, away: 0 }
-  const min = useLinearDisplayedLiveMinute(match)
+  const clockLabel = useLiveMatchClockLabel(match)
   return (
     <Link
       to={`/channel/${match.id}`}
@@ -855,7 +857,7 @@ export function HubRailRowLive({ match, className }: { match: Match; className?:
             <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={crestSm} />
             <span className="truncate text-[11px] font-black text-white">{match.away.shortName}</span>
           </div>
-          <span className="shrink-0 text-[9px] font-black text-emerald-400">{formatRelativeMinute(min) ?? `${min}′`}</span>
+          <span className="shrink-0 text-[9px] font-black text-emerald-400">{clockLabel || '—'}</span>
         </div>
       </div>
     </Link>

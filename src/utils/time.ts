@@ -1,4 +1,6 @@
 /** Affichage agenda / coup d’envoi aligné sur le fuseau France (SportMonks renvoie l’instant en UTC). */
+import { formatFlashscoreMatchMinute } from './liveMatchClock'
+
 export const MATCH_DISPLAY_TIME_ZONE = 'Europe/Paris'
 
 const parisDayFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -96,14 +98,24 @@ export function formatHubDayLabel(iso: string) {
   }).format(d)
 }
 
-export function formatRelativeMinute(minute?: number) {
+export type LiveClockFormatOptions = {
+  inSecondHalf?: boolean
+  paused?: boolean
+}
+
+export function formatRelativeMinute(minute?: number, opts?: LiveClockFormatOptions) {
+  if (opts?.paused) return 'Mi-temps'
   if (minute == null || minute <= 0) return ''
-  if (minute > 90) return `${90}+${minute - 90}'`
-  return `${minute}'`
+  return formatFlashscoreMatchMinute(minute, opts)
 }
 
 /** Minute live ou « Mi-temps » quand l’horloge API est en pause. */
-export function formatLiveMatchClock(minute?: number, paused?: boolean) {
+export function formatLiveMatchClock(
+  minute?: number,
+  paused?: boolean,
+  inSecondHalf?: boolean,
+) {
   if (paused) return 'Mi-temps'
-  return formatRelativeMinute(minute) || '—'
+  if (minute == null || minute <= 0) return '—'
+  return formatFlashscoreMatchMinute(minute, { inSecondHalf }) || '—'
 }

@@ -34,6 +34,8 @@ export type Match = {
   sportMonksRoundId?: number
   /** Mi-temps / pause : la minute affichée ne doit pas continuer à défiler entre deux polls API. */
   liveClockPaused?: boolean
+  /** 2e période (SM) — distingue 46' de 45+1 en temps additionnel 1re mi-temps. */
+  liveInSecondHalf?: boolean
   /** Journée / tour (SportMonks `round.name`) — calendrier CDM. */
   roundName?: string
   /** Phase (SportMonks `stage.name`) — ex. groupe A, huitièmes. */

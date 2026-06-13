@@ -55,6 +55,7 @@ import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import type { User } from '../types/chat'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
+import { useLiveMatchClockLabel } from '../hooks/useLiveMatchClockLabel'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
@@ -73,6 +74,7 @@ import {
   highlightFullscreenDedupeKey,
   liveClockPausedFromSmFixture,
   livePeriodTickingFromSmFixture,
+  liveSecondHalfFromSmFixture,
   type SmFixture,
   type SmStartingXiPlayer,
 } from '../api/sportMonks'
@@ -150,6 +152,10 @@ const FLARE_COLOR_LABELS: Record<FlareColor, string> = {
 
 const CHANNEL_DESKTOP_GRID =
   'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(14.5rem,0.95fr)] md:gap-2.5'
+
+/** Grille 2 colonnes : compo/paris via sheet mobile (évite colonne droite écrasée sur tablette). */
+const CHANNEL_TOUCH_GRID =
+  'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(0,1fr)] xl:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(18rem,0.95fr)] xl:gap-2.5'
 
 function flareSmokeLayers(color: FlareColor) {
   const layers: Record<
@@ -815,6 +821,7 @@ export function ChannelPage() {
       score: extractCurrentGoalsFromSmFixture(liveBundleFixture),
       minute: extractLiveMinuteFromSmFixture(liveBundleFixture),
       paused: liveClockPausedFromSmFixture(liveBundleFixture),
+      inSecondHalf: liveSecondHalfFromSmFixture(liveBundleFixture),
     }
   }, [liveBundleFixture, status])
   const matchForClock = useMemo(() => {
@@ -824,6 +831,7 @@ export function ChannelPage() {
       ...match,
       minute: liveSnapshot.minute,
       liveClockPaused: liveSnapshot.paused,
+      liveInSecondHalf: liveSnapshot.inSecondHalf,
       score: liveSnapshot.score ?? match.score,
     }
   }, [match, liveSnapshot])
@@ -944,6 +952,7 @@ export function ChannelPage() {
 
   const [nowMs, setNowMs] = useState(() => Date.now())
   const liveDisplayedMinute = useLinearDisplayedLiveMinute(matchForClock)
+  const liveClockLabel = useLiveMatchClockLabel(matchForClock)
   const livePeriodTicking = liveBundleFixture ? livePeriodTickingFromSmFixture(liveBundleFixture) : false
   const bettingSuspension = useMemo(
     () =>
@@ -1025,11 +1034,10 @@ export function ChannelPage() {
       return `${hh}:${mm}:${ss}`
     }
     if (status === 'live') {
-      if (match?.liveClockPaused) return 'Mi-temps'
-      return `${Math.max(0, liveDisplayedMinute)}'`
+      return liveClockLabel || '—'
     }
     return 'Terminé'
-  }, [match?.kickoffAt, nowMs, status, liveDisplayedMinute, match?.liveClockPaused])
+  }, [match?.kickoffAt, nowMs, status, liveClockLabel])
   const kickoffMs = useMemo(
     () => (match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null),
     [match?.kickoffAt],
@@ -1061,6 +1069,7 @@ export function ChannelPage() {
   const [standingsModalOpen, setStandingsModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
   const showMobileChannelChrome = useIsMobileTouchViewport()
+  const channelDesktopGrid = showMobileChannelChrome ? CHANNEL_TOUCH_GRID : CHANNEL_DESKTOP_GRID
   const betCardRef = useRef<HTMLDivElement | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
   const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
@@ -2521,7 +2530,7 @@ export function ChannelPage() {
       <main
         className={cn(
           'relative z-10 mt-2 grid min-h-0 flex-1 grid-cols-1 md:items-stretch md:overflow-hidden',
-          CHANNEL_DESKTOP_GRID,
+          channelDesktopGrid,
         )}
       >
         <div
@@ -2695,7 +2704,7 @@ export function ChannelPage() {
                   <SideInfoCell label="Statut">
                     {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
                   </SideInfoCell>
-                  <SideInfoCell label="Minute">{status === 'live' ? `${liveDisplayedMinute}'` : '—'}</SideInfoCell>
+                  <SideInfoCell label="Minute">{status === 'live' ? liveClockLabel || '—' : '—'}</SideInfoCell>
                 </div>
               </Card>
 
@@ -3407,11 +3416,12 @@ export function ChannelPage() {
 
         <div
           className={cn(
-            'tf-live-col tf-live-col-side hidden min-w-0 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:flex md:h-full md:min-h-0 md:flex-col md:overflow-y-auto md:[scrollbar-width:thin]',
+            'tf-live-col tf-live-col-side hidden min-w-0 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:h-full md:min-h-0 md:flex-col md:overflow-y-auto md:[scrollbar-width:thin]',
+            showMobileChannelChrome ? 'xl:flex' : 'md:flex',
             'space-y-2',
           )}
         >
-          <Card className="tf-card-lineup shrink-0 border-fuchsia-400/45 bg-[#1e2336] md:min-h-0">
+          <Card className="tf-card-lineup min-w-0 shrink-0 overflow-hidden border-fuchsia-400/45 bg-[#1e2336] md:min-h-0">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex items-center justify-between gap-2">
               <SectionTitle>Compositions</SectionTitle>
@@ -3694,7 +3704,7 @@ export function ChannelPage() {
                 <div className={chInfoCell}>
                   Statut: {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
                 </div>
-                <div className={chInfoCell}>Minute: {status === 'live' ? `${liveDisplayedMinute}'` : '—'}</div>
+                <div className={chInfoCell}>Minute: {status === 'live' ? liveClockLabel || '—' : '—'}</div>
               </div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'actions' ? (
@@ -3744,7 +3754,8 @@ export function ChannelPage() {
                   awayToneColor={awayToneColor}
                   isUpcoming={isUpcoming}
                   light={L}
-                  className={isUpcoming ? 'h-[min(46dvh,280px)]' : 'h-[min(52dvh,320px)]'}
+                  compact
+                  className="w-full min-w-0"
                 />
                 <MatchLineupSubstitutes
                   home={lineupSide === 'home' ? displayedLineupSubstitutes : []}

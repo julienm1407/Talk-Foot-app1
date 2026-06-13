@@ -4,6 +4,7 @@ import { teamHubPathForMatch } from '../../utils/teamHubRoute'
 import type { Match } from '../../types/match'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
+import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { formatRelativeMinute } from '../../utils/time'
 import { getSportMonksToken } from '../../utils/apiTokens'
@@ -86,8 +87,13 @@ export function LiveMatchHero({
 }) {
   const spotlight = variant === 'spotlight' && !compact
   const linearMinute = useLinearDisplayedLiveMinute(match)
+  const clockLabel = useLiveMatchClockLabel(match)
   const smDriven = Boolean(match.sportMonksFixtureId && getSportMonksToken())
   const minute = smDriven ? linearMinute : simulation.active ? simulation.minute : linearMinute
+  const minuteLabel = smDriven
+    ? clockLabel
+    : formatRelativeMinute(minute, { paused: match.liveClockPaused, inSecondHalf: match.liveInSecondHalf }) ||
+      `${minute}′`
   const score = smDriven
     ? (match.score ?? { home: 0, away: 0 })
     : simulation.active
@@ -200,7 +206,7 @@ export function LiveMatchHero({
                 {burst.teamName}
               </span>
               <span className="mt-1 rounded-full bg-black/35 px-3 py-0.5 text-sm font-bold text-white/95 backdrop-blur-sm">
-                {formatRelativeMinute(minute) ?? `${minute}′`}
+                {minuteLabel}
               </span>
             </div>
           </div>
@@ -375,7 +381,7 @@ export function LiveMatchHero({
                     compact ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[11px] sm:text-xs',
                   )}
                 >
-                  {formatRelativeMinute(minute) ?? `${minute}′`}
+                  {minuteLabel}
                 </span>
               </div>
               <Link

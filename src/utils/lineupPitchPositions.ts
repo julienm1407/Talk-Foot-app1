@@ -71,12 +71,12 @@ function horizontalPctForRow(players: ParsedPlayer[]): Map<ParsedPlayer, number>
     for (const p of players) {
       // SportMonks `formation_field` col 1 = côté droit (RB), dernière col = gauche (LB/LW).
       const t = (maxCol - p.col) / (maxCol - minCol)
-      out.set(p, 8 + t * 84)
+      out.set(p, 10 + t * 80)
     }
     return out
   }
   players.forEach((p, i) => {
-    out.set(p, 8 + (i / (players.length - 1)) * 84)
+    out.set(p, 10 + (i / (players.length - 1)) * 80)
   })
   return out
 }

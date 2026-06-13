@@ -50,6 +50,32 @@ export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
   return periods.some((p) => Boolean(p?.ticking))
 }
 
+/** 2e période en cours (pour afficher 46' vs 45+1). */
+export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
+  if (liveClockPausedFromSmFixture(f)) {
+    const sid = stateIdOf(f)
+    return sid != null && SECOND_HALF_STATE_IDS.has(sid)
+  }
+
+  const periods = f.periods
+  if (Array.isArray(periods) && periods.length) {
+    const ticking = periods.find((p) => p?.ticking)
+    const ref = ticking ?? periods[periods.length - 1]
+    if (ref) {
+      const countsFrom = typeof ref.counts_from === 'number' ? ref.counts_from : 0
+      if (countsFrom >= 45) return true
+      if (countsFrom === 0) return false
+    }
+  }
+
+  const sid = stateIdOf(f)
+  if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return true
+  if (sid === 3) return false
+
+  const total = minuteFromFixture(f)
+  return total > 50
+}
+
 /** Mi-temps / pause : la minute API ne doit pas être « extrapolée » minute par minute côté client. */
 export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
   const sid = stateIdOf(f)
@@ -384,6 +410,7 @@ export function smFixtureToMatch(f: SmFixture): Match {
       minute: minuteFromFixture(f),
       score: score ?? { home: 0, away: 0 },
       liveClockPaused: liveClockPausedFromSmFixture(f),
+      liveInSecondHalf: liveSecondHalfFromSmFixture(f),
     })
   }
   if (status === 'finished' && score) {

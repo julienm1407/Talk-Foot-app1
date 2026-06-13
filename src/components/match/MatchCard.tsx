@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
+import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
 import { formatKickoff, formatLiveMatchClock } from '../../utils/time'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
@@ -132,6 +133,7 @@ export function MatchCard({
   const sim = isLive && liveMirror?.active ? liveMirror : null
   const linearMinute = useLinearDisplayedLiveMinute(match)
   const displayMinute = sim ? sim.minute : linearMinute
+  const clockLabel = useLiveMatchClockLabel(sim ? null : match)
   const compTheme = themeForCompetition(match.competition.id)
   const timeTone = isLive ? 'live' : 'upcoming'
   const kickoffTime = formatKickoff(match.kickoffAt)
@@ -351,7 +353,9 @@ export function MatchCard({
                 )}
               >
                 {isLive
-                  ? formatLiveMatchClock(displayMinute, match.liveClockPaused)
+                  ? sim
+                    ? formatLiveMatchClock(displayMinute, false, false)
+                    : clockLabel || formatLiveMatchClock(displayMinute, match.liveClockPaused, match.liveInSecondHalf)
                   : (
                     <>
                       <span className="block">{kickoffDay}</span>

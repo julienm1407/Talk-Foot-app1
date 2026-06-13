@@ -74,7 +74,7 @@ function LineupPlayerToken({
 
   return (
     <div
-      className="absolute top-1/2 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2"
+      className="absolute top-1/2 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2 tf-lineup-player-token"
       style={{ left: `${leftPct}%` }}
       title={number ? `#${number} ${fullName}` : fullName}
     >
@@ -193,15 +193,15 @@ export function MatchLineupPitch({
   const { rows } = layout
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('w-full min-w-0 space-y-2', className)}>
       <div
         className={cn(
-          'tf-lineup-pitch relative overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
+          'tf-lineup-pitch relative w-full min-w-0 overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
           compact
-            ? 'aspect-[4/5] min-h-[280px] w-full'
+            ? 'aspect-[4/5] min-h-[240px] w-full max-w-full'
             : isUpcoming
-              ? 'h-[280px] md:h-[min(36vh,280px)]'
-              : 'h-[320px] md:h-[min(40vh,320px)]',
+              ? 'h-[280px] w-full md:h-[min(36vh,280px)]'
+              : 'h-[320px] w-full md:h-[min(40vh,320px)]',
         )}
         style={{
           background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
@@ -214,7 +214,7 @@ export function MatchLineupPitch({
         {rows.map((row) => (
           <div
             key={`lineup-row-${row.row}`}
-            className="absolute inset-x-[3%] h-14"
+            className="tf-lineup-pitch-row absolute inset-x-[2%] h-14 sm:inset-x-[3%]"
             style={{
               top: `${row.topPct}%`,
               transform: 'translateY(-50%)',

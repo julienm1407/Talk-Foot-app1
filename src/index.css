@@ -841,6 +841,32 @@ html[data-tf-appearance='light'] .tf-channel-live-light .tf-lineup-pitch {
   border-color: rgba(74, 146, 112, 0.42) !important;
 }
 
+/* Compo : s’adapte aux colonnes étroites (tablette / sidebar). */
+.tf-lineup-pitch {
+  container-type: inline-size;
+  container-name: lineup-pitch;
+}
+
+@container lineup-pitch (max-width: 320px) {
+  .tf-lineup-player-token {
+    width: 2.65rem;
+    max-width: 12vw;
+    font-size: 0.95em;
+  }
+
+  .tf-lineup-pitch-row {
+    inset-inline: 1%;
+  }
+}
+
+@container lineup-pitch (max-width: 240px) {
+  .tf-lineup-player-token {
+    width: 2.35rem;
+    max-width: 11vw;
+    font-size: 0.88em;
+  }
+}
+
 html[data-tf-appearance='light'] .tf-channel-live-light .tf-live-pitch-shell {
   background: #d8e7f6 !important;
 }

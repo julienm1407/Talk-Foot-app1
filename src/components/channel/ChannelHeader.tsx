@@ -1,19 +1,16 @@
 import type { Match } from '../../types/match'
-import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
-import { formatKickoff, formatRelativeMinute } from '../../utils/time'
+import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
+import { formatKickoff } from '../../utils/time'
 import { ClubCrest } from '../brand/ClubCrest'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { cn } from '../../utils/cn'
 
 export function ChannelHeader({ match }: { match: Match }) {
   const isLive = match.status === 'live'
-  const liveMinute = useLinearDisplayedLiveMinute(match)
+  const liveStatusLine = useLiveMatchClockLabel(match)
   const theme = themeForCompetition(match.competition.id)
   const homeScore = match.score?.home ?? '—'
   const awayScore = match.score?.away ?? '—'
-  const liveStatusLine = match.liveClockPaused
-    ? 'Mi-temps'
-    : formatRelativeMinute(liveMinute) || `${liveMinute}'`
 
   return (
     <header className="rounded-2xl border border-[#16334d] bg-[#041a2d] px-2.5 py-2 text-white shadow-[0_14px_28px_rgba(0,0,0,0.35)] sm:px-3.5 lg:h-[86px] lg:py-1.5">
