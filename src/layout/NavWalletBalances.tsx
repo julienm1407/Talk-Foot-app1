@@ -50,9 +50,6 @@ export function NavWalletBalances({
     dense ? 'text-[11px] sm:text-[13px]' : 'text-[13px] sm:text-sm',
   )
 
-  const dailyPendingMobile =
-    rewardsEnabled && !dailyBonus.alreadyClaimedToday && !dailyBonus.canClaim
-
   const runClaim = async () => {
     if (claiming) return
     setClaiming(true)
@@ -87,7 +84,6 @@ export function NavWalletBalances({
   if (compact) {
     return (
       <div className="relative z-[1] inline-flex max-w-[min(100%,14rem)] flex-col items-end gap-0.5">
-        {/* Mobile : bonus récupérable */}
         {rewardsEnabled && dailyBonus.canClaim ? (
           <button
             type="button"
@@ -101,39 +97,21 @@ export function NavWalletBalances({
               'ring-1 ring-emerald-400/35 active:scale-[0.98]',
               claiming && 'opacity-70',
             )}
-            aria-label={`Récupérer ${dailyBonus.amount} jetons quotidiens`}
+            aria-label="Récupérer le bonus jetons du jour"
           >
             <TokenGlyph className="size-4 shrink-0" variant="onDark" />
             <span className="truncate text-[11px] font-black leading-tight">
-              {claiming ? '…' : `Récup. +${dailyBonus.amount}`}
+              {claiming ? '…' : 'Récup. bonus'}
             </span>
           </button>
-        ) : dailyPendingMobile ? (
-          <Link
-            to="/profile#monnaie"
-            className={cn(
-              shell,
-              'lg:hidden gap-1.5 px-2 py-1',
-              L
-                ? 'border-amber-300/50 bg-amber-50/95 text-amber-950'
-                : 'border-amber-400/35 bg-amber-500/12 text-amber-100',
-            )}
-            title={`Bonus +${dailyBonus.amount} jetons disponible à 10h`}
-            aria-label={`Jetons quotidiens : +${dailyBonus.amount} à 10h`}
-          >
-            <TokenGlyph className="size-3.5 shrink-0" variant={L ? 'solid' : 'onDark'} />
-            <span className="truncate text-[10px] font-black leading-tight">+{dailyBonus.amount} à 10h</span>
-          </Link>
         ) : null}
 
         <Link
           to="/profile#monnaie"
           className={cn(
             shell,
+            'inline-flex',
             dense ? 'gap-1 px-1.5 py-1 sm:gap-2 sm:px-2.5 sm:py-1.5' : 'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5',
-            rewardsEnabled && (dailyBonus.canClaim || dailyPendingMobile)
-              ? 'hidden lg:inline-flex'
-              : 'inline-flex',
           )}
           title={`${wallet.tokens} jetons · ${wallet.medals} médailles`}
           aria-label={`${wallet.tokens} jetons, ${wallet.medals} médailles`}
