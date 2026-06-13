@@ -1,22 +1,31 @@
+import type { LineupPlayerMatchOverlay } from '../api/sportMonks/extractPlayerMatchOverlaysFromSmFixture'
+
 type ParsedPlayer = {
   name: string
+  fullName: string
   number?: string
   photoUrl?: string
+  playerId?: number
   row: number
   col: number
   formationPosition?: number | null
 }
 
+export type LineupPitchPlayer = {
+  name: string
+  fullName: string
+  number?: string
+  photoUrl?: string
+  playerId?: number
+  col: number
+  leftPct: number
+  overlay?: LineupPlayerMatchOverlay
+}
+
 export type LineupPitchRow = {
   row: number
   topPct: number
-  players: Array<{
-    name: string
-    number?: string
-    photoUrl?: string
-    col: number
-    leftPct: number
-  }>
+  players: LineupPitchPlayer[]
 }
 
 export type LineupPitchLayout = {
@@ -60,7 +69,8 @@ function horizontalPctForRow(players: ParsedPlayer[]): Map<ParsedPlayer, number>
   const maxCol = Math.max(...cols)
   if (maxCol > minCol) {
     for (const p of players) {
-      const t = (p.col - minCol) / (maxCol - minCol)
+      // SportMonks `formation_field` col 1 = côté droit (RB), dernière col = gauche (LB/LW).
+      const t = (maxCol - p.col) / (maxCol - minCol)
       out.set(p, 8 + t * 84)
     }
     return out
@@ -78,6 +88,7 @@ function parseLineupPlayers(
         label: string
         number?: string
         photoUrl?: string
+        playerId?: number
         formationField?: string | null
         formationPosition?: number | null
       }
@@ -91,17 +102,20 @@ function parseLineupPlayers(
     .map((p, index) => {
       if (typeof p === 'string') {
         const { row, col } = inferRowColFromFormationPosition(index + 1, lines)
-        return { name: p, row, col, formationPosition: index + 1 }
+        return { name: surnameLabel(p), fullName: p, row, col, formationPosition: index + 1 }
       }
 
+      const fullName = p.label
       const ff = p.formationField?.trim()
       if (ff) {
         const [rowRaw, colRaw] = ff.split(':').map((x) => Number(x.trim()))
         if (Number.isFinite(rowRaw) && Number.isFinite(colRaw) && rowRaw > 0 && colRaw > 0) {
           return {
-            name: p.label,
+            name: surnameLabel(fullName),
+            fullName,
             number: p.number,
             photoUrl: p.photoUrl,
+            playerId: p.playerId,
             row: rowRaw,
             col: colRaw,
             formationPosition: p.formationPosition,
@@ -112,15 +126,17 @@ function parseLineupPlayers(
       const fp = p.formationPosition ?? index + 1
       const { row, col } = inferRowColFromFormationPosition(fp, lines)
       return {
-        name: p.label,
+        name: surnameLabel(fullName),
+        fullName,
         number: p.number,
         photoUrl: p.photoUrl,
+        playerId: p.playerId,
         row,
         col,
         formationPosition: fp,
       }
     })
-    .filter((p) => p.name.trim().length > 0)
+    .filter((p) => p.fullName.trim().length > 0)
 }
 
 function surnameLabel(name: string): string {
@@ -141,6 +157,7 @@ export function computeLineupPitchLayout(
         label: string
         number?: string
         photoUrl?: string
+        playerId?: number
         formationField?: string | null
         formationPosition?: number | null
       }
@@ -163,9 +180,11 @@ export function computeLineupPitchLayout(
       row: rowKey,
       topPct,
       players: rowPlayers.map((p) => ({
-        name: surnameLabel(p.name),
+        name: p.name,
+        fullName: p.fullName,
         number: p.number,
         photoUrl: p.photoUrl,
+        playerId: p.playerId,
         col: p.col,
         leftPct: xs.get(p) ?? 50,
       })),
@@ -181,9 +200,25 @@ export function computeLineupPitchLayout(
       if (!Number.isFinite(na) && Number.isFinite(nb)) return 1
       return a.name.localeCompare(b.name, 'fr')
     })
-    .map((p) => ({ name: p.name, number: p.number }))
+    .map((p) => ({ name: p.fullName, number: p.number }))
 
   return { rows, roster }
+}
+
+export function attachLineupOverlaysToLayout(
+  layout: LineupPitchLayout,
+  resolveOverlay: (player: { playerId?: number; fullName: string }) => LineupPlayerMatchOverlay | undefined,
+): LineupPitchLayout {
+  return {
+    roster: layout.roster,
+    rows: layout.rows.map((row) => ({
+      ...row,
+      players: row.players.map((p) => ({
+        ...p,
+        overlay: resolveOverlay({ playerId: p.playerId, fullName: p.fullName }),
+      })),
+    })),
+  }
 }
 
 /** @deprecated Utiliser computeLineupPitchLayout */

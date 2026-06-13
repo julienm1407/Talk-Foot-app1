@@ -106,7 +106,8 @@ export type SmFixtureEventRow = {
   minute?: number | null
   extra_minute?: number | null
   participant_id?: number | null
-  type?: { developer_name?: string; name?: string }
+  type_id?: number | null
+  type?: { id?: number; developer_name?: string; name?: string }
   player?: { display_name?: string; name?: string }
   related_player?: { display_name?: string; name?: string }
   relatedPlayer?: { display_name?: string; name?: string }

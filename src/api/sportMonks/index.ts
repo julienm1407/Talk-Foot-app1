@@ -103,6 +103,20 @@ export {
   type SmLineupSource,
 } from './extractStartingXisFromSmFixture'
 export {
+  extractSubstitutesFromSmFixture,
+  lineupFlashscoreShortName,
+  type LineupSubstitutePlayer,
+  type LineupSubstitutesBySide,
+} from './extractSubstitutesFromSmFixture'
+export {
+  extractPlayerMatchOverlaysFromSmFixture,
+  enrichLineupOverlaysFromMatchFeed,
+  resolveLineupPlayerOverlay,
+  type LineupPlayerMatchOverlay,
+  type LineupPlayerOverlayIndex,
+  type LineupOverlayRosterPlayer,
+} from './extractPlayerMatchOverlaysFromSmFixture'
+export {
   extractSquadPlayersFromSmEnvelope,
   overlayClubSquadWithSmPlayers,
   type SmSquadPlayerRow,

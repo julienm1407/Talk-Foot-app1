@@ -1,5 +1,8 @@
+import type { LineupPlayerMatchOverlay } from '../../api/sportMonks/extractPlayerMatchOverlaysFromSmFixture'
+import { useState } from 'react'
 import { cn } from '../../utils/cn'
 import type { LineupPitchLayout } from '../../utils/lineupPitchPositions'
+import { formatLineupRating, lineupRatingBackground } from '../../utils/lineupPlayerRatingColor'
 
 function playerInitials(name: string): string {
   const parts = name.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean)
@@ -8,74 +11,164 @@ function playerInitials(name: string): string {
   return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
 }
 
+function CardBadge({ kind }: { kind: 'yellow' | 'red' }) {
+  return (
+    <span
+      className={cn(
+        'block h-3 w-2 rounded-[2px] border border-black/30 shadow-md ring-1 ring-white/70',
+        kind === 'yellow' ? 'bg-yellow-400' : 'bg-red-600',
+      )}
+      aria-hidden
+    />
+  )
+}
+
+function GoalBadge({ count, ownGoal }: { count: number; ownGoal?: boolean }) {
+  if (count <= 0) return null
+  return (
+    <span
+      className="relative inline-flex h-3.5 w-3.5 items-center justify-center"
+      title={ownGoal ? `CSC ×${count}` : `But${count > 1 ? 's' : ''} ×${count}`}
+    >
+      <span className={cn('text-[10px] leading-none', ownGoal ? 'text-red-600' : 'text-neutral-800')} aria-hidden>
+        ⚽
+      </span>
+      {count > 1 ? (
+        <span className="absolute -bottom-0.5 -right-1 flex h-2.5 min-w-2.5 items-center justify-center rounded-full bg-neutral-900 px-px text-[6px] font-black text-white">
+          {count}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 function LineupPlayerToken({
   name,
+  fullName,
   number,
   photoUrl,
   leftPct,
+  overlay,
   light,
   compact,
 }: {
   name: string
+  fullName: string
   number?: string
   photoUrl?: string
   leftPct: number
+  overlay?: LineupPlayerMatchOverlay
   light?: boolean
   compact?: boolean
 }) {
-  const size = compact ? 'h-8 w-8' : 'h-9 w-9'
+  const [photoFailed, setPhotoFailed] = useState(false)
+  const bubbleSize = compact ? 'h-9 w-9' : 'h-10 w-10'
   const textSize = compact ? 'text-[7px]' : 'text-[8px]'
+  const subbedOff = overlay?.subbedOffMinute != null
+  const goals = overlay?.goals ?? 0
+  const ownGoals = overlay?.ownGoals ?? 0
+  const yellowCards = overlay?.yellowCards ?? 0
+  const redCards = overlay?.redCards ?? 0
+  const rating = overlay?.rating
+  const showPhoto = photoUrl && !photoFailed
 
   return (
     <div
-      className="absolute top-1/2 w-[3.25rem] max-w-[14vw] -translate-x-1/2 -translate-y-1/2"
+      className="absolute top-1/2 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2"
       style={{ left: `${leftPct}%` }}
-      title={number ? `#${number} ${name}` : name}
+      title={number ? `#${number} ${fullName}` : fullName}
     >
-      <div className="relative mx-auto w-fit">
-        <div
-          className={cn(
-            'overflow-hidden rounded-full border-2 shadow-md',
-            size,
-            light ? 'border-white bg-sky-100' : 'border-white/90 bg-[#0a1f35]',
-          )}
-        >
-          {photoUrl ? (
-            <img src={photoUrl} alt="" className="h-full w-full object-cover object-top" loading="lazy" />
-          ) : (
-            <div
-              className={cn(
-                'flex h-full w-full items-center justify-center font-black',
-                textSize,
-                light ? 'text-sky-900/70' : 'text-sky-100/80',
-              )}
+      <div className={cn('relative mx-auto w-fit', subbedOff && 'opacity-55')}>
+        <div className="relative mx-auto w-fit">
+          {rating != null ? (
+            <span
+              className="absolute -right-1.5 -top-1 z-20 flex h-4 min-w-4 items-center justify-center rounded px-0.5 text-[7px] font-black leading-none text-white shadow-md ring-1 ring-black/10"
+              style={{ backgroundColor: lineupRatingBackground(rating) }}
             >
-              {playerInitials(name)}
+              {formatLineupRating(rating)}
+            </span>
+          ) : null}
+
+          {(goals > 0 || ownGoals > 0) && (
+            <div className="absolute -left-1 -top-1 z-20 flex flex-col gap-0.5">
+              {goals > 0 ? <GoalBadge count={goals} /> : null}
+              {ownGoals > 0 ? <GoalBadge count={ownGoals} ownGoal /> : null}
             </div>
           )}
-        </div>
-        {number ? (
-          <span
+
+          {(yellowCards > 0 || redCards > 0) && (
+            <div className="absolute -left-0.5 -top-0.5 z-20 flex gap-0.5">
+              {yellowCards > 0 ? <CardBadge kind="yellow" /> : null}
+              {redCards > 0 ? <CardBadge kind="red" /> : null}
+            </div>
+          )}
+
+          <div
             className={cn(
-              'absolute -bottom-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border px-0.5 text-[8px] font-black leading-none',
-              light
-                ? 'border-emerald-700/40 bg-emerald-500 text-white'
-                : 'border-emerald-300/50 bg-emerald-600 text-white',
+              'overflow-hidden rounded-full border-2 bg-white shadow-md',
+              bubbleSize,
+              light ? 'border-white' : 'border-white/90',
             )}
           >
-            {number}
-          </span>
-        ) : null}
+            {showPhoto ? (
+              <img
+                src={photoUrl}
+                alt=""
+                className="h-full w-full object-cover object-top"
+                loading="lazy"
+                onError={() => setPhotoFailed(true)}
+              />
+            ) : (
+              <div
+                className={cn(
+                  'flex h-full w-full items-center justify-center font-black',
+                  textSize,
+                  light ? 'bg-sky-100 text-sky-900/70' : 'bg-[#0a1f35] text-sky-100/85',
+                )}
+              >
+                {playerInitials(fullName)}
+              </div>
+            )}
+          </div>
+
+          {number ? (
+            <span
+              className={cn(
+                'absolute -bottom-0.5 -right-0.5 z-10 flex h-4 min-w-4 items-center justify-center rounded-full border px-0.5 text-[8px] font-black leading-none text-white',
+                light
+                  ? 'border-emerald-700/40 bg-emerald-500'
+                  : 'border-emerald-300/50 bg-emerald-600',
+              )}
+            >
+              {number}
+            </span>
+          ) : null}
+
+          {subbedOff ? (
+            <span
+              className="absolute -bottom-0.5 -left-1 z-10 flex h-3.5 w-3.5 flex-col overflow-hidden rounded-[2px] border border-white/25 bg-neutral-900/90 shadow"
+              title={`Sorti ${overlay!.subbedOffMinute!}′`}
+            >
+              <span className="flex flex-1 items-center justify-center bg-emerald-600 text-[5px] leading-none text-white">
+                ↑
+              </span>
+              <span className="flex flex-1 items-center justify-center bg-red-600 text-[5px] leading-none text-white">
+                ↓
+              </span>
+            </span>
+          ) : null}
+        </div>
+
+        <p
+          className={cn(
+            'mt-0.5 truncate text-center font-bold leading-tight',
+            textSize,
+            light ? 'text-[#023458]' : 'text-sky-50',
+          )}
+        >
+          {name}
+        </p>
       </div>
-      <p
-        className={cn(
-          'mt-0.5 truncate text-center font-bold leading-tight',
-          textSize,
-          light ? 'text-[#023458]' : 'text-sky-50',
-        )}
-      >
-        {name}
-      </p>
     </div>
   )
 }
@@ -97,7 +190,7 @@ export function MatchLineupPitch({
   compact?: boolean
   className?: string
 }) {
-  const { rows, roster } = layout
+  const { rows } = layout
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -129,11 +222,13 @@ export function MatchLineupPitch({
           >
             {row.players.map((p) => (
               <LineupPlayerToken
-                key={`${row.row}-${p.col}-${p.number ?? ''}-${p.name}`}
+                key={`${row.row}-${p.col}-${p.number ?? ''}-${p.fullName}`}
                 name={p.name}
+                fullName={p.fullName}
                 number={p.number}
                 photoUrl={p.photoUrl}
                 leftPct={p.leftPct}
+                overlay={p.overlay}
                 light={light}
                 compact={compact}
               />
@@ -141,30 +236,6 @@ export function MatchLineupPitch({
           </div>
         ))}
       </div>
-
-      {roster.length > 0 ? (
-        <div
-          className={cn(
-            'grid grid-cols-2 gap-x-2 gap-y-1 rounded-md border border-white/10 bg-black/20 px-2 py-1.5',
-            compact ? 'text-[9px]' : 'text-[10px]',
-          )}
-        >
-          {roster.map((p) => (
-            <div
-              key={`roster-${p.number ?? ''}-${p.name}`}
-              className={cn('min-w-0 truncate font-semibold', light ? 'text-sky-900/90' : 'text-sky-100/92')}
-              title={p.name}
-            >
-              {p.number ? (
-                <span className={cn('mr-1 font-black', light ? 'text-emerald-700' : 'text-emerald-300')}>
-                  {p.number}
-                </span>
-              ) : null}
-              {p.name}
-            </div>
-          ))}
-        </div>
-      ) : null}
     </div>
   )
 }

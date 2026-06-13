@@ -19,6 +19,7 @@ import { BetWidget } from '../components/bet/BetWidget'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
+import { MatchLineupSubstitutes } from '../components/channel/MatchLineupSubstitutes'
 import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandings'
@@ -68,14 +69,24 @@ import {
   extractLiveCardDisplayRowsFromSmFixture,
   extractLiveGoalDisplayRowsFromSmFixture,
   extractLiveMinuteFromSmFixture,
+  fetchSportMonksFixtureEventsWeather,
   highlightFullscreenDedupeKey,
   liveClockPausedFromSmFixture,
   livePeriodTickingFromSmFixture,
+  type SmFixture,
   type SmStartingXiPlayer,
 } from '../api/sportMonks'
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
-import { computeLineupPitchLayout } from '../utils/lineupPitchPositions'
+import {
+  enrichLineupOverlaysFromMatchFeed,
+  extractPlayerMatchOverlaysFromSmFixture,
+  resolveLineupPlayerOverlay,
+} from '../api/sportMonks/extractPlayerMatchOverlaysFromSmFixture'
+import { extractSubstitutesFromSmFixture } from '../api/sportMonks/extractSubstitutesFromSmFixture'
+import type { LineupSubstituteWithOverlay } from '../components/channel/MatchLineupSubstitutes'
+import { attachLineupOverlaysToLayout, computeLineupPitchLayout } from '../utils/lineupPitchPositions'
+import { getSportMonksToken } from '../utils/apiTokens'
 import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/bannedWords'
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
@@ -1724,14 +1735,122 @@ export function ChannelPage() {
     betting.settleMatchResult,
   ])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
+  const [lineupSubsFallbackFixture, setLineupSubsFallbackFixture] = useState<SmFixture | null>(null)
+
+  useEffect(() => {
+    if (!match?.sportMonksFixtureId || (status !== 'live' && status !== 'finished')) {
+      setLineupSubsFallbackFixture(null)
+      return
+    }
+
+    const fromBundle = extractSubstitutesFromSmFixture(liveBundleFixture)
+    if (fromBundle.home.length + fromBundle.away.length > 0) {
+      setLineupSubsFallbackFixture(null)
+      return
+    }
+
+    const token = getSportMonksToken()
+    if (!token) {
+      setLineupSubsFallbackFixture(null)
+      return
+    }
+
+    let cancelled = false
+    fetchSportMonksFixtureEventsWeather(token, match.sportMonksFixtureId)
+      .then((fx) => {
+        if (cancelled) return
+        setLineupSubsFallbackFixture(fx)
+      })
+      .catch(() => {
+        if (!cancelled) setLineupSubsFallbackFixture(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [match?.sportMonksFixtureId, status, liveBundleFixture])
+
+  const fixtureForLineupSubs = useMemo((): SmFixture | null => {
+    if (!liveBundleFixture && !lineupSubsFallbackFixture) return null
+    if (!liveBundleFixture) return lineupSubsFallbackFixture
+    if (!lineupSubsFallbackFixture) return liveBundleFixture
+    return {
+      ...liveBundleFixture,
+      events: liveBundleFixture.events?.length ? liveBundleFixture.events : lineupSubsFallbackFixture.events,
+      comments: liveBundleFixture.comments?.length ? liveBundleFixture.comments : lineupSubsFallbackFixture.comments,
+      lineups: liveBundleFixture.lineups?.length ? liveBundleFixture.lineups : lineupSubsFallbackFixture.lineups,
+      participants: liveBundleFixture.participants?.length
+        ? liveBundleFixture.participants
+        : lineupSubsFallbackFixture.participants,
+    }
+  }, [liveBundleFixture, lineupSubsFallbackFixture])
+
+  const lineupSubstitutes = useMemo(() => {
+    if (status !== 'live' && status !== 'finished') return { home: [], away: [] }
+    return extractSubstitutesFromSmFixture(fixtureForLineupSubs)
+  }, [fixtureForLineupSubs, status])
   const displayedLineupPlayers = useMemo(
     () => (lineupSide === 'home' ? starters?.home ?? [] : starters?.away ?? []),
     [lineupSide, starters],
   )
+  const lineupOverlayRoster = useMemo(
+    () => [
+      ...(starters?.home ?? []).map((p) => ({
+        label: p.label,
+        playerId: p.playerId,
+        side: 'home' as const,
+      })),
+      ...(starters?.away ?? []).map((p) => ({
+        label: p.label,
+        playerId: p.playerId,
+        side: 'away' as const,
+      })),
+      ...lineupSubstitutes.home.map((p) => ({
+        label: p.label,
+        playerId: p.playerId,
+        side: 'home' as const,
+      })),
+      ...lineupSubstitutes.away.map((p) => ({
+        label: p.label,
+        playerId: p.playerId,
+        side: 'away' as const,
+      })),
+    ],
+    [starters, lineupSubstitutes],
+  )
+  const lineupOverlays = useMemo(() => {
+    const base = extractPlayerMatchOverlaysFromSmFixture(liveBundleFixture)
+    if (status !== 'live' && status !== 'finished') return base
+    return enrichLineupOverlaysFromMatchFeed(base, {
+      cards: liveCardDisplayRows,
+      goals: liveGoalDisplayRows,
+      players: lineupOverlayRoster,
+    })
+  }, [
+    liveBundleFixture,
+    liveCardDisplayRows,
+    liveGoalDisplayRows,
+    lineupOverlayRoster,
+    status,
+  ])
+  const displayedLineupSubstitutes = useMemo((): LineupSubstituteWithOverlay[] => {
+    const pool = lineupSide === 'home' ? lineupSubstitutes.home : lineupSubstitutes.away
+    return pool.map((p) => ({
+      ...p,
+      overlay: resolveLineupPlayerOverlay(lineupOverlays, {
+        playerId: p.playerId,
+        name: p.label,
+      }),
+    }))
+  }, [lineupSide, lineupSubstitutes, lineupOverlays])
   const displayedLineupLayout = useMemo(() => {
     const formation = lineupSide === 'home' ? formations.home : formations.away
-    return computeLineupPitchLayout(displayedLineupPlayers, formation)
-  }, [displayedLineupPlayers, lineupSide, formations.home, formations.away])
+    const layout = computeLineupPitchLayout(displayedLineupPlayers, formation)
+    if (status !== 'live' && status !== 'finished') return layout
+    return attachLineupOverlaysToLayout(layout, (p) =>
+      resolveLineupPlayerOverlay(lineupOverlays, { playerId: p.playerId, name: p.fullName }),
+    )
+  }, [displayedLineupPlayers, lineupSide, formations.home, formations.away, lineupOverlays, status])
   const lineupAutoTimerRef = useRef<number | null>(null)
   const lineupAutoPausedUntilRef = useRef<number>(0)
   const pauseLineupAutoFor3Min = () => {
@@ -3348,6 +3467,12 @@ export function ChannelPage() {
               light={L}
               compact
             />
+            <MatchLineupSubstitutes
+              home={lineupSide === 'home' ? displayedLineupSubstitutes : []}
+              away={lineupSide === 'away' ? displayedLineupSubstitutes : []}
+              showWhenEmpty={status === 'live' || status === 'finished'}
+              light={L}
+            />
             {displayedLineupLayout.roster.length === 0 ? (
               <p className="mt-2 text-center text-[10px] font-semibold text-sky-200/70">
                 Composition non disponible.
@@ -3620,6 +3745,12 @@ export function ChannelPage() {
                   isUpcoming={isUpcoming}
                   light={L}
                   className={isUpcoming ? 'h-[min(46dvh,280px)]' : 'h-[min(52dvh,320px)]'}
+                />
+                <MatchLineupSubstitutes
+                  home={lineupSide === 'home' ? displayedLineupSubstitutes : []}
+                  away={lineupSide === 'away' ? displayedLineupSubstitutes : []}
+                  showWhenEmpty={status === 'live' || status === 'finished'}
+                  light={L}
                 />
                 {displayedLineupLayout.roster.length === 0 ? (
                   <p className="text-center text-[11px] font-semibold text-sky-200/75">Composition non disponible.</p>

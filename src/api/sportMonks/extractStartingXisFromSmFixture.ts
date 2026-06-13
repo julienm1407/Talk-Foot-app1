@@ -4,6 +4,7 @@ import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
 export type SmStartingXiPlayer = {
   label: string
   number?: string
+  playerId?: number
   formationField?: string
   formationPosition?: number
   /** Photo joueur SportMonks (`player.image_path`) quand disponible. */
@@ -121,6 +122,7 @@ function takeXiFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
     label: string
     j: number
     fk: number
+    playerId?: number
     formationField?: string
     formationPosition?: number
     photoUrl?: string
@@ -130,6 +132,12 @@ function takeXiFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
     if (!label) continue
     const j = jerseyNumber(r)
     const fk = formationSortKey(r)
+    const playerId =
+      typeof r.player_id === 'number'
+        ? r.player_id
+        : typeof r.player?.id === 'number'
+          ? r.player.id
+          : undefined
     const formationField =
       typeof r.formation_field === 'string' && r.formation_field.trim() ? r.formation_field.trim() : undefined
     const formationPosition =
@@ -137,12 +145,13 @@ function takeXiFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
         ? r.formation_position
         : undefined
     const photoUrl = playerPhotoUrl(r)
-    items.push({ label, j, fk, formationField, formationPosition, photoUrl })
+    items.push({ label, j, fk, playerId, formationField, formationPosition, photoUrl })
   }
   items.sort((a, b) => (a.fk !== b.fk ? a.fk - b.fk : a.j - b.j))
-  return items.slice(0, 11).map(({ label, j, formationField, formationPosition, photoUrl }) => ({
+  return items.slice(0, 11).map(({ label, j, playerId, formationField, formationPosition, photoUrl }) => ({
     label,
     number: j < 100 ? String(j) : undefined,
+    playerId,
     formationField,
     formationPosition,
     photoUrl,
