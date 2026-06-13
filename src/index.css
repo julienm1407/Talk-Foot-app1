@@ -37,7 +37,12 @@
   display: none !important;
 }
 
+/* Ne pas bloquer toute la page : seuls les enfants portés reçoivent les clics. */
 #tf-shop-modal-root:not(:empty) {
+  pointer-events: none;
+}
+
+#tf-shop-modal-root:not(:empty) > * {
   pointer-events: auto;
 }
 
@@ -2598,6 +2603,26 @@ body::before {
   [data-tf-channel-dock='true'] {
     display: grid !important;
   }
+}
+
+/* BottomNav — portail body, au-dessus du scroll (profil, boutique, etc.). */
+.tf-app-bottomnav-shell {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  bottom: 0 !important;
+  z-index: 2147482310 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.tf-bottom-nav-more-sheet {
+  z-index: 2147482315 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  isolation: isolate;
 }
 
 /* Barre de saisie chat — mobile (portail body, au-dessus de la BottomNav). */

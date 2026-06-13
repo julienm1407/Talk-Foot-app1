@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import {
@@ -39,11 +40,11 @@ export function BottomNav() {
 
   if (!showMobileNav) return null
 
-  return (
+  const chrome = (
     <>
       <nav
         className={cn(
-          'tf-app-bottomnav fixed inset-x-0 bottom-0 z-50 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl',
+          'tf-app-bottomnav tf-app-bottomnav-shell border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl',
           L
             ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-[0_-8px_32px_rgba(2,52,88,0.08)]'
             : 'border-tf-dark-alt/50 bg-tf-dark shadow-[0_-12px_40px_rgba(0,0,0,0.35)]',
@@ -113,4 +114,8 @@ export function BottomNav() {
       <BottomNavMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </>
   )
+
+  if (typeof document === 'undefined') return chrome
+
+  return createPortal(chrome, document.body)
 }

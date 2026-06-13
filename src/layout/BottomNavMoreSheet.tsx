@@ -32,7 +32,7 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[55] lg:hidden" data-tf-modal="true">
+    <div className="tf-bottom-nav-more-sheet fixed inset-0 lg:hidden" data-tf-modal="true">
       <button
         type="button"
         className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
