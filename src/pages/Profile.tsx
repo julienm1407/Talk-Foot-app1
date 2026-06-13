@@ -28,7 +28,6 @@ import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { clubPathForId } from '../utils/clubRoute'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
-import { ProfileMobileNavEscape } from '../components/profile/ProfileMobileNavEscape'
 import { SeasonAdminToggle } from '../components/admin/SeasonAdminToggle'
 import { DisplayNameEditor } from '../components/profile/DisplayNameEditor'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -122,7 +121,6 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-5 sm:space-y-6 lg:space-y-7">
-      <ProfileMobileNavEscape />
       <header
         className={cn(
           'flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
