@@ -1,6 +1,7 @@
 type ParsedPlayer = {
   name: string
   number?: string
+  photoUrl?: string
   row: number
   col: number
   formationPosition?: number | null
@@ -9,7 +10,13 @@ type ParsedPlayer = {
 export type LineupPitchRow = {
   row: number
   topPct: number
-  players: Array<{ name: string; number?: string; col: number }>
+  players: Array<{
+    name: string
+    number?: string
+    photoUrl?: string
+    col: number
+    leftPct: number
+  }>
 }
 
 export type LineupPitchLayout = {
@@ -41,12 +48,36 @@ function inferRowColFromFormationPosition(fp: number, lines: number[]): { row: n
   return { row: lines.length, col: 1 }
 }
 
+function horizontalPctForRow(players: ParsedPlayer[]): Map<ParsedPlayer, number> {
+  const out = new Map<ParsedPlayer, number>()
+  if (!players.length) return out
+  if (players.length === 1) {
+    out.set(players[0], 50)
+    return out
+  }
+  const cols = players.map((p) => p.col)
+  const minCol = Math.min(...cols)
+  const maxCol = Math.max(...cols)
+  if (maxCol > minCol) {
+    for (const p of players) {
+      const t = (p.col - minCol) / (maxCol - minCol)
+      out.set(p, 8 + t * 84)
+    }
+    return out
+  }
+  players.forEach((p, i) => {
+    out.set(p, 8 + (i / (players.length - 1)) * 84)
+  })
+  return out
+}
+
 function parseLineupPlayers(
   players: Array<
     | string
     | {
         label: string
         number?: string
+        photoUrl?: string
         formationField?: string | null
         formationPosition?: number | null
       }
@@ -70,6 +101,7 @@ function parseLineupPlayers(
           return {
             name: p.label,
             number: p.number,
+            photoUrl: p.photoUrl,
             row: rowRaw,
             col: colRaw,
             formationPosition: p.formationPosition,
@@ -82,6 +114,7 @@ function parseLineupPlayers(
       return {
         name: p.label,
         number: p.number,
+        photoUrl: p.photoUrl,
         row,
         col,
         formationPosition: fp,
@@ -107,6 +140,7 @@ export function computeLineupPitchLayout(
     | {
         label: string
         number?: string
+        photoUrl?: string
         formationField?: string | null
         formationPosition?: number | null
       }
@@ -124,13 +158,16 @@ export function computeLineupPitchLayout(
       .filter((p) => p.row === rowKey)
       .sort((a, b) => a.col - b.col || a.name.localeCompare(b.name))
     const topPct = rowCount === 0 ? 50 : 92 - (idx / rowCount) * 82
+    const xs = horizontalPctForRow(rowPlayers)
     return {
       row: rowKey,
       topPct,
       players: rowPlayers.map((p) => ({
         name: surnameLabel(p.name),
         number: p.number,
+        photoUrl: p.photoUrl,
         col: p.col,
+        leftPct: xs.get(p) ?? 50,
       })),
     }
   })

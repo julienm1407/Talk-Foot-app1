@@ -186,6 +186,7 @@ export type SmPlayer = {
   firstname?: string
   lastname?: string
   nationality?: { name?: string }
+  image_path?: string | null
 }
 
 /** Ligne de compos (`include` lineups.* sur une fixture). */
@@ -198,6 +199,7 @@ export type SmLineupRow = {
     display_name?: string
     firstname?: string
     lastname?: string
+    image_path?: string | null
   }
   type_id?: number
   type?: { id?: number; developer_name?: string; name?: string }

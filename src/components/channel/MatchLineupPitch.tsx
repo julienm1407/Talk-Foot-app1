@@ -1,34 +1,81 @@
 import { cn } from '../../utils/cn'
 import type { LineupPitchLayout } from '../../utils/lineupPitchPositions'
 
-function PlayerChip({
+function playerInitials(name: string): string {
+  const parts = name.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase()
+}
+
+function LineupPlayerToken({
   name,
   number,
+  photoUrl,
+  leftPct,
   light,
   compact,
 }: {
   name: string
   number?: string
+  photoUrl?: string
+  leftPct: number
   light?: boolean
   compact?: boolean
 }) {
+  const size = compact ? 'h-8 w-8' : 'h-9 w-9'
+  const textSize = compact ? 'text-[7px]' : 'text-[8px]'
+
   return (
     <div
-      className={cn(
-        'min-w-0 flex-1 basis-0 truncate rounded border px-0.5 py-0.5 text-center font-bold leading-tight',
-        compact ? 'text-[8px] sm:text-[9px]' : 'text-[9px] sm:text-[10px]',
-        light
-          ? 'border-sky-400/45 bg-white/95 text-[#023458] shadow-sm'
-          : 'border-cyan-200/50 bg-[#062235]/95 text-sky-50 shadow-[0_2px_6px_rgba(0,0,0,0.35)]',
-      )}
+      className="absolute top-1/2 w-[3.25rem] max-w-[14vw] -translate-x-1/2 -translate-y-1/2"
+      style={{ left: `${leftPct}%` }}
       title={number ? `#${number} ${name}` : name}
     >
-      {number ? (
-        <>
-          <span className={light ? 'text-emerald-700' : 'text-emerald-300'}>{number}</span>{' '}
-        </>
-      ) : null}
-      {name}
+      <div className="relative mx-auto w-fit">
+        <div
+          className={cn(
+            'overflow-hidden rounded-full border-2 shadow-md',
+            size,
+            light ? 'border-white bg-sky-100' : 'border-white/90 bg-[#0a1f35]',
+          )}
+        >
+          {photoUrl ? (
+            <img src={photoUrl} alt="" className="h-full w-full object-cover object-top" loading="lazy" />
+          ) : (
+            <div
+              className={cn(
+                'flex h-full w-full items-center justify-center font-black',
+                textSize,
+                light ? 'text-sky-900/70' : 'text-sky-100/80',
+              )}
+            >
+              {playerInitials(name)}
+            </div>
+          )}
+        </div>
+        {number ? (
+          <span
+            className={cn(
+              'absolute -bottom-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border px-0.5 text-[8px] font-black leading-none',
+              light
+                ? 'border-emerald-700/40 bg-emerald-500 text-white'
+                : 'border-emerald-300/50 bg-emerald-600 text-white',
+            )}
+          >
+            {number}
+          </span>
+        ) : null}
+      </div>
+      <p
+        className={cn(
+          'mt-0.5 truncate text-center font-bold leading-tight',
+          textSize,
+          light ? 'text-[#023458]' : 'text-sky-50',
+        )}
+      >
+        {name}
+      </p>
     </div>
   )
 }
@@ -58,10 +105,10 @@ export function MatchLineupPitch({
         className={cn(
           'tf-lineup-pitch relative overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
           compact
-            ? 'aspect-[4/5] min-h-[260px] w-full'
+            ? 'aspect-[4/5] min-h-[280px] w-full'
             : isUpcoming
-              ? 'h-[260px] md:h-[min(34vh,260px)]'
-              : 'h-[300px] md:h-[min(38vh,300px)]',
+              ? 'h-[280px] md:h-[min(36vh,280px)]'
+              : 'h-[320px] md:h-[min(40vh,320px)]',
         )}
         style={{
           background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
@@ -74,18 +121,19 @@ export function MatchLineupPitch({
         {rows.map((row) => (
           <div
             key={`lineup-row-${row.row}`}
-            className="absolute inset-x-[4%] flex items-center justify-evenly gap-0.5"
+            className="absolute inset-x-[3%] h-14"
             style={{
               top: `${row.topPct}%`,
               transform: 'translateY(-50%)',
-              maxHeight: '14%',
             }}
           >
             {row.players.map((p) => (
-              <PlayerChip
+              <LineupPlayerToken
                 key={`${row.row}-${p.col}-${p.number ?? ''}-${p.name}`}
                 name={p.name}
                 number={p.number}
+                photoUrl={p.photoUrl}
+                leftPct={p.leftPct}
                 light={light}
                 compact={compact}
               />
