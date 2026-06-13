@@ -22,12 +22,14 @@ export type LiveEncartSimulation = {
   burst: LiveEncartBurst
   toast: LiveEncartToast
   rim: LiveEncartRim
+  liveClockPaused?: boolean
+  liveInSecondHalf?: boolean
 }
 
 /** Même match que le hero : score, minute et effets synchronisés sur la carte « À l’affiche ». */
 export type LiveMirrorForCard = Pick<
   LiveEncartSimulation,
-  'minute' | 'score' | 'bumpSide' | 'rim' | 'burst' | 'toast' | 'active'
+  'minute' | 'score' | 'bumpSide' | 'rim' | 'burst' | 'toast' | 'active' | 'liveClockPaused' | 'liveInSecondHalf'
 >
 
 function hashId(s: string): number {

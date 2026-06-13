@@ -7,6 +7,8 @@ import {
   extractCurrentGoalsFromSmFixture,
   extractLiveMinuteFromSmFixture,
   fetchSportMonksFixtureEventsTimeline,
+  liveClockPausedFromSmFixture,
+  liveSecondHalfFromSmFixture,
 } from '../api/sportMonks'
 import type { Match } from '../types/match'
 import type { LiveEncartBurst, LiveEncartRim, LiveEncartToast } from '../types/liveSimulation'
@@ -45,6 +47,8 @@ export function useLiveEncartSimulation(match: Match | null) {
   const [burst, setBurst] = useState<LiveEncartBurst>(null)
   const [toast, setToast] = useState<LiveEncartToast>(null)
   const [rim, setRim] = useState<LiveEncartRim>(null)
+  const [liveClockPaused, setLiveClockPaused] = useState(false)
+  const [liveInSecondHalf, setLiveInSecondHalf] = useState(false)
 
   const scoreRef = useRef(score)
   useEffect(() => {
@@ -72,9 +76,8 @@ export function useLiveEncartSimulation(match: Match | null) {
   const smSeenKeysRef = useRef<Set<string>>(new Set())
   const smPrimedRef = useRef(false)
 
-  /** Dernière minute « officielle » SM + horodatage : le poll timeline est ~22 s, le calendrier rare — on fait dériver l’affichage entre deux syncs. */
+  /** Dernière minute « officielle » SM — pas d’extrapolation client entre deux syncs. */
   const minuteAnchorRef = useRef<{ m: number; atMs: number }>({ m: 1, atMs: Date.now() })
-  const [liveChronoTick, setLiveChronoTick] = useState(0)
 
   const active = Boolean(match && match.status === 'live')
   const smTimelineDriving =
@@ -119,6 +122,8 @@ export function useLiveEncartSimulation(match: Match | null) {
       setBurst(null)
       setToast(null)
       setRim(null)
+      setLiveClockPaused(false)
+      setLiveInSecondHalf(false)
       return
     }
     const s = normalizeScore(initialScoreFromMatch(match))
@@ -175,13 +180,6 @@ export function useLiveEncartSimulation(match: Match | null) {
     return () => clearInterval(id)
   }, [active, smTimelineDriving])
 
-  /** Recalcul de la minute dérivée (SM) chaque seconde — évite l’effet figé puis rattrapage. */
-  useEffect(() => {
-    if (!active || !smTimelineDriving) return
-    const id = window.setInterval(() => setLiveChronoTick((n) => n + 1), 1000)
-    return () => window.clearInterval(id)
-  }, [active, smTimelineDriving, match?.id])
-
   /** Timeline événements fixture SM : score, minute, animations (remplace la simulation aléatoire). */
   useEffect(() => {
     if (!active || !match?.sportMonksFixtureId) return
@@ -209,6 +207,8 @@ export function useLiveEncartSimulation(match: Match | null) {
         if (Number.isFinite(liveMin) && liveMin >= 0) {
           snapMinuteFromAuthority(Math.min(99, Math.max(1, liveMin)))
         }
+        setLiveClockPaused(liveClockPausedFromSmFixture(fx))
+        setLiveInSecondHalf(liveSecondHalfFromSmFixture(fx))
 
         const raw = Array.isArray(fx.events) ? fx.events : []
         const sorted = [...raw].sort((a, b) => {
@@ -416,26 +416,18 @@ export function useLiveEncartSimulation(match: Match | null) {
     }
   }, [])
 
-  const displayMinute = useMemo(() => {
-    if (!active) return minute
-    if (!smTimelineDriving) return minute
-    const m0 = matchRef.current
-    if (m0?.liveClockPaused) return minuteAnchorRef.current.m
-    const { m, atMs } = minuteAnchorRef.current
-    const drift = Math.floor((Date.now() - atMs) / 60_000)
-    return Math.min(99, Math.max(0, m + drift))
-  }, [active, smTimelineDriving, minute, liveChronoTick])
-
   return useMemo(
     () => ({
       active,
-      minute: displayMinute,
+      minute,
       score,
       bumpSide,
       burst,
       toast,
       rim,
+      liveClockPaused,
+      liveInSecondHalf,
     }),
-    [active, displayMinute, score, bumpSide, burst, toast, rim],
+    [active, minute, score, bumpSide, burst, toast, rim, liveClockPaused, liveInSecondHalf],
   )
 }

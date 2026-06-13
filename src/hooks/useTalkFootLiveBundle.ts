@@ -15,7 +15,7 @@ type FixtureChannel = {
 const CHANNELS = new Map<number, FixtureChannel>()
 
 function pollMsForStatus(status: MatchStatus): number {
-  if (status === 'live') return 8_000
+  if (status === 'live') return 5_000
   if (status === 'upcoming') return 20_000
   return 45_000
 }

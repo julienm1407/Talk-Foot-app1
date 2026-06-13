@@ -76,12 +76,13 @@ export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
   return total > 50
 }
 
-/** Mi-temps / pause : la minute API ne doit pas être « extrapolée » minute par minute côté client. */
+/** Mi-temps / pause : calé sur SportMonks (périodes + état), sans extrapolation client. */
 export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
   const sid = stateIdOf(f)
   const blob = `${f.state?.developer_name ?? ''} ${f.state?.state ?? ''}`.toUpperCase()
 
   if (Array.isArray(f.periods) && f.periods.some((p) => p?.ticking)) return false
+
   if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
     const apiMin = typeof f.minute === 'number' ? f.minute : minuteFromPeriods(f)
     if (apiMin != null && apiMin >= 46) return false
@@ -92,6 +93,21 @@ export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
     return true
   }
   if (sid === 3) return true
+
+  /** Fin 1re période, horloge arrêtée → mi-temps (même si le libellé HT tarde). */
+  if (Array.isArray(f.periods) && f.periods.length > 0) {
+    if (f.periods.some((p) => Boolean(p?.ticking) && typeof p.counts_from === 'number' && p.counts_from >= 45)) {
+      return false
+    }
+    if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
+
+    const maxTotal = f.periods.reduce((acc, p) => {
+      const t = periodMinuteTotal(p)
+      return t != null ? Math.max(acc, t) : acc
+    }, 0)
+    if (maxTotal >= 45) return true
+  }
+
   return false
 }
 
@@ -268,40 +284,12 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
   return goalsFromScores(f.scores)
 }
 
-/**
- * Estimation depuis le coup d’envoi quand SM n’envoie ni `minute` ni `periods.minutes`.
- * Dernier recours uniquement — ne pas avancer avant le vrai coup d’envoi.
- */
-function minuteFromKickoffElapsed(f: SmFixture): number {
-  if (smStatus(f) !== 'live') return 0
-  const kickoffMs = Date.parse(startingAtIso(f))
-  if (!Number.isFinite(kickoffMs)) return 0
-  const now = Date.now()
-  if (now < kickoffMs + 90_000) return 0
-
-  const dev = (f.state?.developer_name || f.state?.state || '').toUpperCase()
-  const sid = stateIdOf(f)
-  const clearlyLive =
-    dev.includes('INPLAY') ||
-    dev.includes('LIVE') ||
-    (sid != null && LIVE_STATE_IDS.has(sid) && sid !== 3)
-  if (!clearlyLive) return 0
-
-  const elapsedMin = Math.floor((now - kickoffMs) / 60_000)
-  if (elapsedMin < 0) return 0
-  if (sid === 3) return 45
-  const halftimeBreakMin = 15
-  if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
-    return Math.min(99, Math.max(46, elapsedMin - halftimeBreakMin))
-  }
-  return Math.min(45, elapsedMin)
-}
-
 function minuteFromFixture(f: SmFixture): number {
   const fromPeriods = minuteFromPeriods(f)
   if (fromPeriods != null) return fromPeriods
   if (typeof f.minute === 'number' && f.minute >= 0) return f.minute
-  return minuteFromKickoffElapsed(f)
+  /** Pas d’estimation depuis starting_at (retard / mi-temps ≠ horloge réelle). */
+  return 0
 }
 
 /** Minute affichée (période / `fixture.minute`) pour caler l’encart sur le live SM. */

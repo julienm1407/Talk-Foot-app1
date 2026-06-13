@@ -6,7 +6,7 @@ import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
 import { LiveSalonPresenceStrip } from '../home/LiveSalonPresenceStrip'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { cn } from '../../utils/cn'
-import { formatHubDayLabel, formatKickoff, formatRelativeMinute } from '../../utils/time'
+import { formatHubDayLabel, formatKickoff } from '../../utils/time'
 
 export { formatHubDayLabel }
 import { useAppearance } from '../../contexts/AppearanceContext'
@@ -117,8 +117,17 @@ export function HubStripLive({
   asLink?: boolean
 }) {
   const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
-  const linearMinute = useLinearDisplayedLiveMinute(match)
-  const clockLabel = useLiveMatchClockLabel(sim ? null : match)
+  const matchForClock =
+    sim != null
+      ? {
+          ...match,
+          minute: sim.minute,
+          liveClockPaused: sim.liveClockPaused ?? match.liveClockPaused,
+          liveInSecondHalf: sim.liveInSecondHalf ?? match.liveInSecondHalf,
+        }
+      : match
+  const linearMinute = useLinearDisplayedLiveMinute(matchForClock)
+  const clockLabel = useLiveMatchClockLabel(matchForClock)
   const minute = sim ? sim.minute : linearMinute
   const sc = sim ? sim.score : match.score ?? { home: 0, away: 0 }
   const bump = sim?.bumpSide ?? null
@@ -214,7 +223,7 @@ export function HubStripLive({
                   visualSize === 'hero' ? 'px-2 py-0.5 text-[11px]' : 'px-2 py-0.5 text-[10px]',
                 )}
               >
-                {sim ? (formatRelativeMinute(minute) ?? `${minute}′`) : (clockLabel || `${minute}′`)}
+                {clockLabel || `${minute}′`}
               </span>
             </div>
             <div className="flex min-w-0 items-center justify-end gap-2 text-right">
@@ -236,7 +245,7 @@ export function HubStripLive({
                 visualSize === 'compact' ? 'pb-1.5' : visualSize === 'hero' ? 'pb-1.5' : 'pb-2',
               )}
             >
-              <HubMatchProgressBar minute={minute} />
+              <HubMatchProgressBar minute={minute} paused={Boolean(matchForClock.liveClockPaused)} />
             </div>
           ) : null}
         </div>
