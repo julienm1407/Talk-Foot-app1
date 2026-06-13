@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
@@ -12,6 +12,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { BottomNavMoreSheet } from './BottomNavMoreSheet'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
+import { getBottomNavPortalRoot } from '../utils/bottomNavPortalRoot'
 
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
@@ -25,10 +26,17 @@ export function BottomNav() {
   const L = appearance === 'light'
   const showMobileNav = useIsMobileTouchViewport()
   const [moreOpen, setMoreOpen] = useState(false)
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+
+  useLayoutEffect(() => {
+    setPortalTarget(getBottomNavPortalRoot())
+  }, [])
 
   useEffect(() => {
     setMoreOpen(false)
-  }, [location.pathname])
+  }, [location.pathname, location.hash])
+
+  const closeMore = () => setMoreOpen(false)
 
   const moreActive = useMemo(
     () =>
@@ -42,6 +50,7 @@ export function BottomNav() {
 
   const chrome = (
     <>
+      <BottomNavMoreSheet open={moreOpen} onClose={closeMore} />
       <nav
         className={cn(
           'tf-app-bottomnav tf-app-bottomnav-shell border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl',
@@ -60,6 +69,7 @@ export function BottomNav() {
                 key={to}
                 to={to}
                 end={end}
+                onClick={closeMore}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'tf-nav-pill flex min-h-tf-touch flex-col items-center justify-center gap-1 rounded-tf-xl px-1.5 py-2 text-[11px] font-bold leading-tight outline-none active:scale-[0.96]',
@@ -110,12 +120,10 @@ export function BottomNav() {
           </button>
         </div>
       </nav>
-
-      <BottomNavMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </>
   )
 
-  if (typeof document === 'undefined') return chrome
+  if (!portalTarget) return null
 
-  return createPortal(chrome, document.body)
+  return createPortal(chrome, portalTarget)
 }

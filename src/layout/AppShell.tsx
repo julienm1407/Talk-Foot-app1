@@ -22,6 +22,9 @@ const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
 /** Espace au-dessus de la BottomNav fixe (lg:hidden → mobile + tablette). */
 const mainBottomPadAboveBottomNav =
   'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
+/** Réserve la zone tactile de la BottomNav fixe — le scroll ne doit pas s'étendre dessous. */
+const mobileMainClearBottomNav =
+  'max-lg:mb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]'
 /** Accueil desktop : pas de bottom nav — éviter le grand vide gris sous le hub. */
 const mainBottomPadHomeDesktop = 'lg:pb-2 xl:pb-3'
 
@@ -55,7 +58,10 @@ export function AppShell() {
 
       <main
         id="main-content"
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none"
+        className={cn(
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden outline-none',
+          !isChannel && mobileMainClearBottomNav,
+        )}
         tabIndex={-1}
       >
         {isChannel ? (

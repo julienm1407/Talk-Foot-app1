@@ -35,7 +35,7 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
     <div className="tf-bottom-nav-more-sheet fixed inset-0 lg:hidden" data-tf-modal="true">
       <button
         type="button"
-        className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+        className="tf-bottom-nav-more-sheet__backdrop absolute inset-x-0 top-0 bg-black/45 backdrop-blur-[2px]"
         aria-label="Fermer le menu Plus"
         onClick={onClose}
       />
@@ -44,7 +44,7 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
         aria-modal="true"
         aria-label="Plus d'options"
         className={cn(
-          'absolute inset-x-0 bottom-0 mx-auto w-full max-w-tf-content rounded-t-[24px] border shadow-[0_-16px_48px_rgba(0,0,0,0.35)]',
+          'tf-bottom-nav-more-sheet__panel absolute inset-x-0 bottom-0 mx-auto w-full max-w-tf-content rounded-t-[24px] border shadow-[0_-16px_48px_rgba(0,0,0,0.35)]',
           'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
           'mb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]',
           L
