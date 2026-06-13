@@ -1075,6 +1075,8 @@ export function ChannelPage() {
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
     userId: selfUserId,
+    actorDisplayName: authUser?.displayName,
+    matchLabel: match ? `${homeHeaderLabel} vs ${awayHeaderLabel}` : null,
   })
   const filteredChatMessages = useMemo(
     () => chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),

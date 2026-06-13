@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import {
+  createLiveMatchMessageLikeInboxNotification,
+} from '../lib/supabase/inboxNotifications'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
+import { displayNameFromSession } from './useLiveMatchChatSync'
 
 type LikeRow = {
   message_id: string
@@ -47,8 +51,10 @@ export function useLiveMatchMessageLikesSync(options: {
   matchId: string
   enabled: boolean
   userId: string | null
+  actorDisplayName?: string | null
+  matchLabel?: string | null
 }) {
-  const { matchId, enabled, userId } = options
+  const { matchId, enabled, userId, actorDisplayName, matchLabel } = options
   const [likeMap, setLikeMap] = useState<Map<string, MessageLikeState>>(() => new Map())
   const userIdRef = useRef(userId)
   userIdRef.current = userId
@@ -82,6 +88,37 @@ export function useLiveMatchMessageLikesSync(options: {
     })
   }, [])
 
+  const notifyAuthorOnLike = useCallback(
+    async (messageId: string, likerDisplayName: string) => {
+      if (!isSupabaseConfigured() || !matchId) return
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return
+      const { data: msg } = await sb
+        .from('live_match_messages')
+        .select('user_id, body, metadata')
+        .eq('id', messageId)
+        .maybeSingle()
+      const authorId = msg?.user_id
+      const uid = userIdRef.current
+      if (!authorId || !uid || authorId === uid) return
+      const meta =
+        msg?.metadata && typeof msg.metadata === 'object' && !Array.isArray(msg.metadata)
+          ? (msg.metadata as Record<string, unknown>)
+          : null
+      const textBody = typeof msg?.body === 'string' ? msg.body.trim() : ''
+      const messagePreview = textBody || (typeof meta?.gifUrl === 'string' ? '[GIF]' : '')
+      await createLiveMatchMessageLikeInboxNotification(sb, {
+        recipientSupabaseId: authorId,
+        actorDisplayName: likerDisplayName,
+        matchId,
+        matchLabel: matchLabel?.trim() || undefined,
+        messageId,
+        messagePreview,
+      })
+    },
+    [matchId, matchLabel],
+  )
+
   const toggleLike = useCallback(
     async (messageId: string) => {
       if (!isSupabaseConfigured() || !matchId) return
@@ -100,6 +137,9 @@ export function useLiveMatchMessageLikesSync(options: {
       })
       patchMessageLike(messageId, willLike)
 
+      const likerName =
+        actorDisplayName?.trim() || displayNameFromSession(session.user)
+
       if (willLike) {
         const { error } = await sb.from('live_match_message_likes').insert({
           match_id: matchId,
@@ -109,7 +149,9 @@ export function useLiveMatchMessageLikesSync(options: {
         if (error) {
           patchMessageLike(messageId, false)
           if (import.meta.env.DEV) console.warn('[Talk Foot] like insert:', error.message)
+          return
         }
+        void notifyAuthorOnLike(messageId, likerName)
       } else {
         const { error } = await sb
           .from('live_match_message_likes')
@@ -122,7 +164,7 @@ export function useLiveMatchMessageLikesSync(options: {
         }
       }
     },
-    [matchId, patchMessageLike],
+    [matchId, actorDisplayName, patchMessageLike, notifyAuthorOnLike],
   )
 
   useEffect(() => {

@@ -125,6 +125,32 @@ export async function createMessageLikeInboxNotification(
   }
 }
 
+export async function createLiveMatchMessageLikeInboxNotification(
+  sb: SupabaseClient,
+  opts: {
+    recipientSupabaseId: string
+    actorDisplayName: string
+    matchId: string
+    matchLabel?: string
+    messageId: string
+    messagePreview: string
+  },
+): Promise<void> {
+  const preview = truncateMessagePreview(opts.messagePreview)
+  const { error } = await sb.from('inbox_notifications').insert({
+    recipient_supabase_id: opts.recipientSupabaseId,
+    kind: 'message_like',
+    title: `${opts.actorDisplayName} a aimé votre message`,
+    body: preview || `Message dans le live${opts.matchLabel ? ` · ${opts.matchLabel}` : ''}`,
+    href: `/channel/${opts.matchId}`,
+    actor_display_name: opts.actorDisplayName,
+    message_id: opts.messageId,
+  })
+  if (error && import.meta.env.DEV) {
+    console.warn('[Talk Foot] inbox live message_like:', error.message)
+  }
+}
+
 export async function createFriendRequestInboxNotification(
   sb: SupabaseClient,
   opts: {
