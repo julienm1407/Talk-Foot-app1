@@ -1,5 +1,4 @@
-import { useMemo, useState, useEffect, useLayoutEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useMemo, useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import {
@@ -12,7 +11,6 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { BottomNavMoreSheet } from './BottomNavMoreSheet'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
-import { getBottomNavPortalRoot } from '../utils/bottomNavPortalRoot'
 
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
@@ -26,14 +24,10 @@ export function BottomNav() {
   const L = appearance === 'light'
   const showMobileNav = useIsMobileTouchViewport()
   const [moreOpen, setMoreOpen] = useState(false)
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
-
-  useLayoutEffect(() => {
-    setPortalTarget(getBottomNavPortalRoot())
-  }, [])
 
   useEffect(() => {
     setMoreOpen(false)
+    document.body.style.overflow = ''
   }, [location.pathname, location.hash])
 
   const closeMore = () => setMoreOpen(false)
@@ -48,7 +42,7 @@ export function BottomNav() {
 
   if (!showMobileNav) return null
 
-  const chrome = (
+  return (
     <>
       <BottomNavMoreSheet open={moreOpen} onClose={closeMore} />
       <nav
@@ -122,8 +116,4 @@ export function BottomNav() {
       </nav>
     </>
   )
-
-  if (!portalTarget) return null
-
-  return createPortal(chrome, portalTarget)
 }

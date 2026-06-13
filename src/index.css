@@ -78,30 +78,6 @@
   pointer-events: auto;
 }
 
-/* BottomNav mobile — hors #root, au-dessus du scroll profil (zone non cliquable sauf barre). */
-#tf-bottom-nav-root {
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147482310 !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  pointer-events: none !important;
-  overflow: visible !important;
-  isolation: isolate;
-}
-
-#tf-bottom-nav-root:empty {
-  display: none !important;
-}
-
-#tf-bottom-nav-root:not(:empty) > * {
-  pointer-events: auto;
-}
-
 .tf-shop-modal-backdrop {
   position: absolute;
   inset: 0;
@@ -2629,12 +2605,12 @@ body::before {
   }
 }
 
-/* BottomNav — portail body, au-dessus du scroll (profil, boutique, etc.). */
+/* BottomNav — hors du conteneur scroll (sibling AppShell), toujours cliquable sur profil. */
 .tf-app-bottomnav-shell {
   position: fixed !important;
   inset-inline: 0 !important;
   bottom: 0 !important;
-  z-index: 2147482325 !important;
+  z-index: 120 !important;
   pointer-events: auto !important;
   touch-action: manipulation;
   transform: translateZ(0);
@@ -2643,10 +2619,11 @@ body::before {
 }
 
 .tf-bottom-nav-more-sheet {
-  z-index: 2147482315 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 110 !important;
   pointer-events: none !important;
   touch-action: manipulation;
-  isolation: isolate;
 }
 
 .tf-bottom-nav-more-sheet__backdrop {
@@ -2657,6 +2634,12 @@ body::before {
 .tf-bottom-nav-more-sheet__panel {
   z-index: 1 !important;
   pointer-events: auto !important;
+}
+
+/* iOS : -webkit-overflow-scrolling + fixed nav = taps perdus sur pages longues (profil). */
+.tf-profile-page-scroll {
+  -webkit-overflow-scrolling: auto;
+  overscroll-behavior-y: contain;
 }
 
 /* Barre de saisie chat — mobile (portail body, au-dessus de la BottomNav). */

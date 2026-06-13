@@ -36,6 +36,7 @@ export function AppShell() {
   const isChannelStadium = /^\/channel\/[^/]+\/stade$/.test(location.pathname)
   const isGroupTribune = /^\/group\/[^/]+/.test(location.pathname)
   const isDebatePage = /^\/debate\/[^/]+/.test(location.pathname)
+  const isProfile = location.pathname === '/profile' || location.pathname.startsWith('/profile/')
   /** Dock Match / Compo / Paris / Tribune (portail fixe) — pas de footer légal en dessous. */
   const hideChannelLegalFooter = isChannel && !isChannelStadium && isMobileTouch
 
@@ -47,6 +48,7 @@ export function AppShell() {
   return (
     <DirectMessagesProvider>
     <PrivateMessagesUiProvider>
+    <>
     <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell">
       <SkipLink />
       <ActivityRouteLogger />
@@ -131,7 +133,8 @@ export function AppShell() {
         ) : (
           <div
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto [-webkit-overflow-scrolling:touch]',
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y',
+              isProfile && 'tf-profile-page-scroll',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-5 sm:pt-7',
               mainBottomPadMobile,
             )}
@@ -149,9 +152,10 @@ export function AppShell() {
           </div>
         )}
       </main>
-
-      {!isChannel ? <BottomNav /> : null}
     </div>
+
+    {!isChannel ? <BottomNav /> : null}
+    </>
     </PrivateMessagesUiProvider>
     </DirectMessagesProvider>
   )

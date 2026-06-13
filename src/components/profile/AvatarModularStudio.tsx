@@ -594,7 +594,7 @@ export function AvatarModularStudio() {
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-white/50 lg:hidden">
             Choisir une catégorie
           </p>
-          <div className="-mx-3 mb-3 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:mb-4 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+          <div className="-mx-3 mb-3 touch-pan-x overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:mb-4 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
             <div className="flex w-max min-w-full gap-1.5 sm:w-auto sm:flex-wrap">
               {SLOT_ORDER.map((slot) => (
                 <button
