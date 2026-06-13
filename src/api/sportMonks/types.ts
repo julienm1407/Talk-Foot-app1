@@ -142,7 +142,14 @@ export type SmFixture = {
   xGfixture?: SmXGFixtureRow[]
   xgfixture?: SmXGFixtureRow[]
   /** Présent sur livescores / includes `periods` */
-  periods?: Array<{ ticking?: boolean; minutes?: number; description?: string }>
+  periods?: Array<{
+    ticking?: boolean
+    minutes?: number
+    description?: string
+    counts_from?: number
+    time_added?: number
+    extra_minute?: number
+  }>
   minute?: number
   /** Include `statistics.type` (stats live / post). */
   statistics?: SmFixtureStatistic[]

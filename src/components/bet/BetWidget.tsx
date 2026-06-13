@@ -79,6 +79,9 @@ export function BetWidget({
   liveStatRows = [],
   lineupScorers = [],
   scoredButeurs = [],
+  oddsAlreadyLiveAdjusted = false,
+  bettingSuspended = false,
+  bettingSuspendReason,
 }: {
   match: Match
   bookOdds1x2?: SmBookOdds1x2 | null
@@ -98,6 +101,10 @@ export function BetWidget({
     formationField?: string
   }[]
   scoredButeurs?: { side: 'home' | 'away'; slug: string; name?: string }[]
+  /** Cotes déjà ajustées live par useTalkFootInternalOdds — évite double calcul. */
+  oddsAlreadyLiveAdjusted?: boolean
+  bettingSuspended?: boolean
+  bettingSuspendReason?: string
   betting?: {
     wallet: Wallet
     matchBets: Bet[]
@@ -172,9 +179,9 @@ export function BetWidget({
 
   const x12Displayed = useMemo((): SmBookOdds1x2 | null => {
     if (!x12Resolved) return null
-    if (!isLive) return x12Resolved
+    if (!isLive || oddsAlreadyLiveAdjusted) return x12Resolved
     return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive, liveStatExtras)
-  }, [x12Resolved, isLive, scoreHome, scoreAway, minuteLive, liveStatExtras])
+  }, [x12Resolved, isLive, oddsAlreadyLiveAdjusted, scoreHome, scoreAway, minuteLive, liveStatExtras])
 
   const oddsSourceLabel =
     oddsSource === 'talkfoot' ? 'Cotes Talk Foot' : 'Cotes estimées'
@@ -257,6 +264,7 @@ export function BetWidget({
 
   const markets = useMemo(() => {
     const x12 = x12Displayed
+    const liveBlocked = isLive && bettingSuspended
     const base: Array<{
       id: BetMarket
       label: string
@@ -269,7 +277,7 @@ export function BetWidget({
       {
         id: 'result_1x2' as const,
         label: isLive ? '1N2 (cotes live)' : '1N2',
-        enabled: x12Ready,
+        enabled: x12Ready && !liveBlocked,
         picks: [
           { id: 'home' as const, label: match.home.shortName, odds: x12?.home ?? 0 },
           { id: 'draw' as const, label: 'Nul', odds: x12?.draw ?? 0 },
@@ -286,7 +294,7 @@ export function BetWidget({
       base.push({
         id: 'anytime_scorer',
         label: isFinished ? 'Buteur (résultat)' : 'Buteur (marque dans le match)',
-        enabled: isFinished ? false : x12Ready,
+        enabled: isFinished ? false : x12Ready && !liveBlocked,
         gridCols: 2,
         picks: [...scorerPicksForDisplay.home, ...scorerPicksForDisplay.away],
         scorerSides: [
@@ -301,6 +309,7 @@ export function BetWidget({
     isLive,
     isUpcoming,
     isFinished,
+    bettingSuspended,
     match.away.shortName,
     match.home.shortName,
     scorerPicksForDisplay,
@@ -419,6 +428,13 @@ export function BetWidget({
 
   const placePending = () => {
     if (!pending) return
+    if (isLive && bettingSuspended) {
+      setNotice({
+        tone: 'err',
+        text: bettingSuspendReason ?? 'Paris suspendus momentanément.',
+      })
+      return
+    }
     if (pending.market === 'anytime_scorer') {
       const m = /^scor:(home|away):(.+)$/.exec(pending.selection)
       if (m) {
@@ -484,6 +500,9 @@ export function BetWidget({
             ) : (
               <span className="mt-0.5 block text-[10px] font-semibold text-sky-200/70">Mise rapide</span>
             )}
+            {isLive && bettingSuspended && bettingSuspendReason ? (
+              <span className="mt-1 block text-[10px] font-bold text-amber-200/95">{bettingSuspendReason}</span>
+            ) : null}
           </div>
           {compact ? (
             <button

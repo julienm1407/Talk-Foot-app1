@@ -57,6 +57,7 @@ import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
+import { deriveBettingSuspension } from '../utils/bettingSuspension'
 import { useLiveMatchMessageLikesSync } from '../hooks/useLiveMatchMessageLikesSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import { useLiveMatchSalonStats } from '../hooks/useLiveMatchSalonStats'
@@ -69,6 +70,7 @@ import {
   extractLiveMinuteFromSmFixture,
   highlightFullscreenDedupeKey,
   liveClockPausedFromSmFixture,
+  livePeriodTickingFromSmFixture,
   type SmStartingXiPlayer,
 } from '../api/sportMonks'
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
@@ -539,6 +541,7 @@ function cloudMessageToUi(m: Message): ChatMessageItem {
     likes: 0,
     emoteId: m.emoteId,
     matchTribune: m.matchTribune,
+    createdAtMs: m.createdAt,
   }
 }
 
@@ -930,6 +933,18 @@ export function ChannelPage() {
 
   const [nowMs, setNowMs] = useState(() => Date.now())
   const liveDisplayedMinute = useLinearDisplayedLiveMinute(matchForClock)
+  const livePeriodTicking = liveBundleFixture ? livePeriodTickingFromSmFixture(liveBundleFixture) : false
+  const bettingSuspension = useMemo(
+    () =>
+      deriveBettingSuspension({
+        status,
+        liveClockPaused: matchForClock?.liveClockPaused,
+        minute: liveDisplayedMinute,
+        periodTicking: livePeriodTicking,
+        highlights: smTimelineHighlights,
+      }),
+    [status, matchForClock?.liveClockPaused, liveDisplayedMinute, livePeriodTicking, smTimelineHighlights],
+  )
 
   const sidelinedCounts = useMemo(
     () => extractSidelinedCountsFromSmFixture(liveBundleFixture),
@@ -1067,7 +1082,9 @@ export function ChannelPage() {
           const mapped = cloudMessageToUi(m)
           byId.set(mapped.id, mapped)
         }
-        return Array.from(byId.values())
+        return Array.from(byId.values()).sort(
+          (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
+        )
       })
     },
   })
@@ -1259,6 +1276,16 @@ export function ChannelPage() {
     }
     recordChatSend()
     setDraft('')
+    if (res.message) {
+      const mapped = cloudMessageToUi(res.message)
+      setChatMessages((prev) => {
+        const byId = new Map(prev.map((m) => [m.id, m]))
+        byId.set(mapped.id, mapped)
+        return Array.from(byId.values()).sort(
+          (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
+        )
+      })
+    }
   }
   const onToggleLikeMessage = (id: string) => {
     if (messageLikes.isConfigured) {
@@ -1317,6 +1344,7 @@ export function ChannelPage() {
     [match?.home.name, match?.home.shortName, match?.away.name, match?.away.shortName, homeName, awayName],
   )
 
+  const fullscreenBusyRef = useRef(false)
   const launchFullscreenEvent = useCallback(
     (
       kind: 'goal' | 'card' | 'var' | 'kickoff',
@@ -1325,8 +1353,13 @@ export function ChannelPage() {
       durationMs = 3200,
       side?: 'home' | 'away',
     ) => {
+      if (fullscreenBusyRef.current) return
+      fullscreenBusyRef.current = true
       setFullscreenEvent({ kind, title, subtitle, side })
-      window.setTimeout(() => setFullscreenEvent(null), durationMs)
+      window.setTimeout(() => {
+        setFullscreenEvent(null)
+        fullscreenBusyRef.current = false
+      }, durationMs)
     },
     [],
   )
@@ -1488,6 +1521,8 @@ export function ChannelPage() {
     const t = String(latest.type || '').toLowerCase()
     if (t.includes('but') || t.includes('carton') || t.includes('var')) return
     if (Date.now() - lastGoalFullscreenAtRef.current < 12_000) return
+    const rawLower = String(latest.title || latest.detail || '').toLowerCase()
+    if (rawLower.includes('penalty') || rawLower.includes('peno')) return
 
     const raw = String(latest.title || latest.detail || '').trim()
     const translated = translateSportMonksLiveTextToFr(raw)
@@ -3340,6 +3375,9 @@ export function ChannelPage() {
                   bookOddsOverUnder25={oddsOverUnder25}
                   bookOddsLoading={oddsLoading}
                   oddsSource={oddsMeta.source}
+                  oddsAlreadyLiveAdjusted
+                  bettingSuspended={bettingSuspension.suspended}
+                  bettingSuspendReason={bettingSuspension.reason}
                   teamAttackIndices={attackIndices}
                   compact
                   liveScore={{ home: homeScore, away: awayScore }}
@@ -3600,6 +3638,9 @@ export function ChannelPage() {
                     bookOddsOverUnder25={oddsOverUnder25}
                     bookOddsLoading={oddsLoading}
                     oddsSource={oddsMeta.source}
+                    oddsAlreadyLiveAdjusted
+                    bettingSuspended={bettingSuspension.suspended}
+                    bettingSuspendReason={bettingSuspension.reason}
                     teamAttackIndices={attackIndices}
                     compact
                     liveScore={{ home: homeScore, away: awayScore }}

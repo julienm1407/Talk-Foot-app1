@@ -463,11 +463,16 @@ export function cardColorFromHighlightText(raw: string): 'yellow' | 'red' {
 
 /** Déduplication timeline : un carton par minute / camp / couleur. */
 export function cardCoarseDedupeKey(
-  h: Pick<Highlight, 'type' | 'minute' | 'side' | 'title' | 'detail'>,
+  h: Pick<Highlight, 'type' | 'minute' | 'side' | 'title' | 'detail' | 'scorerName'>,
 ): string | null {
   if (h.type !== 'Carton') return null
   const color = cardColorFromHighlightText(`${h.title ?? ''} ${h.detail ?? ''}`)
-  return `${h.minute}|${h.side ?? '?'}|${color}`
+  const player =
+    h.scorerName?.trim() ||
+    parseCardPlayerName(`${h.title ?? ''} ${h.detail ?? ''}`) ||
+    ''
+  const playerKey = player ? slugScorer(compactScorerDisplayName(player)) : ''
+  return `${h.minute}|${h.side ?? '?'}|${color}|${playerKey}`
 }
 
 /** Nom affiché carton (prénom + nom quand dispo). */

@@ -29,6 +29,12 @@ export const DEFAULT_MODULAR_SLOT_COLORS: ModularSlotColors = {
   shoes: 'default',
 }
 
+/** Bouche « lèvres » = personnage féminin sans barbe par défaut. */
+export function isFeminineModularAvatar(data: AvatarData): boolean {
+  const mouth = String(data.mouth ?? '').trim()
+  return mouth.startsWith('mouth-lips')
+}
+
 export function createDefaultModularAvatarState(): ModularAvatarState {
   return {
     data: createDefaultAvatarData(),
@@ -59,7 +65,7 @@ export function resolveModularAvatarState(
       eyebrows: null,
       nose: d.nose ?? defaults.nose,
       mouth: d.mouth ?? defaults.mouth,
-      beard: d.beard ?? defaults.beard,
+      beard: 'beard' in d ? d.beard : defaults.beard,
       jersey: d.jersey ?? defaults.jersey,
       shorts: d.shorts ?? defaults.shorts,
       socks: null,

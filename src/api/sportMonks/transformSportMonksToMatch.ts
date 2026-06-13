@@ -18,11 +18,53 @@ function stateIdOf(f: SmFixture): number | undefined {
   return f.state?.id ?? f.state_id
 }
 
+/** États SM « 2e mi-temps » (≠ minute 68 — ancien bug affichait 68 dès le state 22). */
+const SECOND_HALF_STATE_IDS = new Set([4, 6, 9, 21, 22, 25])
+
+function periodMinuteTotal(p: NonNullable<SmFixture['periods']>[number]): number | null {
+  if (typeof p.minutes !== 'number' || p.minutes < 0) return null
+  const base = typeof p.counts_from === 'number' && p.counts_from >= 0 ? p.counts_from : 0
+  return base + p.minutes
+}
+
+function minuteFromPeriods(f: SmFixture): number | null {
+  const periods = f.periods
+  if (!Array.isArray(periods) || !periods.length) return null
+  for (let i = periods.length - 1; i >= 0; i--) {
+    const p = periods[i]
+    if (p?.ticking) {
+      const total = periodMinuteTotal(p)
+      if (total != null) return total
+    }
+  }
+  for (let i = periods.length - 1; i >= 0; i--) {
+    const total = periodMinuteTotal(periods[i])
+    if (total != null) return total
+  }
+  return null
+}
+
+export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
+  const periods = f.periods
+  if (!Array.isArray(periods)) return false
+  return periods.some((p) => Boolean(p?.ticking))
+}
+
 /** Mi-temps / pause : la minute API ne doit pas être « extrapolée » minute par minute côté client. */
 export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
-  const blob = `${f.state?.developer_name ?? ''} ${f.state?.state ?? ''}`.toUpperCase()
-  if (blob.includes('HT') || blob.includes('HALF')) return true
   const sid = stateIdOf(f)
+  const blob = `${f.state?.developer_name ?? ''} ${f.state?.state ?? ''}`.toUpperCase()
+
+  if (Array.isArray(f.periods) && f.periods.some((p) => p?.ticking)) return false
+  if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
+    const apiMin = typeof f.minute === 'number' ? f.minute : minuteFromPeriods(f)
+    if (apiMin != null && apiMin >= 46) return false
+  }
+
+  if (blob.includes('HT') || blob.includes('HALF')) {
+    if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
+    return true
+  }
   if (sid === 3) return true
   return false
 }
@@ -200,38 +242,39 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
   return goalsFromScores(f.scores)
 }
 
-/** États SM « 2e mi-temps » (≠ minute 68 — ancien bug affichait 68 dès le state 22). */
-const SECOND_HALF_STATE_IDS = new Set([4, 6, 9, 21, 22, 25])
-
 /**
  * Estimation depuis le coup d’envoi quand SM n’envoie ni `minute` ni `periods.minutes`.
- * Ne confond plus state_id 2 (= 1re mi-temps) avec « 25e minute ».
+ * Dernier recours uniquement — ne pas avancer avant le vrai coup d’envoi.
  */
 function minuteFromKickoffElapsed(f: SmFixture): number {
+  if (smStatus(f) !== 'live') return 0
   const kickoffMs = Date.parse(startingAtIso(f))
   if (!Number.isFinite(kickoffMs)) return 0
-  const elapsedMin = Math.floor((Date.now() - kickoffMs) / 60_000)
-  if (elapsedMin < 0) return 0
+  const now = Date.now()
+  if (now < kickoffMs + 90_000) return 0
+
+  const dev = (f.state?.developer_name || f.state?.state || '').toUpperCase()
   const sid = stateIdOf(f)
+  const clearlyLive =
+    dev.includes('INPLAY') ||
+    dev.includes('LIVE') ||
+    (sid != null && LIVE_STATE_IDS.has(sid) && sid !== 3)
+  if (!clearlyLive) return 0
+
+  const elapsedMin = Math.floor((now - kickoffMs) / 60_000)
+  if (elapsedMin < 0) return 0
   if (sid === 3) return 45
   const halftimeBreakMin = 15
   if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
     return Math.min(99, Math.max(46, elapsedMin - halftimeBreakMin))
   }
-  return Math.min(50, elapsedMin)
+  return Math.min(45, elapsedMin)
 }
 
 function minuteFromFixture(f: SmFixture): number {
+  const fromPeriods = minuteFromPeriods(f)
+  if (fromPeriods != null) return fromPeriods
   if (typeof f.minute === 'number' && f.minute >= 0) return f.minute
-  const periods = f.periods
-  if (Array.isArray(periods)) {
-    for (let i = periods.length - 1; i >= 0; i--) {
-      const p = periods[i]
-      if (p?.ticking && typeof p.minutes === 'number') return p.minutes
-    }
-    const last = periods[periods.length - 1]
-    if (typeof last?.minutes === 'number') return last.minutes
-  }
   return minuteFromKickoffElapsed(f)
 }
 

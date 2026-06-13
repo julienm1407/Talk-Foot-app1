@@ -1,20 +1,21 @@
 /** Positions % sur le terrain (y bas = gardien si invert). */
 export const LINEUP_FALLBACK_POSITIONS: Array<{ left: number; top: number }> = [
-  { left: 35, top: 16 },
-  { left: 65, top: 16 },
-  { left: 14, top: 40 },
-  { left: 38, top: 40 },
-  { left: 62, top: 40 },
-  { left: 86, top: 40 },
-  { left: 14, top: 64 },
-  { left: 38, top: 64 },
-  { left: 62, top: 64 },
-  { left: 86, top: 64 },
-  { left: 50, top: 86 },
+  { left: 12, top: 12 },
+  { left: 38, top: 12 },
+  { left: 62, top: 12 },
+  { left: 88, top: 12 },
+  { left: 12, top: 36 },
+  { left: 38, top: 36 },
+  { left: 62, top: 36 },
+  { left: 88, top: 36 },
+  { left: 22, top: 62 },
+  { left: 50, top: 62 },
+  { left: 78, top: 88 },
 ]
 
 type ParsedPlayer = {
   name: string
+  number?: string
   index: number
   row: number | null
   col: number | null
@@ -23,14 +24,38 @@ type ParsedPlayer = {
 
 export type LineupBadgePlacement = {
   name: string
+  number?: string
   left: number
   top: number
   /** Largeur max du badge en % du terrain (évite le chevauchement). */
   maxWidthPct: number
 }
 
+function clampPct(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n))
+}
+
+function fallbackPlacement(i: number, parsed: ParsedPlayer): LineupBadgePlacement {
+  const fb = LINEUP_FALLBACK_POSITIONS[i] ?? { left: 50, top: 50 }
+  return {
+    name: parsed.name,
+    number: parsed.number,
+    left: fb.left,
+    top: clampPct(fb.top, 8, 90),
+    maxWidthPct: 24,
+  }
+}
+
 function parseLineupPlayers(
-  players: Array<string | { label: string; formationField?: string | null; formationPosition?: number | null }>,
+  players: Array<
+    | string
+    | {
+        label: string
+        number?: string
+        formationField?: string | null
+        formationPosition?: number | null
+      }
+  >,
 ): ParsedPlayer[] {
   return players
     .slice(0, 11)
@@ -40,6 +65,7 @@ function parseLineupPlayers(
       if (!ff) {
         return {
           name: p.label,
+          number: p.number,
           index,
           row: null,
           col: null,
@@ -49,7 +75,14 @@ function parseLineupPlayers(
       const [rowRaw, colRaw] = ff.split(':').map((x) => Number(x.trim()))
       const row = Number.isFinite(rowRaw) ? rowRaw : null
       const col = Number.isFinite(colRaw) ? colRaw : null
-      return { name: p.label, index, row, col, formationPosition: p.formationPosition }
+      return {
+        name: p.label,
+        number: p.number,
+        index,
+        row,
+        col,
+        formationPosition: p.formationPosition,
+      }
     })
     .filter((p) => p.name.trim().length > 0)
 }
@@ -66,11 +99,11 @@ function horizontalForRow(rowPlayers: ParsedPlayer[]): number[] {
   if (maxCol > minCol) {
     return cols.map((col) => {
       const t = (col - minCol) / (maxCol - minCol)
-      return 8 + t * 84
+      return 6 + t * 88
     })
   }
 
-  const pad = n >= 5 ? 4 : n >= 4 ? 6 : 8
+  const pad = n >= 5 ? 3 : n >= 4 ? 5 : 7
   const span = 100 - pad * 2
   return Array.from({ length: n }, (_, slot) => pad + (slot / (n - 1)) * span)
 }
@@ -78,7 +111,7 @@ function horizontalForRow(rowPlayers: ParsedPlayer[]): number[] {
 /** Écarte les badges d'une même ligne si leurs centres sont trop proches. */
 function resolveRowOverlaps(
   row: Array<{ left: number; maxWidthPct: number }>,
-  minGapPct = 1.5,
+  minGapPct = 2,
 ): void {
   row.sort((a, b) => a.left - b.left)
   for (let i = 1; i < row.length; i++) {
@@ -89,10 +122,10 @@ function resolveRowOverlaps(
       cur.left = prev.left + needed
     }
   }
-  const overflow = row[row.length - 1].left + row[row.length - 1].maxWidthPct / 2 - 96
+  const overflow = row[row.length - 1].left + row[row.length - 1].maxWidthPct / 2 - 97
   if (overflow > 0) {
     for (const item of row) item.left -= overflow
-    const underflow = row[0].left - row[0].maxWidthPct / 2 - 4
+    const underflow = row[0].left - row[0].maxWidthPct / 2 - 3
     if (underflow < 0) {
       for (const item of row) item.left -= underflow
     }
@@ -100,19 +133,21 @@ function resolveRowOverlaps(
 }
 
 export function computeLineupBadgePlacements(
-  players: Array<string | { label: string; formationField?: string | null; formationPosition?: number | null }>,
+  players: Array<
+    | string
+    | {
+        label: string
+        number?: string
+        formationField?: string | null
+        formationPosition?: number | null
+      }
+  >,
 ): LineupBadgePlacement[] {
-  const fallback = LINEUP_FALLBACK_POSITIONS
   const parsed = parseLineupPlayers(players)
   const positioned = parsed.filter((p) => p.row != null && p.col != null)
 
-  if (positioned.length < 7) {
-    return parsed.map((p, i) => ({
-      name: p.name,
-      left: fallback[i]?.left ?? 50,
-      top: fallback[i]?.top ?? 120,
-      maxWidthPct: 22,
-    }))
+  if (positioned.length < 4) {
+    return parsed.map((p, i) => fallbackPlacement(i, p))
   }
 
   const rows = [...new Set(positioned.map((p) => p.row as number))].sort((a, b) => a - b)
@@ -123,12 +158,7 @@ export function computeLineupBadgePlacements(
 
   const placements: LineupBadgePlacement[] = parsed.map((p, i) => {
     if (p.row == null || p.col == null) {
-      return {
-        name: p.name,
-        left: fallback[i]?.left ?? 50,
-        top: fallback[i]?.top ?? 120,
-        maxWidthPct: 22,
-      }
+      return fallbackPlacement(i, p)
     }
 
     const rowPlayers = positioned
@@ -138,14 +168,15 @@ export function computeLineupBadgePlacements(
     const xs = horizontalForRow(rowPlayers)
     const rowIdx = rowIndexByValue.get(p.row) ?? 0
     const normalized = rowIdx / rowCount
-    const y = invert ? 86 - normalized * 74 : 12 + normalized * 74
+    const y = invert ? 88 - normalized * 78 : 10 + normalized * 78
     const n = rowPlayers.length
-    const maxWidthPct = Math.min(32, Math.max(12, Math.floor(72 / n)))
+    const maxWidthPct = Math.min(28, Math.max(14, Math.floor(78 / n)))
 
     return {
       name: p.name,
+      number: p.number,
       left: xs[slot] ?? 50,
-      top: y,
+      top: clampPct(y, 8, 90),
       maxWidthPct,
     }
   })

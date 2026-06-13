@@ -31,6 +31,7 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
     if (!match || match.status !== 'live') return Math.max(0, Math.round(Number(match?.minute) || 0))
     if (paused) return official
     const drift = Math.floor((Date.now() - anchor.atMs) / 60_000)
-    return Math.min(99, Math.max(0, anchor.m + drift))
+    const linear = anchor.m + drift
+    return Math.min(99, Math.max(0, Math.min(linear, official + 1)))
   }, [match, anchor, tick, paused, official])
 }

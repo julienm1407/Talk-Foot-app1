@@ -19,6 +19,8 @@ export type LiveMatchChatMessageItem = {
   likedByMe?: boolean
   matchTribune?: MatchTribuneZone
   emoteId?: string
+  /** Tri chronologique tribune (ms UTC). */
+  createdAtMs?: number
 }
 
 export function LiveMatchChatMessage({

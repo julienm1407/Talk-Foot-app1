@@ -1,17 +1,20 @@
 import type { CSSProperties } from 'react'
 import { cn } from '../../utils/cn'
 
-function compactPlayerLabel(name: string, maxLen = 12) {
+function playerDisplayLabel(name: string, number?: string, compact?: boolean) {
   const cleaned = name.replace(/\s+/g, ' ').trim()
-  if (!cleaned) return 'Joueur'
+  if (!cleaned) return number ? `#${number}` : 'Joueur'
   const parts = cleaned.split(' ')
   const last = parts[parts.length - 1] ?? cleaned
-  const candidate = last.length >= 3 ? last : cleaned
-  return candidate.length > maxLen ? `${candidate.slice(0, maxLen - 1)}…` : candidate
+  const surname = last.length >= 2 ? last : cleaned
+  const maxLen = compact ? 11 : 14
+  const trimmed = surname.length > maxLen ? `${surname.slice(0, maxLen - 1)}…` : surname
+  return number ? `${number} ${trimmed}` : trimmed
 }
 
 function PlayerBadge({
   name,
+  number,
   className,
   style,
   light,
@@ -19,6 +22,7 @@ function PlayerBadge({
   maxWidthPct,
 }: {
   name: string
+  number?: string
   className?: string
   style?: CSSProperties
   light?: boolean
@@ -28,10 +32,10 @@ function PlayerBadge({
   return (
     <div
       className={cn(
-        'absolute truncate rounded-md border font-bold leading-tight backdrop-blur-[1px]',
+        'absolute rounded-md border font-bold leading-tight backdrop-blur-[1px]',
         compact
-          ? 'px-1 py-0.5 text-[8px] sm:text-[9px]'
-          : 'px-1.5 py-1 text-[10px]',
+          ? 'px-1 py-0.5 text-[7px] sm:text-[8px]'
+          : 'px-1.5 py-1 text-[9px] sm:text-[10px]',
         light
           ? 'border-sky-400/40 bg-white/95 text-[#023458] shadow-[0_4px_12px_rgba(15,40,70,0.12)]'
           : 'border-cyan-200/55 bg-[#062235]/92 text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)]',
@@ -39,11 +43,14 @@ function PlayerBadge({
       )}
       style={{
         ...style,
-        maxWidth: maxWidthPct ? `${maxWidthPct}%` : compact ? '28%' : '32%',
+        maxWidth: maxWidthPct ? `${maxWidthPct}%` : compact ? '30%' : '34%',
+        whiteSpace: 'normal',
+        textAlign: 'center',
+        wordBreak: 'break-word',
       }}
-      title={name}
+      title={number ? `#${number} ${name}` : name}
     >
-      {compactPlayerLabel(name, compact ? 8 : 12)}
+      {playerDisplayLabel(name, number, compact)}
     </div>
   )
 }
@@ -57,7 +64,7 @@ export function MatchLineupPitch({
   compact,
   className,
 }: {
-  badges: Array<{ name: string; left: number; top: number; maxWidthPct?: number }>
+  badges: Array<{ name: string; number?: string; left: number; top: number; maxWidthPct?: number }>
   homeToneColor: string
   awayToneColor: string
   isUpcoming?: boolean
@@ -70,10 +77,10 @@ export function MatchLineupPitch({
       className={cn(
         'tf-lineup-pitch relative overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
         compact
-          ? 'aspect-[3/4] min-h-[200px] w-full'
+          ? 'aspect-[3/4] min-h-[220px] w-full'
           : isUpcoming
-            ? 'h-[200px] md:h-[min(28vh,200px)]'
-            : 'h-[250px] md:h-[min(34vh,250px)]',
+            ? 'h-[220px] md:h-[min(30vh,220px)]'
+            : 'h-[270px] md:h-[min(36vh,270px)]',
         className,
       )}
       style={{
@@ -86,8 +93,9 @@ export function MatchLineupPitch({
 
       {badges.map((p, i) => (
         <PlayerBadge
-          key={`lineup-badge-${i}-${p.name}`}
+          key={`lineup-badge-${i}-${p.number ?? ''}-${p.name}`}
           name={p.name}
+          number={p.number}
           light={light}
           compact={compact}
           maxWidthPct={p.maxWidthPct}

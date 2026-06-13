@@ -159,6 +159,12 @@ export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' 
     const slug = scorerSlugForHighlight(h)
     if (slug) return `but|${h.minute}|${sideKey}|${slug}`
   }
+  if (bucket === 'carton') {
+    const slug = scorerSlugForHighlight(h)
+    if (slug) return `carton|${h.minute}|${sideKey}|${slug}`
+    const coarse = cardCoarseDedupeKey(h)
+    if (coarse) return `carton|${coarse}`
+  }
   const combined = `${String(h.title ?? '').trim()} ${String(h.detail ?? '').trim()} ${String(h.scorerName ?? '').trim()}`.trim()
   const text = combined
     .toLowerCase()

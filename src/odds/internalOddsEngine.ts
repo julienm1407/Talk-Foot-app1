@@ -165,11 +165,16 @@ export function adjustProbabilities1x2ForLive(
   let pA = base.pAway * sa
   let pD = base.pDraw * Math.exp(-0.42 * Math.abs(d) * tau)
 
-  if (d === 0 && minute >= 55) {
+  if (d === 0 && homeGoals === 0 && awayGoals === 0 && minute >= 55) {
     const lateTie = clamp((minute - 55) / 40, 0, 1)
-    pD *= Math.exp(-2.4 * lateTie * tau)
-    pH *= 1 + 0.12 * lateTie
-    pA *= 1 + 0.12 * lateTie
+    pD *= Math.exp(-1.1 * lateTie * tau)
+    pH *= 1 + 0.06 * lateTie
+    pA *= 1 + 0.06 * lateTie
+  } else if (d === 0 && homeGoals > 0 && minute >= 50) {
+    const late = clamp((minute - 50) / 45, 0, 1)
+    pD *= 1 + 0.28 * late * tau
+    pH *= 1 - 0.1 * late * tau
+    pA *= 1 - 0.1 * late * tau
   }
 
   const hRed = live.homeRedCards ?? 0
@@ -199,6 +204,25 @@ export function adjustProbabilities1x2ForLive(
   return normalize3(pH, pD, pA)
 }
 
+/** Plafond réaliste des cotes live selon le score (évite des cotes à 50+ sur match serré). */
+export function capLive1x2Odds(
+  odds: SmBookOdds1x2,
+  homeGoals: number,
+  awayGoals: number,
+  minute: number,
+): SmBookOdds1x2 {
+  const diff = Math.abs(homeGoals - awayGoals)
+  const leaderGoals = Math.max(homeGoals, awayGoals)
+  let maxOdd = 4.5
+  if (diff >= 3 && leaderGoals >= 3) maxOdd = 100
+  else if (diff >= 2 && minute >= 65) maxOdd = 10
+  else if (diff >= 1 && minute >= 78) maxOdd = 6
+  else if (diff === 0) maxOdd = 4.2
+
+  const cap = (n: number) => round2(clamp(n, 1.05, maxOdd))
+  return { home: cap(odds.home), draw: cap(odds.draw), away: cap(odds.away) }
+}
+
 export function adjust1x2OddsForLiveInternal(
   prematch: SmBookOdds1x2,
   live: LiveOddsContext,
@@ -206,7 +230,8 @@ export function adjust1x2OddsForLiveInternal(
 ): SmBookOdds1x2 {
   const base = impliedProbsFromDecimalOdds(prematch)
   const adjusted = adjustProbabilities1x2ForLive(base, live)
-  return probabilitiesToDecimalOdds(adjusted, marginPct * 0.95)
+  const odds = probabilitiesToDecimalOdds(adjusted, marginPct * 0.95)
+  return capLive1x2Odds(odds, live.homeGoals, live.awayGoals, live.minute)
 }
 
 /**

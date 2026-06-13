@@ -59,6 +59,10 @@ function rowToMessage(row: LiveMsgRow): Message {
   }
 }
 
+export function sortChatMessages(msgs: Message[]): Message[] {
+  return [...msgs].sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id))
+}
+
 export function displayNameFromSession(user: {
   user_metadata?: Record<string, unknown>
   email?: string | null
@@ -146,24 +150,22 @@ export function useLiveMatchChatSync(options: {
     let cancelled = false
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
-    const run = async () => {
+    const fetchRecent = async () => {
       const session = await ensureSupabaseChatSession(sb)
       if (!session || cancelled) return
       await syncRealtimeAuth(sb)
-
       const { data: rows, error: fetchErr } = await sb
         .from('live_match_messages')
         .select('id, match_id, user_id, display_name, body, metadata, created_at')
         .eq('match_id', matchId)
         .order('created_at', { ascending: true })
         .limit(200)
+      if (cancelled || fetchErr || !rows?.length) return
+      onRemoteMessagesRef.current((rows as LiveMsgRow[]).map(rowToMessage))
+    }
 
-      if (cancelled) return
-
-      if (!fetchErr && rows?.length) {
-        onRemoteMessagesRef.current((rows as LiveMsgRow[]).map(rowToMessage))
-      }
-
+    const run = async () => {
+      await fetchRecent()
       if (cancelled) return
 
       const matchFilter = postgresChangesEqFilter('match_id', matchId)
@@ -198,8 +200,26 @@ export function useLiveMatchChatSync(options: {
 
     void run()
 
+    const pollId = window.setInterval(() => {
+      void fetchRecent()
+    }, 30_000)
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void fetchRecent()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    const { data: authListener } = sb.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+        void syncRealtimeAuth(sb).then(() => fetchRecent())
+      }
+    })
+
     return () => {
       cancelled = true
+      window.clearInterval(pollId)
+      document.removeEventListener('visibilitychange', onVisible)
+      authListener.subscription.unsubscribe()
       if (channelRef.current) {
         void sb.removeChannel(channelRef.current)
         channelRef.current = null
