@@ -20,7 +20,10 @@ import { useDebates } from '../contexts/DebatesContext'
 import { useCustomGroupDebates } from '../hooks/useCustomGroupDebates'
 import { MessageList } from '../components/channel/MessageList'
 import { MessageComposer } from '../components/channel/MessageComposer'
-import { MobileChatComposerDock } from '../components/channel/MobileChatComposerDock'
+import {
+  MobileChatComposerDock,
+  MOBILE_CHAT_COMPOSER_DOCK_HEIGHT,
+} from '../components/channel/MobileChatComposerDock'
 import { chatPersonasPool, currentUser } from '../data/users'
 import {
   useSupporterGroupChannelSync,
@@ -30,6 +33,7 @@ import {
 import { channelsForSupporterGroup } from '../data/defaultGroupChannels'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
+import { ensureCloudRegistryForPublicSystemGroup } from '../lib/supabase/ensureCloudRegistryForPublicSystemGroup'
 import { upsertCloudSupporterGroup } from '../lib/supabase/supporterGroupsRegistry'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { ensureTalkFootSupabaseSession, isClerkAuthMode } from '../lib/supabase/talkfootSession'
@@ -177,6 +181,19 @@ export function GroupPage() {
       )
     })()
   }, [group?.id, group?.createdBy, authUser?.id])
+
+  /** Tribunes système publiques (France CDM, etc.) : registre cloud requis pour le chat partagé (RLS). */
+  useEffect(() => {
+    if (!group || !isSupabaseConfigured() || !authUser?.id || authUser.isAnonymous) return
+    if (group.createdBy !== 'system' || (group.groupKind ?? 'public') !== 'public') return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    void (async () => {
+      const session = await ensureTalkFootSupabaseSession(sb)
+      if (!session) return
+      await ensureCloudRegistryForPublicSystemGroup(sb, group, session.user.id)
+    })()
+  }, [group?.id, group?.createdBy, group?.groupKind, authUser?.id, authUser?.isAnonymous])
   const groupRef = useRef<SupporterGroup | null>(null)
   groupRef.current = group
 
@@ -933,7 +950,8 @@ export function GroupPage() {
     (debate.salonAccess ?? 'public') === 'public'
 
   const canWriteInTribune =
-    accessLevel !== 'readonly' && (isGroupMember || isDebateSalon || isPublicDebateInGeneral)
+    accessLevel !== 'readonly' &&
+    (isGroupMember || isDebateSalon || isPublicDebateInGeneral || isPublicGroup)
   const groupMainClubId = group.fanTags?.clubIds?.[0] ?? null
   const groupMainClubLabel = groupMainClubId ? ALL_CLUBS_BY_ID[groupMainClubId]?.name ?? groupMainClubId : null
   const groupNationIso = group.fanTags?.nationIso ?? null
@@ -1291,8 +1309,8 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-1 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
-        <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 lg:hidden">
+      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-0 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
+        <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 max-lg:py-0.5 lg:hidden">
           <div className="flex min-w-0 items-center gap-1">
             <Link
               to="/groups"
@@ -1352,106 +1370,6 @@ export function GroupPage() {
               </Button>
             ) : null}
           </div>
-        </div>
-
-        <div className="min-w-0 shrink-0 space-y-0.5 lg:hidden">
-          <div
-            className="flex gap-1 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            role="tablist"
-            aria-label="Choisir un salon"
-          >
-            {group.channels.map((c) => {
-              const active = channelId === c.id
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  className={cn(
-                    'shrink-0 rounded-lg border px-2 py-1 text-left text-[10px] font-black transition',
-                    active
-                      ? L
-                        ? 'border-tf-dark/25 bg-white shadow-sm ring-2 ring-tf-electric/25'
-                        : 'border-sky-400/40 bg-white/[0.12] ring-2 ring-sky-400/30'
-                      : L
-                        ? 'border-tf-grey-pastel/60 bg-tf-white/90'
-                        : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
-                  )}
-                  style={
-                    active && salonSurface
-                      ? { borderColor: salonSurface.boxBorderColor }
-                      : undefined
-                  }
-                  onClick={() => setChannelId(c.id)}
-                >
-                  <span className="whitespace-nowrap">
-                    {c.emoji} {c.name}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-          <details
-            className={cn(
-              'overflow-hidden rounded-lg border px-2 py-1',
-              L ? 'border-tf-grey-pastel/40 bg-tf-white/95' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
-            )}
-            data-no-swipe="true"
-          >
-            <summary
-              className={cn(
-                'cursor-pointer list-none text-[9px] font-black uppercase tracking-wide [&::-webkit-details-marker]:hidden',
-                TF_TEXT_MUTED,
-              )}
-            >
-              Tifo · options
-            </summary>
-            <div className="space-y-2 pt-2">
-              {canManageGroup ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  {!salonFormOpen ? (
-                    <Button
-                      type="button"
-                      variant="soft"
-                      className="rounded-xl text-[10px] font-black"
-                      disabled={group.channels.length >= MAX_GROUP_CHANNELS}
-                      onClick={() => {
-                        setNewSalonError(null)
-                        setSalonFormOpen(true)
-                      }}
-                    >
-                      + Nouvelle tribune
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="rounded-xl text-[10px] font-black"
-                      onClick={() => {
-                        setSalonFormOpen(false)
-                        setNewSalonError(null)
-                      }}
-                    >
-                      Annuler
-                    </Button>
-                  )}
-                </div>
-              ) : null}
-              <div className="max-h-[min(38dvh,15rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
-                <GroupTifoPanel
-                  embedded
-                  groupId={group.id}
-                  matches={matches}
-                  groupClubId={groupMainClubId}
-                  groupClubLabel={groupMainClubLabel ?? undefined}
-                  groupNationIso={groupNationIso}
-                  groupNationLabel={groupNationLabel ?? undefined}
-                  isGroupAdmin={group.createdBy === 'me'}
-                />
-              </div>
-            </div>
-          </details>
         </div>
 
         <Card className="hidden p-4 sm:p-5 lg:block lg:max-h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-y-contain" elevation="soft">
@@ -1721,6 +1639,43 @@ export function GroupPage() {
               L ? 'max-lg:border-tf-grey-pastel/40' : 'max-lg:border-white/10',
             )}
           >
+            <div
+              className="mb-1 flex gap-1 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+              role="tablist"
+              aria-label="Choisir un salon"
+            >
+              {group.channels.map((c) => {
+                const active = channelId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className={cn(
+                      'shrink-0 rounded-lg border px-2 py-1 text-left text-[10px] font-black transition',
+                      active
+                        ? L
+                          ? 'border-tf-dark/25 bg-white shadow-sm ring-2 ring-tf-electric/25'
+                          : 'border-sky-400/40 bg-white/[0.12] ring-2 ring-sky-400/30'
+                        : L
+                          ? 'border-tf-grey-pastel/60 bg-tf-white/90'
+                          : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
+                    )}
+                    style={
+                      active && salonSurface
+                        ? { borderColor: salonSurface.boxBorderColor }
+                        : undefined
+                    }
+                    onClick={() => setChannelId(c.id)}
+                  >
+                    <span className="whitespace-nowrap">
+                      {c.emoji} {c.name}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
             <div className="hidden flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3 lg:flex">
               <div className="min-w-0 flex-1 sm:min-w-[14rem]">
                 <div
@@ -1867,6 +1822,31 @@ export function GroupPage() {
                     tfChipSurface(L),
                   )}
                 >
+                  🎌
+                </summary>
+                <div className="absolute left-0 right-0 z-20 mt-1 max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain rounded-xl border bg-white p-2 shadow-lg [-webkit-overflow-scrolling:touch] dark:border-white/10 dark:bg-[#041a2d]">
+                  <GroupTifoPanel
+                    embedded
+                    groupId={group.id}
+                    matches={matches}
+                    groupClubId={groupMainClubId}
+                    groupClubLabel={groupMainClubLabel ?? undefined}
+                    groupNationIso={groupNationIso}
+                    groupNationLabel={groupNationLabel ?? undefined}
+                    isGroupAdmin={group.createdBy === 'me'}
+                  />
+                </div>
+              </details>
+              <details
+                className={cn('min-w-[2.25rem] shrink-0', L ? 'text-tf-grey' : 'text-sky-200/90')}
+                data-no-swipe="true"
+              >
+                <summary
+                  className={cn(
+                    'flex h-7 cursor-pointer list-none items-center justify-center rounded-lg border px-1.5 text-[10px] font-black [&::-webkit-details-marker]:hidden',
+                    tfChipSurface(L),
+                  )}
+                >
                   🔍
                 </summary>
                 <div className="mt-1.5 w-full min-w-[10rem]">
@@ -1985,11 +1965,14 @@ export function GroupPage() {
             ref={feedRef}
             className={cn(
               'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
-              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0',
+              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0 max-lg:scroll-pb-28',
               'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',
             )}
-            style={salonSurface?.backdrop}
+            style={{
+              ...(salonSurface?.backdrop ?? {}),
+              scrollPaddingBottom: MOBILE_CHAT_COMPOSER_DOCK_HEIGHT,
+            }}
             role="log"
             aria-label="Messages de la tribune"
             aria-live="polite"

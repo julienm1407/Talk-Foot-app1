@@ -20,9 +20,6 @@ import { useRouteViewReset } from '../hooks/useRouteViewReset'
 const mainBottomPadMobile =
   'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] lg:pb-2'
 const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
-/** Espace au-dessus de la BottomNav fixe (lg:hidden → mobile + tablette). */
-const mainBottomPadAboveBottomNav =
-  'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
 /** Réserve la zone tactile de la BottomNav fixe — le scroll ne doit pas s'étendre dessous. */
 const mobileMainClearBottomNav =
   'max-lg:mb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]'
@@ -98,10 +95,11 @@ export function AppShell() {
             data-tf-route-scroll
             className={cn(
               'mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col min-h-0 px-[var(--tf-page-gutter)]',
-              'max-lg:overflow-hidden max-lg:pt-2',
+              'max-lg:overflow-hidden max-lg:pt-1',
               'lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-y-contain lg:pt-7',
-              mainBottomPadAboveBottomNav,
-              'sm:pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
+              /* Dock chat fixe + marge BottomNav sur <main> : pas de grand padding bas en plus. */
+              'max-lg:pb-[env(safe-area-inset-bottom,0px)]',
+              'lg:pb-[max(1rem,env(safe-area-inset-bottom,0px))]',
             )}
           >
             <div

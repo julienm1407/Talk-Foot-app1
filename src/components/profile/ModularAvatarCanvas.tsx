@@ -126,8 +126,8 @@ const GARMENT_FOCUS_CLIP: Record<BoutiqueGarmentShow, string> = {
   shoes: 'inset(44% 6% 0% 6%)',
 }
 const GARMENT_FOCUS_COVER_BOOST = 1.08
-/** Corps entier dans le cadre portrait (profil joueur). */
-const PORTRAIT_FRAME_COVER_BOOST = 2.08
+/** Marge intérieure — corps entier visible dans le cadre portrait (profil joueur). */
+const PORTRAIT_FRAME_CONTAIN_PAD = 0.9
 
 function garmentFocusClip(show: BoutiqueGarmentShow): string {
   return GARMENT_FOCUS_CLIP[show]
@@ -316,11 +316,11 @@ export function ModularAvatarCanvas({
 
   if (fill && portraitFocus) {
     const baseScale =
-      Math.max(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * PORTRAIT_FRAME_COVER_BOOST
+      Math.min(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * PORTRAIT_FRAME_CONTAIN_PAD
     return (
       <div ref={fillRef} className={cn('relative h-full w-full overflow-hidden', className)}>
         <div
-          className="absolute left-1/2 bottom-[2%]"
+          className="absolute left-1/2 bottom-[3%]"
           style={{
             width: canvasSize.width,
             height: canvasSize.height,
