@@ -1,49 +1,44 @@
-/** Positions % sur le terrain (y bas = gardien si invert). */
-export const LINEUP_FALLBACK_POSITIONS: Array<{ left: number; top: number }> = [
-  { left: 12, top: 12 },
-  { left: 38, top: 12 },
-  { left: 62, top: 12 },
-  { left: 88, top: 12 },
-  { left: 12, top: 36 },
-  { left: 38, top: 36 },
-  { left: 62, top: 36 },
-  { left: 88, top: 36 },
-  { left: 22, top: 62 },
-  { left: 50, top: 62 },
-  { left: 78, top: 88 },
-]
-
 type ParsedPlayer = {
   name: string
   number?: string
-  index: number
-  row: number | null
-  col: number | null
+  row: number
+  col: number
   formationPosition?: number | null
 }
 
-export type LineupBadgePlacement = {
-  name: string
-  number?: string
-  left: number
-  top: number
-  /** Largeur max du badge en % du terrain (évite le chevauchement). */
-  maxWidthPct: number
+export type LineupPitchRow = {
+  row: number
+  topPct: number
+  players: Array<{ name: string; number?: string; col: number }>
 }
 
-function clampPct(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n))
+export type LineupPitchLayout = {
+  rows: LineupPitchRow[]
+  /** Liste complète triée (numéro puis nom) pour affichage sous le terrain. */
+  roster: Array<{ name: string; number?: string }>
 }
 
-function fallbackPlacement(i: number, parsed: ParsedPlayer): LineupBadgePlacement {
-  const fb = LINEUP_FALLBACK_POSITIONS[i] ?? { left: 50, top: 50 }
-  return {
-    name: parsed.name,
-    number: parsed.number,
-    left: fb.left,
-    top: clampPct(fb.top, 8, 90),
-    maxWidthPct: 24,
+function parseFormationLines(formation?: string | null): number[] {
+  const raw = String(formation ?? '').trim()
+  if (!raw) return [1, 4, 4, 2]
+  const parts = raw
+    .split(/[-/|\s]+/)
+    .map((x) => Number(x.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0)
+  if (!parts.length) return [1, 4, 4, 2]
+  return [1, ...parts]
+}
+
+function inferRowColFromFormationPosition(fp: number, lines: number[]): { row: number; col: number } {
+  const pos = Math.max(1, Math.min(11, Math.round(fp)))
+  let remaining = pos
+  for (let i = 0; i < lines.length; i++) {
+    if (remaining <= lines[i]) {
+      return { row: i + 1, col: remaining }
+    }
+    remaining -= lines[i]
   }
+  return { row: lines.length, col: 1 }
 }
 
 function parseLineupPlayers(
@@ -56,83 +51,57 @@ function parseLineupPlayers(
         formationPosition?: number | null
       }
   >,
+  formation?: string | null,
 ): ParsedPlayer[] {
+  const lines = parseFormationLines(formation)
+
   return players
     .slice(0, 11)
     .map((p, index) => {
-      if (typeof p === 'string') return { name: p, index, row: null, col: null }
-      const ff = p.formationField
-      if (!ff) {
-        return {
-          name: p.label,
-          number: p.number,
-          index,
-          row: null,
-          col: null,
-          formationPosition: p.formationPosition,
+      if (typeof p === 'string') {
+        const { row, col } = inferRowColFromFormationPosition(index + 1, lines)
+        return { name: p, row, col, formationPosition: index + 1 }
+      }
+
+      const ff = p.formationField?.trim()
+      if (ff) {
+        const [rowRaw, colRaw] = ff.split(':').map((x) => Number(x.trim()))
+        if (Number.isFinite(rowRaw) && Number.isFinite(colRaw) && rowRaw > 0 && colRaw > 0) {
+          return {
+            name: p.label,
+            number: p.number,
+            row: rowRaw,
+            col: colRaw,
+            formationPosition: p.formationPosition,
+          }
         }
       }
-      const [rowRaw, colRaw] = ff.split(':').map((x) => Number(x.trim()))
-      const row = Number.isFinite(rowRaw) ? rowRaw : null
-      const col = Number.isFinite(colRaw) ? colRaw : null
+
+      const fp = p.formationPosition ?? index + 1
+      const { row, col } = inferRowColFromFormationPosition(fp, lines)
       return {
         name: p.label,
         number: p.number,
-        index,
         row,
         col,
-        formationPosition: p.formationPosition,
+        formationPosition: fp,
       }
     })
     .filter((p) => p.name.trim().length > 0)
 }
 
-function horizontalForRow(rowPlayers: ParsedPlayer[]): number[] {
-  const n = rowPlayers.length
-  if (n === 0) return []
-  if (n === 1) return [50]
-
-  const cols = rowPlayers.map((p) => p.col as number)
-  const minCol = Math.min(...cols)
-  const maxCol = Math.max(...cols)
-
-  if (maxCol > minCol) {
-    return cols.map((col) => {
-      const t = (col - minCol) / (maxCol - minCol)
-      return 6 + t * 88
-    })
-  }
-
-  const pad = n >= 5 ? 3 : n >= 4 ? 5 : 7
-  const span = 100 - pad * 2
-  return Array.from({ length: n }, (_, slot) => pad + (slot / (n - 1)) * span)
+function surnameLabel(name: string): string {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  if (!cleaned) return 'Joueur'
+  const parts = cleaned.split(' ')
+  const last = parts[parts.length - 1] ?? cleaned
+  return last.length >= 2 ? last : cleaned
 }
 
-/** Écarte les badges d'une même ligne si leurs centres sont trop proches. */
-function resolveRowOverlaps(
-  row: Array<{ left: number; maxWidthPct: number }>,
-  minGapPct = 2,
-): void {
-  row.sort((a, b) => a.left - b.left)
-  for (let i = 1; i < row.length; i++) {
-    const prev = row[i - 1]
-    const cur = row[i]
-    const needed = (prev.maxWidthPct + cur.maxWidthPct) / 2 + minGapPct
-    if (cur.left - prev.left < needed) {
-      cur.left = prev.left + needed
-    }
-  }
-  const overflow = row[row.length - 1].left + row[row.length - 1].maxWidthPct / 2 - 97
-  if (overflow > 0) {
-    for (const item of row) item.left -= overflow
-    const underflow = row[0].left - row[0].maxWidthPct / 2 - 3
-    if (underflow < 0) {
-      for (const item of row) item.left -= underflow
-    }
-  }
-}
-
-export function computeLineupBadgePlacements(
+/**
+ * Ligne tactique par bande horizontale (flex) — évite le chevauchement des badges absolus.
+ */
+export function computeLineupPitchLayout(
   players: Array<
     | string
     | {
@@ -142,58 +111,75 @@ export function computeLineupBadgePlacements(
         formationPosition?: number | null
       }
   >,
-): LineupBadgePlacement[] {
-  const parsed = parseLineupPlayers(players)
-  const positioned = parsed.filter((p) => p.row != null && p.col != null)
+  formation?: string | null,
+): LineupPitchLayout {
+  const parsed = parseLineupPlayers(players, formation)
+  if (!parsed.length) return { rows: [], roster: [] }
 
-  if (positioned.length < 4) {
-    return parsed.map((p, i) => fallbackPlacement(i, p))
-  }
+  const rowKeys = [...new Set(parsed.map((p) => p.row))].sort((a, b) => a - b)
+  const rowCount = Math.max(1, rowKeys.length - 1)
 
-  const rows = [...new Set(positioned.map((p) => p.row as number))].sort((a, b) => a - b)
-  const gk = positioned.find((p) => p.formationPosition === 1)
-  const invert = gk ? (gk.row as number) <= Math.min(...rows) : true
-  const rowIndexByValue = new Map(rows.map((v, i) => [v, i] as const))
-  const rowCount = Math.max(1, rows.length - 1)
-
-  const placements: LineupBadgePlacement[] = parsed.map((p, i) => {
-    if (p.row == null || p.col == null) {
-      return fallbackPlacement(i, p)
-    }
-
-    const rowPlayers = positioned
-      .filter((x) => x.row === p.row)
-      .sort((a, b) => (a.col as number) - (b.col as number) || a.index - b.index)
-    const slot = Math.max(0, rowPlayers.findIndex((x) => x === p))
-    const xs = horizontalForRow(rowPlayers)
-    const rowIdx = rowIndexByValue.get(p.row) ?? 0
-    const normalized = rowIdx / rowCount
-    const y = invert ? 88 - normalized * 78 : 10 + normalized * 78
-    const n = rowPlayers.length
-    const maxWidthPct = Math.min(28, Math.max(14, Math.floor(78 / n)))
-
+  const rows: LineupPitchRow[] = rowKeys.map((rowKey, idx) => {
+    const rowPlayers = parsed
+      .filter((p) => p.row === rowKey)
+      .sort((a, b) => a.col - b.col || a.name.localeCompare(b.name))
+    const topPct = rowCount === 0 ? 50 : 92 - (idx / rowCount) * 82
     return {
-      name: p.name,
-      number: p.number,
-      left: xs[slot] ?? 50,
-      top: clampPct(y, 8, 90),
-      maxWidthPct,
+      row: rowKey,
+      topPct,
+      players: rowPlayers.map((p) => ({
+        name: surnameLabel(p.name),
+        number: p.number,
+        col: p.col,
+      })),
     }
   })
 
-  const byRow = new Map<number, LineupBadgePlacement[]>()
-  for (let idx = 0; idx < parsed.length; idx++) {
-    const p = parsed[idx]
-    if (p.row == null) continue
-    const placement = placements[idx]
-    if (!placement) continue
-    const list = byRow.get(p.row) ?? []
-    list.push(placement)
-    byRow.set(p.row, list)
-  }
-  for (const row of byRow.values()) {
-    resolveRowOverlaps(row)
-  }
+  const roster = [...parsed]
+    .sort((a, b) => {
+      const na = Number(a.number)
+      const nb = Number(b.number)
+      if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb
+      if (Number.isFinite(na) && !Number.isFinite(nb)) return -1
+      if (!Number.isFinite(na) && Number.isFinite(nb)) return 1
+      return a.name.localeCompare(b.name, 'fr')
+    })
+    .map((p) => ({ name: p.name, number: p.number }))
 
-  return placements
+  return { rows, roster }
 }
+
+/** @deprecated Utiliser computeLineupPitchLayout */
+export type LineupBadgePlacement = {
+  name: string
+  number?: string
+  left: number
+  top: number
+  maxWidthPct: number
+}
+
+/** @deprecated Utiliser computeLineupPitchLayout */
+export function computeLineupBadgePlacements(
+  players: Parameters<typeof computeLineupPitchLayout>[0],
+  formation?: string | null,
+): LineupBadgePlacement[] {
+  const { rows } = computeLineupPitchLayout(players, formation)
+  const out: LineupBadgePlacement[] = []
+  for (const row of rows) {
+    const n = row.players.length
+    for (let i = 0; i < n; i++) {
+      const p = row.players[i]
+      const left = n <= 1 ? 50 : 8 + (i / (n - 1)) * 84
+      out.push({
+        name: p.name,
+        number: p.number,
+        left,
+        top: row.topPct,
+        maxWidthPct: Math.min(22, Math.floor(80 / Math.max(1, n))),
+      })
+    }
+  }
+  return out
+}
+
+export const LINEUP_FALLBACK_POSITIONS: Array<{ left: number; top: number }> = []

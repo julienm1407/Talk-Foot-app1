@@ -75,7 +75,7 @@ import {
 } from '../api/sportMonks'
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
-import { computeLineupBadgePlacements } from '../utils/lineupPitchPositions'
+import { computeLineupPitchLayout } from '../utils/lineupPitchPositions'
 import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/bannedWords'
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
@@ -863,7 +863,7 @@ export function ChannelPage() {
   const homeFlagSrc = homeNation ? (nationFlagUrl(homeNation.iso, 40) ?? undefined) : undefined
   const awayFlagSrc = awayNation ? (nationFlagUrl(awayNation.iso, 40) ?? undefined) : undefined
   const isFinished = status === 'finished'
-  const { starters } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
+  const { starters, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? '', match ?? null)
   const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
@@ -1728,10 +1728,10 @@ export function ChannelPage() {
     () => (lineupSide === 'home' ? starters?.home ?? [] : starters?.away ?? []),
     [lineupSide, starters],
   )
-  const displayedLineupBadges = useMemo(
-    () => computeLineupBadgePlacements(displayedLineupPlayers),
-    [displayedLineupPlayers],
-  )
+  const displayedLineupLayout = useMemo(() => {
+    const formation = lineupSide === 'home' ? formations.home : formations.away
+    return computeLineupPitchLayout(displayedLineupPlayers, formation)
+  }, [displayedLineupPlayers, lineupSide, formations.home, formations.away])
   const lineupAutoTimerRef = useRef<number | null>(null)
   const lineupAutoPausedUntilRef = useRef<number>(0)
   const pauseLineupAutoFor3Min = () => {
@@ -3341,14 +3341,14 @@ export function ChannelPage() {
             </div>
             <MatchLineupPitch
               className="mt-2"
-              badges={displayedLineupBadges}
+              layout={displayedLineupLayout}
               homeToneColor={homeToneColor}
               awayToneColor={awayToneColor}
               isUpcoming={isUpcoming}
               light={L}
               compact
             />
-            {displayedLineupBadges.length === 0 ? (
+            {displayedLineupLayout.roster.length === 0 ? (
               <p className="mt-2 text-center text-[10px] font-semibold text-sky-200/70">
                 Composition non disponible.
               </p>
@@ -3614,14 +3614,14 @@ export function ChannelPage() {
                   </button>
                 </div>
                 <MatchLineupPitch
-                  badges={displayedLineupBadges}
+                  layout={displayedLineupLayout}
                   homeToneColor={homeToneColor}
                   awayToneColor={awayToneColor}
                   isUpcoming={isUpcoming}
                   light={L}
                   className={isUpcoming ? 'h-[min(46dvh,280px)]' : 'h-[min(52dvh,320px)]'}
                 />
-                {displayedLineupBadges.length === 0 ? (
+                {displayedLineupLayout.roster.length === 0 ? (
                   <p className="text-center text-[11px] font-semibold text-sky-200/75">Composition non disponible.</p>
                 ) : null}
               </div>

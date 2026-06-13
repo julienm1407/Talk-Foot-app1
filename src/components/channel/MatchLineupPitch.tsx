@@ -1,62 +1,40 @@
-import type { CSSProperties } from 'react'
 import { cn } from '../../utils/cn'
+import type { LineupPitchLayout } from '../../utils/lineupPitchPositions'
 
-function playerDisplayLabel(name: string, number?: string, compact?: boolean) {
-  const cleaned = name.replace(/\s+/g, ' ').trim()
-  if (!cleaned) return number ? `#${number}` : 'Joueur'
-  const parts = cleaned.split(' ')
-  const last = parts[parts.length - 1] ?? cleaned
-  const surname = last.length >= 2 ? last : cleaned
-  const maxLen = compact ? 11 : 14
-  const trimmed = surname.length > maxLen ? `${surname.slice(0, maxLen - 1)}…` : surname
-  return number ? `${number} ${trimmed}` : trimmed
-}
-
-function PlayerBadge({
+function PlayerChip({
   name,
   number,
-  className,
-  style,
   light,
   compact,
-  maxWidthPct,
 }: {
   name: string
   number?: string
-  className?: string
-  style?: CSSProperties
   light?: boolean
   compact?: boolean
-  maxWidthPct?: number
 }) {
   return (
     <div
       className={cn(
-        'absolute rounded-md border font-bold leading-tight backdrop-blur-[1px]',
-        compact
-          ? 'px-1 py-0.5 text-[7px] sm:text-[8px]'
-          : 'px-1.5 py-1 text-[9px] sm:text-[10px]',
+        'min-w-0 flex-1 basis-0 truncate rounded border px-0.5 py-0.5 text-center font-bold leading-tight',
+        compact ? 'text-[8px] sm:text-[9px]' : 'text-[9px] sm:text-[10px]',
         light
-          ? 'border-sky-400/40 bg-white/95 text-[#023458] shadow-[0_4px_12px_rgba(15,40,70,0.12)]'
-          : 'border-cyan-200/55 bg-[#062235]/92 text-sky-50 shadow-[0_4px_10px_rgba(0,0,0,0.35)]',
-        className,
+          ? 'border-sky-400/45 bg-white/95 text-[#023458] shadow-sm'
+          : 'border-cyan-200/50 bg-[#062235]/95 text-sky-50 shadow-[0_2px_6px_rgba(0,0,0,0.35)]',
       )}
-      style={{
-        ...style,
-        maxWidth: maxWidthPct ? `${maxWidthPct}%` : compact ? '30%' : '34%',
-        whiteSpace: 'normal',
-        textAlign: 'center',
-        wordBreak: 'break-word',
-      }}
       title={number ? `#${number} ${name}` : name}
     >
-      {playerDisplayLabel(name, number, compact)}
+      {number ? (
+        <>
+          <span className={light ? 'text-emerald-700' : 'text-emerald-300'}>{number}</span>{' '}
+        </>
+      ) : null}
+      {name}
     </div>
   )
 }
 
 export function MatchLineupPitch({
-  badges,
+  layout,
   homeToneColor,
   awayToneColor,
   isUpcoming,
@@ -64,7 +42,7 @@ export function MatchLineupPitch({
   compact,
   className,
 }: {
-  badges: Array<{ name: string; number?: string; left: number; top: number; maxWidthPct?: number }>
+  layout: LineupPitchLayout
   homeToneColor: string
   awayToneColor: string
   isUpcoming?: boolean
@@ -72,37 +50,73 @@ export function MatchLineupPitch({
   compact?: boolean
   className?: string
 }) {
-  return (
-    <div
-      className={cn(
-        'tf-lineup-pitch relative overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
-        compact
-          ? 'aspect-[3/4] min-h-[220px] w-full'
-          : isUpcoming
-            ? 'h-[220px] md:h-[min(30vh,220px)]'
-            : 'h-[270px] md:h-[min(36vh,270px)]',
-        className,
-      )}
-      style={{
-        background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
-      }}
-    >
-      <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
-      <div className="absolute left-7 right-7 top-5 h-[41%] rounded-md border border-white/20" />
-      <div className="absolute bottom-5 left-7 right-7 h-[41%] rounded-md border border-white/20" />
+  const { rows, roster } = layout
 
-      {badges.map((p, i) => (
-        <PlayerBadge
-          key={`lineup-badge-${i}-${p.number ?? ''}-${p.name}`}
-          name={p.name}
-          number={p.number}
-          light={light}
-          compact={compact}
-          maxWidthPct={p.maxWidthPct}
-          className="-translate-x-1/2 -translate-y-1/2"
-          style={{ left: `${p.left}%`, top: `${p.top}%` }}
-        />
-      ))}
+  return (
+    <div className={cn('space-y-2', className)}>
+      <div
+        className={cn(
+          'tf-lineup-pitch relative overflow-hidden rounded-lg border border-emerald-300/35 bg-[#14543f]',
+          compact
+            ? 'aspect-[4/5] min-h-[260px] w-full'
+            : isUpcoming
+              ? 'h-[260px] md:h-[min(34vh,260px)]'
+              : 'h-[300px] md:h-[min(38vh,300px)]',
+        )}
+        style={{
+          background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
+        }}
+      >
+        <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
+        <div className="absolute left-[8%] right-[8%] top-[6%] h-[38%] rounded-md border border-white/20" />
+        <div className="absolute bottom-[6%] left-[8%] right-[8%] h-[38%] rounded-md border border-white/20" />
+
+        {rows.map((row) => (
+          <div
+            key={`lineup-row-${row.row}`}
+            className="absolute inset-x-[4%] flex items-center justify-evenly gap-0.5"
+            style={{
+              top: `${row.topPct}%`,
+              transform: 'translateY(-50%)',
+              maxHeight: '14%',
+            }}
+          >
+            {row.players.map((p) => (
+              <PlayerChip
+                key={`${row.row}-${p.col}-${p.number ?? ''}-${p.name}`}
+                name={p.name}
+                number={p.number}
+                light={light}
+                compact={compact}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {roster.length > 0 ? (
+        <div
+          className={cn(
+            'grid grid-cols-2 gap-x-2 gap-y-1 rounded-md border border-white/10 bg-black/20 px-2 py-1.5',
+            compact ? 'text-[9px]' : 'text-[10px]',
+          )}
+        >
+          {roster.map((p) => (
+            <div
+              key={`roster-${p.number ?? ''}-${p.name}`}
+              className={cn('min-w-0 truncate font-semibold', light ? 'text-sky-900/90' : 'text-sky-100/92')}
+              title={p.name}
+            >
+              {p.number ? (
+                <span className={cn('mr-1 font-black', light ? 'text-emerald-700' : 'text-emerald-300')}>
+                  {p.number}
+                </span>
+              ) : null}
+              {p.name}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }
