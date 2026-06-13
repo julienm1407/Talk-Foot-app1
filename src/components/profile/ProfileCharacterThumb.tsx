@@ -4,12 +4,13 @@ import { cn } from '../../utils/cn'
 import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { ModularAvatarHeadThumb } from './ModularAvatarCanvas'
 import {
+  MODULAR_PP_CHAT_FRAMING,
   MODULAR_PP_HEAD_RENDER_BASE_PX,
   MODULAR_PP_LEADERBOARD_FRAMING,
   MODULAR_PP_NAV_FRAMING,
 } from './modularPPFraming'
 
-export { MODULAR_PP_LEADERBOARD_FRAMING, MODULAR_PP_NAV_FRAMING }
+export { MODULAR_PP_CHAT_FRAMING, MODULAR_PP_LEADERBOARD_FRAMING, MODULAR_PP_NAV_FRAMING }
 
 const PRESETS = {
   xs: 28,

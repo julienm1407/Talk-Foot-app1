@@ -6,7 +6,7 @@ import { buildChatPeerProfile } from '../../utils/chatPeerProfile'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import {
-  MODULAR_PP_NAV_FRAMING,
+  MODULAR_PP_CHAT_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
 import { SalonBotHeadThumb } from './SalonBotHeadThumb'
@@ -96,9 +96,9 @@ export function ChatCharacterThumb({
   ) : useModularThumb ? (
     <ProfileCharacterThumb
       profile={profile}
-      size="sm"
+      size={size === 'compact' ? 'xs' : 'chat'}
       imagePriority
-      {...MODULAR_PP_NAV_FRAMING}
+      {...MODULAR_PP_CHAT_FRAMING}
       className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
       aria-label={ariaLabel}
     />
