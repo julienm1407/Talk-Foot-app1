@@ -44,5 +44,9 @@ export function resolvePageBackTarget(pathname: string): PageBackTarget | null {
     return { to: '/boutique', label: 'Boutique' }
   }
 
+  if (p === '/profile' || p.startsWith('/profile/')) {
+    return { to: '/', label: 'Accueil' }
+  }
+
   return null
 }

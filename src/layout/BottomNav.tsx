@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import {
@@ -11,6 +12,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { BottomNavMoreSheet } from './BottomNavMoreSheet'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
+import { hardNavigateTo } from '../utils/hardNavigate'
 
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
@@ -32,12 +34,17 @@ export function BottomNav() {
   }, [location.pathname, location.hash])
 
   const closeMore = () => setMoreOpen(false)
+  const onProfile = location.pathname === '/profile' || location.pathname.startsWith('/profile/')
 
   const goTo = useCallback(
     (to: string) => {
       closeMore()
-      const normalizedPath = location.pathname || '/'
       const targetPath = to || '/'
+      if (onProfile) {
+        hardNavigateTo(targetPath)
+        return
+      }
+      const normalizedPath = location.pathname || '/'
       const alreadyThere =
         normalizedPath === targetPath ||
         (targetPath === '/' && (normalizedPath === '/' || normalizedPath === ''))
@@ -47,7 +54,7 @@ export function BottomNav() {
       }
       navigate(targetPath)
     },
-    [location.pathname, navigate],
+    [location.pathname, navigate, onProfile],
   )
 
   const moreActive = useMemo(
@@ -60,12 +67,12 @@ export function BottomNav() {
 
   if (!showMobileNav) return null
 
-  return (
+  const chrome = (
     <>
-      <BottomNavMoreSheet open={moreOpen} onClose={closeMore} />
+      <BottomNavMoreSheet open={moreOpen} onClose={closeMore} onNavigate={goTo} />
       <nav
         className={cn(
-          'tf-app-bottomnav tf-app-bottomnav-shell border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl',
+          'tf-app-bottomnav border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl',
           L
             ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-[0_-8px_32px_rgba(2,52,88,0.08)]'
             : 'border-tf-dark-alt/50 bg-tf-dark shadow-[0_-12px_40px_rgba(0,0,0,0.35)]',
@@ -133,4 +140,10 @@ export function BottomNav() {
       </nav>
     </>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(<div className="tf-app-bottomnav-mobile-shell">{chrome}</div>, document.body)
+  }
+
+  return chrome
 }

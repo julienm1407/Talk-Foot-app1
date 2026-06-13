@@ -2605,12 +2605,46 @@ body::before {
   }
 }
 
-/* BottomNav — hors du conteneur scroll (sibling AppShell), toujours cliquable sur profil. */
+/* BottomNav — portail body (comme le dock chat), au-dessus du scroll profil sur mobile réel. */
+.tf-app-bottomnav-mobile-shell {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  bottom: 0 !important;
+  z-index: 2147482780 !important;
+  pointer-events: none !important;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.tf-app-bottomnav-mobile-shell > * {
+  pointer-events: auto !important;
+}
+
+.tf-app-topbar-mobile-shell {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  top: 0 !important;
+  z-index: 2147482770 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.tf-app-topbar-spacer {
+  height: calc(3.35rem + env(safe-area-inset-top, 0px));
+  flex-shrink: 0;
+}
+
+/* Legacy — conservé pour compatibilité si rendu inline */
 .tf-app-bottomnav-shell {
   position: fixed !important;
   inset-inline: 0 !important;
   bottom: 0 !important;
-  z-index: 120 !important;
+  z-index: 2147482780 !important;
   pointer-events: auto !important;
   touch-action: manipulation;
   transform: translateZ(0);
@@ -2621,7 +2655,7 @@ body::before {
 .tf-bottom-nav-more-sheet {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 110 !important;
+  z-index: 2147482775 !important;
   pointer-events: none !important;
   touch-action: manipulation;
 }

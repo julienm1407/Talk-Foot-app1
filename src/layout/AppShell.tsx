@@ -54,7 +54,7 @@ export function AppShell() {
     <>
     <div
       key={routeSurfaceKey}
-      className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell tf-route-surface"
+      className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell"
     >
       <SkipLink />
       <ActivityRouteLogger />
@@ -143,7 +143,7 @@ export function AppShell() {
           <div
             data-tf-route-scroll
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y tf-route-surface',
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y',
               isProfile && 'tf-profile-page-scroll',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-5 sm:pt-7',
               mainBottomPadMobile,

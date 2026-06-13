@@ -10,7 +10,15 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
 /** Sous-menu mobile — Paris, classements, boutique (au-dessus de la BottomNav). */
-export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function BottomNavMoreSheet({
+  open,
+  onClose,
+  onNavigate,
+}: {
+  open: boolean
+  onClose: () => void
+  onNavigate: (to: string) => void
+}) {
   const location = useLocation()
   const navigate = useNavigate()
   const { appearance } = useAppearance()
@@ -19,6 +27,10 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
   const goTo = useCallback(
     (to: string) => {
       onClose()
+      if (onNavigate) {
+        onNavigate(to)
+        return
+      }
       const normalizedPath = location.pathname || '/'
       const targetPath = to || '/'
       const alreadyThere = normalizedPath === targetPath
@@ -28,7 +40,7 @@ export function BottomNavMoreSheet({ open, onClose }: { open: boolean; onClose: 
       }
       navigate(targetPath)
     },
-    [location.pathname, navigate, onClose],
+    [location.pathname, navigate, onClose, onNavigate],
   )
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../utils/cn'
 import { LogoEncartLink } from './LogoMark'
@@ -28,6 +29,8 @@ import { NavWalletBalances } from './NavWalletBalances'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 import { TopBarBackButton } from './TopBarBackButton'
 import { resolvePageBackTarget } from '../utils/pageBackNavigation'
+import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
+import { hardNavigateTo } from '../utils/hardNavigate'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -90,6 +93,7 @@ export function TopBar() {
     [dmThreads],
   )
   const belowXl = useIsBelowXl()
+  const mobileTouch = useIsMobileTouchViewport()
   const isHomePath = location.pathname === '/' || location.pathname === ''
   const backTarget = resolvePageBackTarget(location.pathname)
   const mobileDenseHeader = belowXl && Boolean(backTarget)
@@ -117,10 +121,11 @@ export function TopBar() {
     }
   }, [inboxOpen, pm])
 
-  return (
+  const header = (
     <header
       className={cn(
-        'tf-app-topbar relative sticky top-0 z-40 w-full min-w-0 shrink-0 overflow-visible border-b backdrop-blur-md',
+        'tf-app-topbar relative w-full min-w-0 shrink-0 overflow-visible border-b backdrop-blur-md',
+        mobileTouch ? 'z-auto' : 'sticky top-0 z-40',
         'pt-[env(safe-area-inset-top,0px)]',
         L
           ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-tf-elev-nav-light'
@@ -152,6 +157,11 @@ export function TopBar() {
               if (belowXl && isHomePath && monEspace) {
                 e.preventDefault()
                 monEspace.toggleMonEspaceDrawer()
+                return
+              }
+              if (mobileTouch && profileActive) {
+                e.preventDefault()
+                hardNavigateTo('/')
               }
             }}
             className={cn(
@@ -391,4 +401,15 @@ export function TopBar() {
       />
     </header>
   )
+
+  if (mobileTouch && typeof document !== 'undefined') {
+    return (
+      <>
+        <div className="tf-app-topbar-spacer shrink-0" aria-hidden />
+        {createPortal(<div className="tf-app-topbar-mobile-shell">{header}</div>, document.body)}
+      </>
+    )
+  }
+
+  return header
 }
