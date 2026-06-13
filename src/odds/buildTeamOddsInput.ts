@@ -1,5 +1,6 @@
 import type { LeagueStandingRow } from '../data/leagueStandings'
 import type { FormResult } from '../types/standings'
+import { nationPowerFactorsFromIso } from '../data/nationFifaStrength'
 import type { MatchOddsContext, StandingSlice, TeamOddsContext, TeamPowerFactors } from './types'
 
 export function formScoreFromResults(form: FormResult[]): number {
@@ -124,5 +125,33 @@ export function buildMatchOddsContext(
       formOverride: opts?.awayFormOverride,
       keyAbsences: opts?.awayAbsences,
     }),
+  }
+}
+
+/** Cotes sélections — classement FIFA + forme récente (CDM / matchs internationaux). */
+export function buildMatchOddsContextFromNations(
+  homeNationIso: string,
+  awayNationIso: string,
+  opts?: {
+    homeFormOverride?: FormResult[]
+    awayFormOverride?: FormResult[]
+    homeAbsences?: number
+    awayAbsences?: number
+  },
+): MatchOddsContext {
+  const homeFactors = nationPowerFactorsFromIso(homeNationIso, true, opts?.homeFormOverride)
+  const awayFactors = nationPowerFactorsFromIso(awayNationIso, false, opts?.awayFormOverride)
+  return {
+    leagueSize: 32,
+    home: {
+      teamId: homeNationIso.toUpperCase(),
+      factors: homeFactors,
+      absenceFactor: absenceFactorFromCount(opts?.homeAbsences ?? 0),
+    },
+    away: {
+      teamId: awayNationIso.toUpperCase(),
+      factors: awayFactors,
+      absenceFactor: absenceFactorFromCount(opts?.awayAbsences ?? 0),
+    },
   }
 }

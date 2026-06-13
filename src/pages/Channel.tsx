@@ -9,6 +9,7 @@ import { nationFlagUrl } from '../utils/nationFlagUrl'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
 import {
+  teamAttackIndicesFromNations,
   teamAttackIndicesFromStandings,
   useTalkFootInternalOdds,
 } from '../hooks/useTalkFootInternalOdds'
@@ -989,17 +990,22 @@ export function ChannelPage() {
     liveStatRows,
     liveScore: { home: homeScore, away: awayScore },
     liveMinute: liveDisplayedMinute,
+    homeNationIso: homeNation?.iso ?? null,
+    awayNationIso: awayNation?.iso ?? null,
   })
   const attackIndices = useMemo(
-    () =>
-      match
-        ? teamAttackIndicesFromStandings(
-            displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
-            match.home.id,
-            match.away.id,
-          )
-        : { home: 50, away: 50 },
-    [match, displayedStandingsRows, standingsRows],
+    () => {
+      if (!match) return { home: 50, away: 50 }
+      if (homeNation?.iso && awayNation?.iso) {
+        return teamAttackIndicesFromNations(homeNation.iso, awayNation.iso)
+      }
+      return teamAttackIndicesFromStandings(
+        displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+        match.home.id,
+        match.away.id,
+      )
+    },
+    [match, homeNation?.iso, awayNation?.iso, displayedStandingsRows, standingsRows],
   )
   const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
   const oddsReady = Boolean(

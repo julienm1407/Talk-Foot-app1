@@ -56,16 +56,28 @@ export function teamPowerScore(factors: TeamPowerFactors, absenceFactor = 1): nu
 
 /**
  * Convertit deux puissances en probabilités 1 / N / 2.
- * Ex. écart modéré → ~52 % / 25 % / 23 %.
+ * Courbe calibrée sur des cotes bookmaker (favori ~1,15–1,35, outsider ~8–20).
  */
 export function probabilities1x2FromPower(homePower: number, awayPower: number): Probabilities1x2 {
-  const diff = clamp((homePower - awayPower) / 100, -1, 1)
-  const tilt = Math.tanh(1.45 * diff)
-  let pHome = 0.5 + 0.34 * tilt
-  let pAway = 0.5 - 0.34 * tilt
-  const closeness = 1 - Math.abs(diff)
-  let pDraw = 0.1 + 0.22 * closeness
-  if (Math.abs(diff) < 0.08) pDraw += 0.04
+  const diff = clamp(homePower - awayPower, -55, 55)
+  const absDiff = Math.abs(diff)
+
+  const homeWinShare = 1 / (1 + Math.exp(-0.078 * diff))
+  let pDraw = 0.22 * Math.exp(-0.028 * absDiff) + 0.055
+  pDraw = clamp(pDraw, 0.06, 0.32)
+
+  const remain = 1 - pDraw
+  let pHome = remain * homeWinShare
+  let pAway = remain * (1 - homeWinShare)
+
+  if (absDiff >= 28) {
+    pDraw = Math.min(pDraw, 0.14)
+    const s = pHome + pDraw + pAway
+    pHome /= s
+    pDraw /= s
+    pAway /= s
+  }
+
   return normalize3(pHome, pDraw, pAway)
 }
 
@@ -158,12 +170,12 @@ export function adjustProbabilities1x2ForLive(
   const { minute, homeGoals, awayGoals } = live
   const d = homeGoals - awayGoals
   const tau = clamp((minute + 8) / 96, 0.1, 1)
-  const k = 0.95 + 0.85 * tau
+  const k = 1.05 + 0.95 * tau
   const sh = Math.exp(k * d)
   const sa = Math.exp(-k * d)
   let pH = base.pHome * sh
   let pA = base.pAway * sa
-  let pD = base.pDraw * Math.exp(-0.42 * Math.abs(d) * tau)
+  let pD = base.pDraw * Math.exp(-0.48 * Math.abs(d) * tau)
 
   if (d === 0 && homeGoals === 0 && awayGoals === 0 && minute >= 55) {
     const lateTie = clamp((minute - 55) / 40, 0, 1)
@@ -204,22 +216,29 @@ export function adjustProbabilities1x2ForLive(
   return normalize3(pH, pD, pA)
 }
 
-/** Plafond réaliste des cotes live selon le score (évite des cotes à 50+ sur match serré). */
+/** Plafond réaliste des cotes live — ne bride pas l’outsider mené tardivement. */
 export function capLive1x2Odds(
   odds: SmBookOdds1x2,
   homeGoals: number,
   awayGoals: number,
   minute: number,
 ): SmBookOdds1x2 {
-  const diff = Math.abs(homeGoals - awayGoals)
-  const leaderGoals = Math.max(homeGoals, awayGoals)
-  let maxOdd = 4.5
-  if (diff >= 3 && leaderGoals >= 3) maxOdd = 100
-  else if (diff >= 2 && minute >= 65) maxOdd = 10
-  else if (diff >= 1 && minute >= 78) maxOdd = 6
-  else if (diff === 0) maxOdd = 4.2
+  const diff = homeGoals - awayGoals
+  const absDiff = Math.abs(diff)
+  const tau = clamp((minute + 5) / 95, 0.05, 1)
 
-  const cap = (n: number) => round2(clamp(n, 1.05, maxOdd))
+  let maxOdd = 80
+  if (absDiff === 0) {
+    maxOdd = clamp(4.8 + (1 - tau) * 2.5, 4.5, 7.5)
+  } else if (absDiff === 1 && minute >= 78) {
+    maxOdd = 35
+  } else if (absDiff >= 2 && minute >= 70) {
+    maxOdd = 50
+  } else if (absDiff >= 3) {
+    maxOdd = 100
+  }
+
+  const cap = (n: number) => round2(clamp(n, 1.04, maxOdd))
   return { home: cap(odds.home), draw: cap(odds.draw), away: cap(odds.away) }
 }
 

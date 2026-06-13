@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { LiveFixtureStatRow } from '../api/sportMonks/extractLiveFixtureStatistics'
 import type { LeagueStandingRow } from '../data/leagueStandings'
-import { buildMatchOddsContext, findStandingForTeam } from '../odds/buildTeamOddsInput'
+import { buildMatchOddsContext, buildMatchOddsContextFromNations, findStandingForTeam } from '../odds/buildTeamOddsInput'
 import {
   adjust1x2OddsForLiveInternal,
   adjustOverUnder25ForLiveInternal,
@@ -13,6 +13,7 @@ import {
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../odds/types'
 import type { Match } from '../types/match'
 import type { FormResult } from '../types/standings'
+import { getNationFifaRank, nationStrengthScoreFromRank } from '../data/nationFifaStrength'
 
 function statValue(rows: LiveFixtureStatRow[], key: string, side: 'home' | 'away'): number {
   const row = rows.find((r) => r.key === key || r.key.replace(/_/g, '') === key.replace(/_/g, ''))
@@ -38,6 +39,8 @@ export function useTalkFootInternalOdds(opts: {
   liveStatRows?: LiveFixtureStatRow[]
   liveScore?: { home: number; away: number } | null
   liveMinute?: number | null
+  homeNationIso?: string | null
+  awayNationIso?: string | null
 }) {
   const {
     match,
@@ -50,25 +53,36 @@ export function useTalkFootInternalOdds(opts: {
     liveStatRows = [],
     liveScore,
     liveMinute,
+    homeNationIso,
+    awayNationIso,
   } = opts
 
   const prematch = useMemo(() => {
     if (!match) return null
 
+    if (homeNationIso && awayNationIso) {
+      const ctx = buildMatchOddsContextFromNations(homeNationIso, awayNationIso, {
+        homeFormOverride,
+        awayFormOverride,
+        homeAbsences,
+        awayAbsences,
+      })
+      return computePrematch1x2FromContext(ctx)
+    }
+
     const homeRow = findStandingForTeam(standingsRows, match.home.id)
     const awayRow = findStandingForTeam(standingsRows, match.away.id)
     const leagueSize = Math.max(standingsRows.length, 18)
 
-    const ctx = buildMatchOddsContext(homeRow, awayRow, match.home.id, match.away.id, {
-      leagueSize,
-      homeFormOverride,
-      awayFormOverride,
-      homeAbsences,
-      awayAbsences,
-    })
-
-    if (ctx && (homeRow || awayRow)) {
-      return computePrematch1x2FromContext(ctx)
+    if (homeRow || awayRow) {
+      const ctx = buildMatchOddsContext(homeRow, awayRow, match.home.id, match.away.id, {
+        leagueSize,
+        homeFormOverride,
+        awayFormOverride,
+        homeAbsences,
+        awayAbsences,
+      })
+      if (ctx) return computePrematch1x2FromContext(ctx)
     }
 
     const fid = match.sportMonksFixtureId ?? hashMatchId(match.id)
@@ -88,6 +102,8 @@ export function useTalkFootInternalOdds(opts: {
     awayFormOverride,
     homeAbsences,
     awayAbsences,
+    homeNationIso,
+    awayNationIso,
   ])
 
   const isLive = match?.status === 'live'
@@ -158,6 +174,16 @@ export function teamAttackIndicesFromStandings(
   return {
     home: h?.attackIndex ?? 50,
     away: a?.attackIndex ?? 50,
+  }
+}
+
+export function teamAttackIndicesFromNations(
+  homeNationIso: string,
+  awayNationIso: string,
+): { home: number; away: number } {
+  return {
+    home: nationStrengthScoreFromRank(getNationFifaRank(homeNationIso)),
+    away: nationStrengthScoreFromRank(getNationFifaRank(awayNationIso)),
   }
 }
 
