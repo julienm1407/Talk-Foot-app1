@@ -98,9 +98,12 @@ import {
   parseLiveGoalRowsFromHighlights,
   parseLiveCardRowsFromHighlights,
 } from '../utils/liveFootballOdds'
+import {
+  isPostMatchDebriefOpen,
+  postMatchDebriefMinutesLeft,
+  resolveMatchFinishedAtMs,
+} from '../utils/matchDebriefWindow'
 
-/** Débrief tchat après le coup de sifflet final (30 min max). */
-const POST_MATCH_CHAT_MS = 30 * 60 * 1000
 /** Ouverture du tchat tribune avant coup d'envoi. */
 const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
 
@@ -1007,21 +1010,33 @@ export function ChannelPage() {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
   }, [])
-  const [finishedAtMs, setFinishedAtMs] = useState<number | null>(null)
+  const [witnessedFinishedAtMs, setWitnessedFinishedAtMs] = useState<number | null>(null)
+  const prevMatchStatusRef = useRef(status)
   useEffect(() => {
-    if (status === 'finished') {
-      setFinishedAtMs((prev) => prev ?? Date.now())
-      return
+    setWitnessedFinishedAtMs(null)
+    prevMatchStatusRef.current = status
+  }, [match?.id])
+  useEffect(() => {
+    if (prevMatchStatusRef.current === 'live' && status === 'finished') {
+      setWitnessedFinishedAtMs(Date.now())
     }
-    setFinishedAtMs(null)
+    if (status !== 'finished') {
+      setWitnessedFinishedAtMs(null)
+    }
+    prevMatchStatusRef.current = status
   }, [status, match?.id])
-  const chatDebriefOpen =
-    isFinished && finishedAtMs != null && nowMs - finishedAtMs < POST_MATCH_CHAT_MS
+  const finishedAtMs = useMemo(
+    () =>
+      resolveMatchFinishedAtMs({
+        match: match ?? null,
+        fixture: liveBundleFixture,
+        witnessedFinishedAtMs,
+      }),
+    [match, liveBundleFixture, witnessedFinishedAtMs],
+  )
+  const chatDebriefOpen = isFinished && isPostMatchDebriefOpen(finishedAtMs, nowMs)
   const chatClosedAfterMatch = isFinished && !chatDebriefOpen
-  const debriefMinutesLeft = useMemo(() => {
-    if (!chatDebriefOpen || finishedAtMs == null) return 0
-    return Math.max(1, Math.ceil((POST_MATCH_CHAT_MS - (nowMs - finishedAtMs)) / 60_000))
-  }, [chatDebriefOpen, finishedAtMs, nowMs])
+  const debriefMinutesLeft = postMatchDebriefMinutesLeft(finishedAtMs, nowMs)
   const showLiveChat = !chatClosedAfterMatch
   const timerText = useMemo(() => {
     const kickoffTs = match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null
