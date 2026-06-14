@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDirectMessagesContext } from '../contexts/DirectMessagesContext'
@@ -35,6 +35,7 @@ export function UserProfilePage() {
   const [liveName, setLiveName] = useState<string | null>(null)
   const [friendActionHint, setFriendActionHint] = useState<string | null>(null)
   const [friendBusy, setFriendBusy] = useState(false)
+  const friendPronosticsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (authUser?.id && userId && authUser.id === userId) {
@@ -80,13 +81,17 @@ export function UserProfilePage() {
         (!useCloudFriends && Boolean(peer.isMockFriend))),
   )
 
-  const canViewFriendPronostics = Boolean(peer && isFriend && !peer.isTalkFootBot && viewerActorId)
+  const canViewFriendPronostics = Boolean(peer && isFriend && !peer.isTalkFootBot)
 
   const friendPronostics = useFriendPronostics({
     friendActorKey: peer?.id,
     viewerActorKey: viewerActorId,
-    enabled: canViewFriendPronostics,
+    enabled: canViewFriendPronostics && Boolean(viewerActorId) && isSupabaseConfigured(),
   })
+
+  const scrollToFriendPronostics = () => {
+    friendPronosticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   if (!peer) {
     return (
@@ -153,8 +158,10 @@ export function UserProfilePage() {
     setFriendBusy(true)
     const out = await dm.acceptFriendRequest(peer.id)
     setFriendBusy(false)
-    if (out.ok) setFriendActionHint('Vous êtes maintenant amis — la conversation est dans les messages.')
-    else setFriendActionHint(out.error ?? 'Impossible d’accepter.')
+    if (out.ok) {
+      setFriendActionHint('Vous êtes maintenant amis — la conversation est dans les messages.')
+      window.setTimeout(() => scrollToFriendPronostics(), 400)
+    } else setFriendActionHint(out.error ?? 'Impossible d’accepter.')
   }
 
   return (
@@ -272,6 +279,17 @@ export function UserProfilePage() {
               </Button>
             ) : null}
 
+            {canViewFriendPronostics ? (
+              <Button
+                type="button"
+                variant="soft"
+                className="font-black"
+                onClick={scrollToFriendPronostics}
+              >
+                Voir ses paris
+              </Button>
+            ) : null}
+
             <Link
               to="/match"
               className={cn(
@@ -294,13 +312,17 @@ export function UserProfilePage() {
       </Card>
 
       {canViewFriendPronostics ? (
-        <FriendPronosticsPanel
-          displayName={displayUsername}
-          bets={friendPronostics.bets}
-          loading={friendPronostics.loading}
-          error={friendPronostics.error}
-          counts={friendPronostics.counts}
-        />
+        <div ref={friendPronosticsRef} id="friend-pronostics" className="scroll-mt-24">
+          <FriendPronosticsPanel
+            displayName={displayUsername}
+            bets={friendPronostics.bets}
+            loading={
+              (isSupabaseConfigured() && !viewerActorId) || friendPronostics.loading
+            }
+            error={viewerActorId || !isSupabaseConfigured() ? friendPronostics.error : null}
+            counts={friendPronostics.counts}
+          />
+        </div>
       ) : null}
     </div>
   )

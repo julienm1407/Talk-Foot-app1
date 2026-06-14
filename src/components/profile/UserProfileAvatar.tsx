@@ -8,8 +8,10 @@ import { ModularAvatarPortrait } from './ModularAvatarCanvas'
 import { DressableCharacter } from './DressableCharacter'
 import { SalonBotHeadThumb } from '../channel/SalonBotHeadThumb'
 
-const PORTRAIT_W = 136
-const PORTRAIT_H = 196
+const AVATAR_SHELL =
+  'relative mx-auto shrink-0 overflow-hidden rounded-2xl shadow-lg ring-4 ring-white/40 ' +
+  'border border-white/10 bg-gradient-to-b from-[#0e1018] to-[#0a0c12] ' +
+  'h-[16rem] w-[11rem] sm:mx-0 sm:h-[12.75rem] sm:w-[8.75rem]'
 
 export function UserProfileAvatar({
   peer,
@@ -27,18 +29,12 @@ export function UserProfileAvatar({
   const profile = cloudProfile ?? buildChatPeerProfile(peer)
   const photoUrl = profile.profilePhotoDataUrl?.trim()
   const hasModular = Boolean(profile.modularAvatar?.data)
-  const shellClass = cn(
-    'relative shrink-0 overflow-hidden rounded-2xl shadow-lg ring-4 ring-white/40',
-    'border border-white/10 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
-    className,
-  )
-  const portraitStyle = { width: PORTRAIT_W, height: PORTRAIT_H, minWidth: PORTRAIT_W, minHeight: PORTRAIT_H }
+  const shellClass = cn(AVATAR_SHELL, className)
 
   if (profileLoading) {
     return (
       <div
         className={cn(shellClass, 'animate-pulse bg-slate-800/50')}
-        style={portraitStyle}
         role="img"
         aria-busy="true"
         aria-label="Chargement de l’avatar"
@@ -48,7 +44,7 @@ export function UserProfileAvatar({
 
   if (peer.isTalkFootBot) {
     return (
-      <div className={shellClass} style={portraitStyle} role="img" aria-label={`Avatar ${peer.username}`}>
+      <div className={shellClass} role="img" aria-label={`Avatar ${peer.username}`}>
         <SalonBotHeadThumb seed={peer.avatarSeed} kind="coach" className="size-full" />
       </div>
     )
@@ -56,7 +52,7 @@ export function UserProfileAvatar({
 
   if (photoUrl && !photoFailed) {
     return (
-      <div className={cn(shellClass, 'bg-white/5')} style={portraitStyle} role="img">
+      <div className={cn(shellClass, 'bg-white/5')} role="img">
         <img
           src={photoUrl}
           alt=""
@@ -72,16 +68,10 @@ export function UserProfileAvatar({
     return (
       <div
         className={shellClass}
-        style={portraitStyle}
         role="img"
         aria-label={`Avatar de ${peer.username} — maillot et tenue`}
       >
-        <ModularAvatarPortrait
-          state={modularState}
-          width={PORTRAIT_W}
-          height={PORTRAIT_H}
-          imagePriority
-        />
+        <ModularAvatarPortrait state={modularState} imagePriority className="size-full" />
       </div>
     )
   }
@@ -89,7 +79,6 @@ export function UserProfileAvatar({
   return (
     <div
       className={cn(shellClass, 'overflow-hidden')}
-      style={portraitStyle}
       role="img"
       aria-label={`Avatar de ${peer.username} — maillot et tenue`}
     >
@@ -97,7 +86,7 @@ export function UserProfileAvatar({
         profile={profile}
         variant="front"
         supporterFanClubId={peer.fanClubId ?? null}
-        className="size-full scale-[1.12] origin-bottom"
+        className="size-full scale-[1.35] origin-bottom"
       />
     </div>
   )

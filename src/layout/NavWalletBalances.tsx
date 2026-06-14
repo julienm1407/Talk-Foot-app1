@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useAuth } from '../contexts/AuthContext'
 import { useAppearance } from '../contexts/AppearanceContext'
-import { useWallet } from '../hooks/useWallet'
+import { DAILY_TOKEN_BONUS_AMOUNT, useWallet } from '../hooks/useWallet'
 import { canUseWalletRewards } from '../utils/walletAuth'
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
@@ -35,6 +35,7 @@ export function NavWalletBalances({
   const L = appearance === 'light'
   const tokens = formatBalance(wallet.tokens)
   const medals = formatBalance(wallet.medals)
+  const canClaimBonus = rewardsEnabled && dailyBonus.canClaim
 
   const shell = cn(
     'inline-flex shrink-0 items-center rounded-xl border transition',
@@ -57,7 +58,6 @@ export function NavWalletBalances({
       const r = await claimDailyTokenBonus()
       if (r.ok) setClaimHint(`+${r.amount}`)
       else if (r.reason === 'already_claimed') setClaimHint('OK')
-      else if (r.reason === 'not_open_yet') setClaimHint('10h')
       else setClaimHint('!')
       window.setTimeout(() => setClaimHint(null), 2800)
     } finally {
@@ -65,117 +65,182 @@ export function NavWalletBalances({
     }
   }
 
-  const balanceRow = (
-    <>
-      <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <TokenGlyph className={cn('shrink-0', dense ? 'size-3.5 sm:size-4' : 'size-4')} variant={L ? 'solid' : 'onDark'} />
-        <span className={value}>{tokens}</span>
-      </span>
-      <span className={divider} aria-hidden />
-      <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <span className={cn('leading-none', dense ? 'text-xs sm:text-sm' : 'text-sm')} aria-hidden>
-          🏅
-        </span>
-        <span className={value}>{medals}</span>
-      </span>
-    </>
+  const tokenGlyph = (
+    <span className="relative inline-flex shrink-0">
+      <TokenGlyph className={cn('shrink-0', dense ? 'size-3.5 sm:size-4' : 'size-4')} variant={L ? 'solid' : 'onDark'} />
+      {canClaimBonus ? (
+        <span
+          className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.85)]"
+          aria-hidden
+        />
+      ) : null}
+    </span>
   )
+
+  const tokenControl = canClaimBonus ? (
+    <button
+      type="button"
+      onClick={() => void runClaim()}
+      disabled={claiming}
+      className={cn(
+        TF_FOCUS_VISIBLE,
+        'tf-interactive-press inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-0.5 -my-0.5',
+        'ring-2 ring-emerald-400/50',
+        L ? 'ring-offset-1 ring-offset-white/95' : 'ring-offset-0',
+        claiming && 'opacity-70',
+      )}
+      title={`Récupérer +${DAILY_TOKEN_BONUS_AMOUNT} jetons`}
+      aria-label={`${wallet.tokens} jetons — récupérer le bonus (+${DAILY_TOKEN_BONUS_AMOUNT})`}
+    >
+      {tokenGlyph}
+      <span className={value}>{tokens}</span>
+    </button>
+  ) : (
+    <Link
+      to="/profile#monnaie"
+      className="inline-flex items-center gap-1 whitespace-nowrap"
+      title={`${wallet.tokens} jetons`}
+      aria-label={`${wallet.tokens} jetons`}
+    >
+      {tokenGlyph}
+      <span className={value}>{tokens}</span>
+    </Link>
+  )
+
+  const medalsControl = (
+    <Link
+      to="/profile#monnaie"
+      className="inline-flex items-center gap-1 whitespace-nowrap"
+      title={`${wallet.medals} médailles`}
+      aria-label={`${wallet.medals} médailles`}
+    >
+      <span className={cn('leading-none', dense ? 'text-xs sm:text-sm' : 'text-sm')} aria-hidden>
+        🏅
+      </span>
+      <span className={value}>{medals}</span>
+    </Link>
+  )
+
+  const claimToast =
+    claimHint ? (
+      <span
+        role="status"
+        className={cn(
+          'pointer-events-none absolute right-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg px-2 py-1 text-[10px] font-black shadow-md',
+          claimHint.startsWith('+')
+            ? 'bg-emerald-600 text-white'
+            : L
+              ? 'bg-tf-dark text-white'
+              : 'bg-white/15 text-white ring-1 ring-white/20',
+        )}
+      >
+        {claimHint.startsWith('+')
+          ? `${claimHint} jetons !`
+          : claimHint === '!'
+            ? 'Échec — réessaie'
+            : 'Déjà récupéré'}
+      </span>
+    ) : null
 
   if (compact) {
     return (
-      <div className="relative z-[1] inline-flex max-w-[min(100%,14rem)] flex-col items-end gap-0.5">
-        {rewardsEnabled && dailyBonus.canClaim ? (
-          <button
-            type="button"
-            onClick={() => void runClaim()}
-            disabled={claiming}
-            className={cn(
-              TF_FOCUS_VISIBLE,
-              'tf-interactive-press lg:hidden',
-              'inline-flex min-h-tf-touch max-w-full items-center gap-1.5 rounded-xl border px-2.5 py-1.5',
-              'border-emerald-400/45 bg-emerald-500/20 text-emerald-50 shadow-[0_0_20px_rgba(16,185,129,0.25)]',
-              'ring-1 ring-emerald-400/35 active:scale-[0.98]',
-              claiming && 'opacity-70',
-            )}
-            aria-label="Récupérer le bonus jetons du jour"
-          >
-            <TokenGlyph className="size-4 shrink-0" variant="onDark" />
-            <span className="truncate text-[11px] font-black leading-tight">
-              {claiming ? '…' : 'Récup. bonus'}
-            </span>
-          </button>
-        ) : null}
-
-        <Link
-          to="/profile#monnaie"
+      <div className="relative z-[1] inline-flex max-w-[min(100%,14rem)] flex-col items-end">
+        <div
           className={cn(
             shell,
             'inline-flex',
             dense ? 'gap-1 px-1.5 py-1 sm:gap-2 sm:px-2.5 sm:py-1.5' : 'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5',
           )}
           title={`${wallet.tokens} jetons · ${wallet.medals} médailles`}
-          aria-label={`${wallet.tokens} jetons, ${wallet.medals} médailles`}
         >
-          {balanceRow}
-        </Link>
-
-        {claimHint ? (
-          <span
-            role="status"
-            className={cn(
-              'pointer-events-none absolute right-0 top-full z-50 mt-1 whitespace-nowrap rounded-lg px-2 py-1 text-[10px] font-black shadow-md lg:hidden',
-              claimHint.startsWith('+')
-                ? 'bg-emerald-600 text-white'
-                : L
-                  ? 'bg-tf-dark text-white'
-                  : 'bg-white/15 text-white ring-1 ring-white/20',
-            )}
-          >
-            {claimHint.startsWith('+') ? `${claimHint} jetons !` : claimHint === '10h' ? 'Ouverture à 10h' : claimHint === '!' ? 'Échec — réessaie' : 'Déjà récupéré'}
-          </span>
-        ) : null}
+          {tokenControl}
+          <span className={divider} aria-hidden />
+          {medalsControl}
+        </div>
+        {claimToast}
       </div>
     )
   }
 
   return (
-    <Link
-      to="/profile#monnaie"
-      className={cn(shell, 'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5')}
-      title={`${wallet.tokens} jetons · ${wallet.medals} médailles`}
-      aria-label={`${wallet.tokens} jetons, ${wallet.medals} médailles`}
-    >
-      <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <TokenGlyph className="size-4 shrink-0 sm:size-[1.125rem]" variant={L ? 'solid' : 'onDark'} />
-        <span className="flex flex-col items-start leading-none">
-          <span
+    <div className="relative">
+      <div className={cn(shell, 'gap-2 px-2 py-1 sm:gap-2.5 sm:px-2.5 sm:py-1.5')}>
+        {canClaimBonus ? (
+          <button
+            type="button"
+            onClick={() => void runClaim()}
+            disabled={claiming}
             className={cn(
-              'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
-              L ? 'text-emerald-800/75' : 'text-emerald-200/80',
+              TF_FOCUS_VISIBLE,
+              'inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-0.5 ring-2 ring-emerald-400/50',
+              L ? 'ring-offset-1 ring-offset-white/95' : 'ring-offset-0',
+              claiming && 'opacity-70',
             )}
+            title={`Récupérer +${DAILY_TOKEN_BONUS_AMOUNT} jetons`}
+            aria-label={`${wallet.tokens} jetons — récupérer le bonus (+${DAILY_TOKEN_BONUS_AMOUNT})`}
           >
-            Jetons
-          </span>
-          <span className={value}>{tokens}</span>
-        </span>
-      </span>
-      <span className={cn(divider, 'h-7 sm:h-8')} aria-hidden />
-      <span className="inline-flex items-center gap-1 whitespace-nowrap">
-        <span className="text-sm leading-none sm:text-base" aria-hidden>
-          🏅
-        </span>
-        <span className="flex flex-col items-start leading-none">
-          <span
-            className={cn(
-              'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
-              L ? 'text-amber-900/75' : 'text-amber-200/85',
-            )}
+            <span className="relative inline-flex shrink-0">
+              <TokenGlyph className="size-4 shrink-0 sm:size-[1.125rem]" variant={L ? 'solid' : 'onDark'} />
+              <span
+                className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.85)]"
+                aria-hidden
+              />
+            </span>
+            <span className="flex flex-col items-start leading-none">
+              <span
+                className={cn(
+                  'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
+                  L ? 'text-emerald-800/75' : 'text-emerald-200/80',
+                )}
+              >
+                Jetons
+              </span>
+              <span className={value}>{tokens}</span>
+            </span>
+          </button>
+        ) : (
+          <Link
+            to="/profile#monnaie"
+            className="inline-flex items-center gap-1 whitespace-nowrap"
+            title={`${wallet.tokens} jetons`}
           >
-            Médailles
+            <TokenGlyph className="size-4 shrink-0 sm:size-[1.125rem]" variant={L ? 'solid' : 'onDark'} />
+            <span className="flex flex-col items-start leading-none">
+              <span
+                className={cn(
+                  'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
+                  L ? 'text-emerald-800/75' : 'text-emerald-200/80',
+                )}
+              >
+                Jetons
+              </span>
+              <span className={value}>{tokens}</span>
+            </span>
+          </Link>
+        )}
+        <span className={cn(divider, 'h-7 sm:h-8')} aria-hidden />
+        <Link
+          to="/profile#monnaie"
+          className="inline-flex items-center gap-1 whitespace-nowrap"
+          title={`${wallet.medals} médailles`}
+        >
+          <span className="text-sm leading-none sm:text-base" aria-hidden>
+            🏅
           </span>
-          <span className={value}>{medals}</span>
-        </span>
-      </span>
-    </Link>
+          <span className="flex flex-col items-start leading-none">
+            <span
+              className={cn(
+                'text-[8px] font-black uppercase tracking-wide sm:text-[9px]',
+                L ? 'text-amber-900/75' : 'text-amber-200/85',
+              )}
+            >
+              Médailles
+            </span>
+            <span className={value}>{medals}</span>
+          </span>
+        </Link>
+      </div>
+      {claimToast}
+    </div>
   )
 }

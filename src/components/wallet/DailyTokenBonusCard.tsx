@@ -14,9 +14,7 @@ type Props = {
   className?: string
 }
 
-/**
- * Récompense jetons quotidienne (10h) — à placer en haut sur mobile pour rester visible.
- */
+/** Récompense jetons quotidienne (10h Paris) — solde toujours visible, bouton seulement si récupérable. */
 export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
   const { user } = useAuth()
   const { appearance } = useAppearance()
@@ -31,10 +29,7 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
   const hubSecondary = L ? 'text-tf-dark/72' : 'text-sky-200/95'
 
   return (
-    <section
-      className={cn(className)}
-      aria-labelledby="daily-token-bonus-title"
-    >
+    <section className={cn(className)} aria-labelledby="daily-token-bonus-title">
       <p
         id="daily-token-bonus-title"
         className={cn(
@@ -43,7 +38,7 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
           hubCaps,
         )}
       >
-        {prominent ? 'Jetons quotidiens' : 'Récompense quotidienne'}
+        {prominent ? 'Mes jetons' : 'Solde jetons'}
       </p>
       <div
         className={cn(
@@ -57,18 +52,12 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
         <div className="flex items-start gap-2">
           <TokenGlyph className={cn('shrink-0', prominent ? 'mt-0.5 size-5' : 'mt-0.5 size-4')} />
           <div className="min-w-0 flex-1">
-            <p className={cn('font-black text-tf-app-fg', prominent ? 'text-sm' : 'text-[10px]')}>
-              +{dailyBonus.amount} jetons
-              <span className={cn('font-bold', hubSecondary)}> · s&apos;ajoutent à ton solde</span>
+            <p className={cn('font-black tabular-nums text-tf-app-fg', prominent ? 'text-lg' : 'text-sm')}>
+              {wallet.tokens.toLocaleString('fr-FR')} jetons
             </p>
-            <p className={cn('mt-0.5 font-semibold tabular-nums', prominent ? 'text-xs' : 'text-[9px]', hubSecondary)}>
-              Solde actuel : {wallet.tokens.toLocaleString('fr-FR')} jetons
+            <p className={cn('mt-0.5 font-semibold', prominent ? 'text-xs' : 'text-[9px]', hubSecondary)}>
+              Bonus quotidien : +{dailyBonus.amount} jetons (à partir de 10h)
             </p>
-            {prominent && dailyBonus.canClaim ? (
-              <p className={cn('mt-0.5 text-xs font-semibold', hubSecondary)}>
-                Bonus du jour (10h) — cumulatif, ton solde ne repart pas à zéro.
-              </p>
-            ) : null}
           </div>
         </div>
         {!rewardsEnabled ? (
@@ -82,19 +71,16 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
           >
             Se connecter pour récupérer
           </Link>
-        ) : (
+        ) : dailyBonus.canClaim ? (
           <button
             type="button"
             className={cn(
-              'mt-2.5 w-full rounded-lg font-black transition',
+              TF_FOCUS_VISIBLE,
+              'mt-2.5 w-full rounded-lg bg-emerald-600 font-black text-white transition hover:bg-emerald-700',
               prominent ? 'px-3 py-2.5 text-sm' : 'rounded-md px-2 py-1.5 text-[10px]',
-              dailyBonus.canClaim
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : L
-                  ? 'bg-slate-200 text-slate-600'
-                  : 'bg-white/15 text-white/70',
+              claiming && 'opacity-70',
             )}
-            disabled={!dailyBonus.canClaim || claiming}
+            disabled={claiming}
             onClick={() => {
               void (async () => {
                 if (claiming) return
@@ -103,7 +89,6 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
                   const r = await claimDailyTokenBonus()
                   if (r.ok) setDailyClaimHint(`+${r.amount} jetons récupérés !`)
                   else if (r.reason === 'already_claimed') setDailyClaimHint('Déjà récupéré pour cette journée.')
-                  else if (r.reason === 'not_open_yet') setDailyClaimHint('Le bonus ouvre tous les jours à 10h.')
                   else if (r.reason === 'login_required') setDailyClaimHint('Connexion requise.')
                   else setDailyClaimHint('Impossible pour le moment.')
                   window.setTimeout(() => setDailyClaimHint(null), 3200)
@@ -113,23 +98,19 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
               })()
             }}
           >
-            {claiming
-              ? 'Récupération…'
-              : dailyBonus.canClaim
-                ? 'Récupérer mes jetons'
-                : dailyBonus.alreadyClaimedToday
-                  ? 'Déjà récupéré'
-                  : 'À 10h'}
+            {claiming ? 'Récupération…' : `Récupérer +${dailyBonus.amount} jetons`}
           </button>
-        )}
+        ) : dailyBonus.alreadyClaimedToday ? (
+          <p className={cn('mt-2 font-bold text-emerald-700', prominent ? 'text-xs' : 'text-[9px]')}>
+            Bonus récupéré aujourd&apos;hui
+          </p>
+        ) : null}
         {dailyClaimHint ? (
           <p
             className={cn(
               'mt-1.5 font-bold leading-snug',
               prominent ? 'text-xs' : 'text-[9px]',
-              dailyBonus.alreadyClaimedToday || dailyClaimHint.startsWith('+')
-                ? 'text-emerald-700'
-                : hubSecondary,
+              dailyClaimHint.startsWith('+') ? 'text-emerald-700' : hubSecondary,
             )}
           >
             {dailyClaimHint}

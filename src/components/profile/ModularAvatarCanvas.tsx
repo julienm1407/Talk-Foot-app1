@@ -127,7 +127,9 @@ const GARMENT_FOCUS_CLIP: Record<BoutiqueGarmentShow, string> = {
 }
 const GARMENT_FOCUS_COVER_BOOST = 1.08
 /** Marge intérieure — corps entier visible dans le cadre portrait (profil joueur). */
-const PORTRAIT_FRAME_CONTAIN_PAD = 0.9
+const PORTRAIT_FRAME_CONTAIN_PAD = 1
+/** Zoom léger pour compenser le vide transparent des sprites (reste clipé). */
+const PORTRAIT_FRAME_ZOOM = 1.28
 
 function garmentFocusClip(show: BoutiqueGarmentShow): string {
   return GARMENT_FOCUS_CLIP[show]
@@ -315,12 +317,13 @@ export function ModularAvatarCanvas({
   )
 
   if (fill && portraitFocus) {
-    const baseScale =
+    const fitScale =
       Math.min(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * PORTRAIT_FRAME_CONTAIN_PAD
+    const baseScale = fitScale * PORTRAIT_FRAME_ZOOM
     return (
       <div ref={fillRef} className={cn('relative h-full w-full overflow-hidden', className)}>
         <div
-          className="absolute left-1/2 bottom-[3%]"
+          className="absolute left-1/2 bottom-0"
           style={{
             width: canvasSize.width,
             height: canvasSize.height,
@@ -458,8 +461,8 @@ export function ModularAvatarHeadThumb({
 /** Portrait buste (tête + maillot) — page profil public, fiches joueur. */
 export function ModularAvatarPortrait({
   state,
-  width = 136,
-  height = 196,
+  width,
+  height,
   imagePriority = false,
   className,
 }: {
@@ -469,8 +472,12 @@ export function ModularAvatarPortrait({
   imagePriority?: boolean
   className?: string
 }) {
+  const fixedSize = width != null && height != null
   return (
-    <div className={cn('relative overflow-hidden', className)} style={{ width, height }}>
+    <div
+      className={cn('relative overflow-hidden', fixedSize ? '' : 'h-full w-full', className)}
+      style={fixedSize ? { width, height } : undefined}
+    >
       <ModularAvatarCanvas
         state={state}
         crop="full"
