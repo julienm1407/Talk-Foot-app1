@@ -394,7 +394,7 @@ export function AvatarModularStudio() {
         const next = updater(prev)
         return { data: next.data, slotColors: next.slotColors }
       })
-      window.setTimeout(() => persistAvatar(), 120)
+      window.setTimeout(() => persistAvatar(), 0)
     },
     [updateModularAvatar, persistAvatar],
   )
@@ -479,20 +479,23 @@ export function AvatarModularStudio() {
     }
   }, [searchParams, ownedItemIds, updateModularAvatar, setSearchParams])
 
+  const cloudFlushRef = useRef(cloud?.flushAppSave)
+  cloudFlushRef.current = cloud?.flushAppSave
+
   useEffect(() => {
     return () => {
       if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
-      void cloud?.flushAppSave?.()
+      void cloudFlushRef.current?.()
     }
-  }, [cloud])
+  }, [])
 
   useEffect(() => {
     const onPageHide = () => {
-      void cloud?.flushAppSave?.()
+      void cloudFlushRef.current?.()
     }
     window.addEventListener('pagehide', onPageHide)
     return () => window.removeEventListener('pagehide', onPageHide)
-  }, [cloud])
+  }, [])
 
   useEffect(() => {
     const el = previewWrapRef.current

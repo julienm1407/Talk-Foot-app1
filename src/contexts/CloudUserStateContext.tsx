@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useSession } from '@clerk/clerk-react'
+import { useLocation } from 'react-router-dom'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
@@ -35,6 +36,7 @@ import { clearChatAuthorAvatarCache } from '../hooks/useChatAuthorModularAvatars
 import {
   extractStoredModularAvatar,
   mergeModularAvatarBackupIntoApp,
+  isLikelyDefaultModularAvatar,
   wouldDowngradeModularAvatar,
   writeModularAvatarBackup,
 } from '../utils/modularAvatarBackup'
@@ -131,6 +133,7 @@ function CloudUserStateLoader({
   clerkSessionId: string | null
 }) {
   const { user, refreshAuthUser } = useAuth()
+  const location = useLocation()
   const [ready, setReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [app, setApp] = useState<UserAppStateV1>(() => defaultUserAppState())
@@ -143,6 +146,37 @@ function CloudUserStateLoader({
   const hasLocalEditsRef = useRef(false)
   const pendingCloudSaveRef = useRef(false)
   const loadUserIdRef = useRef<string | null>(null)
+  const readyRef = useRef(false)
+
+  useEffect(() => {
+    readyRef.current = ready
+  }, [ready])
+
+  useEffect(() => {
+    const flushPending = () => {
+      if (hasLocalEditsRef.current || pendingCloudSaveRef.current) {
+        void flushSaveRef.current()
+      }
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flushPending()
+    }
+    window.addEventListener('pagehide', flushPending)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('pagehide', flushPending)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
+  const prevPathRef = useRef(location.pathname)
+  useEffect(() => {
+    if (prevPathRef.current === location.pathname) return
+    prevPathRef.current = location.pathname
+    if (hasLocalEditsRef.current || pendingCloudSaveRef.current) {
+      void flushSaveRef.current()
+    }
+  }, [location.pathname])
 
   useEffect(() => {
     appRef.current = app
@@ -219,6 +253,7 @@ function CloudUserStateLoader({
       return
     }
     if (isClerkAuthMode() && !clerkSessionId) {
+      if (loadUserIdRef.current === user.id && readyRef.current) return
       setReady(false)
       return
     }
@@ -237,15 +272,19 @@ function CloudUserStateLoader({
       setLoadError(null)
       const displayName = user.displayName?.trim() || user.email?.split('@')[0] || 'Supporter'
 
+      let resyncSessionAvatar = false
+
       const applySnapshot = (
         appState: unknown,
         onboardingComplete: boolean,
         oauthCompleted: boolean,
       ): boolean => {
+        resyncSessionAvatar = false
         if (hasLocalEditsRef.current) {
           setReady(true)
           return false
         }
+        const sessionAvatar = resolveModularAvatarState(appRef.current.profile.modularAvatar)
         const rawModularAvatar = extractStoredModularAvatar(appState)
         let merged = mergeUserAppState(appState)
         if (wouldDowngradeModularAvatar(rawModularAvatar, merged.profile.modularAvatar)) {
@@ -259,6 +298,17 @@ function CloudUserStateLoader({
         }
         const restored = mergeModularAvatarBackupIntoApp(user.id, merged)
         merged = restored.app
+        if (
+          readyRef.current &&
+          !isLikelyDefaultModularAvatar(sessionAvatar) &&
+          wouldDowngradeModularAvatar(sessionAvatar, merged.profile.modularAvatar)
+        ) {
+          merged = {
+            ...merged,
+            profile: { ...merged.profile, modularAvatar: sessionAvatar },
+          }
+          resyncSessionAvatar = true
+        }
         setApp(merged)
         appRef.current = merged
         setOnboardingCompleteCol(onboardingComplete)
@@ -309,7 +359,13 @@ function CloudUserStateLoader({
             } catch (syncErr) {
               console.warn('[Talk Foot] Reprise avatar local → cloud:', syncErr)
             }
-          } else if (!hasLocalEditsRef.current && !cancelled) {
+          } else if (resyncSessionAvatar && !cancelled) {
+            try {
+              await flushSaveRef.current()
+            } catch (syncErr) {
+              console.warn('[Talk Foot] Resync avatar session → cloud:', syncErr)
+            }
+          } else if (!hasLocalEditsRef.current && !cancelled && !resyncSessionAvatar) {
             try {
               const merged = mergeUserAppState(snapshot.appState)
               const rawModularAvatar = extractStoredModularAvatar(snapshot.appState)
@@ -342,7 +398,7 @@ function CloudUserStateLoader({
             }
           }
 
-          if (!hasLocalEditsRef.current && !restoredFromBackup) {
+          if (!hasLocalEditsRef.current && !restoredFromBackup && !resyncSessionAvatar) {
             try {
               const mergedApp = mergeUserAppState(snapshot.appState)
               const rawModularAvatar = extractStoredModularAvatar(snapshot.appState)
@@ -409,7 +465,7 @@ function CloudUserStateLoader({
     return () => {
       cancelled = true
     }
-  }, [user?.id, user?.displayName, user?.email, clerkSessionId])
+  }, [user?.id, clerkSessionId])
 
   const patchApp = useCallback(
     (fn: (prev: UserAppStateV1) => UserAppStateV1) => {
