@@ -11,6 +11,7 @@ import {
   stripSportMonksCommentPrefix,
   translateSportMonksLiveTextToFr,
 } from '../../utils/translateSportMonksLiveEnToFr'
+import { formatGoalEventMinute } from '../../utils/matchEventMinute'
 import { cn } from '../../utils/cn'
 
 export type MatchHighlightTeamLabels = {
@@ -251,7 +252,9 @@ export function MatchHighlights({
                         channel ? 'text-sky-300/90' : 'text-slate-500',
                       )}
                     >
-                      {h.minute > 0 ? `${h.minute}'` : '—'}
+                      {h.minute > 0
+                        ? formatGoalEventMinute(h.minute, { inSecondHalf: h.inSecondHalf }) || `${h.minute}'`
+                        : '—'}
                     </span>
                     {!isCard ? (
                       <span

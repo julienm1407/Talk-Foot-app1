@@ -55,13 +55,13 @@ function periodMinuteValue(p: SmPeriodRow, nowMs = Date.now()): number | null {
   const fromSm = periodMinuteTotal(p)
   if (!p?.ticking) return fromSm
 
+  // Horloge SM fiable : ne jamais préférer un elapsed wall-clock (mi-temps incluse).
+  if (typeof p.minutes === 'number' && p.minutes > 0) return fromSm
+
   const fromStarted = minuteFromPeriodStarted(p, nowMs)
   if (fromStarted == null) return fromSm
-
-  const sm = fromSm ?? 0
-  // CDM / certains plans : `minutes` reste à 0 pendant toute la période (`has_timer: false`).
-  if (sm <= 0 || p.has_timer === false) return fromStarted
-  return Math.max(sm, fromStarted)
+  if (fromSm == null || fromSm <= 0) return fromStarted
+  return fromSm
 }
 
 function minuteFromPeriods(f: SmFixture, nowMs = Date.now()): number | null {
@@ -93,18 +93,6 @@ function minuteFromEvents(f: SmFixture): number | null {
     max = Math.max(max, m + x)
   }
   return max > 0 ? max : null
-}
-
-function minuteFromKickoffEstimate(f: SmFixture, nowMs = Date.now()): number | null {
-  if (smStatus(f) !== 'live') return null
-  if (liveClockPausedFromSmFixture(f)) return null
-  const kickoffMs = Date.parse(startingAtIso(f))
-  if (!Number.isFinite(kickoffMs)) return null
-  const elapsedMin = Math.floor((nowMs - kickoffMs) / 60_000)
-  if (elapsedMin <= 0) return null
-  const inSecondHalf = liveSecondHalfFromSmFixture(f)
-  const cap = inSecondHalf ? 99 : 55
-  return Math.min(cap, elapsedMin)
 }
 
 export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
@@ -364,8 +352,6 @@ function minuteFromFixture(f: SmFixture, nowMs = Date.now()): number {
   if (typeof fx.minute === 'number' && fx.minute > 0) return fx.minute
   const fromEvents = minuteFromEvents(fx)
   if (fromEvents != null) return fromEvents
-  const fromKickoff = minuteFromKickoffEstimate(fx, nowMs)
-  if (fromKickoff != null) return fromKickoff
   if (fromPeriods != null) return fromPeriods
   if (typeof fx.minute === 'number' && fx.minute >= 0) return fx.minute
   return 0

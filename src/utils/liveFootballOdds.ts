@@ -252,6 +252,7 @@ export type LiveGoalDisplayRow = {
   side: 'home' | 'away'
   name: string
   minute: number
+  inSecondHalf?: boolean
   assistName?: string
 }
 
@@ -309,7 +310,7 @@ export function parseLiveGoalRowsFromHighlights(
     const key = `${side}:${slug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name: displayName, minute })
+    out.push({ side, name: displayName, minute, inSecondHalf: h.inSecondHalf })
   }
 
   if (pendingNoSide.length && scoreHint) {
@@ -341,6 +342,7 @@ export type LiveCardDisplayRow = {
   side: 'home' | 'away'
   name: string
   minute: number
+  inSecondHalf?: boolean
   color: 'yellow' | 'red'
 }
 
@@ -548,7 +550,7 @@ export function parseLiveCardRowsFromHighlights(
     const key = `${side}:${color}:${slugScorer(name)}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name: compactScorerDisplayName(name), minute, color })
+    out.push({ side, name: compactScorerDisplayName(name), minute, inSecondHalf: h.inSecondHalf, color })
   }
 
   out.sort((a, b) => a.minute - b.minute || a.name.localeCompare(b.name))

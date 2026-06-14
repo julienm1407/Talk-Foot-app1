@@ -58,6 +58,7 @@ import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useLiveMatchClockLabel } from '../hooks/useLiveMatchClockLabel'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
+import { formatGoalEventMinute } from '../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { deriveBettingSuspension } from '../utils/bettingSuspension'
@@ -443,13 +444,18 @@ function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | nu
   return null
 }
 
+function highlightMinuteLabel(h: Pick<Highlight, 'minute' | 'inSecondHalf'>): string {
+  const label = formatGoalEventMinute(h.minute, { inSecondHalf: h.inSecondHalf })
+  return label || (h.minute > 0 ? `${h.minute}'` : '')
+}
+
 /** Buteurs uniquement, sous le camp qui a marqué. */
 function LiveHeaderScorers({
   goals,
   align,
   light,
 }: {
-  goals: { name: string; minute: number }[]
+  goals: { name: string; minute: number; inSecondHalf?: boolean }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -473,7 +479,7 @@ function LiveHeaderScorers({
         >
           <span className="min-w-0 truncate">⚽ {g.name}</span>
           <span className={cn('shrink-0 tabular-nums opacity-90', light ? 'text-emerald-900/75' : 'text-cyan-200/80')}>
-            {`${g.minute}'`}
+            {formatGoalEventMinute(g.minute, { inSecondHalf: g.inSecondHalf }) || `${g.minute}'`}
           </span>
         </li>
       ))}
@@ -487,7 +493,7 @@ function LiveHeaderCards({
   align,
   light,
 }: {
-  cards: { name: string; minute: number; color: 'yellow' | 'red' }[]
+  cards: { name: string; minute: number; inSecondHalf?: boolean; color: 'yellow' | 'red' }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -525,7 +531,7 @@ function LiveHeaderCards({
               light ? 'text-slate-700/80' : 'text-slate-200/75',
             )}
           >
-            {`${c.minute}'`}
+            {formatGoalEventMinute(c.minute, { inSecondHalf: c.inSecondHalf }) || `${c.minute}'`}
           </span>
         </li>
       ))}
@@ -1501,6 +1507,11 @@ export function ChannelPage() {
     const pending = smTimelineHighlights.filter((h) => {
       const kind = fullscreenKindFromHighlight(h)
       if (!kind) return false
+      if (kind === 'goal') {
+        if (!h.id.startsWith('sm-event-')) return false
+        if (!h.scorerName?.trim()) return false
+        if (!h.side) return false
+      }
       if (fullscreenShownHighlightIdsRef.current.has(h.id)) return false
       const key = highlightFullscreenDedupeKey(h)
       if (fullscreenDedupeKeysRef.current.has(key)) {
@@ -1515,9 +1526,9 @@ export function ChannelPage() {
       const key = highlightFullscreenDedupeKey(h)
       fullscreenDedupeKeysRef.current.add(key)
       fullscreenShownHighlightIdsRef.current.add(h.id)
-      const raw = `${h.title ?? ''} ${h.detail ?? ''}`
-      const side = h.side ?? detectHighlightSide(raw)
-      const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
+      const side = h.side ?? detectHighlightSide(`${h.title ?? ''} ${h.detail ?? ''}`)
+      if (!side) return
+      const teamLabel = side === 'home' ? homeName : awayName
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
       const goalRow =
         goalTeamHints
@@ -1537,7 +1548,7 @@ export function ChannelPage() {
           launchFullscreenEvent(
             'goal',
             'BUT',
-            `${h.minute}'${scorerLabel ? ` · ${scorerLabel}` : ''}`,
+            `${highlightMinuteLabel(h)}${scorerLabel ? ` · ${scorerLabel}` : ''}`,
             6200,
             side,
           )
@@ -1545,12 +1556,12 @@ export function ChannelPage() {
           launchFullscreenEvent(
             'card',
             'CARTON',
-            `${h.minute}' · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
+            `${highlightMinuteLabel(h)} · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
             4600,
             side,
           )
         } else {
-          launchFullscreenEvent('var', 'VAR', `${h.minute}' ${hlText}`, 5200)
+          launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(h)} ${hlText}`, 5200)
         }
       }, delayMs)
     })
@@ -1602,7 +1613,7 @@ export function ChannelPage() {
               : '📣 Live'
 
     setAnimationNotice(
-      `${label}${latest.minute ? ` ${latest.minute}'` : ''}${teamLabel ? ` · ${teamLabel}` : ''}${compact ? ` — ${compact}` : ''}`,
+      `${label}${latest.minute ? ` ${highlightMinuteLabel(latest)}` : ''}${teamLabel ? ` · ${teamLabel}` : ''}${compact ? ` — ${compact}` : ''}`,
     )
     if (infoToastTimeoutRef.current != null) window.clearTimeout(infoToastTimeoutRef.current)
     infoToastTimeoutRef.current = window.setTimeout(() => setAnimationNotice(null), 3600)
@@ -1694,14 +1705,14 @@ export function ChannelPage() {
     () =>
       liveGoalDisplayRows
         .filter((r) => r.side === 'home')
-        .map(({ name, minute }) => ({ name, minute })),
+        .map(({ name, minute, inSecondHalf }) => ({ name, minute, inSecondHalf })),
     [liveGoalDisplayRows],
   )
   const headerAwayScorers = useMemo(
     () =>
       liveGoalDisplayRows
         .filter((r) => r.side === 'away')
-        .map(({ name, minute }) => ({ name, minute })),
+        .map(({ name, minute, inSecondHalf }) => ({ name, minute, inSecondHalf })),
     [liveGoalDisplayRows],
   )
 
@@ -1728,14 +1739,14 @@ export function ChannelPage() {
     () =>
       liveCardDisplayRows
         .filter((r) => r.side === 'home')
-        .map(({ name, minute, color }) => ({ name, minute, color })),
+        .map(({ name, minute, inSecondHalf, color }) => ({ name, minute, inSecondHalf, color })),
     [liveCardDisplayRows],
   )
   const headerAwayCards = useMemo(
     () =>
       liveCardDisplayRows
         .filter((r) => r.side === 'away')
-        .map(({ name, minute, color }) => ({ name, minute, color })),
+        .map(({ name, minute, inSecondHalf, color }) => ({ name, minute, inSecondHalf, color })),
     [liveCardDisplayRows],
   )
 
@@ -3289,7 +3300,7 @@ export function ChannelPage() {
               <div className="tf-live-soft-surface min-w-0 w-full rounded-md bg-[#122940] px-2 py-1 text-[10px] text-sky-100/90 md:w-[90%]">
                 {latestHighlight ? (
                   <span className="block truncate font-semibold">
-                    {latestHighlight.minute}' {latestHighlightText}
+                    {highlightMinuteLabel(latestHighlight)} {latestHighlightText}
                   </span>
                 ) : (
                   <span className="block truncate font-semibold text-sky-200/70">Moments forts en attente...</span>

@@ -105,6 +105,11 @@ export type SmFixtureEventRow = {
   id?: number
   minute?: number | null
   extra_minute?: number | null
+  period?: {
+    counts_from?: number
+    description?: string
+    type_id?: number
+  } | null
   participant_id?: number | null
   type_id?: number | null
   type?: { id?: number; developer_name?: string; name?: string }

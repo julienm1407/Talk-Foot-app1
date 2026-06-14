@@ -2,6 +2,8 @@ export type Highlight = {
   id: string
   matchId: string
   minute: number
+  /** 2e période — pour afficher 45+5 vs 50' cumulé. */
+  inSecondHalf?: boolean
   /** Ordre SM (`comments.order`) pour tri stable si même minute. */
   order?: number
   type: 'But' | 'Occasion' | 'Carton' | 'VAR' | 'Arrêt' | 'Info'

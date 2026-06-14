@@ -1,4 +1,9 @@
 import type { Highlight } from '../../data/highlights'
+import {
+  eventInSecondHalf,
+  eventMinuteTotal,
+  formatEventMinuteLabel,
+} from '../../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import {
@@ -34,11 +39,8 @@ function commentLooksLikeGoal(text: string): boolean {
   return false
 }
 
-function displayMinute(row: { minute?: number | null; extra_minute?: number | null }): number {
-  const m = typeof row.minute === 'number' ? row.minute : 0
-  const x = typeof row.extra_minute === 'number' ? row.extra_minute : 0
-  if (m <= 0 && x <= 0) return 0
-  return m + x
+function displayMinute(row: { minute?: number | null; extra_minute?: number | null; period?: SmFixtureEventRow['period'] }): number {
+  return eventMinuteTotal(row)
 }
 
 function eventDevLooksLikeCard(u: string): boolean {
@@ -313,6 +315,8 @@ export function extractTimelineHighlightsFromSmFixture(
       const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
       const type = highlightTypeFromEventDev(dev)
       const minute = displayMinute(ev)
+      const inSecondHalf = eventInSecondHalf(ev, minute)
+      const minuteLabel = formatEventMinuteLabel(ev) || `${minute}'`
       const side = sideFromParticipant(ev.participant_id, homeId, awayId)
       const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
       const cardPlayer = type === 'Carton' ? cardPlayerFromEvent(ev, dev) : undefined
@@ -330,9 +334,9 @@ export function extractTimelineHighlightsFromSmFixture(
               )
       const detail =
         resolvedType === 'But' && scorerName
-          ? `${minute}' · ${scorerName}`
+          ? `${minuteLabel} · ${scorerName}`
           : resolvedType === 'Carton' && cardPlayer
-            ? `${minute}' · ${cardColorFromEventDev(dev) === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${cardPlayer}`
+            ? `${minuteLabel} · ${cardColorFromEventDev(dev) === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${cardPlayer}`
             : translateSportMonksLiveTextToFr((dev || 'Événement').trim())
       out.push({
         id: `sm-event-${ev.id ?? `${minute}-${dev}`}`,
@@ -342,6 +346,7 @@ export function extractTimelineHighlightsFromSmFixture(
         type: resolvedType,
         title,
         detail,
+        ...(inSecondHalf ? { inSecondHalf } : {}),
         ...(side ? { side } : {}),
         ...(scorerName ? { scorerName } : {}),
         ...(cardPlayer ? { scorerName: cardPlayer } : {}),
@@ -365,6 +370,7 @@ export function extractTimelineHighlightsFromSmFixture(
     const slice = sorted.length > MAX_ROWS ? sorted.slice(-MAX_ROWS) : sorted
     for (const c of slice) {
       const minute = displayMinute(c)
+      const inSecondHalf = eventInSecondHalf(c, minute)
       const order = typeof c.order === 'number' ? c.order : typeof c.id === 'number' ? c.id : 0
       const rawComment = String(c.comment ?? '').trim()
       const scorerName = parseGoalScorerName(rawComment) ?? undefined
@@ -389,6 +395,7 @@ export function extractTimelineHighlightsFromSmFixture(
         type,
         title: scorerName ?? cardPlayer ?? '',
         detail,
+        ...(inSecondHalf ? { inSecondHalf } : {}),
         ...(scorerName ? { scorerName } : {}),
         ...(cardPlayer ? { scorerName: cardPlayer } : {}),
         ...(assistName ? { assistName } : {}),
@@ -495,6 +502,8 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
     const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
     if (!eventDevLooksLikeGoal(dev.toUpperCase())) continue
     const minute = displayMinute(ev)
+    const inSecondHalf = eventInSecondHalf(ev, minute)
+    const minuteLabel = formatEventMinuteLabel(ev) || `${minute}'`
     const side = sideFromParticipant(ev.participant_id, homeId, awayId)
     const scorerName = scorerFromEvent(ev)
     if (!scorerName) continue
@@ -505,7 +514,8 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
       minute,
       type: 'But',
       title: scorerName,
-      detail: `${minute}' · ${scorerName}`,
+      detail: `${minuteLabel} · ${scorerName}`,
+      ...(inSecondHalf ? { inSecondHalf } : {}),
       ...(side ? { side } : {}),
       scorerName,
     })
@@ -536,6 +546,8 @@ export function extractLiveCardDisplayRowsFromSmFixture(
     const u = dev.toUpperCase()
     if (!eventDevLooksLikeCard(u)) continue
     const minute = displayMinute(ev)
+    const inSecondHalf = eventInSecondHalf(ev, minute)
+    const minuteLabel = formatEventMinuteLabel(ev) || `${minute}'`
     const side = sideFromParticipant(ev.participant_id, homeId, awayId)
     const playerName = cardPlayerFromEvent(ev, dev)
     if (!playerName || isMatchTeamLabel(playerName, home, away)) continue
@@ -546,7 +558,8 @@ export function extractLiveCardDisplayRowsFromSmFixture(
       minute,
       type: 'Carton',
       title: playerName,
-      detail: `${minute}' · ${color === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${playerName}`,
+      detail: `${minuteLabel} · ${color === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${playerName}`,
+      ...(inSecondHalf ? { inSecondHalf } : {}),
       ...(side ? { side } : {}),
       scorerName: playerName,
     })

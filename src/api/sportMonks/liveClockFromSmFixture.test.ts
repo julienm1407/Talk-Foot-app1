@@ -95,12 +95,4 @@ describe('live clock from SportMonks fixture', () => {
     } as SmFixture
     expect(liveClockPausedFromSmFixture(fx)).toBe(false)
   })
-
-  it('estime depuis le coup d envoi si aucune période ni minute SM', () => {
-    const fx = {
-      starting_at_timestamp: Math.floor(Date.now() / 1000) - 32 * 60,
-      state: { id: 2, developer_name: 'INPLAY_1ST_HALF' },
-    } as SmFixture
-    expect(extractLiveMinuteFromSmFixture(fx)).toBe(32)
-  })
 })
