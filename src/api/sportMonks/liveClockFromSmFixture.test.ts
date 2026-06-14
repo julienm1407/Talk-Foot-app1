@@ -95,4 +95,28 @@ describe('live clock from SportMonks fixture', () => {
     } as SmFixture
     expect(liveClockPausedFromSmFixture(fx)).toBe(false)
   })
+
+  it('lit la minute depuis les commentaires live si periods restent à 0', () => {
+    const fx = {
+      state: { id: 2, developer_name: 'INPLAY_1ST_HALF' },
+      periods: [{ ticking: false, counts_from: 0, minutes: 0 }],
+      comments: [{ minute: 34, extra_minute: 0, comment: 'Goal! Player scores' }],
+    } as SmFixture
+    expect(extractLiveMinuteFromSmFixture(fx)).toBe(34)
+  })
+
+  it('cumule correctement les minutes 2e période depuis les events', () => {
+    const fx = {
+      state: { id: 22, developer_name: 'INPLAY_2ND_HALF' },
+      periods: [{ ticking: false, counts_from: 45, minutes: 0 }],
+      events: [
+        {
+          minute: 12,
+          extra_minute: 0,
+          period: { counts_from: 45 },
+        },
+      ],
+    } as SmFixture
+    expect(extractLiveMinuteFromSmFixture(fx)).toBe(57)
+  })
 })

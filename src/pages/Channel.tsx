@@ -76,8 +76,10 @@ import {
   extractLiveCardDisplayRowsFromSmFixture,
   extractLiveGoalDisplayRowsFromSmFixture,
   extractLiveMinuteFromSmFixture,
+  fetchSportMonksFixtureEventsTimeline,
   fetchSportMonksFixtureEventsWeather,
   highlightFullscreenDedupeKey,
+  goalSemanticKey,
   liveClockPausedFromSmFixture,
   livePeriodTickingFromSmFixture,
   liveSecondHalfFromSmFixture,
@@ -442,6 +444,23 @@ function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | nu
   if (t === 'Carton') return 'card'
   if (t === 'VAR') return 'var'
   return null
+}
+
+function fullscreenEventDedupeKey(h: Highlight, kind: 'goal' | 'card' | 'var'): string {
+  if (kind === 'goal') {
+    const semantic = goalSemanticKey(h)
+    if (semantic) return `goal|${semantic}`
+    if (h.side && h.minute > 0) return `goal|${h.minute}|${h.side}`
+  }
+  return highlightFullscreenDedupeKey(h)
+}
+
+function preferFullscreenHighlight(a: Highlight, b: Highlight): Highlight {
+  if (a.id.startsWith('sm-event-') && !b.id.startsWith('sm-event-')) return a
+  if (b.id.startsWith('sm-event-') && !a.id.startsWith('sm-event-')) return b
+  if (a.scorerName?.trim() && !b.scorerName?.trim()) return a
+  if (b.scorerName?.trim() && !a.scorerName?.trim()) return b
+  return a
 }
 
 function highlightMinuteLabel(h: Pick<Highlight, 'minute' | 'inSecondHalf'>): string {
@@ -832,15 +851,62 @@ export function ChannelPage() {
   const status = match?.status ?? 'upcoming'
   const isUpcoming = status === 'upcoming'
   const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
-  const liveSnapshot = useMemo(() => {
-    if (!liveBundleFixture || status !== 'live') return null
-    return {
-      score: extractCurrentGoalsFromSmFixture(liveBundleFixture),
-      minute: extractLiveMinuteFromSmFixture(liveBundleFixture),
-      paused: liveClockPausedFromSmFixture(liveBundleFixture),
-      inSecondHalf: liveSecondHalfFromSmFixture(liveBundleFixture),
+  const [clockFallbackFixture, setClockFallbackFixture] = useState<SmFixture | null>(null)
+
+  /** Repli chrono : `/api/live-bundle` indisponible (dev local) ou minute SM à 0. */
+  useEffect(() => {
+    if (status !== 'live' || !match?.sportMonksFixtureId) {
+      setClockFallbackFixture(null)
+      return
     }
-  }, [liveBundleFixture, status])
+
+    const bundleMinute = liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) : 0
+    const needsFallback = !liveBundleFixture || bundleMinute <= 0
+    if (!needsFallback) {
+      setClockFallbackFixture(null)
+      return
+    }
+
+    const token = getSportMonksToken()
+    if (!token) {
+      setClockFallbackFixture(null)
+      return
+    }
+
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const fx = await fetchSportMonksFixtureEventsTimeline(token, match.sportMonksFixtureId!)
+        if (!cancelled) setClockFallbackFixture(fx)
+      } catch {
+        if (!cancelled) setClockFallbackFixture(null)
+      }
+    }
+
+    void poll()
+    const id = window.setInterval(() => void poll(), 5_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [status, match?.sportMonksFixtureId, liveBundleFixture])
+
+  const clockFixture = useMemo(() => {
+    if (!liveBundleFixture) return clockFallbackFixture
+    const bundleMinute = extractLiveMinuteFromSmFixture(liveBundleFixture)
+    if (bundleMinute > 0) return liveBundleFixture
+    return clockFallbackFixture ?? liveBundleFixture
+  }, [liveBundleFixture, clockFallbackFixture])
+
+  const liveSnapshot = useMemo(() => {
+    if (!clockFixture || status !== 'live') return null
+    return {
+      score: extractCurrentGoalsFromSmFixture(clockFixture),
+      minute: extractLiveMinuteFromSmFixture(clockFixture),
+      paused: liveClockPausedFromSmFixture(clockFixture),
+      inSecondHalf: liveSecondHalfFromSmFixture(clockFixture),
+    }
+  }, [clockFixture, status])
   const matchForClock = useMemo(() => {
     if (!match) return null
     if (!liveSnapshot) return match
@@ -857,10 +923,10 @@ export function ChannelPage() {
       minute,
       liveClockPaused: liveSnapshot.paused,
       liveInSecondHalf: liveSnapshot.inSecondHalf,
-      livePeriodTicking: liveBundleFixture ? livePeriodTickingFromSmFixture(liveBundleFixture) : match.livePeriodTicking,
+      livePeriodTicking: clockFixture ? livePeriodTickingFromSmFixture(clockFixture) : match.livePeriodTicking,
       score: liveSnapshot.score ?? match.score,
     }
-  }, [match, liveSnapshot, liveBundleFixture])
+  }, [match, liveSnapshot, clockFixture])
   useEffect(() => {
     const fromBundle = liveSnapshot?.score
     const fromMatch = match?.score
@@ -979,7 +1045,10 @@ export function ChannelPage() {
   const [nowMs, setNowMs] = useState(() => Date.now())
   const liveDisplayedMinute = useLinearDisplayedLiveMinute(matchForClock)
   const liveClockLabel = useLiveMatchClockLabel(matchForClock)
-  const livePeriodTicking = liveBundleFixture ? livePeriodTickingFromSmFixture(liveBundleFixture) : false
+  const livePeriodTicking =
+    clockFixture != null
+      ? livePeriodTickingFromSmFixture(clockFixture)
+      : matchForClock?.livePeriodTicking !== false
   const bettingSuspension = useMemo(
     () =>
       deriveBettingSuspension({
@@ -1393,6 +1462,7 @@ export function ChannelPage() {
   const lastGoalFullscreenAtRef = useRef(0)
   const infoHighlightPrimedRef = useRef(false)
   const infoHighlightIdsRef = useRef<Set<string>>(new Set())
+  const infoToastKeysRef = useRef<Set<string>>(new Set())
   const infoToastTimeoutRef = useRef<number | null>(null)
 
   const detectHighlightSide = useCallback(
@@ -1412,6 +1482,34 @@ export function ChannelPage() {
   )
 
   const fullscreenBusyRef = useRef(false)
+  const fullscreenQueueRef = useRef<
+    {
+      kind: 'goal' | 'card' | 'var' | 'kickoff'
+      title: string
+      subtitle?: string
+      durationMs: number
+      side?: 'home' | 'away'
+    }[]
+  >([])
+
+  const drainFullscreenQueue = useCallback(() => {
+    if (fullscreenBusyRef.current) return
+    const next = fullscreenQueueRef.current.shift()
+    if (!next) return
+    fullscreenBusyRef.current = true
+    setFullscreenEvent({
+      kind: next.kind,
+      title: next.title,
+      subtitle: next.subtitle,
+      side: next.side,
+    })
+    window.setTimeout(() => {
+      setFullscreenEvent(null)
+      fullscreenBusyRef.current = false
+      drainFullscreenQueue()
+    }, next.durationMs)
+  }, [])
+
   const launchFullscreenEvent = useCallback(
     (
       kind: 'goal' | 'card' | 'var' | 'kickoff',
@@ -1420,15 +1518,10 @@ export function ChannelPage() {
       durationMs = 3200,
       side?: 'home' | 'away',
     ) => {
-      if (fullscreenBusyRef.current) return
-      fullscreenBusyRef.current = true
-      setFullscreenEvent({ kind, title, subtitle, side })
-      window.setTimeout(() => {
-        setFullscreenEvent(null)
-        fullscreenBusyRef.current = false
-      }, durationMs)
+      fullscreenQueueRef.current.push({ kind, title, subtitle, durationMs, side })
+      drainFullscreenQueue()
     },
-    [],
+    [drainFullscreenQueue],
   )
   const kickoffFxMatchIdRef = useRef<string | undefined>(undefined)
   /** Coup d’envoi plein écran : une fois par tribune + pas si on rejoint le live tard (évite F5 / navigation). */
@@ -1490,6 +1583,7 @@ export function ChannelPage() {
       fullscreenShownHighlightIdsRef.current = new Set()
       infoHighlightPrimedRef.current = false
       infoHighlightIdsRef.current = new Set()
+      infoToastKeysRef.current = new Set()
     }
     if (status !== 'live' || !smTimelineHighlights.length) return
 
@@ -1497,37 +1591,42 @@ export function ChannelPage() {
       for (const h of smTimelineHighlights) {
         const kind = fullscreenKindFromHighlight(h)
         if (!kind) continue
-        fullscreenDedupeKeysRef.current.add(highlightFullscreenDedupeKey(h))
+        fullscreenDedupeKeysRef.current.add(fullscreenEventDedupeKey(h, kind))
         fullscreenShownHighlightIdsRef.current.add(h.id)
       }
       fullscreenDedupePrimedRef.current = true
       return
     }
 
-    const pending = smTimelineHighlights.filter((h) => {
+    const pendingByKey = new Map<string, Highlight>()
+    for (const h of smTimelineHighlights) {
       const kind = fullscreenKindFromHighlight(h)
-      if (!kind) return false
-      if (kind === 'goal') {
-        if (!h.id.startsWith('sm-event-')) return false
-        if (!h.scorerName?.trim()) return false
-        if (!h.side) return false
-      }
-      if (fullscreenShownHighlightIdsRef.current.has(h.id)) return false
-      const key = highlightFullscreenDedupeKey(h)
+      if (!kind) continue
+      if (fullscreenShownHighlightIdsRef.current.has(h.id)) continue
+      const key = fullscreenEventDedupeKey(h, kind)
       if (fullscreenDedupeKeysRef.current.has(key)) {
         fullscreenShownHighlightIdsRef.current.add(h.id)
-        return false
+        continue
       }
-      return true
-    })
+      const prev = pendingByKey.get(key)
+      if (prev) {
+        pendingByKey.set(key, preferFullscreenHighlight(prev, h))
+        fullscreenShownHighlightIdsRef.current.add(h.id)
+        continue
+      }
+      pendingByKey.set(key, h)
+    }
+
+    const pending = Array.from(pendingByKey.values())
 
     pending.forEach((h, index) => {
       const kind = fullscreenKindFromHighlight(h)!
-      const key = highlightFullscreenDedupeKey(h)
+      const key = fullscreenEventDedupeKey(h, kind)
+      const side = h.side ?? detectHighlightSide(`${h.title ?? ''} ${h.detail ?? ''}`)
+      if ((kind === 'goal' || kind === 'card') && !side) return
+
       fullscreenDedupeKeysRef.current.add(key)
       fullscreenShownHighlightIdsRef.current.add(h.id)
-      const side = h.side ?? detectHighlightSide(`${h.title ?? ''} ${h.detail ?? ''}`)
-      if (!side) return
       const teamLabel = side === 'home' ? homeName : awayName
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
       const goalRow =
@@ -1561,7 +1660,7 @@ export function ChannelPage() {
             side,
           )
         } else {
-          launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(h)} ${hlText}`, 5200)
+          launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(h)} ${hlText}`, 5200, side)
         }
       }, delayMs)
     })
@@ -1573,6 +1672,9 @@ export function ChannelPage() {
     detectHighlightSide,
     homeName,
     awayName,
+    goalTeamHints,
+    homeScore,
+    awayScore,
   ])
 
   /** Moments forts API (hors but/carton/VAR) → micro-signal visuel lisible sans envahir l’écran. */
@@ -1580,7 +1682,13 @@ export function ChannelPage() {
     if (!match?.id || status !== 'live' || smTimelineHighlights.length === 0) return
 
     if (!infoHighlightPrimedRef.current) {
-      for (const h of smTimelineHighlights) infoHighlightIdsRef.current.add(h.id)
+      for (const h of smTimelineHighlights) {
+        infoHighlightIdsRef.current.add(h.id)
+        const t = String(h.type || '').toLowerCase()
+        if (t.includes('but') || t.includes('carton') || t.includes('var')) continue
+        const raw = String(h.title || h.detail || '').trim().toLowerCase().slice(0, 80)
+        infoToastKeysRef.current.add(`${h.minute}|${t}|${raw}`)
+      }
       infoHighlightPrimedRef.current = true
       return
     }
@@ -1598,7 +1706,10 @@ export function ChannelPage() {
 
     const raw = String(latest.title || latest.detail || '').trim()
     const translated = translateSportMonksLiveTextToFr(raw)
-    const compact = translated.length > 92 ? `${translated.slice(0, 89)}…` : translated
+    const compact = translated.length > 72 ? `${translated.slice(0, 69)}…` : translated
+    const infoKey = `${latest.minute}|${t}|${raw.toLowerCase().slice(0, 80)}`
+    if (infoToastKeysRef.current.has(infoKey)) return
+    infoToastKeysRef.current.add(infoKey)
     const side = detectHighlightSide(`${latest.title ?? ''} ${latest.detail ?? ''}`)
     const teamLabel = side === 'home' ? homeName : side === 'away' ? awayName : ''
     const label =
@@ -2966,16 +3077,6 @@ export function ChannelPage() {
               light={L}
             />
             <ChannelPrivateSalonGate matchId={match?.id} light={L}>
-            <div className="relative mt-1.5">
-              {animationNotice ? (
-                <div
-                  className="pointer-events-none absolute inset-x-1 top-1 z-20 rounded-lg border border-[#8b7bff]/45 bg-[#0a1f35]/92 px-2 py-1 text-center text-[11px] font-semibold text-[#ece8ff] shadow-[0_8px_24px_rgba(2,12,28,0.45)] backdrop-blur-sm motion-safe:animate-[tf-fx-toast-in_220ms_ease-out]"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {animationNotice}
-                </div>
-              ) : null}
             <div
               className={cn(
                 'tf-chat-scroll space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
@@ -3052,7 +3153,15 @@ export function ChannelPage() {
                 </>
               )}
             </div>
-            </div>
+            {animationNotice ? (
+              <div
+                className="pointer-events-none mt-1.5 rounded-lg border border-[#8b7bff]/45 bg-[#0a1f35]/92 px-2 py-1.5 text-center text-[11px] font-semibold leading-snug text-[#ece8ff] shadow-[0_8px_24px_rgba(2,12,28,0.35)] backdrop-blur-sm motion-safe:animate-[tf-fx-toast-in_220ms_ease-out]"
+                role="status"
+                aria-live="polite"
+              >
+                {animationNotice}
+              </div>
+            ) : null}
             <form
               onSubmit={onSend}
               className="tf-channel-chat-form relative z-[20] mt-2 flex min-w-0 items-center gap-1.5 md:gap-2"

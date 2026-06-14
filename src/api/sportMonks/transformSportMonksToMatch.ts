@@ -5,6 +5,7 @@ import { findNationByName } from '../../data/nations'
 import { teams, teamColors } from '../../data/teams'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { localizeMatchTeams } from '../../utils/matchSideColors'
+import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventMinute'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 
@@ -83,16 +84,26 @@ function minuteFromPeriods(f: SmFixture, nowMs = Date.now()): number | null {
   return best
 }
 
+function minuteFromFeedRows(rows: SmEventMinuteRow[]): number | null {
+  if (!rows.length) return null
+  let max = 0
+  for (const row of rows) {
+    const total = eventMinuteTotal(row)
+    if (total > max) max = total
+  }
+  return max > 0 ? max : null
+}
+
 function minuteFromEvents(f: SmFixture): number | null {
   const events = f.events
   if (!Array.isArray(events) || !events.length) return null
-  let max = 0
-  for (const e of events) {
-    const m = typeof e.minute === 'number' ? e.minute : 0
-    const x = typeof e.extra_minute === 'number' ? e.extra_minute : 0
-    max = Math.max(max, m + x)
-  }
-  return max > 0 ? max : null
+  return minuteFromFeedRows(events)
+}
+
+function minuteFromComments(f: SmFixture): number | null {
+  const comments = f.comments
+  if (!Array.isArray(comments) || !comments.length) return null
+  return minuteFromFeedRows(comments)
 }
 
 export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
@@ -348,12 +359,19 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
 function minuteFromFixture(f: SmFixture, nowMs = Date.now()): number {
   const fx = asClockFixture(f)
   const fromPeriods = minuteFromPeriods(fx, nowMs)
-  if (fromPeriods != null && fromPeriods > 0) return fromPeriods
-  if (typeof fx.minute === 'number' && fx.minute > 0) return fx.minute
   const fromEvents = minuteFromEvents(fx)
-  if (fromEvents != null) return fromEvents
-  if (fromPeriods != null) return fromPeriods
-  if (typeof fx.minute === 'number' && fx.minute >= 0) return fx.minute
+  const fromComments = minuteFromComments(fx)
+  const fxMinute = typeof fx.minute === 'number' ? fx.minute : null
+
+  const candidates = [
+    fromPeriods,
+    fromEvents,
+    fromComments,
+    fxMinute != null && fxMinute > 0 ? fxMinute : null,
+  ].filter((v): v is number => v != null && Number.isFinite(v))
+
+  if (candidates.length) return Math.min(99, Math.max(...candidates))
+  if (fxMinute != null && fxMinute >= 0) return fxMinute
   return 0
 }
 

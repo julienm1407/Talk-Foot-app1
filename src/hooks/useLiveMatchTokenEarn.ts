@@ -23,6 +23,7 @@ export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boole
   const { grantLiveTick } = useXpGrant()
   const cloud = useOptionalCloudUserState()
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const earnFlushRef = useRef(0)
 
   const limit = liveMatchTokensPerHour(tier)
   const earned = liveTokensEarnedThisHour(subscription.usage ?? {})
@@ -49,6 +50,8 @@ export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boole
           wallet: { ...w, tokens: w.tokens + 1 },
         }
       })
+      earnFlushRef.current += 1
+      if (earnFlushRef.current % 3 === 0) void cloud.flushAppSave?.()
       grantLiveTick()
       return
     }

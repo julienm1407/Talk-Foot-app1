@@ -2616,6 +2616,27 @@ body::before {
   }
 }
 
+/* Bandeau cookies — au-dessus du contenu, sous la BottomNav sur mobile. */
+.tf-cookie-consent-shell {
+  position: fixed !important;
+  inset-inline: 0 !important;
+  bottom: 0 !important;
+  z-index: 2147482700 !important;
+  pointer-events: none !important;
+  touch-action: manipulation;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.tf-cookie-consent-shell > * {
+  pointer-events: auto !important;
+}
+
+.tf-cookie-consent-shell--above-bottomnav {
+  bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
 /* BottomNav — portail body (comme le dock chat), au-dessus du scroll profil sur mobile réel. */
 .tf-app-bottomnav-mobile-shell {
   position: fixed !important;

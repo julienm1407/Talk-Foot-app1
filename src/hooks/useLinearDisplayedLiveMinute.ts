@@ -13,27 +13,34 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
   const [tick, setTick] = useState(0)
 
   const [anchor, setAnchor] = useState<{ m: number; atMs: number }>(() => ({
-    m: official,
+    m: official > 0 ? official : 1,
     atMs: Date.now(),
   }))
 
   useLayoutEffect(() => {
-    if (!match || match.status !== 'live' || paused || !periodTicking || official <= 0) return
-    setAnchor({ m: official, atMs: Date.now() })
-  }, [match?.id, match?.status, official, paused, periodTicking])
+    if (!match || match.status !== 'live' || paused) return
+    // Minute SM à 0 = donnée absente (pas une vraie 0') — on amorce à 1' pour défiler entre deux polls.
+    const seed = official > 0 ? official : 1
+    setAnchor({ m: seed, atMs: Date.now() })
+  }, [match?.id, match?.status, official, paused])
 
   useEffect(() => {
-    if (!isLive || paused || !periodTicking) return
+    if (!isLive || paused) return
     const id = window.setInterval(() => setTick((n) => n + 1), 1000)
     return () => window.clearInterval(id)
-  }, [isLive, paused, periodTicking, match?.id])
+  }, [isLive, paused, match?.id])
 
   return useMemo(() => {
     if (!match || match.status !== 'live') return Math.max(0, Math.round(Number(match?.minute) || 0))
-    if (paused || !periodTicking) return official
-    if (official <= 0) return 0
+    if (paused) return official
+    const seed = official > 0 ? official : 1
     const drift = Math.floor((Date.now() - anchor.atMs) / 60_000)
     const linear = anchor.m + drift
-    return Math.min(99, Math.max(official, Math.min(linear, official + 1)))
+    const cap = official > 0 ? official + 1 : seed + 1
+    const displayed = Math.min(99, Math.max(seed, official, Math.min(linear, cap)))
+    // SM omet parfois `periods.ticking` alors que le match avance — ne pas figer le chrono pour autant.
+    if (!periodTicking && official > 0) return displayed
+    if (!periodTicking && official <= 0) return seed
+    return displayed
   }, [match, anchor, tick, paused, periodTicking, official])
 }

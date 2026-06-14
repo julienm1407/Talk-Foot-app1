@@ -136,6 +136,7 @@ export function useGlobalBetSettlement() {
             wallet: delta ? { ...w, tokens: w.tokens + delta } : w,
           }
         })
+        void cloud.flushAppSave?.()
         return
       }
 
