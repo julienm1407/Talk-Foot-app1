@@ -3,6 +3,8 @@ import { isClerkAuthMode } from './talkfootSession'
 
 export type BindTalkfootActorResult = { ok: true } | { ok: false; error: string }
 
+let lastSuccessfulBindKey: string | null = null
+
 /**
  * Lie la session Supabase courante (auth.uid()) à l'actor_key Talk Foot (Clerk).
  * No-op pour les comptes Supabase Auth natifs (UUID = actor_key).
@@ -22,8 +24,14 @@ export async function bindTalkfootActorSession(
 
   const { data: sessionWrap } = await sb.auth.getSession()
   const accessToken = sessionWrap.session?.access_token
-  if (!accessToken) {
+  const supabaseUserId = sessionWrap.session?.user?.id?.trim() ?? ''
+  if (!accessToken || !supabaseUserId) {
     return { ok: false, error: 'no_supabase_session' }
+  }
+
+  const bindKey = `${key}:${sessionId}:${supabaseUserId}`
+  if (lastSuccessfulBindKey === bindKey) {
+    return { ok: true }
   }
 
   const res = await fetch('/api/bind-talkfoot-actor', {
@@ -47,6 +55,7 @@ export async function bindTalkfootActorSession(
     return { ok: false, error: payload.error ?? `bind_http_${res.status}` }
   }
 
+  lastSuccessfulBindKey = bindKey
   return { ok: true }
 }
 

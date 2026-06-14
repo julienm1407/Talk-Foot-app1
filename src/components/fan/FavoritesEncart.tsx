@@ -6,6 +6,7 @@ import { useSupporterGroups } from '../../hooks/useSupporterGroups'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { ClubCrest } from '../brand/ClubCrest'
 import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
+import { useLiveMatchForClock } from '../../hooks/useLiveMatchForClock'
 import { formatKickoff } from '../../utils/time'
 import { cn } from '../../utils/cn'
 import { getGroupAccess, sortGroupsByFanAffinity } from '../../utils/groupAccess'
@@ -13,8 +14,9 @@ import type { Match } from '../../types/match'
 
 function MatchFavChip({ m, light }: { m: Match; light: boolean }) {
   const live = m.status === 'live'
-  const clockLabel = useLiveMatchClockLabel(m)
-  const sc = m.score
+  const clockMatch = useLiveMatchForClock(live ? m : null) ?? m
+  const clockLabel = useLiveMatchClockLabel(clockMatch)
+  const sc = clockMatch.score
   const scoreStr = sc ? `${sc.home}-${sc.away}` : null
   const sub = live ? (clockLabel || scoreStr || 'Live') : formatKickoff(m.kickoffAt)
 

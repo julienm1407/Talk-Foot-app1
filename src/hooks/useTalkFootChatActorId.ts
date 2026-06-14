@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { syncClerkProfileToChatActor } from '../lib/supabase/chatActorProfile'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
-import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
+import { useTalkFootCloudSession } from './useTalkFootCloudSession'
 
 /**
  * UUID Supabase (`auth.uid()`) utilisé pour tribunes, amis et MP.
@@ -11,6 +11,7 @@ import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
  */
 export function useTalkFootChatActorId(): string | null {
   const { user: authUser } = useAuth()
+  const { ensureCloudSession } = useTalkFootCloudSession()
   const [actorId, setActorId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function useTalkFootChatActorId(): string | null {
 
     let cancelled = false
     void (async () => {
-      const session = await ensureTalkFootSupabaseSession(sb)
+      const session = await ensureCloudSession()
       if (cancelled) return
       const chatActorId = session?.user.id ?? null
       setActorId(chatActorId)
@@ -43,7 +44,7 @@ export function useTalkFootChatActorId(): string | null {
     return () => {
       cancelled = true
     }
-  }, [authUser?.id, authUser?.displayName])
+  }, [authUser?.id, authUser?.displayName, ensureCloudSession])
 
   return actorId
 }

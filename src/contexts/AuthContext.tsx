@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
-import { useClerk, useSignIn, useSignUp, useUser } from '@clerk/clerk-react'
+import { useAuth as useClerkAuth, useClerk, useSignIn, useSignUp, useUser } from '@clerk/clerk-react'
 import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -641,15 +641,23 @@ function isEmailNotVerifiedMessage(code?: string | null, message?: string | null
 
 function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded: userLoaded } = useUser()
+  const { isSignedIn, userId, isLoaded: clerkAuthLoaded } = useClerkAuth()
   const clerk = useClerk()
   const { isLoaded: signInLoaded, signIn, setActive: setSignInActive } = useSignIn()
   const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp()
   const [authNotice, setAuthNotice] = useState<string | null>(null)
   const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
-  const isLoaded = userLoaded && signInLoaded && signUpLoaded
+  const stableUserRef = useRef<AuthUser | null>(null)
+  const isLoaded = clerkAuthLoaded && userLoaded && signInLoaded && signUpLoaded
 
-  const mappedUser: AuthUser | null = user
-    ? withAdminFlag({
+  const mappedUser: AuthUser | null = useMemo(() => {
+    if (!isSignedIn || !userId) {
+      stableUserRef.current = null
+      return null
+    }
+
+    if (user) {
+      const next = withAdminFlag({
         id: user.id,
         email: user.primaryEmailAddress?.emailAddress,
         displayName:
@@ -660,7 +668,22 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
         provider: user.externalAccounts?.some((a) => a.provider === 'google') ? 'google' : 'email',
         avatarUrl: user.imageUrl,
       })
-    : null
+      stableUserRef.current = next
+      return next
+    }
+
+    if (stableUserRef.current?.id === userId) {
+      return stableUserRef.current
+    }
+
+    const fallback = withAdminFlag({
+      id: userId,
+      displayName: 'Supporteur',
+      provider: 'email',
+    })
+    stableUserRef.current = fallback
+    return fallback
+  }, [user, isSignedIn, userId])
 
   const login = useCallback((_user: AuthUser) => {
     /* géré par Clerk */

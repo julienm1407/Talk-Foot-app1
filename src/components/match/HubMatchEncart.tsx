@@ -3,6 +3,8 @@ import type { Match } from '../../types/match'
 import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
+import { useLiveMatchForClock } from '../../hooks/useLiveMatchForClock'
+import { getSportMonksToken } from '../../utils/apiTokens'
 import { LiveSalonPresenceStrip } from '../home/LiveSalonPresenceStrip'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { cn } from '../../utils/cn'
@@ -116,20 +118,22 @@ export function HubStripLive({
   fillColumnHeight?: boolean
   asLink?: boolean
 }) {
-  const sim = match.status === 'live' && liveMirror?.active ? liveMirror : null
+  const smDriven = Boolean(match.sportMonksFixtureId && getSportMonksToken())
+  const clockMatch = useLiveMatchForClock(match) ?? match
+  const sim = match.status === 'live' && liveMirror?.active && !smDriven ? liveMirror : null
   const matchForClock =
     sim != null
       ? {
-          ...match,
+          ...clockMatch,
           minute: sim.minute,
-          liveClockPaused: sim.liveClockPaused ?? match.liveClockPaused,
-          liveInSecondHalf: sim.liveInSecondHalf ?? match.liveInSecondHalf,
+          liveClockPaused: sim.liveClockPaused ?? clockMatch.liveClockPaused,
+          liveInSecondHalf: sim.liveInSecondHalf ?? clockMatch.liveInSecondHalf,
         }
-      : match
+      : clockMatch
   const linearMinute = useLinearDisplayedLiveMinute(matchForClock)
   const clockLabel = useLiveMatchClockLabel(matchForClock)
-  const minute = sim ? sim.minute : linearMinute
-  const sc = sim ? sim.score : match.score ?? { home: 0, away: 0 }
+  const minute = smDriven || !sim ? linearMinute : sim.minute
+  const sc = smDriven ? (clockMatch.score ?? { home: 0, away: 0 }) : sim ? sim.score : clockMatch.score ?? { home: 0, away: 0 }
   const bump = sim?.bumpSide ?? null
   const rim = liveRimClass(sim?.rim ?? null)
   const featured = layout === 'featured'
@@ -833,8 +837,9 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
 }
 
 export function HubRailRowLive({ match, className }: { match: Match; className?: string }) {
-  const sc = match.score ?? { home: 0, away: 0 }
-  const clockLabel = useLiveMatchClockLabel(match)
+  const clockMatch = useLiveMatchForClock(match) ?? match
+  const sc = clockMatch.score ?? { home: 0, away: 0 }
+  const clockLabel = useLiveMatchClockLabel(clockMatch)
   return (
     <Link
       to={`/channel/${match.id}`}

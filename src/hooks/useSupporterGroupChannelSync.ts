@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
-import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 import { upsertCloudGroupMembership } from '../lib/supabase/groupMembership'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
+import { useTalkFootCloudSession } from './useTalkFootCloudSession'
 import type { Message } from '../types/chat'
 import type { TribuneId } from '../types/tribune'
 import { groupThreadMatchId } from '../utils/groupThreadMessages'
@@ -84,6 +84,7 @@ export function useSupporterGroupChannelSync(options: {
   onRemoteMessages: (msgs: Message[], origin: SupporterGroupRemoteOrigin, meta?: SupporterGroupRemoteMeta) => void
 }) {
   const { groupId, channelId, debateId, enabled, skipMembershipUpsert, onRemoteMessages } = options
+  const { ensureCloudSession } = useTalkFootCloudSession()
   const onRemoteMessagesRef = useRef(onRemoteMessages)
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
@@ -117,7 +118,7 @@ export function useSupporterGroupChannelSync(options: {
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
 
-      const session = await ensureTalkFootSupabaseSession(sb)
+      const session = await ensureCloudSession()
       if (!session) return { ok: false as const, error: 'no_session' }
 
       const body = msg.text ?? ''
@@ -160,7 +161,7 @@ export function useSupporterGroupChannelSync(options: {
 
       return { ok: true as const, message: rowToMessage(data as GroupMsgRow) }
     },
-    [],
+    [ensureCloudSession],
   )
 
   useEffect(() => {
@@ -174,7 +175,7 @@ export function useSupporterGroupChannelSync(options: {
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const run = async () => {
-      const session = await ensureTalkFootSupabaseSession(sb)
+      const session = await ensureCloudSession()
       if (!session || cancelled) return
       await syncRealtimeAuth(sb)
 
@@ -262,7 +263,7 @@ export function useSupporterGroupChannelSync(options: {
         channelRef.current = null
       }
     }
-  }, [groupId, channelId, enabled, skipMembershipUpsert, rowMatchesDebateScope])
+  }, [groupId, channelId, enabled, skipMembershipUpsert, rowMatchesDebateScope, ensureCloudSession])
 
   const loadOlderMessages = useCallback(
     async (
@@ -271,7 +272,7 @@ export function useSupporterGroupChannelSync(options: {
       if (!isSupabaseConfigured() || !groupId || !channelId) return { ok: false, error: 'no_config' }
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false, error: 'no_client' }
-      const session = await ensureTalkFootSupabaseSession(sb)
+      const session = await ensureCloudSession()
       if (!session) return { ok: false, error: 'no_session' }
 
       const { data, error } = await sb
@@ -296,7 +297,7 @@ export function useSupporterGroupChannelSync(options: {
         hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_OLDER,
       }
     },
-    [groupId, channelId, rowMatchesDebateScope],
+    [groupId, channelId, rowMatchesDebateScope, ensureCloudSession],
   )
 
   return { publishMessage, loadOlderMessages, isCloudChatConfigured: isSupabaseConfigured() }

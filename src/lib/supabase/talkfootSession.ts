@@ -1,4 +1,5 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
+import { bindTalkfootActorSession } from './bindTalkfootActorSession'
 import { ensureSupabaseAuthenticatedSession, ensureSupabaseChatSession } from './ensureSession'
 
 export function isClerkAuthMode(): boolean {
@@ -16,4 +17,26 @@ export async function ensureTalkFootSupabaseSession(
   if (authenticated) return authenticated
   if (isClerkAuthMode()) return ensureSupabaseChatSession(sb)
   return null
+}
+
+/**
+ * Session Supabase + liaison Clerk vérifiée (obligatoire pour RPC profil / wallet en mode Clerk).
+ */
+export async function ensureTalkFootBoundSupabaseSession(
+  sb: SupabaseClient,
+  clerkActorKey: string | null | undefined,
+  clerkSessionId: string | null | undefined,
+): Promise<Session | null> {
+  const session = await ensureTalkFootSupabaseSession(sb)
+  if (!session || !isClerkAuthMode()) return session
+
+  const actorKey = clerkActorKey?.trim()
+  const sessionId = clerkSessionId?.trim()
+  if (!actorKey || !sessionId) return session
+
+  const bindResult = await bindTalkfootActorSession(sb, actorKey, sessionId)
+  if (!bindResult.ok && import.meta.env.DEV) {
+    console.warn('[TalkFoot] bind session cloud:', bindResult.error)
+  }
+  return session
 }

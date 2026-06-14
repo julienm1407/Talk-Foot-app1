@@ -8,6 +8,7 @@ import { AppearanceProvider } from './contexts/AppearanceContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import App from './App'
 import { CookieConsentBanner } from './components/legal/CookieConsentBanner'
+import { SessionKeepAlive } from './components/auth/SessionKeepAlive'
 import { RouteSeo } from './components/seo/RouteSeo'
 import { clearChunkReloadFlag } from './utils/lazyWithRetry'
 
@@ -29,6 +30,7 @@ const appTree = (
     <BrowserRouter basename={routerBasename()}>
       <AppearanceProvider>
         <AuthProvider>
+          <SessionKeepAlive />
           <RouteSeo />
           <App />
           <CookieConsentBanner />
@@ -45,6 +47,7 @@ const root = (
         publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
         signInFallbackRedirectUrl={clerkFallbackPath()}
         signUpFallbackRedirectUrl={clerkFallbackPath()}
+        touchSession
       >
         {appTree}
       </ClerkProvider>

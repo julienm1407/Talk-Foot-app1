@@ -4,6 +4,25 @@ function isAnonymousUser(user: User | null | undefined): boolean {
   return user?.is_anonymous === true
 }
 
+/** Évite plusieurs signInAnonymously() en parallèle (sessions Supabase conflictuelles). */
+let anonymousSessionInFlight: Promise<Session | null> | null = null
+
+async function signInAnonymouslyOnce(sb: SupabaseClient): Promise<Session | null> {
+  if (anonymousSessionInFlight) return anonymousSessionInFlight
+
+  anonymousSessionInFlight = (async () => {
+    const { data, error } = await sb.auth.signInAnonymously()
+    if (error || !data.session) return null
+    return data.session
+  })()
+
+  try {
+    return await anonymousSessionInFlight
+  } finally {
+    anonymousSessionInFlight = null
+  }
+}
+
 /**
  * Compte réel Supabase (email / OAuth), pas l’accès anonyme.
  * Réservé aux tribunes membres, MP, etc.
@@ -44,7 +63,5 @@ export async function ensureSupabaseChatSession(sb: SupabaseClient): Promise<Ses
     if (refreshed.session?.user) return refreshed.session
   }
 
-  const { data, error } = await sb.auth.signInAnonymously()
-  if (error || !data.session) return null
-  return data.session
+  return signInAnonymouslyOnce(sb)
 }

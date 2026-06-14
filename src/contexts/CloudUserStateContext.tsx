@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { useSession } from '@clerk/clerk-react'
+import { useSession, useAuth as useClerkAuth } from '@clerk/clerk-react'
 import { useLocation } from 'react-router-dom'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -109,6 +109,18 @@ export function CloudUserStateGate({ children }: { children: ReactNode }) {
 
 function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
   const { session, isLoaded } = useSession()
+  const { isSignedIn } = useClerkAuth()
+  const lastSessionIdRef = useRef<string | null>(null)
+
+  if (session?.id) {
+    lastSessionIdRef.current = session.id
+  } else if (!isSignedIn) {
+    lastSessionIdRef.current = null
+  }
+
+  const clerkSessionId =
+    isLoaded && isSignedIn ? (session?.id ?? lastSessionIdRef.current) : isLoaded ? null : null
+
   return (
     <>
       {!isLoaded ? (
@@ -120,7 +132,7 @@ function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
           Synchronisation du compte…
         </div>
       ) : null}
-      <CloudUserStateLoader clerkSessionId={isLoaded ? (session?.id ?? null) : null}>
+      <CloudUserStateLoader clerkSessionId={clerkSessionId}>
         {children}
       </CloudUserStateLoader>
     </>
