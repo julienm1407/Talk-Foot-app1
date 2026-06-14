@@ -665,15 +665,20 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
 
   if (session?.id) {
     clerkSessionIdRef.current = session.id
-  } else if (!userId) {
+  } else if (!userId && isLoaded && !session) {
     clerkSessionIdRef.current = null
   }
 
-  const clerkSessionId = userId ? (session?.id ?? clerkSessionIdRef.current) : null
+  const clerkSessionId = session?.id ?? (userId ? clerkSessionIdRef.current : null)
 
   const mappedUser: AuthUser | null = useMemo(() => {
     if (!userId) {
-      stableUserRef.current = null
+      if (isLoaded && stableUserRef.current && (session?.id || clerkSessionIdRef.current)) {
+        return stableUserRef.current
+      }
+      if (isLoaded) {
+        stableUserRef.current = null
+      }
       return null
     }
 
@@ -712,7 +717,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     })
     stableUserRef.current = fallback
     return fallback
-  }, [user, isSignedIn, userId])
+  }, [user, isSignedIn, userId, isLoaded, session?.id])
 
   const login = useCallback((_user: AuthUser) => {
     /* géré par Clerk */

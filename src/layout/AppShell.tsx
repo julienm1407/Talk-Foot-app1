@@ -45,10 +45,7 @@ export function AppShell() {
 
   return (
     <>
-    <div
-      key={routeSurfaceKey}
-      className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell"
-    >
+    <div className="flex h-dvh max-h-dvh min-h-0 w-full min-w-0 max-w-full flex-col overflow-hidden overflow-x-hidden tf-mobile-app-shell">
       <SkipLink />
       <ActivityRouteLogger />
       <BetSettlementRunner />

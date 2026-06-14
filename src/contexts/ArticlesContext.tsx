@@ -60,7 +60,8 @@ export function ArticlesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sb = getSupabaseBrowserClient()
     if (!sb) return
-    const { data } = sb.auth.onAuthStateChange(() => {
+    const { data } = sb.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') return
       void refresh()
     })
     return () => {

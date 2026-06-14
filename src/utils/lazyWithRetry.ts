@@ -1,6 +1,8 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 
-const CHUNK_RELOAD_KEY = 'tf-chunk-reload-v1'
+const CHUNK_RELOAD_AT_KEY = 'tf-chunk-reload-at-v1'
+/** Une seule tentative de reload par fenêtre — évite boucle infinie si le chunk échoue toujours (Safari). */
+const RELOAD_COOLDOWN_MS = 45_000
 
 function isChunkLoadError(err: unknown): boolean {
   if (!(err instanceof Error)) return false
@@ -13,10 +15,30 @@ function isChunkLoadError(err: unknown): boolean {
   )
 }
 
-/** Efface le flag après chargement réussi (évite boucle de reload). */
+/** Efface le flag après chargement réussi d’un chunk lazy. */
 export function clearChunkReloadFlag(): void {
   try {
-    sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+    sessionStorage.removeItem(CHUNK_RELOAD_AT_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function canReloadForChunkError(): boolean {
+  try {
+    const raw = sessionStorage.getItem(CHUNK_RELOAD_AT_KEY)
+    if (!raw) return true
+    const at = Number(raw)
+    if (!Number.isFinite(at)) return true
+    return Date.now() - at >= RELOAD_COOLDOWN_MS
+  } catch {
+    return true
+  }
+}
+
+function markChunkReloadAttempt(): void {
+  try {
+    sessionStorage.setItem(CHUNK_RELOAD_AT_KEY, String(Date.now()))
   } catch {
     /* ignore */
   }
@@ -35,22 +57,10 @@ export function lazyWithRetry<T extends ComponentType<unknown>>(
       clearChunkReloadFlag()
       return mod
     } catch (err) {
-      if (isChunkLoadError(err)) {
-        let alreadyReloaded = false
-        try {
-          alreadyReloaded = sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1'
-        } catch {
-          /* ignore */
-        }
-        if (!alreadyReloaded) {
-          try {
-            sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
-          } catch {
-            /* ignore */
-          }
-          window.location.reload()
-          return new Promise(() => {})
-        }
+      if (isChunkLoadError(err) && canReloadForChunkError()) {
+        markChunkReloadAttempt()
+        window.location.reload()
+        return new Promise(() => {})
       }
       throw err
     }
