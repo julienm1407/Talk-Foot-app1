@@ -4031,7 +4031,7 @@ export function ChannelPage() {
       {typeof document !== 'undefined' && showLiveChat && paidFxLayers.length > 0
         ? createPortal(
             <div className="tf-paid-fx-portal-layer tf-paid-fx-portal" aria-hidden>
-              {paidFxLayers.map((layer, layerIndex) => (
+              {paidFxLayers.map((layer) => (
                 <div key={layer.layerId} className="pointer-events-none absolute inset-0 overflow-hidden">
                   {layer.fx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={layer.seed} /> : null}
                   {layer.fx.id === 'fumigene' ? (
