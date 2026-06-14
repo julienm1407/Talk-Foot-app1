@@ -372,13 +372,29 @@ const CLERK_TOUCH_MS = 5 * 60 * 1000
 const CLERK_TOKEN_REFRESH_MS = 10 * 60 * 1000
 const SUPABASE_REFRESH_MS = 45 * 60 * 1000
 
-async function refreshSupabaseSessionIfPresent(): Promise<void> {
+let lastSupabaseRefreshAt = 0
+let supabaseRefreshInFlight: Promise<void> | null = null
+
+async function refreshSupabaseSessionIfPresent(force = false): Promise<void> {
   if (!isSupabaseConfigured()) return
-  const sb = getSupabaseBrowserClient()
-  if (!sb) return
-  const { data: sessionWrap } = await sb.auth.getSession()
-  if (!sessionWrap.session) return
-  await sb.auth.refreshSession()
+  const now = Date.now()
+  if (!force && now - lastSupabaseRefreshAt < SUPABASE_REFRESH_MS) return
+  if (supabaseRefreshInFlight) return supabaseRefreshInFlight
+
+  supabaseRefreshInFlight = (async () => {
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+    const { data: sessionWrap } = await sb.auth.getSession()
+    if (!sessionWrap.session) return
+    await sb.auth.refreshSession()
+    lastSupabaseRefreshAt = Date.now()
+  })()
+
+  try {
+    await supabaseRefreshInFlight
+  } finally {
+    supabaseRefreshInFlight = null
+  }
 }
 
 function SupabaseAuthProvider({ children }: { children: ReactNode }) {
@@ -696,49 +712,55 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
   const stableUserRef = useRef<AuthUser | null>(null)
   const clerkSessionIdRef = useRef<string | null>(session?.id ?? null)
+  const sessionRef = useRef(session)
+  sessionRef.current = session
   const isLoaded = clerkAuthLoaded && userLoaded && signInLoaded && signUpLoaded
 
   if (session?.id) {
     clerkSessionIdRef.current = session.id
-  } else if (!isSignedIn) {
+  } else if (!userId) {
     clerkSessionIdRef.current = null
   }
 
-  const clerkSessionId = isSignedIn ? (session?.id ?? clerkSessionIdRef.current) : null
+  const clerkSessionId = userId ? (session?.id ?? clerkSessionIdRef.current) : null
 
   useEffect(() => {
-    if (!isSignedIn || !session) return
+    const activeSession = sessionRef.current
+    if (!isSignedIn || !userId || !activeSession) return
 
     const lastTouchRef = { current: 0 }
     const lastTokenRef = { current: 0 }
-    const lastSupabaseRefreshRef = { current: 0 }
 
-    const runKeepAlive = async (force = false) => {
+    const runKeepAlive = async (opts?: { touch?: boolean; token?: boolean; supabase?: boolean }) => {
       if (document.visibilityState !== 'visible') return
       const now = Date.now()
+      const s = sessionRef.current
+      if (!s) return
       try {
-        if (force || now - lastTouchRef.current >= CLERK_TOUCH_MS) {
-          await session.touch()
+        if (opts?.touch !== false && (opts?.touch === true || now - lastTouchRef.current >= CLERK_TOUCH_MS)) {
+          await s.touch()
           lastTouchRef.current = now
         }
-        if (force || now - lastTokenRef.current >= CLERK_TOKEN_REFRESH_MS) {
-          await session.getToken()
+        if (opts?.token !== false && (opts?.token === true || now - lastTokenRef.current >= CLERK_TOKEN_REFRESH_MS)) {
+          await s.getToken()
           lastTokenRef.current = now
         }
-        if (force || now - lastSupabaseRefreshRef.current >= SUPABASE_REFRESH_MS) {
+        if (opts?.supabase) {
           await refreshSupabaseSessionIfPresent()
-          lastSupabaseRefreshRef.current = now
         }
       } catch {
         /* ignore */
       }
     }
 
-    void runKeepAlive(true)
-    const interval = window.setInterval(() => void runKeepAlive(), 60_000)
-    const onVisible = () => void runKeepAlive(true)
+    void runKeepAlive({ touch: true, token: true })
+    const interval = window.setInterval(
+      () => void runKeepAlive({ touch: true, token: true, supabase: true }),
+      60_000,
+    )
+    const onVisible = () => void runKeepAlive({ touch: true, token: true })
     const onActivity = () => {
-      if (Date.now() - lastTouchRef.current >= CLERK_TOUCH_MS) void runKeepAlive()
+      if (Date.now() - lastTouchRef.current >= CLERK_TOUCH_MS) void runKeepAlive({ touch: true })
     }
 
     document.addEventListener('visibilitychange', onVisible)
@@ -751,10 +773,18 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('pointerdown', onActivity)
       window.removeEventListener('keydown', onActivity)
     }
-  }, [isSignedIn, session])
+  }, [isSignedIn, userId, session?.id])
 
   const mappedUser: AuthUser | null = useMemo(() => {
-    if (!isSignedIn || !userId) {
+    if (!userId) {
+      stableUserRef.current = null
+      return null
+    }
+
+    if (!isSignedIn) {
+      if (stableUserRef.current?.id === userId) {
+        return stableUserRef.current
+      }
       stableUserRef.current = null
       return null
     }

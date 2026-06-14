@@ -209,14 +209,18 @@ export function useLiveMatchChatSync(options: {
     }
     document.addEventListener('visibilitychange', onVisible)
 
+    let authDebounce: number | null = null
     const { data: authListener } = sb.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+      if (event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN') return
+      if (authDebounce != null) window.clearTimeout(authDebounce)
+      authDebounce = window.setTimeout(() => {
         void syncRealtimeAuth(sb).then(() => fetchRecent())
-      }
+      }, 800)
     })
 
     return () => {
       cancelled = true
+      if (authDebounce != null) window.clearTimeout(authDebounce)
       window.clearInterval(pollId)
       document.removeEventListener('visibilitychange', onVisible)
       authListener.subscription.unsubscribe()

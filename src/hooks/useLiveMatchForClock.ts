@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SmFixture } from '../api/sportMonks'
 import {
   extractCurrentGoalsFromSmFixture,
@@ -19,30 +19,31 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
   const status = match?.status ?? 'upcoming'
   const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
   const [clockFallbackFixture, setClockFallbackFixture] = useState<SmFixture | null>(null)
+  const bundleMinute = liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) : 0
+  const needsFallbackPoll = status === 'live' && Boolean(match?.sportMonksFixtureId) && bundleMinute <= 0
+  const fallbackPollActiveRef = useRef(false)
 
   useEffect(() => {
-    if (status !== 'live' || !match?.sportMonksFixtureId) {
-      setClockFallbackFixture(null)
-      return
-    }
-
-    const bundleMinute = liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) : 0
-    const needsFallback = !liveBundleFixture || bundleMinute <= 0
-    if (!needsFallback) {
+    if (!needsFallbackPoll) {
+      fallbackPollActiveRef.current = false
       setClockFallbackFixture(null)
       return
     }
 
     const token = getSportMonksToken()
     if (!token) {
+      fallbackPollActiveRef.current = false
       setClockFallbackFixture(null)
       return
     }
 
+    if (fallbackPollActiveRef.current) return
+    fallbackPollActiveRef.current = true
+
     let cancelled = false
     const poll = async () => {
       try {
-        const fx = await fetchSportMonksFixtureEventsTimeline(token, match.sportMonksFixtureId!)
+        const fx = await fetchSportMonksFixtureEventsTimeline(token, match!.sportMonksFixtureId!)
         if (!cancelled) setClockFallbackFixture(fx)
       } catch {
         if (!cancelled) setClockFallbackFixture(null)
@@ -53,16 +54,16 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
     const id = window.setInterval(() => void poll(), 5_000)
     return () => {
       cancelled = true
+      fallbackPollActiveRef.current = false
       window.clearInterval(id)
     }
-  }, [status, match?.sportMonksFixtureId, liveBundleFixture])
+  }, [needsFallbackPoll, match?.sportMonksFixtureId])
 
   const clockFixture = useMemo(() => {
     if (!liveBundleFixture) return clockFallbackFixture
-    const bundleMinute = extractLiveMinuteFromSmFixture(liveBundleFixture)
     if (bundleMinute > 0) return liveBundleFixture
     return clockFallbackFixture ?? liveBundleFixture
-  }, [liveBundleFixture, clockFallbackFixture])
+  }, [liveBundleFixture, clockFallbackFixture, bundleMinute])
 
   const liveSnapshot = useMemo(() => {
     if (!clockFixture || status !== 'live') return null
@@ -78,13 +79,13 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
     if (!match) return null
     if (!liveSnapshot) return match
     const contextMinute = Math.min(99, Math.max(0, Math.round(Number(match.minute) || 0)))
-    const bundleMinute = Math.min(99, Math.max(0, Math.round(Number(liveSnapshot.minute) || 0)))
+    const snapshotMinute = Math.min(99, Math.max(0, Math.round(Number(liveSnapshot.minute) || 0)))
     const minute =
-      bundleMinute > 0
-        ? Math.max(contextMinute, bundleMinute)
+      snapshotMinute > 0
+        ? Math.max(contextMinute, snapshotMinute)
         : contextMinute > 0
           ? contextMinute
-          : bundleMinute
+          : snapshotMinute
     return {
       ...match,
       minute,

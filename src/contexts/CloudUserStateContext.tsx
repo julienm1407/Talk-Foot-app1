@@ -262,7 +262,6 @@ function CloudUserStateLoader({
     }
     if (isClerkAuthMode() && !clerkSessionId) {
       if (loadUserIdRef.current === user.id && readyRef.current) return
-      setReady(false)
       return
     }
     if (loadUserIdRef.current !== user.id) {
