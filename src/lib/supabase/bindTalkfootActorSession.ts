@@ -4,6 +4,7 @@ import { isClerkAuthMode } from './talkfootSession'
 export type BindTalkfootActorResult = { ok: true } | { ok: false; error: string }
 
 let lastSuccessfulBindKey: string | null = null
+let lastSupabaseUserId: string | null = null
 
 /**
  * Lie la session Supabase courante (auth.uid()) à l'actor_key Talk Foot (Clerk).
@@ -30,6 +31,10 @@ export async function bindTalkfootActorSession(
   }
 
   const bindKey = `${key}:${sessionId}:${supabaseUserId}`
+  if (lastSupabaseUserId !== supabaseUserId) {
+    lastSuccessfulBindKey = null
+    lastSupabaseUserId = supabaseUserId
+  }
   if (lastSuccessfulBindKey === bindKey) {
     return { ok: true }
   }

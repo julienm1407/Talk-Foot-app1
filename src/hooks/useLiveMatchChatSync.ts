@@ -79,6 +79,12 @@ export function displayNameFromSession(user: {
   return 'Supporteur'
 }
 
+function messageIdsSignature(rows: LiveMsgRow[]): string {
+  if (!rows.length) return ''
+  const last = rows[rows.length - 1]
+  return `${rows.length}:${last.id}:${last.created_at}`
+}
+
 export function useLiveMatchChatSync(options: {
   matchId: string
   enabled: boolean
@@ -86,6 +92,7 @@ export function useLiveMatchChatSync(options: {
 }) {
   const { matchId, enabled, onRemoteMessages } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
+  const lastHistorySigRef = useRef('')
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
@@ -161,7 +168,11 @@ export function useLiveMatchChatSync(options: {
         .order('created_at', { ascending: true })
         .limit(200)
       if (cancelled || fetchErr || !rows?.length) return
-      onRemoteMessagesRef.current((rows as LiveMsgRow[]).map(rowToMessage))
+      const typed = rows as LiveMsgRow[]
+      const sig = messageIdsSignature(typed)
+      if (sig === lastHistorySigRef.current) return
+      lastHistorySigRef.current = sig
+      onRemoteMessagesRef.current(typed.map(rowToMessage))
     }
 
     const run = async () => {
@@ -198,6 +209,7 @@ export function useLiveMatchChatSync(options: {
       channelRef.current = channel
     }
 
+    lastHistorySigRef.current = ''
     void run()
 
     const pollId = window.setInterval(() => {
@@ -209,21 +221,10 @@ export function useLiveMatchChatSync(options: {
     }
     document.addEventListener('visibilitychange', onVisible)
 
-    let authDebounce: number | null = null
-    const { data: authListener } = sb.auth.onAuthStateChange((event) => {
-      if (event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN') return
-      if (authDebounce != null) window.clearTimeout(authDebounce)
-      authDebounce = window.setTimeout(() => {
-        void syncRealtimeAuth(sb).then(() => fetchRecent())
-      }, 800)
-    })
-
     return () => {
       cancelled = true
-      if (authDebounce != null) window.clearTimeout(authDebounce)
       window.clearInterval(pollId)
       document.removeEventListener('visibilitychange', onVisible)
-      authListener.subscription.unsubscribe()
       if (channelRef.current) {
         void sb.removeChannel(channelRef.current)
         channelRef.current = null

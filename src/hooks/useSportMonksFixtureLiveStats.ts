@@ -13,6 +13,14 @@ import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 /** Live : cadence renforcée pour éviter les buts invisibles sans F5. */
 const LIVE_POLL_MS = 12_000
 
+function highlightIdsSignature(items: Highlight[]): string {
+  return items.map((h) => h.id).join('|')
+}
+
+function liveStatRowsSignature(rows: LiveFixtureStatRow[]): string {
+  return rows.map((r) => `${r.label}:${r.home}:${r.away}`).join('|')
+}
+
 /**
  * Statistiques équipe (`statistics` + `statistics.type`) pour un match live ou terminé.
  */
@@ -52,12 +60,16 @@ export function useSportMonksFixtureLiveStats(
       fetchSportMonksFixtureEventsWeather(token, sportMonksFixtureId)
         .then((fx) => {
           if (cancelledRef.current || !fx) return
-          setRows(extractLiveFixtureStatistics(fx))
-          if (channelMatchId) {
-            setTimeline(extractTimelineHighlightsFromSmFixture(fx, channelMatchId))
-          } else {
-            setTimeline([])
-          }
+          const nextRows = extractLiveFixtureStatistics(fx)
+          const nextTimeline = channelMatchId
+            ? extractTimelineHighlightsFromSmFixture(fx, channelMatchId)
+            : []
+          setRows((prev) =>
+            liveStatRowsSignature(prev) === liveStatRowsSignature(nextRows) ? prev : nextRows,
+          )
+          setTimeline((prev) =>
+            highlightIdsSignature(prev) === highlightIdsSignature(nextTimeline) ? prev : nextTimeline,
+          )
         })
         .catch(() => {
           if (!cancelledRef.current) {
@@ -86,9 +98,16 @@ export function useSportMonksFixtureLiveStats(
 
   useEffect(() => {
     if (!liveBundleFixture) return
-    setRows(extractLiveFixtureStatistics(liveBundleFixture))
-    if (channelMatchId) setTimeline(extractTimelineHighlightsFromSmFixture(liveBundleFixture, channelMatchId))
-    else setTimeline([])
+    const nextRows = extractLiveFixtureStatistics(liveBundleFixture)
+    const nextTimeline = channelMatchId
+      ? extractTimelineHighlightsFromSmFixture(liveBundleFixture, channelMatchId)
+      : []
+    setRows((prev) =>
+      liveStatRowsSignature(prev) === liveStatRowsSignature(nextRows) ? prev : nextRows,
+    )
+    setTimeline((prev) =>
+      highlightIdsSignature(prev) === highlightIdsSignature(nextTimeline) ? prev : nextTimeline,
+    )
     setLoading(false)
   }, [liveBundleFixture, channelMatchId])
 

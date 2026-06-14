@@ -1022,9 +1022,10 @@ export function ChannelPage() {
   )
 
   useEffect(() => {
+    if (status === 'live') return
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
-  }, [])
+  }, [status])
   const [witnessedFinishedAtMs, setWitnessedFinishedAtMs] = useState<number | null>(null)
   const prevMatchStatusRef = useRef(status)
   useEffect(() => {

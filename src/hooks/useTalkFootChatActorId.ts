@@ -44,7 +44,7 @@ export function useTalkFootChatActorId(): string | null {
     return () => {
       cancelled = true
     }
-  }, [authUser?.id, authUser?.displayName, ensureCloudSession])
+  }, [authUser?.id, ensureCloudSession])
 
   return actorId
 }
