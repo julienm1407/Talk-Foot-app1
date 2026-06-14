@@ -844,9 +844,10 @@ export function ChannelPage() {
       minute,
       liveClockPaused: liveSnapshot.paused,
       liveInSecondHalf: liveSnapshot.inSecondHalf,
+      livePeriodTicking: liveBundleFixture ? livePeriodTickingFromSmFixture(liveBundleFixture) : match.livePeriodTicking,
       score: liveSnapshot.score ?? match.score,
     }
-  }, [match, liveSnapshot])
+  }, [match, liveSnapshot, liveBundleFixture])
   useEffect(() => {
     const fromBundle = liveSnapshot?.score
     const fromMatch = match?.score

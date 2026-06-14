@@ -37,6 +37,7 @@ export {
   livePeriodTickingFromSmFixture,
   liveSecondHalfFromSmFixture,
 } from './transformSportMonksToMatch'
+export { normalizeSmFixtureIncludes, smIncludeRows } from './normalizeSmFixtureIncludes'
 export {
   findLastFinishedClubMatchFromTeamLatest,
   findNextClubMatchFromSchedule,

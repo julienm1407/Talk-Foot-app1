@@ -30,9 +30,12 @@ const MAX_PAGES = 30
 const liveBundleInflight = new Map<number, Promise<SmFixture | null>>()
 
 function asFixtureArray(data: unknown): SmFixture[] {
-  if (Array.isArray(data)) return data as SmFixture[]
-  if (data && typeof data === 'object' && 'id' in data) return [data as SmFixture]
-  return []
+  const raw: SmFixture[] = []
+  if (Array.isArray(data)) raw.push(...(data as SmFixture[]))
+  else if (data && typeof data === 'object' && 'id' in data) raw.push(data as SmFixture)
+  return raw
+    .map((fx) => normalizeSmFixtureIncludes(fx))
+    .filter((fx): fx is SmFixture => Boolean(fx))
 }
 
 /** Matchs en cours (rafraîchissement recommandé ~30–60 s). */

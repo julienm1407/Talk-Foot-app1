@@ -11,6 +11,10 @@ import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 const LIVE_STATE_IDS = new Set([2, 3, 4, 6, 9, 21, 22, 25])
 const FINISHED_STATE_IDS = new Set([5, 7, 8, 10, 12, 14, 15, 17])
 
+function asClockFixture(f: SmFixture): SmFixture {
+  return normalizeSmFixtureIncludes(f) ?? f
+}
+
 export function inferCompIdFromLeague(league?: SmLeague | null): string {
   return inferTalkFootCompIdFromSmLeague(league)
 }
@@ -46,19 +50,21 @@ function minuteFromPeriods(f: SmFixture): number | null {
 }
 
 export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
-  const periods = f.periods
+  const fx = asClockFixture(f)
+  const periods = fx.periods
   if (!Array.isArray(periods)) return false
   return periods.some((p) => Boolean(p?.ticking))
 }
 
 /** 2e période en cours (pour afficher 46' vs 45+1). */
 export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
-  if (liveClockPausedFromSmFixture(f)) {
-    const sid = stateIdOf(f)
+  const fx = asClockFixture(f)
+  if (liveClockPausedFromSmFixture(fx)) {
+    const sid = stateIdOf(fx)
     return sid != null && SECOND_HALF_STATE_IDS.has(sid)
   }
 
-  const periods = f.periods
+  const periods = fx.periods
   if (Array.isArray(periods) && periods.length) {
     const ticking = periods.find((p) => p?.ticking)
     const ref = ticking ?? periods[periods.length - 1]
@@ -69,44 +75,46 @@ export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
     }
   }
 
-  const sid = stateIdOf(f)
+  const sid = stateIdOf(fx)
   if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return true
   if (sid === 3) return false
 
-  const total = minuteFromFixture(f)
+  const total = minuteFromFixture(fx)
   return total > 50
 }
 
 /** Mi-temps / pause : calé sur SportMonks (périodes + état), sans extrapolation client. */
 export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
-  const sid = stateIdOf(f)
-  const blob = `${f.state?.developer_name ?? ''} ${f.state?.state ?? ''}`.toUpperCase()
+  const fx = asClockFixture(f)
+  const sid = stateIdOf(fx)
+  const blob = `${fx.state?.developer_name ?? ''} ${fx.state?.state ?? ''}`.toUpperCase()
 
-  if (Array.isArray(f.periods) && f.periods.some((p) => p?.ticking)) return false
+  if (Array.isArray(fx.periods) && fx.periods.some((p) => p?.ticking)) return false
+
+  if (sid === 3) return true
 
   if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
-    const apiMin = typeof f.minute === 'number' ? f.minute : minuteFromPeriods(f)
+    const apiMin = typeof fx.minute === 'number' ? fx.minute : minuteFromPeriods(fx)
     if (apiMin != null && apiMin >= 46) return false
   }
 
-  if (blob.includes('HT') || blob.includes('HALF')) {
+  if (blob.includes('HT') || blob.includes('HALF') || blob.includes('BREAK')) {
     if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
     return true
   }
-  if (sid === 3) return true
 
   /** Fin 1re période, horloge arrêtée → mi-temps (même si le libellé HT tarde). */
-  if (Array.isArray(f.periods) && f.periods.length > 0) {
-    if (f.periods.some((p) => Boolean(p?.ticking) && typeof p.counts_from === 'number' && p.counts_from >= 45)) {
+  if (Array.isArray(fx.periods) && fx.periods.length > 0) {
+    if (fx.periods.some((p) => Boolean(p?.ticking) && typeof p.counts_from === 'number' && p.counts_from >= 45)) {
       return false
     }
     if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
 
-    const maxTotal = f.periods.reduce((acc, p) => {
+    const maxTotal = fx.periods.reduce((acc, p) => {
       const t = periodMinuteTotal(p)
       return t != null ? Math.max(acc, t) : acc
     }, 0)
-    if (maxTotal >= 45) return true
+    if (maxTotal >= 45 && (sid == null || sid === 2 || sid === 3)) return true
   }
 
   return false
@@ -286,17 +294,17 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
 }
 
 function minuteFromFixture(f: SmFixture): number {
-  const fromPeriods = minuteFromPeriods(f)
+  const fx = asClockFixture(f)
+  const fromPeriods = minuteFromPeriods(fx)
   if (fromPeriods != null) return fromPeriods
-  if (typeof f.minute === 'number' && f.minute >= 0) return f.minute
+  if (typeof fx.minute === 'number' && fx.minute >= 0) return fx.minute
   /** Pas d’estimation depuis starting_at (retard / mi-temps ≠ horloge réelle). */
   return 0
 }
 
 /** Minute affichée (période / `fixture.minute`) pour caler l’encart sur le live SM. */
 export function extractLiveMinuteFromSmFixture(f: SmFixture): number {
-  const fx = normalizeSmFixtureIncludes(f) ?? f
-  return minuteFromFixture(fx)
+  return minuteFromFixture(f)
 }
 
 function getTeam(
@@ -345,7 +353,8 @@ function getTeam(
 
 /** Convertit une fixture / livescore SportMonks en `Match` interne. */
 export function smFixtureToMatch(f: SmFixture): Match {
-  const lg = leagueForInfer(f)
+  const fx = asClockFixture(f)
+  const lg = leagueForInfer(fx)
   const compId = inferCompIdFromLeague(lg)
   const comp = COMP_NAMES[compId] ?? {
     name: lg?.name ?? f.league?.name ?? 'Compétition',
@@ -355,29 +364,29 @@ export function smFixtureToMatch(f: SmFixture): Match {
       .slice(0, 5)
       .toUpperCase() || '?',
   }
-  const { home: hn, away: an, homeSmId, awaySmId, homeLogoUrl, awayLogoUrl } = namesFromParticipants(f)
+  const { home: hn, away: an, homeSmId, awaySmId, homeLogoUrl, awayLogoUrl } = namesFromParticipants(fx)
   const home = getTeam(compId, hn, homeSmId, homeLogoUrl)
   const away = getTeam(compId, an, awaySmId, awayLogoUrl)
-  const statusFromProvider = smStatus(f)
-  const id = `m-sm-${f.id}`
-  const kickoffAt = startingAtIso(f)
+  const statusFromProvider = smStatus(fx)
+  const id = `m-sm-${fx.id}`
+  const kickoffAt = startingAtIso(fx)
   const kickoffMs = Date.parse(kickoffAt)
   const nowMs = Date.now()
   const hasFutureKickoff = Number.isFinite(kickoffMs) && kickoffMs > nowMs + 60_000
   // Garde-fou: certaines fixtures SM peuvent exposer un état "finished" alors que
   // la date de coup d'envoi est encore future; on évite d'afficher un faux "Terminé".
   const status = hasFutureKickoff && statusFromProvider === 'finished' ? 'upcoming' : statusFromProvider
-  const score = goalsFromScores(f.scores)
+  const score = goalsFromScores(fx.scores)
 
   const roundId =
-    typeof f.round?.id === 'number'
-      ? f.round.id
-      : typeof f.round_id === 'number'
-        ? f.round_id
+    typeof fx.round?.id === 'number'
+      ? fx.round.id
+      : typeof fx.round_id === 'number'
+        ? fx.round_id
         : undefined
-  const roundName = f.round?.name?.trim() || undefined
-  const stageName = f.stage?.name?.trim() || undefined
-  const venueName = f.venue?.name?.trim() || undefined
+  const roundName = fx.round?.name?.trim() || undefined
+  const stageName = fx.stage?.name?.trim() || undefined
+  const venueName = fx.venue?.name?.trim() || undefined
 
   const base: Match = {
     id,
@@ -387,7 +396,7 @@ export function smFixtureToMatch(f: SmFixture): Match {
     kickoffAt,
     status,
     provider: 'sportmonks',
-    sportMonksFixtureId: f.id,
+    sportMonksFixtureId: fx.id,
     ...(roundId != null ? { sportMonksRoundId: roundId } : {}),
     ...(roundName ? { roundName } : {}),
     ...(stageName ? { stageName } : {}),
@@ -397,10 +406,11 @@ export function smFixtureToMatch(f: SmFixture): Match {
   if (status === 'live') {
     return localizeMatchTeams({
       ...base,
-      minute: minuteFromFixture(f),
+      minute: minuteFromFixture(fx),
       score: score ?? { home: 0, away: 0 },
-      liveClockPaused: liveClockPausedFromSmFixture(f),
-      liveInSecondHalf: liveSecondHalfFromSmFixture(f),
+      liveClockPaused: liveClockPausedFromSmFixture(fx),
+      liveInSecondHalf: liveSecondHalfFromSmFixture(fx),
+      livePeriodTicking: livePeriodTickingFromSmFixture(fx),
     })
   }
   if (status === 'finished' && score) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchTalkFootLiveBundleFixture, type SmFixture } from '../api/sportMonks'
+import { fetchTalkFootLiveBundleFixture, normalizeSmFixtureIncludes, type SmFixture } from '../api/sportMonks'
 
 type MatchStatus = 'upcoming' | 'live' | 'finished'
 
@@ -44,7 +44,7 @@ function ensureTransport(fixtureId: number, status: MatchStatus) {
       es.addEventListener('fixture', (ev) => {
         try {
           const msg = JSON.parse((ev as MessageEvent).data) as { fixture?: SmFixture | null }
-          ch.fixture = (msg?.fixture as SmFixture | null) ?? null
+          ch.fixture = normalizeSmFixtureIncludes((msg?.fixture as SmFixture | null) ?? null)
           broadcast(ch)
         } catch {
           // ignore parse issues, polling stays active

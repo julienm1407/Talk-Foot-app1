@@ -27,6 +27,15 @@ describe('live clock from SportMonks fixture', () => {
     expect(liveSecondHalfFromSmFixture(fx)).toBe(false)
   })
 
+  it('detecte mi-temps avec periods imbriques dans data', () => {
+    const fx = {
+      state: { id: 2, developer_name: 'INPLAY_1ST_HALF' },
+      periods: { data: [{ ticking: false, counts_from: 0, minutes: 47 }] },
+    } as unknown as SmFixture
+    expect(extractLiveMinuteFromSmFixture(fx)).toBe(47)
+    expect(liveClockPausedFromSmFixture(fx)).toBe(true)
+  })
+
   it('reprend en 2e période quand la période ticking repart à 45', () => {
     const fx = {
       state: { id: 22, developer_name: 'INPLAY_2ND_HALF' },

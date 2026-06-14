@@ -36,6 +36,8 @@ export type Match = {
   liveClockPaused?: boolean
   /** 2e période (SM) — distingue 46' de 45+1 en temps additionnel 1re mi-temps. */
   liveInSecondHalf?: boolean
+  /** Horloge SM en cours (période `ticking`) — pas de défilement client si false. */
+  livePeriodTicking?: boolean
   /** Journée / tour (SportMonks `round.name`) — calendrier CDM. */
   roundName?: string
   /** Phase (SportMonks `stage.name`) — ex. groupe A, huitièmes. */
