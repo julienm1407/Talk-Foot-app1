@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react'
-import { useSession } from '@clerk/clerk-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -10,12 +9,11 @@ import { ensureTalkFootBoundSupabaseSession } from '../lib/supabase/talkfootSess
  * Réutilise le dernier clerkSessionId connu pendant un refresh token Clerk.
  */
 export function useTalkFootCloudSession() {
-  const { user } = useAuth()
-  const { session } = useSession()
-  const clerkSessionIdRef = useRef<string | null>(session?.id ?? null)
+  const { user, clerkSessionId } = useAuth()
+  const clerkSessionIdRef = useRef<string | null>(clerkSessionId)
 
-  if (session?.id) {
-    clerkSessionIdRef.current = session.id
+  if (clerkSessionId) {
+    clerkSessionIdRef.current = clerkSessionId
   }
 
   const ensureCloudSession = useCallback(async () => {

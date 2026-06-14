@@ -227,6 +227,9 @@ export default defineConfig(({ mode }) => {
   if (siteUrl) plugins.push(tfSitemapRobotsPlugin(outDir, siteUrl, publicPathPrefix))
 
   return {
+    resolve: {
+      dedupe: ['react', 'react-dom', '@clerk/clerk-react', '@clerk/shared'],
+    },
     define: {
       /** Exposé au client pour diagnostiquer « clé absente » après déploiement (sans révéler le jeton). */
       __TF_BUILD_HAS_SM_TOKEN__: JSON.stringify(buildHasSmToken),

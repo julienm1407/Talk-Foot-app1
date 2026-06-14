@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useSession } from '@clerk/clerk-react'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
@@ -86,8 +85,8 @@ function ProfilePrivacyActionsInner({ clerkSessionId }: { clerkSessionId: string
 }
 
 function ProfilePrivacyActionsClerk() {
-  const { session } = useSession()
-  return <ProfilePrivacyActionsInner clerkSessionId={session?.id ?? null} />
+  const { clerkSessionId } = useAuth()
+  return <ProfilePrivacyActionsInner clerkSessionId={clerkSessionId} />
 }
 
 export function ProfilePrivacySection() {

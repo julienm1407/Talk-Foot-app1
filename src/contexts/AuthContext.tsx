@@ -1,6 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
-import { useAuth as useClerkAuth, useClerk, useSignIn, useSignUp, useUser } from '@clerk/clerk-react'
+import {
+  useAuth as useClerkAuth,
+  useClerk,
+  useSignIn,
+  useSignUp,
+  useSession,
+  useUser,
+} from '@clerk/clerk-react'
 import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -65,6 +72,8 @@ export type PasswordResetRequestResult =
   | { status: 'error'; message: string }
 
 export type AuthContextValue = AuthState & {
+  /** Session Clerk active (stable pendant refresh token). Null hors mode Clerk. */
+  clerkSessionId: string | null
   login: (user: AuthUser) => void
   /** Connexion par email ou pseudo + mot de passe. */
   loginWithEmail: (identifier: string, password: string) => Promise<LoginEmailResult>
@@ -342,6 +351,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     ...state,
+    clerkSessionId: null,
     login,
     loginWithEmail,
     signUpWithEmail,
@@ -356,6 +366,19 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+const CLERK_TOUCH_MS = 5 * 60 * 1000
+const CLERK_TOKEN_REFRESH_MS = 10 * 60 * 1000
+const SUPABASE_REFRESH_MS = 45 * 60 * 1000
+
+async function refreshSupabaseSessionIfPresent(): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  const sb = getSupabaseBrowserClient()
+  if (!sb) return
+  const { data: sessionWrap } = await sb.auth.getSession()
+  if (!sessionWrap.session) return
+  await sb.auth.refreshSession()
 }
 
 function SupabaseAuthProvider({ children }: { children: ReactNode }) {
@@ -600,8 +623,31 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  useEffect(() => {
+    if (!state.user) return
+
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible') return
+      try {
+        await refreshSupabaseSessionIfPresent()
+      } catch {
+        /* ignore */
+      }
+    }
+
+    void refresh()
+    const interval = window.setInterval(() => void refresh(), SUPABASE_REFRESH_MS)
+    const onVisible = () => void refresh()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [state.user?.id])
+
   const value: AuthContextValue = {
     ...state,
+    clerkSessionId: null,
     login,
     loginWithEmail,
     signUpWithEmail,
@@ -642,13 +688,70 @@ function isEmailNotVerifiedMessage(code?: string | null, message?: string | null
 function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded: userLoaded } = useUser()
   const { isSignedIn, userId, isLoaded: clerkAuthLoaded } = useClerkAuth()
+  const { session } = useSession()
   const clerk = useClerk()
   const { isLoaded: signInLoaded, signIn, setActive: setSignInActive } = useSignIn()
   const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp()
   const [authNotice, setAuthNotice] = useState<string | null>(null)
   const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
   const stableUserRef = useRef<AuthUser | null>(null)
+  const clerkSessionIdRef = useRef<string | null>(session?.id ?? null)
   const isLoaded = clerkAuthLoaded && userLoaded && signInLoaded && signUpLoaded
+
+  if (session?.id) {
+    clerkSessionIdRef.current = session.id
+  } else if (!isSignedIn) {
+    clerkSessionIdRef.current = null
+  }
+
+  const clerkSessionId = isSignedIn ? (session?.id ?? clerkSessionIdRef.current) : null
+
+  useEffect(() => {
+    if (!isSignedIn || !session) return
+
+    const lastTouchRef = { current: 0 }
+    const lastTokenRef = { current: 0 }
+    const lastSupabaseRefreshRef = { current: 0 }
+
+    const runKeepAlive = async (force = false) => {
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      try {
+        if (force || now - lastTouchRef.current >= CLERK_TOUCH_MS) {
+          await session.touch()
+          lastTouchRef.current = now
+        }
+        if (force || now - lastTokenRef.current >= CLERK_TOKEN_REFRESH_MS) {
+          await session.getToken()
+          lastTokenRef.current = now
+        }
+        if (force || now - lastSupabaseRefreshRef.current >= SUPABASE_REFRESH_MS) {
+          await refreshSupabaseSessionIfPresent()
+          lastSupabaseRefreshRef.current = now
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    void runKeepAlive(true)
+    const interval = window.setInterval(() => void runKeepAlive(), 60_000)
+    const onVisible = () => void runKeepAlive(true)
+    const onActivity = () => {
+      if (Date.now() - lastTouchRef.current >= CLERK_TOUCH_MS) void runKeepAlive()
+    }
+
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pointerdown', onActivity, { passive: true })
+    window.addEventListener('keydown', onActivity, { passive: true })
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pointerdown', onActivity)
+      window.removeEventListener('keydown', onActivity)
+    }
+  }, [isSignedIn, session])
 
   const mappedUser: AuthUser | null = useMemo(() => {
     if (!isSignedIn || !userId) {
@@ -824,6 +927,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user: mappedUser,
     isReady: isLoaded,
+    clerkSessionId,
     login,
     loginWithEmail,
     signUpWithEmail,
