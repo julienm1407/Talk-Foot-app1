@@ -14,6 +14,7 @@ import { levelFromXp, getLevelTier, xpPerLevel } from '../data/shop'
 import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../data/characterPresets'
 import { defaultUserProfile } from '../data/userAppStateDefaults'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
+import { useAuth } from '../contexts/AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { resolveAvatarLoadout, styleCatalog } from '../data/avatar2dCatalog'
 import {
@@ -24,6 +25,7 @@ import {
 } from '../features/avatar2d/modularAvatarState'
 import { isBoutiqueShopItemOwned, repairPackOwnedItemIds } from '../data/boutiqueEconomy'
 import { sanitizeModularGarmentAccess } from '../utils/modularGarmentAccess'
+import { writeModularAvatarBackup } from '../utils/modularAvatarBackup'
 import { XP_REWARDS } from '../data/xpRewards'
 import { isXpEventCredited, markXpEventCredited, xpDedupeKey } from '../utils/xpGrant'
 
@@ -140,6 +142,7 @@ function isUserProfileStored(p: unknown): boolean {
 
 export function useProfile() {
   const cloud = useOptionalCloudUserState()
+  const { user: authUser } = useAuth()
   const persistLocal = !isSupabaseConfigured()
   const [localProfile, setLocalProfileRaw] = useLocalStorageState<UserProfile>(
     PROFILE_STORAGE_KEY,
@@ -372,14 +375,18 @@ export function useProfile() {
           updater(resolveModularAvatarState(p.modularAvatar)),
           owned,
         )
+        const modularAvatar = sanitizeModularAvatarState(next)
+        if (authUser?.id) {
+          writeModularAvatarBackup(authUser.id, modularAvatar)
+        }
         return {
           ...p,
-          modularAvatar: sanitizeModularAvatarState(next),
+          modularAvatar,
         }
       })
       scheduleProfileCloudFlush()
     },
-    [setProfileStore, scheduleProfileCloudFlush],
+    [authUser?.id, setProfileStore, scheduleProfileCloudFlush],
   )
 
   const setProfilePhotoDataUrl = useCallback(

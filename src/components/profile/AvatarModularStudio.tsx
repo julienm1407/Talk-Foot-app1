@@ -365,7 +365,8 @@ export function AvatarModularStudio() {
 
   const persistAvatar = useCallback(() => {
     if (!cloud?.flushAppSave) {
-      markSaved()
+      setSaveStatus('error')
+      setSaveError('Connexion cloud indisponible — recharge la page.')
       return
     }
     setSaveStatus('saving')

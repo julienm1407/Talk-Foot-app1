@@ -16,7 +16,7 @@ import {
   mergeUserAppState,
   type UserAppStateV1,
 } from '../data/userAppStateDefaults'
-import { coerceModularAvatarFromStored } from '../features/avatar2d/modularAvatarState'
+import { coerceModularAvatarFromStored, resolveModularAvatarState } from '../features/avatar2d/modularAvatarState'
 import { normalizeWallet } from '../utils/walletNormalize'
 import type { FanPreferencesStoredShape } from '../types/fanPreferences'
 import { isTalkFootOAuthProvider } from '../config/oauthProviders'
@@ -27,10 +27,15 @@ import { changeDisplayNameCloud, checkDisplayNameAvailabilityCloud } from '../li
 import {
   ensureTalkfootProfile,
   fetchTalkfootProfileSnapshot,
+  saveTalkfootProfileAppState,
   saveTalkfootProfileAppStateWithChatSync,
 } from '../lib/supabase/profileAppState'
 import { bindTalkfootActorSession } from '../lib/supabase/bindTalkfootActorSession'
 import { clearChatAuthorAvatarCache } from '../hooks/useChatAuthorModularAvatars'
+import {
+  mergeModularAvatarBackupIntoApp,
+  writeModularAvatarBackup,
+} from '../utils/modularAvatarBackup'
 import { useAuth } from './AuthContext'
 
 type CloudUserStateValue = {
@@ -148,11 +153,23 @@ function CloudUserStateLoader({
     const sb = getSupabaseBrowserClient()
     if (!sb || !user?.id) return { ok: false, error: 'no_session' }
     try {
+      await ensureTalkFootSupabaseSession(sb)
+
+      if (isClerkAuthMode()) {
+        if (!clerkSessionId) return { ok: false, error: 'missing_clerk_session' }
+        const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
+        if (!bindResult.ok) return { ok: false, error: bindResult.error ?? 'bind_failed' }
+      }
+
       await saveTalkfootProfileAppStateWithChatSync(
         sb,
         user.id,
         appRef.current,
         ocRef.current,
+      )
+      writeModularAvatarBackup(
+        user.id,
+        resolveModularAvatarState(appRef.current.profile.modularAvatar),
       )
       clearChatAuthorAvatarCache()
       return { ok: true }
@@ -161,7 +178,10 @@ function CloudUserStateLoader({
       console.error('[Talk Foot] Sauvegarde profil cloud:', message)
       return { ok: false, error: message }
     }
-  }, [user?.id])
+  }, [user?.id, clerkSessionId])
+
+  const flushSaveRef = useRef(flushSave)
+  flushSaveRef.current = flushSave
 
   const cancelScheduledSave = useCallback(() => {
     if (saveTimerRef.current) {
@@ -214,13 +234,24 @@ function CloudUserStateLoader({
       setLoadError(null)
       const displayName = user.displayName?.trim() || user.email?.split('@')[0] || 'Supporter'
 
-      const applySnapshot = (appState: unknown, onboardingComplete: boolean, oauthCompleted: boolean) => {
-        if (!hasLocalEditsRef.current) {
-          setApp(mergeUserAppState(appState))
-          setOnboardingCompleteCol(onboardingComplete)
-          setOauthNeedsProfile(!oauthCompleted)
+      const applySnapshot = (
+        appState: unknown,
+        onboardingComplete: boolean,
+        oauthCompleted: boolean,
+      ): boolean => {
+        if (hasLocalEditsRef.current) {
+          setReady(true)
+          return false
         }
+        let merged = mergeUserAppState(appState)
+        const restored = mergeModularAvatarBackupIntoApp(user.id, merged)
+        merged = restored.app
+        setApp(merged)
+        appRef.current = merged
+        setOnboardingCompleteCol(onboardingComplete)
+        setOauthNeedsProfile(!oauthCompleted)
         setReady(true)
+        return restored.restoredFromBackup
       }
 
       let lastErr: unknown = null
@@ -253,19 +284,33 @@ function CloudUserStateLoader({
           }
 
           if (cancelled) return
-          applySnapshot(snapshot.appState, snapshot.onboardingComplete, snapshot.oauthProfileCompleted)
+          const restoredFromBackup = applySnapshot(
+            snapshot.appState,
+            snapshot.onboardingComplete,
+            snapshot.oauthProfileCompleted,
+          )
 
-          if (!hasLocalEditsRef.current && !cancelled) {
+          if (restoredFromBackup && !cancelled) {
             try {
-              await saveTalkfootProfileAppStateWithChatSync(
-                sb,
-                user.id,
-                mergeUserAppState(snapshot.appState),
-                snapshot.onboardingComplete,
-              )
-              clearChatAuthorAvatarCache()
+              await flushSaveRef.current()
             } catch (syncErr) {
-              console.warn('[Talk Foot] Sync profil chat actor:', syncErr)
+              console.warn('[Talk Foot] Reprise avatar local → cloud:', syncErr)
+            }
+          } else if (!hasLocalEditsRef.current && !cancelled) {
+            try {
+              const merged = mergeUserAppState(snapshot.appState)
+              const { data: sessionWrap } = await sb.auth.getSession()
+              const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
+              if (chatActorId && chatActorId !== user.id) {
+                await saveTalkfootProfileAppState(
+                  sb,
+                  chatActorId,
+                  merged,
+                  snapshot.onboardingComplete,
+                )
+              }
+            } catch (syncErr) {
+              console.warn('[Talk Foot] Sync profil chat actor au chargement:', syncErr)
             }
           }
 
