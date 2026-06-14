@@ -2924,22 +2924,25 @@ export function ChannelPage() {
                 </p>
               </div>
             </div>
-            {animationNotice ? (
-              <div className="mt-2 rounded-lg bg-[#8b7bff]/16 px-2 py-1 text-[11px] font-semibold text-[#ece8ff]">
-                {animationNotice}
-              </div>
-            ) : (
-              <div className="mt-2 min-h-0" aria-hidden />
-            )}
             <ChannelSubscriptionExtras
               matchId={match?.id}
               isLive={status === 'live'}
               light={L}
             />
             <ChannelPrivateSalonGate matchId={match?.id} light={L}>
+            <div className="relative mt-1.5">
+              {animationNotice ? (
+                <div
+                  className="pointer-events-none absolute inset-x-1 top-1 z-20 rounded-lg border border-[#8b7bff]/45 bg-[#0a1f35]/92 px-2 py-1 text-center text-[11px] font-semibold text-[#ece8ff] shadow-[0_8px_24px_rgba(2,12,28,0.45)] backdrop-blur-sm motion-safe:animate-[tf-fx-toast-in_220ms_ease-out]"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {animationNotice}
+                </div>
+              ) : null}
             <div
               className={cn(
-                'tf-chat-scroll mt-1.5 space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
+                'tf-chat-scroll space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
                 isUpcoming
                   ? 'h-[min(28dvh,190px)] sm:h-[min(32dvh,210px)] md:min-h-0 md:flex-1 md:h-auto md:max-h-none'
                   : 'h-[200px] sm:h-[240px] md:h-[min(52vh,480px)]',
@@ -3012,6 +3015,7 @@ export function ChannelPage() {
                   <div ref={chatBottomRef} />
                 </>
               )}
+            </div>
             </div>
             <form
               onSubmit={onSend}

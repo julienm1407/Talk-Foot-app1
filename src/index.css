@@ -2189,6 +2189,17 @@ body::before {
   pointer-events: none;
 }
 
+@keyframes tf-fx-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* GOAL overlay */
 @keyframes tf-goal-bg {
   0% {
