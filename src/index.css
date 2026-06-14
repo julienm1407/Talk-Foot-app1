@@ -2750,6 +2750,52 @@ body::before {
   isolation: isolate;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  contain: layout style;
+}
+
+/* Fumigène : overlay au-dessus du score/chat — pas de mix-blend sur le fond */
+.tf-paid-flare-stack {
+  contain: paint;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+.tf-paid-fx-portal .tf-flare-particle,
+.tf-paid-fx-portal .tf-flare-plume,
+.tf-paid-fx-portal .tf-flare-screen-pulse {
+  mix-blend-mode: normal;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.tf-paid-fx-portal .tf-flare-plume,
+.tf-paid-fx-portal .tf-flare-particle {
+  will-change: transform, opacity;
+}
+
+@keyframes tf-flare-screen-pulse-paid {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.34;
+  }
+  22% {
+    opacity: 0.2;
+  }
+  45% {
+    opacity: 0.06;
+  }
+}
+
+.tf-paid-fx-portal .tf-flare-screen-pulse {
+  animation: tf-flare-screen-pulse-paid 3.2s ease-out forwards;
+}
+
+.tf-paid-fx-portal .tf-flare-plume--center {
+  filter: blur(22px);
 }
 
 .tf-paid-fx-portal .tf-confetti {
@@ -2774,8 +2820,12 @@ body::before {
     max-width: none;
     height: 88%;
     bottom: -8%;
-    filter: blur(26px);
+    filter: blur(18px);
     animation-duration: 4s;
+  }
+
+  .tf-paid-fx-portal .tf-flare-plume {
+    filter: blur(14px);
   }
 
   .tf-flare-particle {
@@ -2784,6 +2834,13 @@ body::before {
     margin-left: -75px;
     bottom: 4%;
     animation-duration: 3.4s;
+  }
+
+  .tf-paid-fx-portal .tf-flare-particle {
+    width: 100px;
+    height: 100px;
+    margin-left: -50px;
+    filter: blur(10px);
   }
 
   .tf-flare-screen-pulse {

@@ -257,7 +257,7 @@ function PaidFlareBurst({ seed, color }: { seed: number; color: FlareColor }) {
       const x = Math.sin(seed * 8888 + n * 24680) * 10000
       return x - Math.floor(x)
     }
-    return Array.from({ length: 36 }, (_, i) => ({
+    return Array.from({ length: 28 }, (_, i) => ({
       id: i,
       left: `${6 + rand(i) * 88}%`,
       x: (rand(i + 17) - 0.5) * 260,
@@ -266,7 +266,10 @@ function PaidFlareBurst({ seed, color }: { seed: number; color: FlareColor }) {
   }, [seed])
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+    <div
+      className="tf-paid-flare-stack pointer-events-none absolute inset-0 overflow-hidden"
+      aria-hidden
+    >
       <div
         className="tf-flare-screen-pulse"
         style={{ background: flareScreenTint(color) }}
