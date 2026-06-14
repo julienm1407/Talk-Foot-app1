@@ -93,7 +93,7 @@ export function GroupTifoPanel({
     isGroupAdmin,
   })
 
-  const [color, setColor] = useState(palette[3]!)
+  const [color, setColor] = useState(palette[2]!)
 
   if (!activeId) {
     return (
