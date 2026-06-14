@@ -16,7 +16,11 @@ import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAva
 import { resolveChatDisplayLabel } from '../../utils/chatDisplayName'
 import { MessageList } from '../channel/MessageList'
 import { MessageComposer } from '../channel/MessageComposer'
-import { MobileChatComposerDock } from '../channel/MobileChatComposerDock'
+import {
+  MobileChatComposerDock,
+  MOBILE_CHAT_COMPOSER_DOCK_HEIGHT,
+} from '../channel/MobileChatComposerDock'
+import { DEFAULT_GROUP_QUICK_EMOTES } from '../../data/groupSalonPresets'
 import { Button } from '../ui/Button'
 import { Card } from '../ui/Card'
 import { debateMessageGroupId } from '../../utils/debateAccess'
@@ -283,15 +287,15 @@ export function DebateSalonPanel({
     <Card
       className={cn(
         'flex min-h-0 flex-col overflow-hidden p-0',
-        'max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[auto_minmax(0,1fr)_auto]',
-        'max-lg:min-h-[min(62dvh,34rem)] lg:min-h-[min(78dvh,48rem)] lg:flex-1',
+        'max-lg:grid max-lg:h-full max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[minmax(0,1fr)_auto]',
+        'lg:min-h-[min(78dvh,48rem)] lg:flex-1',
         className,
       )}
       elevation="soft"
     >
       <div
         className={cn(
-          'shrink-0 border-b px-4 py-3 sm:px-5 max-lg:row-start-1 max-lg:px-3 max-lg:py-2',
+          'shrink-0 border-b px-4 py-3 sm:px-5 max-lg:hidden',
           L ? 'border-tf-grey-pastel/50 bg-white/95' : 'border-white/12 bg-[color:var(--tf-c30-surface-soft)]',
         )}
       >
@@ -305,7 +309,11 @@ export function DebateSalonPanel({
 
       <div
         ref={feedRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3 sm:px-4 max-lg:row-start-2 max-lg:min-h-[min(48dvh,26rem)] [-webkit-overflow-scrolling:touch]"
+        className={cn(
+          'min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-4 sm:py-3',
+          'max-lg:relative max-lg:z-0 max-lg:row-start-1 max-lg:scroll-pb-28 lg:flex-1 lg:scroll-pb-3',
+        )}
+        style={{ scrollPaddingBottom: MOBILE_CHAT_COMPOSER_DOCK_HEIGHT }}
         role="log"
         aria-label="Messages du débat"
         aria-live="polite"
@@ -345,11 +353,12 @@ export function DebateSalonPanel({
             }
           />
         )}
+        <div className="h-3 lg:hidden" aria-hidden />
       </div>
 
       <MobileChatComposerDock
-        gridRowClassName="max-lg:row-start-3"
-        className={composerShellClass}
+        gridRowClassName="max-lg:row-start-2"
+        className={cn(composerShellClass, 'min-w-0 touch-manipulation backdrop-blur-md')}
         ariaLabel="Écrire dans le débat"
       >
         {!authUser?.id || authUser.isAnonymous ? (
@@ -374,6 +383,8 @@ export function DebateSalonPanel({
               onSend={(text) => void onSend(text)}
               placeholder="Ton argument, ton avis…"
               richMedia={false}
+              quickEmotes={DEFAULT_GROUP_QUICK_EMOTES}
+              onQuickEmote={(text) => void onSend(text)}
             />
           </>
         )}

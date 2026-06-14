@@ -102,3 +102,23 @@ export async function saveTalkfootProfileAppState(
     throw rpcFailed(String(data?.error ?? 'save_failed'))
   }
 }
+
+/**
+ * Comptes Clerk : le profil vit sous `clerk_id`, mais le chat tribune utilise
+ * `auth.uid()` (session Supabase). On duplique l'état sur les deux lignes.
+ */
+export async function saveTalkfootProfileAppStateWithChatSync(
+  sb: SupabaseClient,
+  actorKey: string,
+  appState: UserAppStateV1,
+  onboardingComplete: boolean,
+): Promise<void> {
+  const primary = actorKey.trim()
+  await saveTalkfootProfileAppState(sb, primary, appState, onboardingComplete)
+
+  const { data: sessionWrap } = await sb.auth.getSession()
+  const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
+  if (chatActorId && chatActorId !== primary) {
+    await saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete)
+  }
+}

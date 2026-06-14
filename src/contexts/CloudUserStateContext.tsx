@@ -27,9 +27,10 @@ import { changeDisplayNameCloud, checkDisplayNameAvailabilityCloud } from '../li
 import {
   ensureTalkfootProfile,
   fetchTalkfootProfileSnapshot,
-  saveTalkfootProfileAppState,
+  saveTalkfootProfileAppStateWithChatSync,
 } from '../lib/supabase/profileAppState'
 import { bindTalkfootActorSession } from '../lib/supabase/bindTalkfootActorSession'
+import { clearChatAuthorAvatarCache } from '../hooks/useChatAuthorModularAvatars'
 import { useAuth } from './AuthContext'
 
 type CloudUserStateValue = {
@@ -97,7 +98,21 @@ export function CloudUserStateGate({ children }: { children: ReactNode }) {
 }
 
 function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
-  const { session } = useSession()
+  const { session, isLoaded } = useSession()
+  if (!isLoaded) {
+    return (
+      <>
+        <div
+          className="border-b border-sky-200/80 bg-sky-50/95 px-4 py-1.5 text-center text-[11px] font-bold text-sky-950"
+          role="status"
+          aria-live="polite"
+        >
+          Synchronisation du compte…
+        </div>
+        {children}
+      </>
+    )
+  }
   return <CloudUserStateLoader clerkSessionId={session?.id ?? null}>{children}</CloudUserStateLoader>
 }
 
@@ -133,7 +148,13 @@ function CloudUserStateLoader({
     const sb = getSupabaseBrowserClient()
     if (!sb || !user?.id) return { ok: false, error: 'no_session' }
     try {
-      await saveTalkfootProfileAppState(sb, user.id, appRef.current, ocRef.current)
+      await saveTalkfootProfileAppStateWithChatSync(
+        sb,
+        user.id,
+        appRef.current,
+        ocRef.current,
+      )
+      clearChatAuthorAvatarCache()
       return { ok: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'rpc_save_failed'
@@ -174,6 +195,10 @@ function CloudUserStateLoader({
       setReady(true)
       return
     }
+    if (isClerkAuthMode() && !clerkSessionId) {
+      setReady(false)
+      return
+    }
     if (loadUserIdRef.current !== user.id) {
       loadUserIdRef.current = user.id
       hasLocalEditsRef.current = false
@@ -211,10 +236,7 @@ function CloudUserStateLoader({
             const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
             if (cancelled) return
             if (!bindResult.ok) {
-              setApp(defaultUserAppState())
               setLoadError(`Liaison session cloud échouée (${bindResult.error}). Recharge la page.`)
-              setOnboardingCompleteCol(false)
-              setOauthNeedsProfile(false)
               setReady(true)
               return
             }
@@ -232,6 +254,20 @@ function CloudUserStateLoader({
 
           if (cancelled) return
           applySnapshot(snapshot.appState, snapshot.onboardingComplete, snapshot.oauthProfileCompleted)
+
+          if (!hasLocalEditsRef.current && !cancelled) {
+            try {
+              await saveTalkfootProfileAppStateWithChatSync(
+                sb,
+                user.id,
+                mergeUserAppState(snapshot.appState),
+                snapshot.onboardingComplete,
+              )
+              clearChatAuthorAvatarCache()
+            } catch (syncErr) {
+              console.warn('[Talk Foot] Sync profil chat actor:', syncErr)
+            }
+          }
 
           if (!hasLocalEditsRef.current) {
             try {
@@ -263,7 +299,12 @@ function CloudUserStateLoader({
               const rawJson = JSON.stringify(snapshot.appState ?? {})
               const mergedJson = JSON.stringify(mergedApp)
               if (mergedModularOk && !mergedLostBets && rawJson !== mergedJson) {
-                await saveTalkfootProfileAppState(sb, user.id, mergedApp, snapshot.onboardingComplete)
+                await saveTalkfootProfileAppStateWithChatSync(
+                  sb,
+                  user.id,
+                  mergedApp,
+                  snapshot.onboardingComplete,
+                )
               }
             } catch (err) {
               console.warn('[Talk Foot] Migration app_state cloud:', err)
@@ -286,9 +327,6 @@ function CloudUserStateLoader({
         setLoadError(friendly)
         setReady(true)
         return
-      }
-      if (!hasLocalEditsRef.current) {
-        setApp(defaultUserAppState())
       }
       setLoadError(friendly)
       setOnboardingCompleteCol(false)

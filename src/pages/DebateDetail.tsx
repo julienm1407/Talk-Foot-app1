@@ -78,7 +78,9 @@ export function DebateDetailPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-1 flex-col gap-3 max-lg:overflow-hidden max-lg:gap-2 lg:space-y-6',
+        'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-clip',
+        'max-lg:h-full max-lg:gap-1 max-lg:overflow-hidden',
+        'lg:gap-3 lg:space-y-6',
       )}
       data-no-swipe="true"
     >
@@ -98,11 +100,14 @@ export function DebateDetailPage() {
       </div>
 
       <header
-        className="shrink-0 overflow-hidden rounded-2xl border border-orange-200/40 shadow-tf-card max-lg:rounded-xl"
+        className={cn(
+          'shrink-0 overflow-hidden rounded-2xl border border-orange-200/40 shadow-tf-card max-lg:rounded-xl',
+          'max-lg:max-h-[min(22dvh,9.25rem)] max-lg:overflow-y-auto max-lg:overscroll-y-contain',
+        )}
         style={{ ['--debate-accent' as string]: debate.accent }}
       >
         <div
-          className="relative px-4 py-4 sm:px-6 sm:py-6 max-lg:px-3 max-lg:py-2.5"
+          className="relative px-4 py-4 sm:px-6 sm:py-6 max-lg:px-2.5 max-lg:py-2"
           style={{
             background: `linear-gradient(155deg, ${debate.accent} 0%, color-mix(in srgb, ${debate.accent} 42%, #0a1628) 52%, #061018 100%)`,
           }}
@@ -115,18 +120,18 @@ export function DebateDetailPage() {
             aria-hidden
           />
           <div className="relative">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 max-lg:gap-1">
               {debate.trending ? (
-                <span className="inline-flex rounded-full bg-white/18 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white ring-1 ring-white/35">
+                <span className="inline-flex rounded-full bg-white/18 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/35 max-lg:px-1.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
                   🔥 Tendance
                 </span>
               ) : null}
-              <span className="inline-flex rounded-full bg-emerald-500/25 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-white ring-1 ring-emerald-300/40">
+              <span className="inline-flex rounded-full bg-emerald-500/25 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-emerald-300/40 max-lg:px-1.5 sm:px-2.5 sm:py-1 sm:text-[11px]">
                 Ouvert à tous
               </span>
               {linkedGroupId ? <DebateGroupBadge groupId={linkedGroupId} /> : null}
             </div>
-            <h1 className="mt-2 font-display text-xl font-black leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.55)] max-lg:line-clamp-3 sm:mt-3 sm:text-3xl sm:leading-[1.12]">
+            <h1 className="mt-1.5 font-display text-xl font-black leading-[1.15] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.4),0_1px_2px_rgba(0,0,0,0.55)] max-lg:line-clamp-2 max-lg:text-[0.95rem] sm:mt-3 sm:text-3xl sm:leading-[1.12]">
               {debate.title}
             </h1>
             <p
@@ -135,22 +140,23 @@ export function DebateDetailPage() {
                 'bg-black/35 ring-1 ring-white/15 backdrop-blur-[2px]',
                 '[text-shadow:0_1px_2px_rgba(0,0,0,0.65)]',
                 'sm:mt-3.5 sm:px-4 sm:py-3 sm:text-[0.9375rem] sm:leading-relaxed',
+                'max-lg:hidden',
               )}
             >
               {debate.excerpt}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-black sm:text-sm">
-              <span className="rounded-xl border border-white/30 bg-white/14 px-3 py-1.5 text-white/95 backdrop-blur-sm sm:px-4 sm:py-2">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black max-lg:mt-1.5 sm:mt-4 sm:gap-2 sm:text-sm">
+              <span className="rounded-lg border border-white/30 bg-white/14 px-2 py-1 text-white/95 backdrop-blur-sm sm:rounded-xl sm:px-4 sm:py-2">
                 👥 {debate.participantsCount.toLocaleString('fr-FR')} participants
               </span>
-              <span className="rounded-xl border border-white/30 bg-white/14 px-3 py-1.5 text-white/95 backdrop-blur-sm sm:px-4 sm:py-2">
+              <span className="rounded-lg border border-white/30 bg-white/14 px-2 py-1 text-white/95 backdrop-blur-sm sm:rounded-xl sm:px-4 sm:py-2">
                 💬 {debate.messagesCount.toLocaleString('fr-FR')} messages
               </span>
               {isSiteAdmin ? (
                 <button
                   type="button"
                   disabled={deleteBusy}
-                  className="rounded-xl border border-rose-300/50 bg-rose-500/25 px-3 py-1.5 text-white backdrop-blur-sm transition hover:bg-rose-500/40 disabled:opacity-60 sm:px-4 sm:py-2"
+                  className="rounded-lg border border-rose-300/50 bg-rose-500/25 px-2 py-1 text-white backdrop-blur-sm transition hover:bg-rose-500/40 disabled:opacity-60 max-lg:text-[10px] sm:rounded-xl sm:px-4 sm:py-2"
                   onClick={() => {
                     if (deleteBusy) return
                     const ok = window.confirm(

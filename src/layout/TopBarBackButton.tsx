@@ -17,7 +17,10 @@ export function TopBarBackButton({
   const L = appearance === 'light'
   const mobileTouch = useIsMobileTouchViewport()
   const useHardNav =
-    mobileTouch && (pathname === '/profile' || pathname.startsWith('/profile/'))
+    mobileTouch &&
+    (pathname === '/profile' ||
+      pathname.startsWith('/profile/') ||
+      /^\/debate\/[^/]+$/.test(pathname))
 
   if (!back) return null
 

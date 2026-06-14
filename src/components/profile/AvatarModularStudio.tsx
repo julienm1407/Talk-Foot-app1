@@ -331,7 +331,8 @@ export function AvatarModularStudio() {
 
   const [activeSlot, setActiveSlot] = useState<AvatarSlotKey>('hair')
   const [purchaseBanner, setPurchaseBanner] = useState<string | null>(null)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [previewMax, setPreviewMax] = useState(280)
   const saveHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const previewWrapRef = useRef<HTMLDivElement>(null)
@@ -356,10 +357,31 @@ export function AvatarModularStudio() {
   const modularState = useMemo(() => ({ data: avatar, slotColors }), [avatar, slotColors])
 
   const markSaved = useCallback(() => {
+    setSaveError(null)
     setSaveStatus('saved')
     if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
     saveHintTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2200)
   }, [])
+
+  const persistAvatar = useCallback(() => {
+    if (!cloud?.flushAppSave) {
+      markSaved()
+      return
+    }
+    setSaveStatus('saving')
+    void cloud.flushAppSave().then((result) => {
+      if (result.ok) {
+        markSaved()
+        return
+      }
+      setSaveStatus('error')
+      setSaveError(
+        result.error?.includes('forbidden')
+          ? 'Session expirée — recharge la page puis réessaie.'
+          : 'Sauvegarde impossible. Vérifie ta connexion et réessaie.',
+      )
+    })
+  }, [cloud, markSaved])
 
   const patchModular = useCallback(
     (updater: (prev: { data: AvatarData; slotColors: ModularSlotColors }) => {
@@ -371,9 +393,9 @@ export function AvatarModularStudio() {
         const next = updater(prev)
         return { data: next.data, slotColors: next.slotColors }
       })
-      markSaved()
+      window.setTimeout(() => persistAvatar(), 120)
     },
-    [updateModularAvatar, markSaved],
+    [updateModularAvatar, persistAvatar],
   )
 
   const goToBoutiqueForCategory = useCallback(
@@ -464,6 +486,14 @@ export function AvatarModularStudio() {
   }, [cloud])
 
   useEffect(() => {
+    const onPageHide = () => {
+      void cloud?.flushAppSave?.()
+    }
+    window.addEventListener('pagehide', onPageHide)
+    return () => window.removeEventListener('pagehide', onPageHide)
+  }, [cloud])
+
+  useEffect(() => {
     const el = previewWrapRef.current
     if (!el) return
     let locked: number | null = null
@@ -550,7 +580,11 @@ export function AvatarModularStudio() {
         <p
           className={cn(
             'mt-1.5 text-[10px] font-bold sm:mt-2 sm:text-[11px]',
-            saveStatus === 'saved' ? 'text-emerald-300' : 'text-sky-200/55',
+            saveStatus === 'saved'
+              ? 'text-emerald-300'
+              : saveStatus === 'error'
+                ? 'text-rose-300'
+                : 'text-sky-200/55',
           )}
           role="status"
           aria-live="polite"
@@ -559,7 +593,9 @@ export function AvatarModularStudio() {
             ? 'Enregistrement…'
             : saveStatus === 'saved'
               ? 'Avatar enregistré'
-              : 'Sauvegarde auto'}
+              : saveStatus === 'error'
+                ? saveError ?? 'Sauvegarde impossible'
+                : 'Sauvegarde auto'}
         </p>
         {purchaseBanner ? (
           <p className="mt-2 rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-[11px] font-bold text-emerald-100">

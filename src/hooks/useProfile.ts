@@ -157,7 +157,7 @@ export function useProfile() {
     profileCloudFlushRef.current = setTimeout(() => {
       profileCloudFlushRef.current = null
       void cloud.flushAppSave()
-    }, 800)
+    }, 250)
   }, [cloud])
 
   useEffect(

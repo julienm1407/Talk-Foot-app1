@@ -3,7 +3,7 @@ import { mergeUserAppState } from '../../data/userAppStateDefaults'
 import {
   ensureTalkfootProfile,
   fetchTalkfootProfileSnapshot,
-  saveTalkfootProfileAppState,
+  saveTalkfootProfileAppStateWithChatSync,
 } from './profileAppState'
 
 /**
@@ -30,6 +30,11 @@ export async function syncClerkProfileToChatActor(
 
   if (clerkSnap?.appState) {
     const merged = mergeUserAppState(clerkSnap.appState)
-    await saveTalkfootProfileAppState(sb, chatActorId, merged, clerkSnap.onboardingComplete)
+    await saveTalkfootProfileAppStateWithChatSync(
+      sb,
+      chatActorId,
+      merged,
+      clerkSnap.onboardingComplete,
+    )
   }
 }
