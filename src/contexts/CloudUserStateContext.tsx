@@ -34,6 +34,7 @@ import {
 import { bindTalkfootActorSession } from '../lib/supabase/bindTalkfootActorSession'
 import { clearChatAuthorAvatarCache } from '../hooks/useChatAuthorModularAvatars'
 import {
+  coalesceAppStateWithModularBackup,
   extractStoredModularAvatar,
   mergeModularAvatarBackupIntoApp,
   isLikelyDefaultModularAvatar,
@@ -108,9 +109,9 @@ export function CloudUserStateGate({ children }: { children: ReactNode }) {
 
 function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
   const { session, isLoaded } = useSession()
-  if (!isLoaded) {
-    return (
-      <>
+  return (
+    <>
+      {!isLoaded ? (
         <div
           className="border-b border-sky-200/80 bg-sky-50/95 px-4 py-1.5 text-center text-[11px] font-bold text-sky-950"
           role="status"
@@ -118,11 +119,12 @@ function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
         >
           Synchronisation du compte…
         </div>
+      ) : null}
+      <CloudUserStateLoader clerkSessionId={isLoaded ? (session?.id ?? null) : null}>
         {children}
-      </>
-    )
-  }
-  return <CloudUserStateLoader clerkSessionId={session?.id ?? null}>{children}</CloudUserStateLoader>
+      </CloudUserStateLoader>
+    </>
+  )
 }
 
 function CloudUserStateLoader({
@@ -197,16 +199,22 @@ function CloudUserStateLoader({
         if (!bindResult.ok) return { ok: false, error: bindResult.error ?? 'bind_failed' }
       }
 
+      const payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
+      if (payload !== appRef.current) {
+        appRef.current = payload
+        setApp(payload)
+      }
+
       await saveTalkfootProfileAppStateWithChatSync(
         sb,
         user.id,
-        appRef.current,
+        payload,
         ocRef.current,
         user.displayName?.trim() || 'Supporter',
       )
       writeModularAvatarBackup(
         user.id,
-        resolveModularAvatarState(appRef.current.profile.modularAvatar),
+        resolveModularAvatarState(payload.profile.modularAvatar),
       )
       clearChatAuthorAvatarCache()
       return { ok: true }

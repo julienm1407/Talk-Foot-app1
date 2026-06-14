@@ -65,6 +65,41 @@ export function writeModularAvatarBackup(userId: string, modularAvatar: ModularA
   }
 }
 
+/** Avatar affiché (nav, accueil) : priorité à la sauvegarde locale si le profil cloud est en retard. */
+export function resolveDisplayModularAvatar(
+  userId: string | undefined,
+  stored: ModularAvatarState | undefined | null,
+): ModularAvatarState {
+  const resolved = sanitizeModularAvatarState(resolveModularAvatarState(stored ?? undefined))
+  const key = userId?.trim()
+  if (!key) return resolved
+
+  const backup = readModularAvatarBackup(key)
+  if (!backup) return resolved
+
+  const backupResolved = backup.modularAvatar
+  if (isLikelyDefaultModularAvatar(backupResolved)) return resolved
+  if (isLikelyDefaultModularAvatar(resolved)) return backupResolved
+  return resolved
+}
+
+/** Avant écriture cloud : ne jamais envoyer un skin par défaut si la sauvegarde locale est custom. */
+export function coalesceAppStateWithModularBackup(
+  userId: string,
+  app: UserAppStateV1,
+): UserAppStateV1 {
+  const backup = readModularAvatarBackup(userId)
+  if (!backup || isLikelyDefaultModularAvatar(backup.modularAvatar)) return app
+  if (!isLikelyDefaultModularAvatar(app.profile.modularAvatar)) return app
+  return {
+    ...app,
+    profile: {
+      ...app.profile,
+      modularAvatar: backup.modularAvatar,
+    },
+  }
+}
+
 export function readModularAvatarBackup(userId: string): ModularAvatarBackupV1 | null {
   const key = userId.trim()
   if (!key) return null
@@ -112,7 +147,8 @@ export function mergeModularAvatarBackupIntoApp(
     return { app, restoredFromBackup: false }
   }
 
-  const shouldRestore = serverLooksDefault || backupHasMoreCustomization
+  const shouldRestore =
+    (serverLooksDefault && backupHasCustomization) || backupHasMoreCustomization
 
   if (!shouldRestore) return { app, restoredFromBackup: false }
 

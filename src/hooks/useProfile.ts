@@ -25,7 +25,11 @@ import {
 } from '../features/avatar2d/modularAvatarState'
 import { isBoutiqueShopItemOwned, repairPackOwnedItemIds } from '../data/boutiqueEconomy'
 import { sanitizeModularGarmentAccess } from '../utils/modularGarmentAccess'
-import { writeModularAvatarBackup } from '../utils/modularAvatarBackup'
+import {
+  mergeModularAvatarBackupIntoApp,
+  resolveDisplayModularAvatar,
+  writeModularAvatarBackup,
+} from '../utils/modularAvatarBackup'
 import { XP_REWARDS } from '../data/xpRewards'
 import { isXpEventCredited, markXpEventCredited, xpDedupeKey } from '../utils/xpGrant'
 
@@ -153,6 +157,20 @@ export function useProfile() {
 
   const profile = cloud !== undefined ? cloud.app.profile : localProfile
   const profileCloudFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const backupSyncRef = useRef(false)
+
+  useEffect(() => {
+    if (!cloud?.syncReady || !authUser?.id || backupSyncRef.current) return
+    const merged = mergeModularAvatarBackupIntoApp(authUser.id, cloud.app)
+    if (!merged.restoredFromBackup) return
+    backupSyncRef.current = true
+    cloud.patchApp(() => merged.app)
+    void cloud.flushAppSave()
+  }, [cloud, authUser?.id])
+
+  useEffect(() => {
+    if (!authUser?.id) backupSyncRef.current = false
+  }, [authUser?.id])
 
   const scheduleProfileCloudFlush = useCallback(() => {
     if (!cloud) return
@@ -385,8 +403,9 @@ export function useProfile() {
         }
       })
       scheduleProfileCloudFlush()
+      if (cloud) void cloud.flushAppSave()
     },
-    [authUser?.id, setProfileStore, scheduleProfileCloudFlush],
+    [authUser?.id, setProfileStore, scheduleProfileCloudFlush, cloud],
   )
 
   const setProfilePhotoDataUrl = useCallback(
@@ -446,7 +465,7 @@ export function useProfile() {
       avatarLoadout: resolveAvatarLoadout(profile),
       modularAvatar: sanitizeModularAvatarState(
         sanitizeModularGarmentAccess(
-          resolveModularAvatarState(profile.modularAvatar),
+          resolveDisplayModularAvatar(authUser?.id, profile.modularAvatar),
           normalizeOwnedItemIds(
             Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : [],
           ),
@@ -470,7 +489,7 @@ export function useProfile() {
         },
       },
     }
-  }, [profile, computedLevel])
+  }, [profile, computedLevel, authUser?.id])
 
   return {
     profile: safeProfile,
