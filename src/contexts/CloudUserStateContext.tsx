@@ -33,7 +33,9 @@ import {
 import { bindTalkfootActorSession } from '../lib/supabase/bindTalkfootActorSession'
 import { clearChatAuthorAvatarCache } from '../hooks/useChatAuthorModularAvatars'
 import {
+  extractStoredModularAvatar,
   mergeModularAvatarBackupIntoApp,
+  wouldDowngradeModularAvatar,
   writeModularAvatarBackup,
 } from '../utils/modularAvatarBackup'
 import { useAuth } from './AuthContext'
@@ -244,7 +246,17 @@ function CloudUserStateLoader({
           setReady(true)
           return false
         }
+        const rawModularAvatar = extractStoredModularAvatar(appState)
         let merged = mergeUserAppState(appState)
+        if (wouldDowngradeModularAvatar(rawModularAvatar, merged.profile.modularAvatar)) {
+          const coerced = coerceModularAvatarFromStored(rawModularAvatar)
+          if (coerced) {
+            merged = {
+              ...merged,
+              profile: { ...merged.profile, modularAvatar: coerced },
+            }
+          }
+        }
         const restored = mergeModularAvatarBackupIntoApp(user.id, merged)
         merged = restored.app
         setApp(merged)
@@ -300,9 +312,14 @@ function CloudUserStateLoader({
           } else if (!hasLocalEditsRef.current && !cancelled) {
             try {
               const merged = mergeUserAppState(snapshot.appState)
+              const rawModularAvatar = extractStoredModularAvatar(snapshot.appState)
               const { data: sessionWrap } = await sb.auth.getSession()
               const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
-              if (chatActorId && chatActorId !== user.id) {
+              if (
+                chatActorId &&
+                chatActorId !== user.id &&
+                !wouldDowngradeModularAvatar(rawModularAvatar, merged.profile.modularAvatar)
+              ) {
                 try {
                   await ensureTalkfootProfile(
                     sb,
@@ -325,25 +342,13 @@ function CloudUserStateLoader({
             }
           }
 
-          if (!hasLocalEditsRef.current) {
+          if (!hasLocalEditsRef.current && !restoredFromBackup) {
             try {
               const mergedApp = mergeUserAppState(snapshot.appState)
-              const rawProfile =
-                snapshot.appState !== null &&
-                typeof snapshot.appState === 'object' &&
-                !Array.isArray(snapshot.appState)
-                  ? (snapshot.appState as Record<string, unknown>).profile
-                  : undefined
-              const rawHadModular =
-                rawProfile !== null &&
-                typeof rawProfile === 'object' &&
-                !Array.isArray(rawProfile) &&
-                (rawProfile as Record<string, unknown>).modularAvatar != null
+              const rawModularAvatar = extractStoredModularAvatar(snapshot.appState)
+              const rawHadModular = rawModularAvatar != null
               const mergedModularOk =
-                !rawHadModular ||
-                coerceModularAvatarFromStored(
-                  (rawProfile as Record<string, unknown>).modularAvatar,
-                ) != null
+                !rawHadModular || coerceModularAvatarFromStored(rawModularAvatar) != null
               const rawBets =
                 snapshot.appState !== null &&
                 typeof snapshot.appState === 'object' &&
@@ -352,9 +357,20 @@ function CloudUserStateLoader({
                   : undefined
               const mergedLostBets =
                 Array.isArray(rawBets) && rawBets.length > 0 && mergedApp.bets.length === 0
+              const mergedWouldDowngradeAvatar =
+                wouldDowngradeModularAvatar(rawModularAvatar, mergedApp.profile.modularAvatar) ||
+                wouldDowngradeModularAvatar(
+                  appRef.current.profile.modularAvatar,
+                  mergedApp.profile.modularAvatar,
+                )
               const rawJson = JSON.stringify(snapshot.appState ?? {})
               const mergedJson = JSON.stringify(mergedApp)
-              if (mergedModularOk && !mergedLostBets && rawJson !== mergedJson) {
+              if (
+                mergedModularOk &&
+                !mergedLostBets &&
+                !mergedWouldDowngradeAvatar &&
+                rawJson !== mergedJson
+              ) {
                 await saveTalkfootProfileAppStateWithChatSync(
                   sb,
                   user.id,

@@ -17,9 +17,32 @@ function storageKey(userId: string): string {
   return `talkfoot.modularAvatar.v1.${userId.trim()}`
 }
 
-function modularSignature(state: ModularAvatarState | undefined | null): string {
+export function modularAvatarSignature(state: ModularAvatarState | undefined | null): string {
   const resolved = sanitizeModularAvatarState(resolveModularAvatarState(state ?? undefined))
   return JSON.stringify(resolved)
+}
+
+function modularSignature(state: ModularAvatarState | undefined | null): string {
+  return modularAvatarSignature(state)
+}
+
+/** True si le nouvel état efface une customisation cloud existante. */
+export function wouldDowngradeModularAvatar(
+  previous: ModularAvatarState | unknown,
+  next: ModularAvatarState | unknown,
+): boolean {
+  const prev = coerceModularAvatarFromStored(previous)
+  const nxt = coerceModularAvatarFromStored(next)
+  if (!prev || isLikelyDefaultModularAvatar(prev)) return false
+  if (!nxt || isLikelyDefaultModularAvatar(nxt)) return true
+  return modularSignature(prev) !== modularSignature(nxt)
+}
+
+export function extractStoredModularAvatar(appState: unknown): unknown {
+  if (appState === null || typeof appState !== 'object' || Array.isArray(appState)) return undefined
+  const profile = (appState as Record<string, unknown>).profile
+  if (profile === null || typeof profile !== 'object' || Array.isArray(profile)) return undefined
+  return (profile as Record<string, unknown>).modularAvatar
 }
 
 export function isLikelyDefaultModularAvatar(state: ModularAvatarState | undefined | null): boolean {
@@ -78,9 +101,18 @@ export function mergeModularAvatarBackupIntoApp(
     Boolean(backupResolved.data.hair && backupResolved.data.hair !== serverResolved.data.hair) ||
     Boolean(backupResolved.data.jersey && backupResolved.data.jersey !== serverResolved.data.jersey)
 
-  const backupIsRecent = Date.now() - backup.savedAt < 7 * 24 * 60 * 60 * 1000
-  const shouldRestore =
-    serverLooksDefault || backupHasMoreCustomization || (backupIsRecent && serverSig !== backupSig)
+  const serverHasCustomization = !serverLooksDefault
+  const backupHasCustomization = !isLikelyDefaultModularAvatar(backup.modularAvatar)
+
+  // Ne jamais remplacer un avatar cloud custom par une sauvegarde locale plus pauvre / obsolète.
+  if (serverHasCustomization && !backupHasCustomization) {
+    return { app, restoredFromBackup: false }
+  }
+  if (serverHasCustomization && backupHasCustomization && !backupHasMoreCustomization) {
+    return { app, restoredFromBackup: false }
+  }
+
+  const shouldRestore = serverLooksDefault || backupHasMoreCustomization
 
   if (!shouldRestore) return { app, restoredFromBackup: false }
 
