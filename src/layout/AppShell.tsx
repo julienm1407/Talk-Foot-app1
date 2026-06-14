@@ -1,7 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '../components/ErrorBoundary'
-import { DirectMessagesProvider } from '../contexts/DirectMessagesContext'
-import { PrivateMessagesUiProvider } from '../contexts/PrivateMessagesUiContext'
 import { BottomNav } from './BottomNav'
 import { TopBar } from './TopBar'
 import { SkipLink } from './SkipLink'
@@ -46,8 +44,6 @@ export function AppShell() {
   })
 
   return (
-    <DirectMessagesProvider>
-    <PrivateMessagesUiProvider>
     <>
     <div
       key={routeSurfaceKey}
@@ -164,7 +160,5 @@ export function AppShell() {
 
     {!isChannel ? <BottomNav /> : null}
     </>
-    </PrivateMessagesUiProvider>
-    </DirectMessagesProvider>
   )
 }

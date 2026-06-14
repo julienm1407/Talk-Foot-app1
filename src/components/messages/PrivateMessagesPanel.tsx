@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppearance } from '../../contexts/AppearanceContext'
-import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
+import { useDirectMessagesContext, useDirectMessagesOptional } from '../../contexts/DirectMessagesContext'
 import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
 import { cn } from '../../utils/cn'
 import { type DirectMessageLine } from '../../data/directMessagesMock'
@@ -17,11 +17,22 @@ export function PrivateMessagesPanel({
   /** Faux quand le panneau est replié mais reste monté. */
   visible?: boolean
 }) {
+  const dm = useDirectMessagesOptional()
+  if (!dm) return null
+  return <PrivateMessagesPanelLoaded onClose={onClose} visible={visible} />
+}
+
+function PrivateMessagesPanelLoaded({
+  onClose,
+  visible = true,
+}: {
+  onClose: () => void
+  visible?: boolean
+}) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { pendingThreadId, clearPendingThread, activeThreadId, setActiveThreadId } = usePrivateMessagesUi()
-  const { mergedFor, send, markVisited, setActiveDmUiThreadId, directThreads } =
-    useDirectMessagesContext()
+  const { mergedFor, send, markVisited, setActiveDmUiThreadId, directThreads } = useDirectMessagesContext()
   const active = useMemo(
     () => (activeThreadId ? directThreads.find((x) => x.id === activeThreadId) ?? null : null),
     [activeThreadId, directThreads],

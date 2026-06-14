@@ -172,8 +172,11 @@
 html {
   height: 100%;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Évite le défilement horizontal “fantôme” (100vw, enfants trop larges) */
   overflow-x: clip;
+  /* Complète viewport user-scalable=no — évite pinch/double-tap qui déforment le layout mobile. */
+  touch-action: manipulation;
 }
 
 body {

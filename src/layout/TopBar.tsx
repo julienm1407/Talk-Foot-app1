@@ -287,7 +287,9 @@ export function TopBar() {
                 </span>
               ) : null}
             </button>
-            <PrivateMessagesPanel visible={pm.isOpen} onClose={() => pm.close()} />
+            {pm.isOpen && dmOpt ? (
+              <PrivateMessagesPanel visible onClose={() => pm.close()} />
+            ) : null}
           </div>
           <div ref={inboxWrapRef} className="relative shrink-0">
             <button
