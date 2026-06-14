@@ -26,27 +26,85 @@ function stateIdOf(f: SmFixture): number | undefined {
 /** États SM « 2e mi-temps » (≠ minute 68 — ancien bug affichait 68 dès le state 22). */
 const SECOND_HALF_STATE_IDS = new Set([4, 6, 9, 21, 22, 25])
 
-function periodMinuteTotal(p: NonNullable<SmFixture['periods']>[number]): number | null {
+type SmPeriodRow = NonNullable<SmFixture['periods']>[number]
+
+function periodCountsFrom(p: SmPeriodRow): number {
+  return typeof p.counts_from === 'number' && p.counts_from >= 0 ? p.counts_from : 0
+}
+
+/** Minute cumulée depuis la ligne `periods` SM (cumulée ou locale selon la période). */
+function periodMinuteTotal(p: SmPeriodRow): number | null {
   if (typeof p.minutes !== 'number' || p.minutes < 0) return null
-  const base = typeof p.counts_from === 'number' && p.counts_from >= 0 ? p.counts_from : 0
+  const base = periodCountsFrom(p)
+  // SM envoie souvent la minute cumulée (ex. 50 en 1re MT, 96 en 2e) — ne pas re-ajouter counts_from.
+  if (base > 0 && p.minutes >= base) return p.minutes
   return base + p.minutes
 }
 
-function minuteFromPeriods(f: SmFixture): number | null {
+/** Horloge live quand `has_timer` est false : SM garde `minutes` à 0 mais fournit `started`. */
+function minuteFromPeriodStarted(p: SmPeriodRow, nowMs = Date.now()): number | null {
+  if (!p?.ticking) return null
+  const started = p.started
+  if (typeof started !== 'number' || started <= 0) return null
+  const elapsedMin = Math.floor(nowMs / 1000 - started) / 60
+  if (!Number.isFinite(elapsedMin) || elapsedMin < 0) return null
+  return Math.min(99, periodCountsFrom(p) + Math.floor(elapsedMin))
+}
+
+function periodMinuteValue(p: SmPeriodRow, nowMs = Date.now()): number | null {
+  const fromSm = periodMinuteTotal(p)
+  if (!p?.ticking) return fromSm
+
+  const fromStarted = minuteFromPeriodStarted(p, nowMs)
+  if (fromStarted == null) return fromSm
+
+  const sm = fromSm ?? 0
+  // CDM / certains plans : `minutes` reste à 0 pendant toute la période (`has_timer: false`).
+  if (sm <= 0 || p.has_timer === false) return fromStarted
+  return Math.max(sm, fromStarted)
+}
+
+function minuteFromPeriods(f: SmFixture, nowMs = Date.now()): number | null {
   const periods = f.periods
   if (!Array.isArray(periods) || !periods.length) return null
   for (let i = periods.length - 1; i >= 0; i--) {
     const p = periods[i]
     if (p?.ticking) {
-      const total = periodMinuteTotal(p)
+      const total = periodMinuteValue(p, nowMs)
       if (total != null) return total
     }
   }
+  let best: number | null = null
   for (let i = periods.length - 1; i >= 0; i--) {
-    const total = periodMinuteTotal(periods[i])
-    if (total != null) return total
+    const total = periodMinuteValue(periods[i], nowMs)
+    if (total == null) continue
+    best = best == null ? total : Math.max(best, total)
   }
-  return null
+  return best
+}
+
+function minuteFromEvents(f: SmFixture): number | null {
+  const events = f.events
+  if (!Array.isArray(events) || !events.length) return null
+  let max = 0
+  for (const e of events) {
+    const m = typeof e.minute === 'number' ? e.minute : 0
+    const x = typeof e.extra_minute === 'number' ? e.extra_minute : 0
+    max = Math.max(max, m + x)
+  }
+  return max > 0 ? max : null
+}
+
+function minuteFromKickoffEstimate(f: SmFixture, nowMs = Date.now()): number | null {
+  if (smStatus(f) !== 'live') return null
+  if (liveClockPausedFromSmFixture(f)) return null
+  const kickoffMs = Date.parse(startingAtIso(f))
+  if (!Number.isFinite(kickoffMs)) return null
+  const elapsedMin = Math.floor((nowMs - kickoffMs) / 60_000)
+  if (elapsedMin <= 0) return null
+  const inSecondHalf = liveSecondHalfFromSmFixture(f)
+  const cap = inSecondHalf ? 99 : 55
+  return Math.min(cap, elapsedMin)
 }
 
 export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
@@ -79,7 +137,8 @@ export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
   if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return true
   if (sid === 3) return false
 
-  const total = minuteFromFixture(fx)
+  const fromPeriods = minuteFromPeriods(fx)
+  const total = fromPeriods ?? (typeof fx.minute === 'number' ? fx.minute : 0)
   return total > 50
 }
 
@@ -98,7 +157,12 @@ export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
     if (apiMin != null && apiMin >= 46) return false
   }
 
-  if (blob.includes('HT') || blob.includes('HALF') || blob.includes('BREAK')) {
+  if (
+    /\bHT\b/.test(blob) ||
+    blob.includes('HALF TIME') ||
+    blob.includes('HALFTIME') ||
+    blob.includes('BREAK')
+  ) {
     if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
     return true
   }
@@ -293,12 +357,17 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
   return goalsFromScores(f.scores)
 }
 
-function minuteFromFixture(f: SmFixture): number {
+function minuteFromFixture(f: SmFixture, nowMs = Date.now()): number {
   const fx = asClockFixture(f)
-  const fromPeriods = minuteFromPeriods(fx)
+  const fromPeriods = minuteFromPeriods(fx, nowMs)
+  if (fromPeriods != null && fromPeriods > 0) return fromPeriods
+  if (typeof fx.minute === 'number' && fx.minute > 0) return fx.minute
+  const fromEvents = minuteFromEvents(fx)
+  if (fromEvents != null) return fromEvents
+  const fromKickoff = minuteFromKickoffEstimate(fx, nowMs)
+  if (fromKickoff != null) return fromKickoff
   if (fromPeriods != null) return fromPeriods
   if (typeof fx.minute === 'number' && fx.minute >= 0) return fx.minute
-  /** Pas d’estimation depuis starting_at (retard / mi-temps ≠ horloge réelle). */
   return 0
 }
 

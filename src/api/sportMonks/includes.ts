@@ -36,7 +36,7 @@ export const SM_INCLUDE_FIXTURE_PREDICTIONS_ONLY =
 
 /** Liste calendrier / agrégation (léger + état + scores + phase / lieu). */
 export const SM_INCLUDE_FIXTURE_LIST =
-  'participants;scores.type;league;state;round;stage;venue' as const
+  'participants;scores.type;league;state;round;stage;venue;periods' as const
 
 /** Timeline live légère : événements + score + minute (périodes pour le chrono). */
 export const SM_INCLUDE_FIXTURE_EVENTS_TIMELINE =

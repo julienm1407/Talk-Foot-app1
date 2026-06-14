@@ -150,6 +150,10 @@ export type SmFixture = {
     counts_from?: number
     time_added?: number
     extra_minute?: number
+    started?: number
+    ended?: number | null
+    seconds?: number
+    has_timer?: boolean
   }>
   minute?: number
   /** Include `statistics.type` (stats live / post). */

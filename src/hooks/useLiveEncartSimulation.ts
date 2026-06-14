@@ -35,9 +35,11 @@ function normalizeScore(s: { home: unknown; away: unknown }): { home: number; aw
   }
 }
 
-/** Minute affichée : on ne fait pas avancer artificiellement le chrono selon le score. */
-function displayMinuteFromMatch(minuteFromMatch: number): number {
-  return Math.min(99, Math.max(0, Math.round(minuteFromMatch)))
+/** Minute de départ encart : 0 SM = inconnu, pas une vraie 0'. */
+function seedMinuteFromMatch(match: Match): number {
+  const m = Math.round(Number(match.minute) || 0)
+  if (m > 0) return Math.min(89, m)
+  return 1
 }
 
 export function useLiveEncartSimulation(match: Match | null) {
@@ -127,8 +129,7 @@ export function useLiveEncartSimulation(match: Match | null) {
       return
     }
     const s = normalizeScore(initialScoreFromMatch(match))
-    const rawMin = Math.min(89, match.minute ?? 12)
-    const m = displayMinuteFromMatch(rawMin)
+    const m = seedMinuteFromMatch(match)
     snapMinuteFromAuthority(m)
     setScore(s)
     scoreRef.current = s
@@ -151,18 +152,16 @@ export function useLiveEncartSimulation(match: Match | null) {
     const s = normalizeScore(initialScoreFromMatch(match))
     setScore(s)
     scoreRef.current = s
-    const rawMin = Math.min(89, match.minute ?? 12)
-    const m = displayMinuteFromMatch(rawMin)
+    const m = seedMinuteFromMatch(match)
     snapMinuteFromAuthority(m)
   }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, match?.status, smTimelineDriving, snapMinuteFromAuthority])
 
-  /** À chaque refetch `MatchesContext` (~45 s) : réaligner score + minute SM sans réinitialiser tout l’encart. */
+  /** À chaque refetch `MatchesContext` (~12 s) : réaligner score + minute SM sans réinitialiser tout l’encart. */
   useEffect(() => {
     if (!match || match.status !== 'live') return
     if (smTimelineDriving) return
     const s = normalizeScore(initialScoreFromMatch(match))
-    const rawMin = Math.min(89, match.minute ?? 12)
-    const m = displayMinuteFromMatch(rawMin)
+    const m = seedMinuteFromMatch(match)
     setScore(s)
     scoreRef.current = s
     snapMinuteFromAuthority(m)
@@ -204,8 +203,8 @@ export function useLiveEncartSimulation(match: Match | null) {
           scoreRef.current = g
         }
         const liveMin = extractLiveMinuteFromSmFixture(fx)
-        if (Number.isFinite(liveMin) && liveMin >= 0) {
-          snapMinuteFromAuthority(Math.min(99, Math.max(1, liveMin)))
+        if (Number.isFinite(liveMin) && liveMin > 0) {
+          snapMinuteFromAuthority(Math.min(99, liveMin))
         }
         setLiveClockPaused(liveClockPausedFromSmFixture(fx))
         setLiveInSecondHalf(liveSecondHalfFromSmFixture(fx))
