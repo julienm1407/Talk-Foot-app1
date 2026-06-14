@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -135,6 +135,7 @@ export function BetWidget({
   const [notice, setNotice] = useState<null | { tone: 'ok' | 'err'; text: string; href?: string }>(
     null,
   )
+  const sheetScrollRef = useRef<HTMLDivElement>(null)
 
   const isUpcoming = match.status === 'upcoming'
 
@@ -387,7 +388,6 @@ export function BetWidget({
         badge: null as string | null,
         odd: 'border-emerald-800/40 bg-white text-emerald-900 shadow-sm',
       }
-      if (!bets.length) return defaultVisual
       if (bets.some((b) => b.status === 'won')) {
         return {
           shell:
@@ -404,9 +404,41 @@ export function BetWidget({
           odd: 'text-rose-800',
         }
       }
+      if (pending?.market === 'anytime_scorer' && pending.selection === selection) {
+        return {
+          shell:
+            'border-2 border-emerald-500/90 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-400/40 shadow-sm',
+          badge: '✓',
+          odd: 'text-emerald-800',
+        }
+      }
       return defaultVisual
     },
-    [scorerBetsForSelection],
+    [pending, scorerBetsForSelection],
+  )
+
+  const scrollSheetToTop = useCallback(() => {
+    sheetScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
+  const selectPendingPick = useCallback(
+    (
+      pick: { market: BetMarket; selection: BetSelection; odds: number; label: string },
+      options?: { scrollToConfirm?: boolean },
+    ) => {
+      setPending(pick)
+      if (maxStake >= minStake) {
+        setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+      }
+      const shouldScroll = options?.scrollToConfirm ?? pick.market === 'anytime_scorer'
+      if (shouldScroll) {
+        if (!sheetOpen) setSheetOpen(true)
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => scrollSheetToTop())
+        })
+      }
+    },
+    [maxStake, minStake, sheetOpen, scrollSheetToTop],
   )
 
   const openSheet = () => setSheetOpen(true)
@@ -729,7 +761,10 @@ export function BetWidget({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
+            <div
+              ref={sheetScrollRef}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5"
+            >
               <div className="rounded-2xl border border-sky-200/70 bg-sky-50/90 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-black uppercase tracking-wide text-sky-900/80">
@@ -804,10 +839,24 @@ export function BetWidget({
               </div>
 
               {pending ? (
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-blue-200/70 bg-blue-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  className={cn(
+                    'mt-4 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between',
+                    pending.market === 'anytime_scorer'
+                      ? 'border-emerald-300/80 bg-emerald-50/90 ring-2 ring-emerald-400/25'
+                      : 'border-blue-200/70 bg-blue-50/60',
+                  )}
+                >
                   <div className="min-w-0">
-                    <div className="text-[10px] font-black uppercase tracking-wide text-blue-900/70">
-                      Sélection
+                    <div
+                      className={cn(
+                        'text-[10px] font-black uppercase tracking-wide',
+                        pending.market === 'anytime_scorer'
+                          ? 'text-emerald-900/80'
+                          : 'text-blue-900/70',
+                      )}
+                    >
+                      {pending.market === 'anytime_scorer' ? 'Buteur sélectionné' : 'Sélection'}
                     </div>
                     <div className="truncate text-sm font-black text-slate-900">{pending.label}</div>
                     <div className="mt-0.5 text-xs font-semibold text-slate-600">
@@ -965,6 +1014,9 @@ export function BetWidget({
                                   {side.picks.map((p) => {
                                     const visual = pickScorerVisual(p.id)
                                     const bets = scorerBetsForSelection(p.id)
+                                    const isSelected =
+                                      pending?.market === 'anytime_scorer' &&
+                                      pending.selection === p.id
                                     const scoredLive =
                                       p.disabled && !bets.length && m.id === 'anytime_scorer'
                                     return (
@@ -976,16 +1028,14 @@ export function BetWidget({
                                           visual.shell,
                                         )}
                                         disabled={!m.enabled || p.disabled}
+                                        aria-pressed={isSelected}
                                         onClick={() => {
-                                          setPending({
+                                          selectPendingPick({
                                             market: m.id,
                                             selection: p.id,
                                             odds: p.odds,
                                             label: `${m.label} • ${p.label}`,
                                           })
-                                          if (maxStake >= minStake) {
-                                            setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                                          }
                                         }}
                                       >
                                         <span className="min-w-0 text-center leading-snug sm:text-left">
@@ -1021,6 +1071,10 @@ export function BetWidget({
                           const isScorer = m.id === 'anytime_scorer'
                           const visual = isScorer ? pickScorerVisual(p.id) : null
                           const scorerBets = isScorer ? scorerBetsForSelection(p.id) : []
+                          const isSelected =
+                            isScorer &&
+                            pending?.market === 'anytime_scorer' &&
+                            pending.selection === p.id
                           const scoredLive = isScorer && p.disabled && scorerBets.length === 0
                           return (
                             <Button
@@ -1032,16 +1086,14 @@ export function BetWidget({
                                 visual?.shell,
                               )}
                               disabled={!m.enabled || p.disabled}
+                              aria-pressed={isScorer ? isSelected : undefined}
                               onClick={() => {
-                                setPending({
+                                selectPendingPick({
                                   market: m.id,
                                   selection: p.id,
                                   odds: p.odds,
                                   label: `${m.label} • ${p.label}`,
                                 })
-                                if (maxStake >= minStake) {
-                                  setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                                }
                               }}
                             >
                               <span className="min-w-0 text-center leading-snug sm:text-left">{p.label}</span>
