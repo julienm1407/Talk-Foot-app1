@@ -166,6 +166,7 @@ function CloudUserStateLoader({
         user.id,
         appRef.current,
         ocRef.current,
+        user.displayName?.trim() || 'Supporter',
       )
       writeModularAvatarBackup(
         user.id,
@@ -302,6 +303,16 @@ function CloudUserStateLoader({
               const { data: sessionWrap } = await sb.auth.getSession()
               const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
               if (chatActorId && chatActorId !== user.id) {
+                try {
+                  await ensureTalkfootProfile(
+                    sb,
+                    chatActorId,
+                    displayName.trim() || 'Supporter',
+                    true,
+                  )
+                } catch {
+                  /* déjà provisionné */
+                }
                 await saveTalkfootProfileAppState(
                   sb,
                   chatActorId,
@@ -349,6 +360,7 @@ function CloudUserStateLoader({
                   user.id,
                   mergedApp,
                   snapshot.onboardingComplete,
+                  displayName.trim() || 'Supporter',
                 )
               }
             } catch (err) {

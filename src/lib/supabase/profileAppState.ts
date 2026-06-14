@@ -112,13 +112,20 @@ export async function saveTalkfootProfileAppStateWithChatSync(
   actorKey: string,
   appState: UserAppStateV1,
   onboardingComplete: boolean,
+  displayName = 'Supporter',
 ): Promise<void> {
   const primary = actorKey.trim()
   await saveTalkfootProfileAppState(sb, primary, appState, onboardingComplete)
 
   const { data: sessionWrap } = await sb.auth.getSession()
   const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
-  if (chatActorId && chatActorId !== primary) {
-    await saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete)
+  if (!chatActorId || chatActorId === primary) return
+
+  // La ligne auth.uid() doit exister pour que les autres joueurs voient l'avatar en chat.
+  try {
+    await ensureTalkfootProfile(sb, chatActorId, displayName.trim() || 'Supporter', true)
+  } catch {
+    /* profil chat déjà créé */
   }
+  await saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete)
 }
