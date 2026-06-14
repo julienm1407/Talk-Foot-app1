@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -136,6 +136,8 @@ export function BetWidget({
     null,
   )
   const sheetScrollRef = useRef<HTMLDivElement>(null)
+  const x12SectionRef = useRef<HTMLDivElement>(null)
+  const scorersSectionRef = useRef<HTMLDivElement>(null)
 
   const isUpcoming = match.status === 'upcoming'
 
@@ -263,8 +265,11 @@ export function BetWidget({
   const scorerPicksDisplayTotal =
     scorerPicksForDisplay.home.length + scorerPicksForDisplay.away.length
 
+  const showScorerMarket =
+    scorerPicksDisplayTotal > 0 &&
+    (isUpcoming || isLive || (isFinished && userScorerBets.length > 0))
+
   const markets = useMemo(() => {
-    const x12 = x12Displayed
     const liveBlocked = isLive && bettingSuspended
     const base: Array<{
       id: BetMarket
@@ -274,49 +279,35 @@ export function BetWidget({
       picks: ScorerPickRow[]
       /** Marché buteur : deux colonnes (domicile / extérieur), sans mélanger les joueurs. */
       scorerSides?: { teamLabel: string; picks: ScorerPickRow[] }[]
-    }> = [
-      {
-        id: 'result_1x2' as const,
-        label: isLive ? '1N2 (cotes live)' : '1N2',
-        enabled: x12Ready && !liveBlocked,
-        picks: [
-          { id: 'home' as const, label: match.home.shortName, odds: x12?.home ?? 0 },
-          { id: 'draw' as const, label: 'Nul', odds: x12?.draw ?? 0 },
-          { id: 'away' as const, label: match.away.shortName, odds: x12?.away ?? 0 },
-        ],
-      },
-    ]
-
-    const showScorerMarket =
-      scorerPicksDisplayTotal > 0 &&
-      (isUpcoming || isLive || (isFinished && userScorerBets.length > 0))
+    }> = []
 
     if (showScorerMarket) {
+      const homePicks = scorerPicksForDisplay.home
+      const awayPicks = scorerPicksForDisplay.away
+      const scorerSides = [
+        { teamLabel: match.home.shortName, picks: homePicks },
+        { teamLabel: match.away.shortName, picks: awayPicks },
+      ].filter((side) => side.picks.length > 0)
+
       base.push({
         id: 'anytime_scorer',
         label: isFinished ? 'Buteur (résultat)' : 'Buteur (marque dans le match)',
         enabled: isFinished ? false : x12Ready && !liveBlocked,
         gridCols: 2,
-        picks: [...scorerPicksForDisplay.home, ...scorerPicksForDisplay.away],
-        scorerSides: [
-          { teamLabel: match.home.shortName, picks: scorerPicksForDisplay.home },
-          { teamLabel: match.away.shortName, picks: scorerPicksForDisplay.away },
-        ],
+        picks: [...homePicks, ...awayPicks],
+        scorerSides: scorerSides.length > 0 ? scorerSides : undefined,
       })
     }
 
     return base
   }, [
     isLive,
-    isUpcoming,
     isFinished,
     bettingSuspended,
     match.away.shortName,
     match.home.shortName,
     scorerPicksForDisplay,
-    scorerPicksDisplayTotal,
-    userScorerBets.length,
-    x12Displayed,
+    showScorerMarket,
     x12Ready,
   ])
 
@@ -363,9 +354,17 @@ export function BetWidget({
           badge: 'Perdu',
         }
       }
+      if (pending?.market === 'result_1x2' && pending.selection === side) {
+        return {
+          shell:
+            'border-2 border-emerald-500/90 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-400/40 shadow-sm',
+          odd: 'border-emerald-700/50 bg-emerald-600/15 text-emerald-950',
+          badge: '✓',
+        }
+      }
       return defaultVisual
     },
-    [resultBetsForSide],
+    [pending, resultBetsForSide],
   )
 
   const scorerBetsForSelection = useCallback(
@@ -421,6 +420,10 @@ export function BetWidget({
     sheetScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
+  const scrollSheetToSection = useCallback((ref: RefObject<HTMLElement | null>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
   const selectPendingPick = useCallback(
     (
       pick: { market: BetMarket; selection: BetSelection; odds: number; label: string },
@@ -430,7 +433,9 @@ export function BetWidget({
       if (maxStake >= minStake) {
         setStake((s) => Math.min(Math.max(s, minStake), maxStake))
       }
-      const shouldScroll = options?.scrollToConfirm ?? pick.market === 'anytime_scorer'
+      const shouldScroll =
+        options?.scrollToConfirm ??
+        (pick.market === 'anytime_scorer' || pick.market === 'result_1x2')
       if (shouldScroll) {
         if (!sheetOpen) setSheetOpen(true)
         requestAnimationFrame(() => {
@@ -443,19 +448,22 @@ export function BetWidget({
 
   const openSheet = () => setSheetOpen(true)
 
+  const openSheetToScorers = useCallback(() => {
+    setSheetOpen(true)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollSheetToSection(scorersSectionRef))
+    })
+  }, [scrollSheetToSection])
+
   const pickQuick = (side: 'home' | 'away') => {
     if (!x12Displayed) return
     const odds = side === 'home' ? x12Displayed.home : x12Displayed.away
-    setPending({
+    selectPendingPick({
       market: 'result_1x2',
       selection: side,
       odds,
       label: side === 'home' ? `1N2 · ${match.home.shortName}` : `1N2 · ${match.away.shortName}`,
     })
-    if (maxStake >= minStake) {
-      setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-    }
-    openSheet()
   }
 
   const placePending = () => {
@@ -537,15 +545,28 @@ export function BetWidget({
             ) : null}
           </div>
           {compact ? (
-            <button
-              type="button"
-              onClick={openSheet}
-              aria-haspopup="dialog"
-              aria-expanded={sheetOpen}
-              className="shrink-0 rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
-            >
-              Parier
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={openSheet}
+                aria-haspopup="dialog"
+                aria-expanded={sheetOpen}
+                className="rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
+              >
+                Parier
+              </button>
+              {showScorerMarket ? (
+                <button
+                  type="button"
+                  onClick={openSheetToScorers}
+                  aria-haspopup="dialog"
+                  aria-expanded={sheetOpen}
+                  className="rounded-lg border border-violet-300/45 bg-violet-500/90 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-violet-400 focus-visible:outline focus-visible:ring-2 focus-visible:ring-violet-300/50"
+                >
+                  Buteurs
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div
@@ -573,15 +594,28 @@ export function BetWidget({
             </Badge>
           </div>
           {!compact ? (
-            <button
-              type="button"
-              onClick={openSheet}
-              aria-haspopup="dialog"
-              aria-expanded={sheetOpen}
-              className="min-h-11 w-full shrink-0 rounded-xl border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:min-h-0 sm:w-auto sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
-            >
-              Parier
-            </button>
+            <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
+              <button
+                type="button"
+                onClick={openSheet}
+                aria-haspopup="dialog"
+                aria-expanded={sheetOpen}
+                className="min-h-11 flex-1 rounded-xl border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:min-h-0 sm:flex-none sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
+              >
+                Parier
+              </button>
+              {showScorerMarket ? (
+                <button
+                  type="button"
+                  onClick={openSheetToScorers}
+                  aria-haspopup="dialog"
+                  aria-expanded={sheetOpen}
+                  className="min-h-11 flex-1 rounded-xl border border-violet-300/50 bg-violet-500/90 px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-violet-400 focus-visible:outline focus-visible:ring-2 focus-visible:ring-violet-300/50 sm:min-h-0 sm:flex-none sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
+                >
+                  Buteurs
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -661,13 +695,12 @@ export function BetWidget({
               type="button"
               onClick={() => {
                 if (!x12Displayed) return
-                setPending({
+                selectPendingPick({
                   market: 'result_1x2',
                   selection: 'draw',
                   odds: x12Displayed.draw,
                   label: '1N2 · Nul',
                 })
-                openSheet()
               }}
               className="tf-bet-soft tf-bet-mini tf-bet-mini-pick rounded-lg border border-sky-400/50 bg-[#102f4d] px-2 py-1.5 text-left text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-sky-300/80 hover:bg-[#153a5c]"
               disabled={!x12Ready || !x12Displayed}
@@ -844,19 +877,25 @@ export function BetWidget({
                     'mt-4 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between',
                     pending.market === 'anytime_scorer'
                       ? 'border-emerald-300/80 bg-emerald-50/90 ring-2 ring-emerald-400/25'
-                      : 'border-blue-200/70 bg-blue-50/60',
+                      : pending.market === 'result_1x2'
+                        ? 'border-emerald-300/80 bg-emerald-50/90 ring-2 ring-emerald-400/25'
+                        : 'border-blue-200/70 bg-blue-50/60',
                   )}
                 >
                   <div className="min-w-0">
                     <div
                       className={cn(
                         'text-[10px] font-black uppercase tracking-wide',
-                        pending.market === 'anytime_scorer'
+                        pending.market === 'anytime_scorer' || pending.market === 'result_1x2'
                           ? 'text-emerald-900/80'
                           : 'text-blue-900/70',
                       )}
                     >
-                      {pending.market === 'anytime_scorer' ? 'Buteur sélectionné' : 'Sélection'}
+                      {pending.market === 'anytime_scorer'
+                          ? 'Buteur sélectionné'
+                          : pending.market === 'result_1x2'
+                            ? '1N2 sélectionné'
+                            : 'Sélection'}
                     </div>
                     <div className="truncate text-sm font-black text-slate-900">{pending.label}</div>
                     <div className="mt-0.5 text-xs font-semibold text-slate-600">
@@ -904,112 +943,56 @@ export function BetWidget({
                 </div>
               ) : null}
 
-              <div className="mt-5">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                  Coup rapide — 1N2
-                </p>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {(['home', 'draw', 'away'] as const).map((side) => {
-                    const visual = pickTeamVisual(side)
-                    const label =
-                      side === 'home'
-                        ? match.home.shortName
-                        : side === 'away'
-                          ? match.away.shortName
-                          : 'Nul'
-                    const odds =
-                      x12OddsPending
-                        ? '…'
-                        : x12Ready && x12Displayed
-                          ? fmtOdds(
-                              side === 'home'
-                                ? x12Displayed.home
-                                : side === 'away'
-                                  ? x12Displayed.away
-                                  : x12Displayed.draw,
-                            )
-                          : '—'
-                    return (
-                      <Button
-                        key={side}
-                        variant="soft"
-                        className={cn(
-                          'h-11 rounded-xl px-3 text-sm font-bold',
-                          side === 'draw'
-                            ? 'flex-col justify-center gap-0.5 text-[11px] leading-tight'
-                            : 'justify-between',
-                          visual.shell,
-                        )}
-                        disabled={!x12Ready || !x12Displayed}
-                        onClick={() => {
-                          if (side === 'draw') {
-                            if (!x12Displayed) return
-                            setPending({
-                              market: 'result_1x2',
-                              selection: 'draw',
-                              odds: x12Displayed.draw,
-                              label: '1N2 · Nul',
-                            })
-                            openSheet()
-                            if (maxStake >= minStake) {
-                              setStake((s) => Math.min(Math.max(s, minStake), maxStake))
-                            }
-                            return
-                          }
-                          pickQuick(side)
-                        }}
-                      >
-                        <span className={cn('truncate', side === 'draw' && 'text-[10px] font-semibold')}>
-                          {label}
-                        </span>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {visual.badge ? (
-                            <span className="text-[9px] font-black uppercase">{visual.badge}</span>
-                          ) : null}
-                          <span className="text-xs font-black tabular-nums">{odds}</span>
-                        </div>
-                      </Button>
-                    )
-                  })}
-                </div>
+              <div className="sticky top-0 z-10 -mx-4 mt-4 flex gap-2 border-b border-slate-100 bg-white/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
+                {showScorerMarket ? (
+                  <button
+                    type="button"
+                    onClick={() => scrollSheetToSection(scorersSectionRef)}
+                    className="flex-1 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-violet-900 transition hover:bg-violet-100"
+                  >
+                    Buteurs
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => scrollSheetToSection(x12SectionRef)}
+                  className="flex-1 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-sky-900 transition hover:bg-sky-100"
+                >
+                  1N2
+                </button>
               </div>
 
-              <div className="mt-5 space-y-3 pb-2">
-                {markets.map((m) => (
-                  <div
-                    key={m.id}
-                    className="rounded-2xl border border-slate-200/70 bg-slate-50/40 p-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-black text-slate-900">{m.label}</span>
-                      {!m.enabled && (
-                        <Badge className="border-slate-200 bg-slate-100 text-slate-600">
-                          {m.id === 'result_1x2'
-                            ? x12OddsPending
-                              ? '…'
-                              : 'Indispo'
-                            : m.id === 'exact_score'
-                              ? 'Live'
-                              : 'Pause'}
-                        </Badge>
-                      )}
-                    </div>
-                    {m.scorerSides && m.scorerSides.length > 0 ? (
-                      <div className="mt-2 max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain pr-0.5 sm:max-h-64">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {m.scorerSides.map((side) => (
-                            <div
-                              key={side.teamLabel}
-                              className="min-w-0 rounded-xl border border-slate-200/90 bg-slate-100/55 p-2.5 shadow-sm"
-                            >
-                              <p className="border-b border-slate-200/80 pb-1.5 text-center text-[10px] font-black uppercase tracking-wide text-slate-600">
-                                {side.teamLabel}
-                              </p>
-                              {side.picks.length === 0 ? (
-                                <p className="mt-3 text-center text-[10px] font-semibold text-slate-400">
-                                  Aucun titulaire listé
+              {markets.length > 0 ? (
+                <div ref={scorersSectionRef} className="mt-4 space-y-3 pb-2">
+                  {markets.map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-2xl border border-slate-200/70 bg-slate-50/40 p-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-black text-slate-900">{m.label}</span>
+                        {!m.enabled && (
+                          <Badge className="border-slate-200 bg-slate-100 text-slate-600">
+                            {m.id === 'exact_score' ? 'Live' : 'Pause'}
+                          </Badge>
+                        )}
+                      </div>
+                      {m.scorerSides && m.scorerSides.length > 0 ? (
+                        <div className="mt-2 max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain pr-0.5 sm:max-h-64">
+                          <div
+                            className={cn(
+                              'grid gap-3',
+                              m.scorerSides.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1',
+                            )}
+                          >
+                            {m.scorerSides.map((side) => (
+                              <div
+                                key={side.teamLabel}
+                                className="min-w-0 rounded-xl border border-slate-200/90 bg-slate-100/55 p-2.5 shadow-sm"
+                              >
+                                <p className="border-b border-slate-200/80 pb-1.5 text-center text-[10px] font-black uppercase tracking-wide text-slate-600">
+                                  {side.teamLabel}
                                 </p>
-                              ) : (
                                 <div className="mt-2 grid grid-cols-2 gap-2">
                                   {side.picks.map((p) => {
                                     const visual = pickScorerVisual(p.id)
@@ -1055,74 +1038,146 @@ export function BetWidget({
                                     )
                                   })}
                                 </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        className={cn(
-                          'mt-2 grid gap-2',
-                          m.gridCols === 2 ? 'grid-cols-2' : 'grid-cols-3',
-                        )}
-                      >
-                        {m.picks.map((p) => {
-                          const isScorer = m.id === 'anytime_scorer'
-                          const visual = isScorer ? pickScorerVisual(p.id) : null
-                          const scorerBets = isScorer ? scorerBetsForSelection(p.id) : []
-                          const isSelected =
-                            isScorer &&
-                            pending?.market === 'anytime_scorer' &&
-                            pending.selection === p.id
-                          const scoredLive = isScorer && p.disabled && scorerBets.length === 0
-                          return (
-                            <Button
-                              key={p.id}
-                              variant="soft"
-                              className={cn(
-                                'min-h-10 justify-between gap-1 rounded-xl px-2 text-xs font-bold',
-                                isScorer ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
-                                visual?.shell,
-                              )}
-                              disabled={!m.enabled || p.disabled}
-                              aria-pressed={isScorer ? isSelected : undefined}
-                              onClick={() => {
-                                selectPendingPick({
-                                  market: m.id,
-                                  selection: p.id,
-                                  odds: p.odds,
-                                  label: `${m.label} • ${p.label}`,
-                                })
-                              }}
-                            >
-                              <span className="min-w-0 text-center leading-snug sm:text-left">{p.label}</span>
-                              <div className="flex shrink-0 items-center gap-1">
-                                {visual?.badge ? (
-                                  <span className="text-[9px] font-black uppercase">{visual.badge}</span>
-                                ) : null}
-                                <span
-                                  className={cn(
-                                    'font-black tabular-nums',
-                                    visual?.odd ?? 'text-slate-500',
-                                  )}
-                                >
-                                  {m.id === 'result_1x2' && !x12Ready
-                                    ? x12OddsPending
-                                      ? '…'
-                                      : '—'
-                                    : scoredLive
-                                      ? 'But ✓'
-                                      : fmtOdds(p.odds)}
-                                </span>
                               </div>
-                            </Button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            'mt-2 grid gap-2',
+                            m.gridCols === 2 ? 'grid-cols-2' : 'grid-cols-3',
+                          )}
+                        >
+                          {m.picks.map((p) => {
+                            const isScorer = m.id === 'anytime_scorer'
+                            const visual = isScorer ? pickScorerVisual(p.id) : null
+                            const scorerBets = isScorer ? scorerBetsForSelection(p.id) : []
+                            const isSelected =
+                              isScorer &&
+                              pending?.market === 'anytime_scorer' &&
+                              pending.selection === p.id
+                            const scoredLive = isScorer && p.disabled && scorerBets.length === 0
+                            return (
+                              <Button
+                                key={p.id}
+                                variant="soft"
+                                className={cn(
+                                  'min-h-10 justify-between gap-1 rounded-xl px-2 text-xs font-bold',
+                                  isScorer ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
+                                  visual?.shell,
+                                )}
+                                disabled={!m.enabled || p.disabled}
+                                aria-pressed={isScorer ? isSelected : undefined}
+                                onClick={() => {
+                                  selectPendingPick({
+                                    market: m.id,
+                                    selection: p.id,
+                                    odds: p.odds,
+                                    label: `${m.label} • ${p.label}`,
+                                  })
+                                }}
+                              >
+                                <span className="min-w-0 text-center leading-snug sm:text-left">
+                                  {p.label}
+                                </span>
+                                <div className="flex shrink-0 items-center gap-1">
+                                  {visual?.badge ? (
+                                    <span className="text-[9px] font-black uppercase">
+                                      {visual.badge}
+                                    </span>
+                                  ) : null}
+                                  <span
+                                    className={cn(
+                                      'font-black tabular-nums',
+                                      visual?.odd ?? 'text-slate-500',
+                                    )}
+                                  >
+                                    {scoredLive ? 'But ✓' : fmtOdds(p.odds)}
+                                  </span>
+                                </div>
+                              </Button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div ref={x12SectionRef} className="mt-5">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                  {isLive ? '1N2 (cotes live)' : '1N2'}
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {(['home', 'draw', 'away'] as const).map((side) => {
+                    const visual = pickTeamVisual(side)
+                    const isSelected =
+                      pending?.market === 'result_1x2' && pending.selection === side
+                    const label =
+                      side === 'home'
+                        ? match.home.shortName
+                        : side === 'away'
+                          ? match.away.shortName
+                          : 'Nul'
+                    const odds =
+                      x12OddsPending
+                        ? '…'
+                        : x12Ready && x12Displayed
+                          ? fmtOdds(
+                              side === 'home'
+                                ? x12Displayed.home
+                                : side === 'away'
+                                  ? x12Displayed.away
+                                  : x12Displayed.draw,
+                            )
+                          : '—'
+                    return (
+                      <Button
+                        key={side}
+                        variant="soft"
+                        className={cn(
+                          'h-11 rounded-xl px-3 text-sm font-bold',
+                          side === 'draw'
+                            ? 'flex-col justify-center gap-0.5 text-[11px] leading-tight'
+                            : 'justify-between',
+                          visual.shell,
+                        )}
+                        disabled={!x12Ready || !x12Displayed}
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          if (!x12Displayed) return
+                          const oddsVal =
+                            side === 'home'
+                              ? x12Displayed.home
+                              : side === 'away'
+                                ? x12Displayed.away
+                                : x12Displayed.draw
+                          selectPendingPick({
+                            market: 'result_1x2',
+                            selection: side,
+                            odds: oddsVal,
+                            label:
+                              side === 'draw'
+                                ? '1N2 · Nul'
+                                : `1N2 · ${side === 'home' ? match.home.shortName : match.away.shortName}`,
+                          })
+                        }}
+                      >
+                        <span className={cn('truncate', side === 'draw' && 'text-[10px] font-semibold')}>
+                          {label}
+                        </span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {visual.badge ? (
+                            <span className="text-[9px] font-black uppercase">{visual.badge}</span>
+                          ) : null}
+                          <span className="text-xs font-black tabular-nums">{odds}</span>
+                        </div>
+                      </Button>
+                    )
+                  })}
+                </div>
               </div>
 
               <Link
