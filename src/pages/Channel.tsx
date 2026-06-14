@@ -61,6 +61,10 @@ import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMin
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { deriveBettingSuspension } from '../utils/bettingSuspension'
+import {
+  stadiumAmbiancePercentFromFxCount,
+  stadiumAmbianceTierLabel,
+} from '../utils/stadiumAmbianceFromFx'
 import { useLiveMatchMessageLikesSync } from '../hooks/useLiveMatchMessageLikesSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import { useLiveMatchSalonStats } from '../hooks/useLiveMatchSalonStats'
@@ -2066,6 +2070,14 @@ export function ChannelPage() {
     [],
   )
   const fxActiveCount = stadiumFxTotal
+  const stadiumAmbiancePct = useMemo(
+    () => stadiumAmbiancePercentFromFxCount(stadiumFxTotal),
+    [stadiumFxTotal],
+  )
+  const stadiumAmbianceLabel = useMemo(
+    () => stadiumAmbianceTierLabel(stadiumAmbiancePct),
+    [stadiumAmbiancePct],
+  )
   const liveSalonStats = useLiveMatchSalonStats(match?.id)
   const viewersDisplay =
     liveSalonStats != null
@@ -2284,10 +2296,23 @@ export function ChannelPage() {
           <div className="pointer-events-none absolute inset-0 rounded-xl border border-rose-400/80 animate-pulse" />
         ) : null}
         {status === 'live' ? (
-          <div className={`mb-2 h-1.5 overflow-hidden rounded-full ${L ? 'bg-slate-200' : 'bg-[#0a1a2d]'}`}>
+          <div
+            className={`mb-2 h-1.5 overflow-hidden rounded-full ${L ? 'bg-slate-200' : 'bg-[#0a1a2d]'}`}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={stadiumAmbiancePct}
+            aria-label={`Ambiance stade ${stadiumAmbiancePct}% · ${fxActiveCount} FX tribune · ${stadiumAmbianceLabel}`}
+          >
             <div
-              className="h-full w-full tf-hype-glow"
-              style={{ background: `linear-gradient(90deg, ${homeColor}, ${awayColor})` }}
+              className={cn(
+                'h-full transition-[width] duration-700 ease-out',
+                stadiumAmbiancePct >= 65 && 'tf-hype-glow',
+              )}
+              style={{
+                width: `${stadiumAmbiancePct <= 0 ? 0 : Math.max(4, stadiumAmbiancePct)}%`,
+                background: `linear-gradient(90deg, ${homeColor}, ${awayColor})`,
+              }}
             />
           </div>
         ) : null}

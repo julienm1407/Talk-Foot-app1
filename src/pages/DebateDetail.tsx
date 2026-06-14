@@ -78,7 +78,7 @@ export function DebateDetailPage() {
   return (
     <div
       className={cn(
-        'flex min-h-0 flex-1 flex-col gap-4 max-lg:overflow-hidden lg:space-y-6',
+        'flex min-h-0 flex-1 flex-col gap-3 max-lg:overflow-hidden max-lg:gap-2 lg:space-y-6',
       )}
       data-no-swipe="true"
     >
@@ -102,7 +102,7 @@ export function DebateDetailPage() {
         style={{ ['--debate-accent' as string]: debate.accent }}
       >
         <div
-          className="relative px-4 py-4 sm:px-6 sm:py-6 max-lg:py-3.5"
+          className="relative px-4 py-4 sm:px-6 sm:py-6 max-lg:px-3 max-lg:py-2.5"
           style={{
             background: `linear-gradient(155deg, ${debate.accent} 0%, color-mix(in srgb, ${debate.accent} 42%, #0a1628) 52%, #061018 100%)`,
           }}

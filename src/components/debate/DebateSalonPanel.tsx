@@ -284,28 +284,28 @@ export function DebateSalonPanel({
       className={cn(
         'flex min-h-0 flex-col overflow-hidden p-0',
         'max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[auto_minmax(0,1fr)_auto]',
-        'lg:min-h-[min(70vh,42rem)]',
+        'max-lg:min-h-[min(62dvh,34rem)] lg:min-h-[min(78dvh,48rem)] lg:flex-1',
         className,
       )}
       elevation="soft"
     >
       <div
         className={cn(
-          'shrink-0 border-b px-4 py-3 sm:px-5 max-lg:row-start-1',
+          'shrink-0 border-b px-4 py-3 sm:px-5 max-lg:row-start-1 max-lg:px-3 max-lg:py-2',
           L ? 'border-tf-grey-pastel/50 bg-white/95' : 'border-white/12 bg-[color:var(--tf-c30-surface-soft)]',
         )}
       >
-        <h2 className="font-display text-sm font-black uppercase tracking-[0.16em] text-tf-app-fg">
+        <h2 className="font-display text-sm font-black uppercase tracking-[0.16em] text-tf-app-fg max-lg:text-xs">
           Discussion ouverte
         </h2>
-        <p className="mt-1 text-xs font-semibold text-tf-app-muted">
+        <p className="mt-1 text-xs font-semibold text-tf-app-muted max-lg:line-clamp-1 max-lg:text-[11px]">
           Participe directement — aucune adhésion à une tribune requise.
         </p>
       </div>
 
       <div
         ref={feedRef}
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3 sm:px-4 max-lg:row-start-2 [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3 sm:px-4 max-lg:row-start-2 max-lg:min-h-[min(48dvh,26rem)] [-webkit-overflow-scrolling:touch]"
         role="log"
         aria-label="Messages du débat"
         aria-live="polite"

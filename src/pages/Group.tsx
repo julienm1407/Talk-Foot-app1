@@ -1309,7 +1309,7 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-0 overflow-x-clip max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(88dvh,calc(100dvh-7.5rem))] lg:max-h-[min(88dvh,calc(100dvh-7.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
+      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-0 overflow-x-clip max-lg:min-h-0 max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(92dvh,calc(100dvh-5.5rem))] lg:max-h-[min(92dvh,calc(100dvh-5.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
         <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 max-lg:py-0.5 lg:hidden">
           <div className="flex min-w-0 items-center gap-1">
             <Link
@@ -1622,8 +1622,8 @@ export function GroupPage() {
         <Card
           className={cn(
             'flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden border-2 p-0',
-            'max-lg:grid max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[auto_minmax(0,1fr)_auto]',
-            'lg:min-h-[min(50dvh,22rem)] lg:h-full lg:max-h-none',
+            'max-lg:grid max-lg:h-full max-lg:min-h-0 max-lg:flex-1 max-lg:grid-rows-[auto_minmax(0,1fr)_auto]',
+            'lg:min-h-0 lg:h-full lg:max-h-none',
           )}
           elevation="soft"
           style={
@@ -1637,6 +1637,8 @@ export function GroupPage() {
               tfSalonHeader(L, 'shrink-0 p-3 sm:p-4 lg:p-5'),
               'max-lg:row-start-1 max-lg:border-b max-lg:p-1.5',
               L ? 'max-lg:border-tf-grey-pastel/40' : 'max-lg:border-white/10',
+              isDebateSalon &&
+                'max-lg:max-h-[min(28dvh,11.5rem)] max-lg:overflow-y-auto max-lg:overscroll-y-contain',
             )}
           >
             <div
@@ -1872,6 +1874,7 @@ export function GroupPage() {
                 <LinkedDebateBanner
                   debate={debate}
                   debateId={effectiveDebateId}
+                  compact
                   className="mt-3 hidden lg:mt-4 lg:block"
                 />
                 <details
@@ -1965,7 +1968,7 @@ export function GroupPage() {
             ref={feedRef}
             className={cn(
               'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
-              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0 max-lg:scroll-pb-28',
+              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0 max-lg:scroll-pb-28 max-lg:min-h-[min(52dvh,28rem)]',
               'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',
             )}
