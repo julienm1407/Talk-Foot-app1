@@ -31,6 +31,8 @@ export type User = {
   characterLook?: Partial<AvatarCharacterLook>
   /** Avatar modulaire (studio) — chargé depuis le profil cloud pour les vrais comptes. */
   modularAvatar?: ModularAvatarState
+  /** Photo profil (data URL) — chargée depuis le profil cloud pour les vrais comptes. */
+  profilePhotoDataUrl?: string
   /** Formule effective (cloud) — cadre Ultra en chat. */
   subscriptionTier?: SubscriptionTierId
 }

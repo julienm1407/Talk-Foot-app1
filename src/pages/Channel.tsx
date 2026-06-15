@@ -1189,7 +1189,7 @@ export function ChannelPage() {
     () => [...new Set(chatMessages.map((m) => m.userId))],
     [chatMessages],
   )
-  const { avatars: modularByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
+  const { avatars: modularByAuthor, profilePhotos: profilePhotoByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
     {
@@ -1243,8 +1243,15 @@ export function ChannelPage() {
     for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
       const label = resolveChatDisplayLabel(map[id]?.username, cloudAuthorNames[id])
       const subscriptionTier = subscriptionTiersByAuthor[id]
+      const profilePhotoDataUrl = profilePhotoByAuthor[id]
       if (map[id]) {
-        map[id] = { ...map[id], username: label, modularAvatar, ...(subscriptionTier ? { subscriptionTier } : {}) }
+        map[id] = {
+          ...map[id],
+          username: label,
+          modularAvatar,
+          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
+          ...(subscriptionTier ? { subscriptionTier } : {}),
+        }
       } else {
         map[id] = {
           id,
@@ -1252,9 +1259,14 @@ export function ChannelPage() {
           avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
           modularAvatar,
+          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
           ...(subscriptionTier ? { subscriptionTier } : {}),
         }
       }
+    }
+    for (const [id, profilePhotoDataUrl] of Object.entries(profilePhotoByAuthor)) {
+      if (!map[id] || map[id].profilePhotoDataUrl) continue
+      map[id] = { ...map[id], profilePhotoDataUrl }
     }
     for (const id of chatAuthorIds) {
       const subscriptionTier = subscriptionTiersByAuthor[id]
@@ -1273,6 +1285,7 @@ export function ChannelPage() {
     chatMessages,
     chatAuthorIds,
     modularByAuthor,
+    profilePhotoByAuthor,
     cloudAuthorNames,
     subscriptionTiersByAuthor,
     authUser,

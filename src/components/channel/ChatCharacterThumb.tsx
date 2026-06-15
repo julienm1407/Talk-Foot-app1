@@ -18,7 +18,7 @@ import { userShowsUltraAvatarFrame } from '../../utils/ultraAvatarFrame'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import { isChatAuthorAvatarPending } from '../../hooks/useChatAuthorModularAvatars'
-import { resolveDisplayModularAvatar } from '../../utils/modularAvatarBackup'
+import { isLikelyDefaultModularAvatar, resolveDisplayModularAvatar } from '../../utils/modularAvatarBackup'
 import { resolveProfileModularAvatarForDisplay } from '../../utils/chatAuthorModularAvatar'
 
 const CHAT_SHELL_PX = {
@@ -99,13 +99,16 @@ export function ChatCharacterThumb({
   const isSalonBot = Boolean(user?.isGroupSalonBot)
   const isTalkFootBot = Boolean(user?.isTalkFootBot)
   const isBot = isSalonBot || isTalkFootBot
-  const peerHasModular = Boolean(user?.modularAvatar?.data)
-  const useModularThumb = !isBot && (isSelf || peerHasModular)
+  const peerModular = user?.modularAvatar
+  const peerHasCustomModular =
+    Boolean(peerModular?.data) && !isLikelyDefaultModularAvatar(peerModular)
+  const useModularThumb = !isBot && (isSelf || peerHasCustomModular)
   const cloudAvatarPending = Boolean(
     user?.id &&
       !isSelf &&
       !isBot &&
-      !peerHasModular &&
+      !peerHasCustomModular &&
+      !photoUrl &&
       isChatAuthorAvatarPending(user.id, selfUserId),
   )
   const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`

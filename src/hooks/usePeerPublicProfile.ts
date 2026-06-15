@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { buildChatPeerProfile } from '../utils/chatPeerProfile'
 import {
   modularAvatarFromPublicRow,
+  profilePhotoFromPublicRow,
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 
@@ -42,15 +43,18 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
         if (cancelled) return
         const row = rows[0]
         const modular = row ? modularAvatarFromPublicRow(row.modularAvatar) : undefined
+        const profilePhotoDataUrl = row ? profilePhotoFromPublicRow(row.profilePhotoDataUrl) : undefined
         const cloudName = row?.displayName?.trim() || null
         const base = buildChatPeerProfile({
           ...peer,
           ...(modular ? { modularAvatar: modular } : {}),
+          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
         })
         setDisplayName(cloudName)
         setCloudProfile({
           ...base,
           ...(modular ? { modularAvatar: modular } : {}),
+          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
         })
       })
       .catch(() => {

@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import {
   modularAvatarFromPublicRow,
+  profilePhotoFromPublicRow,
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 
@@ -13,10 +14,22 @@ type AuthorCacheEntry = {
   modularAvatar: ModularAvatarState | null
   displayName: string | null
   subscriptionTier: SubscriptionTierId | null
+  profilePhotoDataUrl: string | null
   loaded: boolean
 }
 
 const authorCache = new Map<string, AuthorCacheEntry>()
+
+function markAuthorCacheLoaded(actorKey: string, partial?: Partial<Omit<AuthorCacheEntry, 'loaded'>>) {
+  const prev = authorCache.get(actorKey)
+  authorCache.set(actorKey, {
+    modularAvatar: partial?.modularAvatar ?? prev?.modularAvatar ?? null,
+    displayName: partial?.displayName ?? prev?.displayName ?? null,
+    subscriptionTier: partial?.subscriptionTier ?? prev?.subscriptionTier ?? null,
+    profilePhotoDataUrl: partial?.profilePhotoDataUrl ?? prev?.profilePhotoDataUrl ?? null,
+    loaded: true,
+  })
+}
 
 export function clearChatAuthorAvatarCache(userId?: string) {
   if (userId) {
@@ -63,11 +76,24 @@ export function useChatAuthorModularAvatars(
 
   useEffect(() => {
     if (!pendingKey || !isSupabaseConfigured()) return
-    const sb = getSupabaseBrowserClient()
-    if (!sb) return
 
     const ids = pendingKey.split(',').filter(Boolean)
     let cancelled = false
+
+    const finishLoaded = () => {
+      for (const actorKey of ids) {
+        if (!authorCache.get(actorKey)?.loaded) {
+          markAuthorCacheLoaded(actorKey)
+        }
+      }
+      if (!cancelled) setTick((n) => n + 1)
+    }
+
+    const sb = getSupabaseBrowserClient()
+    if (!sb) {
+      finishLoaded()
+      return
+    }
 
     void (async () => {
       try {
@@ -82,27 +108,28 @@ export function useChatAuthorModularAvatars(
           const modularAvatar = row ? modularAvatarFromPublicRow(row.modularAvatar) ?? null : null
           const displayName = row?.displayName?.trim() || null
           const subscriptionTier = row?.subscriptionTier ?? null
-          authorCache.set(actorKey, { modularAvatar, displayName, subscriptionTier, loaded: true })
+          const profilePhotoDataUrl = row
+            ? profilePhotoFromPublicRow(row.profilePhotoDataUrl) ?? null
+            : null
+          markAuthorCacheLoaded(actorKey, {
+            modularAvatar,
+            displayName,
+            subscriptionTier,
+            profilePhotoDataUrl,
+          })
           if (row?.profileId && row.profileId !== actorKey) {
-            authorCache.set(row.profileId, {
+            markAuthorCacheLoaded(row.profileId, {
               modularAvatar,
               displayName,
               subscriptionTier,
-              loaded: true,
+              profilePhotoDataUrl,
             })
           }
         }
       } catch {
         if (cancelled) return
-        for (const actorKey of ids) {
-          const prev = authorCache.get(actorKey)
-          authorCache.set(actorKey, {
-            modularAvatar: prev?.modularAvatar ?? null,
-            displayName: prev?.displayName ?? null,
-            subscriptionTier: prev?.subscriptionTier ?? null,
-            loaded: true,
-          })
-        }
+        finishLoaded()
+        return
       }
 
       if (!cancelled) setTick((n) => n + 1)
@@ -115,6 +142,7 @@ export function useChatAuthorModularAvatars(
 
   return useMemo(() => {
     const avatars: Record<string, ModularAvatarState> = {}
+    const profilePhotos: Record<string, string> = {}
     const displayNames: Record<string, string> = {}
     const subscriptionTiers: Record<string, SubscriptionTierId> = {}
 
@@ -132,9 +160,12 @@ export function useChatAuthorModularAvatars(
     for (const id of userIds) {
       const cached = authorCache.get(id)
       if (cached?.modularAvatar && !avatars[id]) avatars[id] = cached.modularAvatar
+      if (cached?.profilePhotoDataUrl && !profilePhotos[id]) {
+        profilePhotos[id] = cached.profilePhotoDataUrl
+      }
       if (cached?.displayName) displayNames[id] = cached.displayName
       if (cached?.subscriptionTier) subscriptionTiers[id] = cached.subscriptionTier
     }
-    return { avatars, displayNames, subscriptionTiers }
+    return { avatars, profilePhotos, displayNames, subscriptionTiers }
   }, [userIds, tick, selfModularAvatar, selfSubscriptionTier, selfUserKeys])
 }

@@ -131,7 +131,7 @@ export function DebateSalonPanel({
     () => [...new Set(messages.map((m) => m.userId))],
     [messages],
   )
-  const { avatars: modularByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
+  const { avatars: modularByAuthor, profilePhotos: profilePhotoByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
     {
@@ -175,8 +175,15 @@ export function DebateSalonPanel({
     for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
       const label = resolveChatDisplayLabel(authorNameByUserId.get(id), cloudAuthorNames[id])
       const subscriptionTier = subscriptionTiersByAuthor[id]
+      const profilePhotoDataUrl = profilePhotoByAuthor[id]
       if (base[id]) {
-        base[id] = { ...base[id], username: label, modularAvatar, ...(subscriptionTier ? { subscriptionTier } : {}) }
+        base[id] = {
+          ...base[id],
+          username: label,
+          modularAvatar,
+          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
+          ...(subscriptionTier ? { subscriptionTier } : {}),
+        }
       } else {
         base[id] = {
           id,
@@ -184,9 +191,14 @@ export function DebateSalonPanel({
           avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
           modularAvatar,
+          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
           ...(subscriptionTier ? { subscriptionTier } : {}),
         }
       }
+    }
+    for (const [id, profilePhotoDataUrl] of Object.entries(profilePhotoByAuthor)) {
+      if (!base[id] || base[id].profilePhotoDataUrl) continue
+      base[id] = { ...base[id], profilePhotoDataUrl }
     }
     for (const id of chatAuthorIds) {
       const subscriptionTier = subscriptionTiersByAuthor[id]
@@ -216,6 +228,7 @@ export function DebateSalonPanel({
     chatActorId,
     cloudAuthorNames,
     modularByAuthor,
+    profilePhotoByAuthor,
     subscriptionTiersByAuthor,
     selfChatUserId,
     selfProfile.modularAvatar,

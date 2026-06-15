@@ -21,6 +21,7 @@ export type TalkfootPublicProfileRow = {
   profileId: string
   displayName: string | null
   modularAvatar: unknown
+  profilePhotoDataUrl: string | null
   subscriptionTier: SubscriptionTierId | null
 }
 
@@ -41,11 +42,15 @@ export async function fetchTalkfootPublicProfiles(
     const actorKey = typeof row.actor_key === 'string' ? row.actor_key : ''
     const profileId = typeof row.profile_id === 'string' ? row.profile_id : ''
     if (!actorKey || !profileId) continue
+    const profilePhotoRaw =
+      row.profile_photo_data_url != null ? String(row.profile_photo_data_url) : null
     out.push({
       actorKey,
       profileId,
       displayName: row.display_name != null ? String(row.display_name) : null,
       modularAvatar: row.modular_avatar ?? null,
+      profilePhotoDataUrl:
+        profilePhotoRaw?.trim().startsWith('data:image/') ? profilePhotoRaw.trim() : null,
       subscriptionTier: parsePublicSubscriptionTier(row.subscription_tier),
     })
   }
