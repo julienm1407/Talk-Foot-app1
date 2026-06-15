@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { User } from '../../types/chat'
 import type { UserProfile } from '../../types/profile'
@@ -14,6 +14,9 @@ import { SalonBotHeadThumb } from './SalonBotHeadThumb'
 import { UltraAvatarFrame } from '../subscription/UltraAvatarFrame'
 import { useSubscription } from '../../hooks/useSubscription'
 import { userShowsUltraAvatarFrame } from '../../utils/ultraAvatarFrame'
+import { useAuth } from '../../contexts/AuthContext'
+import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
+import { isChatAuthorAvatarPending } from '../../hooks/useChatAuthorModularAvatars'
 
 function peerProfileKey(u: User | undefined): string {
   if (!u) return 'anon'
@@ -60,14 +63,32 @@ export function ChatCharacterThumb({
   'aria-label'?: string
 }) {
   const { tier: selfTier } = useSubscription()
+  const { user: authUser } = useAuth()
+  const chatActorId = useTalkFootChatActorId()
+  const selfUserId = chatActorId ?? authUser?.id ?? 'me'
+  const [photoFailed, setPhotoFailed] = useState(false)
   const peerProfile = useMemo(() => buildChatPeerProfile(user), [peerProfileKey(user)])
   const profile = isSelf ? selfProfile : peerProfile
+  const photoUrl = profile.profilePhotoDataUrl?.trim()
+  useEffect(() => {
+    setPhotoFailed(false)
+  }, [photoUrl])
   const isSalonBot = Boolean(user?.isGroupSalonBot)
   const isTalkFootBot = Boolean(user?.isTalkFootBot)
   const isBot = isSalonBot || isTalkFootBot
   const useModularThumb = !isBot && (isSelf || Boolean(user?.modularAvatar))
+  const cloudAvatarPending = Boolean(
+    user?.id &&
+      !isSelf &&
+      !isBot &&
+      !user.modularAvatar &&
+      isChatAuthorAvatarPending(user.id, selfUserId),
+  )
   const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`
   const showUltraFrame = userShowsUltraAvatarFrame(user, { isSelf, selfTier })
+  const thumbBorderClass = showUltraFrame
+    ? 'border-0 shadow-none'
+    : 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]'
 
   const botSeed = useMemo(() => {
     if (isSalonBot && user?.id.startsWith('group-bot:')) {
@@ -79,9 +100,7 @@ export function ChatCharacterThumb({
   const shellClass = cn(
     'relative isolate block shrink-0 self-start overflow-hidden rounded-full outline-none',
     size === 'compact'
-      ? useModularThumb || isBot
-        ? 'size-7 min-h-7 min-w-7'
-        : 'size-7 min-h-7 min-w-7'
+      ? 'size-7 min-h-7 min-w-7'
       : 'size-[2.65rem] min-h-[2.65rem] min-w-[2.65rem] sm:size-[2.85rem] sm:min-h-[2.85rem] sm:min-w-[2.85rem]',
     className,
   )
@@ -94,30 +113,32 @@ export function ChatCharacterThumb({
       className="size-full"
       aria-label={ariaLabel}
     />
+  ) : photoUrl && !photoFailed ? (
+    <img
+      src={photoUrl}
+      alt=""
+      className={cn('size-full rounded-full object-cover object-top', thumbBorderClass)}
+      onError={() => setPhotoFailed(true)}
+    />
   ) : useModularThumb ? (
     <ProfileCharacterThumb
       profile={profile}
-      size={size === 'compact' ? 'xs' : 'chat'}
-      imagePriority={false}
+      size={size === 'compact' ? 'xs' : 'sm'}
+      imagePriority={isSelf}
       {...MODULAR_PP_CHAT_FRAMING}
-      className={cn(
-        '!h-full !w-full !min-h-0 !min-w-0 rounded-full',
-        showUltraFrame
-          ? 'border-0 shadow-none'
-          : 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]',
-      )}
+      className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
       aria-label={ariaLabel}
+    />
+  ) : cloudAvatarPending ? (
+    <div
+      className={cn('size-full animate-pulse rounded-full bg-slate-600/70', thumbBorderClass)}
+      aria-hidden
     />
   ) : (
     <img
       src={dicebearAvatarUrl(dicebearSeed, 96, 0)}
       alt=""
-      className={cn(
-        'size-full rounded-full object-cover',
-        showUltraFrame
-          ? 'border-0 shadow-none'
-          : 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]',
-      )}
+      className={cn('size-full rounded-full object-cover', thumbBorderClass)}
     />
   )
 

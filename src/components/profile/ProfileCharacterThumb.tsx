@@ -20,6 +20,10 @@ const PRESETS = {
   lg: 96,
 } as const
 
+function fillsParentShell(className?: string) {
+  return Boolean(className && /(?:^|\s)!?(?:h|w)-full/.test(className))
+}
+
 export function ProfileCharacterThumb({
   profile,
   size = 'md',
@@ -42,6 +46,7 @@ export function ProfileCharacterThumb({
   'aria-label'?: string
 }) {
   const thumbPx = PRESETS[size]
+  const fillParent = fillsParentShell(className)
   const modularState = resolveModularAvatarState(profile.modularAvatar)
   const shellRef = useRef<HTMLDivElement>(null)
   const [renderState, setRenderState] = useState<{ shellSize: number; renderSize: number }>({
@@ -50,33 +55,30 @@ export function ProfileCharacterThumb({
   })
 
   useEffect(() => {
-    if (framingMode === 'topbar') {
-      const renderSize =
-        thumbPx < MODULAR_PP_HEAD_RENDER_BASE_PX
-          ? thumbPx
-          : Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, thumbPx)
-      setRenderState({ shellSize: thumbPx, renderSize })
-      return
-    }
-    /** Tailles fixes (chat xs, etc.) : pas de ResizeObserver — évite les crash Safari au zoom. */
-    if (size === 'xs' || size === 'sm' || size === 'chat') {
-      setRenderState({ shellSize: thumbPx, renderSize: thumbPx })
-      return
-    }
     const el = shellRef.current
     if (!el) return
+
     const update = () => {
       const measured = Math.round(Math.min(el.clientWidth, el.clientHeight))
       const shellSize = Math.max(16, measured || thumbPx)
-      const renderSize = measured < 32 ? thumbPx : shellSize
+      let renderSize = shellSize
+      if (framingMode === 'topbar') {
+        renderSize =
+          shellSize < MODULAR_PP_HEAD_RENDER_BASE_PX
+            ? shellSize
+            : Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, shellSize)
+      } else if (shellSize < 32) {
+        renderSize = thumbPx
+      }
       setRenderState({ shellSize, renderSize })
     }
+
     update()
     if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [thumbPx, framingMode, size])
+  }, [thumbPx, framingMode])
 
   const scale =
     framingMode === 'topbar' && renderState.renderSize > 0
@@ -88,9 +90,14 @@ export function ProfileCharacterThumb({
       ref={shellRef}
       className={cn(
         'relative shrink-0 overflow-hidden rounded-full border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
+        fillParent && 'h-full w-full min-h-0 min-w-0',
         className,
       )}
-      style={{ width: thumbPx, height: thumbPx, minWidth: thumbPx, minHeight: thumbPx }}
+      style={
+        fillParent
+          ? undefined
+          : { width: thumbPx, height: thumbPx, minWidth: thumbPx, minHeight: thumbPx }
+      }
       role="img"
       aria-label={ariaLabel ?? 'Photo de profil — tête de mon avatar modulaire'}
     >

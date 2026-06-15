@@ -16,11 +16,11 @@ export const MODULAR_PP_NAV_FRAMING = {
   headScale: 1.55,
 }
 
-/** Fil tribune / débat (~28–45px) — tête entière, sans zoom nav. */
+/** Fil tribune / débat (~28–45px) — cadrage tête proche de la barre nav. */
 export const MODULAR_PP_CHAT_FRAMING = {
   framingMode: 'topbar' as const,
-  headOffsetPx: 0,
-  headScale: 1,
+  headOffsetPx: -3,
+  headScale: 1.5,
 }
 
 /** Vignettes ~28px (classement parieurs) — tête entière, sans zoom nav. */

@@ -26,6 +26,12 @@ export function clearChatAuthorAvatarCache(userId?: string) {
   authorCache.clear()
 }
 
+/** Vrai tant que l’avatar cloud d’un auteur n’a pas encore été résolu (évite Dicebear temporaire). */
+export function isChatAuthorAvatarPending(userId: string, selfUserId: string): boolean {
+  if (!shouldFetchCloudChatAvatar(userId, selfUserId)) return false
+  return !authorCache.get(userId)?.loaded
+}
+
 type SelfAvatarOptions = {
   /** Profil modulaire local (compte connecté) — prioritaire sur le cache cloud. */
   selfModularAvatar?: ModularAvatarState | null
