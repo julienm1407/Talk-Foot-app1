@@ -17,7 +17,7 @@ import { useXpGrant } from './useXpGrant'
 
 function clampStake(n: number) {
   if (!Number.isFinite(n)) return 0
-  return Math.max(5, Math.min(250, Math.round(n)))
+  return Math.max(5, Math.round(n))
 }
 
 export function useBetting(matchId: string, matchForLabel?: Match | null) {

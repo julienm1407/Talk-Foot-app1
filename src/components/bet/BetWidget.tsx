@@ -141,8 +141,7 @@ export function BetWidget({
 
   const isUpcoming = match.status === 'upcoming'
 
-  const maxStakeCap = 250
-  const maxStake = Math.min(maxStakeCap, Math.max(0, wallet.tokens))
+  const maxStake = Math.max(0, wallet.tokens)
   const minStake = 5
 
   /** Triplet 1N2 affichable : API, puis fallback estimé stable par match. */
