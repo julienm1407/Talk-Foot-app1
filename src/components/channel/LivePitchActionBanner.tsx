@@ -24,6 +24,8 @@ export function LivePitchActionBanner({
   homeColor,
   awayColor,
   pitchPressureTint,
+  liveClockPaused,
+  liveInSecondHalf,
   className,
 }: {
   highlight: Highlight | null
@@ -36,6 +38,8 @@ export function LivePitchActionBanner({
   homeColor: string
   awayColor: string
   pitchPressureTint: { homeTint: number; awayTint: number }
+  liveClockPaused?: boolean
+  liveInSecondHalf?: boolean
   className?: string
 }) {
   const banner = resolveLivePitchBanner({
@@ -46,6 +50,8 @@ export function LivePitchActionBanner({
     dangerousDelta,
     homeLabel,
     awayLabel,
+    liveClockPaused,
+    liveInSecondHalf,
   })
 
   const showHomeArrow = banner.side === 'home'

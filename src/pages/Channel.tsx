@@ -3440,6 +3440,8 @@ export function ChannelPage() {
                   homeColor={homeColor}
                   awayColor={awayColor}
                   pitchPressureTint={pitchPressureTint}
+                  liveClockPaused={matchForClock?.liveClockPaused}
+                  liveInSecondHalf={matchForClock?.liveInSecondHalf}
                 />
               </div>
             ) : isFinished ? (

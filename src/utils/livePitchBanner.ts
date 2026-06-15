@@ -35,9 +35,28 @@ export function resolveLivePitchBanner(params: {
   dangerousDelta: number
   homeLabel: string
   awayLabel: string
+  liveClockPaused?: boolean
+  liveInSecondHalf?: boolean
 }): LivePitchBanner {
-  const { highlight, highlightText, detectSide, dangerousLeader, dangerousDelta, homeLabel, awayLabel } =
-    params
+  const {
+    highlight,
+    highlightText,
+    detectSide,
+    dangerousLeader,
+    dangerousDelta,
+    homeLabel,
+    awayLabel,
+    liveClockPaused,
+    liveInSecondHalf,
+  } = params
+
+  if (liveClockPaused && !liveInSecondHalf) {
+    return {
+      label: 'MI-TEMPS',
+      side: 'neutral',
+      tone: 'neutral',
+    }
+  }
 
   if (highlight) {
     const raw = `${highlight.title ?? ''} ${highlight.detail ?? ''}`.trim()
