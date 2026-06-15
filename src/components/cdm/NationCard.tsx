@@ -31,8 +31,8 @@ export function NationCard({
         'group relative min-w-0',
         variant === 'jersey'
           ? railLayout
-            ? 'h-[17.5rem] w-[11rem] shrink-0'
-            : 'h-auto min-h-[17.5rem] w-full'
+            ? 'h-56 w-44 shrink-0'
+            : 'h-auto min-h-[12.5rem] w-full'
           : railLayout
             ? 'h-32 w-32 shrink-0'
             : 'aspect-square h-auto w-full max-w-[8.5rem]',
@@ -58,7 +58,9 @@ export function NationCard({
           aria-hidden
         />
         {variant === 'jersey' ? (
-          <NationJerseyImage nation={nation} variant="card" wrapperClassName="relative z-0" />
+          <div className="relative z-0 flex flex-1 items-center justify-center px-2 pt-3">
+            <NationJerseyImage nation={nation} variant="card" />
+          </div>
         ) : (
           <div className="relative z-0 flex flex-1 items-center justify-center pt-4">
             <NationCrest nation={nation} size="lg" withRing />

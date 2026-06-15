@@ -1,52 +1,40 @@
 import type { Nation } from '../../data/nations'
 import { cn } from '../../utils/cn'
 
-/** Zoom visuel uniforme des PNG maillot (souvent petits à l’intrinsèque). */
+/** Zoom visuel ×3 — PNG souvent petits à l’intrinsèque ; scale depuis le centre pour ne pas décaler. */
 const JERSEY_SCALE = 3
 
 type NationJerseyImageProps = {
   nation: Pick<Nation, 'jerseyUrl' | 'nameFr'>
   variant?: 'hero' | 'card'
   className?: string
-  wrapperClassName?: string
 }
 
 /**
- * Maillot nation — rendu agrandi (×3) pour toutes les fiches / cartes CDM.
+ * Maillot nation agrandi (×3), centré sur place — fiches et cartes CDM.
  */
 export function NationJerseyImage({
   nation,
   variant = 'card',
   className,
-  wrapperClassName,
 }: NationJerseyImageProps) {
   const isHero = variant === 'hero'
 
   return (
-    <div
+    <img
+      src={nation.jerseyUrl}
+      alt={`Maillot ${nation.nameFr}`}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
       className={cn(
-        'relative flex items-center justify-center overflow-visible',
+        'pointer-events-none w-auto select-none object-contain origin-center',
         isHero
-          ? 'min-h-[calc(6.5rem*3)] w-[min(12rem,34vw)] sm:min-h-[calc(8rem*3)] sm:w-[min(15rem,24vw)]'
-          : 'min-h-[calc(2.85rem*3)] w-full flex-1 px-1 pt-2',
-        wrapperClassName,
+          ? 'max-h-[5rem] drop-shadow-[0_18px_28px_rgba(0,0,0,0.4)] sm:max-h-[6rem]'
+          : 'max-h-[2.85rem] drop-shadow-[0_8px_14px_rgba(0,0,0,0.35)]',
+        className,
       )}
-    >
-      <img
-        src={nation.jerseyUrl}
-        alt={`Maillot ${nation.nameFr}`}
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        className={cn(
-          'pointer-events-none w-auto select-none object-contain origin-bottom',
-          isHero
-            ? 'h-[6.5rem] drop-shadow-[0_18px_28px_rgba(0,0,0,0.4)] sm:h-[8rem]'
-            : 'h-[2.85rem] drop-shadow-[0_8px_14px_rgba(0,0,0,0.35)]',
-          className,
-        )}
-        style={{ transform: `scale(${JERSEY_SCALE})` }}
-      />
-    </div>
+      style={{ transform: `scale(${JERSEY_SCALE})` }}
+    />
   )
 }

@@ -105,7 +105,7 @@ export function NationPage() {
       </nav>
 
       <section
-        className="relative overflow-x-hidden rounded-3xl border text-white shadow-tf-elev-3 sm:overflow-visible"
+        className="relative overflow-hidden rounded-3xl border text-white shadow-tf-elev-3"
         style={{
           background: `linear-gradient(135deg, ${nation.primary} 0%, ${nation.secondary} 60%, ${nation.accent} 130%)`,
           borderColor: 'rgba(255,255,255,0.18)',
@@ -157,7 +157,9 @@ export function NationPage() {
               </Link>
             </div>
           </div>
-          <NationJerseyImage nation={nation} variant="hero" wrapperClassName="items-end sm:items-center" />
+          <div className="flex items-center justify-center">
+            <NationJerseyImage nation={nation} variant="hero" />
+          </div>
         </div>
       </section>
 
