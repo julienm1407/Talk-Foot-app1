@@ -77,8 +77,7 @@ export function ChatCharacterThumb({
   }, [isSalonBot, user?.avatarSeed, user?.id])
 
   const shellClass = cn(
-    'relative isolate block shrink-0 self-start outline-none',
-    showUltraFrame ? 'overflow-visible' : 'overflow-hidden rounded-full',
+    'relative isolate block shrink-0 self-start overflow-hidden rounded-full outline-none',
     size === 'compact'
       ? useModularThumb || isBot
         ? 'size-7 min-h-7 min-w-7'
@@ -101,20 +100,30 @@ export function ChatCharacterThumb({
       size={size === 'compact' ? 'xs' : 'chat'}
       imagePriority={false}
       {...MODULAR_PP_CHAT_FRAMING}
-      className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
+      className={cn(
+        '!h-full !w-full !min-h-0 !min-w-0 rounded-full',
+        showUltraFrame
+          ? 'border-0 shadow-none'
+          : 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]',
+      )}
       aria-label={ariaLabel}
     />
   ) : (
     <img
       src={dicebearAvatarUrl(dicebearSeed, 96, 0)}
       alt=""
-      className="size-full rounded-full border-2 border-white/20 object-cover shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
+      className={cn(
+        'size-full rounded-full object-cover',
+        showUltraFrame
+          ? 'border-0 shadow-none'
+          : 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]',
+      )}
     />
   )
 
   const avatarBody = (
     <>
-      <div className="size-full overflow-hidden rounded-full">{figure}</div>
+      {figure}
       {showUltraFrame ? <UltraAvatarFrame size={size} /> : null}
     </>
   )
