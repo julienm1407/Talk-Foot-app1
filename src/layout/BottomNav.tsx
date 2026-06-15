@@ -12,7 +12,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { BottomNavMoreSheet } from './BottomNavMoreSheet'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
-import { hardNavigateTo } from '../utils/hardNavigate'
+import { hardNavigateTo, isProfilePath } from '../utils/hardNavigate'
 
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
@@ -34,7 +34,7 @@ export function BottomNav() {
   }, [location.pathname, location.hash])
 
   const closeMore = () => setMoreOpen(false)
-  const onProfile = location.pathname === '/profile' || location.pathname.startsWith('/profile/')
+  const onProfile = isProfilePath(location.pathname)
 
   const goTo = useCallback(
     (to: string) => {

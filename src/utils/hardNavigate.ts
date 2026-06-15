@@ -5,3 +5,8 @@ export function hardNavigateTo(path: string): void {
   const prefix = base === '/' || base === '' ? '' : base.replace(/\/$/, '')
   window.location.assign(`${prefix}${target}`)
 }
+
+export function isProfilePath(pathname: string): boolean {
+  const p = pathname.replace(/\/+$/, '') || '/'
+  return p === '/profile' || p.startsWith('/profile/')
+}

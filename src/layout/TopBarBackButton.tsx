@@ -3,7 +3,7 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { resolvePageBackTarget } from '../utils/pageBackNavigation'
 import { cn } from '../utils/cn'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
-import { hardNavigateTo } from '../utils/hardNavigate'
+import { hardNavigateTo, isProfilePath } from '../utils/hardNavigate'
 
 export function TopBarBackButton({
   pathname,
@@ -17,10 +17,7 @@ export function TopBarBackButton({
   const L = appearance === 'light'
   const mobileTouch = useIsMobileTouchViewport()
   const useHardNav =
-    mobileTouch &&
-    (pathname === '/profile' ||
-      pathname.startsWith('/profile/') ||
-      /^\/debate\/[^/]+$/.test(pathname))
+    isProfilePath(pathname) || (mobileTouch && /^\/debate\/[^/]+$/.test(pathname))
 
   if (!back) return null
 

@@ -30,7 +30,7 @@ import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 import { TopBarBackButton } from './TopBarBackButton'
 import { resolvePageBackTarget } from '../utils/pageBackNavigation'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
-import { hardNavigateTo } from '../utils/hardNavigate'
+import { hardNavigateTo, isProfilePath } from '../utils/hardNavigate'
 
 export function TopBar() {
   const { user: authUser } = useAuth()
@@ -80,7 +80,7 @@ export function TopBar() {
   const season = useOptionalSeasonMode()
   const isCdm = season?.isCdm2026 ?? false
   const profileTheme = getAppSectionTheme('profile')
-  const profileActive = location.pathname.startsWith('/profile')
+  const profileActive = isProfilePath(location.pathname)
   const inbox = useInbox()
   const [inboxOpen, setInboxOpen] = useState(false)
   const pm = usePrivateMessagesUi()
@@ -160,9 +160,10 @@ export function TopBar() {
                 monEspace.toggleMonEspaceDrawer()
                 return
               }
-              if (mobileTouch && profileActive) {
+              if (profileActive) {
                 e.preventDefault()
                 hardNavigateTo('/')
+                return
               }
             }}
             className={cn(
@@ -181,6 +182,23 @@ export function TopBar() {
           <ThemeAppearanceToggle variant="headerIcon" className="hidden shrink-0 lg:grid" />
 
           {isCdm ? (
+            profileActive ? (
+              <button
+                type="button"
+                title="Mode Coupe du Monde 2026 — accueil saison"
+                onClick={() => hardNavigateTo('/cdm')}
+                className="hidden items-center gap-1.5 rounded-full border px-2 py-1 font-display text-[10px] font-black uppercase tracking-[0.18em] shadow-sm transition hover:scale-[1.02] sm:inline-flex sm:text-[11px]"
+                style={{
+                  background: 'linear-gradient(135deg, #06214a 0%, #0a2f5e 100%)',
+                  color: '#f4c542',
+                  borderColor: 'rgba(244,197,66,0.55)',
+                  boxShadow: '0 0 0 1px rgba(244,197,66,0.25), 0 4px 12px rgba(6,33,74,0.35)',
+                }}
+              >
+                <span aria-hidden>★</span>
+                CDM 2026
+              </button>
+            ) : (
             <Link
               to="/cdm"
               title="Mode Coupe du Monde 2026 — accueil saison"
@@ -195,6 +213,7 @@ export function TopBar() {
               <span aria-hidden>★</span>
               CDM 2026
             </Link>
+            )
           ) : null}
         </div>
 
@@ -219,18 +238,32 @@ export function TopBar() {
                     location.pathname,
                     location.hash,
                   )
+                  const pillClass = cn(
+                    navPillBase,
+                    active
+                      ? navActiveClasses(section)
+                      : cn(th.nav.focus, navInactiveHoverTint(section), 'hover:text-tf-app-fg'),
+                  )
+                  if (profileActive) {
+                    return (
+                      <button
+                        key={to}
+                        type="button"
+                        onClick={() => hardNavigateTo(to)}
+                        aria-current={active ? 'page' : undefined}
+                        className={pillClass}
+                      >
+                        {th.label}
+                      </button>
+                    )
+                  }
                   return (
                     <NavLink
                       key={to}
                       to={to}
                       end={end}
                       aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        navPillBase,
-                        active
-                          ? navActiveClasses(section)
-                          : cn(th.nav.focus, navInactiveHoverTint(section), 'hover:text-tf-app-fg'),
-                      )}
+                      className={pillClass}
                     >
                       {th.label}
                     </NavLink>
@@ -332,6 +365,21 @@ export function TopBar() {
             {inboxOpen ? <InboxPanel onClose={() => setInboxOpen(false)} inbox={inbox} /> : null}
           </div>
           {authUser?.isAdmin ? (
+            profileActive ? (
+              <button
+                type="button"
+                title="Administration"
+                onClick={() => hardNavigateTo('/admin')}
+                className={cn(
+                  'tf-nav-pill hidden shrink-0 items-center rounded-2xl border px-2 py-1.5 text-[11px] font-black uppercase tracking-wide outline-none min-[480px]:inline-flex sm:px-2.5 sm:py-2 sm:text-[12px]',
+                  L
+                    ? 'border-amber-400/50 bg-amber-50 text-amber-950 hover:bg-amber-100'
+                    : 'border-amber-300/40 bg-amber-500/15 text-amber-100 hover:bg-amber-500/25',
+                )}
+              >
+                Admin
+              </button>
+            ) : (
             <NavLink
               to="/admin"
               title="Administration"
@@ -344,6 +392,7 @@ export function TopBar() {
             >
               Admin
             </NavLink>
+            )
           ) : null}
           <ThemeAppearanceToggle variant="headerIcon" className="shrink-0 lg:hidden" />
           <NavLink
