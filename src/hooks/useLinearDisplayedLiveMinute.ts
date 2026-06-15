@@ -22,7 +22,7 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
     // Minute SM à 0 = donnée absente (pas une vraie 0') — on amorce à 1' pour défiler entre deux polls.
     const seed = official > 0 ? official : 1
     setAnchor({ m: seed, atMs: Date.now() })
-  }, [match?.id, match?.status, official, paused])
+  }, [match?.id, match?.status, official, paused, match?.liveInSecondHalf])
 
   useEffect(() => {
     if (!isLive || paused) return

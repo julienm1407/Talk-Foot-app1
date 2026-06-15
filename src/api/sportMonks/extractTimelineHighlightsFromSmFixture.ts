@@ -72,6 +72,16 @@ function eventDevLooksLikeGoal(u: string): boolean {
   return false
 }
 
+function eventDevIsOwnGoal(dev: string): boolean {
+  const u = dev.toUpperCase()
+  return u.includes('OWN GOAL') || u.includes('OWNGOAL') || u.includes('OWN-GOAL')
+}
+
+function commentIsOwnGoal(text: string): boolean {
+  const u = text.toUpperCase()
+  return u.includes('OWN GOAL') || u.includes('OWNGOAL') || u.includes('OWN-GOAL') || u.includes('CSC')
+}
+
 function commentLooksLikeCorner(text: string): boolean {
   const u = text.toUpperCase()
   return u.includes('CORNER') || u.includes('COUP FRANC') || u.includes('FREE KICK')
@@ -324,6 +334,7 @@ export function extractTimelineHighlightsFromSmFixture(
       let resolvedType = type
       if (type === 'But' && !scorerName) resolvedType = 'Info'
       if (type === 'Carton' && !cardPlayer) resolvedType = 'Info'
+      const ownGoal = resolvedType === 'But' && eventDevIsOwnGoal(dev)
       const title =
         resolvedType === 'But' && scorerName
           ? scorerName
@@ -351,6 +362,7 @@ export function extractTimelineHighlightsFromSmFixture(
         ...(scorerName ? { scorerName } : {}),
         ...(cardPlayer ? { scorerName: cardPlayer } : {}),
         ...(assistName ? { assistName } : {}),
+        ...(ownGoal ? { ownGoal: true } : {}),
       })
     }
   }
@@ -387,6 +399,7 @@ export function extractTimelineHighlightsFromSmFixture(
       if (type === 'But' && (!scorerName || !isPlausibleGoalScorerName(scorerName))) type = 'Info'
       const detail = translateSportMonksLiveTextToFr(rawComment)
       const assistName = type === 'But' ? parseGoalAssistFromText(rawComment) ?? undefined : undefined
+      const ownGoal = type === 'But' && commentIsOwnGoal(rawComment)
       out.push({
         id: `sm-comment-${c.id ?? order}-${order}`,
         matchId,
@@ -399,6 +412,7 @@ export function extractTimelineHighlightsFromSmFixture(
         ...(scorerName ? { scorerName } : {}),
         ...(cardPlayer ? { scorerName: cardPlayer } : {}),
         ...(assistName ? { assistName } : {}),
+        ...(ownGoal ? { ownGoal: true } : {}),
       })
     }
   }
@@ -508,6 +522,7 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
     const scorerName = scorerFromEvent(ev)
     if (!scorerName) continue
     if (isMatchTeamLabel(scorerName, home, away)) continue
+    const ownGoal = eventDevIsOwnGoal(dev)
     rows.push({
       id: `sm-event-goal-${ev.id ?? minute}`,
       matchId: 'direct',
@@ -518,6 +533,7 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
       ...(inSecondHalf ? { inSecondHalf } : {}),
       ...(side ? { side } : {}),
       scorerName,
+      ...(ownGoal ? { ownGoal: true } : {}),
     })
   }
   const fromEvents = parseLiveGoalRowsFromHighlights(rows, home, away, scoreHint)

@@ -14,6 +14,8 @@ import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { newlyWonBetIds } from '../utils/xpGrant'
 import { useXpGrant } from './useXpGrant'
+import { writeBetsBackup } from '../utils/betsBackup'
+import { useAuth } from '../contexts/AuthContext'
 
 function clampStake(n: number) {
   if (!Number.isFinite(n)) return 0
@@ -22,6 +24,7 @@ function clampStake(n: number) {
 
 export function useBetting(matchId: string, matchForLabel?: Match | null) {
   const cloud = useOptionalCloudUserState()
+  const { user } = useAuth()
   const { wallet, patchWallet } = useWallet()
   const { betTokenMultiplier: betMult } = useSubscription()
   const { grantBetPlaced, grantBetWon } = useXpGrant()
@@ -55,13 +58,23 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
         cloud.patchApp((prev) => {
           const w = normalizeWallet(prev.wallet)
           if (w.tokens < stake) return prev
+          const nextBets = [bet, ...prev.bets].slice(0, 200)
+          if (user?.id) writeBetsBackup(user.id, nextBets)
           return {
             ...prev,
             wallet: { ...w, tokens: w.tokens - stake },
-            bets: [bet, ...prev.bets].slice(0, 200),
+            bets: nextBets,
           }
         })
-        void cloud.flushAppSave?.()
+        void (async () => {
+          if (!cloud.flushAppSave) return
+          for (let attempt = 0; attempt < 4; attempt += 1) {
+            const result = await cloud.flushAppSave()
+            if (result.ok) return
+            if (result.error !== 'not_hydrated' && result.error !== 'missing_clerk_session') return
+            await new Promise((r) => setTimeout(r, 350 * (attempt + 1)))
+          }
+        })()
       } else {
         patchWallet((w) => ({ ...w, tokens: w.tokens - stake }))
         setBets((prev) => [bet, ...prev].slice(0, 200))
@@ -69,7 +82,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
       grantBetPlaced(id)
       return { ok: true as const, bet }
     },
-    [matchId, matchForLabel, setBets, patchWallet, wallet.tokens, cloud, grantBetPlaced],
+    [matchId, matchForLabel, setBets, patchWallet, wallet.tokens, cloud, grantBetPlaced, user?.id],
   )
 
   const cancelBet = useCallback(

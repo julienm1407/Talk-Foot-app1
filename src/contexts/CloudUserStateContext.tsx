@@ -45,6 +45,11 @@ import {
   mergeWalletBackupIntoApp,
   writeWalletBackup,
 } from '../utils/walletBackup'
+import {
+  coalesceAppStateWithBetsBackup,
+  mergeBetsBackupIntoApp,
+  writeBetsBackup,
+} from '../utils/betsBackup'
 import { useAuth } from './AuthContext'
 
 type CloudUserStateValue = {
@@ -208,6 +213,7 @@ function CloudUserStateLoader({
 
       let payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
       payload = coalesceAppStateWithWalletBackup(user.id, payload)
+      payload = coalesceAppStateWithBetsBackup(user.id, payload)
       if (payload !== appRef.current) {
         appRef.current = payload
         setApp(payload)
@@ -225,6 +231,7 @@ function CloudUserStateLoader({
         resolveModularAvatarState(payload.profile.modularAvatar),
       )
       writeWalletBackup(user.id, payload.wallet)
+      writeBetsBackup(user.id, payload.bets)
       clearChatAuthorAvatarCache()
       return { ok: true }
     } catch (err) {
@@ -318,6 +325,8 @@ function CloudUserStateLoader({
         merged = restored.app
         const walletRestored = mergeWalletBackupIntoApp(user.id, merged)
         merged = walletRestored.app
+        const betsRestored = mergeBetsBackupIntoApp(user.id, merged)
+        merged = betsRestored.app
         if (
           readyRef.current &&
           !isLikelyDefaultModularAvatar(sessionAvatar) &&
@@ -332,11 +341,12 @@ function CloudUserStateLoader({
         setApp(merged)
         appRef.current = merged
         writeWalletBackup(user.id, merged.wallet)
+        writeBetsBackup(user.id, merged.bets)
         setOnboardingCompleteCol(onboardingComplete)
         setOauthNeedsProfile(!oauthCompleted)
         cloudHydratedRef.current = true
         setReady(true)
-        return restored.restoredFromBackup || walletRestored.restoredFromBackup
+        return restored.restoredFromBackup || walletRestored.restoredFromBackup || betsRestored.restoredFromBackup
       }
 
       let lastErr: unknown = null
@@ -479,6 +489,13 @@ function CloudUserStateLoader({
         if (walletRestored.restoredFromBackup) {
           setApp(walletRestored.app)
           appRef.current = walletRestored.app
+        }
+        const betsRestored = mergeBetsBackupIntoApp(user.id, appRef.current)
+        if (betsRestored.restoredFromBackup) {
+          setApp(betsRestored.app)
+          appRef.current = betsRestored.app
+        }
+        if (walletRestored.restoredFromBackup || betsRestored.restoredFromBackup) {
           cloudHydratedRef.current = true
         }
       }
@@ -509,8 +526,16 @@ function CloudUserStateLoader({
             prevWallet.tokens !== nextWallet.tokens ||
             prevWallet.medals !== nextWallet.medals ||
             prevWallet.lastDailyTokenGrant !== nextWallet.lastDailyTokenGrant
+          const betsChanged =
+            prev.bets.length !== next.bets.length ||
+            prev.bets.some((b, i) => b.id !== next.bets[i]?.id || b.status !== next.bets[i]?.status)
           if (walletChanged) {
             writeWalletBackup(user.id, next.wallet)
+          }
+          if (betsChanged) {
+            writeBetsBackup(user.id, next.bets)
+          }
+          if (walletChanged || betsChanged) {
             hasLocalEditsRef.current = true
           }
         }

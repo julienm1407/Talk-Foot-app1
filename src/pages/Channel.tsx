@@ -471,7 +471,7 @@ function LiveHeaderScorers({
   align,
   light,
 }: {
-  goals: { name: string; minute: number; inSecondHalf?: boolean }[]
+  goals: { name: string; minute: number; inSecondHalf?: boolean; ownGoal?: boolean }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -493,7 +493,14 @@ function LiveHeaderScorers({
             light ? 'text-emerald-800' : 'text-cyan-100',
           )}
         >
-          <span className="min-w-0 truncate">⚽ {g.name}</span>
+          <span
+            className={cn(
+              'min-w-0 truncate',
+              g.ownGoal && (light ? 'text-red-700' : 'text-red-400'),
+            )}
+          >
+            ⚽ {formatGoalScorerLabel(g.name, null, { ownGoal: g.ownGoal })}
+          </span>
           <span className={cn('shrink-0 tabular-nums opacity-90', light ? 'text-emerald-900/75' : 'text-cyan-200/80')}>
             {formatGoalEventMinute(g.minute, { inSecondHalf: g.inSecondHalf }) || `${g.minute}'`}
           </span>
@@ -1523,7 +1530,7 @@ export function ChannelPage() {
       infoHighlightIdsRef.current = new Set()
       infoToastKeysRef.current = new Set()
     }
-    if (status !== 'live' || !smTimelineHighlights.length) return
+    if (status !== 'live') return
 
     if (!fullscreenDedupePrimedRef.current) {
       for (const h of smTimelineHighlights) {
@@ -1536,11 +1543,18 @@ export function ChannelPage() {
       return
     }
 
+    if (!smTimelineHighlights.length) return
+
+    const historyCutoff = Math.max(0, liveDisplayedMinute - 2)
     const pendingByKey = new Map<string, Highlight>()
     for (const h of smTimelineHighlights) {
       const kind = fullscreenKindFromHighlight(h)
       if (!kind) continue
       if (fullscreenShownHighlightIdsRef.current.has(h.id)) continue
+      if (h.minute > 0 && h.minute < historyCutoff) {
+        fullscreenShownHighlightIdsRef.current.add(h.id)
+        continue
+      }
       const key = fullscreenEventDedupeKey(h, kind)
       if (fullscreenDedupeKeysRef.current.has(key)) {
         fullscreenShownHighlightIdsRef.current.add(h.id)
@@ -1581,7 +1595,9 @@ export function ChannelPage() {
       window.setTimeout(() => {
         if (kind === 'goal') {
           lastGoalFullscreenAtRef.current = Date.now()
-          const scorerLabel = scorer ? formatGoalScorerLabel(scorer, assist) : teamLabel
+          const scorerLabel = scorer
+            ? formatGoalScorerLabel(scorer, assist, { ownGoal: h.ownGoal })
+            : teamLabel
           launchFullscreenEvent(
             'goal',
             'BUT',
@@ -1613,11 +1629,12 @@ export function ChannelPage() {
     goalTeamHints,
     homeScore,
     awayScore,
+    liveDisplayedMinute,
   ])
 
   /** Moments forts API (hors but/carton/VAR) → micro-signal visuel lisible sans envahir l’écran. */
   useEffect(() => {
-    if (!match?.id || status !== 'live' || smTimelineHighlights.length === 0) return
+    if (!match?.id || status !== 'live') return
 
     if (!infoHighlightPrimedRef.current) {
       for (const h of smTimelineHighlights) {
@@ -1631,7 +1648,17 @@ export function ChannelPage() {
       return
     }
 
-    const unseen = smTimelineHighlights.filter((h) => !infoHighlightIdsRef.current.has(h.id))
+    if (smTimelineHighlights.length === 0) return
+
+    const historyCutoff = Math.max(0, liveDisplayedMinute - 2)
+    const unseen = smTimelineHighlights.filter((h) => {
+      if (infoHighlightIdsRef.current.has(h.id)) return false
+      if (h.minute > 0 && h.minute < historyCutoff) {
+        infoHighlightIdsRef.current.add(h.id)
+        return false
+      }
+      return true
+    })
     if (unseen.length === 0) return
     for (const h of unseen) infoHighlightIdsRef.current.add(h.id)
 
@@ -1666,7 +1693,7 @@ export function ChannelPage() {
     )
     if (infoToastTimeoutRef.current != null) window.clearTimeout(infoToastTimeoutRef.current)
     infoToastTimeoutRef.current = window.setTimeout(() => setAnimationNotice(null), 3600)
-  }, [smTimelineHighlights, status, match?.id, detectHighlightSide, homeName, awayName])
+  }, [smTimelineHighlights, status, match?.id, detectHighlightSide, homeName, awayName, liveDisplayedMinute])
 
   useEffect(
     () => () => {
@@ -1754,14 +1781,14 @@ export function ChannelPage() {
     () =>
       liveGoalDisplayRows
         .filter((r) => r.side === 'home')
-        .map(({ name, minute, inSecondHalf }) => ({ name, minute, inSecondHalf })),
+        .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
     [liveGoalDisplayRows],
   )
   const headerAwayScorers = useMemo(
     () =>
       liveGoalDisplayRows
         .filter((r) => r.side === 'away')
-        .map(({ name, minute, inSecondHalf }) => ({ name, minute, inSecondHalf })),
+        .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
     [liveGoalDisplayRows],
   )
 
@@ -3664,7 +3691,7 @@ export function ChannelPage() {
                   />
                   <div
                     className={cn(
-                      'relative z-10 w-full max-h-[min(78dvh,calc(100dvh-7rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto rounded-2xl border p-3 shadow-2xl',
+                      'relative z-10 w-full max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto rounded-2xl border p-3 shadow-2xl',
                       chSheetPanel,
                     )}
                     onClick={(e) => e.stopPropagation()}
@@ -3822,7 +3849,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'paris' ? (
-              <div className="max-h-[min(78dvh,calc(100dvh-8rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              <div className="max-h-[min(88dvh,calc(100dvh-6rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
                 {isFinished ? (
                   <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
                 ) : match ? (
@@ -4096,8 +4123,8 @@ export function ChannelPage() {
           )
         : null}
       {!isFinished && fullscreenEvent ? (
-        <div className="pointer-events-none fixed inset-0 z-[95] overflow-hidden">
-          <div className="absolute inset-0 bg-black/46 backdrop-blur-[4px]" />
+        <div className="tf-live-fullscreen-fx pointer-events-none fixed inset-0 z-[2147482400] overflow-hidden">
+          <div className="absolute inset-0 bg-black/28" />
           <div
             className={`absolute inset-[-16%] animate-[tf-goal-bg_1100ms_ease-out_forwards] ${
               fullscreenEvent.kind === 'goal'

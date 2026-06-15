@@ -46,11 +46,31 @@ export function eventMinuteTotal(row: SmEventMinuteRow): number {
 
 /** 2e période (pour afficher 45+5 vs 50' en 1re MT). */
 export function eventInSecondHalf(row: SmEventMinuteRow, totalMinute?: number): boolean {
+  const countsFrom =
+    typeof row.period?.counts_from === 'number' && row.period.counts_from >= 0
+      ? row.period.counts_from
+      : 0
+  if (countsFrom >= 45) return true
+
   const { firstHalf, secondHalf } = periodHalfFlags(row)
-  if (secondHalf && !firstHalf) return true
-  if (firstHalf && !secondHalf) return false
   const total = totalMinute ?? eventMinuteTotal(row)
-  return total > 50
+  const rawMinute = typeof row.minute === 'number' ? row.minute : 0
+  const extra = typeof row.extra_minute === 'number' ? row.extra_minute : 0
+
+  if (secondHalf && !firstHalf) return true
+
+  if (firstHalf && !secondHalf) {
+    // Temps additionnel 1re MT : extra_minute > 0 (ex. 45+5 → minute 45, extra 5).
+    if (extra > 0) return false
+    // SM envoie parfois la minute cumulée en 2e MT sans period.counts_from.
+    if (rawMinute >= 46) return true
+    return false
+  }
+
+  if (extra > 0) return false
+  if (total > 50) return true
+  if (rawMinute >= 46) return true
+  return false
 }
 
 /** Libellé buteur / carton : 45+5' en temps additionnel 1re MT, 67' en 2e MT. */

@@ -135,7 +135,7 @@ function translateCombinedParts(text: string): string {
 function highlightDetailText(h: Highlight, teamLabels?: MatchHighlightTeamLabels): string {
   const typeLabel = shortTitle[h.type]
   if (h.type === 'But' && h.scorerName) {
-    const scorerLine = formatGoalScorerLabel(h.scorerName, h.assistName)
+    const scorerLine = formatGoalScorerLabel(h.scorerName, h.assistName, { ownGoal: h.ownGoal })
     const raw = stripSportMonksCommentPrefix(String(h.detail ?? '').trim())
     const fr = raw ? translateCombinedParts(raw) : ''
     if (fr && !fr.toLowerCase().includes(scorerLine.toLowerCase())) {

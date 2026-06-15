@@ -40,4 +40,16 @@ describe('matchEventMinute', () => {
     expect(eventMinuteTotal(row)).toBe(38)
     expect(eventInSecondHalf(row)).toBe(false)
   })
+
+  it('2e MT : minute 58 sans period SM → 58\' et non 45+13', () => {
+    const row = { minute: 58, period: { counts_from: 0 } }
+    expect(eventInSecondHalf(row, 58)).toBe(true)
+    expect(formatEventMinuteLabel(row)).toBe("58'")
+  })
+
+  it('1re MT : 45+1 via extra_minute reste en 45+1', () => {
+    const row = { minute: 45, extra_minute: 1, period: { counts_from: 0, description: '1st-half' } }
+    expect(eventInSecondHalf(row, 46)).toBe(false)
+    expect(formatEventMinuteLabel(row)).toBe("45+1'")
+  })
 })

@@ -13,6 +13,8 @@ export type Highlight = {
   side?: 'home' | 'away'
   /** Nom du buteur si connu (événements SM). */
   scorerName?: string
+  /** Contre son camp (CSC). */
+  ownGoal?: boolean
   /** Passeur décisif si connu (related_player SM ou texte commentaire). */
   assistName?: string
 }

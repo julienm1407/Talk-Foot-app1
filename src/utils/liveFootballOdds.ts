@@ -107,12 +107,21 @@ export function parseGoalAssistFromText(raw: string): string | null {
 }
 
 /** Libellé buteur + passeur : « Salah (Alexander-Arnold) » — le ballon ne concerne que le buteur. */
-export function formatGoalScorerLabel(scorer: string, assist?: string | null): string {
+export function formatGoalScorerLabel(
+  scorer: string,
+  assist?: string | null,
+  opts?: { ownGoal?: boolean },
+): string {
   const sc = compactScorerDisplayName(scorer)
-  if (!assist?.trim()) return sc
-  const as = compactScorerDisplayName(assist)
-  if (!as || slugScorer(as) === slugScorer(sc)) return sc
-  return `${sc} (${as})`
+  let base = sc
+  if (assist?.trim()) {
+    const as = compactScorerDisplayName(assist)
+    if (as && slugScorer(as) !== slugScorer(sc)) {
+      base = `${sc} (${as})`
+    }
+  }
+  if (opts?.ownGoal) return `${base} (CSC)`
+  return base
 }
 
 /** Extrait « prénom nom » depuis un libellé de but (timeline FR / EN). */
@@ -253,6 +262,7 @@ export type LiveGoalDisplayRow = {
   name: string
   minute: number
   inSecondHalf?: boolean
+  ownGoal?: boolean
   assistName?: string
 }
 
@@ -310,7 +320,7 @@ export function parseLiveGoalRowsFromHighlights(
     const key = `${side}:${slug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name: displayName, minute, inSecondHalf: h.inSecondHalf })
+    out.push({ side, name: displayName, minute, inSecondHalf: h.inSecondHalf, ownGoal: h.ownGoal })
   }
 
   if (pendingNoSide.length && scoreHint) {

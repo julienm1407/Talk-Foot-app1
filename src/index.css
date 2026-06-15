@@ -2906,9 +2906,19 @@ body::before {
   flex-direction: column;
   justify-content: flex-end;
   padding: 0.5rem;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem);
   pointer-events: auto !important;
   touch-action: manipulation;
+}
+
+/* Animations BUT/CARTON plein écran — sans backdrop-blur (bug iOS score/chat). */
+.tf-live-fullscreen-fx {
+  isolation: isolate;
+  contain: layout style paint;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 @media (max-width: 1023px) {
