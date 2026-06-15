@@ -27,6 +27,32 @@ test('live : but outsider resserre sa cote et allonge celle du favori', () => {
   assert.ok(afterUnderdogGoal.home > prematch.home, 'Suisse moins favorie après avoir encaissé')
 })
 
+test('live : 1-1 à la 91e — cote nul proche de 1 (résultat le plus probable)', () => {
+  const ctx = buildMatchOddsContextFromNations('DEU', 'CUW')
+  const prematch = computePrematch1x2FromContext(ctx).odds1x2
+  const late = adjust1x2OddsForLiveInternal(prematch, {
+    minute: 91,
+    homeGoals: 1,
+    awayGoals: 1,
+  })
+  assert.ok(late.draw >= 1.01 && late.draw <= 1.35, `draw=${late.draw}`)
+  assert.ok(late.home >= 8, `home=${late.home}`)
+  assert.ok(late.away >= 8, `away=${late.away}`)
+})
+
+test('live : 5-0 à la 40e — favori ~1,01, outsider ~100', () => {
+  const ctx = buildMatchOddsContextFromNations('DEU', 'CUW')
+  const prematch = computePrematch1x2FromContext(ctx).odds1x2
+  const blowout = adjust1x2OddsForLiveInternal(prematch, {
+    minute: 40,
+    homeGoals: 5,
+    awayGoals: 0,
+  })
+  assert.ok(blowout.home >= 1.01 && blowout.home <= 1.15, `home=${blowout.home}`)
+  assert.ok(blowout.away >= 50, `away=${blowout.away}`)
+  assert.ok(blowout.draw >= 40, `draw=${blowout.draw}`)
+})
+
 test('écart de puissance cohérent CHE > QAT', () => {
   const ctx = buildMatchOddsContextFromNations('CHE', 'QAT')
   const home = teamPowerScore(ctx.home.factors, ctx.home.absenceFactor ?? 1)

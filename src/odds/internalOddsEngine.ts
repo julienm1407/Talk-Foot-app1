@@ -97,9 +97,13 @@ export function applyBookmakerMargin(
 }
 
 /** Cote décimale = 1 / probabilité implicite (avec marge déjà dans les probas si souhaité). */
-export function probabilityToDecimalOdd(p: number, marginPct = DEFAULT_BOOK_MARGIN): number {
-  const implied = clamp(p * (1 + clamp(marginPct, 0.05, 0.1)), 0.018, 0.92)
-  return round2(clamp(1 / implied, 1.02, 80))
+export function probabilityToDecimalOdd(
+  p: number,
+  marginPct = DEFAULT_BOOK_MARGIN,
+  minOdd = 1.02,
+): number {
+  const implied = clamp(p * (1 + clamp(marginPct, 0.05, 0.1)), 0.018, 0.98)
+  return round2(clamp(1 / implied, minOdd, 80))
 }
 
 export function probabilitiesToDecimalOdds(
@@ -159,64 +163,111 @@ export function impliedProbsFromDecimalOdds(o: SmBookOdds1x2): Probabilities1x2 
   return { pHome: iH / s, pDraw: iD / s, pAway: iA / s }
 }
 
+function poissonPMF(k: number, lambda: number): number {
+  if (lambda <= 0) return k === 0 ? 1 : 0
+  if (k < 0) return 0
+  let term = Math.exp(-lambda)
+  for (let i = 1; i <= k; i += 1) term *= lambda / i
+  return term
+}
+
+/** Buts attendus restants (modèle Poisson simplifié, ~2,55 buts / match). */
+function remainingGoalsExpectancy(minute: number, totalPerMatch = 2.55): number {
+  const tau = clamp(minute / 95, 0, 1)
+  return totalPerMatch * clamp(1 - tau, 0.025, 1)
+}
+
 /**
- * Ajustements live : score, minute, cartons rouges (−15 % équipe sanctionnée),
- * tirs cadrés x2 (favorise l’équipe dominante).
+ * Probabilités 1N2 à partir du score et du temps restant (Poisson sur les buts restants).
+ * À 90′ 1-1 → nul dominant ; 5-0 à 40′ → victoire domicile quasi certaine.
+ */
+export function liveOutcomeProbsFromScore(
+  homeGoals: number,
+  awayGoals: number,
+  minute: number,
+  homeAttackShare = 0.52,
+): Probabilities1x2 {
+  const lam = remainingGoalsExpectancy(minute)
+  const lamH = lam * clamp(homeAttackShare, 0.2, 0.8)
+  const lamA = lam * (1 - clamp(homeAttackShare, 0.2, 0.8))
+  const maxExtra = 10
+  let pH = 0
+  let pD = 0
+  let pA = 0
+  for (let gh = 0; gh <= maxExtra; gh += 1) {
+    const pGh = poissonPMF(gh, lamH)
+    for (let ga = 0; ga <= maxExtra; ga += 1) {
+      const w = pGh * poissonPMF(ga, lamA)
+      const fh = homeGoals + gh
+      const fa = awayGoals + ga
+      if (fh > fa) pH += w
+      else if (fh < fa) pA += w
+      else pD += w
+    }
+  }
+  return normalize3(pH, pD, pA)
+}
+
+function blendProbabilities(a: Probabilities1x2, b: Probabilities1x2, w: number): Probabilities1x2 {
+  const t = clamp(w, 0, 1)
+  return normalize3(
+    a.pHome * (1 - t) + b.pHome * t,
+    a.pDraw * (1 - t) + b.pDraw * t,
+    a.pAway * (1 - t) + b.pAway * t,
+  )
+}
+
+/**
+ * Ajustements live : modèle score + temps (Poisson), puis cartons rouges et tirs cadrés.
  */
 export function adjustProbabilities1x2ForLive(
   base: Probabilities1x2,
   live: LiveOddsContext,
 ): Probabilities1x2 {
   const { minute, homeGoals, awayGoals } = live
-  const d = homeGoals - awayGoals
-  const tau = clamp((minute + 8) / 96, 0.1, 1)
-  const k = 1.05 + 0.95 * tau
-  const sh = Math.exp(k * d)
-  const sa = Math.exp(-k * d)
-  let pH = base.pHome * sh
-  let pA = base.pAway * sa
-  let pD = base.pDraw * Math.exp(-0.48 * Math.abs(d) * tau)
-
-  if (d === 0 && homeGoals === 0 && awayGoals === 0 && minute >= 55) {
-    const lateTie = clamp((minute - 55) / 40, 0, 1)
-    pD *= Math.exp(-1.1 * lateTie * tau)
-    pH *= 1 + 0.06 * lateTie
-    pA *= 1 + 0.06 * lateTie
-  } else if (d === 0 && homeGoals > 0 && minute >= 50) {
-    const late = clamp((minute - 50) / 45, 0, 1)
-    pD *= 1 + 0.28 * late * tau
-    pH *= 1 - 0.1 * late * tau
-    pA *= 1 - 0.1 * late * tau
-  }
+  const diff = homeGoals - awayGoals
+  const absDiff = Math.abs(diff)
+  const homeShare = clamp(base.pHome / Math.max(0.08, base.pHome + base.pAway), 0.28, 0.72)
+  const fromScore = liveOutcomeProbsFromScore(homeGoals, awayGoals, minute, homeShare)
+  const liveWeight = clamp(
+    ((minute + 5) / 90) * (1 + Math.min(absDiff, 5) * 0.2),
+    0,
+    1,
+  )
+  let probs = blendProbabilities(base, fromScore, liveWeight)
 
   const hRed = live.homeRedCards ?? 0
   const aRed = live.awayRedCards ?? 0
   if (hRed > aRed) {
     const pen = Math.pow(0.85, hRed - aRed)
-    pH *= pen
+    probs = normalize3(probs.pHome * pen, probs.pDraw, probs.pAway)
   } else if (aRed > hRed) {
     const pen = Math.pow(0.85, aRed - hRed)
-    pA *= pen
+    probs = normalize3(probs.pHome, probs.pDraw, probs.pAway * pen)
   }
 
   const hSot = live.homeShotsOnTarget ?? 0
   const aSot = live.awayShotsOnTarget ?? 0
   if (hSot >= 2 && aSot > 0 && hSot >= aSot * 2) {
     const boost = clamp(0.04 + (hSot / aSot - 2) * 0.03, 0.04, 0.12)
-    pH *= 1 + boost
-    pD *= 1 - boost * 0.35
-    pA *= 1 - boost * 0.65
+    probs = normalize3(
+      probs.pHome * (1 + boost),
+      probs.pDraw * (1 - boost * 0.35),
+      probs.pAway * (1 - boost * 0.65),
+    )
   } else if (aSot >= 2 && hSot > 0 && aSot >= hSot * 2) {
     const boost = clamp(0.04 + (aSot / hSot - 2) * 0.03, 0.04, 0.12)
-    pA *= 1 + boost
-    pD *= 1 - boost * 0.35
-    pH *= 1 - boost * 0.65
+    probs = normalize3(
+      probs.pHome * (1 - boost * 0.65),
+      probs.pDraw * (1 - boost * 0.35),
+      probs.pAway * (1 + boost),
+    )
   }
 
-  return normalize3(pH, pD, pA)
+  return probs
 }
 
-/** Plafond réaliste des cotes live — ne bride pas l’outsider mené tardivement. */
+/** Bornes réalistes par issue (favori ~1,01, outsider mené tardivement ~100). */
 export function capLive1x2Odds(
   odds: SmBookOdds1x2,
   homeGoals: number,
@@ -225,21 +276,71 @@ export function capLive1x2Odds(
 ): SmBookOdds1x2 {
   const diff = homeGoals - awayGoals
   const absDiff = Math.abs(diff)
-  const tau = clamp((minute + 5) / 95, 0.05, 1)
+  const totalGoals = homeGoals + awayGoals
 
-  let maxOdd = 80
-  if (absDiff === 0) {
-    maxOdd = clamp(4.8 + (1 - tau) * 2.5, 4.5, 7.5)
-  } else if (absDiff === 1 && minute >= 78) {
-    maxOdd = 35
-  } else if (absDiff >= 2 && minute >= 70) {
-    maxOdd = 50
-  } else if (absDiff >= 3) {
-    maxOdd = 100
+  let homeLo = 1.04
+  let drawLo = 1.04
+  let awayLo = 1.04
+  let homeHi = 100
+  let drawHi = 100
+  let awayHi = 100
+
+  if (diff === 0 && totalGoals > 0 && minute >= 78) {
+    drawLo = 1.01
+    drawHi = 1.35
+    homeHi = 30
+    awayHi = 30
+  } else if (diff === 0 && totalGoals === 0 && minute >= 70) {
+    drawHi = 4.2
+    homeHi = 18
+    awayHi = 18
   }
 
-  const cap = (n: number) => round2(clamp(n, 1.04, maxOdd))
-  return { home: cap(odds.home), draw: cap(odds.draw), away: cap(odds.away) }
+  if (absDiff === 1 && minute >= 75) {
+    if (diff > 0) {
+      homeLo = 1.01
+      homeHi = 2.8
+      drawHi = 6
+      awayHi = 45
+    } else {
+      awayLo = 1.01
+      awayHi = 2.8
+      drawHi = 6
+      homeHi = 45
+    }
+  }
+
+  if (absDiff >= 2 && minute >= 55) {
+    if (diff > 0) {
+      homeLo = 1.01
+      homeHi = absDiff >= 4 ? 1.12 : 1.35
+      drawHi = absDiff >= 4 ? 60 : 25
+      awayHi = 100
+    } else {
+      awayLo = 1.01
+      awayHi = absDiff >= 4 ? 1.12 : 1.35
+      drawHi = absDiff >= 4 ? 60 : 25
+      homeHi = 100
+    }
+  } else if (absDiff >= 3 && minute >= 35) {
+    if (diff > 0) {
+      homeLo = 1.01
+      homeHi = 1.15
+      drawHi = 80
+      awayHi = 100
+    } else {
+      awayLo = 1.01
+      awayHi = 1.15
+      drawHi = 80
+      homeHi = 100
+    }
+  }
+
+  return {
+    home: round2(clamp(odds.home, homeLo, homeHi)),
+    draw: round2(clamp(odds.draw, drawLo, drawHi)),
+    away: round2(clamp(odds.away, awayLo, awayHi)),
+  }
 }
 
 export function adjust1x2OddsForLiveInternal(
@@ -249,7 +350,12 @@ export function adjust1x2OddsForLiveInternal(
 ): SmBookOdds1x2 {
   const base = impliedProbsFromDecimalOdds(prematch)
   const adjusted = adjustProbabilities1x2ForLive(base, live)
-  const odds = probabilitiesToDecimalOdds(adjusted, marginPct * 0.95)
+  const liveMargin = marginPct * 0.92
+  const odds: SmBookOdds1x2 = {
+    home: probabilityToDecimalOdd(adjusted.pHome, liveMargin, 1.01),
+    draw: probabilityToDecimalOdd(adjusted.pDraw, liveMargin, 1.01),
+    away: probabilityToDecimalOdd(adjusted.pAway, liveMargin, 1.01),
+  }
   return capLive1x2Odds(odds, live.homeGoals, live.awayGoals, live.minute)
 }
 
