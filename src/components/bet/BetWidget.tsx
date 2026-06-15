@@ -550,6 +550,7 @@ export function BetWidget({
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-emerald-300/85" />
       {!hideInlineForSheet ? (
+      <>
       <div
         className={cn(
           'tf-bet-soft rounded-xl border border-[#4b7ba8]/60 bg-[#0d2741]',
@@ -808,6 +809,7 @@ export function BetWidget({
         </div>
         {compact ? null : null}
       </div>
+      </>
       ) : null}
 
       {sheetOpen ? (
