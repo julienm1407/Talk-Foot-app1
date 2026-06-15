@@ -3849,7 +3849,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'paris' ? (
-              <div className="max-h-[min(88dvh,calc(100dvh-6rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              <div className="max-h-[min(88dvh,calc(100dvh-6rem-env(safe-area-inset-bottom,0px)))] overflow-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
                 {isFinished ? (
                   <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
                 ) : match ? (
@@ -3865,7 +3865,7 @@ export function ChannelPage() {
                     bettingSuspendReason={bettingSuspension.reason}
                     teamAttackIndices={attackIndices}
                     compact
-                    prominent
+                    autoOpenSheet
                     liveScore={{ home: homeScore, away: awayScore }}
                     liveMinute={liveDisplayedMinute}
                     liveStatRows={liveStatRows}

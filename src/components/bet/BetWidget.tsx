@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -75,6 +75,7 @@ export function BetWidget({
   teamAttackIndices = null,
   compact = false,
   prominent = false,
+  autoOpenSheet = false,
   liveScore = null,
   liveMinute = null,
   liveStatRows = [],
@@ -94,6 +95,8 @@ export function BetWidget({
   compact?: boolean
   /** Panneau mobile / zone étroite : cotes et boutons plus grands. */
   prominent?: boolean
+  /** Panneau Paris mobile : ouvre la feuille de pari directement. */
+  autoOpenSheet?: boolean
   liveStatRows?: { key: string; home: number; away: number }[]
   liveScore?: { home: number; away: number } | null
   liveMinute?: number | null
@@ -128,6 +131,13 @@ export function BetWidget({
   const fallback = useBetting(match.id, match)
   const { wallet, openBets, matchBets, placeBet, cancelBet: _cancelBet, stats } = betting ?? fallback
   const [sheetOpen, setSheetOpen] = useState(false)
+  const sheetDense = compact
+  const hideInlineForSheet = compact && sheetOpen
+
+  useEffect(() => {
+    if (!autoOpenSheet) return
+    setSheetOpen(true)
+  }, [autoOpenSheet, match.id])
   const [stake, setStake] = useState(25)
   const [pending, setPending] = useState<null | {
     market: BetMarket
@@ -539,6 +549,7 @@ export function BetWidget({
       )}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-emerald-300/85" />
+      {!hideInlineForSheet ? (
       <div
         className={cn(
           'tf-bet-soft rounded-xl border border-[#4b7ba8]/60 bg-[#0d2741]',
@@ -797,10 +808,14 @@ export function BetWidget({
         </div>
         {compact ? null : null}
       </div>
+      ) : null}
 
       {sheetOpen ? (
         <div
-          className="fixed inset-0 z-[88] flex items-end justify-center sm:items-center sm:p-4"
+          className={cn(
+            'fixed inset-0 flex items-end justify-center sm:items-center sm:p-4',
+            sheetDense ? 'z-[2147482503]' : 'z-[88]',
+          )}
           data-no-swipe="true"
           data-tf-modal="true"
           role="dialog"
@@ -815,26 +830,44 @@ export function BetWidget({
           />
           <div
             className={cn(
-              'relative z-10 flex max-h-[min(92vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200/80 bg-white shadow-2xl',
-              'sm:max-h-[min(88vh,680px)] sm:max-w-xl sm:rounded-3xl',
+              'relative z-10 flex w-full flex-col overflow-hidden rounded-t-3xl border border-slate-200/80 bg-white shadow-2xl',
+              sheetDense
+                ? 'max-h-[min(88dvh,620px)] sm:max-h-[min(84vh,640px)] sm:max-w-lg sm:rounded-3xl'
+                : 'max-h-[min(92vh,720px)] max-w-lg sm:max-h-[min(88vh,680px)] sm:max-w-xl',
             )}
           >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-5">
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-between gap-2 border-b border-slate-100',
+                sheetDense ? 'px-3 py-2' : 'px-4 py-3 sm:px-5',
+              )}
+            >
               <div>
-                <h2 id="bet-sheet-title" className="text-base font-black text-slate-900">
+                <h2
+                  id="bet-sheet-title"
+                  className={cn('font-black text-slate-900', sheetDense ? 'text-sm' : 'text-base')}
+                >
                   Pronos
                 </h2>
-                <p className="text-[11px] font-semibold text-slate-500">
+                <p className={cn('font-semibold text-slate-500', sheetDense ? 'text-[10px]' : 'text-[11px]')}>
                   Mise d’abord, puis valide ta sélection
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge className="border-slate-200 bg-slate-50 text-slate-800">
+                <Badge
+                  className={cn(
+                    'border-slate-200 bg-slate-50 text-slate-800',
+                    sheetDense && 'px-2 py-0.5 text-[10px]',
+                  )}
+                >
                   {wallet.tokens} j.
                 </Badge>
                 <button
                   type="button"
-                  className="grid size-10 place-items-center rounded-2xl border border-slate-200 bg-white text-lg font-bold text-slate-600 transition hover:bg-slate-50"
+                  className={cn(
+                    'grid place-items-center rounded-2xl border border-slate-200 bg-white font-bold text-slate-600 transition hover:bg-slate-50',
+                    sheetDense ? 'size-8 text-base' : 'size-10 text-lg',
+                  )}
                   onClick={() => setSheetOpen(false)}
                   aria-label="Fermer"
                 >
@@ -845,16 +878,25 @@ export function BetWidget({
 
             <div
               ref={sheetScrollRef}
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5"
+              className={cn(
+                'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+                sheetDense ? 'px-3 py-2.5' : 'px-4 py-4 sm:px-5',
+              )}
             >
-              <div className="rounded-2xl border border-sky-200/70 bg-sky-50/90 p-4 shadow-sm">
+              <div className={cn('rounded-2xl border border-sky-200/70 bg-sky-50/90 shadow-sm', sheetDense ? 'p-3' : 'p-4')}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-black uppercase tracking-wide text-sky-900/80">
+                  <span
+                    className={cn(
+                      'font-black uppercase tracking-wide text-sky-900/80',
+                      sheetDense ? 'text-[10px]' : 'text-xs',
+                    )}
+                  >
                     Ta mise
                   </span>
                   <span
                     className={cn(
-                      'text-lg font-black tabular-nums',
+                      'font-black tabular-nums',
+                      sheetDense ? 'text-base' : 'text-lg',
                       canStake ? 'text-slate-900' : 'text-rose-600',
                     )}
                   >
@@ -867,7 +909,7 @@ export function BetWidget({
                   </p>
                 ) : (
                   <>
-                    <div className="mt-3">
+                    <div className={cn(sheetDense ? 'mt-2' : 'mt-3')}>
                       <input
                         type="range"
                         min={minStake}
@@ -875,21 +917,26 @@ export function BetWidget({
                         step={5}
                         value={Math.min(stake, maxStake)}
                         onChange={(e) => setStake(Number(e.target.value))}
-                        className="h-2 w-full cursor-pointer accent-sky-600"
+                        className={cn(
+                          'w-full cursor-pointer accent-sky-600',
+                          sheetDense ? 'h-1.5' : 'h-2',
+                        )}
                         aria-label="Réglage de la mise"
                       />
                     </div>
-                    <div className="mt-2">
+                    <div className={cn(sheetDense ? 'mt-1.5' : 'mt-2')}>
                       <ProgressBar value={stakePct} tone="blue" />
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className={cn('flex flex-wrap gap-1.5', sheetDense ? 'mt-2' : 'mt-3')}>
                       {[10, 25, 50, 100].map((n) => (
                         <Button
                           key={n}
                           type="button"
                           variant="soft"
                           className={cn(
-                            'h-9 rounded-xl px-3 text-sm font-black',
+                            sheetDense
+                              ? 'h-8 rounded-lg px-2.5 text-xs font-black'
+                              : 'h-9 rounded-xl px-3 text-sm font-black',
                             stake === n &&
                               'border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-500/35',
                           )}
@@ -903,7 +950,9 @@ export function BetWidget({
                         type="button"
                         variant="soft"
                         className={cn(
-                          'h-9 rounded-xl px-3 text-sm font-black',
+                          sheetDense
+                            ? 'h-8 rounded-lg px-2.5 text-xs font-black'
+                            : 'h-9 rounded-xl px-3 text-sm font-black',
                           stake === maxStake &&
                             'border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-500/35',
                         )}
@@ -1000,12 +1049,20 @@ export function BetWidget({
                 </div>
               ) : null}
 
-              <div className="sticky top-0 z-10 -mx-4 mt-4 flex gap-2 border-b border-slate-100 bg-white/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5">
+              <div
+                className={cn(
+                  'sticky top-0 z-10 flex gap-1.5 border-b border-slate-100 bg-white/95 backdrop-blur',
+                  sheetDense ? '-mx-3 mt-3 px-3 py-1.5' : '-mx-4 mt-4 px-4 py-2 sm:-mx-5 sm:px-5',
+                )}
+              >
                 {showScorerMarket ? (
                   <button
                     type="button"
                     onClick={() => scrollSheetToSection(scorersSectionRef)}
-                    className="flex-1 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-violet-900 transition hover:bg-violet-100"
+                    className={cn(
+                      'flex-1 rounded-xl border border-violet-200 bg-violet-50 font-black uppercase tracking-wide text-violet-900 transition hover:bg-violet-100',
+                      sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
+                    )}
                   >
                     Buteurs
                   </button>
@@ -1013,21 +1070,29 @@ export function BetWidget({
                 <button
                   type="button"
                   onClick={() => scrollSheetToSection(x12SectionRef)}
-                  className="flex-1 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-sky-900 transition hover:bg-sky-100"
+                  className={cn(
+                    'flex-1 rounded-xl border border-sky-200 bg-sky-50 font-black uppercase tracking-wide text-sky-900 transition hover:bg-sky-100',
+                    sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
+                  )}
                 >
                   1N2
                 </button>
               </div>
 
               {markets.length > 0 ? (
-                <div ref={scorersSectionRef} className="mt-4 space-y-3 pb-2">
+                <div ref={scorersSectionRef} className={cn('space-y-2 pb-2', sheetDense ? 'mt-3' : 'mt-4')}>
                   {markets.map((m) => (
                     <div
                       key={m.id}
-                      className="rounded-2xl border border-slate-200/70 bg-slate-50/40 p-3"
+                      className={cn(
+                        'rounded-2xl border border-slate-200/70 bg-slate-50/40',
+                        sheetDense ? 'p-2' : 'p-3',
+                      )}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-black text-slate-900">{m.label}</span>
+                        <span className={cn('font-black text-slate-900', sheetDense ? 'text-xs' : 'text-sm')}>
+                          {m.label}
+                        </span>
                         {!m.enabled && (
                           <Badge className="border-slate-200 bg-slate-100 text-slate-600">
                             {m.id === 'exact_score' ? 'Live' : 'Pause'}
@@ -1035,22 +1100,43 @@ export function BetWidget({
                         )}
                       </div>
                       {m.scorerSides && m.scorerSides.length > 0 ? (
-                        <div className="mt-2 max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain pr-0.5 sm:max-h-64">
+                        <div
+                          className={cn(
+                            'mt-2 overflow-y-auto overscroll-contain pr-0.5',
+                            sheetDense
+                              ? 'max-h-[min(52dvh,18rem)] sm:max-h-56'
+                              : 'max-h-[min(60vh,24rem)] sm:max-h-64',
+                          )}
+                        >
                           <div
                             className={cn(
-                              'grid gap-3',
-                              m.scorerSides.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1',
+                              'grid',
+                              sheetDense ? 'grid-cols-1 gap-2' : 'gap-3',
+                              !sheetDense && m.scorerSides.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1',
                             )}
                           >
                             {m.scorerSides.map((side) => (
                               <div
                                 key={side.teamLabel}
-                                className="min-w-0 rounded-xl border border-slate-200/90 bg-slate-100/55 p-2.5 shadow-sm"
+                                className={cn(
+                                  'min-w-0 rounded-xl border border-slate-200/90 bg-slate-100/55 shadow-sm',
+                                  sheetDense ? 'p-2' : 'p-2.5',
+                                )}
                               >
-                                <p className="border-b border-slate-200/80 pb-1.5 text-center text-[10px] font-black uppercase tracking-wide text-slate-600">
+                                <p
+                                  className={cn(
+                                    'border-b border-slate-200/80 pb-1 text-center font-black uppercase tracking-wide text-slate-600',
+                                    sheetDense ? 'text-[9px]' : 'text-[10px]',
+                                  )}
+                                >
                                   {side.teamLabel}
                                 </p>
-                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                <div
+                                  className={cn(
+                                    'mt-2 grid gap-1.5',
+                                    sheetDense ? 'grid-cols-3' : 'grid-cols-2 gap-2',
+                                  )}
+                                >
                                   {side.picks.map((p) => {
                                     const visual = pickScorerVisual(p.id)
                                     const bets = scorerBetsForSelection(p.id)
@@ -1064,7 +1150,9 @@ export function BetWidget({
                                         key={p.id}
                                         variant="soft"
                                         className={cn(
-                                          'h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold',
+                                          sheetDense
+                                            ? 'h-auto min-h-[2.35rem] flex-col justify-between gap-0.5 rounded-lg px-1 py-1 text-[9px] font-bold leading-tight'
+                                            : 'h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold',
                                           visual.shell,
                                         )}
                                         disabled={!m.enabled || p.disabled}
@@ -1078,16 +1166,32 @@ export function BetWidget({
                                           })
                                         }}
                                       >
-                                        <span className="min-w-0 text-center leading-snug sm:text-left">
+                                        <span
+                                          className={cn(
+                                            'min-w-0 text-center leading-snug sm:text-left',
+                                            sheetDense && 'line-clamp-2',
+                                          )}
+                                        >
                                           {p.label}
                                         </span>
-                                        <div className="flex shrink-0 items-center gap-1">
+                                        <div className="flex shrink-0 items-center gap-0.5">
                                           {visual.badge ? (
-                                            <span className="text-[9px] font-black uppercase">
+                                            <span
+                                              className={cn(
+                                                'font-black uppercase',
+                                                sheetDense ? 'text-[8px]' : 'text-[9px]',
+                                              )}
+                                            >
                                               {visual.badge}
                                             </span>
                                           ) : null}
-                                          <span className={cn('font-black tabular-nums', visual.odd)}>
+                                          <span
+                                            className={cn(
+                                              'font-black tabular-nums',
+                                              visual.odd,
+                                              sheetDense ? 'text-[10px]' : '',
+                                            )}
+                                          >
                                             {scoredLive ? 'But ✓' : fmtOdds(p.odds)}
                                           </span>
                                         </div>
@@ -1163,11 +1267,11 @@ export function BetWidget({
                 </div>
               ) : null}
 
-              <div ref={x12SectionRef} className="mt-5">
+              <div ref={x12SectionRef} className={cn(sheetDense ? 'mt-4' : 'mt-5')}>
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
                   {isLive ? '1N2 (cotes live)' : '1N2'}
                 </p>
-                <div className="mt-2 grid grid-cols-3 gap-2">
+                <div className={cn('mt-2 grid grid-cols-3', sheetDense ? 'gap-1.5' : 'gap-2')}>
                   {(['home', 'draw', 'away'] as const).map((side) => {
                     const visual = pickTeamVisual(side)
                     const isSelected =
@@ -1195,9 +1299,11 @@ export function BetWidget({
                         key={side}
                         variant="soft"
                         className={cn(
-                          'h-11 rounded-xl px-3 text-sm font-bold',
+                          sheetDense
+                            ? 'h-9 rounded-lg px-2 text-xs font-bold'
+                            : 'h-11 rounded-xl px-3 text-sm font-bold',
                           side === 'draw'
-                            ? 'flex-col justify-center gap-0.5 text-[11px] leading-tight'
+                            ? 'flex-col justify-center gap-0.5 text-[10px] leading-tight'
                             : 'justify-between',
                           visual.shell,
                         )}
