@@ -17,12 +17,14 @@ export function UserProfileAvatar({
   peer,
   cloudProfile,
   profileLoading = false,
+  displayName,
   className,
 }: {
   peer: User
   cloudProfile: UserProfile | null
   /** Chargement cloud en cours — évite d’afficher une tenue factice avant la vraie. */
   profileLoading?: boolean
+  displayName?: string
   className?: string
 }) {
   const [photoFailed, setPhotoFailed] = useState(false)
@@ -30,6 +32,7 @@ export function UserProfileAvatar({
   const photoUrl = profile.profilePhotoDataUrl?.trim()
   const hasModular = Boolean(profile.modularAvatar?.data)
   const shellClass = cn(AVATAR_SHELL, className)
+  const labelName = displayName?.trim() || peer.username
 
   if (profileLoading) {
     return (
@@ -69,7 +72,7 @@ export function UserProfileAvatar({
       <div
         className={shellClass}
         role="img"
-        aria-label={`Avatar de ${peer.username} — maillot et tenue`}
+        aria-label={`Avatar de ${labelName} — maillot et tenue`}
       >
         <ModularAvatarPortrait state={modularState} imagePriority className="size-full" />
       </div>
@@ -80,7 +83,7 @@ export function UserProfileAvatar({
     <div
       className={cn(shellClass, 'overflow-hidden')}
       role="img"
-      aria-label={`Avatar de ${peer.username} — maillot et tenue`}
+      aria-label={`Avatar de ${labelName} — maillot et tenue`}
     >
       <DressableCharacter
         profile={profile}

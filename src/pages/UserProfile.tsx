@@ -20,10 +20,11 @@ import { Card } from '../components/ui/Card'
 import { cn } from '../utils/cn'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
-import { getSupabaseBrowserClient } from '../lib/supabase/client'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const GENERIC_PROFILE_NAMES = new Set(['supporter', 'parieur'])
 
 export function UserProfilePage() {
   const { userId = '' } = useParams<{ userId: string }>()
@@ -36,7 +37,6 @@ export function UserProfilePage() {
 
   const peer = resolveProfilePeer(userId)
   const viewerActorId = useTalkFootChatActorId()
-  const [liveName, setLiveName] = useState<string | null>(null)
   const [friendActionHint, setFriendActionHint] = useState<string | null>(null)
   const [friendBusy, setFriendBusy] = useState(false)
   const friendPronosticsRef = useRef<HTMLDivElement>(null)
@@ -47,35 +47,10 @@ export function UserProfilePage() {
     }
   }, [authUser?.id, userId, navigate])
 
-  useEffect(() => {
-    if (!peer || !authUser?.id || !isSupabaseConfigured()) return
-    const sb = getSupabaseBrowserClient()
-    if (!sb) return
-    if (UUID_RE.test(peer.id)) {
-      void sb
-        .from('profiles')
-        .select('display_name')
-        .eq('id', peer.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          const n = data?.display_name?.trim()
-          if (n) setLiveName(n)
-        })
-      return
-    }
-    // Compat Clerk: fallback sur `profiles.clerk_id` (texte) si `peer.id` n'est pas un UUID.
-    void sb
-      .from('profiles')
-      .select('display_name')
-      .eq('clerk_id', peer.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        const n = data?.display_name?.trim()
-        if (n) setLiveName(n)
-      })
-  }, [userId, authUser?.id, peer])
-
-  const { cloudProfile, loading: profileLoading } = usePeerPublicProfile(peer ?? undefined, authUser?.id)
+  const { cloudProfile, displayName: cloudDisplayName, loading: profileLoading } = usePeerPublicProfile(
+    peer ?? undefined,
+    authUser?.id,
+  )
 
   const useCloudFriends = isSupabaseConfigured() && Boolean(authUser?.id)
   const isFriend = Boolean(
@@ -128,7 +103,13 @@ export function UserProfilePage() {
     )
   }
 
-  const displayUsername = liveName ?? peer.username
+  const cloudName =
+    cloudDisplayName && !GENERIC_PROFILE_NAMES.has(cloudDisplayName.toLowerCase())
+      ? cloudDisplayName
+      : null
+  const fallbackName =
+    peer.username && !GENERIC_PROFILE_NAMES.has(peer.username.toLowerCase()) ? peer.username : null
+  const displayUsername = cloudName ?? fallbackName ?? cloudDisplayName ?? peer.username
   const club = peer.fanClubId ? ALL_CLUBS_BY_ID[peer.fanClubId] : undefined
 
   const canMessage =
@@ -207,7 +188,12 @@ export function UserProfilePage() {
           )}
         >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
-            <UserProfileAvatar peer={peer} cloudProfile={cloudProfile} profileLoading={profileLoading} />
+            <UserProfileAvatar
+              peer={peer}
+              cloudProfile={cloudProfile}
+              profileLoading={profileLoading}
+              displayName={displayUsername}
+            />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <h1
@@ -216,7 +202,11 @@ export function UserProfilePage() {
                     L ? 'text-tf-dark' : 'text-white',
                   )}
                 >
-                  {displayUsername}
+                  {profileLoading && !cloudDisplayName ? (
+                    <span className="inline-block h-8 w-36 animate-pulse rounded-lg bg-white/15" aria-hidden />
+                  ) : (
+                    displayUsername
+                  )}
                 </h1>
                 {peer.isTalkFootBot ? (
                   <span

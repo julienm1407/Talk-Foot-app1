@@ -10,13 +10,15 @@ import {
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 
-/** Charge le profil public (avatar modulaire) d’un autre joueur depuis Supabase. */
+/** Charge le profil public (pseudo + avatar modulaire) d’un autre joueur depuis Supabase. */
 export function usePeerPublicProfile(peer: User | undefined, selfUserId: string | undefined) {
   const [cloudProfile, setCloudProfile] = useState<UserProfile | null>(null)
+  const [displayName, setDisplayName] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     setCloudProfile(null)
+    setDisplayName(null)
     if (!peer || peer.isTalkFootBot || !isSupabaseConfigured()) {
       setLoading(false)
       return
@@ -40,17 +42,22 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
         if (cancelled) return
         const row = rows[0]
         const modular = row ? modularAvatarFromPublicRow(row.modularAvatar) : undefined
+        const cloudName = row?.displayName?.trim() || null
         const base = buildChatPeerProfile({
           ...peer,
           ...(modular ? { modularAvatar: modular } : {}),
         })
+        setDisplayName(cloudName)
         setCloudProfile({
           ...base,
           ...(modular ? { modularAvatar: modular } : {}),
         })
       })
       .catch(() => {
-        if (!cancelled) setCloudProfile(null)
+        if (!cancelled) {
+          setCloudProfile(null)
+          setDisplayName(null)
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -61,5 +68,5 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
     }
   }, [peer?.id, peer?.isTalkFootBot, selfUserId])
 
-  return { cloudProfile, loading }
+  return { cloudProfile, displayName, loading }
 }
