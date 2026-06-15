@@ -478,6 +478,42 @@ function highlightMinuteLabel(h: Pick<Highlight, 'minute' | 'inSecondHalf'>): st
   return label || (h.minute > 0 ? `${h.minute}'` : '')
 }
 
+const FULLSCREEN_SEEN_KEYS_MAX = 200
+
+function fullscreenSeenStorageKey(matchId: string): string {
+  return `tf-fs-seen-${matchId}`
+}
+
+function loadFullscreenSeenKeys(matchId: string): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = localStorage.getItem(fullscreenSeenStorageKey(matchId))
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((k): k is string => typeof k === 'string' && k.length > 0))
+  } catch {
+    return new Set()
+  }
+}
+
+function persistFullscreenSeenKeys(matchId: string, keys: Set<string>): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(
+      fullscreenSeenStorageKey(matchId),
+      JSON.stringify([...keys].slice(-FULLSCREEN_SEEN_KEYS_MAX)),
+    )
+  } catch {
+    /* private mode */
+  }
+}
+
+function rememberFullscreenSeenKey(matchId: string | undefined, keys: Set<string>, key: string): void {
+  keys.add(key)
+  if (matchId) persistFullscreenSeenKeys(matchId, keys)
+}
+
 /** Buteurs uniquement, sous le camp qui a marqué. */
 function LiveHeaderScorers({
   goals,
@@ -1555,7 +1591,7 @@ export function ChannelPage() {
     if (channelLiveMatchIdRef.current !== match?.id) {
       channelLiveMatchIdRef.current = match?.id
       fullscreenDedupePrimedRef.current = false
-      fullscreenDedupeKeysRef.current = new Set()
+      fullscreenDedupeKeysRef.current = match?.id ? loadFullscreenSeenKeys(match.id) : new Set()
       fullscreenShownHighlightIdsRef.current = new Set()
       infoHighlightPrimedRef.current = false
       infoHighlightIdsRef.current = new Set()
@@ -1564,11 +1600,16 @@ export function ChannelPage() {
     if (status !== 'live') return
 
     if (!fullscreenDedupePrimedRef.current) {
+      if (liveStatsLoading) return
       for (const h of smTimelineHighlights) {
         const kind = fullscreenKindFromHighlight(h)
         if (!kind) continue
         const enriched = highlightWithDetectedSide(h, detectHighlightSide)
-        fullscreenDedupeKeysRef.current.add(fullscreenEventDedupeKey(enriched, kind))
+        rememberFullscreenSeenKey(
+          match?.id,
+          fullscreenDedupeKeysRef.current,
+          fullscreenEventDedupeKey(enriched, kind),
+        )
         fullscreenShownHighlightIdsRef.current.add(h.id)
       }
       fullscreenDedupePrimedRef.current = true
@@ -1611,11 +1652,11 @@ export function ChannelPage() {
       const side = enriched.side
       if ((kind === 'goal' || kind === 'card') && !side) {
         fullscreenShownHighlightIdsRef.current.add(h.id)
-        fullscreenDedupeKeysRef.current.add(key)
+        rememberFullscreenSeenKey(match?.id, fullscreenDedupeKeysRef.current, key)
         return
       }
 
-      fullscreenDedupeKeysRef.current.add(key)
+      rememberFullscreenSeenKey(match?.id, fullscreenDedupeKeysRef.current, key)
       fullscreenShownHighlightIdsRef.current.add(h.id)
       const teamLabel = side === 'home' ? homeName : awayName
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
@@ -1658,6 +1699,7 @@ export function ChannelPage() {
     })
   }, [
     smTimelineHighlights,
+    liveStatsLoading,
     status,
     match?.id,
     launchFullscreenEvent,
@@ -1675,6 +1717,7 @@ export function ChannelPage() {
     if (!match?.id || status !== 'live') return
 
     if (!infoHighlightPrimedRef.current) {
+      if (liveStatsLoading) return
       for (const h of smTimelineHighlights) {
         infoHighlightIdsRef.current.add(h.id)
         const t = String(h.type || '').toLowerCase()
@@ -1731,7 +1774,7 @@ export function ChannelPage() {
     )
     if (infoToastTimeoutRef.current != null) window.clearTimeout(infoToastTimeoutRef.current)
     infoToastTimeoutRef.current = window.setTimeout(() => setAnimationNotice(null), 3600)
-  }, [smTimelineHighlights, status, match?.id, detectHighlightSide, homeName, awayName, liveDisplayedMinute])
+  }, [smTimelineHighlights, liveStatsLoading, status, match?.id, detectHighlightSide, homeName, awayName, liveDisplayedMinute])
 
   useEffect(
     () => () => {
