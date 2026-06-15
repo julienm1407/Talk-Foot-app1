@@ -60,7 +60,7 @@ export function resolveModularAvatarState(
     data: {
       skinTone: normalizeModularSkinTone(d.skinTone),
       body: d.body ?? defaults.body,
-      hair: d.hair ?? defaults.hair,
+      hair: 'hair' in d ? d.hair : defaults.hair,
       eyes: d.eyes ?? defaults.eyes,
       eyebrows: null,
       nose: d.nose ?? defaults.nose,
@@ -129,7 +129,7 @@ export function coerceModularAvatarFromStored(value: unknown): ModularAvatarStat
     data: {
       skinTone: normalizeModularSkinTone(typeof d.skinTone === 'string' ? d.skinTone : defaults.skinTone),
       body: coerceNullableAssetId(d.body) ?? defaults.body,
-      hair: coerceNullableAssetId(d.hair) ?? defaults.hair,
+      hair: 'hair' in d ? coerceNullableAssetId(d.hair) : defaults.hair,
       eyes: coerceNullableAssetId(d.eyes) ?? defaults.eyes,
       eyebrows: coerceNullableAssetId(d.eyebrows),
       nose: coerceNullableAssetId(d.nose) ?? defaults.nose,
@@ -164,7 +164,7 @@ export function sanitizeModularAvatarState(state: ModularAvatarState): ModularAv
     data: {
       skinTone: normalizeModularSkinTone(d.skinTone),
       body: withFallback('body', d.body, 'body'),
-      hair: withFallback('hair', d.hair, 'hair'),
+      hair: pick('hair', d.hair),
       eyes: withFallback('eyes', d.eyes, 'eyes'),
       eyebrows: null,
       nose: withFallback('nose', d.nose, 'nose'),
