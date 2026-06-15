@@ -246,6 +246,7 @@ export function useProfile() {
   }, [cloud, setLocalProfileRaw])
 
   useEffect(() => {
+    if (cloud && !cloud.syncReady) return
     const raw = Array.isArray(profile.ownedItemIds) ? profile.ownedItemIds : []
     const fixed = normalizeOwnedItemIds(raw)
     const same =
@@ -253,7 +254,7 @@ export function useProfile() {
     if (!same) {
       setProfileStore((p) => ({ ...p, ownedItemIds: fixed }))
     }
-  }, [profile.ownedItemIds, setProfileStore])
+  }, [profile.ownedItemIds, setProfileStore, cloud?.syncReady])
 
   const computedLevel = useMemo(() => levelFromXp(profile.xp), [profile.xp])
   const tier = useMemo(() => getLevelTier(computedLevel), [computedLevel])

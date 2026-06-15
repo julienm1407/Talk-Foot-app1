@@ -58,6 +58,14 @@ export function useSubscription() {
     (fn: (prev: SubscriptionState) => SubscriptionState) => {
       const apply = (prev: SubscriptionState) => fn(normalizeSubscription(prev))
       if (cloud) {
+        if (!cloud.syncReady) {
+          setLocalSub((prev) => {
+            const next = apply(prev)
+            if (user?.id) writeLocalSubscription(user.id, next)
+            return next
+          })
+          return
+        }
         cloud.patchApp((prev) => {
           const next = apply(normalizeSubscription(prev.subscription))
           if (user?.id) writeLocalSubscription(user.id, next)
@@ -72,7 +80,7 @@ export function useSubscription() {
         return next
       })
     },
-    [cloud, user?.id],
+    [cloud, cloud?.syncReady, user?.id],
   )
 
   useEffect(() => {

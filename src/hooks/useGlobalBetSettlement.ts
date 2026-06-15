@@ -34,6 +34,8 @@ export function useGlobalBetSettlement() {
   const fetchingMatchIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
+    if (isSupabaseConfigured() && cloud && !cloud.syncReady) return
+
     const candidates = matches.filter((m) => {
       if (m.status !== 'finished') return false
       if (m.score?.home == null || m.score?.away == null) return false
@@ -165,5 +167,5 @@ export function useGlobalBetSettlement() {
     return () => {
       cancelled = true
     }
-  }, [matches, bets, setBets, patchWallet, cloud, betTokenMultiplier, grantBetWon])
+  }, [matches, bets, setBets, patchWallet, cloud, cloud?.syncReady, betTokenMultiplier, grantBetWon])
 }

@@ -37,6 +37,7 @@ import {
   writeLocalDailyTokenGrant,
 } from '../utils/dailyTokenGrantLocal'
 import { canUseWalletRewards } from '../utils/walletAuth'
+import { writeWalletBackup } from '../utils/walletBackup'
 
 export { DAILY_TOKEN_BONUS_AMOUNT, DAILY_TOKEN_BONUS_HOUR } from '../utils/dailyTokenBonus'
 export type { DailyTokenBonusStatus } from '../utils/dailyTokenBonus'
@@ -85,15 +86,19 @@ export function useWallet() {
   const patchWallet = useCallback(
     (fn: (w: Wallet) => Wallet) => {
       if (useCloudWallet) {
-        cloud.patchApp((prev) => ({
-          ...prev,
-          wallet: normalizeWallet(fn(normalizeWallet(prev.wallet))),
-        }))
+        cloud.patchApp((prev) => {
+          const next = normalizeWallet(fn(normalizeWallet(prev.wallet)))
+          if (user?.id) writeWalletBackup(user.id, next)
+          return {
+            ...prev,
+            wallet: next,
+          }
+        })
       } else {
         patchWalletStore(fn)
       }
     },
-    [useCloudWallet, cloud],
+    [useCloudWallet, cloud, user?.id],
   )
 
   useEffect(() => {

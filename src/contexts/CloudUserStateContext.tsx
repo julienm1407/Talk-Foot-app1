@@ -40,6 +40,11 @@ import {
   wouldDowngradeModularAvatar,
   writeModularAvatarBackup,
 } from '../utils/modularAvatarBackup'
+import {
+  coalesceAppStateWithWalletBackup,
+  mergeWalletBackupIntoApp,
+  writeWalletBackup,
+} from '../utils/walletBackup'
 import { useAuth } from './AuthContext'
 
 type CloudUserStateValue = {
@@ -149,6 +154,7 @@ function CloudUserStateLoader({
   const pendingCloudSaveRef = useRef(false)
   const loadUserIdRef = useRef<string | null>(null)
   const readyRef = useRef(false)
+  const cloudHydratedRef = useRef(false)
 
   useEffect(() => {
     readyRef.current = ready
@@ -190,6 +196,7 @@ function CloudUserStateLoader({
   const flushSave = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     const sb = getSupabaseBrowserClient()
     if (!sb || !user?.id) return { ok: false, error: 'no_session' }
+    if (!cloudHydratedRef.current) return { ok: false, error: 'not_hydrated' }
     try {
       await ensureTalkFootSupabaseSession(sb)
 
@@ -199,7 +206,8 @@ function CloudUserStateLoader({
         if (!bindResult.ok) return { ok: false, error: bindResult.error ?? 'bind_failed' }
       }
 
-      const payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
+      let payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
+      payload = coalesceAppStateWithWalletBackup(user.id, payload)
       if (payload !== appRef.current) {
         appRef.current = payload
         setApp(payload)
@@ -216,6 +224,7 @@ function CloudUserStateLoader({
         user.id,
         resolveModularAvatarState(payload.profile.modularAvatar),
       )
+      writeWalletBackup(user.id, payload.wallet)
       clearChatAuthorAvatarCache()
       return { ok: true }
     } catch (err) {
@@ -257,6 +266,7 @@ function CloudUserStateLoader({
 
   useEffect(() => {
     if (!user?.id) {
+      cloudHydratedRef.current = false
       setReady(true)
       return
     }
@@ -267,6 +277,7 @@ function CloudUserStateLoader({
     if (loadUserIdRef.current !== user.id) {
       loadUserIdRef.current = user.id
       hasLocalEditsRef.current = false
+      cloudHydratedRef.current = false
       setReady(false)
     }
     let cancelled = false
@@ -305,6 +316,8 @@ function CloudUserStateLoader({
         }
         const restored = mergeModularAvatarBackupIntoApp(user.id, merged)
         merged = restored.app
+        const walletRestored = mergeWalletBackupIntoApp(user.id, merged)
+        merged = walletRestored.app
         if (
           readyRef.current &&
           !isLikelyDefaultModularAvatar(sessionAvatar) &&
@@ -318,10 +331,12 @@ function CloudUserStateLoader({
         }
         setApp(merged)
         appRef.current = merged
+        writeWalletBackup(user.id, merged.wallet)
         setOnboardingCompleteCol(onboardingComplete)
         setOauthNeedsProfile(!oauthCompleted)
+        cloudHydratedRef.current = true
         setReady(true)
-        return restored.restoredFromBackup
+        return restored.restoredFromBackup || walletRestored.restoredFromBackup
       }
 
       let lastErr: unknown = null
@@ -459,6 +474,14 @@ function CloudUserStateLoader({
 
       if (cancelled) return
       const friendly = cloudErrorMessageFr(lastErr)
+      if (user?.id) {
+        const walletRestored = mergeWalletBackupIntoApp(user.id, appRef.current)
+        if (walletRestored.restoredFromBackup) {
+          setApp(walletRestored.app)
+          appRef.current = walletRestored.app
+          cloudHydratedRef.current = true
+        }
+      }
       if (isTransientAuthLockError(friendly)) {
         setLoadError(friendly)
         setReady(true)
@@ -476,16 +499,18 @@ function CloudUserStateLoader({
 
   const patchApp = useCallback(
     (fn: (prev: UserAppStateV1) => UserAppStateV1) => {
-      hasLocalEditsRef.current = true
+      // Avant hydratation cloud : ne pas bloquer le chargement ni écraser le serveur.
+      if (ready) hasLocalEditsRef.current = true
       setApp((prev) => {
         const next = fn(prev)
         appRef.current = next
+        if (user?.id && ready) writeWalletBackup(user.id, next.wallet)
         return next
       })
       if (ready) scheduleSave()
       else pendingCloudSaveRef.current = true
     },
-    [scheduleSave, ready],
+    [scheduleSave, ready, user?.id],
   )
 
   const patchFanPreferences = useCallback(

@@ -31,6 +31,7 @@ export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boole
 
   const grantTick = useCallback(() => {
     if (!user?.id || !matchId || !isLive) return
+    if (cloud && !cloud.syncReady) return
     const usage = subscription.usage ?? {}
     const gate = liveMatchTokenGrantAllowed(tier, usage, 1)
     if (!gate.ok) return
@@ -59,7 +60,7 @@ export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boole
     patchUsage((u) => bumpLiveTokenUsage(u, 1))
     patchWallet((w) => ({ ...w, tokens: w.tokens + 1 }))
     grantLiveTick()
-  }, [user?.id, matchId, isLive, tier, subscription.usage, cloud, patchUsage, patchWallet, grantLiveTick])
+  }, [user?.id, matchId, isLive, tier, subscription.usage, cloud, cloud?.syncReady, patchUsage, patchWallet, grantLiveTick])
 
   useEffect(() => {
     if (tickRef.current) {
