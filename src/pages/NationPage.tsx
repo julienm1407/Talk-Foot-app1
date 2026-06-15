@@ -13,6 +13,7 @@ import { NationSquadList } from '../components/cdm/NationSquadList'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { NationFavoriteButton } from '../components/cdm/NationFavoriteButton'
 import { NationTribuneCard } from '../components/cdm/NationTribuneCard'
+import { NationJerseyImage } from '../components/cdm/NationJerseyImage'
 import { MatchTeamsVsInline } from '../components/match/MatchTeamSideLabel'
 import { cn } from '../utils/cn'
 
@@ -104,7 +105,7 @@ export function NationPage() {
       </nav>
 
       <section
-        className="relative overflow-hidden rounded-3xl border text-white shadow-tf-elev-3"
+        className="relative overflow-x-hidden rounded-3xl border text-white shadow-tf-elev-3 sm:overflow-visible"
         style={{
           background: `linear-gradient(135deg, ${nation.primary} 0%, ${nation.secondary} 60%, ${nation.accent} 130%)`,
           borderColor: 'rgba(255,255,255,0.18)',
@@ -156,16 +157,7 @@ export function NationPage() {
               </Link>
             </div>
           </div>
-          <div className="flex items-center justify-center">
-            <img
-              src={nation.jerseyUrl}
-              alt={`Maillot ${nation.nameFr}`}
-              loading="lazy"
-              decoding="async"
-              className="max-h-[15rem] w-auto select-none object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.4)] sm:max-h-[18rem]"
-              draggable={false}
-            />
-          </div>
+          <NationJerseyImage nation={nation} variant="hero" wrapperClassName="items-end sm:items-center" />
         </div>
       </section>
 
