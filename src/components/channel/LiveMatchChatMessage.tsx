@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import type { MatchTribuneZone, User } from '../../types/chat'
-import { useProfile } from '../../hooks/useProfile'
+import type { UserProfile } from '../../types/profile'
 import { resolveChatMessagePeerUi } from '../../utils/chatPeerSocial'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
@@ -23,9 +24,10 @@ export type LiveMatchChatMessageItem = {
   createdAtMs?: number
 }
 
-export function LiveMatchChatMessage({
+export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
   message,
   user,
+  selfProfile,
   selfUserId = 'me',
   selfChatActorId = null,
   selfClerkUserId = null,
@@ -38,6 +40,7 @@ export function LiveMatchChatMessage({
 }: {
   message: LiveMatchChatMessageItem
   user?: User
+  selfProfile: UserProfile
   selfUserId?: string
   selfChatActorId?: string | null
   selfClerkUserId?: string | null
@@ -48,7 +51,6 @@ export function LiveMatchChatMessage({
   showVerifiedBadge?: boolean
   light?: boolean
 }) {
-  const { profile } = useProfile()
   const likes = likeState?.likes ?? message.likes ?? 0
   const likedByMe = likeState?.likedByMe ?? Boolean(message.likedByMe)
 
@@ -83,7 +85,7 @@ export function LiveMatchChatMessage({
         to={peer.profileTo}
         onPeerMenu={peer.peerSocial ? onOpenPeerMenu : undefined}
         user={chatUser}
-        selfProfile={profile}
+        selfProfile={selfProfile}
         isSelf={peer.isSelfMessage}
         size="compact"
         className={TF_FOCUS_VISIBLE}
@@ -179,4 +181,4 @@ export function LiveMatchChatMessage({
       </button>
     </article>
   )
-}
+})

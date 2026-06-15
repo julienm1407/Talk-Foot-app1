@@ -58,6 +58,11 @@ export function ProfileCharacterThumb({
       setRenderState({ shellSize: thumbPx, renderSize })
       return
     }
+    /** Tailles fixes (chat xs, etc.) : pas de ResizeObserver — évite les crash Safari au zoom. */
+    if (size === 'xs' || size === 'sm' || size === 'chat') {
+      setRenderState({ shellSize: thumbPx, renderSize: thumbPx })
+      return
+    }
     const el = shellRef.current
     if (!el) return
     const update = () => {
@@ -71,7 +76,7 @@ export function ProfileCharacterThumb({
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [thumbPx, framingMode])
+  }, [thumbPx, framingMode, size])
 
   const scale =
     framingMode === 'topbar' && renderState.renderSize > 0

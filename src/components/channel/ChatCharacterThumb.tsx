@@ -92,7 +92,7 @@ export function ChatCharacterThumb({
     <ProfileCharacterThumb
       profile={profile}
       size={size === 'compact' ? 'xs' : 'chat'}
-      imagePriority
+      imagePriority={false}
       {...MODULAR_PP_CHAT_FRAMING}
       className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
       aria-label={ariaLabel}

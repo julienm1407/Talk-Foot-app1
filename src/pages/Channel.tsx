@@ -1092,7 +1092,8 @@ export function ChannelPage() {
   }, [chatLocked, chatOpenAtMs, nowMs])
 
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([])
-  const [draft, setDraft] = useState('')
+  const chatDraftRef = useRef('')
+  const chatInputRef = useRef<HTMLInputElement>(null)
   const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [flareColor, setFlareColor] = useState<FlareColor>('red')
@@ -1300,7 +1301,7 @@ export function ChannelPage() {
     if (chatClosedAfterMatch) return
     if (chatLocked) return
     if (!match?.id) return
-    const text = draft.trim()
+    const text = chatDraftRef.current.trim()
     if (!text) return
     const precheck = moderateChatText(text)
     if (!precheck.ok) {
@@ -1330,7 +1331,8 @@ export function ChannelPage() {
       return
     }
     recordChatSend()
-    setDraft('')
+    chatDraftRef.current = ''
+    if (chatInputRef.current) chatInputRef.current.value = ''
     if (res.message) {
       const mapped = cloudMessageToUi(res.message)
       setChatMessages((prev) => {
@@ -3029,6 +3031,7 @@ export function ChannelPage() {
                       key={msg.id}
                       message={msg}
                       user={chatUsersById[msg.userId]}
+                      selfProfile={selfProfile}
                       selfUserId={selfChatUserId}
                       selfChatActorId={chatActorId}
                       selfClerkUserId={authUser?.id}
@@ -3291,8 +3294,11 @@ export function ChannelPage() {
                 FX
               </button>
               <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
+                ref={chatInputRef}
+                defaultValue=""
+                onChange={(e) => {
+                  chatDraftRef.current = e.target.value
+                }}
                 placeholder={
                   chatLocked
                     ? 'Tchat ouvert 1 h avant le match'
@@ -3301,7 +3307,7 @@ export function ChannelPage() {
                       : 'Écrire un message…'
                 }
                 disabled={chatLocked || !isCloudChatConfigured}
-                className={`min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-sm text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
+                className={`min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-base text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
                   L
                     ? 'placeholder:text-[#4a6682] disabled:placeholder:text-[#3d5670]'
                     : 'placeholder:text-slate-400 disabled:placeholder:text-slate-500'

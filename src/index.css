@@ -2720,6 +2720,11 @@ body::before {
   -webkit-backface-visibility: hidden;
 }
 
+.tf-channel-chat-form input,
+.tf-channel-chat-form textarea {
+  font-size: 16px;
+}
+
 /* Barre de saisie chat — mobile (portail body, au-dessus de la BottomNav). */
 .tf-chat-compose-mobile-shell {
   position: fixed !important;
