@@ -32,7 +32,7 @@ import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 export function HomePage() {
   const navigate = useNavigate()
   const { carouselMatches, matches, loading } = useMatches()
-  const { groups, createGroup } = useSupporterGroups()
+  const { groups, createGroup, isJoined } = useSupporterGroups()
   const { articles: publishedArticles, loading: articlesLoading } = useArticles()
   const { debates, debateOfTheDay, trendingDebates, loading: debatesLoading } = useDebates()
   const {
@@ -65,7 +65,10 @@ export function HomePage() {
     [sortedGroups, accessPrefs],
   )
 
-  const myCreatedGroups = useMemo(() => groups.filter((g) => g.createdBy === 'me'), [groups])
+  const myCreatedGroups = useMemo(
+    () => groups.filter((g) => isJoined(g.id) || g.createdBy === 'me'),
+    [groups, isJoined],
+  )
 
   const activeGroupsRail = visibleGroups.slice(0, 2)
 

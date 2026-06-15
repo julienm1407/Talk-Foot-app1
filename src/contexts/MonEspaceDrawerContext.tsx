@@ -42,12 +42,15 @@ export function MonEspaceDrawerProvider({ children }: { children: ReactNode }) {
   const L = appearance === 'light'
   const navigate = useNavigate()
   const location = useLocation()
-  const { groups, createGroup } = useSupporterGroups()
+  const { groups, createGroup, isJoined } = useSupporterGroups()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(drawerOpen)
 
-  const myCreatedGroups = useMemo(() => groups.filter((g) => g.createdBy === 'me'), [groups])
+  const myCreatedGroups = useMemo(
+    () => groups.filter((g) => isJoined(g.id) || g.createdBy === 'me'),
+    [groups, isJoined],
+  )
 
   const openMonEspaceDrawer = useCallback(() => setDrawerOpen(true), [])
   const closeMonEspaceDrawer = useCallback(() => setDrawerOpen(false), [])

@@ -311,7 +311,7 @@ export function HomeMonEspacePanel({
           <ul className="mt-2 space-y-1" role="list">
             {myCreatedGroups.length === 0 ? (
               <li className={cn('rounded-lg px-2 py-2 text-xs font-semibold leading-snug', hubSecondary)}>
-                {slim ? 'Aucune tribune — crée la tienne.' : 'Tu n’as pas encore créé de tribune. Lance la tienne pour rassembler ton camp.'}
+                {slim ? 'Aucune tribune — rejoins ou crée la tienne.' : 'Tu n’as pas encore rejoint ou créé de tribune. Lance la tienne ou parcours les groupes.'}
               </li>
             ) : (
               myCreatedGroups.slice(0, slim ? 3 : 8).map((g) => (
