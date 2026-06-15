@@ -1244,6 +1244,11 @@ export function ChannelPage() {
       }
     }
     for (const id of chatAuthorIds) {
+      const subscriptionTier = subscriptionTiersByAuthor[id]
+      if (!subscriptionTier || !map[id]) continue
+      map[id] = { ...map[id], subscriptionTier }
+    }
+    for (const id of chatAuthorIds) {
       if (!map[id] || !cloudAuthorNames[id]) continue
       map[id] = {
         ...map[id],

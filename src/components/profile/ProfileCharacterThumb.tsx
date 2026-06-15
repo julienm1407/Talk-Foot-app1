@@ -4,13 +4,19 @@ import { cn } from '../../utils/cn'
 import { resolveModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import { ModularAvatarHeadThumb } from './ModularAvatarCanvas'
 import {
+  MODULAR_PP_CHAT_COMPACT_FRAMING,
   MODULAR_PP_CHAT_FRAMING,
   MODULAR_PP_HEAD_RENDER_BASE_PX,
   MODULAR_PP_LEADERBOARD_FRAMING,
   MODULAR_PP_NAV_FRAMING,
 } from './modularPPFraming'
 
-export { MODULAR_PP_CHAT_FRAMING, MODULAR_PP_LEADERBOARD_FRAMING, MODULAR_PP_NAV_FRAMING }
+export {
+  MODULAR_PP_CHAT_COMPACT_FRAMING,
+  MODULAR_PP_CHAT_FRAMING,
+  MODULAR_PP_LEADERBOARD_FRAMING,
+  MODULAR_PP_NAV_FRAMING,
+}
 
 const PRESETS = {
   xs: 28,
@@ -24,9 +30,28 @@ function fillsParentShell(className?: string) {
   return Boolean(className && /(?:^|\s)!?(?:h|w)-full/.test(className))
 }
 
+function resolveRenderSizes(
+  shellPx: number,
+  fallbackPx: number,
+  framingMode: 'auto' | 'topbar',
+): { shellSize: number; renderSize: number } {
+  const shellSize = Math.max(16, shellPx || fallbackPx)
+  let renderSize = shellSize
+  if (framingMode === 'topbar') {
+    renderSize =
+      shellSize < MODULAR_PP_HEAD_RENDER_BASE_PX
+        ? shellSize
+        : Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, shellSize)
+  } else if (shellSize < 32) {
+    renderSize = fallbackPx
+  }
+  return { shellSize, renderSize }
+}
+
 export function ProfileCharacterThumb({
   profile,
   size = 'md',
+  shellPx: shellPxProp,
   framingMode = 'auto',
   headOffsetPx = 0,
   headScale = 1,
@@ -36,6 +61,8 @@ export function ProfileCharacterThumb({
 }: {
   profile: UserProfile
   size?: keyof typeof PRESETS
+  /** Taille réelle du cercle (px) — évite le décalage preset vs conteneur CSS. */
+  shellPx?: number
   framingMode?: 'auto' | 'topbar'
   headOffsetPx?: number
   headScale?: number
@@ -45,32 +72,26 @@ export function ProfileCharacterThumb({
   className?: string
   'aria-label'?: string
 }) {
-  const thumbPx = PRESETS[size]
+  const thumbPx = shellPxProp ?? PRESETS[size]
   const fillParent = fillsParentShell(className)
   const modularState = resolveModularAvatarState(profile.modularAvatar)
   const shellRef = useRef<HTMLDivElement>(null)
-  const [renderState, setRenderState] = useState<{ shellSize: number; renderSize: number }>({
-    shellSize: thumbPx,
-    renderSize: thumbPx,
-  })
+  const [renderState, setRenderState] = useState(() =>
+    resolveRenderSizes(shellPxProp ?? PRESETS[size], PRESETS[size], framingMode),
+  )
 
   useEffect(() => {
+    if (shellPxProp != null) {
+      setRenderState(resolveRenderSizes(shellPxProp, PRESETS[size], framingMode))
+      return
+    }
+
     const el = shellRef.current
     if (!el) return
 
     const update = () => {
       const measured = Math.round(Math.min(el.clientWidth, el.clientHeight))
-      const shellSize = Math.max(16, measured || thumbPx)
-      let renderSize = shellSize
-      if (framingMode === 'topbar') {
-        renderSize =
-          shellSize < MODULAR_PP_HEAD_RENDER_BASE_PX
-            ? shellSize
-            : Math.max(MODULAR_PP_HEAD_RENDER_BASE_PX, shellSize)
-      } else if (shellSize < 32) {
-        renderSize = thumbPx
-      }
-      setRenderState({ shellSize, renderSize })
+      setRenderState(resolveRenderSizes(measured, thumbPx, framingMode))
     }
 
     update()
@@ -78,7 +99,7 @@ export function ProfileCharacterThumb({
     const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [thumbPx, framingMode])
+  }, [thumbPx, framingMode, shellPxProp, size])
 
   const scale =
     framingMode === 'topbar' && renderState.renderSize > 0

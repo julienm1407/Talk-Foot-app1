@@ -29,6 +29,7 @@ export function clearChatAuthorAvatarCache(userId?: string) {
 /** Vrai tant que l’avatar cloud d’un auteur n’a pas encore été résolu (évite Dicebear temporaire). */
 export function isChatAuthorAvatarPending(userId: string, selfUserId: string): boolean {
   if (!shouldFetchCloudChatAvatar(userId, selfUserId)) return false
+  if (!isSupabaseConfigured()) return false
   return !authorCache.get(userId)?.loaded
 }
 

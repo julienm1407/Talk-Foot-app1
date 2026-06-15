@@ -188,6 +188,11 @@ export function DebateSalonPanel({
         }
       }
     }
+    for (const id of chatAuthorIds) {
+      const subscriptionTier = subscriptionTiersByAuthor[id]
+      if (!subscriptionTier || !base[id]) continue
+      base[id] = { ...base[id], subscriptionTier }
+    }
     for (const [userId, name] of authorNameByUserId) {
       if (base[userId]) {
         base[userId] = {

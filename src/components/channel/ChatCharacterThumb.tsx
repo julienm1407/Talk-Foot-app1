@@ -7,6 +7,7 @@ import { cn } from '../../utils/cn'
 import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import {
+  MODULAR_PP_CHAT_COMPACT_FRAMING,
   MODULAR_PP_CHAT_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
@@ -17,6 +18,13 @@ import { userShowsUltraAvatarFrame } from '../../utils/ultraAvatarFrame'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import { isChatAuthorAvatarPending } from '../../hooks/useChatAuthorModularAvatars'
+import { resolveDisplayModularAvatar } from '../../utils/modularAvatarBackup'
+import { resolveProfileModularAvatarForDisplay } from '../../utils/chatAuthorModularAvatar'
+
+const CHAT_SHELL_PX = {
+  compact: 28,
+  salon: 42,
+} as const
 
 function peerProfileKey(u: User | undefined): string {
   if (!u) return 'anon'
@@ -67,8 +75,23 @@ export function ChatCharacterThumb({
   const chatActorId = useTalkFootChatActorId()
   const selfUserId = chatActorId ?? authUser?.id ?? 'me'
   const [photoFailed, setPhotoFailed] = useState(false)
+  const shellPx = CHAT_SHELL_PX[size === 'compact' ? 'compact' : 'salon']
   const peerProfile = useMemo(() => buildChatPeerProfile(user), [peerProfileKey(user)])
-  const profile = isSelf ? selfProfile : peerProfile
+  const profile = useMemo(() => {
+    if (isSelf) {
+      return {
+        ...selfProfile,
+        modularAvatar: resolveDisplayModularAvatar(selfUserId, selfProfile.modularAvatar),
+      }
+    }
+    if (user?.modularAvatar) {
+      return {
+        ...peerProfile,
+        modularAvatar: resolveProfileModularAvatarForDisplay(user.modularAvatar),
+      }
+    }
+    return peerProfile
+  }, [isSelf, peerProfile, selfProfile, selfUserId, user?.modularAvatar])
   const photoUrl = profile.profilePhotoDataUrl?.trim()
   useEffect(() => {
     setPhotoFailed(false)
@@ -76,12 +99,13 @@ export function ChatCharacterThumb({
   const isSalonBot = Boolean(user?.isGroupSalonBot)
   const isTalkFootBot = Boolean(user?.isTalkFootBot)
   const isBot = isSalonBot || isTalkFootBot
-  const useModularThumb = !isBot && (isSelf || Boolean(user?.modularAvatar))
+  const peerHasModular = Boolean(user?.modularAvatar?.data)
+  const useModularThumb = !isBot && (isSelf || peerHasModular)
   const cloudAvatarPending = Boolean(
     user?.id &&
       !isSelf &&
       !isBot &&
-      !user.modularAvatar &&
+      !peerHasModular &&
       isChatAuthorAvatarPending(user.id, selfUserId),
   )
   const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`
@@ -89,6 +113,7 @@ export function ChatCharacterThumb({
   const thumbBorderClass = showUltraFrame
     ? 'border-0 shadow-none'
     : 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]'
+  const chatFraming = size === 'compact' ? MODULAR_PP_CHAT_COMPACT_FRAMING : MODULAR_PP_CHAT_FRAMING
 
   const botSeed = useMemo(() => {
     if (isSalonBot && user?.id.startsWith('group-bot:')) {
@@ -123,9 +148,10 @@ export function ChatCharacterThumb({
   ) : useModularThumb ? (
     <ProfileCharacterThumb
       profile={profile}
+      shellPx={shellPx}
       size={size === 'compact' ? 'xs' : 'sm'}
-      imagePriority={isSelf}
-      {...MODULAR_PP_CHAT_FRAMING}
+      imagePriority
+      {...chatFraming}
       className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
       aria-label={ariaLabel}
     />
@@ -145,7 +171,7 @@ export function ChatCharacterThumb({
   const avatarBody = (
     <>
       {figure}
-      {showUltraFrame ? <UltraAvatarFrame size={size} /> : null}
+      {showUltraFrame && !cloudAvatarPending ? <UltraAvatarFrame size={size} /> : null}
     </>
   )
 

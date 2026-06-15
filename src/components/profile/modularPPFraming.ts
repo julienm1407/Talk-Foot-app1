@@ -4,7 +4,7 @@
  */
 export const MODULAR_PP_HEAD_ORIGIN = '50% 2%'
 export const MODULAR_PP_HEAD_ZOOM = 2.5
-export const MODULAR_PP_HEAD_ZOOM_SMALL = 1.74
+export const MODULAR_PP_HEAD_ZOOM_SMALL = 2.15
 export const MODULAR_PP_HEAD_MARGIN_TOP_PX = -12
 export const MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX = -9
 export const MODULAR_PP_HEAD_RENDER_BASE_PX = 40
@@ -16,11 +16,18 @@ export const MODULAR_PP_NAV_FRAMING = {
   headScale: 1.55,
 }
 
-/** Fil tribune / débat (~28–45px) — cadrage tête proche de la barre nav. */
+/** Fil tribune / débat (~40–45px) — cadrage tête proche de la barre nav. */
 export const MODULAR_PP_CHAT_FRAMING = {
   framingMode: 'topbar' as const,
-  headOffsetPx: -3,
-  headScale: 1.5,
+  headOffsetPx: -4,
+  headScale: 1.55,
+}
+
+/** Chat live compact (28px) — zoom tête plus fort. */
+export const MODULAR_PP_CHAT_COMPACT_FRAMING = {
+  framingMode: 'topbar' as const,
+  headOffsetPx: -5,
+  headScale: 1.85,
 }
 
 /** Vignettes ~28px (classement parieurs) — tête entière, sans zoom nav. */
