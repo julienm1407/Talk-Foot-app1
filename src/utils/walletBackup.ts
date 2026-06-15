@@ -24,9 +24,24 @@ export function mergeWalletTokens(serverTokens: number, backupTokens: number): n
   const backup = Math.max(0, backupTokens)
   const defaultTokens = DEFAULT_WALLET.tokens
 
+  // Vieux onglet / client par défaut : ne pas écraser un solde cloud déjà enrichi.
   if (backup === defaultTokens && server > defaultTokens) return server
+  // Gain local pas encore synchronisé.
   if (backup > server) return backup
-  if (server === defaultTokens && backup < server) return backup
+  // Dépense locale ou solde déjà aligné : faire confiance au backup (y compris comptes admin).
+  return backup
+}
+
+function mergeWalletMedals(
+  serverMedals: number,
+  backupMedals: number,
+  mergedTokens: number,
+  backupTokens: number,
+): number {
+  const server = Math.max(0, serverMedals)
+  const backup = Math.max(0, backupMedals)
+  if (backup > server) return backup
+  if (mergedTokens === backupTokens && backup <= server) return backup
   return server
 }
 
@@ -34,12 +49,7 @@ function mergeWallets(server: Wallet, backup: Wallet): Wallet {
   const s = normalizeWallet(server)
   const b = normalizeWallet(backup)
   const tokens = mergeWalletTokens(s.tokens, b.tokens)
-  const medals =
-    b.medals > s.medals
-      ? b.medals
-      : tokens === b.tokens && b.tokens < s.tokens && b.medals < s.medals
-        ? b.medals
-        : s.medals
+  const medals = mergeWalletMedals(s.medals, b.medals, tokens, b.tokens)
 
   return normalizeWallet({
     tokens,

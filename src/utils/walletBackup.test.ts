@@ -18,4 +18,8 @@ describe('mergeWalletTokens', () => {
   it('fait confiance au cloud déjà synchronisé après dépense', () => {
     assert.equal(mergeWalletTokens(80, 80), 80)
   })
+
+  it('conserve une dépense admin (99 980) face au cloud non synchronisé (100 000)', () => {
+    assert.equal(mergeWalletTokens(100_000, 99_980), 99_980)
+  })
 })
