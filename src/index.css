@@ -2670,7 +2670,7 @@ body::before {
 }
 
 .tf-app-topbar-spacer {
-  height: calc(3.35rem + env(safe-area-inset-top, 0px));
+  height: calc(3.75rem + env(safe-area-inset-top, 0px));
   flex-shrink: 0;
 }
 
@@ -2709,6 +2709,8 @@ body::before {
 .tf-profile-page-scroll {
   -webkit-overflow-scrolling: auto;
   overscroll-behavior-y: contain;
+  /* Le scroll profil ne doit pas intercepter les clics sur la barre haute (portail ou sticky). */
+  isolation: isolate;
 }
 
 /* Force un nouveau contexte de rendu à chaque changement de route (Safari / PWA). */

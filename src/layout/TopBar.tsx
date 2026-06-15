@@ -94,6 +94,7 @@ export function TopBar() {
   )
   const belowXl = useIsBelowXl()
   const mobileTouch = useIsMobileTouchViewport()
+  const portalTopBar = mobileTouch || profileActive
   const isHomePath = location.pathname === '/' || location.pathname === ''
   const backTarget = resolvePageBackTarget(location.pathname)
   const mobileDenseHeader = belowXl && Boolean(backTarget)
@@ -125,7 +126,7 @@ export function TopBar() {
     <header
       className={cn(
         'tf-app-topbar relative w-full min-w-0 shrink-0 overflow-visible border-b backdrop-blur-md',
-        mobileTouch ? 'z-auto' : 'sticky top-0 z-40',
+        portalTopBar ? 'z-auto' : 'sticky top-0 z-50',
         'pt-[env(safe-area-inset-top,0px)]',
         L
           ? 'border-tf-dark/12 bg-[color:var(--tf-page-bg-light)] shadow-tf-elev-nav-light'
@@ -140,13 +141,13 @@ export function TopBar() {
             'w-full min-w-0',
             belowXl
               ? 'flex items-center gap-1 sm:gap-1.5'
-              : 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4',
+              : 'grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] items-center gap-4',
           )}
         >
         <div
           className={cn(
             'flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3',
-            belowXl && 'min-w-0 flex-1 overflow-hidden',
+            belowXl ? 'min-w-0 flex-1 overflow-hidden' : 'overflow-hidden',
           )}
         >
           <TopBarBackButton pathname={location.pathname} compact={mobileDenseHeader} />
@@ -198,7 +199,7 @@ export function TopBar() {
         </div>
 
         <nav
-          className="hidden min-w-0 xl:flex xl:items-center xl:justify-center"
+          className="relative z-20 hidden min-w-0 xl:flex xl:items-center xl:justify-center"
           aria-label="Primary"
         >
           <div
@@ -242,7 +243,7 @@ export function TopBar() {
 
         <div
           className={cn(
-            'flex shrink-0 items-center justify-end gap-1 sm:gap-1.5 xl:gap-2.5',
+            'relative z-10 flex shrink-0 items-center justify-end gap-1 sm:gap-1.5 xl:gap-2.5',
             !belowXl && cn('col-start-3 pl-3', L ? 'border-l border-tf-dark/10' : 'border-l border-white/10'),
           )}
         >
@@ -404,7 +405,7 @@ export function TopBar() {
     </header>
   )
 
-  if (mobileTouch && typeof document !== 'undefined') {
+  if (portalTopBar && typeof document !== 'undefined') {
     return (
       <>
         <div className="tf-app-topbar-spacer shrink-0" aria-hidden />
