@@ -262,6 +262,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
           ok = true
           return { ...prev, wallet: { ...w, tokens: w.tokens - amount } }
         })
+        if (ok) void cloud.flushAppSave?.()
         return ok
           ? { ok: true as const }
           : { ok: false as const, reason: 'not_enough_tokens' as const }
@@ -272,6 +273,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
         ok = true
         return { ...w, tokens: w.tokens - amount }
       })
+      if (ok) void cloud?.flushAppSave?.()
       return ok
         ? { ok: true as const }
         : { ok: false as const, reason: 'not_enough_tokens' as const }

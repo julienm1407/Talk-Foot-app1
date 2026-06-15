@@ -499,16 +499,29 @@ function CloudUserStateLoader({
 
   const patchApp = useCallback(
     (fn: (prev: UserAppStateV1) => UserAppStateV1) => {
-      // Avant hydratation cloud : ne pas bloquer le chargement ni écraser le serveur.
-      if (ready) hasLocalEditsRef.current = true
       setApp((prev) => {
         const next = fn(prev)
         appRef.current = next
-        if (user?.id && ready) writeWalletBackup(user.id, next.wallet)
+        if (user?.id) {
+          const prevWallet = normalizeWallet(prev.wallet)
+          const nextWallet = normalizeWallet(next.wallet)
+          const walletChanged =
+            prevWallet.tokens !== nextWallet.tokens ||
+            prevWallet.medals !== nextWallet.medals ||
+            prevWallet.lastDailyTokenGrant !== nextWallet.lastDailyTokenGrant
+          if (walletChanged) {
+            writeWalletBackup(user.id, next.wallet)
+            hasLocalEditsRef.current = true
+          }
+        }
         return next
       })
-      if (ready) scheduleSave()
-      else pendingCloudSaveRef.current = true
+      if (ready) {
+        hasLocalEditsRef.current = true
+        scheduleSave()
+      } else {
+        pendingCloudSaveRef.current = true
+      }
     },
     [scheduleSave, ready, user?.id],
   )

@@ -1,6 +1,6 @@
 import type { UserAppStateV1 } from '../data/userAppStateDefaults'
 import type { Wallet } from '../types/bet'
-import { normalizeWallet } from './walletNormalize'
+import { DEFAULT_WALLET, normalizeWallet } from './walletNormalize'
 
 type WalletBackupV1 = {
   v: 1
@@ -18,12 +18,32 @@ function pickLatestGrant(a?: string, b?: string): string | undefined {
   return a >= b ? a : b
 }
 
+/** Aligné sur talkfoot_merge_client_app_state côté Supabase. */
+export function mergeWalletTokens(serverTokens: number, backupTokens: number): number {
+  const server = Math.max(0, serverTokens)
+  const backup = Math.max(0, backupTokens)
+  const defaultTokens = DEFAULT_WALLET.tokens
+
+  if (backup === defaultTokens && server > defaultTokens) return server
+  if (backup > server) return backup
+  if (server === defaultTokens && backup < server) return backup
+  return server
+}
+
 function mergeWallets(server: Wallet, backup: Wallet): Wallet {
   const s = normalizeWallet(server)
   const b = normalizeWallet(backup)
+  const tokens = mergeWalletTokens(s.tokens, b.tokens)
+  const medals =
+    b.medals > s.medals
+      ? b.medals
+      : tokens === b.tokens && b.tokens < s.tokens && b.medals < s.medals
+        ? b.medals
+        : s.medals
+
   return normalizeWallet({
-    tokens: Math.max(s.tokens, b.tokens),
-    medals: Math.max(s.medals, b.medals),
+    tokens,
+    medals,
     lastDailyTokenGrant: pickLatestGrant(s.lastDailyTokenGrant, b.lastDailyTokenGrant),
   })
 }
@@ -58,7 +78,7 @@ export function readWalletBackup(userId: string): WalletBackupV1 | null {
   }
 }
 
-/** Réapplique le meilleur solde local si le cloud est en retard ou réinitialisé. */
+/** Réapplique le solde local si le cloud est en retard ou réinitialisé (100 jetons par défaut). */
 export function mergeWalletBackupIntoApp(
   userId: string,
   app: UserAppStateV1,
@@ -82,7 +102,18 @@ export function mergeWalletBackupIntoApp(
   }
 }
 
-/** Avant écriture cloud : ne jamais envoyer un solde inférieur à la sauvegarde locale. */
+/** Avant écriture cloud : relève le solde seulement si la session ressemble au défaut non synchronisé. */
 export function coalesceAppStateWithWalletBackup(userId: string, app: UserAppStateV1): UserAppStateV1 {
-  return mergeWalletBackupIntoApp(userId, app).app
+  const backup = readWalletBackup(userId)
+  if (!backup) return app
+
+  const current = normalizeWallet(app.wallet)
+  const b = normalizeWallet(backup.wallet)
+  const defaultTokens = DEFAULT_WALLET.tokens
+
+  if (current.tokens === defaultTokens && b.tokens > defaultTokens) {
+    return mergeWalletBackupIntoApp(userId, app).app
+  }
+
+  return app
 }
