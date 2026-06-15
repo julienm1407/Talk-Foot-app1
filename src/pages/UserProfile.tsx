@@ -9,6 +9,8 @@ import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { UserProfileAvatar } from '../components/profile/UserProfileAvatar'
 import { FriendPronosticsPanel } from '../components/social/FriendPronosticsPanel'
 import { ProfilePronoStatsSection } from '../components/profile/ProfilePronoStatsSection'
+import { ProfileIdentitySection } from '../components/profile/ProfileIdentitySection'
+import { usePublicProfileIdentity } from '../hooks/useProfileIdentity'
 import { useFriendPronostics } from '../hooks/useFriendPronostics'
 import { usePublicBettorStats, usePronoStatsFromBets } from '../hooks/usePublicBettorStats'
 import { usePeerPublicProfile } from '../hooks/usePeerPublicProfile'
@@ -100,6 +102,10 @@ export function UserProfilePage() {
   )
   const peerPronoStats =
     canViewFriendPronostics && friendPronostics.bets.length > 0 ? friendBettorStats : publicBettorStats
+  const { lines: peerIdentityLines, loading: peerIdentityLoading } = usePublicProfileIdentity(
+    peerPronoStats.stats,
+    { loading: peerPronoStats.loading },
+  )
 
   const scrollToFriendPronostics = () => {
     friendPronosticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -324,12 +330,20 @@ export function UserProfilePage() {
       </Card>
 
       {!peer.isTalkFootBot ? (
-        <ProfilePronoStatsSection
-          badges={peerPronoStats.badges}
-          progress={peerPronoStats.progress}
-          badgesTitle="Ses badges"
-          loading={peerPronoStats.loading}
-        />
+        <>
+          <ProfileIdentitySection
+            lines={peerIdentityLines}
+            title="Son identité Talk Foot"
+            subtitle="Faits marquants tirés de son activité sur Talk Foot."
+            loading={peerIdentityLoading}
+          />
+          <ProfilePronoStatsSection
+            badges={peerPronoStats.badges}
+            progress={peerPronoStats.progress}
+            badgesTitle="Ses badges"
+            loading={peerPronoStats.loading}
+          />
+        </>
       ) : null}
 
       {canViewFriendPronostics ? (

@@ -11,7 +11,7 @@ export type PronoHubStats = {
 }
 
 export type PronoBadge = {
-  kind: 'starter' | 'beta' | 'predictor' | 'accuracy' | 'streak' | 'league'
+  kind: 'starter' | 'beta' | 'predictor' | 'accuracy' | 'streak' | 'league' | 'invincible'
   label: string
   hint: string
   tone?: 'neutral' | 'live' | 'upcoming'
@@ -60,19 +60,6 @@ export function computePronoHubStats(bets: Bet[]): PronoHubStats {
 export function buildPronoBadges(stats: PronoHubStats, light: boolean): PronoBadge[] {
   const b: PronoBadge[] = []
 
-  b.push({
-    kind: 'starter',
-    label: 'Supporter',
-    hint: 'Compte de départ',
-    tone: 'neutral',
-  })
-  b.push({
-    kind: 'beta',
-    label: 'Beta',
-    hint: 'Accès anticipé',
-    tone: 'upcoming',
-  })
-
   if (stats.total >= 5) {
     b.push({
       kind: 'predictor',
@@ -95,7 +82,16 @@ export function buildPronoBadges(stats: PronoHubStats, light: boolean): PronoBad
     })
   }
 
-  if (stats.streak >= 2) {
+  if (stats.streak >= 5) {
+    b.push({
+      kind: 'invincible',
+      label: 'Invaincu',
+      hint: `${stats.streak} victoires d'affilée`,
+      className: light
+        ? 'border-violet-200 bg-violet-50 text-violet-800'
+        : 'border-violet-400/30 bg-violet-950/45 text-violet-200',
+    })
+  } else if (stats.streak >= 2) {
     b.push({
       kind: 'streak',
       label: `Série x${stats.streak}`,

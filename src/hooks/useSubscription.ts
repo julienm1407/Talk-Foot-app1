@@ -99,6 +99,10 @@ export function useSubscription() {
           nextTier === 'freemium'
             ? null
             : new Date(Date.now() + 30 * 86400000).toISOString(),
+        subscribedSince:
+          nextTier === 'freemium'
+            ? null
+            : prev.subscribedSince ?? new Date().toISOString(),
       }))
       void cloud?.flushAppSave?.()
     },

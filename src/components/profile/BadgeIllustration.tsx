@@ -7,6 +7,7 @@ type Kind =
   | 'accuracy'
   | 'streak'
   | 'league'
+  | 'invincible'
 
 export function BadgeIllustration({
   kind,
@@ -16,7 +17,9 @@ export function BadgeIllustration({
   className?: string
 }) {
   const base =
-    kind === 'accuracy'
+    kind === 'invincible'
+      ? 'from-violet-700 to-fuchsia-500'
+      : kind === 'accuracy'
       ? 'from-emerald-600 to-emerald-400'
       : kind === 'streak'
         ? 'from-amber-600 to-amber-400'
@@ -62,6 +65,11 @@ export function BadgeIllustration({
           <path
             fill="currentColor"
             d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7m0 9.5A2.5 2.5 0 1 1 14.5 9A2.5 2.5 0 0 1 12 11.5"
+          />
+        ) : kind === 'invincible' ? (
+          <path
+            fill="currentColor"
+            d="M12 1L4 4v6c0 5.25 3.4 10.15 8 11 4.6-.85 8-5.75 8-11V4zm0 2.18L18 6.3V10c0 4.16-2.69 8.05-6 8.92-3.31-.87-6-4.76-6-8.92V6.3z"
           />
         ) : (
           <path

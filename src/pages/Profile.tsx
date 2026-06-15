@@ -8,9 +8,11 @@ import { useEffect } from 'react'
 import { ProgressBar } from '../components/ui/ProgressBar'
 import { ProfilePhotoSection } from '../components/profile/ProfilePhotoSection'
 import { ProfilePronoStatsSection } from '../components/profile/ProfilePronoStatsSection'
+import { ProfileIdentitySection } from '../components/profile/ProfileIdentitySection'
 import { AvatarModularStudio } from '../components/profile/AvatarModularStudio'
 import { UserRankCard } from '../components/profile/UserRankCard'
 import { usePronoStats } from '../hooks/usePronoStats'
+import { useProfileIdentity } from '../hooks/useProfileIdentity'
 import { useUserBets } from '../hooks/useUserBets'
 import { useProfile } from '../hooks/useProfile'
 import { useWallet } from '../hooks/useWallet'
@@ -102,6 +104,7 @@ export function ProfilePage() {
   } = useSubscription()
   const mayEditArticles = Boolean(authUser?.isAdmin || canWriteArticles)
   const { badges, progress } = usePronoStats()
+  const { lines: identityLines } = useProfileIdentity()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useUserBets()
   const profilePseudo = authUser?.displayName?.trim() || currentUser.username || 'Supporteur'
@@ -568,6 +571,8 @@ export function ProfilePage() {
           <AvatarModularStudio />
         </div>
       </div>
+
+      <ProfileIdentitySection lines={identityLines} />
 
       <ProfilePronoStatsSection badges={badges} progress={progress} />
 

@@ -20,7 +20,11 @@ export function normalizeWallet(raw: unknown): Wallet {
     typeof o.lastDailyTokenGrant === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.lastDailyTokenGrant)
       ? o.lastDailyTokenGrant
       : undefined
-  return { tokens, medals, lastDailyTokenGrant }
+  const dailyBonusStreak =
+    typeof o.dailyBonusStreak === 'number' && Number.isFinite(o.dailyBonusStreak)
+      ? Math.max(0, Math.floor(o.dailyBonusStreak))
+      : undefined
+  return { tokens, medals, lastDailyTokenGrant, dailyBonusStreak }
 }
 
 export function isWalletStored(p: unknown): boolean {

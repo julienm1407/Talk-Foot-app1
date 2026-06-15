@@ -18,6 +18,7 @@ import {
   readLocalWalletStandardizedFlag,
   writeLocalWalletStandardizedFlag,
 } from '../utils/walletStandardize'
+import { prevDayKey } from '../utils/profileIdentity'
 import { useSubscription } from './useSubscription'
 import { useXpGrant } from './useXpGrant'
 import {
@@ -332,10 +333,13 @@ export function useWallet() {
           return w
         }
         out = { ok: true, amount: DAILY_TOKEN_BONUS_AMOUNT }
+        const continued = merged === prevDayKey(claimDayKey)
+        const dailyBonusStreak = continued ? (w.dailyBonusStreak ?? 1) + 1 : 1
         return {
           ...w,
           tokens: w.tokens + DAILY_TOKEN_BONUS_AMOUNT,
           lastDailyTokenGrant: claimDayKey,
+          dailyBonusStreak,
         }
       })
       if (out.ok) {

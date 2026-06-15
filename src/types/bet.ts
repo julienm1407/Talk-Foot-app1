@@ -57,5 +57,7 @@ export type Wallet = {
   medals: number
   /** Date ISO jour (YYYY-MM-DD) du dernier bonus jetons quotidien réclamé */
   lastDailyTokenGrant?: string
+  /** Jours consécutifs de bonus quotidien réclamé */
+  dailyBonusStreak?: number
 }
 

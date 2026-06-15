@@ -127,9 +127,15 @@ async function fulfillForActor(sb, actorKey, session) {
     if (!tier) return { ok: false, error: 'unknown_tier', actorKey }
 
     const activeUntil = new Date(Date.now() + 32 * 86400000).toISOString()
+    const prevSub = app.subscription ?? {}
     const merged = {
       ...app,
-      subscription: { ...app.subscription, tier, activeUntil },
+      subscription: {
+        ...prevSub,
+        tier,
+        activeUntil,
+        subscribedSince: prevSub.subscribedSince ?? stamp.at,
+      },
       stripeFulfillmentBySessionId: {
         ...app.stripeFulfillmentBySessionId,
         [sessionId]: { ...stamp, kind: 'subscription', tier },

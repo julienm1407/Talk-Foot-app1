@@ -19,6 +19,7 @@ export function normalizeSubscription(raw: unknown): SubscriptionState {
   return {
     tier,
     activeUntil: typeof o.activeUntil === 'string' ? o.activeUntil : null,
+    subscribedSince: typeof o.subscribedSince === 'string' ? o.subscribedSince : null,
     usage,
   }
 }

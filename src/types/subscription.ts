@@ -29,6 +29,8 @@ export type SubscriptionState = {
   tier: SubscriptionTierId
   /** Fin de période payante (ISO), null = pas d’abonnement actif au-delà du tier par défaut */
   activeUntil?: string | null
+  /** Début de la formule payante en cours (ISO) — pour « Ultra depuis X mois ». */
+  subscribedSince?: string | null
   usage?: SubscriptionUsageCounters
 }
 
