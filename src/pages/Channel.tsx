@@ -19,6 +19,7 @@ import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLive
 import { BetWidget } from '../components/bet/BetWidget'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
+import { LivePitchActionBanner } from '../components/channel/LivePitchActionBanner'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
 import { MatchLineupSubstitutes } from '../components/channel/MatchLineupSubstitutes'
 import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
@@ -162,7 +163,7 @@ const CHANNEL_DESKTOP_GRID =
 
 /** Grille 2 colonnes : compo/paris via sheet mobile (évite colonne droite écrasée sur tablette). */
 const CHANNEL_TOUCH_GRID =
-  'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(0,1fr)] xl:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(18rem,0.95fr)] xl:gap-2.5'
+  'gap-2 md:grid-cols-[minmax(14rem,0.86fr)_minmax(0,1fr)] lg:grid-cols-[minmax(14rem,0.86fr)_minmax(22rem,2.12fr)_minmax(18rem,0.95fr)] lg:gap-2.5'
 
 function flareSmokeLayers(color: FlareColor) {
   const layers: Record<
@@ -526,7 +527,7 @@ function LiveHeaderCards({
           key={`${c.color}-${c.name}-${c.minute}-${i}`}
           className={cn(
             'flex max-w-[min(100%,11rem)] items-baseline gap-1 text-[10px] font-bold leading-tight sm:max-w-[min(100%,14rem)] sm:text-[11px]',
-            align === 'right' ? 'flex-row-reverse' : 'flex-row',
+            align === 'right' ? 'flex-row justify-end' : 'flex-row',
             light
               ? c.color === 'red'
                 ? 'text-rose-800'
@@ -729,18 +730,27 @@ export function ChannelPage() {
   const chDockShell = L
     ? 'border-slate-200/90 bg-white/95 shadow-[0_10px_28px_rgba(15,40,70,0.1)] backdrop-blur-sm'
     : 'border-[#3a6690] bg-[#0a1f35]/92 shadow-2xl backdrop-blur-sm'
-  const chDockBtn = (active: boolean) =>
+  const chDockBtn = (active: boolean, accent?: 'paris') =>
     cn(
       'min-h-11 rounded-lg border px-1.5 py-2 text-[10px] font-black leading-tight transition active:scale-[0.97]',
       'touch-manipulation select-none [-webkit-tap-highlight-color:transparent]',
       'max-[360px]:min-h-10 max-[360px]:px-1 max-[360px]:text-[9px]',
+      accent === 'paris' && !active
+        ? L
+          ? 'border-emerald-500/70 bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-400/35'
+          : 'border-emerald-400/55 bg-emerald-500/15 text-emerald-100'
+        : null,
       L
         ? active
           ? 'border-sky-500 bg-sky-200 text-[#023458] shadow-sm ring-2 ring-sky-400/40'
-          : 'border-slate-200 bg-sky-50 text-[#023458] shadow-sm'
+          : accent === 'paris'
+            ? null
+            : 'border-slate-200 bg-sky-50 text-[#023458] shadow-sm'
         : active
           ? 'border-sky-300 bg-sky-400/25 text-white ring-2 ring-sky-300/35'
-          : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-100',
+          : accent === 'paris'
+            ? null
+            : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-100',
     )
   const chSheetTitle = L ? 'text-[#023458]' : 'text-sky-100'
   const chSideInset =
@@ -1988,32 +1998,6 @@ export function ChannelPage() {
       : fullscreenEvent?.side === 'away'
         ? awayColor
         : null
-  const homePlayers = [
-    [12, 50],
-    [24, 18],
-    [24, 38],
-    [24, 62],
-    [24, 82],
-    [38, 24],
-    [38, 44],
-    [38, 58],
-    [38, 78],
-    [50, 35],
-    [50, 65],
-  ] as const
-  const awayPlayers = [
-    [88, 50],
-    [76, 18],
-    [76, 38],
-    [76, 62],
-    [76, 82],
-    [62, 24],
-    [62, 44],
-    [62, 58],
-    [62, 78],
-    [50, 30],
-    [50, 70],
-  ] as const
   const tribuneOptions = useMemo(
     () => [
       { id: 'home-ultras' as const, label: `Ultras ${homeName}`, vibe: 'Chants et ambiance chaude' },
@@ -2091,19 +2075,6 @@ export function ChannelPage() {
     if (!Number.isFinite(h) || !Number.isFinite(a) || h + a < 5) return null
     return h / (h + a)
   }, [possessionRow])
-  /** Balle liée à la pression (domicile à gauche, extérieur à droite) + léger balancement temporel. */
-  const ballMotion = useMemo(() => {
-    const { homeRatio } = livePitchPressure
-    let anchor = 50 + (homeRatio - 0.5) * 52
-    anchor += Math.sin(nowMs / 6200) * 2.2
-    if (possessionRatioHome != null) {
-      anchor = anchor * 0.62 + (50 + (possessionRatioHome - 0.5) * 34) * 0.38
-    }
-    const x = Math.min(78, Math.max(22, anchor))
-    const y = 46 + Math.sin(nowMs / 4800) * 9 + Math.cos(nowMs / 9100) * 5
-    const clampedY = Math.min(76, Math.max(24, y))
-    return { x, y: clampedY }
-  }, [livePitchPressure, possessionRatioHome, nowMs])
   const pitchPressureTint = useMemo(() => {
     const { homeRatio } = livePitchPressure
     const homeTint = Math.round(Math.min(44, homeRatio * 58))
@@ -2474,9 +2445,8 @@ export function ChannelPage() {
               )}
             </div>
           ) : null}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-x-2">
-            <div />
-            <div className="flex flex-col items-center gap-1">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[auto_auto] gap-x-2 gap-y-0.5">
+            <div className="col-start-2 row-start-1 flex flex-col items-center gap-1">
               <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
                 {status === 'live' ? (
                   <span className="inline-flex items-center justify-center gap-1">
@@ -2493,12 +2463,14 @@ export function ChannelPage() {
                 </span>
               ) : null}
             </div>
-            <div />
             {status === 'live' || status === 'finished' ? (
               <>
-                <LiveHeaderTeamEvents goals={headerHomeScorers} cards={headerHomeCards} align="left" light={L} />
-                <div />
-                <LiveHeaderTeamEvents goals={headerAwayScorers} cards={headerAwayCards} align="right" light={L} />
+                <div className="col-start-1 row-start-2 min-w-0 justify-self-start self-start">
+                  <LiveHeaderTeamEvents goals={headerHomeScorers} cards={headerHomeCards} align="left" light={L} />
+                </div>
+                <div className="col-start-3 row-start-2 min-w-0 justify-self-end self-start">
+                  <LiveHeaderTeamEvents goals={headerAwayScorers} cards={headerAwayCards} align="right" light={L} />
+                </div>
               </>
             ) : null}
           </div>
@@ -3405,57 +3377,18 @@ export function ChannelPage() {
                     </div>
                   ) : null}
                 </div>
-                <div className="tf-live-pitch-field relative min-h-[76px] max-h-[min(152px,22vh)] flex-1 overflow-hidden rounded-md bg-[#124238]">
-                  <div
-                    className="pointer-events-none absolute inset-0 z-[1] transition-opacity duration-700"
-                    style={{
-                      background: `linear-gradient(90deg, color-mix(in srgb, ${homeColor} ${pitchPressureTint.homeTint}%, transparent) 0%, transparent 42%, transparent 58%, color-mix(in srgb, ${awayColor} ${pitchPressureTint.awayTint}%, transparent) 100%)`,
-                    }}
-                  />
-                  <div className="pointer-events-none absolute inset-0 z-[4]">
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[17px] font-black tracking-[0.35em] text-white/[0.07]">
-                      LIVE
-                    </div>
-                    <div
-                      className={`absolute top-1/2 -translate-y-1/2 text-[26px] font-black transition-all duration-700 ${
-                        dangerousLeader === 'home'
-                          ? 'left-2 text-emerald-300/95 drop-shadow-[0_0_10px_rgba(16,185,129,0.85)]'
-                          : 'left-3 text-white/20'
-                      }`}
-                    >
-                      ←
-                    </div>
-                    <div
-                      className={`absolute top-1/2 -translate-y-1/2 text-[26px] font-black transition-all duration-700 ${
-                        dangerousLeader === 'away'
-                          ? 'right-2 text-rose-300/95 drop-shadow-[0_0_10px_rgba(251,113,133,0.85)]'
-                          : 'right-3 text-white/20'
-                      }`}
-                    >
-                      →
-                    </div>
-                  </div>
-                  <div className="absolute left-1/2 top-0 z-[2] h-full w-px -translate-x-1/2 bg-white/20" />
-                  <div className="absolute left-1/2 top-1/2 z-[2] h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
-                  {homePlayers.map((p, i) => (
-                    <div
-                      key={`h-${i}`}
-                      className="absolute z-[5] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 shadow-[0_0_8px_rgba(0,0,0,0.35)]"
-                      style={{ left: `${p[0]}%`, top: `${p[1]}%`, backgroundColor: homeColor }}
-                    />
-                  ))}
-                  {awayPlayers.map((p, i) => (
-                    <div
-                      key={`a-${i}`}
-                      className="absolute z-[5] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/60 shadow-[0_0_8px_rgba(0,0,0,0.35)]"
-                      style={{ left: `${p[0]}%`, top: `${p[1]}%`, backgroundColor: awayColor }}
-                    />
-                  ))}
-                  <div
-                    className="absolute z-[8] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white shadow-[0_0_14px_rgba(255,255,255,0.95)] transition-[left,top] duration-1000 ease-out"
-                    style={{ left: `${ballMotion.x}%`, top: `${ballMotion.y}%` }}
-                  />
-                </div>
+                <LivePitchActionBanner
+                  highlight={latestHighlight}
+                  highlightText={latestHighlightText}
+                  detectSide={detectHighlightSide}
+                  dangerousLeader={dangerousLeader}
+                  dangerousDelta={dangerousDelta}
+                  homeLabel={homeHeaderLabel}
+                  awayLabel={awayHeaderLabel}
+                  homeColor={homeColor}
+                  awayColor={awayColor}
+                  pitchPressureTint={pitchPressureTint}
+                />
               </div>
             ) : isFinished ? (
               <div className="tf-live-pitch-shell mt-2 flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-[#101c2a] p-3">
@@ -3537,7 +3470,7 @@ export function ChannelPage() {
         <div
           className={cn(
             'tf-live-col tf-live-col-side hidden min-w-0 rounded-xl border border-[#2b5d87]/35 bg-[#071c31]/90 p-1.5 shadow-[0_12px_24px_rgba(2,8,18,0.26),inset_0_1px_0_rgba(255,255,255,0.05)] md:h-full md:min-h-0 md:flex-col md:overflow-y-auto md:[scrollbar-width:thin]',
-            showMobileChannelChrome ? 'xl:flex' : 'md:flex',
+            showMobileChannelChrome ? 'lg:flex' : 'md:flex',
             'space-y-2',
           )}
         >
@@ -3699,7 +3632,7 @@ export function ChannelPage() {
                 </button>
                 <button
                   type="button"
-                  className={chDockBtn(mobilePanel === 'paris')}
+                  className={chDockBtn(mobilePanel === 'paris', 'paris')}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => setMobilePanel('paris')}
                 >
@@ -3889,7 +3822,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'paris' ? (
-              <div className="max-h-[45vh] overflow-y-auto">
+              <div className="max-h-[min(78dvh,calc(100dvh-8rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
                 {isFinished ? (
                   <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
                 ) : match ? (
@@ -3905,6 +3838,7 @@ export function ChannelPage() {
                     bettingSuspendReason={bettingSuspension.reason}
                     teamAttackIndices={attackIndices}
                     compact
+                    prominent
                     liveScore={{ home: homeScore, away: awayScore }}
                     liveMinute={liveDisplayedMinute}
                     liveStatRows={liveStatRows}

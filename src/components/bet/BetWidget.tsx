@@ -74,6 +74,7 @@ export function BetWidget({
   oddsSource = 'talkfoot',
   teamAttackIndices = null,
   compact = false,
+  prominent = false,
   liveScore = null,
   liveMinute = null,
   liveStatRows = [],
@@ -91,6 +92,8 @@ export function BetWidget({
   oddsSource?: 'talkfoot' | 'fallback'
   teamAttackIndices?: { home: number; away: number } | null
   compact?: boolean
+  /** Panneau mobile / zone étroite : cotes et boutons plus grands. */
+  prominent?: boolean
   liveStatRows?: { key: string; home: number; away: number }[]
   liveScore?: { home: number; away: number } | null
   liveMinute?: number | null
@@ -508,11 +511,30 @@ export function BetWidget({
   }
 
   const potentialReturn = pending ? Math.round(stake * pending.odds * 10) / 10 : 0
+  const compactProminent = compact && prominent
+  const pickBtnCompactClass = compactProminent
+    ? 'tf-bet-pick--prominent !flex !h-12 !min-h-12 !max-h-12 flex-col items-center justify-center gap-0.5 !rounded-xl !px-2 !py-1.5 text-[11px] leading-tight shadow-[0_2px_10px_rgba(2,12,28,0.18),inset_0_1px_0_rgba(255,255,255,0.95)]'
+    : compact
+      ? 'tf-bet-pick--compact !flex !h-10 !min-h-10 !max-h-10 flex-row items-center justify-between gap-1.5 !rounded-lg !px-2.5 !py-0 text-[11px] leading-tight shadow-[0_2px_8px_rgba(2,12,28,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]'
+      : 'min-h-11 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10'
+  const pickNameCompactClass = compactProminent
+    ? 'text-[10px] font-black uppercase tracking-wide text-[#011522]/85'
+    : compact
+      ? 'text-[11px]'
+      : 'overflow-hidden text-ellipsis'
+  const pickOddCompactClass = compactProminent
+    ? 'px-2 py-0.5 text-sm'
+    : compact
+      ? 'px-1.5 py-0.5 text-[10px]'
+      : 'rounded-md px-1.5 py-0.5 text-xs'
 
   return (
     <div
       className={cn(
-        'tf-bet-widget relative flex h-full flex-col overflow-hidden rounded-xl border border-[#3a6690]/55 bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
+        'tf-bet-widget relative flex h-full flex-col overflow-hidden rounded-xl border bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
+        compactProminent
+          ? 'border-emerald-400/45 ring-1 ring-emerald-400/20'
+          : 'border-[#3a6690]/55',
         compact ? 'p-2' : 'p-3',
       )}
     >
@@ -537,7 +559,9 @@ export function BetWidget({
                 Clique une cote puis valide.
               </span>
             ) : (
-              <span className="mt-0.5 block text-[10px] font-semibold text-sky-200/70">Mise rapide</span>
+              <span className="mt-0.5 block text-[10px] font-semibold text-sky-200/70">
+                {compactProminent ? '1N2 · clique une cote puis valide' : 'Mise rapide'}
+              </span>
             )}
             {isLive && bettingSuspended && bettingSuspendReason ? (
               <span className="mt-1 block text-[10px] font-bold text-amber-200/95">{bettingSuspendReason}</span>
@@ -550,7 +574,7 @@ export function BetWidget({
                 onClick={openSheet}
                 aria-haspopup="dialog"
                 aria-expanded={sheetOpen}
-                className="rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
+                className="rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
               >
                 Parier
               </button>
@@ -625,7 +649,13 @@ export function BetWidget({
           compact ? 'mt-2.5' : 'mt-3',
         )}
       >
-        <div className={cn('grid grid-cols-2', compact ? 'gap-1.5' : 'gap-2 sm:gap-2.5')}>
+        <div
+          className={cn(
+            'grid',
+            compactProminent ? 'grid-cols-3 gap-2' : 'grid-cols-2',
+            compact && !compactProminent ? 'gap-1.5' : compactProminent ? '' : 'gap-2 sm:gap-2.5',
+          )}
+        >
           {(['home', 'away'] as const).map((side) => {
             const visual = pickTeamVisual(side)
             const label = side === 'home' ? match.home.shortName : match.away.shortName
@@ -641,11 +671,9 @@ export function BetWidget({
                 disabled={!x12Ready || !x12Displayed}
                 className={cn(
                   'tf-bet-pick min-w-0 overflow-hidden font-bold',
-                  compact
-                    ? 'tf-bet-pick--compact !flex !h-9 !min-h-0 !max-h-9 flex-row items-center justify-between gap-1.5 !rounded-lg !px-2.5 !py-0 text-[11px] leading-tight shadow-[0_2px_8px_rgba(2,12,28,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]'
-                    : 'min-h-11 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10',
+                  pickBtnCompactClass,
                   visual.shell,
-                  compact && '!border',
+                  compact && !compactProminent && '!border',
                   'disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
                 )}
                 onClick={() => pickQuick(side)}
@@ -653,7 +681,7 @@ export function BetWidget({
                 <span
                   className={cn(
                     'tf-bet-pick-name min-w-0 truncate font-extrabold text-[#011522]',
-                    compact ? 'text-[11px]' : 'overflow-hidden text-ellipsis',
+                    pickNameCompactClass,
                   )}
                 >
                   {label}
@@ -661,14 +689,14 @@ export function BetWidget({
                 <div
                   className={cn(
                     'flex min-w-0 shrink-0 items-center',
-                    compact ? 'gap-0.5' : 'gap-1.5 self-end sm:self-auto',
+                    compactProminent ? 'flex-col gap-0' : compact ? 'gap-0.5' : 'gap-1.5 self-end sm:self-auto',
                   )}
                 >
                   {visual.badge ? (
                     <span
                       className={cn(
                         'shrink-0 rounded px-0.5 font-black uppercase tracking-wide',
-                        compact ? 'text-[7px]' : 'rounded-md px-1 py-0.5 text-[8px] sm:text-[9px]',
+                        compact && !compactProminent ? 'text-[7px]' : compactProminent ? 'text-[8px]' : 'rounded-md px-1 py-0.5 text-[8px] sm:text-[9px]',
                       )}
                     >
                       {visual.badge}
@@ -677,7 +705,7 @@ export function BetWidget({
                   <span
                     className={cn(
                       'tf-bet-pick-odd shrink-0 rounded border font-black tabular-nums',
-                      compact ? 'px-1.5 py-0.5 text-[10px]' : 'rounded-md px-1.5 py-0.5 text-xs',
+                      pickOddCompactClass,
                       visual.odd,
                     )}
                   >
@@ -687,8 +715,30 @@ export function BetWidget({
               </Button>
             )
           })}
+          {compactProminent ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (!x12Displayed) return
+                selectPendingPick({
+                  market: 'result_1x2',
+                  selection: 'draw',
+                  odds: x12Displayed.draw,
+                  label: '1N2 · Nul',
+                })
+              }}
+              className="tf-bet-soft tf-bet-pick tf-bet-pick--prominent flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-sky-400/50 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-sky-300/80 hover:bg-[#153a5c] disabled:opacity-50"
+              disabled={!x12Ready || !x12Displayed}
+              title="Pari 1N2 — nul"
+            >
+              <span className="text-[10px] font-black uppercase tracking-wide text-sky-200/90">Nul</span>
+              <span className="tf-bet-pick-odd text-sm font-black tabular-nums text-cyan-100">
+                {x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : x12UnavailableLabel}
+              </span>
+            </button>
+          ) : null}
         </div>
-        {compact ? (
+        {compact && !compactProminent ? (
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -765,8 +815,8 @@ export function BetWidget({
           />
           <div
             className={cn(
-              'relative z-10 flex max-h-[min(92vh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200/80 bg-white shadow-2xl',
-              'sm:max-h-[min(85vh,620px)] sm:rounded-3xl',
+              'relative z-10 flex max-h-[min(92vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-slate-200/80 bg-white shadow-2xl',
+              'sm:max-h-[min(88vh,680px)] sm:max-w-xl sm:rounded-3xl',
             )}
           >
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-5">
@@ -837,8 +887,12 @@ export function BetWidget({
                         <Button
                           key={n}
                           type="button"
-                          variant={stake === n ? 'primary' : 'soft'}
-                          className="h-9 rounded-xl px-3 text-sm font-black"
+                          variant="soft"
+                          className={cn(
+                            'h-9 rounded-xl px-3 text-sm font-black',
+                            stake === n &&
+                              'border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-500/35',
+                          )}
                           disabled={n > maxStake}
                           onClick={() => setStake(Math.min(n, maxStake))}
                         >
@@ -847,8 +901,12 @@ export function BetWidget({
                       ))}
                       <Button
                         type="button"
-                        variant={stake === maxStake ? 'primary' : 'soft'}
-                        className="h-9 rounded-xl px-3 text-sm font-black"
+                        variant="soft"
+                        className={cn(
+                          'h-9 rounded-xl px-3 text-sm font-black',
+                          stake === maxStake &&
+                            'border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-500/35',
+                        )}
                         disabled={maxStake < minStake}
                         onClick={() => setStake(maxStake)}
                       >
@@ -910,7 +968,7 @@ export function BetWidget({
                       Annuler
                     </Button>
                     <Button
-                      variant="primary"
+                      variant="success"
                       className="h-10 rounded-xl px-5 font-black"
                       disabled={!canStake}
                       onClick={placePending}
