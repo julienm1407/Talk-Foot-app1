@@ -17,7 +17,6 @@ import { useSubscription } from '../../hooks/useSubscription'
 import { userShowsUltraAvatarFrame } from '../../utils/ultraAvatarFrame'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
-import { isChatAuthorAvatarPending } from '../../hooks/useChatAuthorModularAvatars'
 import { isLikelyDefaultModularAvatar, resolveDisplayModularAvatar } from '../../utils/modularAvatarBackup'
 import { resolveProfileModularAvatarForDisplay } from '../../utils/chatAuthorModularAvatar'
 
@@ -36,6 +35,7 @@ function peerProfileKey(u: User | undefined): string {
     u.subscriptionTier ?? '',
     JSON.stringify(u.characterLook ?? {}),
     JSON.stringify(u.modularAvatar ?? {}),
+    u.profilePhotoDataUrl ?? '',
   ].join('|')
 }
 
@@ -103,14 +103,6 @@ export function ChatCharacterThumb({
   const peerHasCustomModular =
     Boolean(peerModular?.data) && !isLikelyDefaultModularAvatar(peerModular)
   const useModularThumb = !isBot && (isSelf || peerHasCustomModular)
-  const cloudAvatarPending = Boolean(
-    user?.id &&
-      !isSelf &&
-      !isBot &&
-      !peerHasCustomModular &&
-      !photoUrl &&
-      isChatAuthorAvatarPending(user.id, selfUserId),
-  )
   const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`
   const showUltraFrame = userShowsUltraAvatarFrame(user, { isSelf, selfTier })
   const thumbBorderClass = showUltraFrame
@@ -158,11 +150,6 @@ export function ChatCharacterThumb({
       className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
       aria-label={ariaLabel}
     />
-  ) : cloudAvatarPending ? (
-    <div
-      className={cn('size-full animate-pulse rounded-full bg-slate-600/70', thumbBorderClass)}
-      aria-hidden
-    />
   ) : (
     <img
       src={dicebearAvatarUrl(dicebearSeed, 96, 0)}
@@ -174,7 +161,7 @@ export function ChatCharacterThumb({
   const avatarBody = (
     <>
       {figure}
-      {showUltraFrame && !cloudAvatarPending ? <UltraAvatarFrame size={size} /> : null}
+      {showUltraFrame ? <UltraAvatarFrame size={size} /> : null}
     </>
   )
 

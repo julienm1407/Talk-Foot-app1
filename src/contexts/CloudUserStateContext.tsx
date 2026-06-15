@@ -31,7 +31,7 @@ import {
   saveTalkfootProfileAppStateWithChatSync,
 } from '../lib/supabase/profileAppState'
 import { bindTalkfootActorSession } from '../lib/supabase/bindTalkfootActorSession'
-import { clearChatAuthorAvatarCache } from '../hooks/useChatAuthorModularAvatars'
+import { invalidateChatAuthorAvatars } from '../hooks/useChatAuthorModularAvatars'
 import {
   coalesceAppStateWithModularBackup,
   extractStoredModularAvatar,
@@ -232,7 +232,11 @@ function CloudUserStateLoader({
       )
       writeWalletBackup(user.id, payload.wallet)
       writeBetsBackup(user.id, payload.bets)
-      clearChatAuthorAvatarCache()
+      const { data: sessionWrap } = await sb.auth.getSession()
+      const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
+      invalidateChatAuthorAvatars(
+        [user.id, chatActorId].filter((id, index, all) => Boolean(id) && all.indexOf(id) === index),
+      )
       return { ok: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'rpc_save_failed'

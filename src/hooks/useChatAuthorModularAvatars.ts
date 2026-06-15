@@ -19,6 +19,11 @@ type AuthorCacheEntry = {
 }
 
 const authorCache = new Map<string, AuthorCacheEntry>()
+const cacheInvalidateListeners = new Set<() => void>()
+
+function notifyCacheInvalidate() {
+  cacheInvalidateListeners.forEach((fn) => fn())
+}
 
 function markAuthorCacheLoaded(actorKey: string, partial?: Partial<Omit<AuthorCacheEntry, 'loaded'>>) {
   const prev = authorCache.get(actorKey)
@@ -31,15 +36,25 @@ function markAuthorCacheLoaded(actorKey: string, partial?: Partial<Omit<AuthorCa
   })
 }
 
+/** Réinitialise le cache d’un ou plusieurs auteurs et relance le fetch côté chat. */
+export function invalidateChatAuthorAvatars(userIds: string[]) {
+  const keys = [...new Set(userIds.map((id) => id.trim()).filter(Boolean))]
+  if (!keys.length) return
+  for (const id of keys) authorCache.delete(id)
+  notifyCacheInvalidate()
+}
+
 export function clearChatAuthorAvatarCache(userId?: string) {
   if (userId) {
     authorCache.delete(userId)
+    notifyCacheInvalidate()
     return
   }
   authorCache.clear()
+  notifyCacheInvalidate()
 }
 
-/** Vrai tant que l’avatar cloud d’un auteur n’a pas encore été résolu (évite Dicebear temporaire). */
+/** Vrai tant que l’avatar cloud d’un auteur n’a pas encore été résolu. */
 export function isChatAuthorAvatarPending(userId: string, selfUserId: string): boolean {
   if (!shouldFetchCloudChatAvatar(userId, selfUserId)) return false
   if (!isSupabaseConfigured()) return false
@@ -62,9 +77,18 @@ export function useChatAuthorModularAvatars(
   options?: SelfAvatarOptions,
 ) {
   const [tick, setTick] = useState(0)
+  const [cacheEpoch, setCacheEpoch] = useState(0)
   const selfUserKeys = options?.selfUserKeys
   const selfModularAvatar = options?.selfModularAvatar
   const selfSubscriptionTier = options?.selfSubscriptionTier
+
+  useEffect(() => {
+    const bump = () => setCacheEpoch((n) => n + 1)
+    cacheInvalidateListeners.add(bump)
+    return () => {
+      cacheInvalidateListeners.delete(bump)
+    }
+  }, [])
 
   const pendingKey = useMemo(() => {
     return [...new Set(userIds)]
@@ -72,7 +96,7 @@ export function useChatAuthorModularAvatars(
       .filter((id) => !authorCache.get(id)?.loaded)
       .sort()
       .join(',')
-  }, [userIds, selfUserId])
+  }, [userIds, selfUserId, cacheEpoch])
 
   useEffect(() => {
     if (!pendingKey || !isSupabaseConfigured()) return
@@ -80,18 +104,18 @@ export function useChatAuthorModularAvatars(
     const ids = pendingKey.split(',').filter(Boolean)
     let cancelled = false
 
-    const finishLoaded = () => {
+    const markUnresolvedLoaded = () => {
       for (const actorKey of ids) {
         if (!authorCache.get(actorKey)?.loaded) {
           markAuthorCacheLoaded(actorKey)
         }
       }
-      if (!cancelled) setTick((n) => n + 1)
     }
 
     const sb = getSupabaseBrowserClient()
     if (!sb) {
-      finishLoaded()
+      markUnresolvedLoaded()
+      if (!cancelled) setTick((n) => n + 1)
       return
     }
 
@@ -127,12 +151,11 @@ export function useChatAuthorModularAvatars(
           }
         }
       } catch {
-        if (cancelled) return
-        finishLoaded()
-        return
+        if (!cancelled) markUnresolvedLoaded()
+      } finally {
+        if (cancelled) markUnresolvedLoaded()
+        if (!cancelled) setTick((n) => n + 1)
       }
-
-      if (!cancelled) setTick((n) => n + 1)
     })()
 
     return () => {

@@ -43,6 +43,7 @@ import { useAutoScroll } from '../hooks/useAutoScroll'
 import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatars'
 import { useProfile } from '../hooks/useProfile'
 import { useCloudFriends } from '../hooks/useCloudFriends'
+import { retainStickyChatUserAvatars } from '../utils/stickyChatUserAvatars'
 import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useChatSendGuard } from '../hooks/useChatSendGuard'
@@ -611,6 +612,7 @@ export function GroupPage() {
     return map
   }, [messages])
 
+  const usersByIdRef = useRef<Record<string, User>>({})
   const usersById = useMemo(() => {
     const base: Record<string, User> = {
       ...Object.fromEntries(chatPersonasPool.map((u) => [u.id, u])),
@@ -693,7 +695,9 @@ export function GroupPage() {
         }
       }
     }
-    return base
+    const merged = retainStickyChatUserAvatars(base, usersByIdRef.current)
+    usersByIdRef.current = merged
+    return merged
   }, [
     debateUsers,
     favoriteClubIds,

@@ -54,6 +54,7 @@ import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { buildChatPeerMenuTarget } from '../utils/chatPeerSocial'
 import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
+import { retainStickyChatUserAvatars } from '../utils/stickyChatUserAvatars'
 import type { User } from '../types/chat'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
@@ -1234,6 +1235,7 @@ export function ChannelPage() {
       selfUserKeys: selfAvatarKeys,
     },
   )
+  const chatUsersByIdRef = useRef<Record<string, User>>({})
   const chatUsersById = useMemo(() => {
     const map: Record<string, User> = {}
     for (const m of chatMessages) {
@@ -1316,7 +1318,9 @@ export function ChannelPage() {
         username: resolveChatDisplayLabel(map[id].username, cloudAuthorNames[id]),
       }
     }
-    return map
+    const merged = retainStickyChatUserAvatars(map, chatUsersByIdRef.current)
+    chatUsersByIdRef.current = merged
+    return merged
   }, [
     chatMessages,
     chatAuthorIds,

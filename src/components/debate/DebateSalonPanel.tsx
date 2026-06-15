@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Debate } from '../../data/debates'
 import type { Message } from '../../types/chat'
@@ -14,6 +14,7 @@ import { useProfile } from '../../hooks/useProfile'
 import { useSubscription } from '../../hooks/useSubscription'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAvatars'
+import { retainStickyChatUserAvatars } from '../../utils/stickyChatUserAvatars'
 import { resolveChatDisplayLabel } from '../../utils/chatDisplayName'
 import { MessageList } from '../channel/MessageList'
 import { MessageComposer } from '../channel/MessageComposer'
@@ -150,6 +151,7 @@ export function DebateSalonPanel({
     return map
   }, [messages])
 
+  const usersByIdRef = useRef<Record<string, User>>({})
   const usersById = useMemo(() => {
     const base: Record<string, User> = {}
     if (authUser) {
@@ -221,7 +223,9 @@ export function DebateSalonPanel({
         }
       }
     }
-    return base
+    const merged = retainStickyChatUserAvatars(base, usersByIdRef.current)
+    usersByIdRef.current = merged
+    return merged
   }, [
     authUser,
     authorNameByUserId,
