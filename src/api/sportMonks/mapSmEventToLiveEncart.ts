@@ -20,9 +20,23 @@ function displayMinute(row: { minute?: number | null; extra_minute?: number | nu
   return m + x
 }
 
+function smEventPlayerId(ev: SmFixtureEventRow): number | '' {
+  const nested = ev.player as { id?: number } | undefined
+  if (typeof nested?.id === 'number') return nested.id
+  const top = (ev as { player_id?: number | null }).player_id
+  return typeof top === 'number' ? top : ''
+}
+
 export function smEventDedupeKey(ev: SmFixtureEventRow): string {
+  const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').toUpperCase()
+  if (dev.includes('YELLOW') || (dev.includes('RED') && dev.includes('CARD'))) {
+    const minute = displayMinute(ev)
+    const second = dev.includes('SECOND')
+    const color = second || (dev.includes('RED') && !dev.includes('YELLOW')) ? 'red' : 'yellow'
+    const playerId = smEventPlayerId(ev)
+    return `card:${minute}:${ev.participant_id ?? 0}:${color}:${playerId}`
+  }
   if (typeof ev.id === 'number' && ev.id > 0) return `id:${ev.id}`
-  const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '')
   return `f:${displayMinute(ev)}:${ev.participant_id ?? 0}:${dev}`
 }
 

@@ -98,6 +98,7 @@ import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/banned
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
   clampLiveGoalRowsToScore,
+  cardCoarseDedupeKey,
   extractScorerEventsFromHighlights,
   formatGoalScorerLabel,
   parseLiveGoalRowsFromHighlights,
@@ -449,7 +450,19 @@ function fullscreenEventDedupeKey(h: Highlight, kind: 'goal' | 'card' | 'var'): 
     if (semantic) return `goal|${semantic}`
     if (h.side && h.minute > 0) return `goal|${h.minute}|${h.side}`
   }
+  if (kind === 'card') {
+    const coarse = cardCoarseDedupeKey(h)
+    if (coarse) return `card|${coarse}`
+  }
   return highlightFullscreenDedupeKey(h)
+}
+
+function highlightWithDetectedSide(
+  h: Highlight,
+  detect: (raw: string) => 'home' | 'away' | undefined,
+): Highlight {
+  const side = h.side ?? detect(`${h.title ?? ''} ${h.detail ?? ''}`)
+  return side ? { ...h, side } : h
 }
 
 function preferFullscreenHighlight(a: Highlight, b: Highlight): Highlight {
@@ -1541,7 +1554,8 @@ export function ChannelPage() {
       for (const h of smTimelineHighlights) {
         const kind = fullscreenKindFromHighlight(h)
         if (!kind) continue
-        fullscreenDedupeKeysRef.current.add(fullscreenEventDedupeKey(h, kind))
+        const enriched = highlightWithDetectedSide(h, detectHighlightSide)
+        fullscreenDedupeKeysRef.current.add(fullscreenEventDedupeKey(enriched, kind))
         fullscreenShownHighlightIdsRef.current.add(h.id)
       }
       fullscreenDedupePrimedRef.current = true
@@ -1560,27 +1574,33 @@ export function ChannelPage() {
         fullscreenShownHighlightIdsRef.current.add(h.id)
         continue
       }
-      const key = fullscreenEventDedupeKey(h, kind)
+      const enriched = highlightWithDetectedSide(h, detectHighlightSide)
+      const key = fullscreenEventDedupeKey(enriched, kind)
       if (fullscreenDedupeKeysRef.current.has(key)) {
         fullscreenShownHighlightIdsRef.current.add(h.id)
         continue
       }
       const prev = pendingByKey.get(key)
       if (prev) {
-        pendingByKey.set(key, preferFullscreenHighlight(prev, h))
+        pendingByKey.set(key, preferFullscreenHighlight(prev, enriched))
         fullscreenShownHighlightIdsRef.current.add(h.id)
         continue
       }
-      pendingByKey.set(key, h)
+      pendingByKey.set(key, enriched)
     }
 
     const pending = Array.from(pendingByKey.values())
 
     pending.forEach((h, index) => {
-      const kind = fullscreenKindFromHighlight(h)!
-      const key = fullscreenEventDedupeKey(h, kind)
-      const side = h.side ?? detectHighlightSide(`${h.title ?? ''} ${h.detail ?? ''}`)
-      if ((kind === 'goal' || kind === 'card') && !side) return
+      const enriched = highlightWithDetectedSide(h, detectHighlightSide)
+      const kind = fullscreenKindFromHighlight(enriched)!
+      const key = fullscreenEventDedupeKey(enriched, kind)
+      const side = enriched.side
+      if ((kind === 'goal' || kind === 'card') && !side) {
+        fullscreenShownHighlightIdsRef.current.add(h.id)
+        fullscreenDedupeKeysRef.current.add(key)
+        return
+      }
 
       fullscreenDedupeKeysRef.current.add(key)
       fullscreenShownHighlightIdsRef.current.add(h.id)
@@ -1588,25 +1608,25 @@ export function ChannelPage() {
       const hlText = translateSportMonksLiveTextToFr(String(h.title || h.detail || '').trim())
       const goalRow =
         goalTeamHints
-          ? parseLiveGoalRowsFromHighlights([h], goalTeamHints.home, goalTeamHints.away, {
+          ? parseLiveGoalRowsFromHighlights([enriched], goalTeamHints.home, goalTeamHints.away, {
               home: homeScore,
               away: awayScore,
             })[0]
           : undefined
-      const scorer = h.scorerName?.trim() || goalRow?.name
-      const assist = h.assistName?.trim() || goalRow?.assistName
+      const scorer = enriched.scorerName?.trim() || goalRow?.name
+      const assist = enriched.assistName?.trim() || goalRow?.assistName
       const delayMs = index * 900
 
       window.setTimeout(() => {
         if (kind === 'goal') {
           lastGoalFullscreenAtRef.current = Date.now()
           const scorerLabel = scorer
-            ? formatGoalScorerLabel(scorer, assist, { ownGoal: h.ownGoal })
+            ? formatGoalScorerLabel(scorer, assist, { ownGoal: enriched.ownGoal })
             : teamLabel
           launchFullscreenEvent(
             'goal',
             'BUT',
-            `${highlightMinuteLabel(h)}${scorerLabel ? ` · ${scorerLabel}` : ''}`,
+            `${highlightMinuteLabel(enriched)}${scorerLabel ? ` · ${scorerLabel}` : ''}`,
             6200,
             side,
           )
@@ -1614,12 +1634,12 @@ export function ChannelPage() {
           launchFullscreenEvent(
             'card',
             'CARTON',
-            `${highlightMinuteLabel(h)} · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
+            `${highlightMinuteLabel(enriched)} · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
             4600,
             side,
           )
         } else {
-          launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(h)} ${hlText}`, 5200, side)
+          launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(enriched)} ${hlText}`, 5200, side)
         }
       }, delayMs)
     })
@@ -4149,7 +4169,7 @@ export function ChannelPage() {
             }
           />
           <div
-            className={`absolute inset-0 border-[5px] animate-[tf-live-rim-pulse_850ms_ease-in-out_2] ${
+            className={`absolute inset-0 border-[5px] animate-[tf-live-rim-pulse_850ms_ease-in-out_1] ${
               fullscreenEvent.kind === 'goal'
                 ? ''
                 : fullscreenEvent.kind === 'card'
