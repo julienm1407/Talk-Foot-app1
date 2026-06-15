@@ -8,7 +8,9 @@ import { resolveProfilePeer } from '../data/users'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { UserProfileAvatar } from '../components/profile/UserProfileAvatar'
 import { FriendPronosticsPanel } from '../components/social/FriendPronosticsPanel'
+import { ProfilePronoStatsSection } from '../components/profile/ProfilePronoStatsSection'
 import { useFriendPronostics } from '../hooks/useFriendPronostics'
+import { usePublicBettorStats, usePronoStatsFromBets } from '../hooks/usePublicBettorStats'
 import { usePeerPublicProfile } from '../hooks/usePeerPublicProfile'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { Button } from '../components/ui/Button'
@@ -88,6 +90,16 @@ export function UserProfilePage() {
     viewerActorKey: viewerActorId,
     enabled: canViewFriendPronostics && Boolean(viewerActorId) && isSupabaseConfigured(),
   })
+
+  const publicBettorStats = usePublicBettorStats(
+    peer && !peer.isTalkFootBot && isSupabaseConfigured() ? peer.id : null,
+  )
+  const friendBettorStats = usePronoStatsFromBets(
+    friendPronostics.bets,
+    canViewFriendPronostics && friendPronostics.loading,
+  )
+  const peerPronoStats =
+    canViewFriendPronostics && friendPronostics.bets.length > 0 ? friendBettorStats : publicBettorStats
 
   const scrollToFriendPronostics = () => {
     friendPronosticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -310,6 +322,15 @@ export function UserProfilePage() {
           ) : null}
         </div>
       </Card>
+
+      {!peer.isTalkFootBot ? (
+        <ProfilePronoStatsSection
+          badges={peerPronoStats.badges}
+          progress={peerPronoStats.progress}
+          badgesTitle="Ses badges"
+          loading={peerPronoStats.loading}
+        />
+      ) : null}
 
       {canViewFriendPronostics ? (
         <div ref={friendPronosticsRef} id="friend-pronostics" className="scroll-mt-24">

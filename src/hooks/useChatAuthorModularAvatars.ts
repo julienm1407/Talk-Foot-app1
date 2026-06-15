@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
+import type { SubscriptionTierId } from '../types/subscription'
 import { fetchTalkfootPublicProfiles } from '../lib/supabase/profileAppState'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -11,6 +12,7 @@ import {
 type AuthorCacheEntry = {
   modularAvatar: ModularAvatarState | null
   displayName: string | null
+  subscriptionTier: SubscriptionTierId | null
   loaded: boolean
 }
 
@@ -27,6 +29,8 @@ export function clearChatAuthorAvatarCache(userId?: string) {
 type SelfAvatarOptions = {
   /** Profil modulaire local (compte connecté) — prioritaire sur le cache cloud. */
   selfModularAvatar?: ModularAvatarState | null
+  /** Formule du compte connecté (cadre Ultra sur sa PP). */
+  selfSubscriptionTier?: SubscriptionTierId
   /** Tous les ids possibles pour « moi » (Clerk, UUID Supabase, `me`). */
   selfUserKeys?: string[]
 }
@@ -40,6 +44,7 @@ export function useChatAuthorModularAvatars(
   const [tick, setTick] = useState(0)
   const selfUserKeys = options?.selfUserKeys
   const selfModularAvatar = options?.selfModularAvatar
+  const selfSubscriptionTier = options?.selfSubscriptionTier
 
   const pendingKey = useMemo(() => {
     return [...new Set(userIds)]
@@ -69,9 +74,15 @@ export function useChatAuthorModularAvatars(
           const row = byActorKey.get(actorKey) ?? byProfileId.get(actorKey)
           const modularAvatar = row ? modularAvatarFromPublicRow(row.modularAvatar) ?? null : null
           const displayName = row?.displayName?.trim() || null
-          authorCache.set(actorKey, { modularAvatar, displayName, loaded: true })
+          const subscriptionTier = row?.subscriptionTier ?? null
+          authorCache.set(actorKey, { modularAvatar, displayName, subscriptionTier, loaded: true })
           if (row?.profileId && row.profileId !== actorKey) {
-            authorCache.set(row.profileId, { modularAvatar, displayName, loaded: true })
+            authorCache.set(row.profileId, {
+              modularAvatar,
+              displayName,
+              subscriptionTier,
+              loaded: true,
+            })
           }
         }
       } catch {
@@ -81,6 +92,7 @@ export function useChatAuthorModularAvatars(
           authorCache.set(actorKey, {
             modularAvatar: prev?.modularAvatar ?? null,
             displayName: prev?.displayName ?? null,
+            subscriptionTier: prev?.subscriptionTier ?? null,
             loaded: true,
           })
         }
@@ -97,10 +109,16 @@ export function useChatAuthorModularAvatars(
   return useMemo(() => {
     const avatars: Record<string, ModularAvatarState> = {}
     const displayNames: Record<string, string> = {}
+    const subscriptionTiers: Record<string, SubscriptionTierId> = {}
 
     if (selfModularAvatar && selfUserKeys?.length) {
       for (const id of selfUserKeys) {
         if (id) avatars[id] = selfModularAvatar
+      }
+    }
+    if (selfSubscriptionTier && selfUserKeys?.length) {
+      for (const id of selfUserKeys) {
+        if (id) subscriptionTiers[id] = selfSubscriptionTier
       }
     }
 
@@ -108,7 +126,8 @@ export function useChatAuthorModularAvatars(
       const cached = authorCache.get(id)
       if (cached?.modularAvatar && !avatars[id]) avatars[id] = cached.modularAvatar
       if (cached?.displayName) displayNames[id] = cached.displayName
+      if (cached?.subscriptionTier) subscriptionTiers[id] = cached.subscriptionTier
     }
-    return { avatars, displayNames }
-  }, [userIds, tick, selfModularAvatar, selfUserKeys])
+    return { avatars, displayNames, subscriptionTiers }
+  }, [userIds, tick, selfModularAvatar, selfSubscriptionTier, selfUserKeys])
 }

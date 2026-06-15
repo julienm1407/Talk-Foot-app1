@@ -1,6 +1,7 @@
 import type { TribuneId } from './tribune'
 import type { AvatarCharacterLook } from './profile'
 import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
+import type { SubscriptionTierId } from './subscription'
 
 /** Zone tribune du canal live (métadonnée `match_tribune` / `matchTribune`). */
 export type MatchTribuneZone = 'home-ultras' | 'away-ultras' | 'analystes' | 'neutres'
@@ -30,6 +31,8 @@ export type User = {
   characterLook?: Partial<AvatarCharacterLook>
   /** Avatar modulaire (studio) — chargé depuis le profil cloud pour les vrais comptes. */
   modularAvatar?: ModularAvatarState
+  /** Formule effective (cloud) — cadre Ultra en chat. */
+  subscriptionTier?: SubscriptionTierId
 }
 
 export type Message = {

@@ -792,6 +792,7 @@ export function ChannelPage() {
   const { user: authUser } = useAuth()
   const { check: checkChatSend, recordSend: recordChatSend } = useChatSendGuard()
   const {
+    tier,
     hasVerifiedBadge,
     canStreamSalon,
     canJoinVoiceSalons,
@@ -1158,11 +1159,12 @@ export function ChannelPage() {
     () => [...new Set(chatMessages.map((m) => m.userId))],
     [chatMessages],
   )
-  const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
+  const { avatars: modularByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
     {
       selfModularAvatar: selfProfile.modularAvatar,
+      selfSubscriptionTier: tier,
       selfUserKeys: selfAvatarKeys,
     },
   )
@@ -1186,6 +1188,7 @@ export function ChannelPage() {
         avatarSeed: seed,
         accent: 'emerald',
         modularAvatar: selfProfile.modularAvatar,
+        subscriptionTier: tier,
       }
       map[authUser.id] = {
         ...map[authUser.id],
@@ -1209,8 +1212,9 @@ export function ChannelPage() {
     }
     for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
       const label = resolveChatDisplayLabel(map[id]?.username, cloudAuthorNames[id])
+      const subscriptionTier = subscriptionTiersByAuthor[id]
       if (map[id]) {
-        map[id] = { ...map[id], username: label, modularAvatar }
+        map[id] = { ...map[id], username: label, modularAvatar, ...(subscriptionTier ? { subscriptionTier } : {}) }
       } else {
         map[id] = {
           id,
@@ -1218,6 +1222,7 @@ export function ChannelPage() {
           avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
           modularAvatar,
+          ...(subscriptionTier ? { subscriptionTier } : {}),
         }
       }
     }
@@ -1234,9 +1239,11 @@ export function ChannelPage() {
     chatAuthorIds,
     modularByAuthor,
     cloudAuthorNames,
+    subscriptionTiersByAuthor,
     authUser,
     chatActorId,
     selfProfile.modularAvatar,
+    tier,
   ])
   const { publishReaction } = useLiveMatchReactionsSync({
     matchId: match?.id ?? '',

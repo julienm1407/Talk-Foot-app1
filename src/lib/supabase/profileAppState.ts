@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { UserAppStateV1 } from '../../data/userAppStateDefaults'
+import type { SubscriptionTierId } from '../../types/subscription'
+import { parsePublicSubscriptionTier } from '../../utils/ultraAvatarFrame'
 
 export type TalkfootProfileSnapshot = {
   displayName: string | null
@@ -19,6 +21,7 @@ export type TalkfootPublicProfileRow = {
   profileId: string
   displayName: string | null
   modularAvatar: unknown
+  subscriptionTier: SubscriptionTierId | null
 }
 
 export async function fetchTalkfootPublicProfiles(
@@ -43,6 +46,7 @@ export async function fetchTalkfootPublicProfiles(
       profileId,
       displayName: row.display_name != null ? String(row.display_name) : null,
       modularAvatar: row.modular_avatar ?? null,
+      subscriptionTier: parsePublicSubscriptionTier(row.subscription_tier),
     })
   }
   return out

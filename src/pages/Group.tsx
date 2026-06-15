@@ -591,11 +591,12 @@ export function GroupPage() {
     () => [...new Set(messages.map((m) => m.userId))],
     [messages],
   )
-  const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
+  const { avatars: modularByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
     {
       selfModularAvatar: selfProfile.modularAvatar,
+      selfSubscriptionTier: tier,
       selfUserKeys: selfAvatarKeys,
     },
   )
@@ -630,6 +631,7 @@ export function GroupPage() {
         avatarSeed: seed,
         accent: 'emerald',
         modularAvatar: selfProfile.modularAvatar,
+        subscriptionTier: tier,
         ...(meClub ? { fanClubId: meClub } : {}),
       }
       base[authUser.id] = meEntry
@@ -652,8 +654,9 @@ export function GroupPage() {
     }
     for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
       const label = resolveChatDisplayLabel(authorNameByUserId.get(id), cloudAuthorNames[id])
+      const subscriptionTier = subscriptionTiersByAuthor[id]
       if (base[id]) {
-        base[id] = { ...base[id], username: label, modularAvatar }
+        base[id] = { ...base[id], username: label, modularAvatar, ...(subscriptionTier ? { subscriptionTier } : {}) }
       } else {
         base[id] = {
           id,
@@ -661,6 +664,7 @@ export function GroupPage() {
           avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
           modularAvatar,
+          ...(subscriptionTier ? { subscriptionTier } : {}),
         }
       }
     }
@@ -681,9 +685,11 @@ export function GroupPage() {
     groupSalonBot,
     modularByAuthor,
     cloudAuthorNames,
+    subscriptionTiersByAuthor,
     cloudFriends.acceptedPeers,
     authorNameByUserId,
     selfProfile.modularAvatar,
+    tier,
   ])
 
   const visibleMessages = useMemo(() => {

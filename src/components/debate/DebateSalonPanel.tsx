@@ -11,6 +11,7 @@ import { useSupporterGroupChannelSync } from '../../hooks/useSupporterGroupChann
 import { useSupporterGroupMessageLikesSync } from '../../hooks/useSupporterGroupMessageLikesSync'
 import type { User } from '../../types/chat'
 import { useProfile } from '../../hooks/useProfile'
+import { useSubscription } from '../../hooks/useSubscription'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAvatars'
 import { resolveChatDisplayLabel } from '../../utils/chatDisplayName'
@@ -46,6 +47,7 @@ export function DebateSalonPanel({
   const { refresh: refreshDebates } = useDebates()
   const chatActorId = useTalkFootChatActorId()
   const { profile: selfProfile } = useProfile()
+  const { tier } = useSubscription()
   const messageGroupId = debateMessageGroupId(debate)
   const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
   const selfAvatarKeys = useMemo(() => {
@@ -129,11 +131,12 @@ export function DebateSalonPanel({
     () => [...new Set(messages.map((m) => m.userId))],
     [messages],
   )
-  const { avatars: modularByAuthor, displayNames: cloudAuthorNames } = useChatAuthorModularAvatars(
+  const { avatars: modularByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
     chatAuthorIds,
     selfChatUserId,
     {
       selfModularAvatar: selfProfile.modularAvatar,
+      selfSubscriptionTier: tier,
       selfUserKeys: selfAvatarKeys,
     },
   )
@@ -158,6 +161,7 @@ export function DebateSalonPanel({
         avatarSeed: seed,
         accent: 'emerald',
         modularAvatar: selfProfile.modularAvatar,
+        subscriptionTier: tier,
       }
       base[authUser.id] = meEntry
       base.me = { ...meEntry, id: 'me' }
@@ -170,8 +174,9 @@ export function DebateSalonPanel({
     }
     for (const [id, modularAvatar] of Object.entries(modularByAuthor)) {
       const label = resolveChatDisplayLabel(authorNameByUserId.get(id), cloudAuthorNames[id])
+      const subscriptionTier = subscriptionTiersByAuthor[id]
       if (base[id]) {
-        base[id] = { ...base[id], username: label, modularAvatar }
+        base[id] = { ...base[id], username: label, modularAvatar, ...(subscriptionTier ? { subscriptionTier } : {}) }
       } else {
         base[id] = {
           id,
@@ -179,6 +184,7 @@ export function DebateSalonPanel({
           avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
           modularAvatar,
+          ...(subscriptionTier ? { subscriptionTier } : {}),
         }
       }
     }
@@ -205,8 +211,10 @@ export function DebateSalonPanel({
     chatActorId,
     cloudAuthorNames,
     modularByAuthor,
+    subscriptionTiersByAuthor,
     selfChatUserId,
     selfProfile.modularAvatar,
+    tier,
   ])
 
   const feedRef = useAutoScroll<HTMLDivElement>([messages.length])

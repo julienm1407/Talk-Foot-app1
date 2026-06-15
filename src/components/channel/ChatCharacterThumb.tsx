@@ -11,6 +11,9 @@ import {
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
 import { SalonBotHeadThumb } from './SalonBotHeadThumb'
+import { UltraAvatarFrame } from '../subscription/UltraAvatarFrame'
+import { useSubscription } from '../../hooks/useSubscription'
+import { userShowsUltraAvatarFrame } from '../../utils/ultraAvatarFrame'
 
 function peerProfileKey(u: User | undefined): string {
   if (!u) return 'anon'
@@ -19,6 +22,7 @@ function peerProfileKey(u: User | undefined): string {
     u.avatarSeed,
     u.accent,
     u.fanClubId ?? '',
+    u.subscriptionTier ?? '',
     JSON.stringify(u.characterLook ?? {}),
     JSON.stringify(u.modularAvatar ?? {}),
   ].join('|')
@@ -55,6 +59,7 @@ export function ChatCharacterThumb({
   className?: string
   'aria-label'?: string
 }) {
+  const { tier: selfTier } = useSubscription()
   const peerProfile = useMemo(() => buildChatPeerProfile(user), [peerProfileKey(user)])
   const profile = isSelf ? selfProfile : peerProfile
   const isSalonBot = Boolean(user?.isGroupSalonBot)
@@ -62,6 +67,7 @@ export function ChatCharacterThumb({
   const isBot = isSalonBot || isTalkFootBot
   const useModularThumb = !isBot && (isSelf || Boolean(user?.modularAvatar))
   const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`
+  const showUltraFrame = userShowsUltraAvatarFrame(user, { isSelf, selfTier })
 
   const botSeed = useMemo(() => {
     if (isSalonBot && user?.id.startsWith('group-bot:')) {
@@ -72,11 +78,12 @@ export function ChatCharacterThumb({
 
   const shellClass = cn(
     'relative isolate block shrink-0 self-start outline-none',
+    showUltraFrame ? 'overflow-visible' : 'overflow-hidden rounded-full',
     size === 'compact'
       ? useModularThumb || isBot
         ? 'size-7 min-h-7 min-w-7'
-        : 'size-7 min-h-7 min-w-7 overflow-hidden rounded-full'
-      : 'size-[2.65rem] min-h-[2.65rem] min-w-[2.65rem] overflow-hidden rounded-full sm:size-[2.85rem] sm:min-h-[2.85rem] sm:min-w-[2.85rem]',
+        : 'size-7 min-h-7 min-w-7'
+      : 'size-[2.65rem] min-h-[2.65rem] min-w-[2.65rem] sm:size-[2.85rem] sm:min-h-[2.85rem] sm:min-w-[2.85rem]',
     className,
   )
 
@@ -105,6 +112,13 @@ export function ChatCharacterThumb({
     />
   )
 
+  const avatarBody = (
+    <>
+      <div className="size-full overflow-hidden rounded-full">{figure}</div>
+      {showUltraFrame ? <UltraAvatarFrame size={size} /> : null}
+    </>
+  )
+
   if (onPeerMenu) {
     return (
       <button
@@ -118,7 +132,7 @@ export function ChatCharacterThumb({
         aria-label={ariaLabel}
         aria-haspopup="dialog"
       >
-        {figure}
+        {avatarBody}
       </button>
     )
   }
@@ -126,14 +140,14 @@ export function ChatCharacterThumb({
   if (!to) {
     return (
       <div className={shellClass} aria-label={ariaLabel} role="img">
-        {figure}
+        {avatarBody}
       </div>
     )
   }
 
   return (
     <Link to={to} className={shellClass} aria-label={ariaLabel}>
-      {figure}
+      {avatarBody}
     </Link>
   )
 }
