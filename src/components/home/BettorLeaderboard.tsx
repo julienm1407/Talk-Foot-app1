@@ -2,66 +2,121 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
+import { ChatPeerMenuHost } from '../chat/ChatPeerMenuHost'
 import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAvatars'
+import { useChatPeerMenu } from '../../hooks/useChatPeerMenu'
 import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useProfile } from '../../hooks/useProfile'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import type { LeaderboardEntry } from '../../data/leaderboard'
 import type { ModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import type { UserProfile } from '../../types/profile'
+import type { User } from '../../types/chat'
 import { buildChatPeerProfile } from '../../utils/chatPeerProfile'
+import { resolveChatMessagePeerUi } from '../../utils/chatPeerSocial'
 import { cn } from '../../utils/cn'
+import { isSupabaseConfigured } from '../../lib/supabase/isEnabled'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
 import {
-  MODULAR_PP_LEADERBOARD_FRAMING,
+  MODULAR_PP_CHAT_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
 
 const EMBEDDED_PREVIEW_LIMIT = 10
 
-function BettorRowAvatar({
+function leaderboardUser(entry: LeaderboardEntry, modularAvatar?: ModularAvatarState): User {
+  return {
+    id: entry.userId,
+    username: entry.username,
+    avatarSeed: entry.avatarSeed,
+    accent: entry.accent,
+    ...(modularAvatar ? { modularAvatar } : {}),
+  }
+}
+
+function BettorRowThumb({
   entry,
   isSelf,
   selfProfile,
   modularAvatar,
+  profileTo,
+  onPeerMenu,
 }: {
   entry: LeaderboardEntry
   isSelf: boolean
   selfProfile: UserProfile
   modularAvatar?: ModularAvatarState
+  profileTo?: string
+  onPeerMenu?: () => void
 }) {
   const profile = useMemo(() => {
     if (isSelf) return selfProfile
     if (!modularAvatar) return null
-    return buildChatPeerProfile({
-      id: entry.userId,
-      username: entry.username,
-      avatarSeed: entry.avatarSeed,
-      accent: entry.accent,
-      modularAvatar,
-    })
+    return buildChatPeerProfile(leaderboardUser(entry, modularAvatar))
   }, [entry, isSelf, modularAvatar, selfProfile])
 
-  if (profile) {
+  const shellClass = cn(
+    'relative isolate block shrink-0 self-center outline-none',
+    'size-10 min-h-10 min-w-10 overflow-hidden rounded-full sm:size-11 sm:min-h-11 sm:min-w-11',
+    TF_FOCUS_VISIBLE,
+  )
+
+  const ariaLabel = onPeerMenu
+    ? `Contacter ${entry.username}`
+    : isSelf
+      ? `${entry.username} — mon profil`
+      : `Profil ${entry.username}`
+
+  const figure = profile ? (
+    <ProfileCharacterThumb
+      profile={profile}
+      size="sm"
+      imagePriority={isSelf}
+      {...MODULAR_PP_CHAT_FRAMING}
+      className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
+      aria-label={ariaLabel}
+    />
+  ) : (
+    <Avatar
+      seed={entry.avatarSeed}
+      accent={entry.accent}
+      alt=""
+      className="size-full rounded-full border-2 border-white/15"
+    />
+  )
+
+  if (onPeerMenu) {
     return (
-      <ProfileCharacterThumb
-        profile={profile}
-        size="xs"
-        imagePriority={isSelf}
-        {...MODULAR_PP_LEADERBOARD_FRAMING}
-        className="!rounded-lg border-0 p-0"
-        aria-label={entry.username}
-      />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onPeerMenu()
+        }}
+        className={cn(shellClass, 'cursor-pointer')}
+        aria-label={ariaLabel}
+        aria-haspopup="dialog"
+      >
+        {figure}
+      </button>
+    )
+  }
+
+  if (profileTo) {
+    return (
+      <Link to={profileTo} className={shellClass} aria-label={ariaLabel}>
+        {figure}
+      </Link>
     )
   }
 
   return (
-    <Avatar
-      seed={entry.avatarSeed}
-      accent={entry.accent}
-      alt={entry.username}
-      className="size-7 shrink-0 rounded-lg"
-    />
+    <div className={shellClass} aria-label={ariaLabel} role="img">
+      {figure}
+    </div>
   )
 }
 
@@ -81,6 +136,9 @@ export function BettorLeaderboard({
   const { user: authUser } = useAuth()
   const chatActorId = useTalkFootChatActorId()
   const selfUserId = chatActorId ?? authUser?.id ?? 'me'
+  const dm = useDirectMessagesContext()
+  const socialEnabled = isSupabaseConfigured() && Boolean(dm)
+  const { peerMenu, openPeerMenu, closePeerMenu, menuOpen } = useChatPeerMenu()
   const { top12, top250, myRank, myEntry, totalActive } = useLeaderboard()
   const { profile } = useProfile()
   const limit = previewLimit ?? (extended ? 40 : embedded ? EMBEDDED_PREVIEW_LIMIT : 12)
@@ -199,11 +257,26 @@ export function BettorLeaderboard({
           )}
           role="list"
         >
-          {rows.map((e) => (
+          {rows.map((e) => {
+            const user = leaderboardUser(e, modularByUserId[e.userId])
+            const peer = resolveChatMessagePeerUi({
+              userId: e.userId,
+              authorDisplayName: e.username,
+              user,
+              selfUserId,
+              selfChatActorId: chatActorId,
+              selfClerkUserId: authUser?.id,
+              socialEnabled,
+            })
+            const openPeerMenuHandler = peer.peerSocial
+              ? () => openPeerMenu(peer.menuTarget)
+              : undefined
+
+            return (
             <li
               key={e.userId}
               className={cn(
-                'flex items-center gap-2 rounded-xl px-2 py-1.5',
+                'flex items-center gap-2.5 rounded-xl px-2 py-2 sm:gap-3',
                 e.userId === myEntry.userId &&
                   (dark
                     ? 'bg-emerald-500/15 ring-1 ring-emerald-400/35'
@@ -218,20 +291,49 @@ export function BettorLeaderboard({
               >
                 {e.rank}
               </span>
-              <BettorRowAvatar
+              <BettorRowThumb
                 entry={e}
-                isSelf={e.userId === myEntry.userId}
+                isSelf={peer.isSelfMessage}
                 selfProfile={profile}
                 modularAvatar={modularByUserId[e.userId]}
+                profileTo={peer.profileTo}
+                onPeerMenu={openPeerMenuHandler}
               />
-              <span
-                className={cn(
-                  'min-w-0 flex-1 truncate text-xs font-bold',
-                  dark ? 'text-sky-50' : 'text-tf-dark',
-                )}
-              >
-                {e.username}
-              </span>
+              {peer.peerSocial ? (
+                <button
+                  type="button"
+                  onClick={() => openPeerMenuHandler?.()}
+                  className={cn(
+                    'min-w-0 flex-1 truncate text-left text-xs font-bold sm:text-sm',
+                    dark ? 'text-sky-50' : 'text-tf-dark',
+                    TF_FOCUS_VISIBLE,
+                    'rounded-sm underline-offset-2 hover:underline',
+                  )}
+                >
+                  {e.username}
+                </button>
+              ) : peer.profileTo ? (
+                <Link
+                  to={peer.profileTo}
+                  className={cn(
+                    'min-w-0 flex-1 truncate text-xs font-bold sm:text-sm',
+                    dark ? 'text-sky-50' : 'text-tf-dark',
+                    TF_FOCUS_VISIBLE,
+                    'rounded-sm hover:underline',
+                  )}
+                >
+                  {e.username}
+                </Link>
+              ) : (
+                <span
+                  className={cn(
+                    'min-w-0 flex-1 truncate text-xs font-bold sm:text-sm',
+                    dark ? 'text-sky-50' : 'text-tf-dark',
+                  )}
+                >
+                  {e.username}
+                </span>
+              )}
               <span className={cn('shrink-0 text-[11px] font-black', dark ? 'text-sky-300/85' : 'text-tf-grey')}>
                 {e.score} pts
                 {extended && e.totalBets ? (
@@ -241,7 +343,8 @@ export function BettorLeaderboard({
                 ) : null}
               </span>
             </li>
-          ))}
+            )
+          })}
         </ol>
       )}
 
@@ -281,6 +384,7 @@ export function BettorLeaderboard({
           </Link>
         </div>
       </div>
+      <ChatPeerMenuHost peerMenu={peerMenu} menuOpen={menuOpen} onClose={closePeerMenu} dark={dark} />
     </div>
   )
 }
