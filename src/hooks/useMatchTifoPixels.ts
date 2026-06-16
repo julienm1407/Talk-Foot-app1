@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import {
   TIFO_BOARD_H,
   TIFO_BOARD_W,
+  TIFO_CELL_OCCUPIED_NOTICE,
   TIFO_DEFAULT_PALETTE,
   TIFO_MAX_PER_USER_DAY,
   tifoBoardScopeKey,
@@ -59,6 +60,7 @@ function tifoReducer(state: TifoStore, action: Action): TifoStore {
   if (curQ >= TIFO_MAX_PER_USER_DAY) return state
   const k = tifoPixelKey(x, y)
   const curBoard = state.boards[scopeKey] ?? { pixels: {} }
+  if (curBoard.pixels[k]) return state
   return {
     boards: {
       ...state.boards,
@@ -108,6 +110,11 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
       const curQ = s.quota[day]?.[scopeKey] ?? 0
       if (curQ >= TIFO_MAX_PER_USER_DAY) {
         setNotice(`Limite : ${TIFO_MAX_PER_USER_DAY} pixels / jour sur ce match.`)
+        return false
+      }
+      const k = tifoPixelKey(x, y)
+      if (s.boards[scopeKey]?.pixels[k]) {
+        setNotice(TIFO_CELL_OCCUPIED_NOTICE)
         return false
       }
       dispatch({ type: 'place', scopeKey, x, y, color, day })

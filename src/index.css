@@ -2313,6 +2313,60 @@ body::before {
   color: rgba(1, 30, 51, 0.70);
 }
 
+/* Tifo pixel : couleurs sRGB stables (Samsung / iPhone / PC) + grille sans bordures parasites */
+.tf-tifo-board {
+  color-scheme: only srgb;
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tf-tifo-grid {
+  display: inline-grid;
+  gap: 1px;
+  padding: 0;
+  line-height: 0;
+}
+
+.tf-tifo-grid--light {
+  background-color: rgb(148, 163, 184);
+}
+
+.tf-tifo-grid--dark {
+  background-color: rgb(71, 85, 105);
+}
+
+.tf-tifo-cell {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: none;
+  appearance: none;
+  -webkit-appearance: none;
+  line-height: 0;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tf-tifo-cell--empty:hover {
+    filter: brightness(1.08);
+    outline: 1px solid rgba(56, 189, 248, 0.65);
+    outline-offset: -1px;
+    z-index: 1;
+  }
+
+  .tf-tifo-cell--moderate:hover {
+    outline: 1px solid rgba(244, 63, 94, 0.85);
+    outline-offset: -1px;
+    z-index: 1;
+  }
+}
+
+.tf-tifo-swatch {
+  color-scheme: only srgb;
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @keyframes tf-firework {
   0% {
     transform: translate3d(-50%, -50%, 0) scale(0.6);

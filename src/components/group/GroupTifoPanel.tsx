@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
+import { normalizeTifoDisplayColor } from '../../constants/tifoPixelBoard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
@@ -117,12 +118,12 @@ export function GroupTifoPanel({
     )
   }
 
-  const emptyFill = L ? '#eef2f6' : '#1e293b'
-  const gridBorder = L ? 'border-slate-400/75' : 'border-slate-500/90'
+  const emptyFill = L ? 'rgb(238, 242, 246)' : 'rgb(30, 41, 59)'
 
   return (
     <div
       className={cn(
+        'tf-tifo-board',
         embedded ? 'mt-2' : 'mt-4 rounded-2xl border p-3 shadow-sm',
         !embedded &&
           (L
@@ -206,7 +207,7 @@ export function GroupTifoPanel({
               type="button"
               title={c}
               className={cn(
-                'size-7 rounded-lg border-2 transition',
+                'tf-tifo-swatch size-7 rounded-lg border-2 transition',
                 color === c ? 'border-tf-dark ring-2 ring-tf-electric/30' : 'border-white ring-1 ring-black/10',
               )}
               style={{ backgroundColor: c }}
@@ -242,10 +243,7 @@ export function GroupTifoPanel({
           </div>
         ) : null}
         <div
-          className={cn(
-            'inline-grid gap-0 border p-0',
-            L ? 'border-slate-400/80 bg-slate-200/50' : 'border-slate-500/80 bg-slate-700/40',
-          )}
+          className={cn('tf-tifo-grid', L ? 'tf-tifo-grid--light' : 'tf-tifo-grid--dark')}
           style={{
             gridTemplateColumns: `repeat(${boardW}, ${CELL_PX}px)`,
             gridTemplateRows: `repeat(${boardH}, ${CELL_PX}px)`,
@@ -258,20 +256,20 @@ export function GroupTifoPanel({
             const y = (i / boardW) | 0
             const k = `${x},${y}`
             const painted = pixels[k]
-            const fill = painted ?? emptyFill
+            const fill = painted ? normalizeTifoDisplayColor(painted) : emptyFill
             const isPainted = Boolean(painted)
+            const canPlace = !moderationMode && !isPainted
             return (
               <button
                 key={k}
                 type="button"
+                disabled={!moderationMode && isPainted}
                 className={cn(
-                  'box-border p-0 transition',
-                  gridBorder,
-                  'border-[0.5px]',
-                  moderationMode && isPainted
-                    ? 'hover:ring-1 hover:ring-rose-500 hover:ring-inset'
-                    : 'hover:brightness-110 hover:ring-1 hover:ring-tf-electric/60 hover:ring-inset',
-                  moderationMode && !isPainted && 'cursor-default opacity-60',
+                  'tf-tifo-cell',
+                  canPlace && 'tf-tifo-cell--empty cursor-pointer',
+                  moderationMode && isPainted && 'tf-tifo-cell--moderate cursor-pointer',
+                  moderationMode && !isPainted && 'cursor-default opacity-50',
+                  !moderationMode && isPainted && 'cursor-default',
                 )}
                 style={{
                   width: CELL_PX,
@@ -287,7 +285,8 @@ export function GroupTifoPanel({
                     if (isPainted) void deletePixelAsAdmin(x, y)
                     return
                   }
-                  if (!moderationMode) void placePixel(x, y, color)
+                  if (isPainted) return
+                  void placePixel(x, y, color)
                 }}
                 aria-label={
                   moderationMode

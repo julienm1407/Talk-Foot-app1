@@ -3,6 +3,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import {
   TIFO_BOARD_H,
   TIFO_BOARD_W,
+  TIFO_CELL_OCCUPIED_NOTICE,
   TIFO_DEFAULT_PALETTE,
   TIFO_MAX_PER_USER_DAY,
   tifoPixelKey,
@@ -281,6 +282,12 @@ export function useMatchTifoPixelsCloud(options: {
         return false
       }
 
+      const key = tifoPixelKey(x, y)
+      if (pixels[key]) {
+        setNotice(TIFO_CELL_OCCUPIED_NOTICE)
+        return false
+      }
+
       const sb = getSupabaseBrowserClient()
       if (!sb || !isSupabaseConfigured()) return false
 
@@ -292,8 +299,6 @@ export function useMatchTifoPixelsCloud(options: {
       viewerIdRef.current = session.user.id
       await syncRealtimeAuth(sb)
 
-      const key = tifoPixelKey(x, y)
-      const prevColor = pixels[key]
       setPixels((prev) => ({ ...prev, [key]: color }))
       setRemaining((r) => Math.max(0, r - 1))
 
@@ -308,13 +313,14 @@ export function useMatchTifoPixelsCloud(options: {
       if (error) {
         setPixels((prev) => {
           const next = { ...prev }
-          if (prevColor) next[key] = prevColor
-          else delete next[key]
+          delete next[key]
           return next
         })
         await refreshUsage(sb, session.user.id)
         const msg = error.message ?? ''
-        if (msg.includes('daily_limit') || error.code === 'P0001') {
+        if (msg.includes('cell_occupied')) {
+          setNotice(TIFO_CELL_OCCUPIED_NOTICE)
+        } else if (msg.includes('daily_limit') || error.code === 'P0001') {
           setNotice(`Limite : ${TIFO_MAX_PER_USER_DAY} pixels / jour sur ce match.`)
         } else {
           setNotice('Impossible de placer le pixel pour le moment.')
