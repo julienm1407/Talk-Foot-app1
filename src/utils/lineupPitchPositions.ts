@@ -57,6 +57,16 @@ function inferRowColFromFormationPosition(fp: number, lines: number[]): { row: n
   return { row: lines.length, col: 1 }
 }
 
+function spreadHorizontalPct(count: number, index: number): number {
+  if (count <= 1) return 50
+  return 10 + (index / (count - 1)) * 80
+}
+
+/**
+ * SportMonks numérote `formation_position` droite → gauche (2 = RB, 5 = LB…).
+ * Le champ `formation_field` col suit cette convention pour l’équipe à domicile,
+ * mais peut être inversé pour l’extérieur — on privilégie donc formation_position.
+ */
 function horizontalPctForRow(players: ParsedPlayer[]): Map<ParsedPlayer, number> {
   const out = new Map<ParsedPlayer, number>()
   if (!players.length) return out
@@ -64,19 +74,42 @@ function horizontalPctForRow(players: ParsedPlayer[]): Map<ParsedPlayer, number>
     out.set(players[0], 50)
     return out
   }
+
+  const fps = players
+    .map((p) => p.formationPosition)
+    .filter((fp): fp is number => fp != null && Number.isFinite(fp))
+  if (fps.length === players.length) {
+    const minFp = Math.min(...fps)
+    const maxFp = Math.max(...fps)
+    if (maxFp > minFp) {
+      for (const p of players) {
+        const fp = Math.round(p.formationPosition as number)
+        const t = (maxFp - fp) / (maxFp - minFp)
+        out.set(p, 10 + t * 80)
+      }
+      return out
+    }
+  }
+
   const cols = players.map((p) => p.col)
   const minCol = Math.min(...cols)
   const maxCol = Math.max(...cols)
   if (maxCol > minCol) {
     for (const p of players) {
-      // SportMonks `formation_field` col 1 = côté droit (RB), dernière col = gauche (LB/LW).
+      // Repli : col 1 = côté droit (RB), dernière col = gauche (LB/LW).
       const t = (maxCol - p.col) / (maxCol - minCol)
       out.set(p, 10 + t * 80)
     }
     return out
   }
-  players.forEach((p, i) => {
-    out.set(p, 10 + (i / (players.length - 1)) * 80)
+
+  const sorted = [...players].sort(
+    (a, b) =>
+      (a.formationPosition ?? a.col) - (b.formationPosition ?? b.col) ||
+      a.name.localeCompare(b.name),
+  )
+  sorted.forEach((p, i) => {
+    out.set(p, spreadHorizontalPct(sorted.length, i))
   })
   return out
 }

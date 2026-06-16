@@ -48,7 +48,10 @@ import {
 } from '../components/channel/LiveMatchChatMessage'
 import { ChatPeerMenuHost } from '../components/chat/ChatPeerMenuHost'
 import { useChatPeerMenu } from '../hooks/useChatPeerMenu'
-import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatars'
+import { useChatAuthorModularAvatars, invalidateChatAuthorAvatars } from '../hooks/useChatAuthorModularAvatars'
+import { useTalkFootCloudSession } from '../hooks/useTalkFootCloudSession'
+import { syncClerkProfileToChatActor } from '../lib/supabase/chatActorProfile'
+import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { useProfile } from '../hooks/useProfile'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
@@ -650,6 +653,7 @@ function cloudMessageToUi(m: Message): ChatMessageItem {
     emoteId: m.emoteId,
     matchTribune: m.matchTribune,
     createdAtMs: m.createdAt,
+    clerkActorKey: m.clerkActorKey,
   }
 }
 
@@ -867,6 +871,7 @@ export function ChannelPage() {
   } = useSubscription()
   const mayStreamSalon = canStreamSalon || Boolean(authUser?.isAdmin)
   const chatActorId = useTalkFootChatActorId()
+  const { ensureCloudSession } = useTalkFootCloudSession()
   const selfChatUserId = chatActorId ?? authUser?.id ?? 'me'
   const selfUserId = selfChatUserId
   const { profile: selfProfile } = useProfile()
@@ -1198,6 +1203,7 @@ export function ChannelPage() {
   const { publishMessage, isCloudChatConfigured } = useLiveMatchChatSync({
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
+    getChatSession: ensureCloudSession,
     onRemoteMessages: (msgs) => {
       setChatMessages((prev) => {
         const byId = new Map(prev.map((m) => [m.id, m]))
@@ -1223,12 +1229,16 @@ export function ChannelPage() {
     [chatMessages, selectedTribune],
   )
 
-  const chatAuthorIds = useMemo(
-    () => [...new Set(chatMessages.map((m) => m.userId))],
-    [chatMessages],
-  )
+  const chatAuthorKeys = useMemo(() => {
+    const keys = new Set<string>()
+    for (const m of chatMessages) {
+      if (m.userId) keys.add(m.userId)
+      if (m.clerkActorKey) keys.add(m.clerkActorKey)
+    }
+    return [...keys]
+  }, [chatMessages])
   const { avatars: modularByAuthor, profilePhotos: profilePhotoByAuthor, displayNames: cloudAuthorNames, subscriptionTiers: subscriptionTiersByAuthor } = useChatAuthorModularAvatars(
-    chatAuthorIds,
+    chatAuthorKeys,
     selfChatUserId,
     {
       selfModularAvatar: selfProfile.modularAvatar,
@@ -1307,12 +1317,32 @@ export function ChannelPage() {
       if (!map[id] || map[id].profilePhotoDataUrl) continue
       map[id] = { ...map[id], profilePhotoDataUrl }
     }
-    for (const id of chatAuthorIds) {
+    for (const m of chatMessages) {
+      const clerkKey = m.clerkActorKey
+      if (!clerkKey || !map[m.userId]) continue
+      const modularAvatar = modularByAuthor[clerkKey]
+      const profilePhotoDataUrl = profilePhotoByAuthor[clerkKey]
+      const subscriptionTier = subscriptionTiersByAuthor[clerkKey]
+      const label = cloudAuthorNames[clerkKey]
+      if (!modularAvatar && !profilePhotoDataUrl && !subscriptionTier && !label) continue
+      map[m.userId] = {
+        ...map[m.userId],
+        ...(label
+          ? { username: resolveChatDisplayLabel(map[m.userId]?.username, label) }
+          : {}),
+        ...(modularAvatar && !map[m.userId].modularAvatar ? { modularAvatar } : {}),
+        ...(profilePhotoDataUrl && !map[m.userId].profilePhotoDataUrl
+          ? { profilePhotoDataUrl }
+          : {}),
+        ...(subscriptionTier && !map[m.userId].subscriptionTier ? { subscriptionTier } : {}),
+      }
+    }
+    for (const id of chatAuthorKeys) {
       const subscriptionTier = subscriptionTiersByAuthor[id]
       if (!subscriptionTier || !map[id]) continue
       map[id] = { ...map[id], subscriptionTier }
     }
-    for (const id of chatAuthorIds) {
+    for (const id of chatAuthorKeys) {
       if (!map[id] || !cloudAuthorNames[id]) continue
       map[id] = {
         ...map[id],
@@ -1324,7 +1354,7 @@ export function ChannelPage() {
     return merged
   }, [
     chatMessages,
-    chatAuthorIds,
+    chatAuthorKeys,
     modularByAuthor,
     profilePhotoByAuthor,
     cloudAuthorNames,
@@ -1411,11 +1441,26 @@ export function ChannelPage() {
       window.setTimeout(() => setAnimationNotice(null), 3200)
       return
     }
+    const sb = getSupabaseBrowserClient()
+    if (sb && authUser?.id && chatActorId) {
+      try {
+        await syncClerkProfileToChatActor(
+          sb,
+          authUser.id,
+          chatActorId,
+          authUser.displayName ?? '',
+        )
+        invalidateChatAuthorAvatars([chatActorId, authUser.id])
+      } catch {
+        /* sync best-effort */
+      }
+    }
     const res = await publishMessage({
       matchId: match.id,
       text,
       matchTribune: selectedTribune,
       displayName: authUser?.displayName,
+      clerkActorKey: authUser?.id,
     })
     if (!res.ok) {
       setAnimationNotice(

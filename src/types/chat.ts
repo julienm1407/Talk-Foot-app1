@@ -62,6 +62,8 @@ export type Message = {
     colorB: string
     colorC: string
   }
+  /** Compte Clerk lié (metadata live) — résolution avatar modulaire cloud. */
+  clerkActorKey?: string
 }
 
 export type ReactionEvent = {

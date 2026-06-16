@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import { isLikelyDefaultModularAvatar, resolveDisplayModularAvatar } from '../../utils/modularAvatarBackup'
 import { resolveProfileModularAvatarForDisplay } from '../../utils/chatAuthorModularAvatar'
+import { isChatAuthorAvatarPending } from '../../hooks/useChatAuthorModularAvatars'
 
 const CHAT_SHELL_PX = {
   compact: 28,
@@ -100,9 +101,15 @@ export function ChatCharacterThumb({
   const isTalkFootBot = Boolean(user?.isTalkFootBot)
   const isBot = isSalonBot || isTalkFootBot
   const peerModular = user?.modularAvatar
+  const peerHasModularData = Boolean(peerModular?.data)
   const peerHasCustomModular =
-    Boolean(peerModular?.data) && !isLikelyDefaultModularAvatar(peerModular)
-  const useModularThumb = !isBot && (isSelf || peerHasCustomModular)
+    peerHasModularData && !isLikelyDefaultModularAvatar(peerModular)
+  const useModularThumb = !isBot && (isSelf || peerHasModularData)
+  const preferModularOverPhoto = isSelf || peerHasCustomModular
+  const avatarPending =
+    !isBot &&
+    !isSelf &&
+    Boolean(user?.id && isChatAuthorAvatarPending(user.id, selfUserId))
   const dicebearSeed = `${user?.id ?? 'anon'}-${user?.avatarSeed ?? 'fan'}`
   const showUltraFrame = userShowsUltraAvatarFrame(user, { isSelf, selfTier })
   const thumbBorderClass = showUltraFrame
@@ -133,6 +140,16 @@ export function ChatCharacterThumb({
       className="size-full"
       aria-label={ariaLabel}
     />
+  ) : preferModularOverPhoto && useModularThumb ? (
+    <ProfileCharacterThumb
+      profile={profile}
+      shellPx={shellPx}
+      size={size === 'compact' ? 'xs' : 'sm'}
+      imagePriority
+      {...chatFraming}
+      className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
+      aria-label={ariaLabel}
+    />
   ) : photoUrl && !photoFailed ? (
     <img
       src={photoUrl}
@@ -149,6 +166,14 @@ export function ChatCharacterThumb({
       {...chatFraming}
       className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
       aria-label={ariaLabel}
+    />
+  ) : avatarPending ? (
+    <div
+      className={cn(
+        'size-full rounded-full bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
+        thumbBorderClass,
+      )}
+      aria-hidden
     />
   ) : (
     <img

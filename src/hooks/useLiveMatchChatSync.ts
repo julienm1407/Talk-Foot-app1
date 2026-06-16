@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import type { RealtimePostgresChangesPayload, Session, SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -53,6 +53,7 @@ function rowToMessage(row: LiveMsgRow): Message {
     tribune: pickTribune(meta.tribune),
     matchTribune: pickMatchTribune(meta.matchTribune),
     supporterGroupId: typeof meta.supporterGroupId === 'string' ? meta.supporterGroupId : undefined,
+    clerkActorKey: typeof meta.clerkActorKey === 'string' ? meta.clerkActorKey : undefined,
     gifUrl: typeof meta.gifUrl === 'string' ? meta.gifUrl : undefined,
     emoteId: typeof meta.emoteId === 'string' ? meta.emoteId : undefined,
     groupScarf: scarfOk ? (groupScarf as NonNullable<Message['groupScarf']>) : undefined,
@@ -89,13 +90,22 @@ export function useLiveMatchChatSync(options: {
   matchId: string
   enabled: boolean
   onRemoteMessages: (msgs: Message[]) => void
+  getChatSession?: (sb: SupabaseClient) => Promise<Session | null>
 }) {
-  const { matchId, enabled, onRemoteMessages } = options
+  const { matchId, enabled, onRemoteMessages, getChatSession } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
   const lastHistorySigRef = useRef('')
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
+
+  const resolveChatSession = useCallback(
+    async (sb: SupabaseClient) => {
+      if (getChatSession) return getChatSession(sb)
+      return ensureSupabaseChatSession(sb)
+    },
+    [getChatSession],
+  )
 
   const publishMessage = useCallback(
     async (
@@ -106,7 +116,7 @@ export function useLiveMatchChatSync(options: {
       const sb = getSupabaseBrowserClient()
       if (!sb) return { ok: false as const, error: 'no_client' }
 
-      const session = await ensureSupabaseChatSession(sb)
+      const session = await resolveChatSession(sb)
       if (!session) return { ok: false as const, error: 'no_session' }
 
       const body = msg.text ?? ''
@@ -120,6 +130,7 @@ export function useLiveMatchChatSync(options: {
       if (msg.gifUrl) metadata.gifUrl = msg.gifUrl
       if (msg.emoteId) metadata.emoteId = msg.emoteId
       if (msg.groupScarf) metadata.groupScarf = msg.groupScarf
+      if (msg.clerkActorKey) metadata.clerkActorKey = msg.clerkActorKey
 
       const displayName =
         msg.displayName?.trim() || displayNameFromSession(session.user)
@@ -145,7 +156,7 @@ export function useLiveMatchChatSync(options: {
 
       return { ok: true as const, message: rowToMessage(data as LiveMsgRow) }
     },
-    [],
+    [resolveChatSession],
   )
 
   useEffect(() => {
@@ -158,7 +169,7 @@ export function useLiveMatchChatSync(options: {
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const fetchRecent = async () => {
-      const session = await ensureSupabaseChatSession(sb)
+      const session = await resolveChatSession(sb)
       if (!session || cancelled) return
       await syncRealtimeAuth(sb)
       const { data: rows, error: fetchErr } = await sb
@@ -230,7 +241,7 @@ export function useLiveMatchChatSync(options: {
         channelRef.current = null
       }
     }
-  }, [matchId, enabled])
+  }, [matchId, enabled, resolveChatSession])
 
   return { publishMessage, isCloudChatConfigured: isSupabaseConfigured() }
 }

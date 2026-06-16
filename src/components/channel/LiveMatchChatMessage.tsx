@@ -22,6 +22,8 @@ export type LiveMatchChatMessageItem = {
   emoteId?: string
   /** Tri chronologique tribune (ms UTC). */
   createdAtMs?: number
+  /** Compte Clerk pour charger l'avatar modulaire. */
+  clerkActorKey?: string
 }
 
 export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
