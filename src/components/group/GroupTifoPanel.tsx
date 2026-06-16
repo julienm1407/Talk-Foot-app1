@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
-import { normalizeTifoDisplayColor } from '../../constants/tifoPixelBoard'
+import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT } from '../../constants/tifoPixelBoard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
@@ -96,6 +96,13 @@ export function GroupTifoPanel({
 
   const [color, setColor] = useState(palette[2]!)
 
+  const placedPixelCount = useMemo(() => Object.keys(pixels).length, [pixels])
+  const placedPixelsLabel = useMemo(() => {
+    const placed = placedPixelCount.toLocaleString('fr-FR')
+    const total = TIFO_BOARD_CELL_COUNT.toLocaleString('fr-FR')
+    return `${placed} / ${total} pixels placés`
+  }, [placedPixelCount])
+
   if (!activeId) {
     return (
       <div
@@ -135,14 +142,24 @@ export function GroupTifoPanel({
         <div className={cn('text-[10px] font-black uppercase tracking-[0.2em]', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
           Tifo pixel{isShared ? ' · cette tribune' : ''}
         </div>
-        <span
-          className={cn(
-            'rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums',
-            L ? 'bg-tf-dark/8 text-tf-dark' : 'bg-sky-900/40 text-sky-100',
-          )}
-        >
-          {remaining} px restants aujourd’hui
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums',
+              L ? 'bg-tf-dark/6 text-tf-grey' : 'bg-slate-800/60 text-sky-100/90',
+            )}
+          >
+            {placedPixelsLabel}
+          </span>
+          <span
+            className={cn(
+              'rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums',
+              L ? 'bg-tf-dark/8 text-tf-dark' : 'bg-sky-900/40 text-sky-100',
+            )}
+          >
+            {remaining} px restants aujourd’hui
+          </span>
+        </div>
       </div>
 
       {isGroupAdmin ? (

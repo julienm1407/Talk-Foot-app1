@@ -1,13 +1,15 @@
 export const TIFO_BOARD_W = 36
 export const TIFO_BOARD_H = 22
+export const TIFO_BOARD_CELL_COUNT = TIFO_BOARD_W * TIFO_BOARD_H
 export const TIFO_MAX_PER_USER_DAY = 3
 
-/** Palette tifo : 8 couleurs sRGB (rendu identique PC / mobile). */
+/** Palette tifo : 9 couleurs sRGB (rendu identique PC / mobile). */
 export const TIFO_DEFAULT_PALETTE = [
   'rgb(0, 0, 255)', // bleu
   'rgb(0, 255, 0)', // vert
   'rgb(255, 0, 0)', // rouge
   'rgb(255, 255, 0)', // jaune
+  'rgb(255, 128, 0)', // orange
   'rgb(255, 0, 255)', // magenta
   'rgb(0, 255, 255)', // cyan
   'rgb(0, 0, 0)', // noir
