@@ -339,9 +339,19 @@ export function useMatchTifoPixelsCloud(options: {
 
       const uid = session.user.id
       const chargesQuota = tifoPixelChargesQuota(previousColor, previousOwner, uid)
-      if (chargesQuota && remaining <= 0) {
-        const used = Math.max(0, dailyLimit - remaining)
-        setNotice(`Quota atteint pour aujourd'hui (${used}/${dailyLimit} pixels utilisés).`)
+
+      const preSync = await syncMatchTifoEngagementBonuses(scope.groupId, scope.matchId)
+      const quotaRemaining = preSync?.remaining ?? remaining
+      const quotaLimit = preSync?.daily_limit ?? dailyLimit
+      if (preSync) {
+        setDailyLimit(preSync.daily_limit)
+        setBonusAllowance(preSync.bonus_allowance)
+        setRemaining(preSync.remaining)
+      }
+
+      if (chargesQuota && quotaRemaining <= 0) {
+        const used = Math.max(0, quotaLimit - quotaRemaining)
+        setNotice(`Quota atteint pour aujourd'hui (${used}/${quotaLimit} pixels utilisés).`)
         return false
       }
 
@@ -372,11 +382,21 @@ export function useMatchTifoPixelsCloud(options: {
         })
         const synced = await refreshUsage(sb, uid)
         const msg = error.message ?? ''
-        if (msg.includes('daily_limit') || error.code === 'P0001') {
-          const lim = synced?.daily_limit ?? dailyLimit
-          const rem = synced?.remaining ?? remaining
+        if (msg.includes('cell_occupied')) {
+          setNotice('Cette case est déjà prise — choisis une autre ou repasse sur ton propre pixel.')
+        } else if (msg.includes('daily_limit')) {
+          const lim = synced?.daily_limit ?? quotaLimit
+          const rem = synced?.remaining ?? quotaRemaining
           const used = Math.max(0, lim - rem)
-          setNotice(`Quota atteint pour aujourd'hui (${used}/${lim} pixels utilisés).`)
+          if (rem > 0) {
+            setNotice(
+              'Placement refusé par le serveur alors qu\'il te reste des pixels — recharge la page dans quelques secondes.',
+            )
+          } else {
+            setNotice(`Quota atteint pour aujourd'hui (${used}/${lim} pixels utilisés).`)
+          }
+        } else if (error.code === 'P0001') {
+          setNotice('Impossible de placer ce pixel pour le moment.')
         } else {
           setNotice('Impossible de placer le pixel pour le moment.')
           if (import.meta.env.DEV) console.warn('[Talk Foot] place_match_tifo_pixel:', msg)

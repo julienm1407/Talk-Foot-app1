@@ -167,7 +167,7 @@ export function GroupTifoPanel({
               L ? 'bg-tf-dark/8 text-tf-dark' : 'bg-sky-900/40 text-sky-100',
             )}
           >
-            {remaining} / {dailyLimit} px aujourd’hui
+            {remaining} restants / {dailyLimit} max
             {bonusAllowance > 0 ? ` (+${bonusAllowance} bonus)` : ''}
           </span>
         </div>
