@@ -2322,17 +2322,20 @@ body::before {
 
 .tf-tifo-grid {
   display: inline-grid;
-  gap: 1px;
+  gap: 0;
   padding: 0;
   line-height: 0;
+  outline: 1px solid rgb(51, 65, 85);
 }
 
 .tf-tifo-grid--light {
   background-color: rgb(148, 163, 184);
+  outline-color: rgb(100, 116, 139);
 }
 
 .tf-tifo-grid--dark {
-  background-color: rgb(71, 85, 105);
+  background-color: rgb(30, 41, 59);
+  outline-color: rgb(51, 65, 85);
 }
 
 .tf-tifo-cell {
@@ -2344,6 +2347,20 @@ body::before {
   -webkit-appearance: none;
   line-height: 0;
   touch-action: manipulation;
+  opacity: 1;
+}
+
+.tf-tifo-cell--painted {
+  opacity: 1;
+  filter: none;
+}
+
+.tf-tifo-cell--empty {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.22);
+}
+
+.tf-tifo-grid--light .tf-tifo-cell--empty {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.14);
 }
 
 @media (hover: hover) and (pointer: fine) {

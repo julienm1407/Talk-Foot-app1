@@ -280,13 +280,13 @@ export function GroupTifoPanel({
               <button
                 key={k}
                 type="button"
-                disabled={!moderationMode && isPainted}
                 className={cn(
                   'tf-tifo-cell',
+                  isPainted && 'tf-tifo-cell--painted',
                   canPlace && 'tf-tifo-cell--empty cursor-pointer',
                   moderationMode && isPainted && 'tf-tifo-cell--moderate cursor-pointer',
-                  moderationMode && !isPainted && 'cursor-default opacity-50',
-                  !moderationMode && isPainted && 'cursor-default',
+                  moderationMode && !isPainted && 'tf-tifo-cell--empty cursor-default opacity-50',
+                  !moderationMode && isPainted && 'pointer-events-none cursor-default',
                 )}
                 style={{
                   width: CELL_PX,
@@ -294,6 +294,7 @@ export function GroupTifoPanel({
                   minWidth: CELL_PX,
                   minHeight: CELL_PX,
                   backgroundColor: fill,
+                  opacity: 1,
                 }}
                 onClick={(e) => {
                   e.preventDefault()
