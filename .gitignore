@@ -19,6 +19,16 @@ dist-ssr
 .env.production
 .env.*.local
 
+# Capacitor / mobile signing (ne jamais committer)
+*.keystore
+*.jks
+android/keystore.properties
+android/local.properties
+ios/App/App/private/
+*.p12
+*.mobileprovision
+DerivedData/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

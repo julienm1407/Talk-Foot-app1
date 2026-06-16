@@ -3014,3 +3014,17 @@ body::before {
   }
 }
 
+/* Shell Capacitor (Android / iOS natif) */
+html.tf-native-shell {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+html.tf-native-shell body {
+  min-height: 100dvh;
+}
+
+html.tf-native-shell .tf-mobile-app-shell .tf-app-topbar {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+

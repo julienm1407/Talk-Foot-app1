@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import App from './App'
 import { CookieConsentBanner } from './components/legal/CookieConsentBanner'
 import { RouteSeo } from './components/seo/RouteSeo'
+import { initCapacitorShell } from './mobile/capacitorBootstrap'
 
 function routerBasename(): string | undefined {
   const base = import.meta.env.BASE_URL ?? '/'
@@ -82,10 +83,12 @@ const mountEl = document.getElementById('root')
 if (!mountEl) {
   document.body.textContent = 'Élément #root introuvable dans index.html.'
 } else {
-  try {
-    createRoot(mountEl).render(root)
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    showFatalBootError('Talk Foot n’a pas pu démarrer.', msg)
-  }
+  void initCapacitorShell().finally(() => {
+    try {
+      createRoot(mountEl).render(root)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      showFatalBootError('Talk Foot n’a pas pu démarrer.', msg)
+    }
+  })
 }

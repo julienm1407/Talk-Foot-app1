@@ -1,0 +1,34 @@
+{
+  "locale": "fr-FR",
+  "name": "Talk Foot",
+  "subtitle": "Live foot, débats & tribunes",
+  "promotionalText": "Rejoins les salons live, chate avec les supporters et personnalise ton avatar.",
+  "description": "Talk Foot est le réseau social des supporters de football.\n\nSALONS LIVE\nSuis les matchs en direct avec chat, réactions, score et compos.\n\nTRIBUNES & TIFOS\nParticipe à l’ambiance stade : tribunes virtuelles, pixels tifo, fumigènes.\n\nCOMMUNAUTÉ\nDébats, groupes supporters, messages privés et classements.\n\nFOOT COMPLET\nCalendrier, stats, actus — L1, Big Five, Coupe du Monde.\n\nPARIS FICTIFS\nMise en tokens virtuels pour le fun, sans argent réel.\n\nCrée ton personnage, rejoins ta tribune et vis le match autrement.",
+  "keywords": ["football", "live", "supporters", "chat", "Ligue 1", "débats", "tribune", "match"],
+  "primaryCategory": "SPORTS",
+  "secondaryCategory": "SOCIAL_NETWORKING",
+  "privacyPolicyUrl": "https://talk-foot.com/privacy",
+  "supportUrl": "https://talk-foot.com/about",
+  "marketingUrl": "https://talk-foot.com",
+  "copyright": "2026 Talk Foot",
+  "contactEmail": "app.talkfoot@gmail.com",
+  "bundleId": "com.talkfoot.app",
+  "version": "1.0.0",
+  "build": "1",
+  "ageRating": "12+",
+  "reviewNotes": "Compte démo fourni. Paris = tokens fictifs (boutique intégrée Stripe pour abonnements/médailles, pas de paris réels). Chat modéré automatiquement. Micro/caméra utilisés uniquement pour le live salon optionnel.",
+  "demoAccount": {
+    "email": "REMPLIR_AVANT_SOUMISSION",
+    "password": "REMPLIR_AVANT_SOUMISSION",
+    "instructions": "Se connecter via l’écran Login, puis ouvrir un match live depuis l’accueil."
+  },
+  "screenshots": {
+    "iphone65": "1284 x 2778 px (6.7\") — 3 à 10 captures",
+    "iphone61": "1179 x 2556 px (6.1\")",
+    "ipadPro129": "2048 x 2732 px — optionnel"
+  },
+  "exportCompliance": {
+    "usesEncryption": false,
+    "ITSAppUsesNonExemptEncryption": false
+  }
+}

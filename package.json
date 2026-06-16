@@ -17,9 +17,26 @@
     "test:avatar-zones": "npx tsx --test src/components/profile/avatarHeadZones.test.ts",
     "test:mascot": "npx vite-node --test src/components/mascot/mascotGallery.test.ts src/components/mascot/mascotAnchorRandom.test.ts src/components/mascot/hair/hairAssetParser.test.ts",
     "boutique:assets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/import-boutique-design-assets.ps1; powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-boutique-kit-images.ps1",
-    "auth:email-templates": "node scripts/apply-auth-email-templates.mjs"
+    "auth:email-templates": "node scripts/apply-auth-email-templates.mjs",
+    "build:mobile": "npm run build && npx cap sync",
+    "cap:sync": "npx cap sync",
+    "cap:copy": "npx cap copy",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "cap:assets": "npx capacitor-assets generate --assetPath mobile/assets --iconBackgroundColor \"#ffffff\" --iconBackgroundColorDark \"#061222\" --splashBackgroundColor \"#061222\" --splashBackgroundColorDark \"#061222\"",
+    "android:release": "npm run build:mobile && cd android && gradlew.bat bundleRelease",
+    "android:debug": "npm run build:mobile && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@clerk/clerk-react": "^5.61.6",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
@@ -35,6 +52,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",

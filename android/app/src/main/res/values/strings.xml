@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Talk Foot</string>
+    <string name="title_activity_main">Talk Foot</string>
+    <string name="package_name">com.talkfoot.app</string>
+    <string name="custom_url_scheme">com.talkfoot.app</string>
+</resources>

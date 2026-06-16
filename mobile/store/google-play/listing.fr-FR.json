@@ -1,0 +1,28 @@
+{
+  "locale": "fr-FR",
+  "appTitle": "Talk Foot",
+  "shortDescription": "Salons live, chat, débats et tribunes foot — réseau social supporters.",
+  "fullDescription": "Talk Foot, le réseau social des supporters.\n\n• Salons de match en direct avec chat live et réactions\n• Tribunes virtuelles, tifos et ambiance stade\n• Débats, groupes supporters et messages privés\n• Calendrier L1, Premier League, Liga, Serie A, Bundesliga et Coupe du Monde\n• Paris fictifs à tokens (sans argent réel)\n• Avatar modulaire et profil personnalisable\n\nRejoins ta communauté, commente les matchs en direct et vis l’expérience tribune depuis ton téléphone.\n\nParis et médailles : monnaie virtuelle à des fins de divertissement uniquement. Voir les CGU sur talk-foot.com/terms.",
+  "category": "SPORTS",
+  "tags": ["football", "live", "supporters", "chat", "débats", "Ligue 1"],
+  "contactEmail": "app.talkfoot@gmail.com",
+  "privacyPolicyUrl": "https://talk-foot.com/privacy",
+  "websiteUrl": "https://talk-foot.com",
+  "defaultLanguage": "fr-FR",
+  "contentRating": {
+    "questionnaireNotes": "Application sport / social. Paris fictifs (tokens), pas de jeu d'argent réel. Chat modéré. UGC (messages). Pas de contenu choquant intentionnel.",
+    "targetAge": "PEGI 12 / Teen suggested"
+  },
+  "graphics": {
+    "appIcon": "512x512 PNG — généré dans android/res et Play Console",
+    "featureGraphic": "1024x500 PNG — bannière Play Store (à créer dans mobile/store/screenshots/)",
+    "phoneScreenshots": "2 à 8 captures 1080x1920 minimum",
+    "tabletScreenshots": "optionnel 1200x1920"
+  },
+  "release": {
+    "packageName": "com.talkfoot.app",
+    "versionName": "1.0.0",
+    "versionCode": 1,
+    "artifact": "android/app/build/outputs/bundle/release/app-release.aab"
+  }
+}
