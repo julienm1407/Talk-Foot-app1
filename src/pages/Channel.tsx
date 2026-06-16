@@ -3830,7 +3830,7 @@ export function ChannelPage() {
                   </span>
                   <span className="truncate text-xs font-black text-white">{awayName}</span>
                 </div>
-                {liveStatsLoading && mobileStatRows.length === 0 ? (
+                {liveStatsLoading && !isUpcoming && mobileStatRows.length === 0 ? (
                   <p className="rounded-lg border border-white/10 bg-[#0a1f35]/70 px-3 py-2 text-center text-[11px] font-semibold text-sky-200/80">
                     Chargement des stats…
                   </p>
@@ -3838,7 +3838,12 @@ export function ChannelPage() {
                 {mobileStatRows.map((row, i) => (
                   <ChannelLiveStatBar key={`mobile-stat-${row.key ?? i}`} row={row} />
                 ))}
-                {!liveStatsLoading && mobileStatRows.length === 0 ? (
+                {isUpcoming && mobileStatRows.length === 0 ? (
+                  <p className="rounded-lg border border-white/10 bg-[#0a1f35]/70 px-3 py-2 text-center text-[11px] font-semibold text-sky-200/75">
+                    Les stats live (possession, tirs…) seront disponibles au coup d&apos;envoi.
+                  </p>
+                ) : null}
+                {!isUpcoming && !liveStatsLoading && mobileStatRows.length === 0 ? (
                   <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-[11px] font-semibold text-amber-100/90">
                     Stats SportMonks indisponibles pour ce match (tirs, possession, etc.).
                   </p>
@@ -3857,7 +3862,7 @@ export function ChannelPage() {
                       />
                     </div>
                   </div>
-                ) : !liveStatsLoading && mobileStatRows.length === 0 ? (
+                ) : !isUpcoming && !liveStatsLoading && mobileStatRows.length === 0 ? (
                   <p className="text-center text-[11px] font-semibold text-sky-200/70">
                     Les actions (buts, cartons, remplacements) apparaissent dans l’onglet Actions.
                   </p>
