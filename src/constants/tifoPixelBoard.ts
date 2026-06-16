@@ -3,6 +3,22 @@ export const TIFO_BOARD_H = 22
 export const TIFO_BOARD_CELL_COUNT = TIFO_BOARD_W * TIFO_BOARD_H
 export const TIFO_MAX_PER_USER_DAY = 3
 
+/** Bonus pixels (une fois / jour / tribune / match) — voir sync_match_tifo_engagement_bonuses. */
+export const TIFO_ENGAGEMENT_BONUSES = {
+  chat_sent: 3,
+  message_liked: 1,
+  debate_reply: 2,
+  match_bet: 3,
+  chat_active_10: 2,
+} as const
+
+export const TIFO_MAX_ENGAGEMENT_BONUS =
+  TIFO_ENGAGEMENT_BONUSES.chat_sent +
+  TIFO_ENGAGEMENT_BONUSES.message_liked +
+  TIFO_ENGAGEMENT_BONUSES.debate_reply +
+  TIFO_ENGAGEMENT_BONUSES.match_bet +
+  TIFO_ENGAGEMENT_BONUSES.chat_active_10
+
 /** Palette tifo : 9 couleurs sRGB pleines (rendu opaque PC / mobile). */
 export const TIFO_DEFAULT_PALETTE = [
   'rgb(0, 0, 255)', // bleu
@@ -15,8 +31,6 @@ export const TIFO_DEFAULT_PALETTE = [
   'rgb(0, 0, 0)', // noir
   'rgb(255, 255, 255)', // blanc
 ] as const
-
-export const TIFO_CELL_OCCUPIED_NOTICE = 'Ce pixel est déjà pris — choisis une case vide.'
 
 /** Affichage : hex legacy → rgb sRGB pour un rendu homogène mobile / desktop. */
 export function normalizeTifoDisplayColor(color: string): string {

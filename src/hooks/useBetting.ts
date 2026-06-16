@@ -16,6 +16,7 @@ import { newlyWonBetIds } from '../utils/xpGrant'
 import { useXpGrant } from './useXpGrant'
 import { writeBetsBackup } from '../utils/betsBackup'
 import { useAuth } from '../contexts/AuthContext'
+import { requestTifoEngagementSyncForMatch } from '../utils/tifoEngagementEvents'
 
 function clampStake(n: number) {
   if (!Number.isFinite(n)) return 0
@@ -70,7 +71,10 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
           if (!cloud.flushAppSave) return
           for (let attempt = 0; attempt < 4; attempt += 1) {
             const result = await cloud.flushAppSave()
-            if (result.ok) return
+            if (result.ok) {
+              requestTifoEngagementSyncForMatch(matchId)
+              return
+            }
             if (result.error !== 'not_hydrated' && result.error !== 'missing_clerk_session') return
             await new Promise((r) => setTimeout(r, 350 * (attempt + 1)))
           }
@@ -80,6 +84,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
         setBets((prev) => [bet, ...prev].slice(0, 200))
       }
       grantBetPlaced(id)
+      requestTifoEngagementSyncForMatch(matchId)
       return { ok: true as const, bet }
     },
     [matchId, matchForLabel, setBets, patchWallet, wallet.tokens, cloud, grantBetPlaced, user?.id],

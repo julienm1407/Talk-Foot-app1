@@ -31,6 +31,7 @@ import { isUuidMessageId } from '../../utils/isUuidMessageId'
 import { isSupabaseConfigured } from '../../lib/supabase/isEnabled'
 import { MODERATION_REFUSED_MESSAGE_FR, validateOutgoingChatPayload } from '../../utils/bannedWords'
 import { cn } from '../../utils/cn'
+import { requestTifoEngagementSyncForGroup } from '../../utils/tifoEngagementEvents'
 
 const MAX_DEBATE_MESSAGES = 2000
 const CHANNEL_ID = 'general'
@@ -267,6 +268,7 @@ export function DebateSalonPanel({
         displayName: authUser?.displayName,
       })
       if (r.ok) {
+        requestTifoEngagementSyncForGroup(messageGroupId)
         setMessages((prev) => {
           if (prev.some((m) => m.id === r.message.id)) return prev
           return [...prev, r.message].sort((a, b) => a.createdAt - b.createdAt).slice(-MAX_DEBATE_MESSAGES)

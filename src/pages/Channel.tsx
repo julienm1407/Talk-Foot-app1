@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { teamHubPathForMatch } from '../utils/teamHubRoute'
 import { resolveNationForTeam } from '../utils/resolveMatchNation'
 import { tifoGroupIdForMatchChannel } from '../utils/tifoGroupScope'
+import { requestTifoEngagementSync } from '../utils/tifoEngagementEvents'
 import { nationFlagUrl } from '../utils/nationFlagUrl'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
@@ -1428,6 +1429,7 @@ export function ChannelPage() {
     recordChatSend()
     chatDraftRef.current = ''
     if (chatInputRef.current) chatInputRef.current.value = ''
+    if (channelTifoGroupId) requestTifoEngagementSync(channelTifoGroupId, match.id)
     if (res.message) {
       const mapped = cloudMessageToUi(res.message)
       setChatMessages((prev) => {
@@ -1441,7 +1443,9 @@ export function ChannelPage() {
   }
   const onToggleLikeMessage = (id: string) => {
     if (messageLikes.isConfigured) {
-      void messageLikes.toggleLike(id)
+      void messageLikes.toggleLike(id).then(() => {
+        if (channelTifoGroupId && match?.id) requestTifoEngagementSync(channelTifoGroupId, match.id)
+      })
       return
     }
     setChatMessages((prev) =>

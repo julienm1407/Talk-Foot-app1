@@ -44,6 +44,7 @@ import { useChatAuthorModularAvatars } from '../hooks/useChatAuthorModularAvatar
 import { useProfile } from '../hooks/useProfile'
 import { useCloudFriends } from '../hooks/useCloudFriends'
 import { retainStickyChatUserAvatars } from '../utils/stickyChatUserAvatars'
+import { requestTifoEngagementSyncForGroup } from '../utils/tifoEngagementEvents'
 import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useChatSendGuard } from '../hooks/useChatSendGuard'
@@ -811,6 +812,7 @@ export function GroupPage() {
           }
           bumpGroupActivity(group.id, { messagesToday: 1, onlineNow: 1 })
           refreshGroupActivity()
+          requestTifoEngagementSyncForGroup(group.id)
           return
         }
         if (r.error === 'moderation') {

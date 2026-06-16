@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
-import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT } from '../../constants/tifoPixelBoard'
+import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES } from '../../constants/tifoPixelBoard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
@@ -81,11 +81,15 @@ export function GroupTifoPanel({
     placePixel,
     deletePixelAsAdmin,
     remaining,
+    dailyLimit,
+    bonusAllowance,
     palette,
     boardW,
     boardH,
     notice,
+    engagementNotice,
     clearNotice,
+    clearEngagementNotice,
     loading,
     isShared,
   } = useMatchTifoPixels({
@@ -93,6 +97,12 @@ export function GroupTifoPanel({
     matchId: activeId,
     isGroupAdmin,
   })
+
+  useEffect(() => {
+    if (!engagementNotice) return
+    const t = window.setTimeout(() => clearEngagementNotice(), 4200)
+    return () => window.clearTimeout(t)
+  }, [engagementNotice, clearEngagementNotice])
 
   const [color, setColor] = useState(palette[2]!)
 
@@ -157,10 +167,30 @@ export function GroupTifoPanel({
               L ? 'bg-tf-dark/8 text-tf-dark' : 'bg-sky-900/40 text-sky-100',
             )}
           >
-            {remaining} px restants aujourd’hui
+            {remaining} / {dailyLimit} px aujourd’hui
+            {bonusAllowance > 0 ? ` (+${bonusAllowance} bonus)` : ''}
           </span>
         </div>
       </div>
+
+      {engagementNotice ? (
+        <p
+          className={cn(
+            'mt-2 rounded-lg px-2.5 py-1.5 text-[10px] font-bold',
+            L ? 'bg-emerald-50 text-emerald-800' : 'bg-emerald-500/15 text-emerald-200',
+          )}
+        >
+          {engagementNotice}
+        </p>
+      ) : null}
+
+      {isShared && bonusAllowance === 0 ? (
+        <p className={cn('mt-2 text-[10px] leading-snug', L ? 'text-tf-grey/75' : 'text-sky-200/65')}>
+          Gagne des pixels : message (+{TIFO_ENGAGEMENT_BONUSES.chat_sent}), like (+{TIFO_ENGAGEMENT_BONUSES.message_liked}),
+          débat (+{TIFO_ENGAGEMENT_BONUSES.debate_reply}), pari (+{TIFO_ENGAGEMENT_BONUSES.match_bet}),
+          10 messages live (+{TIFO_ENGAGEMENT_BONUSES.chat_active_10}) — chaque bonus une fois par jour.
+        </p>
+      ) : null}
 
       {isGroupAdmin ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -275,7 +305,7 @@ export function GroupTifoPanel({
             const painted = pixels[k]
             const fill = painted ? normalizeTifoDisplayColor(painted) : emptyFill
             const isPainted = Boolean(painted)
-            const canPlace = !moderationMode && !isPainted
+            const canPlace = !moderationMode
             return (
               <button
                 key={k}
@@ -283,10 +313,10 @@ export function GroupTifoPanel({
                 className={cn(
                   'tf-tifo-cell',
                   isPainted && 'tf-tifo-cell--painted',
-                  canPlace && 'tf-tifo-cell--empty cursor-pointer',
+                  canPlace && !isPainted && 'tf-tifo-cell--empty',
+                  canPlace && 'cursor-pointer',
                   moderationMode && isPainted && 'tf-tifo-cell--moderate cursor-pointer',
                   moderationMode && !isPainted && 'tf-tifo-cell--empty cursor-default opacity-50',
-                  !moderationMode && isPainted && 'pointer-events-none cursor-default',
                 )}
                 style={{
                   width: CELL_PX,
@@ -303,7 +333,6 @@ export function GroupTifoPanel({
                     if (isPainted) void deletePixelAsAdmin(x, y)
                     return
                   }
-                  if (isPainted) return
                   void placePixel(x, y, color)
                 }}
                 aria-label={

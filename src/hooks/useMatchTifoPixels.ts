@@ -2,7 +2,6 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import {
   TIFO_BOARD_H,
   TIFO_BOARD_W,
-  TIFO_CELL_OCCUPIED_NOTICE,
   TIFO_DEFAULT_PALETTE,
   TIFO_MAX_PER_USER_DAY,
   tifoBoardScopeKey,
@@ -57,19 +56,21 @@ function tifoReducer(state: TifoStore, action: Action): TifoStore {
   const { scopeKey, x, y, color, day } = action
   if (x < 0 || x >= TIFO_BOARD_W || y < 0 || y >= TIFO_BOARD_H) return state
   const curQ = state.quota[day]?.[scopeKey] ?? 0
-  if (curQ >= TIFO_MAX_PER_USER_DAY) return state
   const k = tifoPixelKey(x, y)
   const curBoard = state.boards[scopeKey] ?? { pixels: {} }
-  if (curBoard.pixels[k]) return state
+  const wasEmpty = !curBoard.pixels[k]
+  if (wasEmpty && curQ >= TIFO_MAX_PER_USER_DAY) return state
   return {
     boards: {
       ...state.boards,
       [scopeKey]: { ...curBoard, pixels: { ...curBoard.pixels, [k]: color } },
     },
-    quota: {
-      ...state.quota,
-      [day]: { ...(state.quota[day] ?? {}), [scopeKey]: curQ + 1 },
-    },
+    quota: wasEmpty
+      ? {
+          ...state.quota,
+          [day]: { ...(state.quota[day] ?? {}), [scopeKey]: curQ + 1 },
+        }
+      : state.quota,
   }
 }
 
@@ -108,13 +109,10 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
       const day = tifoTodayKeyUtc()
       const s = storeRef.current
       const curQ = s.quota[day]?.[scopeKey] ?? 0
-      if (curQ >= TIFO_MAX_PER_USER_DAY) {
-        setNotice(`Limite : ${TIFO_MAX_PER_USER_DAY} pixels / jour sur ce match.`)
-        return false
-      }
       const k = tifoPixelKey(x, y)
-      if (s.boards[scopeKey]?.pixels[k]) {
-        setNotice(TIFO_CELL_OCCUPIED_NOTICE)
+      const wasEmpty = !s.boards[scopeKey]?.pixels[k]
+      if (wasEmpty && curQ >= TIFO_MAX_PER_USER_DAY) {
+        setNotice(`Limite : ${TIFO_MAX_PER_USER_DAY} pixels / jour sur ce match.`)
         return false
       }
       dispatch({ type: 'place', scopeKey, x, y, color, day })
@@ -130,11 +128,15 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
     placePixel,
     deletePixelAsAdmin,
     remaining,
+    dailyLimit: TIFO_MAX_PER_USER_DAY,
+    bonusAllowance: 0,
     palette: [...TIFO_DEFAULT_PALETTE],
     boardW: TIFO_BOARD_W,
     boardH: TIFO_BOARD_H,
     notice,
+    engagementNotice: null as string | null,
     clearNotice: () => setNotice(null),
+    clearEngagementNotice: () => {},
     loading: false,
     isShared: false,
     isGroupAdmin: false,
