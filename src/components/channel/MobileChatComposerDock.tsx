@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn'
 
 /** Hauteur réservée dans la grille pour ne pas masquer le fil sous le dock fixe. */
 export const MOBILE_CHAT_COMPOSER_DOCK_HEIGHT =
-  'calc(7rem + env(safe-area-inset-bottom, 0px))'
+  'calc(11rem + env(safe-area-inset-bottom, 0px))'
 
 /**
  * Sur mobile tactile : barre de saisie fixée au-dessus de la BottomNav (portail body).

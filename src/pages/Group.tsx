@@ -775,7 +775,7 @@ export function GroupPage() {
     enabled: groupCloudChatEnabled,
     actorDisplayName: authUser?.displayName,
   })
-  const feedRef = useAutoScroll<HTMLDivElement>([displayMessages.length])
+  const feedRef = useAutoScroll<HTMLDivElement>([displayMessages.length], [threadKey])
 
   const tryCloudGroupThenLocal = useCallback(
     async (msg: Message) => {
@@ -1665,7 +1665,7 @@ export function GroupPage() {
           <div
             className={cn(
               tfSalonHeader(L, 'shrink-0 p-3 sm:p-4 lg:p-5'),
-              'max-lg:row-start-1 max-lg:border-b max-lg:p-1.5',
+              'max-lg:row-start-1 max-lg:border-b max-lg:p-1.5 max-lg:pb-1',
               L ? 'max-lg:border-tf-grey-pastel/40' : 'max-lg:border-white/10',
               isDebateSalon &&
                 'max-lg:max-h-[min(28dvh,11.5rem)] max-lg:overflow-y-auto max-lg:overscroll-y-contain',
@@ -1795,7 +1795,7 @@ export function GroupPage() {
               </div>
             </div>
 
-            <div className="relative z-[2] flex flex-nowrap touch-manipulation items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
+            <div className="relative z-[2] flex max-sm:min-h-0 flex-nowrap touch-manipulation items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
               {channel?.id === 'general' && isSiteAdmin ? (
                 <>
                   <button
@@ -1997,8 +1997,8 @@ export function GroupPage() {
           <div
             ref={feedRef}
             className={cn(
-              'min-h-0 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
-              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0 max-lg:scroll-pb-28 max-lg:min-h-[min(52dvh,28rem)]',
+              'min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
+              'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0 max-lg:min-h-0',
               'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',
             )}
@@ -2047,7 +2047,7 @@ export function GroupPage() {
                   : undefined
               }
             />
-            <div className="h-3" />
+            <div className="h-1 shrink-0 max-lg:h-2" aria-hidden />
           </div>
 
           {accessLevel === 'readonly' ? (

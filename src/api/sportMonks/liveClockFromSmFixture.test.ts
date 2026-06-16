@@ -119,4 +119,24 @@ describe('live clock from SportMonks fixture', () => {
     } as SmFixture
     expect(extractLiveMinuteFromSmFixture(fx)).toBe(57)
   })
+
+  it('ancre la reprise 2e MT à 46 quand SM cumule encore 47–51', () => {
+    const fx = {
+      state: { id: 22, developer_name: 'INPLAY_2ND_HALF' },
+      periods: [{ ticking: false, counts_from: 0, minutes: 50 }],
+      minute: 51,
+      comments: [{ minute: 51, extra_minute: 0, comment: 'Second half underway' }],
+    } as SmFixture
+    expect(extractLiveMinuteFromSmFixture(fx)).toBe(46)
+    expect(liveSecondHalfFromSmFixture(fx)).toBe(true)
+  })
+
+  it('prefere la période ticking 2e MT aux events stale', () => {
+    const fx = {
+      state: { id: 22, developer_name: 'INPLAY_2ND_HALF' },
+      periods: [{ ticking: true, counts_from: 45, minutes: 1 }],
+      events: [{ minute: 51, extra_minute: 0, period: { counts_from: 0 } }],
+    } as SmFixture
+    expect(extractLiveMinuteFromSmFixture(fx)).toBe(46)
+  })
 })

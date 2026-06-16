@@ -151,12 +151,12 @@ function scorerSlugForHighlight(h: Pick<Highlight, 'scorerName' | 'title' | 'det
   return slugScorer(compactScorerDisplayName(scorer))
 }
 
-/** Clé stable but : minute + camp + buteur (ignore le doublon event / commentaire). */
+/** Clé stable but : camp + buteur (ignore le doublon event / commentaire SM avec minutes incohérentes). */
 export function goalSemanticKey(h: Pick<Highlight, 'type' | 'minute' | 'side' | 'scorerName' | 'title' | 'detail'>): string | null {
   if (h.type !== 'But') return null
   const slug = scorerSlugForHighlight(h)
   if (!slug) return null
-  return `${h.minute}|${h.side ?? '?'}|${slug}`
+  return `${h.side ?? '?'}|${slug}`
 }
 
 /** Clé stable pour n’afficher qu’une fois un même but / carton / VAR malgré doublons API (ids différents, commentaire + event). */
@@ -172,7 +172,7 @@ export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' 
   const sideKey = h.side ?? ''
   if (bucket === 'but') {
     const slug = scorerSlugForHighlight(h)
-    if (slug) return `but|${h.minute}|${sideKey}|${slug}`
+    if (slug) return `but|${sideKey}|${slug}`
   }
   if (bucket === 'carton') {
     const slug = scorerSlugForHighlight(h)
@@ -224,10 +224,7 @@ function cardPlayerFromEvent(ev: SmFixtureEventRow, dev: string): string | undef
 
 function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   const player = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
-  if (player) {
-    if (isPlausibleGoalScorerName(player)) return player
-    if (player.length >= 3 && /[A-Za-zÀ-ÿ]/.test(player)) return player
-  }
+  if (player && isPlausibleGoalScorerName(player)) return player
   const relatedPlayerObj = ev.relatedPlayer ?? ev.related_player
   const related = String(
     relatedPlayerObj?.display_name ?? relatedPlayerObj?.name ?? ev.related_player_name ?? '',

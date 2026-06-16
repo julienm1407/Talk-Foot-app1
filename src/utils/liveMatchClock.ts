@@ -8,7 +8,9 @@ export function formatFlashscoreMatchMinute(
   const t = Math.max(0, Math.round(totalMinute))
   if (t <= 0) return "0'"
 
-  if (opts?.inSecondHalf) {
+  const inSecondHalf = opts?.inSecondHalf ?? t > 50
+
+  if (inSecondHalf) {
     if (t > 90) return `90+${t - 90}'`
     return `${t}'`
   }

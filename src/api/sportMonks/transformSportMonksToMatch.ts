@@ -128,7 +128,11 @@ export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
     if (ref) {
       const countsFrom = typeof ref.counts_from === 'number' ? ref.counts_from : 0
       if (countsFrom >= 45) return true
-      if (countsFrom === 0) return false
+      if (countsFrom === 0) {
+        const sidEarly = stateIdOf(fx)
+        if (sidEarly != null && SECOND_HALF_STATE_IDS.has(sidEarly)) return true
+        return false
+      }
     }
   }
 
@@ -362,6 +366,34 @@ function minuteFromFixture(f: SmFixture, nowMs = Date.now()): number {
   const fromEvents = minuteFromEvents(fx)
   const fromComments = minuteFromComments(fx)
   const fxMinute = typeof fx.minute === 'number' ? fx.minute : null
+  const inSecondHalf = liveSecondHalfFromSmFixture(fx)
+  const paused = liveClockPausedFromSmFixture(fx)
+
+  if (inSecondHalf && !paused) {
+    const periods = Array.isArray(fx.periods) ? fx.periods : []
+    const ticking2H = periods.find((p) => p?.ticking && periodCountsFrom(p) >= 45)
+    if (ticking2H) {
+      const periodMin = periodMinuteValue(ticking2H, nowMs)
+      if (periodMin != null) return Math.min(99, periodMin)
+    }
+
+    const feedMax = Math.max(
+      fromEvents ?? 0,
+      fromComments ?? 0,
+      fxMinute ?? 0,
+      fromPeriods ?? 0,
+    )
+    // Événements 2e MT fiables une fois le match relancé (≥52').
+    if (fromEvents != null && fromEvents >= 52) {
+      return Math.min(99, feedMax)
+    }
+
+    // Reprise 2e MT : SM annonce INPLAY_2ND_HALF mais cumule encore 47'–51' (1re MT).
+    const sid = stateIdOf(fx)
+    if (sid != null && SECOND_HALF_STATE_IDS.has(sid) && feedMax >= 47 && feedMax <= 51) {
+      return 46
+    }
+  }
 
   const candidates = [
     fromPeriods,

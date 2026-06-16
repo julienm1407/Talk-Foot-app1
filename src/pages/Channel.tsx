@@ -65,6 +65,7 @@ import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useLiveMatchClockLabel } from '../hooks/useLiveMatchClockLabel'
 import { useLiveMatchForClock } from '../hooks/useLiveMatchForClock'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
+import { useAutoScroll } from '../hooks/useAutoScroll'
 import { formatGoalEventMinute } from '../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
@@ -106,6 +107,7 @@ import {
   cardCoarseDedupeKey,
   extractScorerEventsFromHighlights,
   formatGoalScorerLabel,
+  isPlausibleGoalScorerName,
   parseLiveGoalRowsFromHighlights,
   parseLiveCardRowsFromHighlights,
 } from '../utils/liveFootballOdds'
@@ -475,6 +477,15 @@ function preferFullscreenHighlight(a: Highlight, b: Highlight): Highlight {
   if (b.id.startsWith('sm-event-') && !a.id.startsWith('sm-event-')) return b
   if (a.scorerName?.trim() && !b.scorerName?.trim()) return a
   if (b.scorerName?.trim() && !a.scorerName?.trim()) return b
+  if (a.type === 'But' && b.type === 'But') {
+    const aPlausible = a.minute > 0 && a.minute <= 90
+    const bPlausible = b.minute > 0 && b.minute <= 90
+    if (aPlausible && !bPlausible) return a
+    if (bPlausible && !aPlausible) return b
+    if (aPlausible && bPlausible && a.minute !== b.minute) {
+      return a.minute <= b.minute ? a : b
+    }
+  }
   return a
 }
 
@@ -1391,7 +1402,10 @@ export function ChannelPage() {
       )
     },
   })
-  const chatBottomRef = useRef<HTMLDivElement | null>(null)
+  const chatScrollRef = useAutoScroll<HTMLDivElement>(
+    [filteredChatMessages.length],
+    [match?.id, status],
+  )
   const pageScrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -1411,9 +1425,6 @@ export function ChannelPage() {
     return () => window.clearTimeout(scrollTimer)
   }, [searchParams, match?.id, setSearchParams])
 
-  useEffect(() => {
-    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [filteredChatMessages.length])
   useEffect(() => {
     pageScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
   }, [match?.id, status])
@@ -1724,16 +1735,22 @@ export function ChannelPage() {
       const assist = enriched.assistName?.trim() || goalRow?.assistName
       const delayMs = index * 900
 
+      if (kind === 'goal') {
+        if (h.id.startsWith('sm-comment-') || !scorer || !isPlausibleGoalScorerName(scorer)) {
+          fullscreenShownHighlightIdsRef.current.add(h.id)
+          rememberFullscreenSeenKey(match?.id, fullscreenDedupeKeysRef.current, key)
+          return
+        }
+      }
+
       window.setTimeout(() => {
         if (kind === 'goal') {
           lastGoalFullscreenAtRef.current = Date.now()
-          const scorerLabel = scorer
-            ? formatGoalScorerLabel(scorer, assist, { ownGoal: enriched.ownGoal })
-            : teamLabel
+          const scorerLabel = formatGoalScorerLabel(scorer!, assist, { ownGoal: enriched.ownGoal })
           launchFullscreenEvent(
             'goal',
             'BUT',
-            `${highlightMinuteLabel(enriched)}${scorerLabel ? ` · ${scorerLabel}` : ''}`,
+            `${highlightMinuteLabel(enriched)} · ${scorerLabel}`,
             6200,
             side,
           )
@@ -3139,6 +3156,7 @@ export function ChannelPage() {
             />
             <ChannelPrivateSalonGate matchId={match?.id} light={L}>
             <div
+              ref={chatScrollRef}
               className={cn(
                 'tf-chat-scroll space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
                 isUpcoming
@@ -3211,7 +3229,6 @@ export function ChannelPage() {
                         : 'Aucun message dans cette tribune pour le moment — change de zone ou attends les autres supporters.'}
                     </div>
                   ) : null}
-                  <div ref={chatBottomRef} />
                 </>
               )}
             </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
-export function useAutoScroll<T extends HTMLElement>(deps: unknown[]) {
+/** Scroll auto vers le bas sauf si l’utilisateur a remonté (>80 px du bas). */
+export function useAutoScroll<T extends HTMLElement>(deps: unknown[], resetDeps: unknown[] = []) {
   const ref = useRef<T | null>(null)
   const isLocked = useRef(false)
 
@@ -19,10 +20,25 @@ export function useAutoScroll<T extends HTMLElement>(deps: unknown[]) {
   }, [])
 
   useEffect(() => {
+    isLocked.current = false
     const el = ref.current
     if (!el) return
-    if (isLocked.current) return
-    el.scrollTop = el.scrollHeight
+    const scrollToBottom = () => {
+      el.scrollTop = el.scrollHeight
+    }
+    scrollToBottom()
+    requestAnimationFrame(scrollToBottom)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, resetDeps)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || isLocked.current) return
+    const scrollToBottom = () => {
+      el.scrollTop = el.scrollHeight
+    }
+    scrollToBottom()
+    requestAnimationFrame(scrollToBottom)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 
