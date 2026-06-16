@@ -5,6 +5,7 @@ import {
   TIFO_BOARD_W,
   TIFO_DEFAULT_PALETTE,
   TIFO_MAX_PER_USER_DAY,
+  tifoPixelChargesQuota,
   tifoPixelKey,
 } from '../constants/tifoPixelBoard'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
@@ -124,15 +125,16 @@ export function useMatchTifoPixelsCloud(options: {
 
   const refreshUsage = useCallback(
     async (_sb: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>, _uid: string) => {
-      if (!groupId || !matchId) return
+      if (!groupId || !matchId) return null
       const synced = await syncMatchTifoEngagementBonuses(groupId, matchId)
-      if (!synced) return
+      if (!synced) return null
       setDailyLimit(synced.daily_limit)
       setBonusAllowance(synced.bonus_allowance)
       setRemaining(synced.remaining)
       if (synced.new_bonus_pixels > 0) {
         setEngagementNotice(`+${synced.new_bonus_pixels} pixels bonus gagnés !`)
       }
+      return synced
     },
     [groupId, matchId],
   )
@@ -184,8 +186,9 @@ export function useMatchTifoPixelsCloud(options: {
     const applyPixel = (row: PixelRow, ownerId?: string | null) => {
       const key = tifoPixelKey(row.x, row.y)
       setPixels((prev) => ({ ...prev, [key]: row.color }))
-      if (ownerId) {
-        setPixelOwners((prev) => ({ ...prev, [key]: ownerId }))
+      const resolvedOwner = ownerId ?? row.user_id ?? undefined
+      if (resolvedOwner) {
+        setPixelOwners((prev) => ({ ...prev, [key]: resolvedOwner }))
       }
     }
 
@@ -335,9 +338,10 @@ export function useMatchTifoPixelsCloud(options: {
       await syncRealtimeAuth(sb)
 
       const uid = session.user.id
-      const chargesQuota = !previousColor || previousOwner !== uid
+      const chargesQuota = tifoPixelChargesQuota(previousColor, previousOwner, uid)
       if (chargesQuota && remaining <= 0) {
-        setNotice(`Limite : ${dailyLimit} pixels / jour sur ce match.`)
+        const used = Math.max(0, dailyLimit - remaining)
+        setNotice(`Quota atteint pour aujourd'hui (${used}/${dailyLimit} pixels utilisés).`)
         return false
       }
 
@@ -366,10 +370,13 @@ export function useMatchTifoPixelsCloud(options: {
           else delete next[key]
           return next
         })
-        await refreshUsage(sb, uid)
+        const synced = await refreshUsage(sb, uid)
         const msg = error.message ?? ''
         if (msg.includes('daily_limit') || error.code === 'P0001') {
-          setNotice(`Limite : ${dailyLimit} pixels / jour sur ce match.`)
+          const lim = synced?.daily_limit ?? dailyLimit
+          const rem = synced?.remaining ?? remaining
+          const used = Math.max(0, lim - rem)
+          setNotice(`Quota atteint pour aujourd'hui (${used}/${lim} pixels utilisés).`)
         } else {
           setNotice('Impossible de placer le pixel pour le moment.')
           if (import.meta.env.DEV) console.warn('[Talk Foot] place_match_tifo_pixel:', msg)

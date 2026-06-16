@@ -57,3 +57,14 @@ export function tifoTodayKeyUtc() {
 export function tifoBoardScopeKey(groupId: string, matchId: string) {
   return `${groupId}::${matchId}`
 }
+
+/** Quota consommé ? Case vide ou écrasement d'un autre joueur (pas si propriétaire inconnu). */
+export function tifoPixelChargesQuota(
+  previousColor: string | undefined,
+  previousOwner: string | undefined,
+  uid: string,
+): boolean {
+  if (!previousColor) return true
+  if (!previousOwner) return false
+  return previousOwner !== uid
+}
