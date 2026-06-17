@@ -5,7 +5,9 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { ArticleMarkdown } from '../components/article/ArticleMarkdown'
+import { ArticleProse } from '../components/article/ArticleProse'
 import { useAuth } from '../contexts/AuthContext'
+import { useAppearance } from '../contexts/AppearanceContext'
 import {
   createDraftArticle,
   deleteDraftArticle,
@@ -48,6 +50,7 @@ import {
   type AdminSectionId,
 } from '../components/admin/adminSections'
 import { cn } from '../utils/cn'
+import { TF_TEXT_MUTED } from '../theme/appearanceClasses'
 import { resolveArticleExcerpt } from '../utils/articleExcerpt'
 import { normalizeArticleListHtml } from '../utils/normalizeArticleListHtml'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
@@ -301,6 +304,18 @@ function draftInputFromForm(form: FormState): AdminArticleDraftInput {
 
 export function AdminPage() {
   const { user } = useAuth()
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+  const adLabel = 'tf-admin-field-label text-xs font-bold'
+  const adField =
+    'tf-admin-field mt-1 w-full rounded-xl border px-3 text-sm font-medium outline-none focus:border-sky-400'
+  const adInset = L
+    ? 'rounded-xl border border-slate-200 bg-slate-50 p-3'
+    : 'rounded-xl border border-white/10 bg-[#0a1f35]/70 p-3'
+  const adInsetTitle = L ? 'text-slate-600' : 'text-sky-100/85'
+  const adMuted = L ? 'text-slate-600' : 'text-sky-200/80'
+  const adInputDark =
+    'border-white/15 bg-[#0a1f35] text-sky-50 placeholder:text-sky-200/45'
   const [articles, setArticles] = useState<AdminArticle[]>([])
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -693,7 +708,10 @@ export function AdminPage() {
         status === 'saving' && 'border-sky-300/80 bg-sky-50 text-sky-900',
         status === 'saved' && 'border-emerald-300/80 bg-emerald-50 text-emerald-900',
         status === 'error' && 'border-rose-300/80 bg-rose-50 text-rose-900',
-        status === 'idle' && 'border-slate-200/80 bg-white text-slate-700 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-200',
+        status === 'idle' &&
+          (L
+            ? 'border-slate-200/80 bg-white text-slate-700'
+            : 'border-white/10 bg-[#0a1f35]/85 text-sky-100'),
       )}
     >
       {status === 'saving' && 'Sauvegarde en cours...'}
@@ -707,7 +725,7 @@ export function AdminPage() {
     <Card className="space-y-4 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Titre</label>
+              <label className={adLabel}>Titre</label>
               <Input
                 value={form.title}
                 onChange={(e) =>
@@ -717,19 +735,23 @@ export function AdminPage() {
                     slug: p.id ? p.slug : slugify(e.target.value),
                   }))
                 }
-                className="mt-1"
+                className={cn('mt-1', !L && adInputDark)}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Slug</label>
-              <Input value={form.slug} onChange={(e) => setForm((p) => ({ ...p, slug: slugify(e.target.value) }))} className="mt-1" />
+              <label className={adLabel}>Slug</label>
+              <Input value={form.slug} onChange={(e) => setForm((p) => ({ ...p, slug: slugify(e.target.value) }))} className={cn('mt-1', !L && adInputDark)} />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Tag</label>
+              <label className={adLabel}>Tag</label>
               <select
                 value={form.tag}
                 onChange={(e) => setForm((p) => ({ ...p, tag: e.target.value as FormState['tag'] }))}
-                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className={cn(
+                  adField,
+                  'h-10 font-semibold',
+                  L ? 'border-slate-200 bg-white text-slate-900' : 'border-white/15 bg-[#0a1f35] text-sky-50',
+                )}
               >
                 <option value="Breaking">Breaking</option>
                 <option value="Analyse">Analyse</option>
@@ -738,25 +760,36 @@ export function AdminPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">
+              <label className={adLabel}>
                 Résumé court (chapo)
               </label>
               <textarea
                 value={form.excerpt}
                 onChange={(e) => setForm((p) => ({ ...p, excerpt: e.target.value }))}
                 placeholder="2–3 phrases sous le titre. Si vide, le 1er paragraphe du corps sera utilisé à l’affichage."
-                className="mt-1 min-h-[70px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className={cn(
+                  adField,
+                  'min-h-[70px] py-2',
+                  L ? 'border-slate-200 bg-white text-slate-900' : 'border-white/15 bg-[#0a1f35] text-sky-50 placeholder:text-sky-200/45',
+                )}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Auteur</label>
-              <Input value={form.authorName} onChange={(e) => setForm((p) => ({ ...p, authorName: e.target.value }))} className="mt-1" />
+              <label className={adLabel}>Auteur</label>
+              <Input value={form.authorName} onChange={(e) => setForm((p) => ({ ...p, authorName: e.target.value }))} className={cn('mt-1', !L && adInputDark)} />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Image couverture (URL)</label>
-              <Input value={form.coverImageUrl} onChange={(e) => setForm((p) => ({ ...p, coverImageUrl: e.target.value }))} className="mt-1" />
+              <label className={adLabel}>Image couverture (URL)</label>
+              <Input value={form.coverImageUrl} onChange={(e) => setForm((p) => ({ ...p, coverImageUrl: e.target.value }))} className={cn('mt-1', !L && adInputDark)} />
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                <label
+                  className={cn(
+                    'inline-flex cursor-pointer items-center rounded-xl border px-3 py-2 text-xs font-black',
+                    L
+                      ? 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'
+                      : 'border-white/15 bg-[#0a1f35] text-sky-50 hover:bg-[#12304d]',
+                  )}
+                >
                   {uploadingCoverImage ? 'Import...' : 'Uploader la couverture'}
                   <input
                     type="file"
@@ -784,23 +817,26 @@ export function AdminPage() {
                 <img
                   src={form.coverImageUrl}
                   alt="Couverture"
-                  className="mt-2 h-24 w-full rounded-xl border border-slate-200 object-cover dark:border-slate-700"
+                  className={cn(
+                    'mt-2 h-24 w-full rounded-xl border object-cover',
+                    L ? 'border-slate-200' : 'border-white/15',
+                  )}
                   loading="lazy"
                 />
               ) : null}
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Ligues (CSV)</label>
-              <Input value={form.leagueIds} onChange={(e) => setForm((p) => ({ ...p, leagueIds: e.target.value }))} className="mt-1" placeholder="ligue-1,epl" />
+              <label className={adLabel}>Ligues (CSV)</label>
+              <Input value={form.leagueIds} onChange={(e) => setForm((p) => ({ ...p, leagueIds: e.target.value }))} className={cn('mt-1', !L && adInputDark)} placeholder="ligue-1,epl" />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Clubs (CSV)</label>
-              <Input value={form.clubIds} onChange={(e) => setForm((p) => ({ ...p, clubIds: e.target.value }))} className="mt-1" placeholder="psg,om" />
+              <label className={adLabel}>Clubs (CSV)</label>
+              <Input value={form.clubIds} onChange={(e) => setForm((p) => ({ ...p, clubIds: e.target.value }))} className={cn('mt-1', !L && adInputDark)} placeholder="psg,om" />
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Contenu markdown</label>
-              <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              <label className={adLabel}>Contenu markdown</label>
+              <div className={adInset}>
+                <p className={cn('text-xs font-black uppercase tracking-wide', adInsetTitle)}>
                   Mode simple: collage enrichi (Word / Google Docs)
                 </p>
                 <div
@@ -808,7 +844,12 @@ export function AdminPage() {
                   contentEditable
                   suppressContentEditableWarning
                   onPaste={handlePasteInRichEditor}
-                  className="mt-2 min-h-[130px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className={cn(
+                    'tf-admin-rich-editor mt-2 min-h-[130px] w-full rounded-xl border px-3 py-2 text-sm outline-none focus:border-sky-400',
+                    L
+                      ? 'border-slate-200 bg-white text-slate-900'
+                      : 'border-white/15 bg-[#071c31] text-sky-50',
+                  )}
                 />
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button type="button" variant="soft" className="rounded-xl text-xs" onClick={pasteRichTextAsHtml}>
@@ -862,16 +903,28 @@ export function AdminPage() {
                 ref={markdownRef}
                 value={form.bodyMarkdown}
                 onChange={(e) => setForm((p) => ({ ...p, bodyMarkdown: e.target.value }))}
-                className="mt-1 min-h-[320px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-[13px] leading-relaxed text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className={cn(
+                  'tf-admin-markdown-field mt-1 min-h-[320px] w-full rounded-xl border px-3 py-2 font-mono text-[13px] leading-relaxed outline-none focus:border-sky-400',
+                  L
+                    ? 'border-slate-200 bg-white text-slate-900'
+                    : 'border-white/15 bg-[#071c31] text-sky-50',
+                )}
                 aria-describedby="admin-markdown-help"
               />
-              <p id="admin-markdown-help" className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <p id="admin-markdown-help" className={cn('mt-1 text-xs font-semibold', adMuted)}>
                 Rédaction simple : `##` section (H2), `###` sous-partie (H3), paragraphes séparés par une ligne
                 vide. Listes avec `-` ou `1.` en début de ligne (une puce par ligne). Liens et images
                 `![légende](url)`.
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                <label
+                  className={cn(
+                    'inline-flex cursor-pointer items-center rounded-xl border px-3 py-2 text-xs font-black',
+                    L
+                      ? 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50'
+                      : 'border-white/15 bg-[#0a1f35] text-sky-50 hover:bg-[#12304d]',
+                  )}
+                >
                   {uploadingImage ? 'Import...' : 'Importer une image'}
                   <input
                     type="file"
@@ -884,16 +937,16 @@ export function AdminPage() {
                     }}
                   />
                 </label>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <span className={cn('text-xs font-semibold', adMuted)}>
                   L’image est uploadée puis insérée automatiquement en markdown.
                 </span>
               </div>
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              <div className={adInset}>
+                <p className={cn('text-xs font-black uppercase tracking-wide', adInsetTitle)}>
                   Images detectees dans le texte
                 </p>
                 {markdownImages.length === 0 ? (
-                  <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <p className={cn('mt-2 text-xs font-semibold', adMuted)}>
                     Aucune image dans le markdown pour le moment.
                   </p>
                 ) : (
@@ -901,7 +954,10 @@ export function AdminPage() {
                     {markdownImages.map((img) => (
                       <div
                         key={`${img.index}-${img.url}`}
-                        className="rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-900"
+                        className={cn(
+                          'rounded-xl border p-2',
+                          L ? 'border-slate-200 bg-white' : 'border-white/10 bg-[#0a1f35]',
+                        )}
                       >
                         <img
                           src={img.url}
@@ -909,12 +965,19 @@ export function AdminPage() {
                           className="h-20 w-full rounded-lg object-cover"
                           loading="lazy"
                         />
-                        <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+                        <p className={cn('mt-1 line-clamp-1 text-[11px] font-semibold', L ? 'text-slate-700' : 'text-sky-100')}>
                           {img.alt || `Image ${img.index + 1}`}
                         </p>
-                        <p className="line-clamp-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">{img.url}</p>
+                        <p className={cn('line-clamp-1 text-[10px] font-medium', adMuted)}>{img.url}</p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800">
+                          <label
+                            className={cn(
+                              'inline-flex cursor-pointer items-center rounded-lg border px-2 py-1 text-[11px] font-bold',
+                              L
+                                ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                : 'border-white/15 bg-[#0a1f35] text-sky-50 hover:bg-[#12304d]',
+                            )}
+                          >
                             Remplacer
                             <input
                               type="file"
@@ -943,27 +1006,32 @@ export function AdminPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Planifier (date/heure)</label>
+              <label className={adLabel}>Planifier (date/heure)</label>
               <Input
                 type="datetime-local"
                 value={form.scheduledAt}
                 onChange={(e) => setForm((p) => ({ ...p, scheduledAt: e.target.value }))}
-                className="mt-1"
+                className={cn('mt-1', !L && adInputDark)}
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700/80 dark:text-slate-300">Relecteur (optionnel)</label>
+              <label className={adLabel}>Relecteur (optionnel)</label>
               <Input
                 value={form.reviewedBy}
                 onChange={(e) => setForm((p) => ({ ...p, reviewedBy: e.target.value }))}
-                className="mt-1"
+                className={cn('mt-1', !L && adInputDark)}
                 placeholder="Nom de la relecture"
               />
             </div>
-            <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/70">
+            <div className={cn('sm:col-span-2', adInset)}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-black text-slate-900 dark:text-slate-100">Assistant SEO (FR)</p>
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                <p className={cn('text-sm font-black', L ? 'text-slate-900' : 'text-sky-50')}>Assistant SEO (FR)</p>
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-1 text-xs font-black',
+                    L ? 'bg-white text-slate-700' : 'bg-[#071c31] text-sky-100',
+                  )}
+                >
                   Score : {seoAudit.score}/100
                 </span>
               </div>
@@ -972,7 +1040,7 @@ export function AdminPage() {
                   <li className="text-xs font-semibold text-emerald-700">Très bien : article bien optimisé pour la découverte SEO.</li>
                 ) : (
                   seoAudit.tips.map((tip) => (
-                    <li key={tip} className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    <li key={tip} className={cn('text-xs font-semibold', adMuted)}>
                       - {tip}
                     </li>
                   ))
@@ -1009,22 +1077,30 @@ export function AdminPage() {
           </div>
 
           {previewOpen ? (
-            <Card className="space-y-3 border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/70">
-              <h3 className="font-display text-lg font-black text-tf-dark">Aperçu live</h3>
-              <p className="text-sm font-semibold text-tf-grey dark:text-slate-300">
+            <Card
+              className={cn(
+                'tf-admin-preview-card space-y-3 p-4',
+                L ? 'border-slate-200 bg-slate-50/70' : 'border-white/10 bg-[#071c31]/80',
+              )}
+            >
+              <h3 className="font-display text-lg font-black text-tf-app-fg">Aperçu live</h3>
+              <p className={cn('text-sm font-semibold', TF_TEXT_MUTED)}>
                 {resolveArticleExcerpt({
                   excerpt: form.excerpt,
                   bodyMarkdown: form.bodyMarkdown,
                 }) || 'Aucun résumé (remplis le chapo ou le corps).'}
               </p>
-              <div
-                data-tf-article-tone="light"
-                className="tf-article-prose rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80"
+              <ArticleProse
+                light={L}
+                className={cn(
+                  'tf-admin-article-preview rounded-xl border p-4',
+                  L ? 'border-slate-200 bg-white' : 'border-white/12 bg-[#0a1f35]',
+                )}
               >
                 <ArticleMarkdown
                   markdown={form.bodyMarkdown || '_Commence à écrire : une section `##`, puis des paragraphes._'}
                 />
-              </div>
+              </ArticleProse>
             </Card>
           ) : null}
     </Card>
@@ -1033,12 +1109,12 @@ export function AdminPage() {
   const articleListPanel = (
     <Card className="space-y-3 p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-black text-tf-dark">Articles</h2>
+        <h2 className="font-display text-lg font-black text-tf-app-fg">Articles</h2>
         <Button variant="primary" className="rounded-xl px-3 py-2 text-xs" onClick={() => void createNew()}>
           Nouveau
         </Button>
       </div>
-      {loading ? <p className="text-sm font-semibold text-tf-grey">Chargement...</p> : null}
+      {loading ? <p className={cn('text-sm font-semibold', TF_TEXT_MUTED)}>Chargement...</p> : null}
       <div className="space-y-2">
         {articles.map((a) => (
           <button
@@ -1047,8 +1123,12 @@ export function AdminPage() {
             className={cn(
               'w-full rounded-xl border p-2.5 text-left transition',
               selectedId === a.id
-                ? 'border-sky-300 bg-sky-50 dark:border-sky-700 dark:bg-sky-950/40'
-                : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500',
+                ? L
+                  ? 'border-sky-300 bg-sky-50'
+                  : 'border-sky-500/45 bg-sky-950/35'
+                : L
+                  ? 'border-slate-200 bg-white hover:border-slate-300'
+                  : 'border-white/10 bg-[#0a1f35]/80 hover:border-white/20',
             )}
             onClick={() => {
               setSelectedId(a.id)
@@ -1056,8 +1136,8 @@ export function AdminPage() {
               setStatus('idle')
             }}
           >
-            <p className="line-clamp-1 text-sm font-black text-tf-dark">{a.title}</p>
-            <p className="mt-0.5 text-xs font-semibold text-tf-grey">{statusLabel(a.status)}</p>
+            <p className="line-clamp-1 text-sm font-black text-tf-app-fg">{a.title}</p>
+            <p className={cn('mt-0.5 text-xs font-semibold', TF_TEXT_MUTED)}>{statusLabel(a.status)}</p>
           </button>
         ))}
       </div>
@@ -1065,12 +1145,12 @@ export function AdminPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="tf-admin-studio space-y-6">
       <header className="space-y-1 border-b border-tf-grey-pastel/50 pb-4">
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Accès restreint</p>
-        <h1 className="font-display text-2xl font-black tracking-tight text-tf-dark sm:text-3xl">Administration Talk Foot</h1>
-        <p className="text-sm font-medium text-tf-grey">
-          Connecté en tant que <strong className="text-tf-dark">{user?.email ?? user?.displayName}</strong>
+        <h1 className="font-display text-2xl font-black tracking-tight text-tf-app-fg sm:text-3xl">Administration Talk Foot</h1>
+        <p className={cn('text-sm font-medium', TF_TEXT_MUTED)}>
+          Connecté en tant que <strong className="text-tf-app-fg">{user?.email ?? user?.displayName}</strong>
         </p>
       </header>
 
@@ -1089,21 +1169,21 @@ export function AdminPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <Card className="p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 7 jours</p>
-                  <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views7d ?? 0}</p>
+                  <p className="mt-1 text-2xl font-black text-tf-app-fg">{dashboard?.views7d ?? 0}</p>
                 </Card>
                 <Card className="p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Vues 30 jours</p>
-                  <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.views30d ?? 0}</p>
+                  <p className="mt-1 text-2xl font-black text-tf-app-fg">{dashboard?.views30d ?? 0}</p>
                 </Card>
                 <Card className="p-4">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">Clics CTA 30 jours</p>
-                  <p className="mt-1 text-2xl font-black text-tf-dark">{dashboard?.ctaClicks30d ?? 0}</p>
+                  <p className="mt-1 text-2xl font-black text-tf-app-fg">{dashboard?.ctaClicks30d ?? 0}</p>
                 </Card>
               </div>
 
               {(pendingRefundCount > 0 || moderationAlertCount > 0) && (
                 <Card className="space-y-2 p-4">
-                  <h2 className="font-display text-lg font-black text-tf-dark">À traiter</h2>
+                  <h2 className="font-display text-lg font-black text-tf-app-fg">À traiter</h2>
                   {pendingRefundCount > 0 ? (
                     <button
                       type="button"
@@ -1138,7 +1218,7 @@ export function AdminPage() {
               )}
 
               <Card className="p-4">
-                <h2 className="font-display text-lg font-black text-tf-dark">Top articles (30 jours)</h2>
+                <h2 className="font-display text-lg font-black text-tf-app-fg">Top articles (30 jours)</h2>
                 <div className="mt-3 space-y-2">
                   {dashboard?.topArticles30d?.length ? (
                     dashboard.topArticles30d.map((a) => (
@@ -1170,7 +1250,7 @@ export function AdminPage() {
 
           {activeSection === 'moderation' ? (
             <Card className="p-4">
-              <h2 className="font-display text-lg font-black text-tf-dark">Modération commentaires</h2>
+              <h2 className="font-display text-lg font-black text-tf-app-fg">Modération commentaires</h2>
               <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                 Commentaires signalés ou en attente de validation.
               </p>
@@ -1207,7 +1287,7 @@ export function AdminPage() {
           {activeSection === 'operations' ? (
             <div className="space-y-4">
               <Card className="p-4">
-                <h2 className="font-display text-lg font-black text-tf-dark">Demandes de remboursement</h2>
+                <h2 className="font-display text-lg font-black text-tf-app-fg">Demandes de remboursement</h2>
                 <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                   1. Ouvre le paiement dans Stripe et effectue le remboursement. 2. Préviens l’utilisateur par e-mail. 3. Mets à jour le statut ci-dessous.
                 </p>
@@ -1299,7 +1379,7 @@ export function AdminPage() {
               </Card>
 
               <Card className="border-dashed p-4">
-                <h2 className="font-display text-lg font-black text-tf-dark">Gestion utilisateurs</h2>
+                <h2 className="font-display text-lg font-black text-tf-app-fg">Gestion utilisateurs</h2>
                 <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
                   Recherche de comptes, abonnements et sanctions — section prévue pour les prochaines versions.
                 </p>
@@ -1309,7 +1389,7 @@ export function AdminPage() {
 
           {activeSection === 'team' ? (
             <Card className="p-4">
-              <h2 className="font-display text-lg font-black text-tf-dark">Rôles éditoriaux</h2>
+              <h2 className="font-display text-lg font-black text-tf-app-fg">Rôles éditoriaux</h2>
               <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                 Accès rédaction, relecture et publication des articles.
               </p>
@@ -1344,7 +1424,7 @@ export function AdminPage() {
 
           {activeSection === 'newsletter' ? (
             <Card className="p-4">
-              <h2 className="font-display text-lg font-black text-tf-dark">Newsletter</h2>
+              <h2 className="font-display text-lg font-black text-tf-app-fg">Newsletter</h2>
               <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
                 Une <strong>campagne</strong> = un email groupé envoyé aux abonnés newsletter. Cette zone sert aux emails
                 marketing/infos, pas à publier un article.
@@ -1387,7 +1467,7 @@ export function AdminPage() {
         to="/profile"
         className={cn(
           TF_FOCUS_VISIBLE,
-          'inline-flex min-h-tf-touch items-center justify-center rounded-xl border border-tf-dark bg-white/95 px-5 py-3 text-sm font-semibold font-display text-tf-dark shadow-tf-elev-1 transition hover:bg-tf-electric-soft dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
+          'inline-flex min-h-tf-touch items-center justify-center rounded-xl border border-tf-dark bg-white/95 px-5 py-3 text-sm font-semibold font-display text-tf-app-fg shadow-tf-elev-1 transition hover:bg-tf-electric-soft dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
         )}
       >
         Retour au profil

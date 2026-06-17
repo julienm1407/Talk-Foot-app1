@@ -606,6 +606,50 @@ html[data-tf-appearance='light'] .tf-channel-live .tf-card-prematch::before {
   color: var(--tf-article-fg);
 }
 
+/* Admin rédaction — contraste aligné sur data-tf-appearance (pas prefers-color-scheme). */
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-field-label {
+  color: rgb(var(--tf-app-muted-rgb)) !important;
+}
+
+html[data-tf-appearance='light'] .tf-admin-studio .tf-admin-field-label {
+  color: #475569 !important;
+}
+
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-markdown-field,
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-rich-editor,
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-field {
+  background-color: #071c31 !important;
+  border-color: rgba(148, 163, 184, 0.32) !important;
+  color: #e8f1f8 !important;
+}
+
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-markdown-field::placeholder,
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-rich-editor:empty::before {
+  color: rgba(186, 207, 224, 0.55);
+}
+
+html[data-tf-appearance='light'] .tf-admin-studio .tf-admin-markdown-field,
+html[data-tf-appearance='light'] .tf-admin-studio .tf-admin-rich-editor,
+html[data-tf-appearance='light'] .tf-admin-studio .tf-admin-field {
+  background-color: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.45) !important;
+  color: #0f172a !important;
+}
+
+html:not([data-tf-appearance='light']) .tf-admin-studio .tf-admin-article-preview {
+  background: #0a1f35 !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+html[data-tf-appearance='light'] .tf-admin-studio .tf-admin-article-preview {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+html:not([data-tf-appearance='light']) .tf-admin-studio .text-tf-grey {
+  color: rgb(var(--tf-app-muted-rgb)) !important;
+}
+
 html[data-tf-appearance='light'] .tf-channel-live .tf-card-info {
   background: #f4f9ff;
   border-color: rgba(88, 128, 166, 0.38);
