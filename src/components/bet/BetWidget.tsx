@@ -18,6 +18,11 @@ import {
   type ScorerLineupMeta,
 } from '../../utils/liveFootballOdds'
 import { getBetPickedOutcomeLabel } from '../../utils/betDisplay'
+import {
+  BetSheet1x2Grid,
+  BetSheetMarketCard,
+  BetSheetScorerList,
+} from './BetSheetMarketUi'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -345,8 +350,8 @@ export function BetWidget({
       const bets = resultBetsForSide(side)
       const defaultVisual = {
         shell:
-          'border-2 border-sky-300/80 bg-[#f4f9ff] text-[#011522] hover:border-sky-200 hover:bg-white',
-        odd: 'border-emerald-800/40 bg-white text-emerald-900 shadow-sm',
+          'border-slate-200/90 bg-slate-50/90 text-[#011522] hover:border-emerald-300/70 hover:bg-emerald-50/40',
+        odd: 'border-[#00b39c]/55 bg-[#18d3b8] text-[#042f2a] shadow-sm',
         badge: null as string | null,
       }
       if (!bets.length) return defaultVisual
@@ -394,33 +399,29 @@ export function BetWidget({
     (selection: BetSelection) => {
       const bets = scorerBetsForSelection(selection)
       const defaultVisual = {
-        shell:
-          'border-2 border-sky-300/80 bg-[#f4f9ff] text-[#011522] hover:border-sky-200 hover:bg-white',
+        shell: '',
         badge: null as string | null,
-        odd: 'border-emerald-800/40 bg-white text-emerald-900 shadow-sm',
+        odd: 'border-[#00b39c]/55 bg-[#18d3b8] text-[#042f2a] shadow-sm',
       }
       if (bets.some((b) => b.status === 'won')) {
         return {
-          shell:
-            'border-2 border-emerald-500/80 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-400/35',
+          shell: '',
           badge: 'Gagné ✓',
-          odd: 'text-emerald-800',
+          odd: 'border-emerald-600/50 bg-emerald-500 text-white not-italic',
         }
       }
       if (bets.some((b) => b.status === 'lost')) {
         return {
-          shell:
-            'border-2 border-rose-500/80 bg-rose-100 text-rose-950 ring-2 ring-rose-400/35',
+          shell: '',
           badge: 'Perdu',
-          odd: 'text-rose-800',
+          odd: 'border-rose-500/50 bg-rose-400/90 text-white not-italic',
         }
       }
       if (pending?.market === 'anytime_scorer' && pending.selection === selection) {
         return {
-          shell:
-            'border-2 border-emerald-500/90 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-400/40 shadow-sm',
+          shell: '',
           badge: '✓',
-          odd: 'text-emerald-800',
+          odd: 'border-emerald-700/60 bg-emerald-400 text-emerald-950 ring-2 ring-emerald-500/35',
         }
       }
       return defaultVisual
@@ -1057,6 +1058,16 @@ export function BetWidget({
                   sheetDense ? '-mx-3 mt-3 px-3 py-1.5' : '-mx-4 mt-4 px-4 py-2 sm:-mx-5 sm:px-5',
                 )}
               >
+                <button
+                  type="button"
+                  onClick={() => scrollSheetToSection(x12SectionRef)}
+                  className={cn(
+                    'flex-1 rounded-xl border border-sky-200 bg-sky-50 font-black uppercase tracking-wide text-sky-900 transition hover:bg-sky-100',
+                    sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
+                  )}
+                >
+                  1N2
+                </button>
                 {showScorerMarket ? (
                   <button
                     type="button"
@@ -1069,281 +1080,91 @@ export function BetWidget({
                     Buteurs
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => scrollSheetToSection(x12SectionRef)}
-                  className={cn(
-                    'flex-1 rounded-xl border border-sky-200 bg-sky-50 font-black uppercase tracking-wide text-sky-900 transition hover:bg-sky-100',
-                    sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
-                  )}
+              </div>
+
+              <div ref={x12SectionRef} className={cn(sheetDense ? 'mt-3' : 'mt-4')}>
+                <BetSheetMarketCard
+                  title={isLive ? 'Résultat du match (live)' : 'Résultat du match'}
+                  subtitle="Temps réglementaire · 1N2"
+                  dense={sheetDense}
                 >
-                  1N2
-                </button>
+                  <BetSheet1x2Grid
+                    homeLabel={match.home.shortName}
+                    awayLabel={match.away.shortName}
+                    odds={x12Ready && x12Displayed ? x12Displayed : null}
+                    disabled={!x12Ready || !x12Displayed}
+                    dense={sheetDense}
+                    pickVisual={pickTeamVisual}
+                    pendingSelection={
+                      pending?.market === 'result_1x2'
+                        ? (pending.selection as 'home' | 'draw' | 'away')
+                        : null
+                    }
+                    onSelect={(side, oddsVal) => {
+                      selectPendingPick({
+                        market: 'result_1x2',
+                        selection: side,
+                        odds: oddsVal,
+                        label:
+                          side === 'draw'
+                            ? '1N2 · Nul'
+                            : `1N2 · ${side === 'home' ? match.home.shortName : match.away.shortName}`,
+                      })
+                    }}
+                  />
+                </BetSheetMarketCard>
               </div>
 
               {markets.length > 0 ? (
-                <div ref={scorersSectionRef} className={cn('space-y-2 pb-2', sheetDense ? 'mt-3' : 'mt-4')}>
-                  {markets.map((m) => (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        'rounded-2xl border border-slate-200/70 bg-slate-50/40',
-                        sheetDense ? 'p-2' : 'p-3',
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className={cn('font-black text-slate-900', sheetDense ? 'text-xs' : 'text-sm')}>
-                          {m.label}
-                        </span>
-                        {!m.enabled && (
-                          <Badge className="border-slate-200 bg-slate-100 text-slate-600">
-                            {m.id === 'exact_score' ? 'Live' : 'Pause'}
-                          </Badge>
-                        )}
-                      </div>
-                      {m.scorerSides && m.scorerSides.length > 0 ? (
+                <div ref={scorersSectionRef} className={cn(sheetDense ? 'mt-3' : 'mt-4')}>
+                  {markets.map((m) =>
+                    m.scorerSides && m.scorerSides.length > 0 ? (
+                      <BetSheetMarketCard
+                        key={m.id}
+                        title={m.label}
+                        subtitle="Marque à tout moment"
+                        dense={sheetDense}
+                      >
                         <div
                           className={cn(
-                            'mt-2 overflow-y-auto overscroll-contain pr-0.5',
+                            'overflow-y-auto overscroll-contain pr-0.5',
                             sheetDense
-                              ? 'max-h-[min(52dvh,18rem)] sm:max-h-56'
-                              : 'max-h-[min(60vh,24rem)] sm:max-h-64',
+                              ? 'max-h-[min(52dvh,20rem)] sm:max-h-60'
+                              : 'max-h-[min(60vh,28rem)] sm:max-h-72',
                           )}
                         >
-                          <div
-                            className={cn(
-                              'grid',
-                              sheetDense ? 'grid-cols-1 gap-2' : 'gap-3',
-                              !sheetDense && m.scorerSides.length > 1 ? 'sm:grid-cols-2' : 'grid-cols-1',
-                            )}
-                          >
-                            {m.scorerSides.map((side) => (
-                              <div
-                                key={side.teamLabel}
-                                className={cn(
-                                  'min-w-0 rounded-xl border border-slate-200/90 bg-slate-100/55 shadow-sm',
-                                  sheetDense ? 'p-2' : 'p-2.5',
-                                )}
-                              >
-                                <p
-                                  className={cn(
-                                    'border-b border-slate-200/80 pb-1 text-center font-black uppercase tracking-wide text-slate-600',
-                                    sheetDense ? 'text-[9px]' : 'text-[10px]',
-                                  )}
-                                >
-                                  {side.teamLabel}
-                                </p>
-                                <div
-                                  className={cn(
-                                    'mt-2 grid gap-1.5',
-                                    sheetDense ? 'grid-cols-3' : 'grid-cols-2 gap-2',
-                                  )}
-                                >
-                                  {side.picks.map((p) => {
-                                    const visual = pickScorerVisual(p.id)
-                                    const bets = scorerBetsForSelection(p.id)
-                                    const isSelected =
-                                      pending?.market === 'anytime_scorer' &&
-                                      pending.selection === p.id
-                                    const scoredLive =
-                                      p.disabled && !bets.length && m.id === 'anytime_scorer'
-                                    return (
-                                      <Button
-                                        key={p.id}
-                                        variant="soft"
-                                        className={cn(
-                                          sheetDense
-                                            ? 'h-auto min-h-[2.35rem] flex-col justify-between gap-0.5 rounded-lg px-1 py-1 text-[9px] font-bold leading-tight'
-                                            : 'h-auto min-h-11 flex-col justify-between gap-1 rounded-xl px-2 py-1.5 text-xs font-bold',
-                                          visual.shell,
-                                        )}
-                                        disabled={!m.enabled || p.disabled}
-                                        aria-pressed={isSelected}
-                                        onClick={() => {
-                                          selectPendingPick({
-                                            market: m.id,
-                                            selection: p.id,
-                                            odds: p.odds,
-                                            label: `${m.label} • ${p.label}`,
-                                          })
-                                        }}
-                                      >
-                                        <span
-                                          className={cn(
-                                            'min-w-0 text-center leading-snug sm:text-left',
-                                            sheetDense && 'line-clamp-2',
-                                          )}
-                                        >
-                                          {p.label}
-                                        </span>
-                                        <div className="flex shrink-0 items-center gap-0.5">
-                                          {visual.badge ? (
-                                            <span
-                                              className={cn(
-                                                'font-black uppercase',
-                                                sheetDense ? 'text-[8px]' : 'text-[9px]',
-                                              )}
-                                            >
-                                              {visual.badge}
-                                            </span>
-                                          ) : null}
-                                          <span
-                                            className={cn(
-                                              'font-black tabular-nums',
-                                              visual.odd,
-                                              sheetDense ? 'text-[10px]' : '',
-                                            )}
-                                          >
-                                            {scoredLive ? 'But ✓' : fmtOdds(p.odds)}
-                                          </span>
-                                        </div>
-                                      </Button>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          <BetSheetScorerList
+                            sides={m.scorerSides.map((side) => ({
+                              ...side,
+                              picks: side.picks.map((p) => ({
+                                ...p,
+                                scoredLive:
+                                  p.disabled &&
+                                  m.id === 'anytime_scorer' &&
+                                  scorerBetsForSelection(p.id).length === 0,
+                              })),
+                            }))}
+                            enabled={m.enabled}
+                            dense={sheetDense}
+                            pickVisual={pickScorerVisual}
+                            pendingSelection={
+                              pending?.market === 'anytime_scorer' ? pending.selection : null
+                            }
+                            onSelect={(p) => {
+                              selectPendingPick({
+                                market: m.id,
+                                selection: p.id,
+                                odds: p.odds,
+                                label: `${m.label} • ${p.label}`,
+                              })
+                            }}
+                          />
                         </div>
-                      ) : (
-                        <div
-                          className={cn(
-                            'mt-2 grid gap-2',
-                            m.gridCols === 2 ? 'grid-cols-2' : 'grid-cols-3',
-                          )}
-                        >
-                          {m.picks.map((p) => {
-                            const isScorer = m.id === 'anytime_scorer'
-                            const visual = isScorer ? pickScorerVisual(p.id) : null
-                            const scorerBets = isScorer ? scorerBetsForSelection(p.id) : []
-                            const isSelected =
-                              isScorer &&
-                              pending?.market === 'anytime_scorer' &&
-                              pending.selection === p.id
-                            const scoredLive = isScorer && p.disabled && scorerBets.length === 0
-                            return (
-                              <Button
-                                key={p.id}
-                                variant="soft"
-                                className={cn(
-                                  'min-h-10 justify-between gap-1 rounded-xl px-2 text-xs font-bold',
-                                  isScorer ? 'h-auto min-h-11 flex-col py-1.5' : 'h-10 min-w-0',
-                                  visual?.shell,
-                                )}
-                                disabled={!m.enabled || p.disabled}
-                                aria-pressed={isScorer ? isSelected : undefined}
-                                onClick={() => {
-                                  selectPendingPick({
-                                    market: m.id,
-                                    selection: p.id,
-                                    odds: p.odds,
-                                    label: `${m.label} • ${p.label}`,
-                                  })
-                                }}
-                              >
-                                <span className="min-w-0 text-center leading-snug sm:text-left">
-                                  {p.label}
-                                </span>
-                                <div className="flex shrink-0 items-center gap-1">
-                                  {visual?.badge ? (
-                                    <span className="text-[9px] font-black uppercase">
-                                      {visual.badge}
-                                    </span>
-                                  ) : null}
-                                  <span
-                                    className={cn(
-                                      'font-black tabular-nums',
-                                      visual?.odd ?? 'text-slate-500',
-                                    )}
-                                  >
-                                    {scoredLive ? 'But ✓' : fmtOdds(p.odds)}
-                                  </span>
-                                </div>
-                              </Button>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                      </BetSheetMarketCard>
+                    ) : null,
+                  )}
                 </div>
               ) : null}
-
-              <div ref={x12SectionRef} className={cn(sheetDense ? 'mt-4' : 'mt-5')}>
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                  {isLive ? '1N2 (cotes live)' : '1N2'}
-                </p>
-                <div className={cn('mt-2 grid grid-cols-3', sheetDense ? 'gap-1.5' : 'gap-2')}>
-                  {(['home', 'draw', 'away'] as const).map((side) => {
-                    const visual = pickTeamVisual(side)
-                    const isSelected =
-                      pending?.market === 'result_1x2' && pending.selection === side
-                    const label =
-                      side === 'home'
-                        ? match.home.shortName
-                        : side === 'away'
-                          ? match.away.shortName
-                          : 'Nul'
-                    const odds =
-                      x12OddsPending
-                        ? '…'
-                        : x12Ready && x12Displayed
-                          ? fmtOdds(
-                              side === 'home'
-                                ? x12Displayed.home
-                                : side === 'away'
-                                  ? x12Displayed.away
-                                  : x12Displayed.draw,
-                            )
-                          : '—'
-                    return (
-                      <Button
-                        key={side}
-                        variant="soft"
-                        className={cn(
-                          sheetDense
-                            ? 'h-9 rounded-lg px-2 text-xs font-bold'
-                            : 'h-11 rounded-xl px-3 text-sm font-bold',
-                          side === 'draw'
-                            ? 'flex-col justify-center gap-0.5 text-[10px] leading-tight'
-                            : 'justify-between',
-                          visual.shell,
-                        )}
-                        disabled={!x12Ready || !x12Displayed}
-                        aria-pressed={isSelected}
-                        onClick={() => {
-                          if (!x12Displayed) return
-                          const oddsVal =
-                            side === 'home'
-                              ? x12Displayed.home
-                              : side === 'away'
-                                ? x12Displayed.away
-                                : x12Displayed.draw
-                          selectPendingPick({
-                            market: 'result_1x2',
-                            selection: side,
-                            odds: oddsVal,
-                            label:
-                              side === 'draw'
-                                ? '1N2 · Nul'
-                                : `1N2 · ${side === 'home' ? match.home.shortName : match.away.shortName}`,
-                          })
-                        }}
-                      >
-                        <span className={cn('truncate', side === 'draw' && 'text-[10px] font-semibold')}>
-                          {label}
-                        </span>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {visual.badge ? (
-                            <span className="text-[9px] font-black uppercase">{visual.badge}</span>
-                          ) : null}
-                          <span className="text-xs font-black tabular-nums">{odds}</span>
-                        </div>
-                      </Button>
-                    )
-                  })}
-                </div>
-              </div>
 
               <Link
                 to="/profile"
