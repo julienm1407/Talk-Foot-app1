@@ -347,7 +347,7 @@ export function parseLiveGoalRowsFromHighlights(
     const displayName = compactScorerDisplayName(name)
     if (isMatchTeamLabel(displayName, home, away)) continue
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
-    const slug = slugScorer(name)
+    const slug = slugScorer(displayName)
     if (!slug) continue
     const side = h.side ?? guessSideFromTeams(raw, home, away)
     if (!side) {
@@ -663,7 +663,7 @@ export function groupGoalRowsForHeader(
   const indexByKey = new Map<string, number>()
 
   for (const row of rows) {
-    const slug = slugScorer(row.name)
+    const slug = slugScorer(compactScorerDisplayName(row.name))
     const key = `${slug}|${row.ownGoal ? 'og' : 'g'}`
     const minuteEntry = { minute: row.minute, inSecondHalf: row.inSecondHalf }
     const existingIdx = indexByKey.get(key)

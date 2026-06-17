@@ -122,8 +122,23 @@ function highlightTypeFromComment(rawComment: string, isImportant: boolean): Hig
   return 'Info'
 }
 
+function goalsAreApiDuplicates(a: Highlight, b: Highlight): boolean {
+  if (a.type !== 'But' || b.type !== 'But') return false
+  const idA = goalEventIdentityKey(a)
+  const idB = goalEventIdentityKey(b)
+  if (idA && idB && idA === idB) return true
+  const looseA = goalSemanticKey(a)
+  const looseB = goalSemanticKey(b)
+  if (!looseA || looseB !== looseA) return false
+  const oneCommentOneEvent =
+    (a.id.startsWith('sm-comment-') && b.id.startsWith('sm-event-')) ||
+    (b.id.startsWith('sm-comment-') && a.id.startsWith('sm-event-'))
+  if (!oneCommentOneEvent) return false
+  return Math.abs((a.minute || 0) - (b.minute || 0)) <= 3
+}
+
 function highlightDedupeKey(h: Highlight): string {
-  const goalKey = goalSemanticKey(h)
+  const goalKey = goalEventIdentityKey(h)
   if (goalKey) return `but|${goalKey}`
   const cardKey = cardCoarseDedupeKey(h)
   if (cardKey) {
@@ -151,7 +166,18 @@ function scorerSlugForHighlight(h: Pick<Highlight, 'scorerName' | 'title' | 'det
   return slugScorer(compactScorerDisplayName(scorer))
 }
 
-/** Clé stable but : camp + buteur (ignore le doublon event / commentaire SM avec minutes incohérentes). */
+/** Identifiant unique d'un but (camp + buteur + minute) — préserve les doublés. */
+export function goalEventIdentityKey(
+  h: Pick<Highlight, 'type' | 'minute' | 'side' | 'scorerName' | 'title' | 'detail'>,
+): string | null {
+  if (h.type !== 'But') return null
+  const slug = scorerSlugForHighlight(h)
+  if (!slug) return null
+  const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
+  return `${h.side ?? '?'}|${slug}|${minute}`
+}
+
+/** Camp + buteur seulement (rapprochement commentaire SM ↔ événement). */
 export function goalSemanticKey(h: Pick<Highlight, 'type' | 'minute' | 'side' | 'scorerName' | 'title' | 'detail'>): string | null {
   if (h.type !== 'But') return null
   const slug = scorerSlugForHighlight(h)
@@ -171,8 +197,8 @@ export function highlightFullscreenDedupeKey(h: Pick<Highlight, 'id' | 'minute' 
         : 'other'
   const sideKey = h.side ?? ''
   if (bucket === 'but') {
-    const slug = scorerSlugForHighlight(h)
-    if (slug) return `but|${sideKey}|${slug}`
+    const identity = goalEventIdentityKey(h as Highlight)
+    if (identity) return `but|${identity}`
   }
   if (bucket === 'carton') {
     const slug = scorerSlugForHighlight(h)
@@ -416,12 +442,7 @@ export function extractTimelineHighlightsFromSmFixture(
 
   if (!out.length) return []
 
-  const eventGoalKeys = new Set(
-    out
-      .filter((h) => h.type === 'But' && h.id.startsWith('sm-event-'))
-      .map((h) => goalSemanticKey(h))
-      .filter((k): k is string => Boolean(k)),
-  )
+  const eventGoals = out.filter((h) => h.type === 'But' && h.id.startsWith('sm-event-'))
 
   const eventCardKeys = new Set(
     out
@@ -432,8 +453,7 @@ export function extractTimelineHighlightsFromSmFixture(
 
   const withoutDupComments = out.filter((h) => {
     if (h.type === 'But' && h.id.startsWith('sm-comment-')) {
-      const key = goalSemanticKey(h)
-      if (key && eventGoalKeys.has(key)) return false
+      if (eventGoals.some((ev) => goalsAreApiDuplicates(h, ev))) return false
     }
     if (h.type === 'Carton' && h.id.startsWith('sm-comment-')) {
       const coarse = cardCoarseDedupeKey(h)
@@ -446,6 +466,17 @@ export function extractTimelineHighlightsFromSmFixture(
 
   const byKey = new Map<string, Highlight>()
   for (const h of withoutDupComments) {
+    if (h.type === 'But') {
+      let merged = false
+      for (const [k, prev] of byKey.entries()) {
+        if (prev.type === 'But' && goalsAreApiDuplicates(prev, h)) {
+          byKey.set(k, mergeGoalHighlights(prev, h))
+          merged = true
+          break
+        }
+      }
+      if (merged) continue
+    }
     const k = highlightDedupeKey(h)
     const prev = byKey.get(k)
     if (!prev) {

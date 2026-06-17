@@ -79,6 +79,7 @@ export {
   extractLiveGoalDisplayRowsFromSmFixture,
   extractTimelineHighlightsFromSmFixture,
   highlightFullscreenDedupeKey,
+  goalEventIdentityKey,
   goalSemanticKey,
 } from './extractTimelineHighlightsFromSmFixture'
 export {

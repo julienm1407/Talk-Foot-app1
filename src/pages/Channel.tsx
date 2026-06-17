@@ -84,8 +84,8 @@ import {
   extractLiveGoalDisplayRowsFromSmFixture,
   extractLiveMinuteFromSmFixture,
   fetchSportMonksFixtureEventsWeather,
+  goalEventIdentityKey,
   highlightFullscreenDedupeKey,
-  goalSemanticKey,
   type SmFixture,
   type SmStartingXiPlayer,
 } from '../api/sportMonks'
@@ -454,8 +454,8 @@ function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | nu
 
 function fullscreenEventDedupeKey(h: Highlight, kind: 'goal' | 'card' | 'var'): string {
   if (kind === 'goal') {
-    const semantic = goalSemanticKey(h)
-    if (semantic) return `goal|${semantic}`
+    const identity = goalEventIdentityKey(h)
+    if (identity) return `goal|${identity}`
     if (h.side && h.minute > 0) return `goal|${h.minute}|${h.side}`
   }
   if (kind === 'card') {
@@ -550,30 +550,38 @@ function LiveHeaderScorers({
       )}
       aria-label={align === 'right' ? 'Buteurs extérieur' : 'Buteurs domicile'}
     >
-      {goals.map((g, i) => (
-        <li
-          key={`${g.name}-${g.minutes.map((m) => m.minute).join(',')}-${i}`}
-          className={cn(
-            'flex max-w-[min(100%,11rem)] items-baseline gap-1 text-[10px] font-bold leading-tight sm:max-w-[min(100%,14rem)] sm:text-[11px]',
-            align === 'right' ? 'flex-row-reverse' : 'flex-row',
-            light ? 'text-emerald-800' : 'text-cyan-100',
-          )}
-        >
-          <span
+      {goals.map((g, i) => {
+        const minuteLabels = g.minutes
+          .map((m) => formatGoalEventMinute(m.minute, { inSecondHalf: m.inSecondHalf }) || `${m.minute}'`)
+          .join(', ')
+        return (
+          <li
+            key={`${g.name}-${g.minutes.map((m) => m.minute).join(',')}-${i}`}
             className={cn(
-              'min-w-0 truncate',
-              g.ownGoal && (light ? 'text-red-700' : 'text-red-400'),
+              'max-w-[min(100%,14rem)] text-[10px] font-bold leading-snug sm:max-w-[min(100%,17rem)] sm:text-[11px]',
+              light ? 'text-emerald-800' : 'text-cyan-100',
             )}
           >
-            ⚽ {formatGoalScorerLabel(g.name, null, { ownGoal: g.ownGoal })}
-          </span>
-          <span className={cn('shrink-0 tabular-nums opacity-90', light ? 'text-emerald-900/75' : 'text-cyan-200/80')}>
-            {g.minutes
-              .map((m) => formatGoalEventMinute(m.minute, { inSecondHalf: m.inSecondHalf }) || `${m.minute}'`)
-              .join(', ')}
-          </span>
-        </li>
-      ))}
+            <span
+              className={cn(
+                g.ownGoal && (light ? 'text-red-700' : 'text-red-400'),
+              )}
+            >
+              ⚽ {formatGoalScorerLabel(g.name, null, { ownGoal: g.ownGoal })}
+            </span>
+            {minuteLabels ? (
+              <span
+                className={cn(
+                  'ml-1 tabular-nums opacity-90',
+                  light ? 'text-emerald-900/80' : 'text-cyan-200/85',
+                )}
+              >
+                {minuteLabels}
+              </span>
+            ) : null}
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -1204,17 +1212,31 @@ export function ChannelPage() {
   const [stadiumFxTotal, setStadiumFxTotal] = useState(0)
   const seenReactionIdsRef = useRef(new Set<string>())
   const lastLocalFxAtRef = useRef(0)
-  const pushPaidFxLayer = useCallback((fx: ActivePaidFx, seed = Date.now()) => {
-    const layerId = `fx-${seed}-${Math.random().toString(16).slice(2)}`
-    setStadiumFxTotal((n) => n + 1)
-    setPaidFxLayers((prev) => {
-      const next = [...prev, { layerId, fx, seed }]
-      return next.length > MAX_PAID_FX_LAYERS ? next.slice(-MAX_PAID_FX_LAYERS) : next
-    })
+  const paidFxQueueRef = useRef<{ fx: ActivePaidFx; seed: number }[]>([])
+  const paidFxBusyRef = useRef(false)
+
+  const drainPaidFxQueue = useCallback(() => {
+    if (paidFxBusyRef.current) return
+    const next = paidFxQueueRef.current.shift()
+    if (!next) return
+    paidFxBusyRef.current = true
+    const layerId = `fx-${next.seed}-${Math.random().toString(16).slice(2)}`
+    setPaidFxLayers([{ layerId, fx: next.fx, seed: next.seed }])
     window.setTimeout(() => {
       setPaidFxLayers((prev) => prev.filter((l) => l.layerId !== layerId))
+      paidFxBusyRef.current = false
+      drainPaidFxQueue()
     }, PAID_FX_LAYER_MS)
   }, [])
+
+  const pushPaidFxLayer = useCallback((fx: ActivePaidFx, seed = Date.now()) => {
+    setStadiumFxTotal((n) => n + 1)
+    paidFxQueueRef.current.push({ fx, seed })
+    if (paidFxQueueRef.current.length > MAX_PAID_FX_LAYERS) {
+      paidFxQueueRef.current = paidFxQueueRef.current.slice(-MAX_PAID_FX_LAYERS)
+    }
+    drainPaidFxQueue()
+  }, [drainPaidFxQueue])
   const [livePanelOpen, setLivePanelOpen] = useState(false)
   const [liveMicEnabled, setLiveMicEnabled] = useState(true)
   const [liveCamEnabled, setLiveCamEnabled] = useState(false)
@@ -1748,7 +1770,7 @@ export function ChannelPage() {
 
     const pending = Array.from(pendingByKey.values())
 
-    pending.forEach((h, index) => {
+    pending.forEach((h) => {
       const enriched = highlightWithDetectedSide(h, detectHighlightSide)
       const kind = fullscreenKindFromHighlight(enriched)!
       const key = fullscreenEventDedupeKey(enriched, kind)
@@ -1772,7 +1794,6 @@ export function ChannelPage() {
           : undefined
       const scorer = enriched.scorerName?.trim() || goalRow?.name
       const assist = enriched.assistName?.trim() || goalRow?.assistName
-      const delayMs = index * 900
 
       if (kind === 'goal') {
         if (h.id.startsWith('sm-comment-') || !scorer || !isPlausibleGoalScorerName(scorer)) {
@@ -1780,31 +1801,26 @@ export function ChannelPage() {
           rememberFullscreenSeenKey(match?.id, fullscreenDedupeKeysRef.current, key)
           return
         }
+        lastGoalFullscreenAtRef.current = Date.now()
+        const scorerLabel = formatGoalScorerLabel(scorer!, assist, { ownGoal: enriched.ownGoal })
+        launchFullscreenEvent(
+          'goal',
+          'BUT',
+          `${highlightMinuteLabel(enriched)} · ${scorerLabel}`,
+          6200,
+          side,
+        )
+      } else if (kind === 'card') {
+        launchFullscreenEvent(
+          'card',
+          'CARTON',
+          `${highlightMinuteLabel(enriched)} · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
+          4600,
+          side,
+        )
+      } else {
+        launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(enriched)} ${hlText}`, 5200, side)
       }
-
-      window.setTimeout(() => {
-        if (kind === 'goal') {
-          lastGoalFullscreenAtRef.current = Date.now()
-          const scorerLabel = formatGoalScorerLabel(scorer!, assist, { ownGoal: enriched.ownGoal })
-          launchFullscreenEvent(
-            'goal',
-            'BUT',
-            `${highlightMinuteLabel(enriched)} · ${scorerLabel}`,
-            6200,
-            side,
-          )
-        } else if (kind === 'card') {
-          launchFullscreenEvent(
-            'card',
-            'CARTON',
-            `${highlightMinuteLabel(enriched)} · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
-            4600,
-            side,
-          )
-        } else {
-          launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(enriched)} ${hlText}`, 5200, side)
-        }
-      }, delayMs)
     })
   }, [
     smTimelineHighlights,
