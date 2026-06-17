@@ -826,6 +826,7 @@ export function ChannelPage() {
             : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-100',
     )
   const chSheetTitle = L ? 'text-[#023458]' : 'text-sky-100'
+  const chSheetSubtitle = L ? 'text-[#4d6f8d]' : 'text-sky-200/80'
   const chSideInset =
     'rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] text-center text-xs font-semibold leading-snug text-sky-100'
   const chSideSelect =
@@ -3882,8 +3883,9 @@ export function ChannelPage() {
                   className={chDockBtn(mobilePanel === 'tribune')}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => setMobilePanel('tribune')}
+                  aria-label="Stade — tribune et tifo"
                 >
-                  Tribune
+                  Stade
                 </button>
               </div>
 
@@ -3908,16 +3910,23 @@ export function ChannelPage() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                   >
-            <div className="mb-2 flex items-center justify-between">
-              <p className={cn('text-xs font-black uppercase tracking-wider', chSheetTitle)}>
-                {mobilePanel === 'match'
-                  ? mobileMatchTab === 'compo'
-                    ? 'Composition'
-                    : 'Match'
-                  : mobilePanel === 'paris'
-                    ? 'Paris'
-                    : 'Tribune'}
-              </p>
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className={cn('text-xs font-black uppercase tracking-wider', chSheetTitle)}>
+                  {mobilePanel === 'match'
+                    ? mobileMatchTab === 'compo'
+                      ? 'Composition'
+                      : 'Match'
+                    : mobilePanel === 'paris'
+                      ? 'Paris'
+                      : 'Tribune & tifo'}
+                </p>
+                {mobilePanel === 'tribune' ? (
+                  <p className={cn('mt-0.5 text-[10px] font-semibold leading-snug', chSheetSubtitle)}>
+                    Choisis ta zone et dessine le mur collectif
+                  </p>
+                ) : null}
+              </div>
               <button type="button" onClick={() => setMobilePanel(null)} className={chSheetGhostBtn}>
                 Fermer
               </button>
@@ -4095,10 +4104,24 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'tribune' ? (
-              <div className="space-y-2">
-                <p className="text-xs text-sky-200/80">Tribune actuelle: {tribuneOptions.find((t) => t.id === selectedTribune)?.label}</p>
+              <div className="space-y-2.5">
+                <div
+                  className={cn(
+                    'rounded-lg border px-3 py-2',
+                    L ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-[#0a1f35]/70',
+                  )}
+                >
+                  <p className={cn('text-[10px] font-bold uppercase tracking-wide', chSheetSubtitle)}>
+                    Ta tribune
+                  </p>
+                  <p className={cn('mt-0.5 truncate text-sm font-black', chSheetTitle)}>
+                    {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Neutres'}
+                  </p>
+                </div>
                 {isFinished ? (
-                  <p className="text-[11px] font-semibold text-sky-200/75">Match terminé — changement de tribune indisponible.</p>
+                  <p className={cn('text-[11px] font-semibold', chSheetSubtitle)}>
+                    Match terminé — changement de tribune indisponible.
+                  </p>
                 ) : null}
                 <button
                   type="button"
@@ -4106,12 +4129,13 @@ export function ChannelPage() {
                     setMobilePanel(null)
                     setTribuneModalOpen(true)
                   }}
-                  className="w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-bold text-[#06242a]"
+                  disabled={isFinished}
+                  className="w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-bold text-[#06242a] transition hover:bg-[#2be0c6] disabled:cursor-not-allowed disabled:opacity-55"
                 >
-                  Ouvrir la carte du stade
+                  Changer de tribune
                 </button>
                 {showChannelTifo && channelTifoGroupId && match ? (
-                  <div className="max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+                  <div className="max-h-[min(48dvh,18rem)] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
                     <GroupTifoPanel
                       embedded
                       groupId={channelTifoGroupId}
@@ -4120,7 +4144,11 @@ export function ChannelPage() {
                       isGroupAdmin={false}
                     />
                   </div>
-                ) : null}
+                ) : (
+                  <p className={cn('rounded-lg border px-3 py-2 text-center text-[11px] font-semibold', L ? 'border-slate-200 bg-slate-50 text-[#4d6f8d]' : 'border-white/10 bg-[#0a1f35]/70 text-sky-200/75')}>
+                    Le tifo pixel sera disponible au prochain match à venir ou en direct.
+                  </p>
+                )}
               </div>
             ) : null}
                   </div>
