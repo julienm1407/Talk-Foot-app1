@@ -22,6 +22,7 @@ export type BetSelection =
   | '01'
   | '12'
   | `scor:${'home' | 'away'}:${string}`
+  | `ex:${string}`
 
 /** Infos match figées au moment du pari (affichage pronostic si le match sort du calendrier). */
 export type BetMatchLabel = {

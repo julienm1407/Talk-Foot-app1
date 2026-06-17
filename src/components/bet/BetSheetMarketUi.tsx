@@ -233,6 +233,110 @@ export function BetSheet1x2Grid({
   )
 }
 
+export function BetSheetExactScoreGrid({
+  homeLabel,
+  awayLabel,
+  groups,
+  enabled,
+  dense,
+  pickVisual,
+  pendingSelection,
+  onSelect,
+}: {
+  homeLabel: string
+  awayLabel: string
+  groups: {
+    key: 'home' | 'draw' | 'away'
+    title: string
+    picks: { id: BetSelection; label: string; odds: number; disabled?: boolean }[]
+  }[]
+  enabled: boolean
+  dense?: boolean
+  pickVisual: (selection: BetSelection) => BetPickVisualState
+  pendingSelection?: BetSelection | null
+  onSelect: (pick: { id: BetSelection; label: string; odds: number }) => void
+}) {
+  return (
+    <div className={cn('space-y-3', dense && 'space-y-2')}>
+      {groups.map((group) =>
+        group.picks.length > 0 ? (
+          <div key={group.key}>
+            <p
+              className={cn(
+                'font-black uppercase tracking-wide text-slate-500',
+                dense ? 'text-[9px]' : 'text-[10px]',
+              )}
+            >
+              {group.title}
+            </p>
+            <div
+              className={cn(
+                'mt-1 grid grid-cols-2 gap-1.5 sm:grid-cols-3',
+                dense && 'gap-1',
+              )}
+            >
+              {group.picks.map((p) => {
+                const visual = pickVisual(p.id)
+                const isSelected = pendingSelection === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={!enabled || p.disabled}
+                    aria-pressed={isSelected}
+                    onClick={() => onSelect(p)}
+                    className={cn(
+                      'flex flex-col items-center rounded-xl border-2 px-2 py-2 text-center transition',
+                      dense ? 'py-1.5' : 'py-2.5',
+                      isSelected
+                        ? 'border-emerald-500/80 bg-emerald-50 ring-2 ring-emerald-400/35'
+                        : 'border-slate-200/90 bg-slate-50/80 hover:border-emerald-300/60 hover:bg-white',
+                      visual.shell.includes('emerald-100') && 'border-emerald-500/70 bg-emerald-50/90',
+                      visual.shell.includes('rose-100') && 'border-rose-500/70 bg-rose-50/90',
+                      'disabled:cursor-not-allowed disabled:opacity-50',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'font-black tabular-nums text-slate-900',
+                        dense ? 'text-sm' : 'text-base',
+                      )}
+                    >
+                      {p.label.replace('-', ' - ')}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-1 inline-flex min-w-[3rem] items-center justify-center rounded-lg border-2 px-2 py-0.5 font-black italic tabular-nums',
+                        dense ? 'text-xs' : 'text-sm',
+                        visual.odd,
+                      )}
+                    >
+                      {fmtOdds(p.odds)}
+                    </span>
+                    {visual.badge ? (
+                      <span className="mt-0.5 text-[8px] font-black uppercase text-emerald-800">
+                        {visual.badge}
+                      </span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null,
+      )}
+      <p
+        className={cn(
+          'text-center font-semibold text-slate-400',
+          dense ? 'text-[9px]' : 'text-[10px]',
+        )}
+      >
+        {homeLabel} · extérieur · {awayLabel}
+      </p>
+    </div>
+  )
+}
+
 export function BetSheetScorerList({
   sides,
   enabled,

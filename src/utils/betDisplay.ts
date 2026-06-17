@@ -47,6 +47,8 @@ export function getBetPickTitle(bet: Bet, match: Match | null): string {
   }
   if (bet.market === 'exact_score') {
     const s = String(sel)
+    const ex = /^ex:(\d+):(\d+)$/.exec(s)
+    if (ex) return `Score exact ${ex[1]}-${ex[2]}`
     const score =
       s.length === 2 && /^\d\d$/.test(s) ? `${s[0]}-${s[1]}` : s.replace(/(\d)(\d)/, '$1-$2')
     return `Score exact ${score}`
@@ -206,6 +208,8 @@ export function getBetPickedOutcomeLabel(bet: Bet, match: Match | null): string 
   }
   if (bet.market === 'exact_score') {
     const s = String(sel)
+    const ex = /^ex:(\d+):(\d+)$/.exec(s)
+    if (ex) return `Score ${ex[1]}-${ex[2]}`
     const score =
       s.length === 2 && /^\d\d$/.test(s) ? `${s[0]}-${s[1]}` : s.replace(/(\d)(\d)/, '$1-$2')
     return `Score ${score}`

@@ -1,4 +1,5 @@
 import type { Bet, BetMarket } from '../types/bet'
+import { parseExactScoreSelection } from '../odds/exactScoreOdds'
 import { scorerLineupMatchesScoredGoal } from './liveFootballOdds'
 import { betWinTokenCredit } from './subscriptionEntitlements'
 import { newlyWonBetIds } from './xpGrant'
@@ -11,6 +12,13 @@ const SCORE_KEY_MAP: Record<string, [number, number]> = {
   '11': [1, 1],
   '01': [0, 1],
   '12': [1, 2],
+}
+
+function resolvedScore(selection: Bet['selection']): [number, number] | null {
+  const parsed = parseExactScoreSelection(selection)
+  if (parsed) return [parsed.home, parsed.away]
+  const legacy = SCORE_KEY_MAP[String(selection)]
+  return legacy ?? null
 }
 
 export type SettleMatchBetsOptions = {
@@ -68,7 +76,7 @@ export function settleOpenBetsForMatch(
     }
 
     if (b.market === 'exact_score') {
-      const exp = SCORE_KEY_MAP[b.selection as keyof typeof SCORE_KEY_MAP]
+      const exp = resolvedScore(b.selection)
       const won = Boolean(exp && exp[0] === home && exp[1] === away)
       if (won) {
         const payout = Math.round(b.stake * b.odds)

@@ -21,9 +21,11 @@ import { getBetPickedOutcomeLabel } from '../../utils/betDisplay'
 import { useMatch1x2BetVolume } from '../../hooks/useMatch1x2BetVolume'
 import {
   BetSheet1x2Grid,
+  BetSheetExactScoreGrid,
   BetSheetMarketCard,
   BetSheetScorerList,
 } from './BetSheetMarketUi'
+import { exactScorePicksFrom1x2 } from '../../odds/exactScoreOdds'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -168,6 +170,7 @@ export function BetWidget({
   )
   const sheetScrollRef = useRef<HTMLDivElement>(null)
   const x12SectionRef = useRef<HTMLDivElement>(null)
+  const exactScoreSectionRef = useRef<HTMLDivElement>(null)
   const scorersSectionRef = useRef<HTMLDivElement>(null)
 
   const isUpcoming = match.status === 'upcoming'
@@ -215,6 +218,19 @@ export function BetWidget({
     if (!isLive || oddsAlreadyLiveAdjusted) return x12Resolved
     return adjust1x2OddsForLive(x12Resolved, scoreHome, scoreAway, minuteLive, liveStatExtras)
   }, [x12Resolved, isLive, oddsAlreadyLiveAdjusted, scoreHome, scoreAway, minuteLive, liveStatExtras])
+
+  const exactScorePicks = useMemo(() => {
+    if (!x12Displayed) return []
+    return exactScorePicksFrom1x2(x12Displayed, {
+      liveScore: isLive || scoreHome > 0 || scoreAway > 0 ? { home: scoreHome, away: scoreAway } : null,
+      liveMinute: isLive ? minuteLive : null,
+    })
+  }, [x12Displayed, isLive, scoreHome, scoreAway, minuteLive])
+
+  const userExactScoreBets = useMemo(
+    () => matchBets.filter((b) => b.market === 'exact_score' && b.status !== 'cancelled'),
+    [matchBets],
+  )
 
   const oddsSourceLabel =
     oddsSource === 'talkfoot' ? 'Cotes Talk Foot' : 'Cotes estimées'
@@ -265,6 +281,10 @@ export function BetWidget({
   }, [lineupScorers, scoredButeurs, x12Resolved, isLive, minuteLive, teamAttackIndices])
 
   const isFinished = match.status === 'finished'
+  const exactScoreLiveClosed = isLive && minuteLive >= 80
+  const showExactScoreMarket =
+    exactScorePicks.length > 0 &&
+    (isUpcoming || (isLive && !exactScoreLiveClosed) || (isFinished && userExactScoreBets.length > 0))
   const userScorerBets = useMemo(
     () => matchBets.filter((b) => b.market === 'anytime_scorer' && b.status !== 'cancelled'),
     [matchBets],
@@ -446,6 +466,62 @@ export function BetWidget({
     [pending, scorerBetsForSelection],
   )
 
+  const exactScoreBetsForSelection = useCallback(
+    (selection: BetSelection) =>
+      matchBets.filter(
+        (b) =>
+          b.market === 'exact_score' &&
+          b.selection === selection &&
+          b.status !== 'cancelled',
+      ),
+    [matchBets],
+  )
+
+  const pickExactScoreVisual = useCallback(
+    (selection: BetSelection) => {
+      const bets = exactScoreBetsForSelection(selection)
+      const defaultVisual = {
+        shell: '',
+        badge: null as string | null,
+        odd: 'border-[#00b39c]/55 bg-[#18d3b8] text-[#042f2a] shadow-sm',
+      }
+      if (bets.some((b) => b.status === 'won')) {
+        return {
+          shell: 'border-emerald-500/80 bg-emerald-100',
+          badge: 'Gagné ✓',
+          odd: 'border-emerald-600/50 bg-emerald-500 text-white not-italic',
+        }
+      }
+      if (bets.some((b) => b.status === 'lost')) {
+        return {
+          shell: 'border-rose-500/80 bg-rose-100',
+          badge: 'Perdu',
+          odd: 'border-rose-500/50 bg-rose-400/90 text-white not-italic',
+        }
+      }
+      if (pending?.market === 'exact_score' && pending.selection === selection) {
+        return {
+          shell: '',
+          badge: '✓',
+          odd: 'border-emerald-700/60 bg-emerald-400 text-emerald-950 ring-2 ring-emerald-500/35',
+        }
+      }
+      return defaultVisual
+    },
+    [pending, exactScoreBetsForSelection],
+  )
+
+  const exactScoreGroups = useMemo(() => {
+    const home = exactScorePicks.filter((p) => p.category === 'home')
+    const draw = exactScorePicks.filter((p) => p.category === 'draw')
+    const away = exactScorePicks.filter((p) => p.category === 'away')
+    return [
+      { key: 'home' as const, title: `Victoire ${match.home.shortName}`, picks: home },
+      { key: 'draw' as const, title: 'Match nul', picks: draw },
+      { key: 'away' as const, title: `Victoire ${match.away.shortName}`, picks: away },
+    ]
+  }, [exactScorePicks, match.home.shortName, match.away.shortName])
+
   const scrollSheetToTop = useCallback(() => {
     sheetScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
@@ -465,7 +541,9 @@ export function BetWidget({
       }
       const shouldScroll =
         options?.scrollToConfirm ??
-        (pick.market === 'anytime_scorer' || pick.market === 'result_1x2')
+        (pick.market === 'anytime_scorer' ||
+          pick.market === 'result_1x2' ||
+          pick.market === 'exact_score')
       if (shouldScroll) {
         if (!sheetOpen) setSheetOpen(true)
         requestAnimationFrame(() => {
@@ -1009,7 +1087,7 @@ export function BetWidget({
                     'mt-4 flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between',
                     pending.market === 'anytime_scorer'
                       ? 'border-emerald-300/80 bg-emerald-50/90 ring-2 ring-emerald-400/25'
-                      : pending.market === 'result_1x2'
+                      : pending.market === 'result_1x2' || pending.market === 'exact_score'
                         ? 'border-emerald-300/80 bg-emerald-50/90 ring-2 ring-emerald-400/25'
                         : 'border-blue-200/70 bg-blue-50/60',
                   )}
@@ -1018,7 +1096,7 @@ export function BetWidget({
                     <div
                       className={cn(
                         'text-[10px] font-black uppercase tracking-wide',
-                        pending.market === 'anytime_scorer' || pending.market === 'result_1x2'
+                        pending.market === 'anytime_scorer' || pending.market === 'result_1x2' || pending.market === 'exact_score'
                           ? 'text-emerald-900/80'
                           : 'text-blue-900/70',
                       )}
@@ -1027,7 +1105,9 @@ export function BetWidget({
                           ? 'Buteur sélectionné'
                           : pending.market === 'result_1x2'
                             ? '1N2 sélectionné'
-                            : 'Sélection'}
+                            : pending.market === 'exact_score'
+                              ? 'Score exact sélectionné'
+                              : 'Sélection'}
                     </div>
                     <div className="truncate text-sm font-black text-slate-900">{pending.label}</div>
                     <div className="mt-0.5 text-xs font-semibold text-slate-600">
@@ -1091,6 +1171,18 @@ export function BetWidget({
                 >
                   1N2
                 </button>
+                {showExactScoreMarket ? (
+                  <button
+                    type="button"
+                    onClick={() => scrollSheetToSection(exactScoreSectionRef)}
+                    className={cn(
+                      'flex-1 rounded-xl border border-amber-200 bg-amber-50 font-black uppercase tracking-wide text-amber-900 transition hover:bg-amber-100',
+                      sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
+                    )}
+                  >
+                    Scores
+                  </button>
+                ) : null}
                 {showScorerMarket ? (
                   <button
                     type="button"
@@ -1138,6 +1230,44 @@ export function BetWidget({
                   />
                 </BetSheetMarketCard>
               </div>
+
+              {showExactScoreMarket ? (
+                <div ref={exactScoreSectionRef} className={cn(sheetDense ? 'mt-3' : 'mt-4')}>
+                  <BetSheetMarketCard
+                    title={isLive ? 'Score exact (live)' : 'Score exact'}
+                    subtitle={
+                      exactScoreLiveClosed
+                        ? 'Paris fermés après 80′'
+                        : 'Temps réglementaire · cotes élevées'
+                    }
+                    dense={sheetDense}
+                  >
+                    <BetSheetExactScoreGrid
+                      homeLabel={match.home.shortName}
+                      awayLabel={match.away.shortName}
+                      groups={exactScoreGroups}
+                      enabled={
+                        !isFinished &&
+                        x12Ready &&
+                        !(isLive && (bettingSuspended || exactScoreLiveClosed))
+                      }
+                      dense={sheetDense}
+                      pickVisual={pickExactScoreVisual}
+                      pendingSelection={
+                        pending?.market === 'exact_score' ? pending.selection : null
+                      }
+                      onSelect={(p) => {
+                        selectPendingPick({
+                          market: 'exact_score',
+                          selection: p.id,
+                          odds: p.odds,
+                          label: `Score exact · ${p.label}`,
+                        })
+                      }}
+                    />
+                  </BetSheetMarketCard>
+                </div>
+              ) : null}
 
               {markets.length > 0 ? (
                 <div ref={scorersSectionRef} className={cn(sheetDense ? 'mt-3' : 'mt-4')}>
