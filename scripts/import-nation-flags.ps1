@@ -9,7 +9,7 @@ $map = @{
   HRV = 'hr'; CHE = 'ch'; AUT = 'at'; NOR = 'no'; TUR = 'tr'; SWE = 'se'; BIH = 'ba'; CZE = 'cz'; SCO = 'gb-sct'
   ARG = 'ar'; BRA = 'br'; URY = 'uy'; COL = 'co'; ECU = 'ec'; PRY = 'py'
   USA = 'us'; MEX = 'mx'; CAN = 'ca'; HTI = 'ht'; PAN = 'pa'; CUW = 'cw'
-  MAR = 'ma'; DZA = 'dz'; SEN = 'sn'; TUN = 'tn'; EGY = 'eg'; GHA = 'gh'; CIV = 'ci'; CPV = 'cv'; ZAF = 'za'; COG = 'cg'
+  MAR = 'ma'; DZA = 'dz'; SEN = 'sn'; TUN = 'tn'; EGY = 'eg'; GHA = 'gh'; CIV = 'ci'; CPV = 'cv'; ZAF = 'za'; COG = 'cg'; COD = 'cd'
   JPN = 'jp'; KOR = 'kr'; AUS = 'au'; SAU = 'sa'; QAT = 'qa'; IRQ = 'iq'; IRN = 'ir'; JOR = 'jo'; UZB = 'uz'
   NZL = 'nz'
 }

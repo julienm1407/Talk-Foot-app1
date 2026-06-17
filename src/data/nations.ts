@@ -44,7 +44,7 @@ export type Nation = {
  * maillots restent en cache (le chemin de fichier ne change pas, on importe
  * juste un nouveau binaire). Bump cette constante à chaque import majeur.
  */
-const KIT_ASSET_VERSION = '2026-05-29h'
+const KIT_ASSET_VERSION = '2026-06-17a'
 function jersey(iso: string): string {
   return `/jerseys/nations/${iso.toLowerCase()}.png?v=${KIT_ASSET_VERSION}`
 }
@@ -176,6 +176,10 @@ const NATION_NAME_ALIASES: Record<string, string> = {
   'congo dr': 'COD',
   'dr congo': 'COD',
   'democratic republic of congo': 'COD',
+  'rd congo': 'COD',
+  congo: 'COG',
+  'republic of congo': 'COG',
+  'congo brazzaville': 'COG',
   'saudi arabia': 'SAU',
   'united states': 'USA',
   usa: 'USA',

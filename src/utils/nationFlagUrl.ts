@@ -1,5 +1,5 @@
 /** Bump pour invalider le cache navigateur après import des PNG. */
-export const NATION_FLAG_ASSET_VERSION = '2026-05-29a'
+export const NATION_FLAG_ASSET_VERSION = '2026-06-17a'
 
 /**
  * Codes flagcdn (import script → public/flags/{iso3}.png).
@@ -43,6 +43,7 @@ const ISO3_TO_FLAG_CODE: Record<string, string> = {
   CPV: 'cv',
   ZAF: 'za',
   COG: 'cg',
+  COD: 'cd',
   JPN: 'jp',
   KOR: 'kr',
   AUS: 'au',
