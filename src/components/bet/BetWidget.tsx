@@ -22,6 +22,7 @@ import {
 import { getBetPickedOutcomeLabel } from '../../utils/betDisplay'
 import { useMatch1x2BetVolume } from '../../hooks/useMatch1x2BetVolume'
 import {
+  Bet1x2PickTile,
   BetSheet1x2Grid,
   BetSheetExactScoreGrid,
   BetSheetMarketCard,
@@ -390,33 +391,29 @@ export function BetWidget({
     (side: 'home' | 'away' | 'draw') => {
       const bets = resultBetsForSide(side)
       const defaultVisual = {
-        shell:
-          'border-slate-200/90 bg-slate-50/90 text-[#011522] hover:border-emerald-300/70 hover:bg-emerald-50/40',
+        shell: '',
         odd: 'border-[#00b39c]/55 bg-[#18d3b8] text-[#042f2a] shadow-sm',
         badge: null as string | null,
       }
       if (!bets.length) return defaultVisual
       if (bets.some((b) => b.status === 'won')) {
         return {
-          shell:
-            'border-2 border-emerald-500/80 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-400/35',
-          odd: 'border-emerald-700/50 bg-emerald-600/20 text-emerald-950',
+          shell: '',
+          odd: 'border-emerald-600/50 bg-emerald-500 text-white not-italic',
           badge: 'Gagné ✓',
         }
       }
       if (bets.some((b) => b.status === 'lost')) {
         return {
-          shell:
-            'border-2 border-rose-500/80 bg-rose-100 text-rose-950 ring-2 ring-rose-400/35',
-          odd: 'border-rose-700/50 bg-rose-600/15 text-rose-950',
+          shell: '',
+          odd: 'border-rose-500/50 bg-rose-400/90 text-white not-italic',
           badge: 'Perdu',
         }
       }
       if (pending?.market === 'result_1x2' && pending.selection === side) {
         return {
-          shell:
-            'border-2 border-emerald-500/90 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-400/40 shadow-sm',
-          odd: 'border-emerald-700/50 bg-emerald-600/15 text-emerald-950',
+          shell: '',
+          odd: 'border-emerald-700/60 bg-emerald-400 text-emerald-950 ring-2 ring-emerald-500/35',
           badge: '✓',
         }
       }
@@ -567,16 +564,23 @@ export function BetWidget({
     })
   }, [scrollSheetToSection])
 
-  const pickQuick = (side: 'home' | 'away') => {
-    if (!x12Displayed) return
-    const odds = side === 'home' ? x12Displayed.home : x12Displayed.away
-    selectPendingPick({
-      market: 'result_1x2',
-      selection: side,
-      odds,
-      label: side === 'home' ? `1N2 · ${match.home.shortName}` : `1N2 · ${match.away.shortName}`,
-    })
-  }
+  const pick1x2Side = useCallback(
+    (side: 'home' | 'draw' | 'away') => {
+      if (!x12Displayed) return
+      const odds =
+        side === 'home' ? x12Displayed.home : side === 'away' ? x12Displayed.away : x12Displayed.draw
+      selectPendingPick({
+        market: 'result_1x2',
+        selection: side,
+        odds,
+        label:
+          side === 'draw'
+            ? '1N2 · Nul'
+            : `1N2 · ${side === 'home' ? match.home.name : match.away.name}`,
+      })
+    },
+    [match.away.name, match.home.name, selectPendingPick, x12Displayed],
+  )
 
   const placePending = () => {
     if (!pending) return
@@ -628,21 +632,6 @@ export function BetWidget({
 
   const potentialReturn = pending ? Math.round(stake * pending.odds * 10) / 10 : 0
   const compactProminent = compact && prominent
-  const pickBtnCompactClass = compactProminent
-    ? 'tf-bet-pick--prominent !flex !h-12 !min-h-12 !max-h-12 flex-col items-center justify-center gap-0.5 !rounded-xl !px-2 !py-1.5 text-[11px] leading-tight shadow-[0_2px_10px_rgba(2,12,28,0.18),inset_0_1px_0_rgba(255,255,255,0.95)]'
-    : compact
-      ? 'tf-bet-pick--compact !flex !h-10 !min-h-10 !max-h-10 flex-row items-center justify-between gap-1.5 !rounded-lg !px-2.5 !py-0 text-[11px] leading-tight shadow-[0_2px_8px_rgba(2,12,28,0.14),inset_0_1px_0_rgba(255,255,255,0.95)]'
-      : 'min-h-11 flex-col items-stretch gap-1 rounded-xl border-2 px-3 py-2 text-sm shadow-[0_4px_14px_rgba(2,12,28,0.22),inset_0_1px_0_rgba(255,255,255,0.92)] sm:min-h-0 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4 sm:py-2 sm:h-10'
-  const pickNameCompactClass = compactProminent
-    ? 'text-[10px] font-black uppercase tracking-wide text-[#011522]/85'
-    : compact
-      ? 'text-[11px]'
-      : 'overflow-hidden text-ellipsis'
-  const pickOddCompactClass = compactProminent
-    ? 'px-2 py-0.5 text-sm'
-    : compact
-      ? 'px-1.5 py-0.5 text-[10px]'
-      : 'rounded-md px-1.5 py-0.5 text-xs'
 
   return (
     <div
@@ -767,137 +756,44 @@ export function BetWidget({
           compact ? 'mt-2.5' : 'mt-3',
         )}
       >
-        <div
-          className={cn(
-            'grid',
-            compactProminent ? 'grid-cols-3 gap-2' : 'grid-cols-2',
-            compact && !compactProminent ? 'gap-1.5' : compactProminent ? '' : 'gap-2 sm:gap-2.5',
-          )}
-        >
-          {(['home', 'away'] as const).map((side) => {
-            const visual = pickTeamVisual(side)
-            const label = side === 'home' ? match.home.shortName : match.away.shortName
-            const odds =
+        <div className={cn('grid grid-cols-3', compact ? 'gap-1.5' : 'gap-2')}>
+          {(
+            [
+              { side: 'home' as const, label: match.home.name },
+              { side: 'draw' as const, label: 'Nul' },
+              { side: 'away' as const, label: match.away.name },
+            ] as const
+          ).map(({ side, label }) => {
+            const oddsVal =
               x12Ready && x12Displayed
-                ? fmtOdds(side === 'home' ? x12Displayed.home : x12Displayed.away)
-                : x12UnavailableLabel
+                ? side === 'home'
+                  ? x12Displayed.home
+                  : side === 'away'
+                    ? x12Displayed.away
+                    : x12Displayed.draw
+                : null
+            const oddsLabel =
+              oddsVal != null && oddsVal >= 1.01 ? fmtOdds(oddsVal) : x12UnavailableLabel
             return (
-              <Button
+              <Bet1x2PickTile
                 key={side}
-                variant="soft"
-                title={`Pari 1N2 — ${label}`}
-                disabled={!x12Ready || !x12Displayed}
-                className={cn(
-                  'tf-bet-pick min-w-0 overflow-hidden font-bold',
-                  pickBtnCompactClass,
-                  visual.shell,
-                  compact && !compactProminent && '!border',
-                  'disabled:border-slate-400/35 disabled:bg-slate-200/50 disabled:text-slate-500 disabled:opacity-[0.88]',
-                )}
-                onClick={() => pickQuick(side)}
-              >
-                <span
-                  className={cn(
-                    'tf-bet-pick-name min-w-0 truncate font-extrabold text-[#011522]',
-                    pickNameCompactClass,
-                  )}
-                >
-                  {label}
-                </span>
-                <div
-                  className={cn(
-                    'flex min-w-0 shrink-0 items-center',
-                    compactProminent ? 'flex-col gap-0' : compact ? 'gap-0.5' : 'gap-1.5 self-end sm:self-auto',
-                  )}
-                >
-                  {visual.badge ? (
-                    <span
-                      className={cn(
-                        'shrink-0 rounded px-0.5 font-black uppercase tracking-wide',
-                        compact && !compactProminent ? 'text-[7px]' : compactProminent ? 'text-[8px]' : 'rounded-md px-1 py-0.5 text-[8px] sm:text-[9px]',
-                      )}
-                    >
-                      {visual.badge}
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      'tf-bet-pick-odd shrink-0 rounded border font-black tabular-nums',
-                      pickOddCompactClass,
-                      visual.odd,
-                    )}
-                  >
-                    {odds}
-                  </span>
-                </div>
-              </Button>
+                side={side}
+                label={label}
+                oddsLabel={oddsLabel}
+                disabled={!x12Ready || !x12Displayed || !oddsVal || oddsVal < 1.01}
+                dense={compact}
+                inline
+                pickVisual={pickTeamVisual(side)}
+                isSelected={pending?.market === 'result_1x2' && pending.selection === side}
+                onClick={() => pick1x2Side(side)}
+              />
             )
           })}
-          {compactProminent ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (!x12Displayed) return
-                selectPendingPick({
-                  market: 'result_1x2',
-                  selection: 'draw',
-                  odds: x12Displayed.draw,
-                  label: '1N2 · Nul',
-                })
-              }}
-              className="tf-bet-soft tf-bet-pick tf-bet-pick--prominent flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-sky-400/50 bg-[#102f4d] px-2 py-1.5 text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-sky-300/80 hover:bg-[#153a5c] disabled:opacity-50"
-              disabled={!x12Ready || !x12Displayed}
-              title="Pari 1N2 — nul"
-            >
-              <span className="text-[10px] font-black uppercase tracking-wide text-sky-200/90">Nul</span>
-              <span className="tf-bet-pick-odd text-sm font-black tabular-nums text-cyan-100">
-                {x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : x12UnavailableLabel}
-              </span>
-            </button>
-          ) : null}
         </div>
-        {compact && !compactProminent ? (
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (!x12Displayed) return
-                selectPendingPick({
-                  market: 'result_1x2',
-                  selection: 'draw',
-                  odds: x12Displayed.draw,
-                  label: '1N2 · Nul',
-                })
-              }}
-              className="tf-bet-soft tf-bet-mini tf-bet-mini-pick rounded-lg border border-sky-400/50 bg-[#102f4d] px-2 py-1.5 text-left text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-sky-300/80 hover:bg-[#153a5c]"
-              disabled={!x12Ready || !x12Displayed}
-              title="Pari 1N2 — nul"
-            >
-              <span className="block text-[10px] font-bold text-sky-200">Nul</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">
-                {x12Ready && x12Displayed ? fmtOdds(x12Displayed.draw) : x12UnavailableLabel}
-              </span>
-            </button>
-            <Link
-              to="/pronostic"
-              className="tf-bet-soft tf-bet-mini block rounded-lg border border-sky-400/45 bg-[#102f4d] px-2 py-1.5 text-left text-[11px] font-bold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-300/70 hover:bg-[#153a5c]"
-            >
-              <span className="block text-[10px] font-bold text-sky-200">Mes paris</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-cyan-100">{openBets.length}</span>
-            </Link>
-            <Link
-              to="/pronostic"
-              className="tf-bet-soft tf-bet-mini block rounded-lg border border-emerald-400/45 bg-[#12344f] px-2 py-1.5 text-left text-[11px] font-bold text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-emerald-300/70 hover:bg-[#18435f]"
-            >
-              <span className="block text-[10px] font-bold text-emerald-200">Validés</span>
-              <span className="tf-bet-mini-odd text-sm font-black tabular-nums text-emerald-100">{settled.length}</span>
-            </Link>
-          </div>
-        ) : null}
 
         <div
           className={cn(
-            'tf-bet-soft flex items-center justify-between rounded-xl border border-[#3f6f97]/55 bg-[#0d2842]/75 px-2.5 sm:px-3',
+            'tf-bet-soft flex items-center justify-between rounded-xl border border-[#3f6f97]/55 bg-[#0d2842]/90 px-2.5 sm:px-3',
             compact ? 'py-2' : 'py-2',
           )}
         >
@@ -1230,8 +1126,8 @@ export function BetWidget({
                   dense={sheetDense}
                 >
                   <BetSheet1x2Grid
-                    homeLabel={match.home.shortName}
-                    awayLabel={match.away.shortName}
+                    homeLabel={match.home.name}
+                    awayLabel={match.away.name}
                     odds={x12Ready && x12Displayed ? x12Displayed : null}
                     disabled={!x12Ready || !x12Displayed}
                     dense={sheetDense}
@@ -1249,7 +1145,7 @@ export function BetWidget({
                         label:
                           side === 'draw'
                             ? '1N2 · Nul'
-                            : `1N2 · ${side === 'home' ? match.home.shortName : match.away.shortName}`,
+                            : `1N2 · ${side === 'home' ? match.home.name : match.away.name}`,
                       })
                     }}
                     betShares={bet1x2Shares}

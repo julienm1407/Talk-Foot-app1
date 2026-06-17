@@ -26,10 +26,12 @@ function BetImpliedBar({
   share,
   tone,
   dense,
+  dark,
 }: {
   share: number
   tone: 'fav' | 'mid' | 'out'
   dense?: boolean
+  dark?: boolean
 }) {
   const fill =
     tone === 'fav'
@@ -40,7 +42,8 @@ function BetImpliedBar({
   return (
     <div
       className={cn(
-        'mt-1.5 w-full overflow-hidden rounded-full bg-slate-200/90',
+        'mt-1.5 w-full overflow-hidden rounded-full',
+        dark ? 'bg-white/12' : 'bg-slate-200/90',
         dense ? 'h-1' : 'h-1.5',
       )}
       aria-hidden="true"
@@ -50,6 +53,142 @@ function BetImpliedBar({
         style={{ width: share <= 0 ? '0%' : `${Math.min(100, share)}%` }}
       />
     </div>
+  )
+}
+
+function resolve1x2TileShell(opts: {
+  light: boolean
+  visual: BetPickVisualState
+  isSelected: boolean
+  side: 'home' | 'draw' | 'away'
+  inline?: boolean
+}): string {
+  const { light, visual, isSelected, side, inline } = opts
+  if (visual.badge === 'Gagné ✓') {
+    return light
+      ? 'border-2 border-emerald-500/80 bg-emerald-100 ring-2 ring-emerald-400/35'
+      : 'border-2 border-emerald-400/70 bg-emerald-500/15 ring-2 ring-emerald-400/35'
+  }
+  if (visual.badge === 'Perdu') {
+    return light
+      ? 'border-2 border-rose-500/80 bg-rose-100 ring-2 ring-rose-400/35'
+      : 'border-2 border-rose-400/70 bg-rose-500/15 ring-2 ring-rose-400/35'
+  }
+  if (isSelected || visual.badge === '✓') {
+    return light
+      ? 'border-2 border-emerald-500/85 bg-emerald-50 ring-2 ring-emerald-400/40 shadow-sm'
+      : 'border-2 border-emerald-400/70 bg-emerald-500/12 ring-2 ring-emerald-400/35'
+  }
+  if (inline || !light) {
+    if (side === 'draw') {
+      return 'border border-amber-400/40 bg-[#1a3048] hover:border-amber-300/55 hover:bg-[#203a56] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+    }
+    if (side === 'home') {
+      return 'border border-sky-400/40 bg-[#122c48] hover:border-sky-300/55 hover:bg-[#163556] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+    }
+    return 'border border-violet-400/35 bg-[#142945] hover:border-violet-300/50 hover:bg-[#183152] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+  }
+  if (side === 'draw') {
+    return 'border-2 border-amber-200/90 bg-amber-50/80 hover:border-amber-300 hover:bg-amber-50'
+  }
+  if (side === 'home') {
+    return 'border-2 border-sky-200/90 bg-sky-50/70 hover:border-sky-300 hover:bg-sky-50'
+  }
+  return 'border-2 border-violet-200/90 bg-violet-50/70 hover:border-violet-300 hover:bg-violet-50'
+}
+
+export function Bet1x2PickTile({
+  side,
+  label,
+  oddsLabel,
+  share,
+  disabled,
+  dense,
+  inline,
+  pickVisual,
+  isSelected,
+  onClick,
+}: {
+  side: 'home' | 'draw' | 'away'
+  label: string
+  oddsLabel: string
+  share?: number
+  disabled?: boolean
+  dense?: boolean
+  inline?: boolean
+  pickVisual: BetPickVisualState
+  isSelected?: boolean
+  onClick: () => void
+}) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+  const darkSurface = inline || !L
+  const visual = pickVisual
+  const shell = resolve1x2TileShell({
+    light: L,
+    visual,
+    isSelected: Boolean(isSelected),
+    side,
+    inline,
+  })
+  const sideTag =
+    side === 'draw' ? 'Match nul' : side === 'home' ? 'Domicile' : 'Extérieur'
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-pressed={isSelected}
+      onClick={onClick}
+      className={cn(
+        'flex min-w-0 flex-col items-center rounded-2xl px-1.5 text-center transition',
+        dense ? 'py-2' : 'py-2.5',
+        shell,
+        'disabled:cursor-not-allowed disabled:opacity-55',
+      )}
+    >
+      <span
+        className={cn(
+          'font-black uppercase tracking-[0.14em]',
+          darkSurface ? 'text-sky-200/75' : 'text-slate-500',
+          dense ? 'text-[8px]' : 'text-[9px]',
+        )}
+      >
+        {sideTag}
+      </span>
+      <span
+        className={cn(
+          'mt-0.5 line-clamp-2 w-full font-black leading-tight',
+          darkSurface ? 'text-white' : 'text-slate-900',
+          dense ? 'text-[11px]' : 'text-xs sm:text-sm',
+        )}
+      >
+        {label}
+      </span>
+      <span
+        className={cn(
+          'mt-1.5 inline-flex min-w-[3.25rem] items-center justify-center rounded-xl border-2 font-black italic tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
+          dense ? 'px-2.5 py-1 text-sm' : 'min-w-[3.5rem] px-3 py-1.5 text-base',
+          visual.odd,
+        )}
+      >
+        {oddsLabel}
+      </span>
+      {visual.badge && visual.badge !== '✓' ? (
+        <span
+          className={cn(
+            'mt-0.5 font-black uppercase',
+            darkSurface ? 'text-emerald-300' : 'text-emerald-800',
+            dense ? 'text-[8px]' : 'text-[9px]',
+          )}
+        >
+          {visual.badge}
+        </span>
+      ) : null}
+      {share != null ? (
+        <BetImpliedBar share={share} tone={share >= 40 ? 'fav' : share >= 18 ? 'mid' : 'out'} dense={dense} dark={darkSurface} />
+      ) : null}
+    </button>
   )
 }
 
@@ -166,79 +305,36 @@ export function BetSheet1x2Grid({
   /** Parts des paris communautaires (0–100). Si absent ou tout à 0, barres vides. */
   betShares?: [number, number, number]
 }) {
-  const { appearance } = useAppearance()
-  const L = appearance === 'light'
   const shares = betShares ?? [0, 0, 0]
   const sides = [
     { side: 'home' as const, label: homeLabel, share: shares[0] ?? 0 },
     { side: 'draw' as const, label: 'Nul', share: shares[1] ?? 0 },
     { side: 'away' as const, label: awayLabel, share: shares[2] ?? 0 },
   ]
-  const toneForShare = (share: number, maxShare: number): 'fav' | 'mid' | 'out' => {
-    if (share <= 0) return 'out'
-    if (maxShare <= 0) return 'out'
-    if (share >= maxShare - 1) return 'fav'
-    if (share >= maxShare * 0.55) return 'mid'
-    return 'out'
-  }
-  const maxShare = Math.max(...shares, 0)
 
   return (
     <div className={cn('grid grid-cols-3', dense ? 'gap-1.5' : 'gap-2')}>
       {sides.map(({ side, label, share }) => {
-        const visual = pickVisual(side)
-        const isSelected = pendingSelection === side
         const oddsVal =
           side === 'home' ? odds?.home : side === 'away' ? odds?.away : odds?.draw
         const oddsLabel =
           oddsVal != null && oddsVal >= 1.01 ? fmtOdds(oddsVal) : '—'
         return (
-          <button
+          <Bet1x2PickTile
             key={side}
-            type="button"
+            side={side}
+            label={label}
+            oddsLabel={oddsLabel}
+            share={share}
             disabled={disabled || !odds || !oddsVal || oddsVal < 1.01}
-            aria-pressed={isSelected}
+            dense={dense}
+            pickVisual={pickVisual(side)}
+            isSelected={pendingSelection === side}
             onClick={() => {
               if (!oddsVal || oddsVal < 1.01) return
               onSelect(side, oddsVal)
             }}
-            className={cn(
-              'flex min-w-0 flex-col items-center rounded-2xl border-2 px-1.5 py-2 text-center transition',
-              dense ? 'py-1.5' : 'py-2.5',
-              visual.shell,
-              isSelected && 'ring-2 ring-emerald-400/45',
-              'disabled:cursor-not-allowed disabled:opacity-55',
-            )}
-          >
-            <span
-              className={cn(
-                'line-clamp-2 w-full font-bold leading-tight',
-                L ? 'text-slate-700' : 'text-tf-app-fg',
-                dense ? 'text-[10px]' : 'text-[11px]',
-              )}
-            >
-              {label}
-            </span>
-            <span
-              className={cn(
-                'mt-1 font-black italic tabular-nums',
-                TF_TEXT_FG,
-                dense ? 'text-lg' : 'text-xl',
-              )}
-            >
-              {oddsLabel}
-            </span>
-            {visual.badge && visual.badge !== '✓' ? (
-              <span className="mt-0.5 text-[9px] font-black uppercase text-emerald-800">
-                {visual.badge}
-              </span>
-            ) : null}
-            <BetImpliedBar
-              share={share}
-              tone={toneForShare(share, maxShare)}
-              dense={dense}
-            />
-          </button>
+          />
         )
       })}
     </div>
