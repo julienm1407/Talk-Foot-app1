@@ -18,6 +18,7 @@ export type SmLineupSource = 'confirmed' | 'probable' | 'estimated' | 'unknown'
 
 export type SmMatchLineupBundle = {
   starters: SmStartingXIs | null
+  bench: SmStartingXIs | null
   formations: { home?: string; away?: string }
   source: SmLineupSource
 }
@@ -113,6 +114,36 @@ function playerPhotoUrl(row: SmLineupRow): string | undefined {
   const raw = p && typeof p === 'object' ? (p as { image_path?: string | null }).image_path : undefined
   const url = typeof raw === 'string' ? raw.trim() : ''
   return url || undefined
+}
+
+function takeBenchFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
+  const pool = rows.filter((r) => isBenchRow(r))
+  const items: Array<{
+    label: string
+    j: number
+    playerId?: number
+    photoUrl?: string
+  }> = []
+  for (const r of pool) {
+    const label = playerLabel(r)
+    if (!label) continue
+    const j = jerseyNumber(r)
+    const playerId =
+      typeof r.player_id === 'number'
+        ? r.player_id
+        : typeof r.player?.id === 'number'
+          ? r.player.id
+          : undefined
+    const photoUrl = playerPhotoUrl(r)
+    items.push({ label, j, playerId, photoUrl })
+  }
+  items.sort((a, b) => a.j - b.j)
+  return items.map(({ label, j, playerId, photoUrl }) => ({
+    label,
+    number: j < 100 ? String(j) : undefined,
+    playerId,
+    photoUrl,
+  }))
 }
 
 function takeXiFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
@@ -235,7 +266,7 @@ export function extractMatchLineupBundleFromFixture(
     if (homeId == null || awayId == null) return null
     const formations = extractFormations(fixture, homeId, awayId)
     if (!formations.home && !formations.away) return null
-    return { starters: null, formations, source: 'unknown' }
+    return { starters: null, bench: null, formations, source: 'unknown' }
   }
 
   const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
@@ -246,11 +277,13 @@ export function extractMatchLineupBundleFromFixture(
   const pa = pickSidePool(away)
   const hx = takeXiFromRows(ph.rows)
   const ax = takeXiFromRows(pa.rows)
+  const benchHome = takeBenchFromRows(home)
+  const benchAway = takeBenchFromRows(away)
   const formations = extractFormations(fixture, homeId, awayId)
 
   if (!hx.length && !ax.length) {
     if (!formations.home && !formations.away) return null
-    return { starters: null, formations, source: 'unknown' }
+    return { starters: null, bench: null, formations, source: 'unknown' }
   }
 
   const source =
@@ -261,8 +294,11 @@ export function extractMatchLineupBundleFromFixture(
         : ax.length
           ? pa.source
           : 'unknown'
+  const bench =
+    benchHome.length || benchAway.length ? { home: benchHome, away: benchAway } : null
   return {
     starters: { home: hx, away: ax },
+    bench,
     formations,
     source,
   }

@@ -618,6 +618,8 @@ export function extractScorerEventsFromHighlights(
 export type ScorerLineupMeta = {
   formationPosition?: number
   formationField?: string
+  /** Titulaire annoncé ; remplaçants / banc → false (cote plus haute). */
+  isStarter?: boolean
 }
 
 /**
@@ -658,7 +660,7 @@ export function anytimeScorerOdds(
     {
       name,
       side,
-      isStarter: true,
+      isStarter: meta?.isStarter !== false,
       formationPosition: meta?.formationPosition,
     },
     attack,

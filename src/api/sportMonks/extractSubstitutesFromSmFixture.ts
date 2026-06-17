@@ -1,4 +1,5 @@
 import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
+import { slugScorer } from '../../utils/liveFootballOdds'
 import type { SmFixture, SmFixtureCommentRow, SmFixtureEventRow, SmLineupRow } from './types'
 
 export type LineupSubstitutePlayer = {
@@ -359,4 +360,23 @@ export function extractSubstitutesFromSmFixture(
   target.away.sort(byMinute)
 
   return target
+}
+
+function slugPlayerName(name: string): string {
+  return slugScorer(name)
+}
+
+/** Joueurs sortis en cours de match (`side:slug`) — pari buteur fermé sauf s’ils ont déjà marqué. */
+export function extractSubbedOffPlayerKeys(
+  fixture: SmFixture | null | undefined,
+): Set<string> {
+  const subs = extractSubstitutesFromSmFixture(fixture)
+  const keys = new Set<string>()
+  for (const side of ['home', 'away'] as const) {
+    for (const sub of subs[side]) {
+      const slug = slugPlayerName(sub.replacedPlayerName)
+      if (slug) keys.add(`${side}:${slug}`)
+    }
+  }
+  return keys
 }

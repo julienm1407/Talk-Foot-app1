@@ -62,8 +62,9 @@ export function useSportMonksFixtureLineups(sportMonksFixtureId: number | undefi
   }, [liveBundleFixture])
 
   const starters: SmStartingXIs | null = bundle?.starters ?? null
+  const bench: SmStartingXIs | null = bundle?.bench ?? null
   const formations = bundle?.formations ?? {}
   const lineupSource = bundle?.source ?? 'unknown'
 
-  return { starters, formations, lineupSource, recentForm, bundle, lineupsLoading: loading }
+  return { starters, bench, formations, lineupSource, recentForm, bundle, lineupsLoading: loading }
 }

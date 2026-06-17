@@ -96,7 +96,7 @@ import {
   extractPlayerMatchOverlaysFromSmFixture,
   resolveLineupPlayerOverlay,
 } from '../api/sportMonks/extractPlayerMatchOverlaysFromSmFixture'
-import { extractSubstitutesFromSmFixture } from '../api/sportMonks/extractSubstitutesFromSmFixture'
+import { extractSubstitutesFromSmFixture, extractSubbedOffPlayerKeys } from '../api/sportMonks/extractSubstitutesFromSmFixture'
 import type { LineupSubstituteWithOverlay } from '../components/channel/MatchLineupSubstitutes'
 import { attachLineupOverlaysToLayout, computeLineupPitchLayout } from '../utils/lineupPitchPositions'
 import { getSportMonksToken } from '../utils/apiTokens'
@@ -980,7 +980,7 @@ export function ChannelPage() {
   const homeFlagSrc = homeNation ? (nationFlagUrl(homeNation.iso, 40) ?? undefined) : undefined
   const awayFlagSrc = awayNation ? (nationFlagUrl(awayNation.iso, 40) ?? undefined) : undefined
   const isFinished = status === 'finished'
-  const { starters, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
+  const { starters, bench, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
   const betting = useBetting(match?.id ?? '', match ?? null)
   const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
@@ -1865,28 +1865,6 @@ export function ChannelPage() {
     return away.map((p) => (typeof p === 'string' ? p : p.label))
   }, [starters])
 
-  const lineupScorerPicks = useMemo(() => {
-    const out: {
-      side: 'home' | 'away'
-      name: string
-      formationPosition?: number
-      formationField?: string
-    }[] = []
-    const pushSide = (side: 'home' | 'away', players: SmStartingXiPlayer[] | undefined) => {
-      for (const p of players ?? []) {
-        out.push({
-          side,
-          name: p.label,
-          formationPosition: p.formationPosition,
-          formationField: p.formationField,
-        })
-      }
-    }
-    pushSide('home', starters?.home)
-    pushSide('away', starters?.away)
-    return out
-  }, [starters])
-
   const scoredButeurSlugs = useMemo(
     () =>
       goalTeamHints
@@ -2077,6 +2055,72 @@ export function ChannelPage() {
     if (status !== 'live' && status !== 'finished') return { home: [], away: [] }
     return extractSubstitutesFromSmFixture(fixtureForLineupSubs)
   }, [fixtureForLineupSubs, status])
+
+  const lineupScorerPicks = useMemo(() => {
+    const out: {
+      side: 'home' | 'away'
+      name: string
+      formationPosition?: number
+      formationField?: string
+      isStarter: boolean
+      substitutedOff?: boolean
+    }[] = []
+    const seen = new Set<string>()
+    const subbedOffKeys =
+      status === 'live' || status === 'finished'
+        ? extractSubbedOffPlayerKeys(fixtureForLineupSubs)
+        : new Set<string>()
+
+    const pushPlayer = (
+      side: 'home' | 'away',
+      p: { label: string; formationPosition?: number; formationField?: string },
+      isStarter: boolean,
+    ) => {
+      const slug = p.label
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48)
+      const key = `${side}:${slug}`
+      if (!slug || seen.has(key)) return
+      seen.add(key)
+      out.push({
+        side,
+        name: p.label,
+        formationPosition: p.formationPosition,
+        formationField: p.formationField,
+        isStarter,
+        substitutedOff: subbedOffKeys.has(key),
+      })
+    }
+
+    const pushSide = (
+      side: 'home' | 'away',
+      players: SmStartingXiPlayer[] | undefined,
+      isStarter: boolean,
+    ) => {
+      for (const p of players ?? []) {
+        pushPlayer(side, p, isStarter)
+      }
+    }
+
+    pushSide('home', starters?.home, true)
+    pushSide('away', starters?.away, true)
+    pushSide('home', bench?.home, false)
+    pushSide('away', bench?.away, false)
+
+    for (const p of lineupSubstitutes.home) {
+      pushPlayer('home', { label: p.label }, false)
+    }
+    for (const p of lineupSubstitutes.away) {
+      pushPlayer('away', { label: p.label }, false)
+    }
+
+    return out
+  }, [starters, bench, lineupSubstitutes, fixtureForLineupSubs, status])
+
   const displayedLineupPlayers = useMemo(
     () => (lineupSide === 'home' ? starters?.home ?? [] : starters?.away ?? []),
     [lineupSide, starters],

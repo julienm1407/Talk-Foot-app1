@@ -107,6 +107,7 @@ export {
 } from './extractStartingXisFromSmFixture'
 export {
   extractSubstitutesFromSmFixture,
+  extractSubbedOffPlayerKeys,
   lineupFlashscoreShortName,
   type LineupSubstitutePlayer,
   type LineupSubstitutesBySide,

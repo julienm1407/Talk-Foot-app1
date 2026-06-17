@@ -45,7 +45,7 @@ function BetImpliedBar({
     >
       <div
         className={cn('h-full rounded-full transition-[width]', fill)}
-        style={{ width: `${Math.max(4, Math.min(100, share))}%` }}
+        style={{ width: share <= 0 ? '0%' : `${Math.min(100, share)}%` }}
       />
     </div>
   )
@@ -145,6 +145,7 @@ export function BetSheet1x2Grid({
   pickVisual,
   pendingSelection,
   onSelect,
+  betShares,
 }: {
   homeLabel: string
   awayLabel: string
@@ -154,21 +155,23 @@ export function BetSheet1x2Grid({
   pickVisual: (side: 'home' | 'draw' | 'away') => BetPickVisualState
   pendingSelection?: 'home' | 'draw' | 'away' | null
   onSelect: (side: 'home' | 'draw' | 'away', oddsVal: number) => void
+  /** Parts des paris communautaires (0–100). Si absent ou tout à 0, barres vides. */
+  betShares?: [number, number, number]
 }) {
-  const shares = odds
-    ? impliedSharesFromOdds([odds.home, odds.draw, odds.away])
-    : [0, 0, 0]
+  const shares = betShares ?? [0, 0, 0]
   const sides = [
     { side: 'home' as const, label: homeLabel, share: shares[0] ?? 0 },
     { side: 'draw' as const, label: 'Nul', share: shares[1] ?? 0 },
     { side: 'away' as const, label: awayLabel, share: shares[2] ?? 0 },
   ]
   const toneForShare = (share: number, maxShare: number): 'fav' | 'mid' | 'out' => {
-    if (share >= maxShare - 2) return 'fav'
+    if (share <= 0) return 'out'
+    if (maxShare <= 0) return 'out'
+    if (share >= maxShare - 1) return 'fav'
     if (share >= maxShare * 0.55) return 'mid'
     return 'out'
   }
-  const maxShare = Math.max(...shares, 1)
+  const maxShare = Math.max(...shares, 0)
 
   return (
     <div className={cn('grid grid-cols-3', dense ? 'gap-1.5' : 'gap-2')}>

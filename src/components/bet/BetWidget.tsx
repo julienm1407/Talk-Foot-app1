@@ -18,6 +18,7 @@ import {
   type ScorerLineupMeta,
 } from '../../utils/liveFootballOdds'
 import { getBetPickedOutcomeLabel } from '../../utils/betDisplay'
+import { useMatch1x2BetVolume } from '../../hooks/useMatch1x2BetVolume'
 import {
   BetSheet1x2Grid,
   BetSheetMarketCard,
@@ -69,6 +70,15 @@ type ScorerPickRow = {
   disabled?: boolean
 }
 
+function sortScorerPicksByLikelihood(rows: ScorerPickRow[]): ScorerPickRow[] {
+  return [...rows].sort((a, b) => {
+    const aClosed = Boolean(a.disabled)
+    const bClosed = Boolean(b.disabled)
+    if (aClosed !== bClosed) return aClosed ? 1 : -1
+    return a.odds - b.odds
+  })
+}
+
 /** Cotes 1N2 bookmaker (SportMonks) + ajustement live score ; jetons fictifs. */
 export function BetWidget({
   match,
@@ -110,6 +120,8 @@ export function BetWidget({
     name: string
     formationPosition?: number
     formationField?: string
+    isStarter?: boolean
+    substitutedOff?: boolean
   }[]
   scoredButeurs?: { side: 'home' | 'away'; slug: string; name?: string }[]
   /** Cotes déjà ajustées live par useTalkFootInternalOdds — évite double calcul. */
@@ -135,6 +147,7 @@ export function BetWidget({
   void bookOddsOverUnder25
   const fallback = useBetting(match.id, match)
   const { wallet, openBets, matchBets, placeBet, cancelBet: _cancelBet, stats } = betting ?? fallback
+  const { shares: bet1x2Shares, recordBet: record1x2Bet } = useMatch1x2BetVolume(match.id)
   const [sheetOpen, setSheetOpen] = useState(false)
   const sheetDense = compact
   const hideInlineForSheet = compact && sheetOpen
@@ -219,10 +232,11 @@ export function BetWidget({
       const already = scoredButeurs.some(
         (s) => s.side === p.side && scorerLineupMatchesScoredGoal(slug, s),
       )
-      const meta: ScorerLineupMeta | null =
-        p.formationPosition != null || (p.formationField != null && p.formationField.length > 0)
-          ? { formationPosition: p.formationPosition, formationField: p.formationField }
-          : null
+      const meta: ScorerLineupMeta = {
+        formationPosition: p.formationPosition,
+        formationField: p.formationField,
+        isStarter: p.isStarter !== false,
+      }
       const row: ScorerPickRow = {
         id: `scor:${p.side}:${slug}`,
         label: p.name,
@@ -235,7 +249,7 @@ export function BetWidget({
                 ? teamAttackIndices.home
                 : teamAttackIndices.away,
         }),
-        disabled: already,
+        disabled: already || Boolean(p.substitutedOff),
       }
       if (p.side === 'home') {
         if (seenH.has(k)) continue
@@ -257,8 +271,8 @@ export function BetWidget({
   )
 
   const scorerPicksForDisplay = useMemo(() => {
-    const home = [...scorerPicksSplit.home]
-    const away = [...scorerPicksSplit.away]
+    const home = sortScorerPicksByLikelihood([...scorerPicksSplit.home])
+    const away = sortScorerPicksByLikelihood([...scorerPicksSplit.away])
     const seen = new Set([...home, ...away].map((p) => String(p.id)))
     for (const bet of userScorerBets) {
       const sel = String(bet.selection)
@@ -276,7 +290,10 @@ export function BetWidget({
       if (m[1] === 'home') home.push(row)
       else away.push(row)
     }
-    return { home, away }
+    return {
+      home: sortScorerPicksByLikelihood(home),
+      away: sortScorerPicksByLikelihood(away),
+    }
   }, [scorerPicksSplit, userScorerBets, match])
 
   const scorerPicksDisplayTotal =
@@ -514,6 +531,12 @@ export function BetWidget({
       text: `✅ Pari validé : ${selectionText}`,
       href: '/pronostic',
     })
+    if (pending.market === 'result_1x2') {
+      const sel = pending.selection
+      if (sel === 'home' || sel === 'draw' || sel === 'away') {
+        void record1x2Bet(sel)
+      }
+    }
     setPending(null)
     window.setTimeout(() => {
       setNotice(null)
@@ -1111,6 +1134,7 @@ export function BetWidget({
                             : `1N2 · ${side === 'home' ? match.home.shortName : match.away.shortName}`,
                       })
                     }}
+                    betShares={bet1x2Shares}
                   />
                 </BetSheetMarketCard>
               </div>
