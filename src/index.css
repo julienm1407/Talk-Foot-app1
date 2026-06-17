@@ -3052,6 +3052,17 @@ body::before {
   min-height: 0;
 }
 
+.tf-bet-sheet-embedded {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tf-bet-sheet-embedded .tf-bet-sheet--dense {
+  height: auto;
+  min-height: min(58dvh, 420px);
+  max-height: none;
+}
+
 /* Feuille de paris mobile — hauteur explicite (Safari iOS + flex-1). */
 .tf-bet-sheet--dense {
   height: min(88dvh, 620px);

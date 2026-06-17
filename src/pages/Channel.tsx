@@ -4094,6 +4094,7 @@ export function ChannelPage() {
                     bettingSuspendReason={bettingSuspension.reason}
                     teamAttackIndices={attackIndices}
                     compact
+                    inlineSheet
                     liveScore={{ home: homeScore, away: awayScore }}
                     liveMinute={liveDisplayedMinute}
                     liveStatRows={liveStatRows}

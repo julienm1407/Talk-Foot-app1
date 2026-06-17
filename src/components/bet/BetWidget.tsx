@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
-import { createPortal } from 'react-dom'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -96,6 +95,8 @@ export function BetWidget({
   teamAttackIndices = null,
   compact = false,
   prominent = false,
+  /** Panneau Paris mobile : feuille inline dans le sheet channel (pas de modale plein écran). */
+  inlineSheet = false,
   liveScore = null,
   liveMinute = null,
   liveStatRows = [],
@@ -115,6 +116,8 @@ export function BetWidget({
   compact?: boolean
   /** Panneau mobile / zone étroite : cotes et boutons plus grands. */
   prominent?: boolean
+  /** Feuille de paris rendue dans le panneau parent (dock Paris mobile). */
+  inlineSheet?: boolean
   liveStatRows?: { key: string; home: number; away: number }[]
   liveScore?: { home: number; away: number } | null
   liveMinute?: number | null
@@ -155,6 +158,7 @@ export function BetWidget({
   const { shares: bet1x2Shares, recordBet: record1x2Bet } = useMatch1x2BetVolume(match.id)
   const [sheetOpen, setSheetOpen] = useState(false)
   const sheetDense = compact
+  const sheetEmbedded = Boolean(compact && inlineSheet)
   const hideInlineForSheet = compact && sheetOpen
 
   const [stake, setStake] = useState(25)
@@ -630,7 +634,8 @@ export function BetWidget({
   return (
     <div
       className={cn(
-        'tf-bet-widget relative flex h-full min-h-[12rem] flex-col overflow-hidden rounded-xl border bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
+        'tf-bet-widget relative flex h-full flex-col overflow-hidden rounded-xl border bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
+        sheetEmbedded ? 'min-h-0 flex-1 border-0 bg-transparent p-0 shadow-none' : 'min-h-[12rem]',
         compactProminent
           ? 'border-emerald-400/45 ring-1 ring-emerald-400/20'
           : 'border-[#3a6690]/55',
@@ -819,37 +824,48 @@ export function BetWidget({
       </>
       ) : null}
 
-      {sheetOpen && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              className={cn(
-                'tf-bet-sheet-layer fixed inset-0 flex flex-col justify-end sm:justify-center sm:p-4',
-                sheetDense ? 'z-[2147482504]' : 'z-[88]',
-              )}
-              data-no-swipe="true"
-              data-tf-modal="true"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="bet-sheet-title"
-            >
-              <button
-                type="button"
-                className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
-                onClick={() => setSheetOpen(false)}
-                aria-label="Fermer les pronos"
-              />
-              <div
-                className={cn(
-                  'relative z-10 mx-auto flex w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border shadow-2xl tf-bet-sheet',
-                  sheetDense && 'tf-bet-sheet--dense',
-                  sheetLight
-                    ? 'border-slate-200/80 bg-white'
-                    : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)]',
-                  sheetDense
-                    ? 'h-[min(88dvh,620px)] min-h-[min(72dvh,480px)] max-h-[min(88dvh,620px)] sm:rounded-3xl'
-                    : 'max-h-[min(92vh,720px)] sm:max-h-[min(88vh,680px)] sm:max-w-xl',
-                )}
-              >
+      {sheetOpen ? (
+        <div
+          className={cn(
+            sheetEmbedded
+              ? 'tf-bet-sheet-embedded flex min-h-0 flex-1 flex-col overflow-hidden'
+              : cn(
+                  'fixed inset-0 flex flex-col justify-end sm:justify-center sm:p-4',
+                  sheetDense ? 'z-[2147482505]' : 'z-[88]',
+                ),
+            !sheetEmbedded && 'tf-bet-sheet-layer',
+          )}
+          data-no-swipe="true"
+          data-tf-modal={sheetEmbedded ? undefined : 'true'}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bet-sheet-title"
+        >
+          {!sheetEmbedded ? (
+            <button
+              type="button"
+              className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
+              onClick={() => setSheetOpen(false)}
+              aria-label="Fermer les pronos"
+            />
+          ) : null}
+          <div
+            className={cn(
+              'relative z-10 mx-auto flex w-full flex-col overflow-hidden border shadow-2xl tf-bet-sheet',
+              sheetEmbedded
+                ? 'min-h-0 flex-1 rounded-xl tf-bet-sheet--dense'
+                : 'rounded-t-3xl sm:rounded-3xl',
+              sheetDense && !sheetEmbedded && 'tf-bet-sheet--dense max-w-lg',
+              sheetLight
+                ? 'border-slate-200/80 bg-white'
+                : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)]',
+              !sheetEmbedded &&
+                (sheetDense
+                  ? 'h-[min(88dvh,620px)] min-h-[min(72dvh,480px)] max-h-[min(88dvh,620px)]'
+                  : 'max-h-[min(92vh,720px)] max-w-lg sm:max-h-[min(88vh,680px)] sm:max-w-xl'),
+            )}
+          >
+            {!sheetEmbedded ? (
             <div
               className={cn(
                 'flex shrink-0 items-center justify-between gap-2 border-b',
@@ -895,6 +911,11 @@ export function BetWidget({
                 </button>
               </div>
             </div>
+            ) : (
+              <div className="sr-only" id="bet-sheet-title">
+                Pronos
+              </div>
+            )}
 
             <div
               ref={sheetScrollRef}
@@ -1261,10 +1282,8 @@ export function BetWidget({
               </Link>
             </div>
           </div>
-        </div>,
-            document.body,
-          )
-        : null}
+        </div>
+      ) : null}
     </div>
   )
 }
