@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { competitionThemes } from '../../data/competitionThemes'
 import {
   ALL_CLUBS_BY_ID,
@@ -13,6 +14,7 @@ import { ClubSearchCombobox } from './ClubSearchCombobox'
 import { ClubCrest } from '../brand/ClubCrest'
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
 import { resolveClubCatalogLogoUrl } from '../../utils/catalogLogos'
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 
 const MAX_CLUBS = 3
 
@@ -66,6 +68,9 @@ export function FanOnboardingModal() {
 
   if (!onboardingOpen) return null
 
+  const portalTarget = getModalPortalRoot()
+  if (!portalTarget) return null
+
   const handleFinish = () => {
     if (leagueId) completeOnboarding(leagueId, clubIds)
   }
@@ -74,15 +79,28 @@ export function FanOnboardingModal() {
     setClubIds((prev) => toggleClubId(prev, c.id))
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center bg-black/45 p-4 sm:items-center"
+      className={cn(
+        'pointer-events-auto fixed inset-0 z-[1] flex touch-manipulation items-end justify-center overflow-hidden',
+        'h-[100dvh] max-h-[100dvh]',
+        'p-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))]',
+        'sm:items-center',
+      )}
+      data-no-swipe="true"
+      data-tf-modal="true"
       role="dialog"
       aria-modal="true"
       aria-labelledby="fan-onboard-title"
     >
-      <div className="max-h-[min(92dvh,720px)] w-full max-w-lg overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white text-tf-dark shadow-[0_24px_80px_rgba(1,30,51,0.2)]">
-        <div className="border-b border-tf-grey-pastel/50 bg-tf-ice/90 px-5 py-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45"
+        onClick={closeOnboarding}
+        aria-label="Fermer"
+      />
+      <div className="relative z-10 flex max-h-[min(calc(100dvh-2rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),720px)] w-full max-w-lg flex-col overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white text-tf-dark shadow-[0_24px_80px_rgba(1,30,51,0.2)]">
+        <div className="shrink-0 border-b border-tf-grey-pastel/50 bg-tf-ice/90 px-5 py-4">
           <div className="flex items-start gap-3">
             <LogoEncart isLight decorative={false} />
             <div className="min-w-0 flex-1">
@@ -118,7 +136,7 @@ export function FanOnboardingModal() {
           </div>
         </div>
 
-        <div className="max-h-[min(56vh,420px)] overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
           {step === 1 ? (
             <div className="grid gap-2.5 sm:grid-cols-2">
               {leagueList.map((L) => {
@@ -166,7 +184,7 @@ export function FanOnboardingModal() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div>
+              <div className="overflow-visible">
                 <label htmlFor="fan-club-combobox" className="mb-1 block text-xs font-bold text-slate-700">
                   Rechercher un club
                 </label>
@@ -270,23 +288,23 @@ export function FanOnboardingModal() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-5 py-4">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-tf-grey-pastel/50 bg-tf-grey-pastel/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs font-semibold text-slate-600">
             Étape {step}/2 — ligue obligatoire, clubs libres
           </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" className="rounded-2xl" onClick={closeOnboarding}>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" className="min-h-11 rounded-2xl" onClick={closeOnboarding}>
               {preferencesComplete ? 'Annuler' : 'Plus tard'}
             </Button>
             {step === 2 ? (
-              <Button variant="soft" className="rounded-2xl" onClick={() => setStep(1)}>
+              <Button variant="soft" className="min-h-11 rounded-2xl" onClick={() => setStep(1)}>
                 Retour
               </Button>
             ) : null}
             {step === 1 ? (
               <Button
                 variant="primary"
-                className="rounded-2xl"
+                className="min-h-11 rounded-2xl"
                 disabled={!leagueId}
                 onClick={() => setStep(2)}
               >
@@ -295,7 +313,7 @@ export function FanOnboardingModal() {
             ) : (
               <Button
                 variant="primary"
-                className="rounded-2xl"
+                className="min-h-11 rounded-2xl"
                 disabled={!leagueId}
                 onClick={handleFinish}
               >
@@ -305,6 +323,7 @@ export function FanOnboardingModal() {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   )
 }

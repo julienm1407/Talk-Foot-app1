@@ -36,6 +36,14 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
   const dm = useDirectMessagesOptional()
   const { byKind, isRead, markRead, remove, markAllRead, items, refresh } = inbox
   const [friendActionError, setFriendActionError] = useState<string | null>(null)
+  const [acceptingFriendId, setAcceptingFriendId] = useState<string | null>(null)
+
+  const friendActionErrorLabel = (code?: string) => {
+    if (code === 'session') return 'Session expirée — reconnecte-toi puis réessaie.'
+    if (code === 'not_found') return 'Demande introuvable ou déjà traitée.'
+    if (code === 'offline' || code === 'no_client') return 'Service indisponible — réessaie dans un instant.'
+    return code?.trim() || "Impossible d'accepter la demande. Réessaie dans un instant."
+  }
 
   const shell = L
     ? 'border border-tf-dark/12 bg-white text-tf-dark shadow-xl'
@@ -74,17 +82,23 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
       setFriendActionError('Connexion requise pour accepter la demande.')
       return
     }
-    const out = await dm.acceptFriendRequest(f.requesterId)
-    if (!out.ok) {
-      setFriendActionError("Impossible d'accepter la demande. Réessaie dans un instant.")
-      return
+    if (acceptingFriendId) return
+    setAcceptingFriendId(f.requesterId)
+    try {
+      const out = await dm.acceptFriendRequest(f.requesterId)
+      if (!out.ok) {
+        setFriendActionError(friendActionErrorLabel(out.error))
+        return
+      }
+      markRead(f.id)
+      remove(f.id)
+      void refresh()
+      void dm.refreshFriends()
+      onClose()
+      navigate(f.href)
+    } finally {
+      setAcceptingFriendId(null)
     }
-    markRead(f.id)
-    remove(f.id)
-    void refresh()
-    void dm.refreshFriends()
-    onClose()
-    navigate(f.href)
   }
 
   const onDeclineFriend = async (f: InboxFriendItem) => {
@@ -101,7 +115,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
   return (
     <div
       className={cn(
-        'z-[100] flex max-h-[min(70vh,26rem)] w-[min(100vw-1.5rem,22rem)] flex-col overflow-hidden rounded-2xl',
+        'z-[2147482890] flex max-h-[min(70vh,26rem)] w-[min(100vw-1.5rem,22rem)] flex-col overflow-hidden rounded-2xl',
         /* Téléphone / tablette : panneau fixe sous le header — évite le débordement à gauche du dropdown */
         'max-md:fixed max-md:left-[max(0.75rem,env(safe-area-inset-left,0px))] max-md:right-[max(0.75rem,env(safe-area-inset-right,0px))] max-md:top-[calc(3.75rem+env(safe-area-inset-top,0px))] max-md:w-auto max-md:max-h-[min(80dvh,calc(100dvh-4.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
         /* Desktop : ancré à la cloche */
@@ -320,10 +334,11 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                           <div className="mt-2 flex flex-col gap-2 max-md:w-full md:flex-row md:flex-wrap">
                             <button
                               type="button"
+                              disabled={Boolean(acceptingFriendId)}
                               onClick={() => void onAcceptFriend(f)}
-                              className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
+                              className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
                             >
-                              Accepter
+                              {acceptingFriendId === f.requesterId ? 'Acceptation…' : 'Accepter'}
                             </button>
                             <button
                               type="button"

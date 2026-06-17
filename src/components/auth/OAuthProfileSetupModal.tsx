@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { isTalkFootOAuthProvider, oauthProviderDisplayName } from '../../config/oauthProviders'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
@@ -13,6 +14,7 @@ import { getSupabaseBrowserClient } from '../../lib/supabase/client'
 import { checkDisplayNameAvailabilityCloud } from '../../lib/supabase/displayName'
 import { useDisplayNameAvailabilityHint } from '../../hooks/useDisplayNameAvailabilityHint'
 import { DisplayNameAvailabilityHint } from './DisplayNameAvailabilityHint'
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 
 /**
  * Première connexion Google / Apple (Supabase) : pseudo + ligne perso avant le reste de l’app.
@@ -45,6 +47,9 @@ export function OAuthProfileSetupModal() {
   }, [cloud?.oauthNeedsProfile, user?.id, user?.displayName, cloud?.app.profile.aboutLine])
 
   if (!cloud?.oauthNeedsProfile) return null
+
+  const portalTarget = getModalPortalRoot()
+  if (!portalTarget) return null
 
   const providerLabel =
     user?.provider && isTalkFootOAuthProvider(user.provider)
@@ -104,15 +109,23 @@ export function OAuthProfileSetupModal() {
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[210] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+      className={cn(
+        'pointer-events-auto fixed inset-0 z-[1] flex touch-manipulation items-end justify-center overflow-hidden',
+        'h-[100dvh] max-h-[100dvh]',
+        'p-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))]',
+        'sm:items-center',
+      )}
+      data-no-swipe="true"
+      data-tf-modal="true"
       role="dialog"
       aria-modal="true"
       aria-labelledby="oauth-profile-title"
     >
-      <div className="max-h-[min(92dvh,640px)] w-full max-w-md overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white text-tf-dark shadow-[0_24px_80px_rgba(1,30,51,0.22)]">
-        <div className="border-b border-tf-grey-pastel/50 bg-tf-ice/90 px-5 py-4">
+      <div className="absolute inset-0 bg-black/50" aria-hidden />
+      <div className="relative z-10 flex max-h-[min(calc(100dvh-2rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)),640px)] w-full max-w-md flex-col overflow-hidden rounded-[28px] border border-tf-grey-pastel/60 bg-tf-white text-tf-dark shadow-[0_24px_80px_rgba(1,30,51,0.22)]">
+        <div className="shrink-0 border-b border-tf-grey-pastel/50 bg-tf-ice/90 px-5 py-4">
           <div className="flex items-start gap-3">
             <LogoEncart isLight decorative={false} />
             <div className="min-w-0 flex-1">
@@ -131,7 +144,7 @@ export function OAuthProfileSetupModal() {
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4 px-5 py-5">
+        <form onSubmit={onSubmit} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-5">
           {user?.email ? (
             <div>
               <p className="text-[11px] font-bold text-tf-grey">Email (fourni par {providerLabel})</p>
@@ -227,13 +240,14 @@ export function OAuthProfileSetupModal() {
           <Button
             type="submit"
             variant="primary"
-            className="w-full rounded-2xl py-3 font-black"
+            className="min-h-11 w-full rounded-2xl py-3 font-black"
             disabled={busy || pseudoBlocked}
           >
             {busy ? 'Enregistrement…' : pseudoHint.status === 'checking' ? 'Vérification…' : 'Continuer'}
           </Button>
         </form>
       </div>
-    </div>
+    </div>,
+    portalTarget,
   )
 }

@@ -107,6 +107,7 @@ import {
   cardCoarseDedupeKey,
   extractScorerEventsFromHighlights,
   formatGoalScorerLabel,
+  groupGoalRowsForHeader,
   isPlausibleGoalScorerName,
   parseLiveGoalRowsFromHighlights,
   parseLiveCardRowsFromHighlights,
@@ -536,7 +537,7 @@ function LiveHeaderScorers({
   align,
   light,
 }: {
-  goals: { name: string; minute: number; inSecondHalf?: boolean; ownGoal?: boolean }[]
+  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean }[]; ownGoal?: boolean }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -551,7 +552,7 @@ function LiveHeaderScorers({
     >
       {goals.map((g, i) => (
         <li
-          key={`${g.name}-${g.minute}-${i}`}
+          key={`${g.name}-${g.minutes.map((m) => m.minute).join(',')}-${i}`}
           className={cn(
             'flex max-w-[min(100%,11rem)] items-baseline gap-1 text-[10px] font-bold leading-tight sm:max-w-[min(100%,14rem)] sm:text-[11px]',
             align === 'right' ? 'flex-row-reverse' : 'flex-row',
@@ -567,7 +568,9 @@ function LiveHeaderScorers({
             ⚽ {formatGoalScorerLabel(g.name, null, { ownGoal: g.ownGoal })}
           </span>
           <span className={cn('shrink-0 tabular-nums opacity-90', light ? 'text-emerald-900/75' : 'text-cyan-200/80')}>
-            {formatGoalEventMinute(g.minute, { inSecondHalf: g.inSecondHalf }) || `${g.minute}'`}
+            {g.minutes
+              .map((m) => formatGoalEventMinute(m.minute, { inSecondHalf: m.inSecondHalf }) || `${m.minute}'`)
+              .join(', ')}
           </span>
         </li>
       ))}
@@ -633,8 +636,8 @@ function LiveHeaderTeamEvents({
   align,
   light,
 }: {
-  goals: { name: string; minute: number }[]
-  cards: { name: string; minute: number; color: 'yellow' | 'red' }[]
+  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean }[]; ownGoal?: boolean }[]
+  cards: { name: string; minute: number; inSecondHalf?: boolean; color: 'yellow' | 'red' }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -1945,16 +1948,20 @@ export function ChannelPage() {
   ])
   const headerHomeScorers = useMemo(
     () =>
-      liveGoalDisplayRows
-        .filter((r) => r.side === 'home')
-        .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
+      groupGoalRowsForHeader(
+        liveGoalDisplayRows
+          .filter((r) => r.side === 'home')
+          .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
+      ),
     [liveGoalDisplayRows],
   )
   const headerAwayScorers = useMemo(
     () =>
-      liveGoalDisplayRows
-        .filter((r) => r.side === 'away')
-        .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
+      groupGoalRowsForHeader(
+        liveGoalDisplayRows
+          .filter((r) => r.side === 'away')
+          .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
+      ),
     [liveGoalDisplayRows],
   )
 

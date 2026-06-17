@@ -651,6 +651,44 @@ export function extractScorerEventsFromHighlights(
   return out
 }
 
+/** Regroupe les buts d'un même joueur (doublé, triplé…) pour l'affichage sous le score. */
+export function groupGoalRowsForHeader(
+  rows: { name: string; minute: number; inSecondHalf?: boolean; ownGoal?: boolean }[],
+): { name: string; minutes: { minute: number; inSecondHalf?: boolean }[]; ownGoal?: boolean }[] {
+  const groups: {
+    name: string
+    minutes: { minute: number; inSecondHalf?: boolean }[]
+    ownGoal?: boolean
+  }[] = []
+  const indexByKey = new Map<string, number>()
+
+  for (const row of rows) {
+    const slug = slugScorer(row.name)
+    const key = `${slug}|${row.ownGoal ? 'og' : 'g'}`
+    const minuteEntry = { minute: row.minute, inSecondHalf: row.inSecondHalf }
+    const existingIdx = indexByKey.get(key)
+    if (existingIdx == null) {
+      indexByKey.set(key, groups.length)
+      groups.push({
+        name: row.name,
+        minutes: [minuteEntry],
+        ownGoal: row.ownGoal,
+      })
+      continue
+    }
+    const group = groups[existingIdx]!
+    const already = group.minutes.some(
+      (m) => m.minute === minuteEntry.minute && Boolean(m.inSecondHalf) === Boolean(minuteEntry.inSecondHalf),
+    )
+    if (!already) group.minutes.push(minuteEntry)
+  }
+
+  for (const group of groups) {
+    group.minutes.sort((a, b) => a.minute - b.minute)
+  }
+  return groups
+}
+
 /** Métadonnées compos SM pour calibrer la cote buteur (poste + terrain). */
 export type ScorerLineupMeta = {
   formationPosition?: number

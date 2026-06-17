@@ -94,6 +94,22 @@ export async function markInboxNotificationRead(sb: SupabaseClient, id: string):
     .eq('id', id)
 }
 
+/** Après acceptation d'une demande d'ami — retire les notifs en attente. */
+export async function dismissFriendRequestInboxNotifications(
+  sb: SupabaseClient,
+  recipientSupabaseId: string,
+  requesterSupabaseId: string,
+): Promise<void> {
+  const now = new Date().toISOString()
+  await sb
+    .from('inbox_notifications')
+    .update({ read_at: now })
+    .eq('recipient_supabase_id', recipientSupabaseId)
+    .eq('kind', 'friend_request')
+    .eq('requester_supabase_id', requesterSupabaseId)
+    .is('read_at', null)
+}
+
 export async function createMessageLikeInboxNotification(
   sb: SupabaseClient,
   opts: {

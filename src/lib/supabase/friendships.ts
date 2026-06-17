@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createFriendRequestInboxNotification } from './inboxNotifications'
+import { createFriendRequestInboxNotification, dismissFriendRequestInboxNotifications } from './inboxNotifications'
 import { p2pThreadKey } from '../../utils/cloudDmThread'
 
 export type FriendshipRow = {
@@ -107,6 +107,7 @@ export async function acceptFriendRequest(sb: SupabaseClient, myId: string, requ
     .maybeSingle()
   if (error) return { ok: false, error: error.message }
   if (!data) return { ok: false, error: 'not_found' }
+  await dismissFriendRequestInboxNotifications(sb, myId, requesterId)
   return { ok: true }
 }
 
