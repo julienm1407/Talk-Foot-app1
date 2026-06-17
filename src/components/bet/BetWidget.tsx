@@ -793,18 +793,29 @@ export function BetWidget({
 
         <div
           className={cn(
-            'tf-bet-soft flex items-center justify-between rounded-xl border border-[#3f6f97]/55 bg-[#0d2842]/90 px-2.5 sm:px-3',
+            'tf-bet-soft tf-bet-summary-row flex items-center justify-between rounded-xl border px-2.5 sm:px-3',
+            sheetLight
+              ? 'border-slate-200/80 bg-white/90'
+              : 'border-[#3f6f97]/55 bg-[#0d2842]/90',
             compact ? 'py-2' : 'py-2',
           )}
         >
-          <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-sky-200/75">
+          <div
+            className={cn(
+              'flex flex-wrap items-center gap-1.5 text-xs font-semibold',
+              sheetLight ? 'text-slate-600' : 'text-sky-200/90',
+            )}
+          >
             <span>En cours: {openBets.length}</span>
             <span>•</span>
             <span>Résolus: {settled.length}</span>
           </div>
           <Link
             to="/pronostic"
-            className="text-xs font-bold text-cyan-300 hover:text-cyan-200"
+            className={cn(
+              'text-xs font-bold',
+              sheetLight ? 'text-sky-700 hover:text-sky-800' : 'text-cyan-300 hover:text-cyan-200',
+            )}
           >
             Mes paris →
           </Link>

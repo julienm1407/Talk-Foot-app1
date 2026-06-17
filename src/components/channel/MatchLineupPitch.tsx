@@ -191,6 +191,9 @@ export function MatchLineupPitch({
   className?: string
 }) {
   const { rows } = layout
+  const pitchLine = light ? 'border-white/38' : 'border-white/20'
+  const pitchMark = light ? 'bg-white/28' : 'bg-white/15'
+  const standFade = light ? 'from-black/18' : 'from-black/30'
 
   return (
     <div className={cn('w-full min-w-0 space-y-2', className)}>
@@ -204,12 +207,28 @@ export function MatchLineupPitch({
               : 'h-[320px] w-full md:h-[min(40vh,320px)]',
         )}
         style={{
-          background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} 24%, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} 22%, #14543f) 100%)`,
+          background: `linear-gradient(180deg, color-mix(in srgb, ${homeToneColor} ${light ? '30%' : '24%'}, #14543f) 0%, #14543f 46%, color-mix(in srgb, ${awayToneColor} ${light ? '28%' : '22%'}, #14543f) 100%)`,
         }}
       >
-        <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/15" />
-        <div className="absolute left-[8%] right-[8%] top-[6%] h-[38%] rounded-md border border-white/20" />
-        <div className="absolute bottom-[6%] left-[8%] right-[8%] h-[38%] rounded-md border border-white/20" />
+        <div
+          className={cn('pointer-events-none absolute inset-x-0 top-0 h-[16%] bg-gradient-to-b to-transparent', standFade)}
+          aria-hidden
+        />
+        <div
+          className={cn('pointer-events-none absolute inset-x-0 bottom-0 h-[16%] bg-gradient-to-t to-transparent', standFade)}
+          aria-hidden
+        />
+        <div className={cn('absolute left-1/2 top-0 h-full w-px -translate-x-1/2', pitchMark)} />
+        <div
+          className={cn(
+            'absolute left-1/2 top-1/2 h-[24%] w-[40%] -translate-x-1/2 -translate-y-1/2 rounded-full border',
+            pitchLine,
+          )}
+        />
+        <div className={cn('absolute left-[8%] right-[8%] top-[6%] h-[38%] rounded-md border', pitchLine)} />
+        <div className={cn('absolute bottom-[6%] left-[8%] right-[8%] h-[38%] rounded-md border', pitchLine)} />
+        <div className={cn('absolute left-[8%] right-[8%] top-[6%] h-[16%] rounded-sm border-x border-t', pitchLine)} />
+        <div className={cn('absolute bottom-[6%] left-[8%] right-[8%] h-[16%] rounded-sm border-x border-b', pitchLine)} />
 
         {rows.map((row) => (
           <div

@@ -850,6 +850,10 @@ export function ChannelPage() {
   const chLineupTabIdle = L
     ? 'border-slate-200 bg-slate-100 text-[#2a4f68]'
     : 'border-[#4f7ea8] bg-[#0e2a45] text-sky-200/85'
+  const chLineupToggleWrap = L
+    ? 'tf-lineup-team-toggle inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-100 p-0.5'
+    : 'tf-lineup-team-toggle inline-flex items-center gap-1 rounded-md bg-[#0a1f35]/80 p-1'
+  const chLineupToggleIdle = L ? 'text-[#2a4f68]' : 'text-sky-100/80'
   const chAlertBox = L
     ? 'rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-semibold text-[#0a223a]'
     : 'rounded-md border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-2 text-xs font-semibold text-sky-100'
@@ -3702,21 +3706,24 @@ export function ChannelPage() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex items-center justify-between gap-2">
               <SectionTitle>Compositions</SectionTitle>
-              <div className="inline-flex items-center gap-1 rounded-md bg-[#0a1f35]/80 p-1">
+              <div className={chLineupToggleWrap}>
                 <button
                   type="button"
+                  data-lineup-active={lineupSide === 'home' ? 'true' : undefined}
                   onClick={() => {
                     pauseLineupAutoFor3Min()
                     setLineupSide('home')
                   }}
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold transition ${
-                    lineupSide === 'home' ? 'text-white' : 'text-sky-100/80'
-                  }`}
+                  className={cn(
+                    'rounded px-1.5 py-0.5 text-[10px] font-bold transition',
+                    lineupSide === 'home' ? (L ? '' : 'text-white') : chLineupToggleIdle,
+                  )}
                   style={
                     lineupSide === 'home'
                       ? {
                           backgroundColor: homeToneColor,
                           boxShadow: `0 0 0 1px color-mix(in srgb, ${homeToneColor} 74%, white)`,
+                          color: '#ffffff',
                         }
                       : undefined
                   }
@@ -3725,18 +3732,21 @@ export function ChannelPage() {
                 </button>
                 <button
                   type="button"
+                  data-lineup-active={lineupSide === 'away' ? 'true' : undefined}
                   onClick={() => {
                     pauseLineupAutoFor3Min()
                     setLineupSide('away')
                   }}
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold transition ${
-                    lineupSide === 'away' ? 'text-white' : 'text-sky-100/80'
-                  }`}
+                  className={cn(
+                    'rounded px-1.5 py-0.5 text-[10px] font-bold transition',
+                    lineupSide === 'away' ? (L ? '' : 'text-white') : chLineupToggleIdle,
+                  )}
                   style={
                     lineupSide === 'away'
                       ? {
                           backgroundColor: awayToneColor,
                           boxShadow: `0 0 0 1px color-mix(in srgb, ${awayToneColor} 74%, white)`,
+                          color: '#ffffff',
                         }
                       : undefined
                   }
@@ -3761,7 +3771,12 @@ export function ChannelPage() {
               light={L}
             />
             {displayedLineupLayout.roster.length === 0 ? (
-              <p className="mt-2 text-center text-[10px] font-semibold text-sky-200/70">
+              <p
+                className={cn(
+                  'mt-2 text-center text-[10px] font-semibold',
+                  L ? 'text-[#4d6f8d]' : 'text-sky-200/70',
+                )}
+              >
                 Composition non disponible.
               </p>
             ) : null}

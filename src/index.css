@@ -762,8 +762,21 @@ html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft {
   color: #153f63 !important;
 }
 
-html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft *:not(.tf-bet-pick-odd) {
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-soft *:not(.tf-bet-pick-odd):not(.tf-bet-1x2-tile):not(.tf-bet-1x2-tile *) {
   color: #153f63 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-1x2-tile {
+  background: #ffffff !important;
+  border-color: rgba(84, 124, 164, 0.45) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-1x2-tag {
+  color: #5d6978 !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live .tf-bet-widget .tf-bet-1x2-label {
+  color: #011522 !important;
 }
 
 html[data-tf-appearance='light'] .tf-channel-live-light .tf-bet-pick.tf-bet-pick--compact .tf-bet-pick-name {
@@ -845,8 +858,11 @@ html[data-tf-appearance='light'] .tf-channel-live-light .tf-tribune-footer {
 }
 
 html[data-tf-appearance='light'] .tf-channel-live-light .tf-lineup-pitch {
-  background: #57a884 !important;
   border-color: rgba(74, 146, 112, 0.42) !important;
+}
+
+html[data-tf-appearance='light'] .tf-channel-live-light .tf-lineup-team-toggle [data-lineup-active='true'] {
+  color: #ffffff !important;
 }
 
 /* Compo : s’adapte aux colonnes étroites (tablette / sidebar). */

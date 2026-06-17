@@ -61,9 +61,8 @@ function resolve1x2TileShell(opts: {
   visual: BetPickVisualState
   isSelected: boolean
   side: 'home' | 'draw' | 'away'
-  inline?: boolean
 }): string {
-  const { light, visual, isSelected, side, inline } = opts
+  const { light, visual, isSelected, side } = opts
   if (visual.badge === 'Gagné ✓') {
     return light
       ? 'border-2 border-emerald-500/80 bg-emerald-100 ring-2 ring-emerald-400/35'
@@ -79,7 +78,7 @@ function resolve1x2TileShell(opts: {
       ? 'border-2 border-emerald-500/85 bg-emerald-50 ring-2 ring-emerald-400/40 shadow-sm'
       : 'border-2 border-emerald-400/70 bg-emerald-500/12 ring-2 ring-emerald-400/35'
   }
-  if (inline || !light) {
+  if (!light) {
     if (side === 'draw') {
       return 'border border-amber-400/40 bg-[#1a3048] hover:border-amber-300/55 hover:bg-[#203a56] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
     }
@@ -89,12 +88,12 @@ function resolve1x2TileShell(opts: {
     return 'border border-violet-400/35 bg-[#142945] hover:border-violet-300/50 hover:bg-[#183152] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
   }
   if (side === 'draw') {
-    return 'border-2 border-amber-200/90 bg-amber-50/80 hover:border-amber-300 hover:bg-amber-50'
+    return 'border-2 border-amber-300/90 bg-white hover:border-amber-400 hover:bg-amber-50/90 shadow-sm'
   }
   if (side === 'home') {
-    return 'border-2 border-sky-200/90 bg-sky-50/70 hover:border-sky-300 hover:bg-sky-50'
+    return 'border-2 border-sky-300/90 bg-white hover:border-sky-400 hover:bg-sky-50/90 shadow-sm'
   }
-  return 'border-2 border-violet-200/90 bg-violet-50/70 hover:border-violet-300 hover:bg-violet-50'
+  return 'border-2 border-violet-300/90 bg-white hover:border-violet-400 hover:bg-violet-50/90 shadow-sm'
 }
 
 export function Bet1x2PickTile({
@@ -104,7 +103,7 @@ export function Bet1x2PickTile({
   share,
   disabled,
   dense,
-  inline,
+  inline: _inline,
   pickVisual,
   isSelected,
   onClick,
@@ -122,14 +121,13 @@ export function Bet1x2PickTile({
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const darkSurface = inline || !L
+  const darkSurface = !L
   const visual = pickVisual
   const shell = resolve1x2TileShell({
     light: L,
     visual,
     isSelected: Boolean(isSelected),
     side,
-    inline,
   })
   const sideTag =
     side === 'draw' ? 'Match nul' : side === 'home' ? 'Domicile' : 'Extérieur'
@@ -141,7 +139,7 @@ export function Bet1x2PickTile({
       aria-pressed={isSelected}
       onClick={onClick}
       className={cn(
-        'flex min-w-0 flex-col items-center rounded-2xl px-1.5 text-center transition',
+        'tf-bet-1x2-tile flex min-w-0 flex-col items-center rounded-2xl px-1.5 text-center transition',
         dense ? 'py-2' : 'py-2.5',
         shell,
         'disabled:cursor-not-allowed disabled:opacity-55',
@@ -149,8 +147,8 @@ export function Bet1x2PickTile({
     >
       <span
         className={cn(
-          'font-black uppercase tracking-[0.14em]',
-          darkSurface ? 'text-sky-200/75' : 'text-slate-500',
+          'tf-bet-1x2-tag font-black uppercase tracking-[0.14em]',
+          darkSurface ? 'text-sky-200/90' : 'text-slate-500',
           dense ? 'text-[8px]' : 'text-[9px]',
         )}
       >
@@ -158,7 +156,7 @@ export function Bet1x2PickTile({
       </span>
       <span
         className={cn(
-          'mt-0.5 line-clamp-2 w-full font-black leading-tight',
+          'tf-bet-1x2-label mt-0.5 line-clamp-2 w-full font-black leading-tight',
           darkSurface ? 'text-white' : 'text-slate-900',
           dense ? 'text-[11px]' : 'text-xs sm:text-sm',
         )}
@@ -167,7 +165,7 @@ export function Bet1x2PickTile({
       </span>
       <span
         className={cn(
-          'mt-1.5 inline-flex min-w-[3.25rem] items-center justify-center rounded-xl border-2 font-black italic tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
+          'tf-bet-pick-odd mt-1.5 inline-flex min-w-[3.25rem] items-center justify-center rounded-xl border-2 font-black italic tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
           dense ? 'px-2.5 py-1 text-sm' : 'min-w-[3.5rem] px-3 py-1.5 text-base',
           visual.odd,
         )}
