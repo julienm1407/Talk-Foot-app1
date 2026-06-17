@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
@@ -96,7 +96,6 @@ export function BetWidget({
   teamAttackIndices = null,
   compact = false,
   prominent = false,
-  autoOpenSheet = false,
   liveScore = null,
   liveMinute = null,
   liveStatRows = [],
@@ -116,8 +115,6 @@ export function BetWidget({
   compact?: boolean
   /** Panneau mobile / zone étroite : cotes et boutons plus grands. */
   prominent?: boolean
-  /** Panneau Paris mobile : ouvre la feuille de pari directement. */
-  autoOpenSheet?: boolean
   liveStatRows?: { key: string; home: number; away: number }[]
   liveScore?: { home: number; away: number } | null
   liveMinute?: number | null
@@ -160,10 +157,6 @@ export function BetWidget({
   const sheetDense = compact
   const hideInlineForSheet = compact && sheetOpen
 
-  useEffect(() => {
-    if (!autoOpenSheet) return
-    setSheetOpen(true)
-  }, [autoOpenSheet, match.id])
   const [stake, setStake] = useState(25)
   const [pending, setPending] = useState<null | {
     market: BetMarket

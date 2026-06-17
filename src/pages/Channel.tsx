@@ -4078,7 +4078,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'paris' ? (
-              <div className="tf-channel-mobile-paris flex min-h-[min(70dvh,480px)] flex-1 flex-col overflow-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              <div className="tf-channel-mobile-paris flex min-h-[min(70dvh,480px)] flex-1 flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
                 {isFinished ? (
                   <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
                 ) : match ? (
@@ -4094,7 +4094,6 @@ export function ChannelPage() {
                     bettingSuspendReason={bettingSuspension.reason}
                     teamAttackIndices={attackIndices}
                     compact
-                    autoOpenSheet
                     liveScore={{ home: homeScore, away: awayScore }}
                     liveMinute={liveDisplayedMinute}
                     liveStatRows={liveStatRows}
