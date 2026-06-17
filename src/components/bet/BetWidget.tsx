@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -636,7 +637,7 @@ export function BetWidget({
   return (
     <div
       className={cn(
-        'tf-bet-widget relative flex h-full flex-col overflow-hidden rounded-xl border bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
+        'tf-bet-widget relative flex h-full min-h-[12rem] flex-col overflow-hidden rounded-xl border bg-[#0b1f34] shadow-[0_10px_20px_rgba(2,8,18,0.26)]',
         compactProminent
           ? 'border-emerald-400/45 ring-1 ring-emerald-400/20'
           : 'border-[#3a6690]/55',
@@ -825,35 +826,37 @@ export function BetWidget({
       </>
       ) : null}
 
-      {sheetOpen ? (
-        <div
-          className={cn(
-            'fixed inset-0 flex items-end justify-center sm:items-center sm:p-4',
-            sheetDense ? 'z-[2147482503]' : 'z-[88]',
-          )}
-          data-no-swipe="true"
-          data-tf-modal="true"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="bet-sheet-title"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
-            onClick={() => setSheetOpen(false)}
-            aria-label="Fermer les pronos"
-          />
-          <div
-            className={cn(
-              'relative z-10 flex w-full flex-col overflow-hidden rounded-t-3xl border shadow-2xl tf-bet-sheet',
-              sheetLight
-                ? 'border-slate-200/80 bg-white'
-                : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)]',
-              sheetDense
-                ? 'max-h-[min(88dvh,620px)] sm:max-h-[min(84vh,640px)] sm:max-w-lg sm:rounded-3xl'
-                : 'max-h-[min(92vh,720px)] max-w-lg sm:max-h-[min(88vh,680px)] sm:max-w-xl',
-            )}
-          >
+      {sheetOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className={cn(
+                'tf-bet-sheet-layer fixed inset-0 flex flex-col justify-end sm:justify-center sm:p-4',
+                sheetDense ? 'z-[2147482504]' : 'z-[88]',
+              )}
+              data-no-swipe="true"
+              data-tf-modal="true"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="bet-sheet-title"
+            >
+              <button
+                type="button"
+                className="absolute inset-0 bg-slate-900/45 backdrop-blur-[2px]"
+                onClick={() => setSheetOpen(false)}
+                aria-label="Fermer les pronos"
+              />
+              <div
+                className={cn(
+                  'relative z-10 mx-auto flex w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border shadow-2xl tf-bet-sheet',
+                  sheetDense && 'tf-bet-sheet--dense',
+                  sheetLight
+                    ? 'border-slate-200/80 bg-white'
+                    : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)]',
+                  sheetDense
+                    ? 'h-[min(88dvh,620px)] min-h-[min(72dvh,480px)] max-h-[min(88dvh,620px)] sm:rounded-3xl'
+                    : 'max-h-[min(92vh,720px)] sm:max-h-[min(88vh,680px)] sm:max-w-xl',
+                )}
+              >
             <div
               className={cn(
                 'flex shrink-0 items-center justify-between gap-2 border-b',
@@ -903,7 +906,7 @@ export function BetWidget({
             <div
               ref={sheetScrollRef}
               className={cn(
-                'min-h-0 flex-1 overflow-y-auto overscroll-contain',
+                'tf-bet-sheet-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain',
                 sheetDense ? 'px-3 py-2.5' : 'px-4 py-4 sm:px-5',
               )}
             >
@@ -1265,8 +1268,10 @@ export function BetWidget({
               </Link>
             </div>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

@@ -3042,6 +3042,40 @@ body::before {
   touch-action: manipulation;
 }
 
+.tf-channel-mobile-sheet-panel--paris {
+  display: flex;
+  flex-direction: column;
+}
+
+.tf-channel-mobile-paris {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Feuille de paris mobile — hauteur explicite (Safari iOS + flex-1). */
+.tf-bet-sheet--dense {
+  height: min(88dvh, 620px);
+  min-height: min(72dvh, 480px);
+  max-height: min(88dvh, 620px);
+}
+
+.tf-bet-sheet-layer {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+.tf-bet-sheet--dense .tf-bet-sheet-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .tf-bet-sheet--dense {
+    height: min(88dvh, 620px);
+    min-height: min(70dvh, 460px);
+  }
+}
+
 /* Animations BUT/CARTON plein écran — sans backdrop-blur (bug iOS score/chat). */
 .tf-live-fullscreen-fx {
   isolation: isolate;

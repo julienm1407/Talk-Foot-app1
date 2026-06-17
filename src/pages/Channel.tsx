@@ -3905,7 +3905,10 @@ export function ChannelPage() {
                   />
                   <div
                     className={cn(
-                      'relative z-10 w-full max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto rounded-2xl border p-3 shadow-2xl',
+                      'relative z-10 flex w-full flex-col overflow-hidden rounded-2xl border p-3 shadow-2xl',
+                      mobilePanel === 'paris'
+                        ? 'tf-channel-mobile-sheet-panel--paris min-h-[min(78dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] max-h-[min(92dvh,calc(100dvh-4rem-env(safe-area-inset-bottom,0px)))]'
+                        : 'max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto',
                       chSheetPanel,
                     )}
                     onClick={(e) => e.stopPropagation()}
@@ -4075,7 +4078,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'paris' ? (
-              <div className="max-h-[min(88dvh,calc(100dvh-6rem-env(safe-area-inset-bottom,0px)))] overflow-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              <div className="tf-channel-mobile-paris flex min-h-[min(70dvh,480px)] flex-1 flex-col overflow-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]">
                 {isFinished ? (
                   <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
                 ) : match ? (
