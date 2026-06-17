@@ -93,7 +93,7 @@ export function useTalkFootInternalOdds(opts: {
       oddsOverUnder25: prematchOverUnder25From1x2(probs),
       probs1x2: probs,
       source: 'fallback' as const,
-      marginPct: 0.075,
+      marginPct: 0.062,
     }
   }, [
     match,

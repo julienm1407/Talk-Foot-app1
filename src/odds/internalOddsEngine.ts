@@ -18,8 +18,8 @@ export const TEAM_POWER_WEIGHTS = {
   ranking: 0.1,
 } as const
 
-/** Marge bookmaker par défaut (entre 5 % et 10 %). */
-export const DEFAULT_BOOK_MARGIN = 0.075
+/** Marge bookmaker par défaut (légèrement plus généreuse qu’avant). */
+export const DEFAULT_BOOK_MARGIN = 0.062
 
 export const SCORER_WEIGHTS = {
   recentForm: 0.4,
@@ -62,9 +62,9 @@ export function probabilities1x2FromPower(homePower: number, awayPower: number):
   const diff = clamp(homePower - awayPower, -55, 55)
   const absDiff = Math.abs(diff)
 
-  const homeWinShare = 1 / (1 + Math.exp(-0.078 * diff))
-  let pDraw = 0.22 * Math.exp(-0.028 * absDiff) + 0.055
-  pDraw = clamp(pDraw, 0.06, 0.32)
+  const homeWinShare = 1 / (1 + Math.exp(-0.088 * diff))
+  let pDraw = 0.21 * Math.exp(-0.032 * absDiff) + 0.05
+  pDraw = clamp(pDraw, 0.05, 0.3)
 
   const remain = 1 - pDraw
   let pHome = remain * homeWinShare
@@ -110,11 +110,73 @@ export function probabilitiesToDecimalOdds(
   probs: Probabilities1x2,
   marginPct = DEFAULT_BOOK_MARGIN,
 ): SmBookOdds1x2 {
-  return {
-    home: probabilityToDecimalOdd(probs.pHome, marginPct),
-    draw: probabilityToDecimalOdd(probs.pDraw, marginPct),
-    away: probabilityToDecimalOdd(probs.pAway, marginPct),
+  return calibrate1x2OddsForMarket(
+    {
+      home: probabilityToDecimalOdd(probs.pHome, marginPct),
+      draw: probabilityToDecimalOdd(probs.pDraw, marginPct),
+      away: probabilityToDecimalOdd(probs.pAway, marginPct),
+    },
+    marginPct,
+  )
+}
+
+/**
+ * Rapproche les cotes bookmaker : favori un peu moins écrasé, outsider plus haut.
+ * (ex. PRT ~1,25–1,32 / COD ~10–14 plutôt que 1,15 / 22 ou 1,42 / 5,8 en live.)
+ */
+export function calibrate1x2OddsForMarket(
+  odds: SmBookOdds1x2,
+  marginPct = DEFAULT_BOOK_MARGIN,
+): SmBookOdds1x2 {
+  const probs = impliedProbsFromDecimalOdds(odds)
+  const skew = Math.max(probs.pHome, probs.pDraw, probs.pAway) -
+    Math.min(probs.pHome, probs.pDraw, probs.pAway)
+  if (skew < 0.28) return odds
+
+  const gamma = skew >= 0.55 ? 0.86 : skew >= 0.4 ? 0.9 : 0.93
+  const shaped = normalize3(
+    Math.pow(probs.pHome, gamma),
+    Math.pow(probs.pDraw, Math.min(1, gamma + 0.04)),
+    Math.pow(probs.pAway, gamma),
+  )
+  const generousMargin = marginPct * 0.94
+  let result: SmBookOdds1x2 = {
+    home: probabilityToDecimalOdd(shaped.pHome, generousMargin),
+    draw: probabilityToDecimalOdd(shaped.pDraw, generousMargin),
+    away: probabilityToDecimalOdd(shaped.pAway, generousMargin),
   }
+
+  const favOdd = Math.min(result.home, result.away)
+  const dogOdd = Math.max(result.home, result.away)
+  if (dogOdd >= 8.5 && favOdd < 1.27) {
+    const scale = 1.27 / favOdd
+    if (result.home <= result.away) {
+      result = {
+        home: round2(result.home * scale),
+        draw: round2(result.draw * 0.96),
+        away: round2(result.away * 1.06),
+      }
+    } else {
+      result = {
+        home: round2(result.home * 1.06),
+        draw: round2(result.draw * 0.96),
+        away: round2(result.away * scale),
+      }
+    }
+  }
+
+  const favAfter = Math.min(result.home, result.away)
+  const dogAfter = Math.max(result.home, result.away)
+  const maxDog = favAfter < 1.28 ? 16.5 : favAfter < 1.45 ? 11.5 : 8.5
+  if (dogAfter > maxDog) {
+    if (result.away >= result.home) {
+      result = { ...result, away: round2(maxDog) }
+    } else {
+      result = { ...result, home: round2(maxDog) }
+    }
+  }
+
+  return result
 }
 
 export function computePrematch1x2FromContext(
@@ -229,11 +291,16 @@ export function adjustProbabilities1x2ForLive(
   const absDiff = Math.abs(diff)
   const homeShare = clamp(base.pHome / Math.max(0.08, base.pHome + base.pAway), 0.28, 0.72)
   const fromScore = liveOutcomeProbsFromScore(homeGoals, awayGoals, minute, homeShare)
-  const liveWeight = clamp(
+  let liveWeight = clamp(
     ((minute + 5) / 90) * (1 + Math.min(absDiff, 5) * 0.2),
     0,
     1,
   )
+  if (homeGoals === awayGoals && homeGoals === 0) {
+    const favSkew = Math.abs(base.pHome - base.pAway)
+    const damp = clamp(1.2 - favSkew * 1.35, 0.22, 1)
+    liveWeight *= damp
+  }
   let probs = blendProbabilities(base, fromScore, liveWeight)
 
   const hRed = live.homeRedCards ?? 0

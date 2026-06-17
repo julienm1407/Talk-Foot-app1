@@ -3,6 +3,7 @@ import test from 'node:test'
 import { buildMatchOddsContextFromNations } from './buildTeamOddsInput'
 import {
   adjust1x2OddsForLiveInternal,
+  calibrate1x2OddsForMarket,
   computePrematch1x2FromContext,
   teamPowerScore,
 } from './internalOddsEngine'
@@ -58,4 +59,22 @@ test('écart de puissance cohérent CHE > QAT', () => {
   const home = teamPowerScore(ctx.home.factors, ctx.home.absenceFactor ?? 1)
   const away = teamPowerScore(ctx.away.factors, ctx.away.absenceFactor ?? 1)
   assert.ok(home > away + 12)
+})
+
+test('Portugal vs RD Congo — calibrage bookmaker (~1,25 / ~5,5 / ~12)', () => {
+  const ctx = buildMatchOddsContextFromNations('PRT', 'COD')
+  const { odds1x2 } = computePrematch1x2FromContext(ctx)
+  const live00 = adjust1x2OddsForLiveInternal(odds1x2, { minute: 35, homeGoals: 0, awayGoals: 0 })
+  assert.ok(odds1x2.home >= 1.2 && odds1x2.home <= 1.34, `pre home=${odds1x2.home}`)
+  assert.ok(odds1x2.draw >= 5 && odds1x2.draw <= 7.5, `pre draw=${odds1x2.draw}`)
+  assert.ok(odds1x2.away >= 9.5 && odds1x2.away <= 16.5, `pre away=${odds1x2.away}`)
+  assert.ok(live00.home >= 1.22 && live00.home <= 1.38, `live home=${live00.home}`)
+  assert.ok(live00.away >= 9 && live00.away <= 18, `live away=${live00.away}`)
+})
+
+test('calibration relève l’outsider sur gros écart', () => {
+  const raw = { home: 1.12, draw: 6.4, away: 24 }
+  const calibrated = calibrate1x2OddsForMarket(raw)
+  assert.ok(calibrated.home > raw.home, 'favori un peu moins écrasé')
+  assert.ok(calibrated.away < raw.away, 'outsider plus haut en cote')
 })
