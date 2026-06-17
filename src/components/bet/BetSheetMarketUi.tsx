@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { BetSelection } from '../../types/bet'
+import { useAppearance } from '../../contexts/AppearanceContext'
+import { TF_TEXT_FG, TF_TEXT_MUTED, TF_TEXT_SUBTLE, tfInsetCard } from '../../theme/appearanceClasses'
 import { cn } from '../../utils/cn'
 
 export type BetPickVisualState = {
@@ -102,10 +104,14 @@ export function BetSheetMarketCard({
   dense?: boolean
   children: ReactNode
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm',
+        tfInsetCard(L),
+        'overflow-hidden shadow-sm',
         dense ? 'p-2.5' : 'p-3.5',
       )}
     >
@@ -113,7 +119,8 @@ export function BetSheetMarketCard({
         <div className="min-w-0">
           <h3
             className={cn(
-              'font-black text-slate-900',
+              'font-black',
+              TF_TEXT_FG,
               dense ? 'text-xs' : 'text-sm',
             )}
           >
@@ -122,7 +129,8 @@ export function BetSheetMarketCard({
           {subtitle ? (
             <p
               className={cn(
-                'mt-0.5 font-semibold text-slate-500',
+                'mt-0.5 font-semibold',
+                TF_TEXT_MUTED,
                 dense ? 'text-[10px]' : 'text-[11px]',
               )}
             >
@@ -158,6 +166,8 @@ export function BetSheet1x2Grid({
   /** Parts des paris communautaires (0–100). Si absent ou tout à 0, barres vides. */
   betShares?: [number, number, number]
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
   const shares = betShares ?? [0, 0, 0]
   const sides = [
     { side: 'home' as const, label: homeLabel, share: shares[0] ?? 0 },
@@ -202,7 +212,8 @@ export function BetSheet1x2Grid({
           >
             <span
               className={cn(
-                'line-clamp-2 w-full font-bold leading-tight text-slate-700',
+                'line-clamp-2 w-full font-bold leading-tight',
+                L ? 'text-slate-700' : 'text-tf-app-fg',
                 dense ? 'text-[10px]' : 'text-[11px]',
               )}
             >
@@ -210,7 +221,8 @@ export function BetSheet1x2Grid({
             </span>
             <span
               className={cn(
-                'mt-1 font-black italic tabular-nums text-slate-900',
+                'mt-1 font-black italic tabular-nums',
+                TF_TEXT_FG,
                 dense ? 'text-lg' : 'text-xl',
               )}
             >
@@ -256,78 +268,170 @@ export function BetSheetExactScoreGrid({
   pendingSelection?: BetSelection | null
   onSelect: (pick: { id: BetSelection; label: string; odds: number }) => void
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+  const [expanded, setExpanded] = useState(false)
+
+  const byKey = useMemo(
+    () => ({
+      home: groups.find((g) => g.key === 'home')?.picks ?? [],
+      draw: groups.find((g) => g.key === 'draw')?.picks ?? [],
+      away: groups.find((g) => g.key === 'away')?.picks ?? [],
+    }),
+    [groups],
+  )
+
+  const previewRows = useMemo(() => {
+    const rows: Array<{
+      home: (typeof byKey.home)[number] | null
+      draw: (typeof byKey.draw)[number] | null
+      away: (typeof byKey.away)[number] | null
+    }> = []
+    for (let i = 0; i < 3; i += 1) {
+      rows.push({
+        home: byKey.home[i] ?? null,
+        draw: byKey.draw[i] ?? null,
+        away: byKey.away[i] ?? null,
+      })
+    }
+    return rows
+  }, [byKey])
+
+  const extraGroups = useMemo(
+    () =>
+      [
+        { key: 'home' as const, title: groups.find((g) => g.key === 'home')?.title ?? '', picks: byKey.home.slice(3) },
+        { key: 'draw' as const, title: groups.find((g) => g.key === 'draw')?.title ?? '', picks: byKey.draw.slice(3) },
+        { key: 'away' as const, title: groups.find((g) => g.key === 'away')?.title ?? '', picks: byKey.away.slice(3) },
+      ].filter((g) => g.picks.length > 0),
+    [byKey, groups],
+  )
+
+  const hasMore = extraGroups.length > 0
+
+  useEffect(() => {
+    if (!pendingSelection || expanded) return
+    const inPreview = previewRows.some(
+      (row) =>
+        row.home?.id === pendingSelection ||
+        row.draw?.id === pendingSelection ||
+        row.away?.id === pendingSelection,
+    )
+    if (!inPreview) setExpanded(true)
+  }, [pendingSelection, previewRows, expanded])
+
+  const renderPick = (pick: (typeof byKey.home)[number] | null) => {
+    if (!pick) return <div aria-hidden="true" />
+    const visual = pickVisual(pick.id)
+    const isSelected = pendingSelection === pick.id
+    return (
+      <button
+        type="button"
+        disabled={!enabled || pick.disabled}
+        aria-pressed={isSelected}
+        onClick={() => onSelect(pick)}
+        className={cn(
+          'flex min-w-0 w-full items-center gap-1.5 rounded-lg px-0.5 py-1 text-left transition',
+          isSelected && 'rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/45',
+          visual.shell.includes('emerald-100') && 'bg-emerald-500/10',
+          visual.shell.includes('rose-100') && 'bg-rose-500/10',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+        )}
+      >
+        <span
+          className={cn(
+            'shrink-0 font-bold tabular-nums',
+            TF_TEXT_FG,
+            dense ? 'text-[11px]' : 'text-xs',
+          )}
+        >
+          {pick.label.replace('-', ' - ')}
+        </span>
+        <span
+          className={cn(
+            'h-px min-w-[0.35rem] flex-1',
+            L ? 'bg-slate-300/80' : 'bg-white/20',
+          )}
+          aria-hidden="true"
+        />
+        <span
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center rounded-md px-1.5 py-0.5 font-black italic tabular-nums',
+            dense ? 'min-w-[2.35rem] text-[11px]' : 'min-w-[2.6rem] text-xs',
+            visual.odd,
+          )}
+        >
+          {fmtOdds(pick.odds)}
+        </span>
+      </button>
+    )
+  }
+
   return (
     <div className={cn('space-y-3', dense && 'space-y-2')}>
-      {groups.map((group) =>
-        group.picks.length > 0 ? (
-          <div key={group.key}>
-            <p
-              className={cn(
-                'font-black uppercase tracking-wide text-slate-500',
-                dense ? 'text-[9px]' : 'text-[10px]',
-              )}
-            >
-              {group.title}
-            </p>
-            <div
-              className={cn(
-                'mt-1 grid grid-cols-2 gap-1.5 sm:grid-cols-3',
-                dense && 'gap-1',
-              )}
-            >
-              {group.picks.map((p) => {
-                const visual = pickVisual(p.id)
-                const isSelected = pendingSelection === p.id
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={!enabled || p.disabled}
-                    aria-pressed={isSelected}
-                    onClick={() => onSelect(p)}
-                    className={cn(
-                      'flex flex-col items-center rounded-xl border-2 px-2 py-2 text-center transition',
-                      dense ? 'py-1.5' : 'py-2.5',
-                      isSelected
-                        ? 'border-emerald-500/80 bg-emerald-50 ring-2 ring-emerald-400/35'
-                        : 'border-slate-200/90 bg-slate-50/80 hover:border-emerald-300/60 hover:bg-white',
-                      visual.shell.includes('emerald-100') && 'border-emerald-500/70 bg-emerald-50/90',
-                      visual.shell.includes('rose-100') && 'border-rose-500/70 bg-rose-50/90',
-                      'disabled:cursor-not-allowed disabled:opacity-50',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'font-black tabular-nums text-slate-900',
-                        dense ? 'text-sm' : 'text-base',
-                      )}
-                    >
-                      {p.label.replace('-', ' - ')}
-                    </span>
-                    <span
-                      className={cn(
-                        'mt-1 inline-flex min-w-[3rem] items-center justify-center rounded-lg border-2 px-2 py-0.5 font-black italic tabular-nums',
-                        dense ? 'text-xs' : 'text-sm',
-                        visual.odd,
-                      )}
-                    >
-                      {fmtOdds(p.odds)}
-                    </span>
-                    {visual.badge ? (
-                      <span className="mt-0.5 text-[8px] font-black uppercase text-emerald-800">
-                        {visual.badge}
-                      </span>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
+      <div className={cn('space-y-2', dense && 'space-y-1.5')}>
+        {previewRows.map((row, idx) => (
+          <div key={idx} className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            {renderPick(row.home)}
+            {renderPick(row.draw)}
+            {renderPick(row.away)}
           </div>
-        ) : null,
-      )}
+        ))}
+      </div>
+
+      {hasMore ? (
+        <div className="flex justify-center pt-0.5">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Afficher moins de scores' : 'Afficher plus de scores'}
+            onClick={() => setExpanded((v) => !v)}
+            className={cn(
+              'grid size-9 place-items-center rounded-full border transition',
+              L
+                ? 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white'
+                : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-muted hover:border-sky-300/40 hover:text-tf-app-fg',
+            )}
+          >
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              className={cn('size-4 transition-transform', expanded && 'rotate-180')}
+              aria-hidden="true"
+            >
+              <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      ) : null}
+
+      {expanded && hasMore ? (
+        <div className={cn('space-y-3 border-t pt-3', L ? 'border-slate-200/80' : 'border-[color:var(--tf-c30-border)]', dense && 'space-y-2 pt-2')}>
+          {extraGroups.map((group) => (
+            <div key={group.key}>
+              <p
+                className={cn(
+                  'font-black uppercase tracking-wide',
+                  TF_TEXT_SUBTLE,
+                  dense ? 'text-[9px]' : 'text-[10px]',
+                )}
+              >
+                {group.title}
+              </p>
+              <div className={cn('mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2', dense && 'gap-0.5')}>
+                {group.picks.map((pick) => renderPick(pick))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <p
         className={cn(
-          'text-center font-semibold text-slate-400',
+          'text-center font-semibold',
+          TF_TEXT_SUBTLE,
           dense ? 'text-[9px]' : 'text-[10px]',
         )}
       >
@@ -355,13 +459,17 @@ export function BetSheetScorerList({
   pendingSelection?: BetSelection | null
   onSelect: (pick: { id: BetSelection; label: string; odds: number }) => void
 }) {
+  const { appearance } = useAppearance()
+  const L = appearance === 'light'
+
   return (
     <div className={cn('space-y-3', dense && 'space-y-2')}>
       {sides.map((side) => (
         <div key={side.teamLabel}>
           <p
             className={cn(
-              'font-black uppercase tracking-wide text-slate-500',
+              'font-black uppercase tracking-wide',
+              TF_TEXT_SUBTLE,
               dense ? 'text-[9px]' : 'text-[10px]',
             )}
           >
@@ -369,7 +477,10 @@ export function BetSheetScorerList({
           </p>
           <ul
             className={cn(
-              'mt-1 divide-y divide-slate-200/90 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/50',
+              'mt-1 divide-y overflow-hidden rounded-xl border',
+              L
+                ? 'divide-slate-200/90 border-slate-200/80 bg-slate-50/50'
+                : 'divide-[color:var(--tf-c30-border)] border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
             )}
           >
             {side.picks.map((p) => {
@@ -387,18 +498,25 @@ export function BetSheetScorerList({
                       'flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition',
                       dense ? 'px-2.5 py-2' : 'px-3 py-2.5',
                       isSelected
-                        ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-300/60'
-                        : 'hover:bg-white/80',
-                      visual.shell.includes('emerald-100') && 'bg-emerald-50/80',
-                      visual.shell.includes('rose-100') && 'bg-rose-50/80',
+                        ? L
+                          ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-300/60'
+                          : 'bg-emerald-500/10 ring-1 ring-inset ring-emerald-400/35'
+                        : L
+                          ? 'hover:bg-white/80'
+                          : 'hover:bg-white/[0.04]',
+                      visual.shell.includes('emerald-100') &&
+                        (L ? 'bg-emerald-50/80' : 'bg-emerald-500/10'),
+                      visual.shell.includes('rose-100') &&
+                        (L ? 'bg-rose-50/80' : 'bg-rose-500/10'),
                       'disabled:cursor-not-allowed disabled:opacity-50',
                     )}
                   >
                     <span
                       className={cn(
-                        'min-w-0 flex-1 font-semibold leading-snug text-slate-800',
+                        'min-w-0 flex-1 font-semibold leading-snug',
+                        L ? 'text-slate-800' : 'text-tf-app-fg',
                         dense ? 'text-xs' : 'text-sm',
-                        p.disabled && !scoredLive && 'text-slate-400 line-through',
+                        p.disabled && !scoredLive && (L ? 'text-slate-400 line-through' : 'text-tf-app-subtle line-through'),
                       )}
                     >
                       {p.label}

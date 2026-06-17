@@ -9,6 +9,8 @@ import type { Bet } from '../../types/bet'
 import type { Wallet } from '../../types/bet'
 import type { BetMarket, BetSelection } from '../../types/bet'
 import { useBetting } from '../../hooks/useBetting'
+import { useAppearance } from '../../contexts/AppearanceContext'
+import { TF_TEXT_FG, TF_TEXT_MUTED, TF_TEXT_SUBTLE, tfInsetCard } from '../../theme/appearanceClasses'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../../api/sportMonks'
 import {
   adjust1x2OddsForLive,
@@ -148,6 +150,8 @@ export function BetWidget({
 }) {
   void bookOddsOverUnder25
   const fallback = useBetting(match.id, match)
+  const { appearance } = useAppearance()
+  const sheetLight = appearance === 'light'
   const { wallet, openBets, matchBets, placeBet, cancelBet: _cancelBet, stats } = betting ?? fallback
   const { shares: bet1x2Shares, recordBet: record1x2Bet } = useMatch1x2BetVolume(match.id)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -934,7 +938,10 @@ export function BetWidget({
           />
           <div
             className={cn(
-              'relative z-10 flex w-full flex-col overflow-hidden rounded-t-3xl border border-slate-200/80 bg-white shadow-2xl',
+              'relative z-10 flex w-full flex-col overflow-hidden rounded-t-3xl border shadow-2xl tf-bet-sheet',
+              sheetLight
+                ? 'border-slate-200/80 bg-white'
+                : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)]',
               sheetDense
                 ? 'max-h-[min(88dvh,620px)] sm:max-h-[min(84vh,640px)] sm:max-w-lg sm:rounded-3xl'
                 : 'max-h-[min(92vh,720px)] max-w-lg sm:max-h-[min(88vh,680px)] sm:max-w-xl',
@@ -942,25 +949,28 @@ export function BetWidget({
           >
             <div
               className={cn(
-                'flex shrink-0 items-center justify-between gap-2 border-b border-slate-100',
+                'flex shrink-0 items-center justify-between gap-2 border-b',
+                sheetLight ? 'border-slate-100' : 'border-[color:var(--tf-c30-border)]',
                 sheetDense ? 'px-3 py-2' : 'px-4 py-3 sm:px-5',
               )}
             >
               <div>
                 <h2
                   id="bet-sheet-title"
-                  className={cn('font-black text-slate-900', sheetDense ? 'text-sm' : 'text-base')}
+                  className={cn('font-black', TF_TEXT_FG, sheetDense ? 'text-sm' : 'text-base')}
                 >
                   Pronos
                 </h2>
-                <p className={cn('font-semibold text-slate-500', sheetDense ? 'text-[10px]' : 'text-[11px]')}>
+                <p className={cn('font-semibold', TF_TEXT_MUTED, sheetDense ? 'text-[10px]' : 'text-[11px]')}>
                   Mise d’abord, puis valide ta sélection
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge
                   className={cn(
-                    'border-slate-200 bg-slate-50 text-slate-800',
+                    sheetLight
+                      ? 'border-slate-200 bg-slate-50 text-slate-800'
+                      : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-fg',
                     sheetDense && 'px-2 py-0.5 text-[10px]',
                   )}
                 >
@@ -969,7 +979,10 @@ export function BetWidget({
                 <button
                   type="button"
                   className={cn(
-                    'grid place-items-center rounded-2xl border border-slate-200 bg-white font-bold text-slate-600 transition hover:bg-slate-50',
+                    'grid place-items-center rounded-2xl border font-bold transition',
+                    sheetLight
+                      ? 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-muted hover:text-tf-app-fg',
                     sheetDense ? 'size-8 text-base' : 'size-10 text-lg',
                   )}
                   onClick={() => setSheetOpen(false)}
@@ -987,11 +1000,12 @@ export function BetWidget({
                 sheetDense ? 'px-3 py-2.5' : 'px-4 py-4 sm:px-5',
               )}
             >
-              <div className={cn('rounded-2xl border border-sky-200/70 bg-sky-50/90 shadow-sm', sheetDense ? 'p-3' : 'p-4')}>
+              <div className={cn(tfInsetCard(sheetLight), 'shadow-sm', sheetDense ? 'p-3' : 'p-4')}>
                 <div className="flex items-center justify-between gap-2">
                   <span
                     className={cn(
-                      'font-black uppercase tracking-wide text-sky-900/80',
+                      'font-black uppercase tracking-wide',
+                      sheetLight ? 'text-sky-900/80' : 'text-sky-200/90',
                       sheetDense ? 'text-[10px]' : 'text-xs',
                     )}
                   >
@@ -1001,7 +1015,7 @@ export function BetWidget({
                     className={cn(
                       'font-black tabular-nums',
                       sheetDense ? 'text-base' : 'text-lg',
-                      canStake ? 'text-slate-900' : 'text-rose-600',
+                      canStake ? TF_TEXT_FG : 'text-rose-500',
                     )}
                   >
                     {stake} j.
@@ -1069,13 +1083,13 @@ export function BetWidget({
                   </>
                 )}
                 {pending ? (
-                  <p className="mt-3 text-xs font-semibold text-slate-600">
+                  <p className={cn('mt-3 text-xs font-semibold', TF_TEXT_MUTED)}>
                     Gain potentiel (brut) :{' '}
-                    <span className="font-black text-emerald-700">{potentialReturn} j.</span>{' '}
-                    <span className="text-slate-400">(@ {fmtOdds(pending.odds)})</span>
+                    <span className={cn('font-black', sheetLight ? 'text-emerald-700' : 'text-emerald-400')}>{potentialReturn} j.</span>{' '}
+                    <span className={TF_TEXT_SUBTLE}>(@ {fmtOdds(pending.odds)})</span>
                   </p>
                 ) : (
-                  <p className="mt-3 text-xs font-semibold text-slate-500">
+                  <p className={cn('mt-3 text-xs font-semibold', TF_TEXT_MUTED)}>
                     Choisis un marché ci-dessous pour voir le gain estimé.
                   </p>
                 )}
@@ -1109,8 +1123,8 @@ export function BetWidget({
                               ? 'Score exact sélectionné'
                               : 'Sélection'}
                     </div>
-                    <div className="truncate text-sm font-black text-slate-900">{pending.label}</div>
-                    <div className="mt-0.5 text-xs font-semibold text-slate-600">
+                    <div className={cn('truncate text-sm font-black', TF_TEXT_FG)}>{pending.label}</div>
+                    <div className={cn('mt-0.5 text-xs font-semibold', TF_TEXT_MUTED)}>
                       {stake} j. · cote {fmtOdds(pending.odds)}
                     </div>
                   </div>
@@ -1157,7 +1171,10 @@ export function BetWidget({
 
               <div
                 className={cn(
-                  'sticky top-0 z-10 flex gap-1.5 border-b border-slate-100 bg-white/95 backdrop-blur',
+                  'sticky top-0 z-10 flex gap-1.5 border-b backdrop-blur',
+                  sheetLight
+                    ? 'border-slate-100 bg-white/95'
+                    : 'border-[color:var(--tf-c30-border)] bg-[color:color-mix(in_srgb,var(--tf-c30-surface)_95%,transparent)]',
                   sheetDense ? '-mx-3 mt-3 px-3 py-1.5' : '-mx-4 mt-4 px-4 py-2 sm:-mx-5 sm:px-5',
                 )}
               >
@@ -1165,7 +1182,10 @@ export function BetWidget({
                   type="button"
                   onClick={() => scrollSheetToSection(x12SectionRef)}
                   className={cn(
-                    'flex-1 rounded-xl border border-sky-200 bg-sky-50 font-black uppercase tracking-wide text-sky-900 transition hover:bg-sky-100',
+                    'flex-1 rounded-xl border font-black uppercase tracking-wide transition',
+                    sheetLight
+                      ? 'border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100'
+                      : 'border-sky-400/35 bg-sky-950/40 text-sky-100 hover:bg-sky-900/50',
                     sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
                   )}
                 >
@@ -1176,7 +1196,10 @@ export function BetWidget({
                     type="button"
                     onClick={() => scrollSheetToSection(exactScoreSectionRef)}
                     className={cn(
-                      'flex-1 rounded-xl border border-amber-200 bg-amber-50 font-black uppercase tracking-wide text-amber-900 transition hover:bg-amber-100',
+                      'flex-1 rounded-xl border font-black uppercase tracking-wide transition',
+                      sheetLight
+                        ? 'border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                        : 'border-amber-400/35 bg-amber-950/35 text-amber-100 hover:bg-amber-900/45',
                       sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
                     )}
                   >
@@ -1188,7 +1211,10 @@ export function BetWidget({
                     type="button"
                     onClick={() => scrollSheetToSection(scorersSectionRef)}
                     className={cn(
-                      'flex-1 rounded-xl border border-violet-200 bg-violet-50 font-black uppercase tracking-wide text-violet-900 transition hover:bg-violet-100',
+                      'flex-1 rounded-xl border font-black uppercase tracking-wide transition',
+                      sheetLight
+                        ? 'border-violet-200 bg-violet-50 text-violet-900 hover:bg-violet-100'
+                        : 'border-violet-400/35 bg-violet-950/40 text-violet-100 hover:bg-violet-900/50',
                       sheetDense ? 'px-2 py-1.5 text-[10px]' : 'px-3 py-2 text-xs',
                     )}
                   >
@@ -1322,7 +1348,10 @@ export function BetWidget({
 
               <Link
                 to="/profile"
-                className="mt-2 block pb-2 text-center text-xs font-bold text-blue-600 hover:text-blue-700"
+                className={cn(
+                  'mt-2 block pb-2 text-center text-xs font-bold underline-offset-2 hover:underline',
+                  sheetLight ? 'text-blue-600 hover:text-blue-700' : 'text-sky-300 hover:text-sky-200',
+                )}
                 onClick={() => setSheetOpen(false)}
               >
                 Voir l’historique dans le profil →
