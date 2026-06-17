@@ -1545,6 +1545,7 @@ export function ChannelPage() {
   const infoHighlightIdsRef = useRef<Set<string>>(new Set())
   const infoToastKeysRef = useRef<Set<string>>(new Set())
   const infoToastTimeoutRef = useRef<number | null>(null)
+  const liveClockPausedWasRef = useRef(false)
 
   const detectHighlightSide = useCallback(
     (raw: string): 'home' | 'away' | undefined => {
@@ -1665,11 +1666,31 @@ export function ChannelPage() {
       infoHighlightPrimedRef.current = false
       infoHighlightIdsRef.current = new Set()
       infoToastKeysRef.current = new Set()
+      liveClockPausedWasRef.current = false
     }
     if (status !== 'live') return
 
+    const clockPaused = Boolean(matchForClock?.liveClockPaused)
+    if (clockPaused && !liveClockPausedWasRef.current) {
+      for (const h of smTimelineHighlights) {
+        fullscreenShownHighlightIdsRef.current.add(h.id)
+        const kind = fullscreenKindFromHighlight(h)
+        if (!kind) continue
+        const enriched = highlightWithDetectedSide(h, detectHighlightSide)
+        rememberFullscreenSeenKey(
+          match?.id,
+          fullscreenDedupeKeysRef.current,
+          fullscreenEventDedupeKey(enriched, kind),
+        )
+      }
+      fullscreenDedupePrimedRef.current = true
+    }
+    liveClockPausedWasRef.current = clockPaused
+
     if (!fullscreenDedupePrimedRef.current) {
       if (liveStatsLoading) return
+      const hasActivity = homeScore + awayScore > 0 || liveDisplayedMinute > 10
+      if (smTimelineHighlights.length === 0 && hasActivity) return
       for (const h of smTimelineHighlights) {
         const kind = fullscreenKindFromHighlight(h)
         if (!kind) continue
@@ -1693,6 +1714,16 @@ export function ChannelPage() {
       const kind = fullscreenKindFromHighlight(h)
       if (!kind) continue
       if (fullscreenShownHighlightIdsRef.current.has(h.id)) continue
+      if (clockPaused && h.minute > 0 && h.minute < liveDisplayedMinute) {
+        fullscreenShownHighlightIdsRef.current.add(h.id)
+        const enriched = highlightWithDetectedSide(h, detectHighlightSide)
+        rememberFullscreenSeenKey(
+          match?.id,
+          fullscreenDedupeKeysRef.current,
+          fullscreenEventDedupeKey(enriched, kind),
+        )
+        continue
+      }
       if (h.minute > 0 && h.minute < historyCutoff) {
         fullscreenShownHighlightIdsRef.current.add(h.id)
         continue
@@ -1785,6 +1816,7 @@ export function ChannelPage() {
     homeScore,
     awayScore,
     liveDisplayedMinute,
+    matchForClock?.liveClockPaused,
   ])
 
   /** Moments forts API (hors but/carton/VAR) → micro-signal visuel lisible sans envahir l’écran. */

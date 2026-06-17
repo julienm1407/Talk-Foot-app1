@@ -54,6 +54,7 @@ export function slugScorer(name: string): string {
 
 /**
  * Titulaire (slug depuis la compo) vs but déjà déduit des moments forts (slug souvent plus court).
+ * Ne matche pas deux joueurs du même camp qui partagent le nom de famille (ex. João vs Ruben Neves).
  */
 export function scorerLineupMatchesScoredGoal(
   lineupSlug: string,
@@ -61,17 +62,53 @@ export function scorerLineupMatchesScoredGoal(
 ): boolean {
   if (!lineupSlug || !goal.slug) return false
   if (lineupSlug === goal.slug) return true
-  if (goal.name) {
-    const fromName = slugScorer(goal.name)
-    if (fromName) {
-      if (fromName === lineupSlug) return true
-      if (fromName.length >= 5 && lineupSlug.endsWith(`-${fromName}`)) return true
-      if (lineupSlug.length >= 5 && fromName.endsWith(`-${lineupSlug}`)) return true
+
+  const goalSlugParts = goal.slug.split('-').filter(Boolean)
+  const lineupParts = lineupSlug.split('-').filter(Boolean)
+  if (lineupParts.length === 0) return false
+
+  const samePersonFromSlugParts = (givenParts: string[]) => {
+    if (givenParts.length >= 2 && lineupParts.length >= 2) {
+      const goalSurname = givenParts[givenParts.length - 1]!
+      const lineupSurname = lineupParts[lineupParts.length - 1]!
+      if (goalSurname !== lineupSurname) return false
+      return givenParts[0] === lineupParts[0]
+    }
+    if (givenParts.length === 1) {
+      return lineupSlug === givenParts[0]
+    }
+    return false
+  }
+
+  const goalName = goal.name?.trim()
+  if (goalName) {
+    const fromFullName = slugScorer(goalName)
+    if (fromFullName === lineupSlug) return true
+    const nameSlugParts = fromFullName.split('-').filter(Boolean)
+    if (nameSlugParts.length >= 2) {
+      return samePersonFromSlugParts(nameSlugParts)
     }
   }
-  const parts = goal.slug.split('-').filter(Boolean)
-  const single = parts.length === 1
-  if (single && goal.slug.length >= 5 && lineupSlug.endsWith(`-${goal.slug}`)) return true
+
+  if (goalSlugParts.length >= 2) {
+    return samePersonFromSlugParts(goalSlugParts)
+  }
+
+  // Slug buteur incomplet (souvent nom de famille seul côté SM).
+  if (goalSlugParts.length === 1) {
+    const surname = goalSlugParts[0]!
+    if (lineupParts[lineupParts.length - 1] !== surname) return false
+    if (lineupSlug === surname) return true
+    if (goalName) {
+      const nameTokens = goalName.split(/\s+/).filter(Boolean)
+      if (nameTokens.length >= 2) {
+        const goalFirst = slugScorer(nameTokens[0]!).split('-')[0]
+        return goalFirst === lineupParts[0]
+      }
+    }
+    return false
+  }
+
   return false
 }
 
@@ -609,7 +646,7 @@ export function extractScorerEventsFromHighlights(
     const key = `${side}:${slug}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, slug, name: compactScorerDisplayName(name) })
+    out.push({ side, slug, name })
   }
   return out
 }
