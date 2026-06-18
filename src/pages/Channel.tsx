@@ -849,6 +849,9 @@ export function ChannelPage() {
   const chSheetGhostBtn = L
     ? 'rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-bold text-[#023458]'
     : 'rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-2 py-1 text-[10px] font-bold text-sky-100'
+  const chSheetCloseBtn = L
+    ? 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-slate-300 bg-white text-2xl font-black leading-none text-[#023458] shadow-sm active:bg-slate-50'
+    : 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-sky-300/55 bg-[#0e2a45] text-2xl font-black leading-none text-white shadow-sm active:bg-[#153552]'
   const chSheetTabActive = L
     ? 'border-sky-400 bg-sky-100 text-[#023458]'
     : 'border-sky-300 bg-sky-300/20 text-sky-100'
@@ -3960,59 +3963,71 @@ export function ChannelPage() {
                   />
                   <div
                     className={cn(
-                      'relative z-10 flex w-full flex-col overflow-hidden rounded-2xl border p-3 shadow-2xl',
-                      mobilePanel === 'paris'
-                        ? 'tf-channel-mobile-sheet-panel--paris min-h-[min(78dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] max-h-[min(92dvh,calc(100dvh-4rem-env(safe-area-inset-bottom,0px)))]'
-                        : 'max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] overflow-y-auto',
+                      'relative z-10 flex w-full max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] flex-col overflow-hidden rounded-2xl border shadow-2xl',
+                      mobilePanel === 'paris' &&
+                        'tf-channel-mobile-sheet-panel--paris min-h-[min(78dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] max-h-[min(92dvh,calc(100dvh-4rem-env(safe-area-inset-bottom,0px)))]',
                       chSheetPanel,
                     )}
                     onClick={(e) => e.stopPropagation()}
                   >
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className={cn('text-xs font-black uppercase tracking-wider', chSheetTitle)}>
-                  {mobilePanel === 'match'
-                    ? mobileMatchTab === 'compo'
-                      ? 'Composition'
-                      : 'Match'
-                    : mobilePanel === 'paris'
-                      ? 'Paris'
-                      : 'Tribune & tifo'}
-                </p>
-                {mobilePanel === 'tribune' ? (
-                  <p className={cn('mt-0.5 text-[10px] font-semibold leading-snug', chSheetSubtitle)}>
-                    Choisis ta zone et dessine le mur collectif
+            <div
+              className={cn(
+                'shrink-0 border-b px-3 pb-2 pt-3',
+                L ? 'border-slate-200 bg-white' : 'border-[#3a6690]/80 bg-[#0b2440]',
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className={cn('text-xs font-black uppercase tracking-wider', chSheetTitle)}>
+                    {mobilePanel === 'match'
+                      ? mobileMatchTab === 'compo'
+                        ? 'Composition'
+                        : 'Match'
+                      : mobilePanel === 'paris'
+                        ? 'Paris'
+                        : 'Tribune & tifo'}
                   </p>
-                ) : null}
+                  {mobilePanel === 'tribune' ? (
+                    <p className={cn('mt-0.5 text-[10px] font-semibold leading-snug', chSheetSubtitle)}>
+                      Choisis ta zone et dessine le mur collectif
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobilePanel(null)}
+                  className={chSheetCloseBtn}
+                  aria-label="Fermer le panneau"
+                >
+                  ×
+                </button>
               </div>
-              <button type="button" onClick={() => setMobilePanel(null)} className={chSheetGhostBtn}>
-                Fermer
-              </button>
+              {mobilePanel === 'match' ? (
+                <div className="mt-2 flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+                  {(
+                    [
+                      ['stats', 'Stats'],
+                      ['infos', 'Infos'],
+                      ['compo', 'Compo'],
+                      ['actions', 'Actions'],
+                      ['classement', 'Class.'],
+                    ] as const
+                  ).map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setMobileMatchTab(tab)}
+                      className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold ${
+                        mobileMatchTab === tab ? chSheetTabActive : chSheetTabIdle
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            {mobilePanel === 'match' ? (
-              <div className="mb-2 flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-                {(
-                  [
-                    ['stats', 'Stats'],
-                    ['infos', 'Infos'],
-                    ['compo', 'Compo'],
-                    ['actions', 'Actions'],
-                    ['classement', 'Class.'],
-                  ] as const
-                ).map(([tab, label]) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setMobileMatchTab(tab)}
-                    className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold ${
-                      mobileMatchTab === tab ? chSheetTabActive : chSheetTabIdle
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]">
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-white/10 bg-[#0a1f35]/70 px-2.5 py-2 text-center">
@@ -4209,6 +4224,7 @@ export function ChannelPage() {
                 )}
               </div>
             ) : null}
+            </div>
                   </div>
                 </div>
               ) : null}
