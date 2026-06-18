@@ -252,7 +252,7 @@ export function GroupTifoPanel({
             <button
               key={c}
               type="button"
-              title={c}
+              title={c === '#ffffff' ? 'Blanc' : c}
               className={cn(
                 'tf-tifo-swatch size-7 rounded-lg border-2 transition',
                 color === c ? 'border-tf-dark ring-2 ring-tf-electric/30' : 'border-white ring-1 ring-black/10',

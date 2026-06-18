@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
@@ -15,16 +15,20 @@ import type { UserProfile } from '../../types/profile'
 import type { User } from '../../types/chat'
 import { buildChatPeerProfile } from '../../utils/chatPeerProfile'
 import { resolveChatMessagePeerUi } from '../../utils/chatPeerSocial'
+import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
+import { isLikelyDefaultModularAvatar } from '../../utils/modularAvatarBackup'
 import { cn } from '../../utils/cn'
 import { isSupabaseConfigured } from '../../lib/supabase/isEnabled'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
 import {
-  MODULAR_PP_CHAT_FRAMING,
+  MODULAR_PP_LEADERBOARD_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
 
 const EMBEDDED_PREVIEW_LIMIT = 10
+/** Taille fixe — évite ResizeObserver × N lignes (crash Safari / iPad au scroll). */
+const LEADERBOARD_SHELL_PX = 44
 
 function leaderboardUser(entry: LeaderboardEntry, modularAvatar?: ModularAvatarState): User {
   return {
@@ -41,27 +45,67 @@ function BettorRowThumb({
   isSelf,
   selfProfile,
   modularAvatar,
+  profilePhotoUrl,
   profileTo,
   onPeerMenu,
+  lazyMount = false,
 }: {
   entry: LeaderboardEntry
   isSelf: boolean
   selfProfile: UserProfile
   modularAvatar?: ModularAvatarState
+  profilePhotoUrl?: string
   profileTo?: string
   onPeerMenu?: () => void
+  /** Ne monte l’avatar lourd qu’une fois la ligne visible (liste scrollable). */
+  lazyMount?: boolean
 }) {
+  const shellRef = useRef<HTMLSpanElement>(null)
+  const [visible, setVisible] = useState(!lazyMount)
+  const [photoFailed, setPhotoFailed] = useState(false)
+
+  useEffect(() => {
+    if (!lazyMount || visible) return
+    const el = shellRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([observed]) => {
+        if (observed?.isIntersecting) {
+          setVisible(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '64px 0px', threshold: 0.01 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [lazyMount, visible])
+
+  useEffect(() => {
+    setPhotoFailed(false)
+  }, [profilePhotoUrl])
+
   const profile = useMemo(() => {
     if (isSelf) return selfProfile
     if (!modularAvatar) return null
     return buildChatPeerProfile(leaderboardUser(entry, modularAvatar))
   }, [entry, isSelf, modularAvatar, selfProfile])
 
+  const customModular =
+    Boolean(modularAvatar?.data) && !isLikelyDefaultModularAvatar(modularAvatar)
+  const preferModular = isSelf || customModular
+  const photoUrl = profilePhotoUrl?.trim()
+
   const shellClass = cn(
-    'relative isolate block shrink-0 self-center outline-none',
-    'size-10 min-h-10 min-w-10 overflow-hidden rounded-full sm:size-11 sm:min-h-11 sm:min-w-11',
+    'relative isolate block shrink-0 self-center overflow-hidden rounded-full outline-none',
+    'size-10 min-h-10 min-w-10 sm:size-11 sm:min-h-11 sm:min-w-11',
     TF_FOCUS_VISIBLE,
   )
+  const thumbBorderClass = 'border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]'
 
   const ariaLabel = onPeerMenu
     ? `Contacter ${entry.username}`
@@ -69,21 +113,43 @@ function BettorRowThumb({
       ? `${entry.username} — mon profil`
       : `Profil ${entry.username}`
 
-  const figure = profile ? (
-    <ProfileCharacterThumb
-      profile={profile}
-      size="sm"
-      imagePriority={isSelf}
-      {...MODULAR_PP_CHAT_FRAMING}
-      className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-2 border-white/20 shadow-[0_4px_14px_rgba(1,30,51,0.12)]"
-      aria-label={ariaLabel}
-    />
-  ) : (
+  const placeholder = (
     <Avatar
       seed={entry.avatarSeed}
       accent={entry.accent}
       alt=""
-      className="size-full rounded-full border-2 border-white/15"
+      className={cn('size-full rounded-full', thumbBorderClass)}
+    />
+  )
+
+  const figure = !visible ? (
+    placeholder
+  ) : preferModular && profile ? (
+    <ProfileCharacterThumb
+      profile={profile}
+      shellPx={LEADERBOARD_SHELL_PX}
+      size="sm"
+      imagePriority={isSelf}
+      {...MODULAR_PP_LEADERBOARD_FRAMING}
+      className={cn('rounded-full', thumbBorderClass)}
+      aria-label={ariaLabel}
+    />
+  ) : photoUrl && !photoFailed ? (
+    <img
+      src={photoUrl}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className={cn('size-full rounded-full object-cover object-top', thumbBorderClass)}
+      onError={() => setPhotoFailed(true)}
+    />
+  ) : (
+    <img
+      src={dicebearAvatarUrl(`${entry.userId}-${entry.avatarSeed}`, 96, 0)}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className={cn('size-full rounded-full object-cover', thumbBorderClass)}
     />
   )
 
@@ -96,11 +162,13 @@ function BettorRowThumb({
           e.stopPropagation()
           onPeerMenu()
         }}
-        className={cn(shellClass, 'cursor-pointer')}
+        className={cn(shellClass, 'cursor-pointer p-0')}
         aria-label={ariaLabel}
         aria-haspopup="dialog"
       >
-        {figure}
+        <span ref={shellRef} className="block size-full">
+          {figure}
+        </span>
       </button>
     )
   }
@@ -108,14 +176,18 @@ function BettorRowThumb({
   if (profileTo) {
     return (
       <Link to={profileTo} className={shellClass} aria-label={ariaLabel}>
-        {figure}
+        <span ref={shellRef} className="block size-full">
+          {figure}
+        </span>
       </Link>
     )
   }
 
   return (
     <div className={shellClass} aria-label={ariaLabel} role="img">
-      {figure}
+      <span ref={shellRef} className="block size-full">
+        {figure}
+      </span>
     </div>
   )
 }
@@ -151,10 +223,14 @@ export function BettorLeaderboard({
     if (selfUserId) keys.add(selfUserId)
     return [...keys]
   }, [authUser?.id, chatActorId, selfUserId])
-  const { avatars: modularByUserId } = useChatAuthorModularAvatars(rowUserIds, selfUserId, {
-    selfModularAvatar: profile.modularAvatar,
-    selfUserKeys: selfAvatarKeys,
-  })
+  const { avatars: modularByUserId, profilePhotos: profilePhotoByUserId } = useChatAuthorModularAvatars(
+    rowUserIds,
+    selfUserId,
+    {
+      selfModularAvatar: profile.modularAvatar,
+      selfUserKeys: selfAvatarKeys,
+    },
+  )
   const titleCount = extended ? totalActive : Math.min(totalActive, limit)
   const listScrollable = embedded || extended
 
@@ -249,9 +325,9 @@ export function BettorLeaderboard({
       ) : (
         <ol
           className={cn(
-            'mt-3 space-y-1.5',
+            'tf-bettor-leaderboard-scroll mt-3 space-y-1.5',
             listScrollable &&
-              'max-h-[min(17.5rem,42vh)] overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]',
+              'max-h-[min(17.5rem,42vh)] touch-pan-y overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]',
             extended &&
               'sm:grid sm:max-h-[min(520px,55vh)] sm:grid-cols-2 sm:gap-x-4 sm:gap-y-1.5 sm:space-y-0',
           )}
@@ -296,8 +372,10 @@ export function BettorLeaderboard({
                 isSelf={peer.isSelfMessage}
                 selfProfile={profile}
                 modularAvatar={modularByUserId[e.userId]}
+                profilePhotoUrl={profilePhotoByUserId[e.userId]}
                 profileTo={peer.profileTo}
                 onPeerMenu={openPeerMenuHandler}
+                lazyMount={listScrollable}
               />
               {peer.peerSocial ? (
                 <button

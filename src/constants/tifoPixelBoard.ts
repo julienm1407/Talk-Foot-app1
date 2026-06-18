@@ -19,30 +19,62 @@ export const TIFO_MAX_ENGAGEMENT_BONUS =
   TIFO_ENGAGEMENT_BONUSES.match_bet +
   TIFO_ENGAGEMENT_BONUSES.chat_active_10
 
-/** Palette tifo : 9 couleurs sRGB pleines (rendu opaque PC / mobile). */
+/** Palette tifo : hex courts (≤7 car.) — compatible limite serveur place_match_tifo_pixel. */
 export const TIFO_DEFAULT_PALETTE = [
-  'rgb(0, 0, 255)', // bleu
-  'rgb(0, 220, 0)', // vert
-  'rgb(255, 0, 0)', // rouge
-  'rgb(255, 230, 0)', // jaune
-  'rgb(255, 120, 0)', // orange
-  'rgb(255, 0, 255)', // magenta
-  'rgb(0, 220, 255)', // cyan
-  'rgb(0, 0, 0)', // noir
-  'rgb(255, 255, 255)', // blanc
+  '#0000ff', // bleu
+  '#00dc00', // vert
+  '#ff0000', // rouge
+  '#ffe600', // jaune
+  '#ff7800', // orange
+  '#ff00ff', // magenta
+  '#00dcff', // cyan
+  '#000000', // noir
+  '#ffffff', // blanc
 ] as const
 
-/** Affichage : hex legacy → rgb sRGB pour un rendu homogène mobile / desktop. */
+const TIFO_LEGACY_RGB_TO_HEX: Record<string, string> = {
+  'rgb(0, 0, 255)': '#0000ff',
+  'rgb(0,220,0)': '#00dc00',
+  'rgb(0, 220, 0)': '#00dc00',
+  'rgb(255, 0, 0)': '#ff0000',
+  'rgb(255, 230, 0)': '#ffe600',
+  'rgb(255, 120, 0)': '#ff7800',
+  'rgb(255, 0, 255)': '#ff00ff',
+  'rgb(0, 220, 255)': '#00dcff',
+  'rgb(0,0,0)': '#000000',
+  'rgb(0, 0, 0)': '#000000',
+  'rgb(255, 255, 255)': '#ffffff',
+}
+
+/** Normalise une couleur tifo pour affichage + envoi serveur. */
 export function normalizeTifoDisplayColor(color: string): string {
-  const c = color.trim()
-  if (c.startsWith('rgb')) return c
-  const m = /^#?([0-9a-f]{6})$/i.exec(c)
-  if (!m?.[1]) return c
-  const hex = m[1]
-  const r = parseInt(hex.slice(0, 2), 16)
-  const g = parseInt(hex.slice(2, 4), 16)
-  const b = parseInt(hex.slice(4, 6), 16)
-  return `rgb(${r}, ${g}, ${b})`
+  const c = color.trim().toLowerCase().replace(/\s+/g, ' ')
+  if (TIFO_LEGACY_RGB_TO_HEX[c]) return TIFO_LEGACY_RGB_TO_HEX[c]!
+  if (c.startsWith('#')) {
+    const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c)
+    if (m?.[1]) {
+      const hex = m[1]
+      if (hex.length === 3) {
+        return `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`.toLowerCase()
+      }
+      return `#${hex.toLowerCase()}`
+    }
+  }
+  const rgb = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i.exec(c)
+  if (rgb) {
+    const key = `rgb(${rgb[1]}, ${rgb[2]}, ${rgb[3]})`
+    if (TIFO_LEGACY_RGB_TO_HEX[key]) return TIFO_LEGACY_RGB_TO_HEX[key]!
+    const r = Number(rgb[1])
+    const g = Number(rgb[2])
+    const b = Number(rgb[3])
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  }
+  return color
+}
+
+/** Couleur canonique envoyée à Supabase (hex #rrggbb). */
+export function normalizeTifoStorageColor(color: string): string {
+  return normalizeTifoDisplayColor(color)
 }
 
 export function tifoPixelKey(x: number, y: number) {

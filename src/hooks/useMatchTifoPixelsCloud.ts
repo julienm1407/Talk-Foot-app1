@@ -5,6 +5,8 @@ import {
   TIFO_BOARD_W,
   TIFO_DEFAULT_PALETTE,
   TIFO_MAX_PER_USER_DAY,
+  normalizeTifoDisplayColor,
+  normalizeTifoStorageColor,
   tifoPixelChargesQuota,
   tifoPixelKey,
 } from '../constants/tifoPixelBoard'
@@ -42,7 +44,7 @@ function rowsToPixels(rows: PixelRow[]): { pixels: PixelBoard; owners: PixelOwne
   for (const r of rows) {
     if (r.x >= 0 && r.x < TIFO_BOARD_W && r.y >= 0 && r.y < TIFO_BOARD_H && r.color) {
       const key = tifoPixelKey(r.x, r.y)
-      pixels[key] = r.color
+      pixels[key] = normalizeTifoDisplayColor(r.color)
       if (typeof r.user_id === 'string' && r.user_id) owners[key] = r.user_id
     }
   }
@@ -185,7 +187,7 @@ export function useMatchTifoPixelsCloud(options: {
 
     const applyPixel = (row: PixelRow, ownerId?: string | null) => {
       const key = tifoPixelKey(row.x, row.y)
-      setPixels((prev) => ({ ...prev, [key]: row.color }))
+      setPixels((prev) => ({ ...prev, [key]: normalizeTifoDisplayColor(row.color) }))
       const resolvedOwner = ownerId ?? row.user_id ?? undefined
       if (resolvedOwner) {
         setPixelOwners((prev) => ({ ...prev, [key]: resolvedOwner }))
@@ -355,7 +357,7 @@ export function useMatchTifoPixelsCloud(options: {
         return false
       }
 
-      setPixels((prev) => ({ ...prev, [key]: color }))
+      setPixels((prev) => ({ ...prev, [key]: normalizeTifoStorageColor(color) }))
       setPixelOwners((prev) => ({ ...prev, [key]: uid }))
       if (chargesQuota) setRemaining((r) => Math.max(0, r - 1))
 
@@ -364,7 +366,7 @@ export function useMatchTifoPixelsCloud(options: {
         p_match_id: scope.matchId,
         p_x: x,
         p_y: y,
-        p_color: color,
+        p_color: normalizeTifoStorageColor(color),
       })
 
       if (error) {

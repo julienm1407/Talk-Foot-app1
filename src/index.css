@@ -175,8 +175,25 @@ html {
   text-size-adjust: 100%;
   /* Évite le défilement horizontal “fantôme” (100vw, enfants trop larges) */
   overflow-x: clip;
-  /* Complète viewport user-scalable=no — évite pinch/double-tap qui déforment le layout mobile. */
+  /* Limite double-tap zoom rapide sans bloquer le zoom accessibilité iPad. */
   touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .tf-live-fullscreen-fx .tf-live-fullscreen-popup {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .tf-bettor-leaderboard-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .tf-bettor-leaderboard-scroll > li {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 3rem;
+  }
 }
 
 body {

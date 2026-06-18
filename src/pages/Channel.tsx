@@ -105,12 +105,14 @@ import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
   clampLiveGoalRowsToScore,
   cardCoarseDedupeKey,
-  extractScorerEventsFromHighlights,
+  cardColorFromHighlightText,
+  compactScorerDisplayName,
   formatGoalScorerLabel,
   groupGoalRowsForHeader,
   isPlausibleGoalScorerName,
   parseLiveGoalRowsFromHighlights,
   parseLiveCardRowsFromHighlights,
+  slugScorer,
 } from '../utils/liveFootballOdds'
 import {
   isPostMatchDebriefOpen,
@@ -488,6 +490,10 @@ function preferFullscreenHighlight(a: Highlight, b: Highlight): Highlight {
     }
   }
   return a
+}
+
+function cardColorForHighlight(h: Pick<Highlight, 'title' | 'detail'>): 'yellow' | 'red' {
+  return cardColorFromHighlightText(`${h.title ?? ''} ${h.detail ?? ''}`)
 }
 
 function highlightMinuteLabel(h: Pick<Highlight, 'minute' | 'inSecondHalf'>): string {
@@ -1563,6 +1569,7 @@ export function ChannelPage() {
     title: string
     subtitle?: string
     side?: 'home' | 'away'
+    cardColor?: 'yellow' | 'red'
   } | null>(null)
   const channelLiveMatchIdRef = useRef<string | undefined>(undefined)
   const fullscreenDedupePrimedRef = useRef(false)
@@ -1599,6 +1606,7 @@ export function ChannelPage() {
       subtitle?: string
       durationMs: number
       side?: 'home' | 'away'
+      cardColor?: 'yellow' | 'red'
     }[]
   >([])
 
@@ -1612,6 +1620,7 @@ export function ChannelPage() {
       title: next.title,
       subtitle: next.subtitle,
       side: next.side,
+      cardColor: next.cardColor,
     })
     window.setTimeout(() => {
       setFullscreenEvent(null)
@@ -1627,8 +1636,9 @@ export function ChannelPage() {
       subtitle?: string,
       durationMs = 3200,
       side?: 'home' | 'away',
+      cardColor?: 'yellow' | 'red',
     ) => {
-      fullscreenQueueRef.current.push({ kind, title, subtitle, durationMs, side })
+      fullscreenQueueRef.current.push({ kind, title, subtitle, durationMs, side, cardColor })
       drainFullscreenQueue()
     },
     [drainFullscreenQueue],
@@ -1814,12 +1824,15 @@ export function ChannelPage() {
           side,
         )
       } else if (kind === 'card') {
+        const cardColor = cardColorForHighlight(enriched)
+        const playerName = enriched.scorerName?.trim()
         launchFullscreenEvent(
           'card',
-          'CARTON',
-          `${highlightMinuteLabel(enriched)} · Carton${teamLabel ? ` · ${teamLabel}` : ''}`,
+          cardColor === 'red' ? 'CARTON ROUGE' : 'CARTON JAUNE',
+          `${highlightMinuteLabel(enriched)} · ${playerName || teamLabel || 'Carton'}`,
           4600,
           side,
+          cardColor,
         )
       } else {
         launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(enriched)} ${hlText}`, 5200, side)
@@ -1924,14 +1937,6 @@ export function ChannelPage() {
     return away.map((p) => (typeof p === 'string' ? p : p.label))
   }, [starters])
 
-  const scoredButeurSlugs = useMemo(
-    () =>
-      goalTeamHints
-        ? extractScorerEventsFromHighlights(smTimelineHighlights, goalTeamHints.home, goalTeamHints.away)
-        : [],
-    [smTimelineHighlights, goalTeamHints],
-  )
-
   const liveGoalDisplayRows = useMemo(() => {
     if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
     const scoreHint = { home: homeScore, away: awayScore }
@@ -1965,6 +1970,17 @@ export function ChannelPage() {
     awayScore,
     liveBundleFixture,
   ])
+
+  /** Buteurs réels (alignés sur le score) — évite de fermer un pari buteur sur un faux but commentaire SM. */
+  const scoredButeurSlugs = useMemo(
+    () =>
+      liveGoalDisplayRows.map((r) => ({
+        side: r.side,
+        slug: slugScorer(compactScorerDisplayName(r.name)),
+        name: compactScorerDisplayName(r.name),
+      })),
+    [liveGoalDisplayRows],
+  )
   const headerHomeScorers = useMemo(
     () =>
       groupGoalRowsForHeader(
@@ -2025,22 +2041,10 @@ export function ChannelPage() {
     if (settledFinishedMatchRef.current === mid) return
     const fh = match.score?.home ?? homeScore
     const fa = match.score?.away ?? awayScore
-    const hs = match.home.shortName ?? homeName
-    const aw = match.away.shortName ?? awayName
     const runSettle = () => {
       if (settledFinishedMatchRef.current === mid) return
       settledFinishedMatchRef.current = mid
-      const scorerEvents = goalTeamHints
-        ? extractScorerEventsFromHighlights(
-            timelineHighlightsRef.current,
-            goalTeamHints.home,
-            goalTeamHints.away,
-          ).map((e) => ({ side: e.side, slug: e.slug }))
-        : extractScorerEventsFromHighlights(
-            timelineHighlightsRef.current,
-            { shortName: hs, name: hs },
-            { shortName: aw, name: aw },
-          ).map((e) => ({ side: e.side, slug: e.slug }))
+      const scorerEvents = scoredButeurSlugs.map(({ side, slug, name }) => ({ side, slug, name }))
       betting.settleMatchResult(
         { home: fh, away: fa },
         { scorerEvents, forMatchId: mid },
@@ -2058,9 +2062,7 @@ export function ChannelPage() {
     match?.score?.away,
     homeScore,
     awayScore,
-    homeName,
-    awayName,
-    goalTeamHints,
+    scoredButeurSlugs,
     betting.settleMatchResult,
   ])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
@@ -2283,6 +2285,12 @@ export function ChannelPage() {
       : fullscreenEvent?.side === 'away'
         ? awayColor
         : null
+  const fullscreenPopupAccent =
+    fullscreenEvent?.kind === 'card'
+      ? fullscreenEvent.cardColor === 'red'
+        ? '#ef4444'
+        : '#eab308'
+      : fullscreenAccentColor
   const tribuneOptions = useMemo(
     () => [
       { id: 'home-ultras' as const, label: `Ultras ${homeName}`, vibe: 'Chants et ambiance chaude' },
@@ -4455,9 +4463,9 @@ export function ChannelPage() {
                     : 'bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
             }`}
             style={
-              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
+              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
                 ? {
-                    background: `radial-gradient(circle at 50% 50%, color-mix(in srgb, ${fullscreenAccentColor} 52%, transparent), rgba(6,17,30,0.12) 55%, transparent 78%)`,
+                    background: `radial-gradient(circle at 50% 50%, color-mix(in srgb, ${fullscreenPopupAccent} 52%, transparent), rgba(6,17,30,0.12) 55%, transparent 78%)`,
                   }
                 : undefined
             }
@@ -4473,8 +4481,8 @@ export function ChannelPage() {
                     : 'border-violet-300/85'
             }`}
             style={
-              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
-                ? { borderColor: `color-mix(in srgb, ${fullscreenAccentColor} 72%, white)` }
+              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+                ? { borderColor: `color-mix(in srgb, ${fullscreenPopupAccent} 72%, white)` }
                 : undefined
             }
           />
@@ -4505,13 +4513,22 @@ export function ChannelPage() {
             : null}
 
           {fullscreenEvent.kind === 'card'
-            ? [
-                ['12%', '22%', '🟨', 'text-5xl', 0],
-                ['24%', '70%', '🟥', 'text-4xl', 120],
-                ['44%', '18%', '🟨', 'text-6xl', 70],
-                ['68%', '64%', '🟥', 'text-5xl', 180],
-                ['82%', '30%', '🟨', 'text-4xl', 90],
-              ].map(([l, t, emoji, size, d], i) => (
+            ? (fullscreenEvent.cardColor === 'red'
+                ? [
+                    ['12%', '22%', '🟥', 'text-5xl', 0],
+                    ['24%', '70%', '🟥', 'text-4xl', 120],
+                    ['44%', '18%', '🟥', 'text-6xl', 70],
+                    ['68%', '64%', '🟥', 'text-5xl', 180],
+                    ['82%', '30%', '🟥', 'text-4xl', 90],
+                  ]
+                : [
+                    ['12%', '22%', '🟨', 'text-5xl', 0],
+                    ['24%', '70%', '🟨', 'text-4xl', 120],
+                    ['44%', '18%', '🟨', 'text-6xl', 70],
+                    ['68%', '64%', '🟨', 'text-5xl', 180],
+                    ['82%', '30%', '🟨', 'text-4xl', 90],
+                  ]
+              ).map(([l, t, emoji, size, d], i) => (
                 <span
                   key={`card-emoji-${i}`}
                   className={`absolute ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
@@ -4545,7 +4562,7 @@ export function ChannelPage() {
             }`}
           >
             <div
-              className={`w-full max-w-xl rounded-2xl border px-7 py-5 text-center shadow-2xl backdrop-blur-md [transform:translateZ(0)] ${
+              className={`tf-live-fullscreen-popup w-full max-w-xl rounded-2xl border px-7 py-5 text-center shadow-2xl backdrop-blur-md [transform:translateZ(0)] ${
                 fullscreenEvent.kind === 'goal'
                   ? ''
                   : fullscreenEvent.kind === 'card'
@@ -4556,12 +4573,12 @@ export function ChannelPage() {
               }`}
               style={{
                 borderColor:
-                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
-                    ? `color-mix(in srgb, ${fullscreenAccentColor} 72%, white)`
+                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+                    ? `color-mix(in srgb, ${fullscreenPopupAccent} 72%, white)`
                     : undefined,
                 background:
-                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
-                    ? `color-mix(in srgb, ${fullscreenAccentColor} 22%, #091425)`
+                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+                    ? `color-mix(in srgb, ${fullscreenPopupAccent} 22%, #091425)`
                     : undefined,
                 animation:
                   fullscreenEvent.kind === 'var'
@@ -4581,15 +4598,17 @@ export function ChannelPage() {
                         : 'text-violet-200'
                 }`}
                 style={
-                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenAccentColor
-                    ? { color: `color-mix(in srgb, ${fullscreenAccentColor} 75%, white)` }
+                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+                    ? { color: `color-mix(in srgb, ${fullscreenPopupAccent} 75%, white)` }
                     : undefined
                 }
               >
                 {fullscreenEvent.kind === 'goal'
                   ? '⚽'
                   : fullscreenEvent.kind === 'card'
-                    ? '🟨'
+                    ? fullscreenEvent.cardColor === 'red'
+                      ? '🟥'
+                      : '🟨'
                     : fullscreenEvent.kind === 'kickoff'
                       ? '🎺'
                       : '📺'}{' '}
