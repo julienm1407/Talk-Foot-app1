@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { AdSlot } from '../components/ui/AdSlot'
 import { isEditorialAdsRoute } from '../config/adsPolicy'
+import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { cn } from '../utils/cn'
 
 type CenterMax = 'content' | 'ultra'
@@ -22,8 +23,12 @@ export function PageAdRails({
 }) {
   const centerClass = centerMax === 'ultra' ? 'max-w-tf-ultra' : 'max-w-tf-content'
   const { pathname } = useLocation()
+  const isMobileTouch = useIsMobileTouchViewport()
   /** Rails latéraux avec pubs Google uniquement sur pages éditoriales ; sinon contenu seul. */
   const showSideRails = variant === 'rails' && isEditorialAdsRoute(pathname)
+  /** Hub desktop : hauteur cadrée pour scroll interne. Tactile / tablette : flux naturel (scroll page). */
+  const centerOnlyHubShell =
+    variant === 'centerOnly' && !isMobileTouch ? 'h-full min-h-0 flex-1 overflow-hidden' : undefined
 
   if (variant === 'centerOnly' || !showSideRails) {
     return (
@@ -31,7 +36,7 @@ export function PageAdRails({
         className={cn(
           'mx-auto flex w-full min-w-0 flex-col',
           centerClass,
-          variant === 'centerOnly' ? 'md:h-full md:min-h-0 md:flex-1 md:overflow-hidden' : undefined,
+          centerOnlyHubShell,
         )}
       >
         {children}
