@@ -1,4 +1,5 @@
--- Comptes admin Talk Foot : pixels tifo illimités (compléter la grille si besoin).
+-- Réparation prod : sync_match_tifo_engagement_bonuses référençait debate_messages / user_bets (inexistants).
+-- place_match_tifo_pixel ne doit pas échouer si le sync bonus plante.
 
 create or replace function public.sync_match_tifo_engagement_bonuses(
   p_group_id text,
@@ -308,5 +309,5 @@ begin
 end;
 $$;
 
-comment on function public.place_match_tifo_pixel is
-  'Place ou écrase un pixel tifo. Quota journalier ignoré pour les admins Talk Foot (admin_users).';
+comment on function public.sync_match_tifo_engagement_bonuses is
+  'Bonus pixels tifo : tables réelles (supporter_group_channel_messages, profiles.app_state).';

@@ -77,6 +77,32 @@ function broadcastPayloadToRow(payload: unknown, scope: TifoScope): PixelRow | n
   return row
 }
 
+function tifoPlacementErrorMessage(error: { message?: string; code?: string }): string {
+  const msg = (error.message ?? '').toLowerCase()
+  if (msg.includes('not_authenticated')) {
+    return 'Connecte-toi pour placer un pixel sur le tifo.'
+  }
+  if (msg.includes('invalid_color')) {
+    return 'Couleur refusée par le serveur — choisis une couleur de la palette.'
+  }
+  if (msg.includes('out_of_bounds')) {
+    return 'Case hors grille — réessaie sur la grille tifo.'
+  }
+  if (msg.includes('cell_occupied')) {
+    return 'Cette case est déjà prise — choisis une autre ou repasse sur ton propre pixel.'
+  }
+  if (msg.includes('daily_limit')) {
+    return 'daily_limit'
+  }
+  if (msg.includes('could not find the function') || msg.includes('schema cache')) {
+    return 'Tifo indisponible : migration Supabase manquante (place_match_tifo_pixel).'
+  }
+  if (error.code === 'PGRST202' || error.code === '42883') {
+    return 'Tifo indisponible : fonction serveur absente — contacte l’équipe ou réessaie plus tard.'
+  }
+  return ''
+}
+
 function broadcastDeleteToCell(payload: unknown, scope: TifoScope): { x: number; y: number } | null {
   if (!payloadMatchesScope(payload, scope)) return null
   const p = payload as Record<string, unknown>
@@ -394,9 +420,8 @@ export function useMatchTifoPixelsCloud(options: {
         })
         const synced = await refreshUsage(sb, uid)
         const msg = error.message ?? ''
-        if (msg.includes('cell_occupied')) {
-          setNotice('Cette case est déjà prise — choisis une autre ou repasse sur ton propre pixel.')
-        } else if (msg.includes('daily_limit')) {
+        const mapped = tifoPlacementErrorMessage(error)
+        if (mapped === 'daily_limit') {
           const lim = synced?.daily_limit ?? quotaLimit
           const rem = synced?.remaining ?? quotaRemaining
           const used = Math.max(0, lim - rem)
@@ -407,11 +432,13 @@ export function useMatchTifoPixelsCloud(options: {
           } else {
             setNotice(`Quota atteint pour aujourd'hui (${used}/${lim} pixels utilisés).`)
           }
+        } else if (mapped) {
+          setNotice(mapped)
         } else if (error.code === 'P0001') {
           setNotice('Impossible de placer ce pixel pour le moment.')
         } else {
           setNotice('Impossible de placer le pixel pour le moment.')
-          if (import.meta.env.DEV) console.warn('[Talk Foot] place_match_tifo_pixel:', msg)
+          if (import.meta.env.DEV) console.warn('[Talk Foot] place_match_tifo_pixel:', msg, error.code)
         }
         return false
       }
