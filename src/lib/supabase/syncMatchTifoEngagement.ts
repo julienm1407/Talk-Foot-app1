@@ -8,6 +8,7 @@ export type MatchTifoEngagementSync = {
   daily_limit: number
   remaining: number
   new_bonus_pixels: number
+  admin_unlimited?: boolean
 }
 
 export async function syncMatchTifoEngagementBonuses(
@@ -41,5 +42,6 @@ export async function syncMatchTifoEngagementBonuses(
     daily_limit: typeof row.daily_limit === 'number' ? row.daily_limit : 3,
     remaining: typeof row.remaining === 'number' ? row.remaining : 0,
     new_bonus_pixels: typeof row.new_bonus_pixels === 'number' ? row.new_bonus_pixels : 0,
+    admin_unlimited: row.admin_unlimited === true,
   }
 }

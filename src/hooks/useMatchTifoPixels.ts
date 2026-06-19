@@ -140,6 +140,7 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
     loading: false,
     isShared: false,
     isGroupAdmin: false,
+    unlimitedPixels: false,
   }
 }
 

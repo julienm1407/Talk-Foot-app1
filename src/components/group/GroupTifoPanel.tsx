@@ -92,6 +92,7 @@ export function GroupTifoPanel({
     clearEngagementNotice,
     loading,
     isShared,
+    unlimitedPixels,
   } = useMatchTifoPixels({
     groupId,
     matchId: activeId,
@@ -164,11 +165,18 @@ export function GroupTifoPanel({
           <span
             className={cn(
               'rounded-full px-2 py-0.5 text-[10px] font-black tabular-nums',
-              L ? 'bg-tf-dark/8 text-tf-dark' : 'bg-sky-900/40 text-sky-100',
+              unlimitedPixels
+                ? L
+                  ? 'bg-violet-100 text-violet-800'
+                  : 'bg-violet-500/25 text-violet-100'
+                : L
+                  ? 'bg-tf-dark/8 text-tf-dark'
+                  : 'bg-sky-900/40 text-sky-100',
             )}
           >
-            {remaining} restants / {dailyLimit} max
-            {bonusAllowance > 0 ? ` (+${bonusAllowance} bonus)` : ''}
+            {unlimitedPixels
+              ? 'Pixels illimités (admin)'
+              : `${remaining} restants / ${dailyLimit} max${bonusAllowance > 0 ? ` (+${bonusAllowance} bonus)` : ''}`}
           </span>
         </div>
       </div>

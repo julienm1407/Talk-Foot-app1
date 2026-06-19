@@ -10,6 +10,7 @@ import {
   tifoPixelChargesQuota,
   tifoPixelKey,
 } from '../constants/tifoPixelBoard'
+import { useAuth } from '../contexts/AuthContext'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
@@ -91,6 +92,8 @@ export function useMatchTifoPixelsCloud(options: {
   isGroupAdmin: boolean
 }) {
   const { groupId, matchId, isGroupAdmin } = options
+  const { user: authUser } = useAuth()
+  const isSiteAdmin = Boolean(authUser?.isAdmin)
   const [pixels, setPixels] = useState<PixelBoard>({})
   const [pixelOwners, setPixelOwners] = useState<PixelOwners>({})
   const [remaining, setRemaining] = useState(TIFO_MAX_PER_USER_DAY)
@@ -99,6 +102,7 @@ export function useMatchTifoPixelsCloud(options: {
   const [engagementNotice, setEngagementNotice] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const unlimitedPixels = isSiteAdmin
   const viewerIdRef = useRef<string | null>(null)
   const channelRef = useRef<ReturnType<NonNullable<ReturnType<typeof getSupabaseBrowserClient>>['channel']> | null>(
     null,
@@ -130,15 +134,21 @@ export function useMatchTifoPixelsCloud(options: {
       if (!groupId || !matchId) return null
       const synced = await syncMatchTifoEngagementBonuses(groupId, matchId)
       if (!synced) return null
-      setDailyLimit(synced.daily_limit)
-      setBonusAllowance(synced.bonus_allowance)
-      setRemaining(synced.remaining)
-      if (synced.new_bonus_pixels > 0) {
-        setEngagementNotice(`+${synced.new_bonus_pixels} pixels bonus gagnés !`)
+      if (synced.admin_unlimited || isSiteAdmin) {
+        setDailyLimit(synced.daily_limit)
+        setBonusAllowance(0)
+        setRemaining(synced.remaining)
+      } else {
+        setDailyLimit(synced.daily_limit)
+        setBonusAllowance(synced.bonus_allowance)
+        setRemaining(synced.remaining)
+        if (synced.new_bonus_pixels > 0) {
+          setEngagementNotice(`+${synced.new_bonus_pixels} pixels bonus gagnés !`)
+        }
       }
       return synced
     },
-    [groupId, matchId],
+    [groupId, matchId, isSiteAdmin],
   )
 
   const refreshBoard = useCallback(
@@ -351,7 +361,7 @@ export function useMatchTifoPixelsCloud(options: {
         setRemaining(preSync.remaining)
       }
 
-      if (chargesQuota && quotaRemaining <= 0) {
+      if (chargesQuota && !unlimitedPixels && quotaRemaining <= 0) {
         const used = Math.max(0, quotaLimit - quotaRemaining)
         setNotice(`Quota atteint pour aujourd'hui (${used}/${quotaLimit} pixels utilisés).`)
         return false
@@ -359,7 +369,7 @@ export function useMatchTifoPixelsCloud(options: {
 
       setPixels((prev) => ({ ...prev, [key]: normalizeTifoStorageColor(color) }))
       setPixelOwners((prev) => ({ ...prev, [key]: uid }))
-      if (chargesQuota) setRemaining((r) => Math.max(0, r - 1))
+      if (chargesQuota && !unlimitedPixels) setRemaining((r) => Math.max(0, r - 1))
 
       const { error } = await sb.rpc('place_match_tifo_pixel', {
         p_group_id: scope.groupId,
@@ -426,7 +436,7 @@ export function useMatchTifoPixelsCloud(options: {
       void refreshUsage(sb, uid)
       return true
     },
-    [scope, remaining, dailyLimit, pixels, pixelOwners, refreshBoard, refreshUsage],
+    [scope, remaining, dailyLimit, unlimitedPixels, pixels, pixelOwners, refreshBoard, refreshUsage],
   )
 
   const deletePixelAsAdmin = useCallback(
@@ -503,5 +513,6 @@ export function useMatchTifoPixelsCloud(options: {
     loading,
     isShared: true,
     isGroupAdmin,
+    unlimitedPixels,
   }
 }
