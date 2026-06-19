@@ -19,6 +19,7 @@ import { HomeDesktopExperience } from '../components/home/HomeDesktopExperience'
 import { HomeFeedContinuation } from '../components/home/HomeFeedContinuation'
 import { HomeMobileExperience } from '../components/mobile/HomeMobileExperience'
 import { useAppearance } from '../contexts/AppearanceContext'
+import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { hubTrendsShell } from '../utils/hubSurface'
 import { getSportMonksTokenSource } from '../utils/apiTokens'
 import { HomeEditorialIntro } from '../components/ads/HomeEditorialIntro'
@@ -43,6 +44,7 @@ export function HomePage() {
   } = useFanPreferences()
   const { supporterTintActive, team } = useSupporterTintMode()
   const { appearance } = useAppearance()
+  const isMobileTouch = useIsMobileTouchViewport()
   const season = useOptionalSeasonMode()
   const isCdm = season?.isCdm2026 ?? false
 
@@ -232,13 +234,14 @@ export function HomePage() {
     <div
       className={cn(
         'w-full min-w-0 space-y-6 sm:space-y-8',
-        'lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:space-y-0 lg:gap-0',
+        !isMobileTouch && 'lg:flex lg:h-full lg:min-h-0 lg:flex-1 lg:flex-col lg:space-y-0 lg:gap-0',
       )}
     >
       {smKeyBanner}
-      <div className="mx-auto hidden h-full min-h-0 w-full max-w-[min(100%,112.5rem)] lg:flex lg:flex-1 lg:flex-col lg:gap-3 lg:px-4 lg:pb-0 xl:gap-4 xl:px-6">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <HomeDesktopExperience
+      {!isMobileTouch ? (
+        <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,112.5rem)] flex-1 flex-col gap-3 px-4 pb-0 lg:gap-3 xl:gap-4 xl:px-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <HomeDesktopExperience
             liveMatches={hubLiveMatches}
             upcomingMatches={displayMatchesFull}
             tribuneGroups={visibleGroups.slice(0, 4)}
@@ -251,10 +254,11 @@ export function HomePage() {
             onCreateTribune={() => setCreateOpen(true)}
             centerContinuation={wideHomeBelowFold}
           />
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="lg:hidden">
+      {isMobileTouch ? (
         <HomeMobileExperience
           appearance={appearance}
           isCdm={isCdm}
@@ -282,7 +286,7 @@ export function HomePage() {
           onCreateGroup={() => setCreateOpen(true)}
           cdmTopBlockMobile={cdmTopBlockMobile}
         />
-      </div>
+      ) : null}
 
       <CreateGroupModal
         open={createOpen}

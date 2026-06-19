@@ -114,10 +114,12 @@ export function AppShell() {
           <div
             data-tf-route-scroll
             className={cn(
-              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y',
-              'lg:flex lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-y-contain',
+              'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]',
+              !isMobileTouch && 'lg:flex lg:min-h-0 lg:flex-col lg:overflow-y-auto lg:overscroll-y-contain',
               'w-full min-w-0 max-w-full px-[var(--tf-page-gutter)] pt-3 sm:pt-4 lg:pt-6',
-              'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
+              isMobileTouch
+                ? 'pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]'
+                : 'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))]',
               mainBottomPadHomeDesktop,
             )}
           >
@@ -126,7 +128,7 @@ export function AppShell() {
                 <Outlet key={routeSurfaceKey} />
               </ErrorBoundary>
             </PageAdRails>
-            <div className="mt-6 shrink-0 lg:hidden">
+            <div className={cn('mt-6 shrink-0', isMobileTouch ? 'block' : 'lg:hidden')}>
               <SiteLegalFooter className="rounded-t-2xl" />
             </div>
           </div>
