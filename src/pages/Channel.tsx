@@ -122,6 +122,8 @@ import {
 
 /** Ouverture du tchat tribune avant coup d'envoi. */
 const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
+/** Pop-up coup d’envoi : uniquement si on arrive dans la fenêtre juste après le kickoff prévu. */
+const KICKOFF_FULLSCREEN_GRACE_AFTER_MS = 2 * 60 * 1000
 
 type ChannelMatchTab = 'stats' | 'infos' | 'compo' | 'actions' | 'classement'
 
@@ -1663,8 +1665,10 @@ export function ChannelPage() {
     )
     const effectiveMinute = Math.max(apiMinute, liveDisplayedMinute)
     const totalGoals = (match?.score?.home ?? 0) + (match?.score?.away ?? 0)
+    const arrivedAfterKickoffWindow =
+      kickoffMs != null && nowMs > kickoffMs + KICKOFF_FULLSCREEN_GRACE_AFTER_MS
 
-    if (effectiveMinute > 3 || totalGoals > 0) {
+    if (arrivedAfterKickoffWindow || effectiveMinute > 2 || totalGoals > 0) {
       try {
         localStorage.setItem(ssKey, 'skip')
       } catch {
@@ -1688,6 +1692,8 @@ export function ChannelPage() {
     match?.minute,
     match?.score?.home,
     match?.score?.away,
+    kickoffMs,
+    nowMs,
     liveDisplayedMinute,
     liveBundleFixture,
     homeName,
