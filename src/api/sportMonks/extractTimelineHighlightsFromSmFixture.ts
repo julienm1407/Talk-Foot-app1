@@ -9,6 +9,8 @@ import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import {
   cardColorFromHighlightText,
   cardCoarseDedupeKey,
+  cardEventIdentityKey,
+  cardsAreSameCardEvent,
   compactScorerDisplayName,
   isLikelyGeographicFragment,
   isMatchTeamLabel,
@@ -237,6 +239,42 @@ function sideFromParticipant(
   return undefined
 }
 
+function teamHintsFromSmFixture(
+  fixture: SmFixture,
+  homeId: number | undefined,
+  awayId: number | undefined,
+): { home: LiveGoalTeamHints; away: LiveGoalTeamHints } | null {
+  const parts = Array.isArray(fixture.participants) ? fixture.participants : []
+  let homePart = parts.find((p) => String(p.meta?.location ?? '').toLowerCase() === 'home')
+  let awayPart = parts.find((p) => String(p.meta?.location ?? '').toLowerCase() === 'away')
+  if (homeId != null && !homePart?.name) homePart = parts.find((p) => p.id === homeId) ?? homePart
+  if (awayId != null && !awayPart?.name) awayPart = parts.find((p) => p.id === awayId) ?? awayPart
+  const homeName = String(homePart?.name ?? '').trim()
+  const awayName = String(awayPart?.name ?? '').trim()
+  if (!homeName || !awayName) return null
+  return {
+    home: {
+      name: homeName,
+      shortName: homeName.slice(0, 3).toUpperCase(),
+      sportMonksTeamId: homePart?.id ?? homeId,
+    },
+    away: {
+      name: awayName,
+      shortName: awayName.slice(0, 3).toUpperCase(),
+      sportMonksTeamId: awayPart?.id ?? awayId,
+    },
+  }
+}
+
+function cardsAreApiDuplicates(
+  a: Highlight,
+  b: Highlight,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): boolean {
+  return cardsAreSameCardEvent(a, b, home, away)
+}
+
 function cardPlayerFromEvent(ev: SmFixtureEventRow, dev: string): string | undefined {
   const primary = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
   if (primary && isPlausibleCardPlayerName(primary)) return primary
@@ -443,21 +481,22 @@ export function extractTimelineHighlightsFromSmFixture(
   if (!out.length) return []
 
   const eventGoals = out.filter((h) => h.type === 'But' && h.id.startsWith('sm-event-'))
-
-  const eventCardKeys = new Set(
-    out
-      .filter((h) => h.type === 'Carton' && h.id.startsWith('sm-event-'))
-      .map((h) => cardCoarseDedupeKey(h))
-      .filter((k): k is string => Boolean(k)),
-  )
+  const eventCards = out.filter((h) => h.type === 'Carton' && h.id.startsWith('sm-event-'))
+  const cardTeamHints = teamHintsFromSmFixture(normalized, homeId, awayId)
 
   const withoutDupComments = out.filter((h) => {
     if (h.type === 'But' && h.id.startsWith('sm-comment-')) {
       if (eventGoals.some((ev) => goalsAreApiDuplicates(h, ev))) return false
     }
     if (h.type === 'Carton' && h.id.startsWith('sm-comment-')) {
+      if (
+        cardTeamHints &&
+        eventCards.some((ev) => cardsAreApiDuplicates(h, ev, cardTeamHints.home, cardTeamHints.away))
+      ) {
+        return false
+      }
       const coarse = cardCoarseDedupeKey(h)
-      if (coarse && eventCardKeys.has(coarse)) return false
+      if (coarse && eventCards.some((ev) => cardCoarseDedupeKey(ev) === coarse)) return false
       const name = h.scorerName?.trim() ?? ''
       if (!name || !isPlausibleCardPlayerName(name) || isLikelyGeographicFragment(name)) return false
     }
@@ -471,6 +510,26 @@ export function extractTimelineHighlightsFromSmFixture(
       for (const [k, prev] of byKey.entries()) {
         if (prev.type === 'But' && goalsAreApiDuplicates(prev, h)) {
           byKey.set(k, mergeGoalHighlights(prev, h))
+          merged = true
+          break
+        }
+      }
+      if (merged) continue
+    }
+    if (h.type === 'Carton' && cardTeamHints) {
+      let merged = false
+      for (const [k, prev] of byKey.entries()) {
+        if (
+          prev.type === 'Carton' &&
+          cardsAreApiDuplicates(prev, h, cardTeamHints.home, cardTeamHints.away)
+        ) {
+          const mergedCard = mergeCardHighlights(prev, h)
+          const mergedKey =
+            cardEventIdentityKey(mergedCard, cardTeamHints.home, cardTeamHints.away) ??
+            cardCoarseDedupeKey(mergedCard) ??
+            k
+          byKey.delete(k)
+          byKey.set(mergedKey, mergedCard)
           merged = true
           break
         }
@@ -506,18 +565,20 @@ export function extractTimelineHighlightsFromSmFixture(
       nonCardMerged.push(h)
       continue
     }
-    const coarse = cardCoarseDedupeKey(h)
-    if (!coarse) {
+    const cardKey =
+      (cardTeamHints && cardEventIdentityKey(h, cardTeamHints.home, cardTeamHints.away)) ||
+      cardCoarseDedupeKey(h)
+    if (!cardKey) {
       nonCardMerged.push(h)
       continue
     }
-    const prev = mergedCardsByCoarse.get(coarse)
+    const prev = mergedCardsByCoarse.get(cardKey)
     if (!prev) {
-      mergedCardsByCoarse.set(coarse, h)
+      mergedCardsByCoarse.set(cardKey, h)
       continue
     }
     mergedCardsByCoarse.set(
-      coarse,
+      cardKey,
       cardHighlightQuality(h) > cardHighlightQuality(prev) ? h : prev,
     )
   }

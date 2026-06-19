@@ -32,6 +32,10 @@ export const TIFO_DEFAULT_PALETTE = [
   '#ffffff', // blanc
 ] as const
 
+/** Fond des cases vides — assez clair en thème sombre pour distinguer le noir (#000). */
+export const TIFO_EMPTY_FILL_LIGHT = 'rgb(238, 242, 246)'
+export const TIFO_EMPTY_FILL_DARK = 'rgb(100, 116, 139)'
+
 const TIFO_LEGACY_RGB_TO_HEX: Record<string, string> = {
   'rgb(0, 0, 255)': '#0000ff',
   'rgb(0,220,0)': '#00dc00',
@@ -75,6 +79,14 @@ export function normalizeTifoDisplayColor(color: string): string {
 /** Couleur canonique envoyée à Supabase (hex #rrggbb). */
 export function normalizeTifoStorageColor(color: string): string {
   return normalizeTifoDisplayColor(color)
+}
+
+export function isTifoBlackColor(color: string): boolean {
+  return normalizeTifoDisplayColor(color) === '#000000'
+}
+
+export function isTifoWhiteColor(color: string): boolean {
+  return normalizeTifoDisplayColor(color) === '#ffffff'
 }
 
 export function tifoPixelKey(x: number, y: number) {

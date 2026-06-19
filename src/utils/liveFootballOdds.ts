@@ -542,6 +542,62 @@ export function cardCoarseDedupeKey(
   return `${h.minute}|${h.side ?? '?'}|${color}|${playerKey}`
 }
 
+/** Clé stable carton (camp + joueur + minute + couleur) — pop-up fullscreen. */
+export function cardEventIdentityKey(
+  h: Pick<Highlight, 'type' | 'minute' | 'side' | 'title' | 'detail' | 'scorerName'>,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): string | null {
+  if (h.type !== 'Carton') return null
+  const raw = `${h.title ?? ''} ${h.detail ?? ''}`
+  const color = cardColorFromHighlightText(raw)
+  const side = h.side ?? guessSideFromTeams(raw, home, away)
+  if (!side) return null
+  const name = resolveCardPlayerNameFromHighlight(h, home, away)
+  if (!name) return null
+  return `${h.minute}|${side}|${color}|${slugScorer(compactScorerDisplayName(name))}`
+}
+
+/** Même carton SM (événement structuré + commentaire texte, ou camp mal résolu). */
+export function cardsAreSameCardEvent(
+  a: Pick<Highlight, 'id' | 'type' | 'minute' | 'side' | 'title' | 'detail' | 'scorerName'>,
+  b: Pick<Highlight, 'id' | 'type' | 'minute' | 'side' | 'title' | 'detail' | 'scorerName'>,
+  home: LiveGoalTeamHints,
+  away: LiveGoalTeamHints,
+): boolean {
+  if (a.type !== 'Carton' || b.type !== 'Carton') return false
+  if ((a.minute || 0) !== (b.minute || 0)) return false
+
+  const rawA = `${a.title ?? ''} ${a.detail ?? ''}`
+  const rawB = `${b.title ?? ''} ${b.detail ?? ''}`
+  if (cardColorFromHighlightText(rawA) !== cardColorFromHighlightText(rawB)) return false
+
+  const oneCommentOneEvent =
+    (a.id.startsWith('sm-comment-') && b.id.startsWith('sm-event-')) ||
+    (b.id.startsWith('sm-comment-') && a.id.startsWith('sm-event-'))
+  if (oneCommentOneEvent) {
+    const nameA = resolveCardPlayerNameFromHighlight(a, home, away)
+    const nameB = resolveCardPlayerNameFromHighlight(b, home, away)
+    if (nameA && nameB) return slugScorer(nameA) === slugScorer(nameB)
+    return true
+  }
+
+  const sideA = a.side ?? guessSideFromTeams(rawA, home, away)
+  const sideB = b.side ?? guessSideFromTeams(rawB, home, away)
+  if (sideA && sideB && sideA !== sideB) return false
+  if (!sideA && !sideB) return false
+
+  const keyA = cardEventIdentityKey(a, home, away)
+  const keyB = cardEventIdentityKey(b, home, away)
+  if (keyA && keyB) return keyA === keyB
+
+  const nameA = resolveCardPlayerNameFromHighlight(a, home, away)
+  const nameB = resolveCardPlayerNameFromHighlight(b, home, away)
+  if (nameA && nameB) return slugScorer(nameA) === slugScorer(nameB)
+
+  return false
+}
+
 /** Nom affiché carton (prénom + nom quand dispo). */
 export function formatCardPlayerDisplayName(name: string): string {
   const cleaned = name.replace(/\s+/g, ' ').trim()
@@ -575,7 +631,7 @@ export function parseCardPlayerName(raw: string): string | null {
   return null
 }
 
-function resolveCardPlayerNameFromHighlight(
+export function resolveCardPlayerNameFromHighlight(
   h: Pick<Highlight, 'scorerName' | 'title' | 'detail'>,
   home: LiveGoalTeamHints,
   away: LiveGoalTeamHints,

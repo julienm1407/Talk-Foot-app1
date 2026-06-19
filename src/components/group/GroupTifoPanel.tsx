@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
-import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES } from '../../constants/tifoPixelBoard'
+import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES, TIFO_EMPTY_FILL_DARK, TIFO_EMPTY_FILL_LIGHT, isTifoBlackColor, isTifoWhiteColor } from '../../constants/tifoPixelBoard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 
-const CELL_PX = 11
+const CELL_PX_DESKTOP = 11
+/** Grille un peu plus grande dans les panneaux mobile (sheet / embedded). */
+const CELL_PX_EMBEDDED = 13
 
 export function GroupTifoPanel({
   groupId,
@@ -136,7 +138,8 @@ export function GroupTifoPanel({
     )
   }
 
-  const emptyFill = L ? 'rgb(238, 242, 246)' : 'rgb(30, 41, 59)'
+  const emptyFill = L ? TIFO_EMPTY_FILL_LIGHT : TIFO_EMPTY_FILL_DARK
+  const cellPx = embedded ? CELL_PX_EMBEDDED : CELL_PX_DESKTOP
 
   return (
     <div
@@ -260,14 +263,23 @@ export function GroupTifoPanel({
             <button
               key={c}
               type="button"
-              title={c === '#ffffff' ? 'Blanc' : c}
+              title={c === '#ffffff' ? 'Blanc' : c === '#000000' ? 'Noir' : c}
               className={cn(
                 'tf-tifo-swatch size-7 rounded-lg border-2 transition',
-                color === c ? 'border-tf-dark ring-2 ring-tf-electric/30' : 'border-white ring-1 ring-black/10',
+                isTifoBlackColor(c) && 'tf-tifo-swatch--black',
+                color === c
+                  ? isTifoBlackColor(c)
+                    ? 'border-white ring-2 ring-sky-400/70'
+                    : isTifoWhiteColor(c)
+                      ? 'border-slate-500 ring-2 ring-tf-electric/30'
+                      : 'border-tf-dark ring-2 ring-tf-electric/30'
+                  : isTifoBlackColor(c)
+                    ? 'border-white/90 ring-1 ring-white/30'
+                    : 'border-white ring-1 ring-black/10',
               )}
-              style={{ backgroundColor: c }}
+              style={isTifoBlackColor(c) ? undefined : { backgroundColor: c }}
               onClick={() => setColor(c)}
-              aria-label={`Couleur ${c}`}
+              aria-label={`Couleur ${c === '#000000' ? 'noir' : c === '#ffffff' ? 'blanc' : c}`}
             />
           ))}
         </div>
@@ -300,8 +312,8 @@ export function GroupTifoPanel({
         <div
           className={cn('tf-tifo-grid', L ? 'tf-tifo-grid--light' : 'tf-tifo-grid--dark')}
           style={{
-            gridTemplateColumns: `repeat(${boardW}, ${CELL_PX}px)`,
-            gridTemplateRows: `repeat(${boardH}, ${CELL_PX}px)`,
+            gridTemplateColumns: `repeat(${boardW}, ${cellPx}px)`,
+            gridTemplateRows: `repeat(${boardH}, ${cellPx}px)`,
           }}
           role="img"
           aria-label="Grille tifo collaborative"
@@ -313,6 +325,8 @@ export function GroupTifoPanel({
             const painted = pixels[k]
             const fill = painted ? normalizeTifoDisplayColor(painted) : emptyFill
             const isPainted = Boolean(painted)
+            const isBlackPixel = isPainted && isTifoBlackColor(fill)
+            const isWhitePixel = isPainted && isTifoWhiteColor(fill)
             const canPlace = !moderationMode
             return (
               <button
@@ -321,16 +335,18 @@ export function GroupTifoPanel({
                 className={cn(
                   'tf-tifo-cell',
                   isPainted && 'tf-tifo-cell--painted',
+                  isBlackPixel && 'tf-tifo-cell--black',
+                  isWhitePixel && 'tf-tifo-cell--white',
                   canPlace && !isPainted && 'tf-tifo-cell--empty',
                   canPlace && 'cursor-pointer',
                   moderationMode && isPainted && 'tf-tifo-cell--moderate cursor-pointer',
                   moderationMode && !isPainted && 'tf-tifo-cell--empty cursor-default opacity-50',
                 )}
                 style={{
-                  width: CELL_PX,
-                  height: CELL_PX,
-                  minWidth: CELL_PX,
-                  minHeight: CELL_PX,
+                  width: cellPx,
+                  height: cellPx,
+                  minWidth: cellPx,
+                  minHeight: cellPx,
                   backgroundColor: fill,
                   opacity: 1,
                 }}
