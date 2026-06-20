@@ -58,7 +58,7 @@ export function settleOpenBetsForMatch(
       if (won) {
         const payout = Math.round(b.stake * b.odds)
         tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
-        return { ...b, status: 'won' as const, settledAt: now, payout }
+        return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
       }
       return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
     }
@@ -70,7 +70,7 @@ export function settleOpenBetsForMatch(
       if (won) {
         const payout = Math.round(b.stake * b.odds)
         tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
-        return { ...b, status: 'won' as const, settledAt: now, payout }
+        return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
       }
       return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
     }
@@ -81,7 +81,7 @@ export function settleOpenBetsForMatch(
       if (won) {
         const payout = Math.round(b.stake * b.odds)
         tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
-        return { ...b, status: 'won' as const, settledAt: now, payout }
+        return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
       }
       return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
     }
@@ -98,7 +98,7 @@ export function settleOpenBetsForMatch(
       if (won) {
         const payout = Math.round(b.stake * b.odds)
         tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
-        return { ...b, status: 'won' as const, settledAt: now, payout }
+        return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
       }
       return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
     }

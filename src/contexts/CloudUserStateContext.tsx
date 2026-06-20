@@ -50,7 +50,18 @@ import {
   mergeBetsBackupIntoApp,
   writeBetsBackup,
 } from '../utils/betsBackup'
+import { reconcileBetTokenCredits } from '../utils/betTokenReconcile'
+import { betTokenMultiplier, normalizeSubscription } from '../utils/subscriptionEntitlements'
 import { useAuth } from './AuthContext'
+
+function withReconciledBetTokens(app: UserAppStateV1): {
+  app: UserAppStateV1
+  tokenDelta: number
+  reconciledBetIds: string[]
+} {
+  const tier = normalizeSubscription(app.subscription).tier
+  return reconcileBetTokenCredits(app, betTokenMultiplier(tier))
+}
 
 type CloudUserStateValue = {
   /** Profil cloud chargé (évite d’écraser le serveur avant hydratation). */
@@ -216,6 +227,11 @@ function CloudUserStateLoader({
       let payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
       payload = coalesceAppStateWithWalletBackup(user.id, payload)
       payload = coalesceAppStateWithBetsBackup(user.id, payload)
+      const betTokensReconciled = withReconciledBetTokens(payload)
+      payload = betTokensReconciled.app
+      if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
+        hasLocalEditsRef.current = true
+      }
       if (payload !== appRef.current) {
         appRef.current = payload
         setApp(payload)
@@ -333,6 +349,11 @@ function CloudUserStateLoader({
         merged = walletRestored.app
         const betsRestored = mergeBetsBackupIntoApp(user.id, merged)
         merged = betsRestored.app
+        const betTokensReconciled = withReconciledBetTokens(merged)
+        merged = betTokensReconciled.app
+        if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
+          hasLocalEditsRef.current = true
+        }
         if (
           readyRef.current &&
           !isLikelyDefaultModularAvatar(sessionAvatar) &&

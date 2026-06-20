@@ -141,7 +141,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
           if (won) {
             const payout = Math.round(b.stake * b.odds)
             delta += betWinTokenCredit(payout, b.stake, mult)
-            return { ...b, status: 'won' as const, settledAt: now, payout }
+            return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
         })
@@ -189,7 +189,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
           if (won) {
             const payout = Math.round(b.stake * b.odds)
             delta += betWinTokenCredit(payout, b.stake, mult)
-            return { ...b, status: 'won' as const, settledAt: now, payout }
+            return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
           }
           return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
         })

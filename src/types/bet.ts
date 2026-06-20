@@ -48,6 +48,8 @@ export type Bet = {
   placedAt: string
   settledAt?: string
   payout?: number
+  /** Jetons du gain déjà crédités au wallet (évite double crédit après sync cloud). */
+  tokenCreditApplied?: boolean
   matchLabel?: BetMatchLabel
 }
 

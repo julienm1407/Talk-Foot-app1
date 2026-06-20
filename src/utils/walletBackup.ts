@@ -125,5 +125,9 @@ export function coalesceAppStateWithWalletBackup(userId: string, app: UserAppSta
     return mergeWalletBackupIntoApp(userId, app).app
   }
 
+  if (b.tokens > current.tokens || b.medals > current.medals) {
+    return mergeWalletBackupIntoApp(userId, app).app
+  }
+
   return app
 }
