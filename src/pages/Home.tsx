@@ -132,14 +132,6 @@ export function HomePage() {
   /** Sous le live : 2 lignes compactes rail, sans scroll horizontal */
   const upcomingUnderLiveStrip = useMemo(() => upcomingSortedForHome.slice(0, 2), [upcomingSortedForHome])
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[200px] items-center justify-center">
-        <p className="text-sm font-semibold text-tf-grey">Chargement des matchs…</p>
-      </div>
-    )
-  }
-
   const trendsShell = hubTrendsShell(appearance)
 
   /**
@@ -251,6 +243,7 @@ export function HomePage() {
             trendingDebates={trendingDebates}
             debateOfTheDay={debateOfTheDay}
             debatesLoading={debatesLoading}
+            matchesLoading={loading}
             onCreateTribune={() => setCreateOpen(true)}
             centerContinuation={wideHomeBelowFold}
           />

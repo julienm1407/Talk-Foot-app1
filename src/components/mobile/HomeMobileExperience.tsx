@@ -136,7 +136,25 @@ export function HomeMobileExperience({
     </p>
   )
 
-  const heroBlock = heroLiveMatch ? (
+  const matchesLoadingShell = (
+    <div
+      className={cn(
+        'space-y-2 rounded-2xl border p-4',
+        L ? 'border-slate-200/80 bg-white/90' : 'border-white/12 bg-white/[0.04]',
+      )}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className={cn('h-3 w-24 rounded-full animate-pulse', L ? 'bg-slate-200' : 'bg-white/15')} />
+      <div className={cn('h-36 rounded-xl animate-pulse', L ? 'bg-slate-100' : 'bg-white/10')} />
+      <p className="text-center text-[11px] font-semibold text-tf-app-muted">Chargement des matchs…</p>
+    </div>
+  )
+
+  const heroBlock = loading ? (
+    matchesLoadingShell
+  ) : heroLiveMatch ? (
     <div className="space-y-2">
       <HubEncartTopAccent appearance={appearance} preset="live" />
       <LiveMatchHero

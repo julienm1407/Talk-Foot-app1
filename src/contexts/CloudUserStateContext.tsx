@@ -117,11 +117,13 @@ export function CloudUserStateGate({ children }: { children: ReactNode }) {
 }
 
 function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
-  const { isReady, clerkSessionId } = useAuth()
+  const { isReady, clerkSessionId, user } = useAuth()
+  const showAccountSyncBanner =
+    !isReady || (isClerkAuthMode() && Boolean(user?.id) && !clerkSessionId)
 
   return (
     <>
-      {!isReady || (isClerkAuthMode() && !clerkSessionId) ? (
+      {showAccountSyncBanner ? (
         <div
           className="border-b border-sky-200/80 bg-sky-50/95 px-4 py-1.5 text-center text-[11px] font-bold text-sky-950"
           role="status"

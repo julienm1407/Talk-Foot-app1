@@ -62,6 +62,7 @@ export function HomeDesktopExperience({
   trendingDebates,
   debateOfTheDay,
   debatesLoading = false,
+  matchesLoading = false,
   onCreateTribune,
   /** Suite de page dans la colonne centrale (tendances, favoris, fil…) */
   centerContinuation,
@@ -78,6 +79,7 @@ export function HomeDesktopExperience({
   trendingDebates: Debate[]
   debateOfTheDay: Debate | null
   debatesLoading?: boolean
+  matchesLoading?: boolean
   onCreateTribune: () => void
   centerContinuation?: ReactNode
 }) {
@@ -220,7 +222,18 @@ export function HomeDesktopExperience({
         >
           <HubEncartTopAccent appearance={appearance} preset={hasLive ? 'live' : 'upcoming'} />
           <div className="space-y-3 px-4 pt-3 sm:space-y-4 sm:px-5 sm:pt-4">
-          {hasLive ? (
+          {matchesLoading && !hasLive && upcomingSorted.length === 0 ? (
+            <div
+              className="space-y-3"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <div className={cn('h-4 w-32 rounded-full animate-pulse', L ? 'bg-slate-200' : 'bg-white/15')} />
+              <div className={cn('h-44 rounded-xl animate-pulse', L ? 'bg-slate-100' : 'bg-white/10')} />
+              <p className={cn('text-center text-xs font-semibold', hubSecondary)}>Chargement des matchs…</p>
+            </div>
+          ) : hasLive ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">

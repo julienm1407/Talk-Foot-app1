@@ -10,6 +10,7 @@ import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { AboutPage } from './pages/AboutPage'
 import { SubscriptionPlansPage } from './pages/SubscriptionPlansPage'
+import { HomePage } from './pages/Home'
 import {
   AdminPage,
   ArticlePage,
@@ -29,7 +30,6 @@ import {
   CdmGroupsPage,
   CdmBracketPage,
   CdmStatsPage,
-  HomePage,
   NationPage,
   NationsHubPage,
   ProfilePage,
@@ -133,14 +133,7 @@ export default function App() {
             </CloudUserStateGate>
           }
         >
-          <Route
-            index
-            element={
-              <RouteSuspense>
-                <HomePage />
-              </RouteSuspense>
-            }
-          />
+          <Route index element={<HomePage />} />
           <Route path="matches" element={<Navigate to="/match" replace />} />
           <Route
             path="debates"

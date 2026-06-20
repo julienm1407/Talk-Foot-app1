@@ -1,8 +1,5 @@
 import { lazyWithRetry } from '../utils/lazyWithRetry'
 
-export const HomePage = lazyWithRetry(() =>
-  import('../pages/Home').then((m) => ({ default: m.HomePage })),
-)
 export const CalendarPage = lazyWithRetry(() =>
   import('../pages/Calendar').then((m) => ({ default: m.CalendarPage })),
 )

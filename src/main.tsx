@@ -86,6 +86,7 @@ if (!mountEl) {
   void initCapacitorShell().finally(() => {
     try {
       createRoot(mountEl).render(root)
+      document.getElementById('tf-boot-fallback')?.remove()
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       showFatalBootError('Talk Foot n’a pas pu démarrer.', msg)
