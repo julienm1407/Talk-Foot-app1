@@ -1590,6 +1590,8 @@ export function ChannelPage() {
   const fullscreenDedupePrimedRef = useRef(false)
   const fullscreenDedupeKeysRef = useRef<Set<string>>(new Set())
   const fullscreenShownHighlightIdsRef = useRef<Set<string>>(new Set())
+  /** Minute live au moment où on a « accroché » la session (évite buts/cartons déjà joués en popup). */
+  const joinedAtLiveMinuteRef = useRef(-1)
   const lastGoalFullscreenAtRef = useRef(0)
   const infoHighlightPrimedRef = useRef(false)
   const infoHighlightIdsRef = useRef<Set<string>>(new Set())
@@ -1678,10 +1680,17 @@ export function ChannelPage() {
     )
     const effectiveMinute = Math.max(apiMinute, liveDisplayedMinute)
     const totalGoals = (match?.score?.home ?? 0) + (match?.score?.away ?? 0)
+    const inKickoffWindow =
+      kickoffMs != null && nowMs >= kickoffMs && nowMs <= kickoffMs + KICKOFF_FULLSCREEN_GRACE_AFTER_MS
     const arrivedAfterKickoffWindow =
       kickoffMs != null && nowMs > kickoffMs + KICKOFF_FULLSCREEN_GRACE_AFTER_MS
 
-    if (arrivedAfterKickoffWindow || effectiveMinute > 2 || totalGoals > 0) {
+    if (
+      arrivedAfterKickoffWindow ||
+      effectiveMinute > 1 ||
+      totalGoals > 0 ||
+      !inKickoffWindow
+    ) {
       try {
         localStorage.setItem(ssKey, 'skip')
       } catch {
@@ -1720,12 +1729,20 @@ export function ChannelPage() {
       fullscreenDedupePrimedRef.current = false
       fullscreenDedupeKeysRef.current = match?.id ? loadFullscreenSeenKeys(match.id) : new Set()
       fullscreenShownHighlightIdsRef.current = new Set()
+      joinedAtLiveMinuteRef.current = -1
       infoHighlightPrimedRef.current = false
       infoHighlightIdsRef.current = new Set()
       infoToastKeysRef.current = new Set()
       liveClockPausedWasRef.current = false
     }
     if (status !== 'live') return
+
+    const apiMinute = Math.max(
+      Math.round(Number(match?.minute) || 0),
+      liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) ?? 0 : 0,
+    )
+    const effectiveMinute = Math.max(liveDisplayedMinute, apiMinute)
+    const matchAlreadyStarted = homeScore + awayScore > 0 || effectiveMinute > 1
 
     const clockPaused = Boolean(matchForClock?.liveClockPaused)
     const cardTeamHints = goalTeamHints
@@ -1752,8 +1769,8 @@ export function ChannelPage() {
 
     if (!fullscreenDedupePrimedRef.current) {
       if (liveStatsLoading) return
-      const hasActivity = homeScore + awayScore > 0 || liveDisplayedMinute > 10
-      if (smTimelineHighlights.length === 0 && hasActivity) return
+      if (matchAlreadyStarted && effectiveMinute <= 1) return
+      if (smTimelineHighlights.length === 0 && matchAlreadyStarted) return
       for (const h of smTimelineHighlights) {
         const kind = fullscreenKindFromHighlight(h)
         if (!kind) continue
@@ -1765,13 +1782,16 @@ export function ChannelPage() {
         )
         fullscreenShownHighlightIdsRef.current.add(h.id)
       }
+      joinedAtLiveMinuteRef.current = effectiveMinute
       fullscreenDedupePrimedRef.current = true
       return
     }
 
     if (!smTimelineHighlights.length) return
 
-    const historyCutoff = Math.max(0, liveDisplayedMinute - 2)
+    const joinMinute = joinedAtLiveMinuteRef.current
+    const historyCutoff =
+      joinMinute >= 0 ? joinMinute : Math.max(0, liveDisplayedMinute - 2)
     const pendingByKey = new Map<string, Highlight>()
     for (const h of smTimelineHighlights) {
       const kind = fullscreenKindFromHighlight(h)
@@ -1947,6 +1967,8 @@ export function ChannelPage() {
     homeScore,
     awayScore,
     liveDisplayedMinute,
+    liveBundleFixture,
+    match?.minute,
     matchForClock?.liveClockPaused,
   ])
 
@@ -1956,6 +1978,14 @@ export function ChannelPage() {
 
     if (!infoHighlightPrimedRef.current) {
       if (liveStatsLoading) return
+      const apiMinute = Math.max(
+        Math.round(Number(match?.minute) || 0),
+        liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) ?? 0 : 0,
+      )
+      const effectiveMinute = Math.max(liveDisplayedMinute, apiMinute)
+      const matchAlreadyStarted = homeScore + awayScore > 0 || effectiveMinute > 1
+      if (matchAlreadyStarted && effectiveMinute <= 1) return
+      if (smTimelineHighlights.length === 0 && matchAlreadyStarted) return
       for (const h of smTimelineHighlights) {
         infoHighlightIdsRef.current.add(h.id)
         const t = String(h.type || '').toLowerCase()
@@ -1969,7 +1999,9 @@ export function ChannelPage() {
 
     if (smTimelineHighlights.length === 0) return
 
-    const historyCutoff = Math.max(0, liveDisplayedMinute - 2)
+    const joinMinute = joinedAtLiveMinuteRef.current
+    const historyCutoff =
+      joinMinute >= 0 ? joinMinute : Math.max(0, liveDisplayedMinute - 2)
     const unseen = smTimelineHighlights.filter((h) => {
       if (infoHighlightIdsRef.current.has(h.id)) return false
       if (h.minute > 0 && h.minute < historyCutoff) {
@@ -2012,7 +2044,20 @@ export function ChannelPage() {
     )
     if (infoToastTimeoutRef.current != null) window.clearTimeout(infoToastTimeoutRef.current)
     infoToastTimeoutRef.current = window.setTimeout(() => setAnimationNotice(null), 3600)
-  }, [smTimelineHighlights, liveStatsLoading, status, match?.id, detectHighlightSide, homeName, awayName, liveDisplayedMinute])
+  }, [
+    smTimelineHighlights,
+    liveStatsLoading,
+    status,
+    match?.id,
+    match?.minute,
+    detectHighlightSide,
+    homeName,
+    awayName,
+    homeScore,
+    awayScore,
+    liveDisplayedMinute,
+    liveBundleFixture,
+  ])
 
   useEffect(
     () => () => {
