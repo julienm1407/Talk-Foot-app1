@@ -69,7 +69,8 @@ import { useAutoScroll } from '../hooks/useAutoScroll'
 import { formatGoalEventMinute } from '../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
-import { deriveBettingSuspension } from '../utils/bettingSuspension'
+import { deriveBettingSuspension, GOAL_BET_LOCK_MS } from '../utils/bettingSuspension'
+import { pickLivePitchBannerHighlight } from '../utils/livePitchBanner'
 import {
   stadiumAmbiancePercentFromFxCount,
   stadiumAmbianceTierLabel,
@@ -1092,6 +1093,63 @@ export function ChannelPage() {
   const liveDisplayedMinute = useLinearDisplayedLiveMinute(matchForClock)
   const liveClockLabel = useLiveMatchClockLabel(matchForClock)
   const livePeriodTicking = matchForClock?.livePeriodTicking !== false
+  const [bettingSessionAnchorMinute, setBettingSessionAnchorMinute] = useState(-1)
+  const [goalBetLockUntilMs, setGoalBetLockUntilMs] = useState(0)
+  const prevScoreForBetLockRef = useRef({ home: 0, away: 0 })
+  const lastSeenGoalHighlightIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    setBettingSessionAnchorMinute(-1)
+    setGoalBetLockUntilMs(0)
+    prevScoreForBetLockRef.current = { home: 0, away: 0 }
+    lastSeenGoalHighlightIdRef.current = null
+  }, [match?.id])
+
+  useEffect(() => {
+    if (status !== 'live' || !match?.id) return
+    if (bettingSessionAnchorMinute >= 0) return
+    if (liveStatsLoading) return
+    const apiMinute = Math.max(
+      Math.round(Number(match?.minute) || 0),
+      liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) ?? 0 : 0,
+    )
+    const effectiveMinute = Math.max(liveDisplayedMinute, apiMinute)
+    const matchAlreadyStarted = homeScore + awayScore > 0 || effectiveMinute > 1
+    if (matchAlreadyStarted && effectiveMinute <= 1) return
+    setBettingSessionAnchorMinute(effectiveMinute)
+  }, [
+    status,
+    match?.id,
+    match?.minute,
+    bettingSessionAnchorMinute,
+    liveStatsLoading,
+    liveDisplayedMinute,
+    homeScore,
+    awayScore,
+    liveBundleFixture,
+  ])
+
+  useEffect(() => {
+    if (status !== 'live' || bettingSessionAnchorMinute < 0) return
+    const prev = prevScoreForBetLockRef.current
+    if (homeScore > prev.home || awayScore > prev.away) {
+      setGoalBetLockUntilMs(Date.now() + GOAL_BET_LOCK_MS)
+    }
+    prevScoreForBetLockRef.current = { home: homeScore, away: awayScore }
+  }, [homeScore, awayScore, status, bettingSessionAnchorMinute])
+
+  useEffect(() => {
+    if (status !== 'live' || bettingSessionAnchorMinute < 0) return
+    const goals = smTimelineHighlights.filter((h) => h.type === 'But')
+    const latest = goals[goals.length - 1]
+    if (!latest || latest.id === lastSeenGoalHighlightIdRef.current) return
+    lastSeenGoalHighlightIdRef.current = latest.id
+    const hm = latest.minute ?? 0
+    if (hm >= bettingSessionAnchorMinute - 1 && hm >= liveDisplayedMinute - 2) {
+      setGoalBetLockUntilMs(Date.now() + GOAL_BET_LOCK_MS)
+    }
+  }, [smTimelineHighlights, status, bettingSessionAnchorMinute, liveDisplayedMinute])
+
   const bettingSuspension = useMemo(
     () =>
       deriveBettingSuspension({
@@ -1100,8 +1158,20 @@ export function ChannelPage() {
         minute: liveDisplayedMinute,
         periodTicking: livePeriodTicking,
         highlights: smTimelineHighlights,
+        sessionAnchorMinute: bettingSessionAnchorMinute,
+        goalLockUntilMs: goalBetLockUntilMs,
+        nowMs,
       }),
-    [status, matchForClock?.liveClockPaused, liveDisplayedMinute, livePeriodTicking, smTimelineHighlights],
+    [
+      status,
+      matchForClock?.liveClockPaused,
+      liveDisplayedMinute,
+      livePeriodTicking,
+      smTimelineHighlights,
+      bettingSessionAnchorMinute,
+      goalBetLockUntilMs,
+      nowMs,
+    ],
   )
 
   const sidelinedCounts = useMemo(
@@ -1147,7 +1217,7 @@ export function ChannelPage() {
   )
 
   useEffect(() => {
-    if (status === 'live') return
+    if (status === 'upcoming') return
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
   }, [status])
@@ -1572,8 +1642,8 @@ export function ChannelPage() {
   }
 
   const latestHighlight = useMemo(
-    () => (smTimelineHighlights.length ? smTimelineHighlights[smTimelineHighlights.length - 1] : null),
-    [smTimelineHighlights],
+    () => pickLivePitchBannerHighlight(smTimelineHighlights, liveDisplayedMinute),
+    [smTimelineHighlights, liveDisplayedMinute],
   )
   const latestHighlightText = useMemo(() => {
     const raw = latestHighlight?.title || latestHighlight?.detail || ''

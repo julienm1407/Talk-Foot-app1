@@ -31,8 +31,8 @@ export function resolveLivePitchBanner(params: {
   highlight: Highlight | null
   highlightText: string
   detectSide: (raw: string) => 'home' | 'away' | undefined
-  dangerousLeader: 'home' | 'away' | 'equal'
-  dangerousDelta: number
+  dangerousLeader?: 'home' | 'away' | 'equal'
+  dangerousDelta?: number
   homeLabel: string
   awayLabel: string
   liveClockPaused?: boolean
@@ -42,8 +42,6 @@ export function resolveLivePitchBanner(params: {
     highlight,
     highlightText,
     detectSide,
-    dangerousLeader,
-    dangerousDelta,
     homeLabel,
     awayLabel,
     liveClockPaused,
@@ -167,18 +165,23 @@ export function resolveLivePitchBanner(params: {
     }
   }
 
-  if (dangerousLeader !== 'equal' && Math.abs(dangerousDelta) >= 1) {
-    return {
-      label: 'ACTION DANGEREUSE',
-      detail: dangerousLeader === 'home' ? homeLabel : awayLabel,
-      side: dangerousLeader,
-      tone: 'danger',
-    }
-  }
-
   return {
     label: 'MATCH EN COURS',
     side: 'neutral',
     tone: 'neutral',
   }
+}
+
+/** Évite d’afficher une vieille action quand le chrono a avancé. */
+export function pickLivePitchBannerHighlight(
+  highlights: Highlight[],
+  liveMinute: number,
+): Highlight | null {
+  if (!highlights.length) return null
+  const recent = highlights.filter((h) => {
+    const hm = typeof h.minute === 'number' ? h.minute : 0
+    if (hm <= 0) return false
+    return hm >= liveMinute - 2 && hm <= liveMinute + 1
+  })
+  return recent.length ? recent[recent.length - 1]! : null
 }

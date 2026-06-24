@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { Match } from '../../types/match'
 import { Link } from 'react-router-dom'
 import { Button } from '../ui/Button'
@@ -199,6 +199,7 @@ export function BetWidget({
   const x12UnavailableLabel = x12OddsPending ? 'Chargement…' : 'Estimé'
 
   const isLive = match.status === 'live'
+  const liveBlocked = isLive && bettingSuspended
   const scoreHome = liveScore?.home ?? match.score?.home ?? 0
   const scoreAway = liveScore?.away ?? match.score?.away ?? 0
   const minuteLive = Math.max(0, liveMinute ?? match.minute ?? 0)
@@ -215,6 +216,11 @@ export function BetWidget({
       awayShotsOnTarget: sot?.away ?? 0,
     }
   }, [liveStatRows])
+
+  useEffect(() => {
+    if (!liveBlocked) return
+    setPending(null)
+  }, [liveBlocked])
 
   const x12Displayed = useMemo((): SmBookOdds1x2 | null => {
     if (!x12Resolved) return null
@@ -564,6 +570,7 @@ export function BetWidget({
 
   const pick1x2Side = useCallback(
     (side: 'home' | 'draw' | 'away') => {
+      if (liveBlocked) return
       if (!x12Displayed) return
       const odds =
         side === 'home' ? x12Displayed.home : side === 'away' ? x12Displayed.away : x12Displayed.draw
@@ -577,7 +584,7 @@ export function BetWidget({
             : `1N2 · ${side === 'home' ? match.home.name : match.away.name}`,
       })
     },
-    [match.away.name, match.home.name, selectPendingPick, x12Displayed],
+    [liveBlocked, match.away.name, match.home.name, selectPendingPick, x12Displayed],
   )
 
   const placePending = () => {
@@ -779,7 +786,7 @@ export function BetWidget({
                 side={side}
                 label={label}
                 oddsLabel={oddsLabel}
-                disabled={!x12Ready || !x12Displayed || !oddsVal || oddsVal < 1.01}
+                disabled={!x12Ready || !x12Displayed || !oddsVal || oddsVal < 1.01 || liveBlocked}
                 dense={compact}
                 inline
                 pickVisual={pickTeamVisual(side)}
