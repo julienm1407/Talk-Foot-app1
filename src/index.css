@@ -3087,6 +3087,36 @@ body::before {
   flex-direction: column;
 }
 
+.tf-channel-sheet-close {
+  display: grid;
+  place-items: center;
+  min-height: 3rem;
+  min-width: 3rem;
+  padding: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  background: #ffffff;
+  color: #0a223a;
+  font-size: 1.875rem;
+  line-height: 1;
+  font-weight: 900;
+  box-shadow:
+    0 0 0 2px rgba(8, 28, 48, 0.65),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+  touch-action: manipulation;
+}
+
+.tf-channel-sheet-close--light {
+  border-color: #023458;
+  background: #023458;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(2, 52, 88, 0.4);
+}
+
+.tf-channel-sheet-close:active {
+  transform: scale(0.96);
+}
+
 .tf-channel-mobile-paris {
   flex: 1 1 auto;
   min-height: 0;

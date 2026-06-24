@@ -918,36 +918,7 @@ export function BetWidget({
                 </button>
               </div>
             </div>
-            ) : (
-              <div
-                className={cn(
-                  'flex shrink-0 items-center justify-between gap-2 border-b',
-                  sheetLight ? 'border-slate-100' : 'border-[color:var(--tf-c30-border)]',
-                  sheetDense ? 'px-3 py-2' : 'px-4 py-3',
-                )}
-              >
-                <h2
-                  id="bet-sheet-title"
-                  className={cn('font-black', TF_TEXT_FG, sheetDense ? 'text-sm' : 'text-base')}
-                >
-                  Pronos
-                </h2>
-                <button
-                  type="button"
-                  className={cn(
-                    'grid place-items-center rounded-2xl border font-bold transition',
-                    sheetLight
-                      ? 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                      : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-muted hover:text-tf-app-fg',
-                    sheetDense ? 'size-8 text-base' : 'size-10 text-lg',
-                  )}
-                  onClick={() => setSheetOpen(false)}
-                  aria-label="Fermer les pronos"
-                >
-                  ×
-                </button>
-              </div>
-            )}
+            ) : null}
 
             <div
               ref={sheetScrollRef}

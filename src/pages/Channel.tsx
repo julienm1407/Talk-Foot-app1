@@ -869,12 +869,7 @@ export function ChannelPage() {
     'tf-live-control mt-2 w-full rounded-lg border border-[#4a7faa]/55 bg-[#1a3d5c] px-2.5 py-2 text-xs font-bold text-sky-100 transition hover:bg-[#234d6d] disabled:cursor-not-allowed disabled:border-[#3a5a78]/50 disabled:bg-[#0a1f35] disabled:text-sky-200/80'
   const chSheetBackdrop = L ? 'bg-slate-900/30 backdrop-blur-[2px]' : 'bg-slate-900/60 backdrop-blur-[2px]'
   const chSheetPanel = L ? 'border-slate-200 bg-white' : 'border-[#3a6690] bg-[#0b2440]'
-  const chSheetGhostBtn = L
-    ? 'rounded-md border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-bold text-[#023458]'
-    : 'rounded-md border border-[#4f7ea8] bg-[#0e2a45] px-2 py-1 text-[10px] font-bold text-sky-100'
-  const chSheetCloseBtn = L
-    ? 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-slate-300 bg-white text-2xl font-black leading-none text-[#023458] shadow-sm active:bg-slate-50'
-    : 'grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-sky-300/55 bg-[#0e2a45] text-2xl font-black leading-none text-white shadow-sm active:bg-[#153552]'
+  const chSheetCloseBtn = cn('tf-channel-sheet-close', L && 'tf-channel-sheet-close--light')
   const chSheetTabActive = L
     ? 'border-sky-400 bg-sky-100 text-[#023458]'
     : 'border-sky-300 bg-sky-300/20 text-sky-100'
@@ -4194,14 +4189,21 @@ export function ChannelPage() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <button
+                      type="button"
+                      onClick={() => setMobilePanel(null)}
+                      className={cn('absolute right-3 top-3 z-30', chSheetCloseBtn)}
+                      aria-label="Fermer le panneau"
+                    >
+                      ×
+                    </button>
             <div
               className={cn(
-                'shrink-0 border-b px-3 pb-2 pt-3',
+                'shrink-0 border-b px-3 pb-2 pt-3 pr-14',
                 L ? 'border-slate-200 bg-white' : 'border-[#3a6690]/80 bg-[#0b2440]',
               )}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
+              <div className="min-w-0">
                   <p className={cn('text-xs font-black uppercase tracking-wider', chSheetTitle)}>
                     {mobilePanel === 'match'
                       ? mobileMatchTab === 'compo'
@@ -4216,15 +4218,6 @@ export function ChannelPage() {
                       Choisis ta zone et dessine le mur collectif
                     </p>
                   ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMobilePanel(null)}
-                  className={chSheetCloseBtn}
-                  aria-label="Fermer le panneau"
-                >
-                  ×
-                </button>
               </div>
               {mobilePanel === 'match' ? (
                 <div className="mt-2 flex gap-1 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
@@ -4482,8 +4475,8 @@ export function ChannelPage() {
               <h3 className={cn('text-sm font-bold', L ? 'text-[#023458]' : 'text-sky-100')}>
                 Classement · {match?.competition.shortName ?? match?.competition.name ?? 'Compétition'}
               </h3>
-              <button type="button" onClick={() => setStandingsModalOpen(false)} className={chSheetGhostBtn}>
-                Fermer
+              <button type="button" onClick={() => setStandingsModalOpen(false)} className={chSheetCloseBtn} aria-label="Fermer le classement">
+                ×
               </button>
             </div>
             <p className={cn('mt-1 shrink-0 text-[11px]', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
@@ -4523,9 +4516,10 @@ export function ChannelPage() {
               <button
                 type="button"
                 onClick={() => setTribuneModalOpen(false)}
-                className={chSheetGhostBtn}
+                className={chSheetCloseBtn}
+                aria-label="Fermer la carte du stade"
               >
-                Fermer
+                ×
               </button>
             </div>
             <p className={cn('mt-1 text-[11px]', L ? 'text-[#3d5670]' : 'text-sky-200/80')}>
