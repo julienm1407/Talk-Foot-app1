@@ -70,6 +70,7 @@ import { formatGoalEventMinute } from '../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { deriveBettingSuspension, GOAL_BET_LOCK_MS } from '../utils/bettingSuspension'
+import { resolveLiveScoreForBetting } from '../utils/liveBettingScore'
 import { pickLivePitchBannerHighlight } from '../utils/livePitchBanner'
 import {
   stadiumAmbiancePercentFromFxCount,
@@ -969,7 +970,7 @@ export function ChannelPage() {
   const tifoFxAwayLabel = match?.away.shortName ?? awayName
   const initialHomeScore = match?.score?.home ?? 0
   const initialAwayScore = match?.score?.away ?? 0
-  const [displayScore, setDisplayScore] = useState({ home: initialHomeScore, away: initialAwayScore })
+  const [clockScore, setClockScore] = useState({ home: initialHomeScore, away: initialAwayScore })
   const status = match?.status ?? 'upcoming'
   const isUpcoming = status === 'upcoming'
   const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
@@ -979,10 +980,8 @@ export function ChannelPage() {
     const fromMatch = match?.score
     const home = fromClock?.home ?? fromMatch?.home ?? initialHomeScore
     const away = fromClock?.away ?? fromMatch?.away ?? initialAwayScore
-    setDisplayScore({ home, away })
+    setClockScore({ home, away })
   }, [match?.id, matchForClock?.score?.home, matchForClock?.score?.away, match?.score?.home, match?.score?.away, initialHomeScore, initialAwayScore])
-  const homeScore = displayScore.home
-  const awayScore = displayScore.away
   const goalTeamHints = useMemo(() => {
     if (!match) return null
     const homeNation = resolveNationForTeam(match.home, match.competition.id)
@@ -1030,6 +1029,19 @@ export function ChannelPage() {
   )
   const timelineHighlightsRef = useRef(smTimelineHighlights)
   timelineHighlightsRef.current = smTimelineHighlights
+
+  const liveScoreForBetting = useMemo(
+    () =>
+      resolveLiveScoreForBetting({
+        officialHome: clockScore.home,
+        officialAway: clockScore.away,
+        fixture: liveBundleFixture,
+        highlights: smTimelineHighlights,
+      }),
+    [clockScore.home, clockScore.away, liveBundleFixture, smTimelineHighlights],
+  )
+  const homeScore = liveScoreForBetting.home
+  const awayScore = liveScoreForBetting.away
 
   const standingsLeagueId = match && isBigFiveLeagueId(match.competition.id) ? match.competition.id : null
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
@@ -1095,14 +1107,12 @@ export function ChannelPage() {
   const livePeriodTicking = matchForClock?.livePeriodTicking !== false
   const [bettingSessionAnchorMinute, setBettingSessionAnchorMinute] = useState(-1)
   const [goalBetLockUntilMs, setGoalBetLockUntilMs] = useState(0)
-  const prevScoreForBetLockRef = useRef({ home: 0, away: 0 })
-  const lastSeenGoalHighlightIdRef = useRef<string | null>(null)
+  const prevBettingGoalsTotalRef = useRef<number | null>(null)
 
   useEffect(() => {
     setBettingSessionAnchorMinute(-1)
     setGoalBetLockUntilMs(0)
-    prevScoreForBetLockRef.current = { home: 0, away: 0 }
-    lastSeenGoalHighlightIdRef.current = null
+    prevBettingGoalsTotalRef.current = null
   }, [match?.id])
 
   useEffect(() => {
@@ -1114,9 +1124,10 @@ export function ChannelPage() {
       liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) ?? 0 : 0,
     )
     const effectiveMinute = Math.max(liveDisplayedMinute, apiMinute)
-    const matchAlreadyStarted = homeScore + awayScore > 0 || effectiveMinute > 1
+    const matchAlreadyStarted = clockScore.home + clockScore.away > 0 || effectiveMinute > 1
     if (matchAlreadyStarted && effectiveMinute <= 1) return
     setBettingSessionAnchorMinute(effectiveMinute)
+    prevBettingGoalsTotalRef.current = homeScore + awayScore
   }, [
     status,
     match?.id,
@@ -1126,29 +1137,20 @@ export function ChannelPage() {
     liveDisplayedMinute,
     homeScore,
     awayScore,
+    clockScore.home,
+    clockScore.away,
     liveBundleFixture,
   ])
 
   useEffect(() => {
     if (status !== 'live' || bettingSessionAnchorMinute < 0) return
-    const prev = prevScoreForBetLockRef.current
-    if (homeScore > prev.home || awayScore > prev.away) {
+    if (prevBettingGoalsTotalRef.current === null) return
+    const total = homeScore + awayScore
+    if (total > prevBettingGoalsTotalRef.current) {
       setGoalBetLockUntilMs(Date.now() + GOAL_BET_LOCK_MS)
     }
-    prevScoreForBetLockRef.current = { home: homeScore, away: awayScore }
+    prevBettingGoalsTotalRef.current = total
   }, [homeScore, awayScore, status, bettingSessionAnchorMinute])
-
-  useEffect(() => {
-    if (status !== 'live' || bettingSessionAnchorMinute < 0) return
-    const goals = smTimelineHighlights.filter((h) => h.type === 'But')
-    const latest = goals[goals.length - 1]
-    if (!latest || latest.id === lastSeenGoalHighlightIdRef.current) return
-    lastSeenGoalHighlightIdRef.current = latest.id
-    const hm = latest.minute ?? 0
-    if (hm >= bettingSessionAnchorMinute - 1 && hm >= liveDisplayedMinute - 2) {
-      setGoalBetLockUntilMs(Date.now() + GOAL_BET_LOCK_MS)
-    }
-  }, [smTimelineHighlights, status, bettingSessionAnchorMinute, liveDisplayedMinute])
 
   const bettingSuspension = useMemo(
     () =>
@@ -1725,6 +1727,9 @@ export function ChannelPage() {
       side?: 'home' | 'away',
       cardColor?: 'yellow' | 'red',
     ) => {
+      if (kind === 'goal') {
+        setGoalBetLockUntilMs(Date.now() + GOAL_BET_LOCK_MS)
+      }
       fullscreenQueueRef.current.push({ kind, title, subtitle, durationMs, side, cardColor })
       drainFullscreenQueue()
     },

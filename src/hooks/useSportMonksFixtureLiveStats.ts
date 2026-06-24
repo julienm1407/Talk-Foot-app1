@@ -11,7 +11,7 @@ import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
 import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
 /** Live : cadence renforcée pour éviter les buts invisibles sans F5. */
-const LIVE_POLL_MS = 12_000
+const LIVE_POLL_MS = 5_000
 
 function highlightIdsSignature(items: Highlight[]): string {
   return items.map((h) => h.id).join('|')
