@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
-import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES, TIFO_EMPTY_FILL_DARK, TIFO_EMPTY_FILL_LIGHT, isTifoBlackColor, isTifoWhiteColor } from '../../constants/tifoPixelBoard'
+import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES, TIFO_EMPTY_FILL_DARK, TIFO_EMPTY_FILL_LIGHT, TIFO_WHITE_SVG_BG, isTifoBlackColor, isTifoWhiteColor } from '../../constants/tifoPixelBoard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
@@ -279,9 +279,16 @@ export function GroupTifoPanel({
                     : 'border-white ring-1 ring-black/10',
               )}
               style={
-                isTifoBlackColor(c) || isTifoWhiteColor(c)
+                isTifoBlackColor(c)
                   ? undefined
-                  : { backgroundColor: c }
+                  : isTifoWhiteColor(c)
+                    ? {
+                        backgroundColor: '#ffffff',
+                        backgroundImage: TIFO_WHITE_SVG_BG,
+                        backgroundSize: '100% 100%',
+                        colorScheme: 'light',
+                      }
+                    : { backgroundColor: c }
               }
               onClick={() => setColor(c)}
               aria-label={`Couleur ${c === '#000000' ? 'noir' : c === '#ffffff' ? 'blanc' : c}`}
@@ -385,9 +392,16 @@ export function GroupTifoPanel({
                     !isPainted && 'tf-tifo-cell-fill--empty',
                   )}
                   style={
-                    isBlackPixel || isWhitePixel
+                    isBlackPixel
                       ? undefined
-                      : { backgroundColor: fill }
+                      : isWhitePixel
+                        ? {
+                            backgroundColor: '#ffffff',
+                            backgroundImage: TIFO_WHITE_SVG_BG,
+                            backgroundSize: '100% 100%',
+                            colorScheme: 'light',
+                          }
+                        : { backgroundColor: fill }
                   }
                 />
               </div>

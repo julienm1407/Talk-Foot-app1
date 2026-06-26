@@ -81,6 +81,10 @@ export function normalizeTifoStorageColor(color: string): string {
   return normalizeTifoDisplayColor(color)
 }
 
+/** Fond SVG 1×1 — contourne le « force dark » Samsung / Chrome Android sur le blanc. */
+export const TIFO_WHITE_SVG_BG =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23ffffff'/%3E%3C/svg%3E\")"
+
 export function isTifoBlackColor(color: string): boolean {
   const n = normalizeTifoDisplayColor(color)
   return n === '#000000' || n === '#000'

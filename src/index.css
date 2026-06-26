@@ -2392,8 +2392,10 @@ body::before {
 
 /* Tifo pixel : couleurs sRGB stables (Samsung / iPhone / PC) + grille sans bordures parasites */
 .tf-tifo-board {
-  color-scheme: only light;
+  color-scheme: light;
   forced-color-adjust: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -2403,8 +2405,11 @@ body::before {
   padding: 0;
   line-height: 0;
   outline: 1px solid rgb(51, 65, 85);
-  color-scheme: only light;
+  color-scheme: light;
   forced-color-adjust: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  isolation: isolate;
 }
 
 .tf-tifo-grid--light {
@@ -2432,20 +2437,22 @@ body::before {
   touch-action: manipulation;
   opacity: 1;
   overflow: hidden;
-  color-scheme: only light;
   forced-color-adjust: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 .tf-tifo-cell-fill {
+  position: absolute;
+  inset: 0;
   display: block;
-  width: 100%;
-  height: 100%;
   box-sizing: border-box;
   pointer-events: none;
   forced-color-adjust: none;
-  color-scheme: only light;
-  background-image: none !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  isolation: isolate;
+  mix-blend-mode: normal;
+  filter: none;
 }
 
 .tf-tifo-cell--painted {
@@ -2453,22 +2460,35 @@ body::before {
   filter: none;
 }
 
+/* Noir : box-shadow inset (Safari iOS) */
 .tf-tifo-cell-fill--black {
   background-color: #000000 !important;
+  background-image: linear-gradient(#000000, #000000) !important;
   box-shadow: inset 0 0 0 999px #000000;
 }
 
+/* Blanc : SVG 1×1 + color-scheme light (Samsung force-dark) */
 .tf-tifo-cell-fill--white {
+  color-scheme: light;
   background-color: #ffffff !important;
-  box-shadow: inset 0 0 0 999px #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23ffffff'/%3E%3C/svg%3E") !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  box-shadow: none !important;
+  filter: none !important;
 }
 
-.tf-tifo-grid--dark .tf-tifo-cell--black .tf-tifo-cell-fill {
+.tf-tifo-grid--dark .tf-tifo-cell--black .tf-tifo-cell-fill--black {
   outline: 1px solid rgba(255, 255, 255, 0.42);
   outline-offset: -1px;
 }
 
-.tf-tifo-grid--light .tf-tifo-cell--white .tf-tifo-cell-fill {
+.tf-tifo-grid--dark .tf-tifo-cell--white .tf-tifo-cell-fill--white {
+  outline: 1px solid rgba(15, 23, 42, 0.28);
+  outline-offset: -1px;
+}
+
+.tf-tifo-grid--light .tf-tifo-cell--white .tf-tifo-cell-fill--white {
   outline: 1px solid rgba(15, 23, 42, 0.22);
   outline-offset: -1px;
 }
@@ -2497,7 +2517,6 @@ body::before {
 }
 
 .tf-tifo-swatch {
-  color-scheme: only light;
   forced-color-adjust: none;
   -webkit-tap-highlight-color: transparent;
   background-image: none;
@@ -2505,12 +2524,17 @@ body::before {
 
 .tf-tifo-swatch--black {
   background-color: #000000 !important;
+  background-image: linear-gradient(#000000, #000000) !important;
   box-shadow: inset 0 0 0 999px #000000;
 }
 
 .tf-tifo-swatch--white {
+  color-scheme: light;
   background-color: #ffffff !important;
-  box-shadow: inset 0 0 0 999px #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23ffffff'/%3E%3C/svg%3E") !important;
+  background-size: 100% 100% !important;
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 @keyframes tf-firework {
