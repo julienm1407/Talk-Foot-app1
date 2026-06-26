@@ -82,11 +82,13 @@ export function normalizeTifoStorageColor(color: string): string {
 }
 
 export function isTifoBlackColor(color: string): boolean {
-  return normalizeTifoDisplayColor(color) === '#000000'
+  const n = normalizeTifoDisplayColor(color)
+  return n === '#000000' || n === '#000'
 }
 
 export function isTifoWhiteColor(color: string): boolean {
-  return normalizeTifoDisplayColor(color) === '#ffffff'
+  const n = normalizeTifoDisplayColor(color)
+  return n === '#ffffff' || n === '#fff'
 }
 
 export function tifoPixelKey(x: number, y: number) {

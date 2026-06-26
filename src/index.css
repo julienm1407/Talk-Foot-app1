@@ -2392,7 +2392,7 @@ body::before {
 
 /* Tifo pixel : couleurs sRGB stables (Samsung / iPhone / PC) + grille sans bordures parasites */
 .tf-tifo-board {
-  color-scheme: only srgb;
+  color-scheme: only light;
   forced-color-adjust: none;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2403,6 +2403,8 @@ body::before {
   padding: 0;
   line-height: 0;
   outline: 1px solid rgb(51, 65, 85);
+  color-scheme: only light;
+  forced-color-adjust: none;
 }
 
 .tf-tifo-grid--light {
@@ -2417,17 +2419,33 @@ body::before {
 
 .tf-tifo-cell {
   box-sizing: border-box;
+  position: relative;
+  display: block;
   margin: 0;
   padding: 0;
   border: none;
+  background: transparent !important;
+  background-image: none !important;
   appearance: none;
   -webkit-appearance: none;
   line-height: 0;
   touch-action: manipulation;
   opacity: 1;
+  overflow: hidden;
   color-scheme: only light;
   forced-color-adjust: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.tf-tifo-cell-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  pointer-events: none;
+  forced-color-adjust: none;
+  color-scheme: only light;
+  background-image: none !important;
 }
 
 .tf-tifo-cell--painted {
@@ -2435,27 +2453,31 @@ body::before {
   filter: none;
 }
 
-.tf-tifo-cell--black {
+.tf-tifo-cell-fill--black {
   background-color: #000000 !important;
+  box-shadow: inset 0 0 0 999px #000000;
 }
 
-.tf-tifo-cell--white {
+.tf-tifo-cell-fill--white {
   background-color: #ffffff !important;
+  box-shadow: inset 0 0 0 999px #ffffff;
 }
 
-.tf-tifo-grid--dark .tf-tifo-cell--black {
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+.tf-tifo-grid--dark .tf-tifo-cell--black .tf-tifo-cell-fill {
+  outline: 1px solid rgba(255, 255, 255, 0.42);
+  outline-offset: -1px;
 }
 
-.tf-tifo-grid--light .tf-tifo-cell--white {
+.tf-tifo-grid--light .tf-tifo-cell--white .tf-tifo-cell-fill {
+  outline: 1px solid rgba(15, 23, 42, 0.22);
+  outline-offset: -1px;
+}
+
+.tf-tifo-cell--empty .tf-tifo-cell-fill--empty {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.22);
 }
 
-.tf-tifo-cell--empty {
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.22);
-}
-
-.tf-tifo-grid--light .tf-tifo-cell--empty {
+.tf-tifo-grid--light .tf-tifo-cell--empty .tf-tifo-cell-fill--empty {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.14);
 }
 
@@ -2475,28 +2497,20 @@ body::before {
 }
 
 .tf-tifo-swatch {
-  color-scheme: only srgb;
+  color-scheme: only light;
   forced-color-adjust: none;
   -webkit-tap-highlight-color: transparent;
+  background-image: none;
 }
 
 .tf-tifo-swatch--black {
   background-color: #000000 !important;
-  background-image:
-    linear-gradient(45deg, rgb(148, 163, 184) 25%, transparent 25%),
-    linear-gradient(-45deg, rgb(148, 163, 184) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgb(148, 163, 184) 75%),
-    linear-gradient(-45deg, transparent 75%, rgb(148, 163, 184) 75%);
-  background-size: 6px 6px;
-  background-position:
-    0 0,
-    0 3px,
-    3px -3px,
-    -3px 0;
+  box-shadow: inset 0 0 0 999px #000000;
 }
 
 .tf-tifo-swatch--white {
   background-color: #ffffff !important;
+  box-shadow: inset 0 0 0 999px #ffffff;
 }
 
 @keyframes tf-firework {

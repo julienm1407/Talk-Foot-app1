@@ -334,9 +334,10 @@ export function GroupTifoPanel({
             const isWhitePixel = isPainted && isTifoWhiteColor(fill)
             const canPlace = !moderationMode
             return (
-              <button
+              <div
                 key={k}
-                type="button"
+                role="button"
+                tabIndex={canPlace || (moderationMode && isPainted) ? 0 : -1}
                 className={cn(
                   'tf-tifo-cell',
                   isPainted && 'tf-tifo-cell--painted',
@@ -352,8 +353,11 @@ export function GroupTifoPanel({
                   height: cellPx,
                   minWidth: cellPx,
                   minHeight: cellPx,
-                  ...(isBlackPixel || isWhitePixel ? {} : { backgroundColor: fill }),
-                  opacity: 1,
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter' && e.key !== ' ') return
+                  e.preventDefault()
+                  e.currentTarget.click()
                 }}
                 onClick={(e) => {
                   e.preventDefault()
@@ -371,7 +375,22 @@ export function GroupTifoPanel({
                       : `Pixel vide ${x + 1} ${y + 1}`
                     : `Pixel ${x + 1} ${y + 1}`
                 }
-              />
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    'tf-tifo-cell-fill',
+                    isBlackPixel && 'tf-tifo-cell-fill--black',
+                    isWhitePixel && 'tf-tifo-cell-fill--white',
+                    !isPainted && 'tf-tifo-cell-fill--empty',
+                  )}
+                  style={
+                    isBlackPixel || isWhitePixel
+                      ? undefined
+                      : { backgroundColor: fill }
+                  }
+                />
+              </div>
             )
           })}
         </div>
