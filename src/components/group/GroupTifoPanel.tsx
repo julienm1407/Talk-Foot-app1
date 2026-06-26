@@ -267,6 +267,7 @@ export function GroupTifoPanel({
               className={cn(
                 'tf-tifo-swatch size-7 rounded-lg border-2 transition',
                 isTifoBlackColor(c) && 'tf-tifo-swatch--black',
+                isTifoWhiteColor(c) && 'tf-tifo-swatch--white',
                 color === c
                   ? isTifoBlackColor(c)
                     ? 'border-white ring-2 ring-sky-400/70'
@@ -277,7 +278,11 @@ export function GroupTifoPanel({
                     ? 'border-white/90 ring-1 ring-white/30'
                     : 'border-white ring-1 ring-black/10',
               )}
-              style={isTifoBlackColor(c) ? undefined : { backgroundColor: c }}
+              style={
+                isTifoBlackColor(c) || isTifoWhiteColor(c)
+                  ? undefined
+                  : { backgroundColor: c }
+              }
               onClick={() => setColor(c)}
               aria-label={`Couleur ${c === '#000000' ? 'noir' : c === '#ffffff' ? 'blanc' : c}`}
             />
@@ -347,7 +352,7 @@ export function GroupTifoPanel({
                   height: cellPx,
                   minWidth: cellPx,
                   minHeight: cellPx,
-                  backgroundColor: fill,
+                  ...(isBlackPixel || isWhitePixel ? {} : { backgroundColor: fill }),
                   opacity: 1,
                 }}
                 onClick={(e) => {

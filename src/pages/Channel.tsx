@@ -4192,7 +4192,11 @@ export function ChannelPage() {
                     <button
                       type="button"
                       onClick={() => setMobilePanel(null)}
-                      className={cn('absolute right-3 top-3 z-30', chSheetCloseBtn)}
+                      className={cn(
+                        'absolute right-3 top-3',
+                        mobilePanel === 'paris' ? 'z-50' : 'z-30',
+                        chSheetCloseBtn,
+                      )}
                       aria-label="Fermer le panneau"
                     >
                       ×

@@ -2425,11 +2425,22 @@ body::before {
   line-height: 0;
   touch-action: manipulation;
   opacity: 1;
+  color-scheme: only light;
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .tf-tifo-cell--painted {
   opacity: 1;
   filter: none;
+}
+
+.tf-tifo-cell--black {
+  background-color: #000000 !important;
+}
+
+.tf-tifo-cell--white {
+  background-color: #ffffff !important;
 }
 
 .tf-tifo-grid--dark .tf-tifo-cell--black {
@@ -2470,7 +2481,7 @@ body::before {
 }
 
 .tf-tifo-swatch--black {
-  background-color: #000000;
+  background-color: #000000 !important;
   background-image:
     linear-gradient(45deg, rgb(148, 163, 184) 25%, transparent 25%),
     linear-gradient(-45deg, rgb(148, 163, 184) 25%, transparent 25%),
@@ -2482,6 +2493,10 @@ body::before {
     0 3px,
     3px -3px,
     -3px 0;
+}
+
+.tf-tifo-swatch--white {
+  background-color: #ffffff !important;
 }
 
 @keyframes tf-firework {

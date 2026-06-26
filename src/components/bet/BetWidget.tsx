@@ -918,7 +918,44 @@ export function BetWidget({
                 </button>
               </div>
             </div>
-            ) : null}
+            ) : (
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-between gap-2 border-b',
+                sheetLight ? 'border-slate-100 bg-white' : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface)]',
+                'px-3 py-2',
+              )}
+            >
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex min-h-11 min-w-11 items-center gap-1 rounded-xl px-2 text-xs font-black transition',
+                  sheetLight
+                    ? 'text-sky-800 hover:bg-slate-50'
+                    : 'text-sky-100 hover:bg-[color:var(--tf-c30-surface-soft)]',
+                )}
+                onClick={() => setSheetOpen(false)}
+              >
+                <span aria-hidden>←</span>
+                <span>Retour</span>
+              </button>
+              <span className={cn('text-xs font-black uppercase tracking-wide', TF_TEXT_FG)}>Pronos</span>
+              <button
+                type="button"
+                className={cn(
+                  'grid min-h-11 min-w-11 place-items-center rounded-2xl border font-bold transition',
+                  sheetLight
+                    ? 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)] text-tf-app-muted hover:text-tf-app-fg',
+                  'size-10 text-lg',
+                )}
+                onClick={() => setSheetOpen(false)}
+                aria-label="Fermer les pronos"
+              >
+                ×
+              </button>
+            </div>
+            )}
 
             <div
               ref={sheetScrollRef}
