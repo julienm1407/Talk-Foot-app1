@@ -4,6 +4,7 @@ import { formatKickoff } from '../../utils/time'
 import { ClubCrest } from '../brand/ClubCrest'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { cn } from '../../utils/cn'
+import { MatchResultScore } from '../match/MatchResultScore'
 
 export function ChannelHeader({ match }: { match: Match }) {
   const isLive = match.status === 'live'
@@ -11,6 +12,8 @@ export function ChannelHeader({ match }: { match: Match }) {
   const theme = themeForCompetition(match.competition.id)
   const homeScore = match.score?.home ?? '—'
   const awayScore = match.score?.away ?? '—'
+  const regulationHome = typeof homeScore === 'number' ? homeScore : 0
+  const regulationAway = typeof awayScore === 'number' ? awayScore : 0
 
   return (
     <header className="rounded-2xl border border-[#16334d] bg-[#041a2d] px-2.5 py-2 text-white shadow-[0_14px_28px_rgba(0,0,0,0.35)] sm:px-3.5 lg:h-[86px] lg:py-1.5">
@@ -39,9 +42,14 @@ export function ChannelHeader({ match }: { match: Match }) {
           )}
           style={theme ? { background: `linear-gradient(140deg, ${theme.accent}3d, #061a2f)` } : undefined}
         >
-          <div className="text-2xl font-black tabular-nums leading-none sm:text-4xl lg:text-[46px]">
-            {homeScore} <span className="px-1 text-slate-300">-</span> {awayScore}
-          </div>
+          <MatchResultScore
+            home={regulationHome}
+            away={regulationAway}
+            penaltyScore={match.penaltyScore}
+            size="md"
+            scoreClassName="text-2xl font-black text-white leading-none sm:text-4xl lg:text-[46px]"
+            penaltyClassName="text-[10px] font-bold uppercase tracking-wide text-sky-100/75 sm:text-[11px]"
+          />
           <div className="mt-1 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-sky-100/75">
             {isLive && (
               <span

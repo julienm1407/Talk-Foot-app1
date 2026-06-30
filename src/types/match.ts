@@ -26,6 +26,8 @@ export type Match = {
   status: MatchStatus
   minute?: number
   score?: { home: number; away: number }
+  /** Tirs au but (SportMonks `PENALTIES`) — affiché sous le score temps réglementaire + prolongations. */
+  penaltyScore?: { home: number; away: number }
   /** Origine des données (agrégation multi-fournisseurs). */
   provider?: 'sportmonks' | 'demo'
   /** Identifiant fixture SportMonks (détail xG, compos, etc.). */

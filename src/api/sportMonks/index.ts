@@ -32,6 +32,7 @@ export {
   mergeSportMonksFixtureLists,
   inferCompIdFromLeague,
   extractCurrentGoalsFromSmFixture,
+  extractPenaltyShootoutScoreFromSmFixture,
   extractLiveMinuteFromSmFixture,
   liveClockPausedFromSmFixture,
   livePeriodTickingFromSmFixture,

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   extractLiveMinuteFromSmFixture,
+  extractCurrentGoalsFromSmFixture,
+  extractPenaltyShootoutScoreFromSmFixture,
   liveClockPausedFromSmFixture,
   liveSecondHalfFromSmFixture,
 } from './transformSportMonksToMatch'
@@ -138,5 +140,19 @@ describe('live clock from SportMonks fixture', () => {
       events: [{ minute: 51, extra_minute: 0, period: { counts_from: 0 } }],
     } as SmFixture
     expect(extractLiveMinuteFromSmFixture(fx)).toBe(46)
+  })
+
+  it('sépare score temps de jeu et tirs au but (prolongations)', () => {
+    const fx = {
+      state: { id: 8, developer_name: 'FT_PEN' },
+      scores: [
+        { description: 'CURRENT', score: { goals: 2, participant: 'home' } },
+        { description: 'CURRENT', score: { goals: 2, participant: 'away' } },
+        { description: 'PENALTIES', score: { goals: 4, participant: 'home' } },
+        { description: 'PENALTIES', score: { goals: 2, participant: 'away' } },
+      ],
+    } as SmFixture
+    expect(extractCurrentGoalsFromSmFixture(fx)).toEqual({ home: 2, away: 2 })
+    expect(extractPenaltyShootoutScoreFromSmFixture(fx)).toEqual({ home: 4, away: 2 })
   })
 })

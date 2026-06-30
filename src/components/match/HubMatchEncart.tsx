@@ -16,6 +16,7 @@ import { themeForCompetition } from '../../data/competitionThemes'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { SalonAudienceFooter } from './SalonAudienceFooter'
+import { MatchResultScore } from './MatchResultScore'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
@@ -753,9 +754,14 @@ export function HubStripFinished({ match, className }: { match: Match; className
             <span className="truncate text-xs font-black text-white drop-shadow-md">{match.home.shortName}</span>
           </div>
           <div className="flex shrink-0 flex-col items-center px-1">
-            <p className="font-display text-2xl font-black tabular-nums text-white drop-shadow-lg">
-              {sc.home} – {sc.away}
-            </p>
+            <MatchResultScore
+              home={sc.home}
+              away={sc.away}
+              penaltyScore={match.penaltyScore}
+              size="md"
+              scoreClassName="font-display text-2xl font-black text-white drop-shadow-lg"
+              penaltyClassName="text-[10px] font-bold text-sky-100/80"
+            />
             <span className="mt-0.5 text-[10px] font-bold text-sky-100/80">Score final</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-2 text-right">
@@ -898,9 +904,14 @@ export function HubRailRowMatch({ match, className }: { match: Match; className?
         <span className="truncate text-[11px] font-black text-white">
           {match.home.shortName} · {match.away.shortName}
         </span>
-        <span className="shrink-0 font-display text-sm font-black tabular-nums text-white/90">
-          {sc.home}–{sc.away}
-        </span>
+        <MatchResultScore
+          home={sc.home}
+          away={sc.away}
+          penaltyScore={match.penaltyScore}
+          size="sm"
+          scoreClassName="shrink-0 font-display text-sm font-black text-white/90"
+          penaltyClassName="text-[9px] font-bold text-sky-100/70"
+        />
       </div>
     </Link>
   )

@@ -62,9 +62,15 @@ function cardColorFromEventDev(dev: string): 'yellow' | 'red' {
   return 'yellow'
 }
 
+export function smEventDevIsPenaltyShootout(dev: string): boolean {
+  const u = dev.toUpperCase()
+  return u.includes('PENALTY_SHOOTOUT') || u.includes('SHOOTOUT')
+}
+
 function eventDevLooksLikeGoal(u: string): boolean {
   if (u.includes('GOALKICK') || u.includes('GOAL KICK') || u.includes('GOALKEEPER')) return false
   if (u.includes('DISALLOWED') || u.includes('CANCELLED')) return false
+  if (smEventDevIsPenaltyShootout(u)) return false
   if (u.includes('MISSED') && u.includes('PENALTY')) return false
   if (u.includes('PENALTY') && (u.includes('AWARD') || u.includes('CONCEDED'))) return false
   if (u.includes('OWN GOAL') || u.includes('OWNGOAL') || u.includes('OWN-GOAL')) return true
@@ -384,6 +390,7 @@ export function extractTimelineHighlightsFromSmFixture(
     const sliceEv = sortedEv.length > MAX_ROWS ? sortedEv.slice(-MAX_ROWS) : sortedEv
     for (const ev of sliceEv) {
       const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+      if (smEventDevIsPenaltyShootout(dev)) continue
       const type = highlightTypeFromEventDev(dev)
       const minute = displayMinute(ev)
       const inSecondHalf = eventInSecondHalf(ev, minute)

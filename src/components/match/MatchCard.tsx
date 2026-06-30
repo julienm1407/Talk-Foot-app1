@@ -10,6 +10,7 @@ import { cn } from '../../utils/cn'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { ShareButton } from '../ui/ShareButton'
+import { MatchResultScore } from './MatchResultScore'
 
 function patternFor(seed: string): 0 | 1 | 2 | 3 {
   let h = 0
@@ -371,18 +372,26 @@ export function MatchCard({
                     bumpSide={sim.bumpSide}
                   />
                 ) : match.score ? (
-                  <div className="w-full text-center text-lg font-black tabular-nums text-tf-dark">
-                    {match.score.home} <span className="font-normal text-slate-500">-</span>{' '}
-                    {match.score.away}
-                  </div>
+                  <MatchResultScore
+                    home={match.score.home}
+                    away={match.score.away}
+                    penaltyScore={match.penaltyScore}
+                    size="sm"
+                    scoreClassName="w-full text-center text-lg font-black text-tf-dark"
+                    penaltyClassName="text-[10px] font-bold text-tf-grey"
+                  />
                 ) : (
                   <div className="w-full text-center text-base font-black text-tf-dark">VS</div>
                 )
               ) : match.score ? (
-                <div className="w-full text-center text-lg font-black tabular-nums text-tf-dark">
-                  {match.score.home} <span className="font-normal text-slate-500">-</span>{' '}
-                  {match.score.away}
-                </div>
+                <MatchResultScore
+                  home={match.score.home}
+                  away={match.score.away}
+                  penaltyScore={match.penaltyScore}
+                  size="sm"
+                  scoreClassName="w-full text-center text-lg font-black text-tf-dark"
+                  penaltyClassName="text-[10px] font-bold text-tf-grey"
+                />
               ) : (
                 <div className="w-full text-center text-base font-black text-tf-dark">VS</div>
               )}

@@ -283,71 +283,71 @@ function namesFromParticipants(f: SmFixture): {
   return { home, away, homeSmId, awaySmId, homeLogoUrl, awayLogoUrl }
 }
 
-function isPartialPeriodScoreRow(s: SmScoreRow): boolean {
-  const d = String(s.description ?? '').toUpperCase()
-  return d === '1ST_HALF' || d === '2ND_HALF_ONLY' || d === '2ND_HALF'
+function scoreRowDescription(s: SmScoreRow): string {
+  return String(s.description ?? s.type?.developer_name ?? '').toUpperCase()
 }
 
-/** Score affichable : d’abord les lignes `CURRENT` (total match côté SM), jamais les agrégats de mi-temps seuls. */
-function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away: number } | undefined {
-  if (!scores?.length) return undefined
+function isPartialPeriodScoreRow(s: SmScoreRow): boolean {
+  const d = scoreRowDescription(s)
+  return d === '1ST_HALF' || d === '2ND_HALF_ONLY'
+}
 
-  const currentRows = scores.filter((s) => String(s.description ?? '').toUpperCase() === 'CURRENT')
-  if (currentRows.length) {
-    let home = 0
-    let away = 0
-    for (const s of currentRows) {
-      const g = s.score?.goals
-      const part = String(s.score?.participant ?? '').toLowerCase()
-      const gn = g == null ? NaN : Number(g)
-      if (!Number.isFinite(gn)) continue
-      if (part === 'home') home = Math.max(home, gn)
-      if (part === 'away') away = Math.max(away, gn)
-    }
-    if (home !== 0 || away !== 0) return { home, away }
-    const sawSide = currentRows.some((s) => {
-      const g = s.score?.goals
-      const part = String(s.score?.participant ?? '').toLowerCase()
-      return (part === 'home' || part === 'away') && g != null && Number.isFinite(Number(g))
-    })
-    if (sawSide) return { home: 0, away: 0 }
-  }
+function isPenaltyShootoutScoreRow(s: SmScoreRow): boolean {
+  const d = scoreRowDescription(s)
+  return d === 'PENALTIES' || d.includes('PENALTY_SHOOTOUT')
+}
 
-  const tagged: SmScoreRow[] = []
-  const rest: SmScoreRow[] = []
-  for (const s of scores) {
-    const blob = `${s.description ?? ''} ${s.type?.developer_name ?? ''} ${s.type?.name ?? ''}`.toUpperCase()
-    if (blob.includes('CURRENT') || blob.includes('LIVE') || /\bINPLAY\b/.test(blob)) {
-      tagged.push(s)
-    } else {
-      rest.push(s)
-    }
-  }
-  const pool = tagged.length ? tagged : scores.filter((s) => !isPartialPeriodScoreRow(s))
+function aggregateScoreRows(rows: SmScoreRow[]): { home: number; away: number } | undefined {
+  if (!rows.length) return undefined
   let home = 0
   let away = 0
-  for (const s of pool) {
+  let sawHome = false
+  let sawAway = false
+  for (const s of rows) {
     const g = s.score?.goals
     const part = String(s.score?.participant ?? '').toLowerCase()
     const gn = g == null ? NaN : Number(g)
     if (!Number.isFinite(gn)) continue
-    if (part === 'home') home = Math.max(home, gn)
-    if (part === 'away') away = Math.max(away, gn)
+    if (part === 'home') {
+      home = Math.max(home, gn)
+      sawHome = true
+    }
+    if (part === 'away') {
+      away = Math.max(away, gn)
+      sawAway = true
+    }
   }
-  if (home !== 0 || away !== 0) return { home, away }
-  home = 0
-  away = 0
-  const fallbackPool = rest.length ? rest.filter((s) => !isPartialPeriodScoreRow(s)) : scores.filter((s) => !isPartialPeriodScoreRow(s))
-  for (const s of fallbackPool.length ? fallbackPool : scores) {
-    const g = s.score?.goals
-    const part = String(s.score?.participant ?? '').toLowerCase()
-    const gn = g == null ? NaN : Number(g)
-    if (!Number.isFinite(gn)) continue
-    if (part === 'home') home = Math.max(home, gn)
-    if (part === 'away') away = Math.max(away, gn)
+  if (!sawHome && !sawAway) return undefined
+  return { home, away }
+}
+
+function goalsFromScoreDescription(
+  scores: SmScoreRow[] | undefined,
+  description: string,
+): { home: number; away: number } | undefined {
+  if (!scores?.length) return undefined
+  const want = description.toUpperCase()
+  return aggregateScoreRows(scores.filter((s) => scoreRowDescription(s) === want))
+}
+
+/** Score temps réglementaire + prolongations (`CURRENT` SM) — exclut les tirs au but. */
+function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away: number } | undefined {
+  const current = goalsFromScoreDescription(scores, 'CURRENT')
+  if (current) return current
+
+  if (!scores?.length) return undefined
+
+  for (const desc of ['2ND_HALF', 'EXTRA_TIME']) {
+    const row = goalsFromScoreDescription(scores, desc)
+    if (row) return row
   }
-  if (home !== 0 || away !== 0) return { home, away }
+
+  const pool = scores.filter((s) => !isPartialPeriodScoreRow(s) && !isPenaltyShootoutScoreRow(s))
+  const agg = aggregateScoreRows(pool)
+  if (agg) return agg
+
   const sawSide = scores.some((s) => {
+    if (isPenaltyShootoutScoreRow(s)) return false
     const g = s.score?.goals
     const part = String(s.score?.participant ?? '').toLowerCase()
     return (part === 'home' || part === 'away') && g != null && Number.isFinite(Number(g))
@@ -358,6 +358,13 @@ function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away
 /** Score courant (lignes `CURRENT` / live SM) — rafraîchissement encart sans repasser par `smFixtureToMatch`. */
 export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; away: number } | undefined {
   return goalsFromScores(f.scores)
+}
+
+/** Tirs au but réussis (`PENALTIES` SM) — à afficher sous le score du temps de jeu. */
+export function extractPenaltyShootoutScoreFromSmFixture(
+  f: SmFixture,
+): { home: number; away: number } | undefined {
+  return goalsFromScoreDescription(f.scores, 'PENALTIES')
 }
 
 function minuteFromFixture(f: SmFixture, nowMs = Date.now()): number {
@@ -482,6 +489,7 @@ export function smFixtureToMatch(f: SmFixture): Match {
   // la date de coup d'envoi est encore future; on évite d'afficher un faux "Terminé".
   const status = hasFutureKickoff && statusFromProvider === 'finished' ? 'upcoming' : statusFromProvider
   const score = goalsFromScores(fx.scores)
+  const penaltyScore = extractPenaltyShootoutScoreFromSmFixture(fx)
 
   const roundId =
     typeof fx.round?.id === 'number'
@@ -513,13 +521,18 @@ export function smFixtureToMatch(f: SmFixture): Match {
       ...base,
       minute: minuteFromFixture(fx),
       score: score ?? { home: 0, away: 0 },
+      ...(penaltyScore ? { penaltyScore } : {}),
       liveClockPaused: liveClockPausedFromSmFixture(fx),
       liveInSecondHalf: liveSecondHalfFromSmFixture(fx),
       livePeriodTicking: livePeriodTickingFromSmFixture(fx),
     })
   }
   if (status === 'finished' && score) {
-    return localizeMatchTeams({ ...base, score })
+    return localizeMatchTeams({
+      ...base,
+      score,
+      ...(penaltyScore ? { penaltyScore } : {}),
+    })
   }
   return localizeMatchTeams(base)
 }

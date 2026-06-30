@@ -82,6 +82,7 @@ import { useLiveMatchSalonStats } from '../hooks/useLiveMatchSalonStats'
 import type { FlareColor, Message, ReactionType, MatchTribuneZone } from '../types/chat'
 import type { Highlight } from '../data/highlights'
 import {
+  extractPenaltyShootoutScoreFromSmFixture,
   extractLiveCardDisplayRowsFromSmFixture,
   extractLiveGoalDisplayRowsFromSmFixture,
   extractLiveMinuteFromSmFixture,
@@ -126,6 +127,7 @@ import {
   postMatchDebriefMinutesLeft,
   resolveMatchFinishedAtMs,
 } from '../utils/matchDebriefWindow'
+import { MatchResultScore } from '../components/match/MatchResultScore'
 
 /** Ouverture du tchat tribune avant coup d'envoi. */
 const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
@@ -977,6 +979,13 @@ export function ChannelPage() {
     const away = fromClock?.away ?? fromMatch?.away ?? initialAwayScore
     setClockScore({ home, away })
   }, [match?.id, matchForClock?.score?.home, matchForClock?.score?.away, match?.score?.home, match?.score?.away, initialHomeScore, initialAwayScore])
+  const penaltyScore = useMemo(() => {
+    if (liveBundleFixture) {
+      const fromFixture = extractPenaltyShootoutScoreFromSmFixture(liveBundleFixture)
+      if (fromFixture) return fromFixture
+    }
+    return match?.penaltyScore ?? null
+  }, [liveBundleFixture, match?.penaltyScore])
   const goalTeamHints = useMemo(() => {
     if (!match) return null
     const homeNation = resolveNationForTeam(match.home, match.competition.id)
@@ -2872,9 +2881,15 @@ export function ChannelPage() {
                   VS
                 </span>
               ) : null}
-              <p className={`text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
-                {homeScore} - {awayScore}
-              </p>
+              <MatchResultScore
+                home={homeScore}
+                away={awayScore}
+                penaltyScore={penaltyScore}
+                size="lg"
+                separator="-"
+                scoreClassName={L ? 'text-[#023458]' : 'text-white'}
+                penaltyClassName={L ? 'text-[#3d5670]' : 'text-sky-200/75'}
+              />
             </div>
             <div className="flex min-w-0 items-center justify-end gap-1.5">
               <Link
@@ -3014,9 +3029,15 @@ export function ChannelPage() {
                 VS
               </span>
             ) : null}
-            <p className={`text-3xl font-bold tabular-nums ${L ? 'text-[#023458]' : 'text-white'}`}>
-              {homeScore} - {awayScore}
-            </p>
+            <MatchResultScore
+              home={homeScore}
+              away={awayScore}
+              penaltyScore={penaltyScore}
+              size="lg"
+              separator="-"
+              scoreClassName={L ? 'text-[#023458]' : 'text-white'}
+              penaltyClassName={L ? 'text-[#3d5670]' : 'text-sky-200/75'}
+            />
           </div>
           <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end self-start">
             <div className="flex min-w-0 items-center justify-end gap-3">
@@ -3900,9 +3921,14 @@ export function ChannelPage() {
               <div className="tf-live-pitch-shell mt-2 flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-[#101c2a] p-3">
                 <div className="tf-live-soft-surface rounded-lg border border-[#3a6690]/55 bg-[#0f2740]/85 px-3 py-3 text-center">
                   <p className="text-xs font-black uppercase tracking-wide text-sky-200/80">Match terminé</p>
-                  <p className="mt-1 text-sm font-bold text-sky-50">
-                    Score final: {homeScore} - {awayScore}
-                  </p>
+                  <MatchResultScore
+                    home={homeScore}
+                    away={awayScore}
+                    penaltyScore={penaltyScore}
+                    size="md"
+                    scoreClassName="text-sky-50"
+                    penaltyClassName="text-sky-200/75"
+                  />
                   <p className="mt-1 text-[11px] font-semibold text-sky-200/75">
                     Statistiques finales disponibles dans les panneaux du match.
                   </p>
@@ -4253,9 +4279,14 @@ export function ChannelPage() {
               <div className="space-y-2">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-white/10 bg-[#0a1f35]/70 px-2.5 py-2 text-center">
                   <span className="truncate text-xs font-black text-white">{homeName}</span>
-                  <span className="text-lg font-black tabular-nums text-sky-50">
-                    {homeScore} – {awayScore}
-                  </span>
+                  <MatchResultScore
+                    home={homeScore}
+                    away={awayScore}
+                    penaltyScore={penaltyScore}
+                    size="md"
+                    scoreClassName="text-sky-50"
+                    penaltyClassName="text-sky-200/70"
+                  />
                   <span className="truncate text-xs font-black text-white">{awayName}</span>
                 </div>
                 {liveStatsLoading && !isUpcoming && mobileStatRows.length === 0 ? (

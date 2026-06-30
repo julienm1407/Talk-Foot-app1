@@ -13,7 +13,7 @@ import {
 } from '../../utils/matchSideColors'
 import { formatHubDayLabel, HubStripLive } from './HubMatchEncart'
 import { MatchTeamBackdrop, patternFor } from './MatchTeamBackdrop'
-import { SalonAudienceFooter } from './SalonAudienceFooter'
+import { MatchResultScore } from './MatchResultScore'
 
 function fixtureMetaLine(match: Match): string | null {
   const bits = [match.stageName, match.roundName, match.venueName].filter(Boolean)
@@ -155,14 +155,14 @@ export function MatchSpotlightCard({
                 </span>
               </div>
               <div className="shrink-0 text-center">
-                <p
-                  className={cn(
-                    'font-display font-black tabular-nums text-white drop-shadow-lg',
-                    grid ? 'text-xl md:text-3xl lg:text-4xl' : 'text-3xl sm:text-4xl',
-                  )}
-                >
-                  {fsc.home}–{fsc.away}
-                </p>
+                <MatchResultScore
+                  home={fsc.home}
+                  away={fsc.away}
+                  penaltyScore={match.penaltyScore}
+                  size="xl"
+                  scoreClassName="font-display font-black tabular-nums text-white drop-shadow-lg"
+                  penaltyClassName="text-white/75"
+                />
                 <span className={cn('font-bold text-white/75', grid ? 'mt-0.5 text-[9px] md:mt-1 md:text-[11px]' : 'mt-1 text-[11px]')}>
                   Score final
                 </span>
