@@ -299,6 +299,7 @@ export type LiveGoalDisplayRow = {
   name: string
   minute: number
   inSecondHalf?: boolean
+  inExtraTime?: boolean
   ownGoal?: boolean
   assistName?: string
 }
@@ -357,7 +358,7 @@ export function parseLiveGoalRowsFromHighlights(
     const key = `${side}:${slug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name: displayName, minute, inSecondHalf: h.inSecondHalf, ownGoal: h.ownGoal })
+    out.push({ side, name: displayName, minute, inSecondHalf: h.inSecondHalf, inExtraTime: h.inExtraTime, ownGoal: h.ownGoal })
   }
 
   if (pendingNoSide.length && scoreHint) {
@@ -709,11 +710,11 @@ export function extractScorerEventsFromHighlights(
 
 /** Regroupe les buts d'un même joueur (doublé, triplé…) pour l'affichage sous le score. */
 export function groupGoalRowsForHeader(
-  rows: { name: string; minute: number; inSecondHalf?: boolean; ownGoal?: boolean }[],
-): { name: string; minutes: { minute: number; inSecondHalf?: boolean }[]; ownGoal?: boolean }[] {
+  rows: { name: string; minute: number; inSecondHalf?: boolean; inExtraTime?: boolean; ownGoal?: boolean }[],
+): { name: string; minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]; ownGoal?: boolean }[] {
   const groups: {
     name: string
-    minutes: { minute: number; inSecondHalf?: boolean }[]
+    minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]
     ownGoal?: boolean
   }[] = []
   const indexByKey = new Map<string, number>()
@@ -721,7 +722,7 @@ export function groupGoalRowsForHeader(
   for (const row of rows) {
     const slug = slugScorer(compactScorerDisplayName(row.name))
     const key = `${slug}|${row.ownGoal ? 'og' : 'g'}`
-    const minuteEntry = { minute: row.minute, inSecondHalf: row.inSecondHalf }
+    const minuteEntry = { minute: row.minute, inSecondHalf: row.inSecondHalf, inExtraTime: row.inExtraTime }
     const existingIdx = indexByKey.get(key)
     if (existingIdx == null) {
       indexByKey.set(key, groups.length)
@@ -734,7 +735,10 @@ export function groupGoalRowsForHeader(
     }
     const group = groups[existingIdx]!
     const already = group.minutes.some(
-      (m) => m.minute === minuteEntry.minute && Boolean(m.inSecondHalf) === Boolean(minuteEntry.inSecondHalf),
+      (m) =>
+        m.minute === minuteEntry.minute &&
+        Boolean(m.inSecondHalf) === Boolean(minuteEntry.inSecondHalf) &&
+        Boolean(m.inExtraTime) === Boolean(minuteEntry.inExtraTime),
     )
     if (!already) group.minutes.push(minuteEntry)
   }

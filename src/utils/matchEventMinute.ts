@@ -73,17 +73,38 @@ export function eventInSecondHalf(row: SmEventMinuteRow, totalMinute?: number): 
   return false
 }
 
-/** Libellé buteur / carton : 45+5' en temps additionnel 1re MT, 67' en 2e MT. */
+/** Prolongations (91'–120') — affichage absolu, pas 90+X. */
+export function eventInExtraTime(row: SmEventMinuteRow): boolean {
+  const periodDesc = String(row.period?.description ?? '').toLowerCase()
+  if (
+    periodDesc.includes('extra') ||
+    periodDesc.includes('prolong') ||
+    periodDesc.includes('overtime')
+  ) {
+    return !periodDesc.includes('penalt')
+  }
+  const countsFrom = typeof row.period?.counts_from === 'number' ? row.period.counts_from : 0
+  const total = eventMinuteTotal(row)
+  return countsFrom >= 90 && total > 90 && total <= 120
+}
+
+/** Libellé buteur / carton : 45+5' en temps additionnel 1re MT, 67' en 2e MT, 102' en prolongations. */
 export function formatGoalEventMinute(
   minute: number,
-  opts?: { inSecondHalf?: boolean },
+  opts?: { inSecondHalf?: boolean; inExtraTime?: boolean },
 ): string {
   if (!Number.isFinite(minute) || minute <= 0) return ''
-  return formatFlashscoreMatchMinute(minute, { inSecondHalf: opts?.inSecondHalf })
+  return formatFlashscoreMatchMinute(minute, {
+    inSecondHalf: opts?.inSecondHalf,
+    inExtraTime: opts?.inExtraTime,
+  })
 }
 
 export function formatEventMinuteLabel(row: SmEventMinuteRow): string {
   const total = eventMinuteTotal(row)
   if (total <= 0) return ''
-  return formatGoalEventMinute(total, { inSecondHalf: eventInSecondHalf(row, total) })
+  return formatGoalEventMinute(total, {
+    inSecondHalf: eventInSecondHalf(row, total),
+    inExtraTime: eventInExtraTime(row),
+  })
 }

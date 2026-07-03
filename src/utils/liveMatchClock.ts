@@ -1,12 +1,14 @@
-/** Affichage chrono live style Flashscore : 45+2', 67', 90+3', Mi-temps. */
+/** Affichage chrono live style Flashscore : 45+2', 67', 90+3', 102' (prolongations), Mi-temps. */
 export function formatFlashscoreMatchMinute(
   totalMinute: number,
-  opts?: { paused?: boolean; inSecondHalf?: boolean },
+  opts?: { paused?: boolean; inSecondHalf?: boolean; inExtraTime?: boolean },
 ): string {
   if (opts?.paused) return 'Mi-temps'
 
   const t = Math.max(0, Math.round(totalMinute))
   if (t <= 0) return "0'"
+
+  if (opts?.inExtraTime) return `${t}'`
 
   const inSecondHalf = opts?.inSecondHalf ?? t > 50
 

@@ -253,7 +253,10 @@ export function MatchHighlights({
                       )}
                     >
                       {h.minute > 0
-                        ? formatGoalEventMinute(h.minute, { inSecondHalf: h.inSecondHalf }) || `${h.minute}'`
+                        ? formatGoalEventMinute(h.minute, {
+                            inSecondHalf: h.inSecondHalf,
+                            inExtraTime: h.inExtraTime,
+                          }) || `${h.minute}'`
                         : '—'}
                     </span>
                     {!isCard ? (

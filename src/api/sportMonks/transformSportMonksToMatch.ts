@@ -6,6 +6,7 @@ import { teams, teamColors } from '../../data/teams'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { localizeMatchTeams } from '../../utils/matchSideColors'
 import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventMinute'
+import { extractRegulationGoalsFromScores } from '../../utils/matchRegulationScore'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 
@@ -332,6 +333,9 @@ function goalsFromScoreDescription(
 
 /** Score temps réglementaire + prolongations (`CURRENT` SM) — exclut les tirs au but. */
 function goalsFromScores(scores: SmScoreRow[] | undefined): { home: number; away: number } | undefined {
+  const regulation = extractRegulationGoalsFromScores(scores)
+  if (regulation) return regulation
+
   const current = goalsFromScoreDescription(scores, 'CURRENT')
   if (current) return current
 

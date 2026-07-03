@@ -4,6 +4,7 @@ import {
   eventMinuteTotal,
   formatEventMinuteLabel,
 } from '../../utils/matchEventMinute'
+import { isSmExtraTimeEvent, isSmPenaltyShootoutEvent } from '../../utils/matchRegulationScore'
 import { translateSportMonksLiveTextToFr } from '../../utils/translateSportMonksLiveEnToFr'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import {
@@ -67,7 +68,8 @@ export function smEventDevIsPenaltyShootout(dev: string): boolean {
   return u.includes('PENALTY_SHOOTOUT') || u.includes('SHOOTOUT')
 }
 
-function eventDevLooksLikeGoal(u: string): boolean {
+function eventDevLooksLikeGoal(u: string, ev?: SmFixtureEventRow): boolean {
+  if (ev && isSmPenaltyShootoutEvent(ev)) return false
   if (u.includes('GOALKICK') || u.includes('GOAL KICK') || u.includes('GOALKEEPER')) return false
   if (u.includes('DISALLOWED') || u.includes('CANCELLED')) return false
   if (smEventDevIsPenaltyShootout(u)) return false
@@ -99,9 +101,9 @@ function commentMentionsVar(text: string): boolean {
   return /\bVAR\b/i.test(text)
 }
 
-function highlightTypeFromEventDev(dev: string): Highlight['type'] {
+function highlightTypeFromEventDev(dev: string, ev?: SmFixtureEventRow): Highlight['type'] {
   const u = dev.toUpperCase()
-  if (eventDevLooksLikeGoal(u)) return 'But'
+  if (eventDevLooksLikeGoal(u, ev)) return 'But'
   if (eventDevLooksLikeCard(u)) return 'Carton'
   if (u.includes('VAR')) return 'VAR'
   if (u.includes('SAVE') || u.includes('GREAT')) return 'Arrêt'
@@ -389,11 +391,12 @@ export function extractTimelineHighlightsFromSmFixture(
     })
     const sliceEv = sortedEv.length > MAX_ROWS ? sortedEv.slice(-MAX_ROWS) : sortedEv
     for (const ev of sliceEv) {
+      if (isSmPenaltyShootoutEvent(ev)) continue
       const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
-      if (smEventDevIsPenaltyShootout(dev)) continue
-      const type = highlightTypeFromEventDev(dev)
+      const type = highlightTypeFromEventDev(dev, ev)
       const minute = displayMinute(ev)
       const inSecondHalf = eventInSecondHalf(ev, minute)
+      const inExtraTime = isSmExtraTimeEvent(ev)
       const minuteLabel = formatEventMinuteLabel(ev) || `${minute}'`
       const side = sideFromParticipant(ev.participant_id, homeId, awayId)
       const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
@@ -426,6 +429,7 @@ export function extractTimelineHighlightsFromSmFixture(
         title,
         detail,
         ...(inSecondHalf ? { inSecondHalf } : {}),
+        ...(inExtraTime ? { inExtraTime } : {}),
         ...(side ? { side } : {}),
         ...(scorerName ? { scorerName } : {}),
         ...(cardPlayer ? { scorerName: cardPlayer } : {}),
@@ -610,9 +614,10 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
   const rows: Highlight[] = []
   for (const ev of normalized.events ?? []) {
     const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
-    if (!eventDevLooksLikeGoal(dev.toUpperCase())) continue
+    if (!eventDevLooksLikeGoal(dev.toUpperCase(), ev)) continue
     const minute = displayMinute(ev)
     const inSecondHalf = eventInSecondHalf(ev, minute)
+    const inExtraTime = isSmExtraTimeEvent(ev)
     const minuteLabel = formatEventMinuteLabel(ev) || `${minute}'`
     const side = sideFromParticipant(ev.participant_id, homeId, awayId)
     const scorerName = scorerFromEvent(ev)
@@ -627,6 +632,7 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
       title: scorerName,
       detail: `${minuteLabel} · ${scorerName}`,
       ...(inSecondHalf ? { inSecondHalf } : {}),
+      ...(inExtraTime ? { inExtraTime } : {}),
       ...(side ? { side } : {}),
       scorerName,
       ...(ownGoal ? { ownGoal: true } : {}),

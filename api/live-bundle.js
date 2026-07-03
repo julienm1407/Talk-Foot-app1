@@ -13,7 +13,7 @@ const MEM_CACHE = new Map()
 
 const SM_BASE = 'https://api.sportmonks.com/v3/football'
 const LIVE_BUNDLE_INCLUDE =
-  'participants;league;venue;state;scores;periods;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport;comments;lineups.player;lineups.type;lineups.details.type;metadata.type;coaches;formations;trends.type;trends.participant;xGFixture.type'
+  'participants;league;venue;state;scores.type;periods;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport;comments;lineups.player;lineups.type;lineups.details.type;metadata.type;coaches;formations;trends.type;trends.participant;xGFixture.type'
 
 function nowMs() {
   return Date.now()

@@ -4,6 +4,8 @@ export type Highlight = {
   minute: number
   /** 2e période — pour afficher 45+5 vs 50' cumulé. */
   inSecondHalf?: boolean
+  /** Prolongations (91'–120') — affichage minute absolue. */
+  inExtraTime?: boolean
   /** Ordre SM (`comments.order`) pour tri stable si même minute. */
   order?: number
   type: 'But' | 'Occasion' | 'Carton' | 'VAR' | 'Arrêt' | 'Info'

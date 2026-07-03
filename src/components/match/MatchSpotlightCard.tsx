@@ -14,6 +14,7 @@ import {
 import { formatHubDayLabel, HubStripLive } from './HubMatchEncart'
 import { MatchTeamBackdrop, patternFor } from './MatchTeamBackdrop'
 import { MatchResultScore } from './MatchResultScore'
+import { SalonAudienceFooter } from './SalonAudienceFooter'
 
 function fixtureMetaLine(match: Match): string | null {
   const bits = [match.stageName, match.roundName, match.venueName].filter(Boolean)

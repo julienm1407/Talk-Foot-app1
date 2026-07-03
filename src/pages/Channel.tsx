@@ -71,6 +71,7 @@ import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiv
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
 import { deriveBettingSuspension, GOAL_BET_LOCK_MS } from '../utils/bettingSuspension'
 import { resolveLiveScoreForBetting } from '../utils/liveBettingScore'
+import { extractMatchShootoutDisplayFromFixture, extractMatchShootoutFromHighlights, extractRegulationGoalsFromScores } from '../utils/matchRegulationScore'
 import { pickLivePitchBannerHighlight } from '../utils/livePitchBanner'
 import {
   stadiumAmbiancePercentFromFxCount,
@@ -562,7 +563,7 @@ function LiveHeaderScorers({
   align,
   light,
 }: {
-  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean }[]; ownGoal?: boolean }[]
+  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]; ownGoal?: boolean }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -577,7 +578,10 @@ function LiveHeaderScorers({
     >
       {goals.map((g, i) => {
         const minuteLabels = g.minutes
-          .map((m) => formatGoalEventMinute(m.minute, { inSecondHalf: m.inSecondHalf }) || `${m.minute}'`)
+          .map((m) =>
+            formatGoalEventMinute(m.minute, { inSecondHalf: m.inSecondHalf, inExtraTime: m.inExtraTime }) ||
+            `${m.minute}'`,
+          )
           .join(', ')
         return (
           <li
@@ -669,7 +673,7 @@ function LiveHeaderTeamEvents({
   align,
   light,
 }: {
-  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean }[]; ownGoal?: boolean }[]
+  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]; ownGoal?: boolean }[]
   cards: { name: string; minute: number; inSecondHalf?: boolean; color: 'yellow' | 'red' }[]
   align: 'left' | 'right'
   light: boolean
@@ -979,13 +983,6 @@ export function ChannelPage() {
     const away = fromClock?.away ?? fromMatch?.away ?? initialAwayScore
     setClockScore({ home, away })
   }, [match?.id, matchForClock?.score?.home, matchForClock?.score?.away, match?.score?.home, match?.score?.away, initialHomeScore, initialAwayScore])
-  const penaltyScore = useMemo(() => {
-    if (liveBundleFixture) {
-      const fromFixture = extractPenaltyShootoutScoreFromSmFixture(liveBundleFixture)
-      if (fromFixture) return fromFixture
-    }
-    return match?.penaltyScore ?? null
-  }, [liveBundleFixture, match?.penaltyScore])
   const goalTeamHints = useMemo(() => {
     if (!match) return null
     const homeNation = resolveNationForTeam(match.home, match.competition.id)
@@ -1041,11 +1038,51 @@ export function ChannelPage() {
         officialAway: clockScore.away,
         fixture: liveBundleFixture,
         highlights: smTimelineHighlights,
+        matchStatus: status,
       }),
-    [clockScore.home, clockScore.away, liveBundleFixture, smTimelineHighlights],
+    [clockScore.home, clockScore.away, liveBundleFixture, smTimelineHighlights, status],
   )
   const homeScore = liveScoreForBetting.home
   const awayScore = liveScoreForBetting.away
+
+  const headerDisplayScore = useMemo(() => {
+    const fromFixtureScores = extractRegulationGoalsFromScores(liveBundleFixture?.scores)
+    if (status === 'finished') {
+      if (fromFixtureScores) return fromFixtureScores
+      if (match?.score) {
+        return { home: match.score.home ?? 0, away: match.score.away ?? 0 }
+      }
+      return { home: clockScore.home, away: clockScore.away }
+    }
+    return { home: homeScore, away: awayScore }
+  }, [
+    status,
+    match?.score,
+    liveBundleFixture?.scores,
+    clockScore.home,
+    clockScore.away,
+    homeScore,
+    awayScore,
+  ])
+
+  const shootoutDisplay = useMemo(() => {
+    const fromFixture = extractMatchShootoutDisplayFromFixture(liveBundleFixture)
+    if (fromFixture) return fromFixture
+    return extractMatchShootoutFromHighlights(
+      smTimelineHighlights,
+      homeHeaderLabel,
+      awayHeaderLabel,
+    )
+  }, [liveBundleFixture, smTimelineHighlights, homeHeaderLabel, awayHeaderLabel])
+
+  const penaltyScore = useMemo(() => {
+    if (shootoutDisplay?.penalties) return shootoutDisplay.penalties
+    if (liveBundleFixture) {
+      const fromFixture = extractPenaltyShootoutScoreFromSmFixture(liveBundleFixture)
+      if (fromFixture) return fromFixture
+    }
+    return match?.penaltyScore ?? null
+  }, [shootoutDisplay, liveBundleFixture, match?.penaltyScore])
 
   const standingsLeagueId = match && isBigFiveLeagueId(match.competition.id) ? match.competition.id : null
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
@@ -1139,8 +1176,8 @@ export function ChannelPage() {
     bettingSessionAnchorMinute,
     liveStatsLoading,
     liveDisplayedMinute,
-    homeScore,
-    awayScore,
+    headerDisplayScore.home,
+    headerDisplayScore.away,
     clockScore.home,
     clockScore.away,
     liveBundleFixture,
@@ -2043,8 +2080,8 @@ export function ChannelPage() {
     homeName,
     awayName,
     goalTeamHints,
-    homeScore,
-    awayScore,
+    headerDisplayScore.home,
+    headerDisplayScore.away,
     liveDisplayedMinute,
     liveBundleFixture,
     match?.minute,
@@ -2132,8 +2169,8 @@ export function ChannelPage() {
     detectHighlightSide,
     homeName,
     awayName,
-    homeScore,
-    awayScore,
+    headerDisplayScore.home,
+    headerDisplayScore.away,
     liveDisplayedMinute,
     liveBundleFixture,
   ])
@@ -2159,7 +2196,7 @@ export function ChannelPage() {
 
   const liveGoalDisplayRows = useMemo(() => {
     if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
-    const scoreHint = { home: homeScore, away: awayScore }
+    const scoreHint = { home: headerDisplayScore.home, away: headerDisplayScore.away }
 
     const fromEvents = extractLiveGoalDisplayRowsFromSmFixture(
       liveBundleFixture,
@@ -2168,7 +2205,7 @@ export function ChannelPage() {
       scoreHint,
     )
     if (fromEvents.length > 0) {
-      return clampLiveGoalRowsToScore(fromEvents, homeScore, awayScore)
+      return clampLiveGoalRowsToScore(fromEvents, headerDisplayScore.home, headerDisplayScore.away)
     }
 
     const structuredTimeline = smTimelineHighlights.filter(
@@ -2180,14 +2217,14 @@ export function ChannelPage() {
       goalTeamHints.away,
       scoreHint,
     )
-    return clampLiveGoalRowsToScore(fromStructured, homeScore, awayScore)
+    return clampLiveGoalRowsToScore(fromStructured, headerDisplayScore.home, headerDisplayScore.away)
   }, [
     smTimelineHighlights,
     status,
     match,
     goalTeamHints,
-    homeScore,
-    awayScore,
+    headerDisplayScore.home,
+    headerDisplayScore.away,
     liveBundleFixture,
   ])
 
@@ -2206,7 +2243,7 @@ export function ChannelPage() {
       groupGoalRowsForHeader(
         liveGoalDisplayRows
           .filter((r) => r.side === 'home')
-          .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
+          .map(({ name, minute, inSecondHalf, inExtraTime, ownGoal }) => ({ name, minute, inSecondHalf, inExtraTime, ownGoal })),
       ),
     [liveGoalDisplayRows],
   )
@@ -2215,7 +2252,7 @@ export function ChannelPage() {
       groupGoalRowsForHeader(
         liveGoalDisplayRows
           .filter((r) => r.side === 'away')
-          .map(({ name, minute, inSecondHalf, ownGoal }) => ({ name, minute, inSecondHalf, ownGoal })),
+          .map(({ name, minute, inSecondHalf, inExtraTime, ownGoal }) => ({ name, minute, inSecondHalf, inExtraTime, ownGoal })),
       ),
     [liveGoalDisplayRows],
   )
@@ -2280,8 +2317,8 @@ export function ChannelPage() {
     match?.id,
     match?.score?.home,
     match?.score?.away,
-    homeScore,
-    awayScore,
+    headerDisplayScore.home,
+    headerDisplayScore.away,
     scoredButeurSlugs,
     betting.settleMatchResult,
   ])
@@ -2882,13 +2919,19 @@ export function ChannelPage() {
                 </span>
               ) : null}
               <MatchResultScore
-                home={homeScore}
-                away={awayScore}
+                home={headerDisplayScore.home}
+                away={headerDisplayScore.away}
                 penaltyScore={penaltyScore}
+                wentToExtraTime={Boolean(shootoutDisplay?.wentToExtraTime)}
                 size="lg"
                 separator="-"
                 scoreClassName={L ? 'text-[#023458]' : 'text-white'}
-                penaltyClassName={L ? 'text-[#3d5670]' : 'text-sky-200/75'}
+                extraTimeClassName={L ? 'text-[#3d5670]' : 'text-sky-200/85'}
+                penaltyClassName={
+                  L
+                    ? 'border-slate-300 bg-white text-[#023458]'
+                    : 'border-white/25 bg-white/10 text-white'
+                }
               />
             </div>
             <div className="flex min-w-0 items-center justify-end gap-1.5">
@@ -3030,13 +3073,19 @@ export function ChannelPage() {
               </span>
             ) : null}
             <MatchResultScore
-              home={homeScore}
-              away={awayScore}
+              home={headerDisplayScore.home}
+              away={headerDisplayScore.away}
               penaltyScore={penaltyScore}
+              wentToExtraTime={Boolean(shootoutDisplay?.wentToExtraTime)}
               size="lg"
               separator="-"
               scoreClassName={L ? 'text-[#023458]' : 'text-white'}
-              penaltyClassName={L ? 'text-[#3d5670]' : 'text-sky-200/75'}
+              extraTimeClassName={L ? 'text-[#3d5670]' : 'text-sky-200/85'}
+              penaltyClassName={
+                L
+                  ? 'border-slate-300 bg-white text-[#023458]'
+                  : 'border-white/25 bg-white/10 text-white'
+              }
             />
           </div>
           <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end self-start">

@@ -53,6 +53,10 @@ describe('matchEventMinute', () => {
     expect(formatEventMinuteLabel(row)).toBe("45+1'")
   })
 
+  it('affiche 102 en prolongations (pas 90+12)', () => {
+    expect(formatGoalEventMinute(102, { inSecondHalf: true, inExtraTime: true })).toBe("102'")
+  })
+
   it('ne produit jamais 45+50 pour une minute cumulée en fin de match', () => {
     expect(formatGoalEventMinute(95)).toBe("90+5'")
     expect(formatGoalEventMinute(96)).toBe("90+6'")
