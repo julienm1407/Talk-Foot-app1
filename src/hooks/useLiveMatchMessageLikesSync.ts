@@ -177,6 +177,7 @@ export function useLiveMatchMessageLikesSync(options: {
     if (!sb) return
 
     let cancelled = false
+    const mountId = Date.now()
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const onRowChange = (messageId: string, userIdRow: string, added: boolean) => {
@@ -222,7 +223,7 @@ export function useLiveMatchMessageLikesSync(options: {
 
       const matchFilter = postgresChangesEqFilter('match_id', matchId)
       const channel = sb
-        .channel(`live_match_likes:${matchId}`)
+        .channel(`live_match_likes:${matchId}:${mountId}`)
         .on(
           'postgres_changes',
           {

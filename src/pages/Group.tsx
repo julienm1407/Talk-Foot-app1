@@ -45,7 +45,7 @@ import { useProfile } from '../hooks/useProfile'
 import { useCloudFriends } from '../hooks/useCloudFriends'
 import { retainStickyChatUserAvatars } from '../utils/stickyChatUserAvatars'
 import { requestTifoEngagementSyncForGroup } from '../utils/tifoEngagementEvents'
-import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
+import { resolveChatDisplayLabel, safeChatAvatarSeed, safeChatDisplayName } from '../utils/chatDisplayName'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useChatSendGuard } from '../hooks/useChatSendGuard'
 import { cn } from '../utils/cn'
@@ -626,11 +626,11 @@ export function GroupPage() {
       base.me = { ...base.me, fanClubId: meClub }
     }
     if (authUser) {
-      const seed =
-        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      const displayName = safeChatDisplayName(authUser.displayName)
+      const seed = safeChatAvatarSeed(authUser.displayName)
       const meEntry: User = {
         id: authUser.id,
-        username: authUser.displayName,
+        username: displayName,
         avatarSeed: seed,
         accent: 'emerald',
         modularAvatar: selfProfile.modularAvatar,

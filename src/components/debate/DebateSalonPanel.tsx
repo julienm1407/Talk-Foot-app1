@@ -15,7 +15,7 @@ import { useSubscription } from '../../hooks/useSubscription'
 import { useTalkFootChatActorId } from '../../hooks/useTalkFootChatActorId'
 import { useChatAuthorModularAvatars } from '../../hooks/useChatAuthorModularAvatars'
 import { retainStickyChatUserAvatars } from '../../utils/stickyChatUserAvatars'
-import { resolveChatDisplayLabel } from '../../utils/chatDisplayName'
+import { resolveChatDisplayLabel, safeChatAvatarSeed, safeChatDisplayName } from '../../utils/chatDisplayName'
 import { MessageList } from '../channel/MessageList'
 import { MessageComposer } from '../channel/MessageComposer'
 import {
@@ -156,11 +156,11 @@ export function DebateSalonPanel({
   const usersById = useMemo(() => {
     const base: Record<string, User> = {}
     if (authUser) {
-      const seed =
-        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      const displayName = safeChatDisplayName(authUser.displayName)
+      const seed = safeChatAvatarSeed(authUser.displayName)
       const meEntry: User = {
         id: authUser.id,
-        username: authUser.displayName,
+        username: displayName,
         avatarSeed: seed,
         accent: 'emerald',
         modularAvatar: selfProfile.modularAvatar,

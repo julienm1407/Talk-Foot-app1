@@ -42,6 +42,7 @@ import {
   ChannelPrivateSalonGate,
   ChannelSubscriptionExtras,
 } from '../components/channel/ChannelSubscriptionExtras'
+import { ChatPanelErrorBoundary } from '../components/channel/ChatPanelErrorBoundary'
 import {
   LiveMatchChatMessage,
   type LiveMatchChatMessageItem,
@@ -57,7 +58,8 @@ import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { buildChatPeerMenuTarget } from '../utils/chatPeerSocial'
-import { resolveChatDisplayLabel } from '../utils/chatDisplayName'
+import { resolveChatDisplayLabel, safeChatAvatarSeed, safeChatDisplayName } from '../utils/chatDisplayName'
+import { resolveProfileModularAvatarForDisplay } from '../utils/chatAuthorModularAvatar'
 import { retainStickyChatUserAvatars } from '../utils/stickyChatUserAvatars'
 import type { User } from '../types/chat'
 import { useAppearanceOptional } from '../contexts/AppearanceContext'
@@ -695,15 +697,15 @@ function cloudMessageToUi(m: Message): ChatMessageItem {
   return {
     id: m.id,
     userId: m.userId,
-    username: m.authorDisplayName?.trim() || 'Supporteur',
-    text: m.text,
+    username: safeChatDisplayName(m.authorDisplayName),
+    text: typeof m.text === 'string' ? m.text : '',
     time,
-    avatarSeed: m.userId || m.authorDisplayName || m.id,
+    avatarSeed: m.userId || safeChatDisplayName(m.authorDisplayName, 'fan') || m.id,
     avatarAccent: 'violet',
     likes: 0,
     emoteId: m.emoteId,
     matchTribune: m.matchTribune,
-    createdAtMs: m.createdAt,
+    createdAtMs: Number.isFinite(m.createdAt) ? m.createdAt : Date.now(),
     clerkActorKey: m.clerkActorKey,
   }
 }
@@ -1437,14 +1439,14 @@ export function ChannelPage() {
       }
     }
     if (authUser) {
-      const seed =
-        authUser.displayName.trim().slice(0, 12).replace(/\s+/g, '-') || 'you'
+      const displayName = safeChatDisplayName(authUser.displayName)
+      const seed = safeChatAvatarSeed(authUser.displayName)
       const meEntry: User = {
         id: authUser.id,
-        username: authUser.displayName,
+        username: displayName,
         avatarSeed: seed,
         accent: 'emerald',
-        modularAvatar: selfProfile.modularAvatar,
+        modularAvatar: resolveProfileModularAvatarForDisplay(selfProfile.modularAvatar),
         subscriptionTier: tier,
       }
       map[authUser.id] = {
@@ -1471,11 +1473,12 @@ export function ChannelPage() {
       const label = resolveChatDisplayLabel(map[id]?.username, cloudAuthorNames[id])
       const subscriptionTier = subscriptionTiersByAuthor[id]
       const profilePhotoDataUrl = profilePhotoByAuthor[id]
+      const safeModular = resolveProfileModularAvatarForDisplay(modularAvatar)
       if (map[id]) {
         map[id] = {
           ...map[id],
           username: label,
-          modularAvatar,
+          modularAvatar: safeModular,
           ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
           ...(subscriptionTier ? { subscriptionTier } : {}),
         }
@@ -1485,7 +1488,7 @@ export function ChannelPage() {
           username: label || id.replace(/-/g, '').slice(0, 12),
           avatarSeed: id.replace(/-/g, '').slice(0, 12),
           accent: 'violet',
-          modularAvatar,
+          modularAvatar: safeModular,
           ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
           ...(subscriptionTier ? { subscriptionTier } : {}),
         }
@@ -1508,7 +1511,9 @@ export function ChannelPage() {
         ...(label
           ? { username: resolveChatDisplayLabel(map[m.userId]?.username, label) }
           : {}),
-        ...(modularAvatar && !map[m.userId].modularAvatar ? { modularAvatar } : {}),
+        ...(modularAvatar && !map[m.userId].modularAvatar
+          ? { modularAvatar: resolveProfileModularAvatarForDisplay(modularAvatar) }
+          : {}),
         ...(profilePhotoDataUrl && !map[m.userId].profilePhotoDataUrl
           ? { profilePhotoDataUrl }
           : {}),
@@ -1607,61 +1612,69 @@ export function ChannelPage() {
     if (!match?.id) return
     const text = chatDraftRef.current.trim()
     if (!text) return
-    const precheck = moderateChatText(text)
-    if (!precheck.ok) {
-      setAnimationNotice(precheck.message)
-      window.setTimeout(() => setAnimationNotice(null), 2800)
-      return
-    }
-    const chatGate = checkChatSend()
-    if (!chatGate.ok) {
-      setAnimationNotice(chatGate.reason ?? 'Envoi de message limité pour ta formule.')
-      window.setTimeout(() => setAnimationNotice(null), 3200)
-      return
-    }
-    const sb = getSupabaseBrowserClient()
-    if (sb && authUser?.id && chatActorId) {
-      try {
-        await syncClerkProfileToChatActor(
-          sb,
-          authUser.id,
-          chatActorId,
-          authUser.displayName ?? '',
-        )
-        invalidateChatAuthorAvatars([chatActorId, authUser.id])
-      } catch {
-        /* sync best-effort */
+    try {
+      const precheck = moderateChatText(text)
+      if (!precheck.ok) {
+        setAnimationNotice(precheck.message)
+        window.setTimeout(() => setAnimationNotice(null), 2800)
+        return
       }
-    }
-    const res = await publishMessage({
-      matchId: match.id,
-      text,
-      matchTribune: selectedTribune,
-      displayName: authUser?.displayName,
-      clerkActorKey: authUser?.id,
-    })
-    if (!res.ok) {
-      setAnimationNotice(
-        res.error === 'moderation'
-          ? MODERATION_REFUSED_MESSAGE_FR
-          : "Impossible d'envoyer le message (sync cloud indisponible).",
-      )
-      window.setTimeout(() => setAnimationNotice(null), 2800)
-      return
-    }
-    recordChatSend()
-    chatDraftRef.current = ''
-    if (chatInputRef.current) chatInputRef.current.value = ''
-    if (channelTifoGroupId) requestTifoEngagementSync(channelTifoGroupId, match.id)
-    if (res.message) {
-      const mapped = cloudMessageToUi(res.message)
-      setChatMessages((prev) => {
-        const byId = new Map(prev.map((m) => [m.id, m]))
-        byId.set(mapped.id, mapped)
-        return Array.from(byId.values()).sort(
-          (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
-        )
+      const chatGate = checkChatSend()
+      if (!chatGate.ok) {
+        setAnimationNotice(chatGate.reason ?? 'Envoi de message limité pour ta formule.')
+        window.setTimeout(() => setAnimationNotice(null), 3200)
+        return
+      }
+      const sb = getSupabaseBrowserClient()
+      if (sb && authUser?.id && chatActorId) {
+        try {
+          await syncClerkProfileToChatActor(
+            sb,
+            authUser.id,
+            chatActorId,
+            safeChatDisplayName(authUser.displayName),
+          )
+          invalidateChatAuthorAvatars([chatActorId, authUser.id])
+        } catch {
+          /* sync best-effort */
+        }
+      }
+      const res = await publishMessage({
+        matchId: match.id,
+        text,
+        matchTribune: selectedTribune,
+        displayName: authUser?.displayName,
+        clerkActorKey: authUser?.id,
       })
+      if (!res.ok) {
+        setAnimationNotice(
+          res.error === 'moderation'
+            ? MODERATION_REFUSED_MESSAGE_FR
+            : "Impossible d'envoyer le message (sync cloud indisponible).",
+        )
+        window.setTimeout(() => setAnimationNotice(null), 2800)
+        return
+      }
+      recordChatSend()
+      chatDraftRef.current = ''
+      if (chatInputRef.current) chatInputRef.current.value = ''
+      if (channelTifoGroupId) requestTifoEngagementSync(channelTifoGroupId, match.id)
+      if (res.message) {
+        const mapped = cloudMessageToUi(res.message)
+        setChatMessages((prev) => {
+          const byId = new Map(prev.map((m) => [m.id, m]))
+          byId.set(mapped.id, mapped)
+          return Array.from(byId.values()).sort(
+            (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
+          )
+        })
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('[Talk Foot] envoi tchat', err)
+      }
+      setAnimationNotice("Impossible d'envoyer le message. Réessaie dans un instant.")
+      window.setTimeout(() => setAnimationNotice(null), 3200)
     }
   }
   const onToggleLikeMessage = (id: string) => {
@@ -3551,6 +3564,7 @@ export function ChannelPage() {
               light={L}
             />
             <ChannelPrivateSalonGate matchId={match?.id} light={L}>
+            <ChatPanelErrorBoundary light={L}>
             <div
               ref={chatScrollRef}
               className={cn(
@@ -3874,6 +3888,7 @@ export function ChannelPage() {
                 {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : 'Envoyer'}
               </button>
             </form>
+            </ChatPanelErrorBoundary>
             </ChannelPrivateSalonGate>
             </div>
           </Card>

@@ -6,6 +6,7 @@ import { resolveChatMessagePeerUi } from '../../utils/chatPeerSocial'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { ChatCharacterThumb } from './ChatCharacterThumb'
+import { ChatMessageErrorBoundary } from './ChatMessageErrorBoundary'
 import { VerifiedBadge } from '../subscription/VerifiedBadge'
 
 export type LiveMatchChatMessageItem = {
@@ -77,6 +78,21 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
     } satisfies User)
 
   return (
+    <ChatMessageErrorBoundary
+      fallback={
+        <article
+          className={cn(
+            'tf-chat-message flex items-start gap-2 rounded-lg p-1.5',
+            light ? 'bg-white/95' : 'bg-[#0a2239]',
+          )}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-tf-app-fg">{peer.displayName}</p>
+            <p className="mt-0.5 text-xs leading-tight text-tf-app-fg">{message.text}</p>
+          </div>
+        </article>
+      }
+    >
     <article
       className={cn(
         'tf-chat-message flex items-start gap-2 rounded-lg p-1.5 transition',
@@ -182,5 +198,6 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
         <span aria-live="polite">{likes}</span>
       </button>
     </article>
+    </ChatMessageErrorBoundary>
   )
 })

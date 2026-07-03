@@ -29,6 +29,12 @@ function pickTribune(v: unknown): TribuneId | undefined {
   return undefined
 }
 
+function safeCreatedAtMs(iso: string | null | undefined): number {
+  if (!iso) return Date.now()
+  const t = new Date(iso).getTime()
+  return Number.isFinite(t) ? t : Date.now()
+}
+
 function rowToMessage(row: LiveMsgRow): Message {
   const meta = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata : {}
   const groupScarf = meta.groupScarf
@@ -44,12 +50,15 @@ function rowToMessage(row: LiveMsgRow): Message {
     typeof (groupScarf as { colorC?: unknown }).colorC === 'string'
 
   return {
-    id: row.id,
-    matchId: row.match_id,
-    userId: row.user_id,
-    text: row.body,
-    createdAt: new Date(row.created_at).getTime(),
-    authorDisplayName: row.display_name,
+    id: typeof row.id === 'string' && row.id ? row.id : `msg-${Date.now()}`,
+    matchId: typeof row.match_id === 'string' ? row.match_id : '',
+    userId: typeof row.user_id === 'string' ? row.user_id : 'unknown',
+    text: typeof row.body === 'string' ? row.body : '',
+    createdAt: safeCreatedAtMs(row.created_at),
+    authorDisplayName:
+      typeof row.display_name === 'string' && row.display_name.trim()
+        ? row.display_name.trim()
+        : 'Supporteur',
     tribune: pickTribune(meta.tribune),
     matchTribune: pickMatchTribune(meta.matchTribune),
     supporterGroupId: typeof meta.supporterGroupId === 'string' ? meta.supporterGroupId : undefined,
@@ -166,6 +175,7 @@ export function useLiveMatchChatSync(options: {
     if (!sb) return
 
     let cancelled = false
+    const mountId = Date.now()
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const fetchRecent = async () => {
@@ -192,7 +202,7 @@ export function useLiveMatchChatSync(options: {
 
       const matchFilter = postgresChangesEqFilter('match_id', matchId)
       const channel = sb
-        .channel(`live_match_chat:${matchId}`)
+        .channel(`live_match_chat:${matchId}:${mountId}`)
         .on(
           'postgres_changes',
           {

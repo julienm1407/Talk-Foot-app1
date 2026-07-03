@@ -152,6 +152,7 @@ export function useLiveMatchReactionsSync(options: {
     if (!sb) return
 
     let cancelled = false
+    const mountId = Date.now()
 
     const run = async () => {
       const session = await ensureSupabaseChatSession(sb)
@@ -179,7 +180,7 @@ export function useLiveMatchReactionsSync(options: {
 
       const matchFilter = postgresChangesEqFilter('match_id', matchId)
       const channel = sb
-        .channel(`live_match_rx:${matchId}`, {
+        .channel(`live_match_rx:${matchId}:${mountId}`, {
           config: { broadcast: { self: true } },
         })
         .on(
