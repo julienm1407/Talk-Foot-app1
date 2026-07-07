@@ -3,6 +3,7 @@ import { WC_ROUND_LABELS } from '../../types/wc2026'
 import { formatHubDayLabel, formatKickoff } from '../../utils/time'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { resolveNationForWcSlot } from '../../utils/resolveMatchNation'
+import { resolveWcMatchOutcome } from '../../utils/wcMatchOutcome'
 import { MatchTeamSideLabel } from '../match/MatchTeamSideLabel'
 import { cn } from '../../utils/cn'
 
@@ -28,6 +29,7 @@ export function WcMatchSummaryCard({
 
   const isLive = match.status === 'live'
   const isFinished = match.status === 'finished'
+  const outcome = isFinished ? resolveWcMatchOutcome(match) : null
 
   const { favoriteNationIsos } = useFanPreferences()
   const favSet = new Set(favoriteNationIsos)
@@ -74,6 +76,7 @@ export function WcMatchSummaryCard({
         <MatchTeamSideLabel
           label={homeNation?.nameFr ?? match.home.label ?? 'À déterminer'}
           nation={homeNation}
+          className={cn(outcome?.winner === 'home' && 'rounded-lg bg-emerald-500/15 px-1 py-0.5')}
         />
         <div className="flex flex-col items-center">
           {match.home.goals !== undefined && match.away.goals !== undefined ? (
@@ -83,7 +86,11 @@ export function WcMatchSummaryCard({
           ) : (
             <span className="text-xs font-black uppercase tracking-wider text-tf-app-muted">vs</span>
           )}
-          {match.home.penaltyGoals !== undefined && match.away.penaltyGoals !== undefined ? (
+          {outcome?.decidedOnPenalties && outcome.penaltyShootout ? (
+            <span className="text-[10px] font-bold uppercase tracking-wide text-amber-300/90">
+              PEN {outcome.penaltyShootout.home}–{outcome.penaltyShootout.away}
+            </span>
+          ) : match.home.penaltyGoals !== undefined && match.away.penaltyGoals !== undefined ? (
             <span className="text-[10px] font-bold text-tf-app-muted">
               t.a.b. {match.home.penaltyGoals}–{match.away.penaltyGoals}
             </span>
@@ -93,6 +100,7 @@ export function WcMatchSummaryCard({
           label={awayNation?.nameFr ?? match.away.label ?? 'À déterminer'}
           nation={awayNation}
           align="right"
+          className={cn(outcome?.winner === 'away' && 'rounded-lg bg-emerald-500/15 px-1 py-0.5')}
         />
       </div>
 

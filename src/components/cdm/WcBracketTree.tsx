@@ -3,6 +3,7 @@ import type { WcBracket, WcMatch, WcRoundId } from '../../types/wc2026'
 import { WC_ROUND_LABELS } from '../../types/wc2026'
 import { getNationByIso } from '../../data/nations'
 import { formatHubDayLabel } from '../../utils/time'
+import { resolveWcMatchOutcome } from '../../utils/wcMatchOutcome'
 import { cn } from '../../utils/cn'
 
 const ROUND_ORDER: WcRoundId[] = ['r32', 'r16', 'qf', 'sf', 'final', 'third-place']
@@ -21,6 +22,9 @@ export function WcBracketTree({
   className?: string
 }) {
   const matchById = new Map(matches.map((m) => [m.id, m]))
+  const matchBySlot = new Map(
+    matches.filter((m) => m.bracketSlot).map((m) => [m.bracketSlot as string, m]),
+  )
 
   return (
     <div
@@ -42,7 +46,10 @@ export function WcBracketTree({
               </header>
               <div className="flex flex-1 flex-col justify-around gap-2">
                 {slots.map((slot) => {
-                  const match = slot.matchId ? matchById.get(slot.matchId) : null
+                  const match =
+                    (slot.matchId ? matchById.get(slot.matchId) : null) ??
+                    matchBySlot.get(slot.id) ??
+                    null
                   return <BracketSlotCard key={slot.id} slot={slot} match={match} />
                 })}
               </div>
@@ -64,6 +71,7 @@ function BracketSlotCard({
   const homeNation = match?.home?.iso ? getNationByIso(match.home.iso) : null
   const awayNation = match?.away?.iso ? getNationByIso(match.away.iso) : null
   const showLabel = !homeNation && !awayNation
+  const outcome = match ? resolveWcMatchOutcome(match) : null
 
   return (
     <article
@@ -74,11 +82,21 @@ function BracketSlotCard({
     >
       <div className="mb-1 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wider text-tf-app-muted">
         <span className="text-tf-cdm-gold/90">{slot.id}</span>
-        {match ? (
-          <span className="truncate" title={match.kickoffAt}>
-            {formatHubDayLabel(match.kickoffAt)}
-          </span>
-        ) : null}
+        <div className="flex min-w-0 items-center gap-1.5">
+          {outcome?.decidedOnPenalties && outcome.penaltyShootout ? (
+            <span
+              className="shrink-0 rounded border border-amber-400/45 bg-amber-500/15 px-1 py-px text-[8px] font-black tracking-[0.14em] text-amber-200"
+              title={`Tirs au but ${outcome.penaltyShootout.home}-${outcome.penaltyShootout.away}`}
+            >
+              PEN
+            </span>
+          ) : null}
+          {match ? (
+            <span className="truncate" title={match.kickoffAt}>
+              {formatHubDayLabel(match.kickoffAt)}
+            </span>
+          ) : null}
+        </div>
       </div>
       {showLabel ? (
         <p className="text-tf-app-muted">{slot.description}</p>
@@ -90,6 +108,9 @@ function BracketSlotCard({
             nationName={homeNation?.nameFr}
             flag={homeNation?.flag}
             goals={match?.home?.goals}
+            penaltyGoals={match?.home?.penaltyGoals}
+            isWinner={outcome?.winner === 'home'}
+            decidedOnPenalties={Boolean(outcome?.decidedOnPenalties)}
           />
           <SideRow
             label={match?.away?.label}
@@ -97,9 +118,17 @@ function BracketSlotCard({
             nationName={awayNation?.nameFr}
             flag={awayNation?.flag}
             goals={match?.away?.goals}
+            penaltyGoals={match?.away?.penaltyGoals}
+            isWinner={outcome?.winner === 'away'}
+            decidedOnPenalties={Boolean(outcome?.decidedOnPenalties)}
           />
         </div>
       )}
+      {outcome?.decidedOnPenalties && outcome.penaltyShootout ? (
+        <p className="mt-1 text-center text-[8px] font-bold uppercase tracking-wide text-amber-200/85">
+          Tirs au but {outcome.penaltyShootout.home}-{outcome.penaltyShootout.away}
+        </p>
+      ) : null}
     </article>
   )
 }
@@ -110,33 +139,75 @@ function SideRow({
   nationName,
   flag,
   goals,
+  penaltyGoals,
+  isWinner = false,
+  decidedOnPenalties = false,
 }: {
   label?: string
   iso?: string
   nationName?: string
   flag?: string
   goals?: number
+  penaltyGoals?: number
+  isWinner?: boolean
+  decidedOnPenalties?: boolean
 }) {
+  const rowClass = cn(
+    'flex items-center justify-between gap-2 rounded px-1 py-1 transition',
+    isWinner
+      ? 'bg-emerald-500/20 ring-1 ring-emerald-400/40'
+      : decidedOnPenalties
+        ? 'opacity-80'
+        : undefined,
+  )
+
+  const scoreCell = (
+    <span className="flex shrink-0 items-center gap-1 tabular-nums">
+      <span className={cn('font-black', isWinner ? 'text-emerald-100' : 'text-tf-app-fg')}>
+        {goals ?? '—'}
+      </span>
+      {decidedOnPenalties && penaltyGoals != null ? (
+        <span
+          className={cn(
+            'text-[9px] font-black',
+            isWinner ? 'text-emerald-200/95' : 'text-tf-app-muted',
+          )}
+          title="Tirs au but"
+        >
+          ({penaltyGoals})
+        </span>
+      ) : null}
+    </span>
+  )
+
   if (iso && nationName) {
     return (
       <Link
         to={`/nation/${iso.toLowerCase()}`}
-        className="flex items-center justify-between gap-2 rounded px-1 py-1 hover:bg-white/[0.05]"
+        className={cn(rowClass, 'hover:bg-white/[0.05]')}
       >
-        <span className="flex min-w-0 items-center gap-1.5 truncate font-bold text-tf-app-fg">
+        <span
+          className={cn(
+            'flex min-w-0 items-center gap-1.5 truncate font-bold',
+            isWinner ? 'text-emerald-50' : 'text-tf-app-fg',
+          )}
+        >
           {flag ? <span aria-hidden>{flag}</span> : null}
           <span className="truncate">{nationName}</span>
+          {isWinner && decidedOnPenalties ? (
+            <span className="shrink-0 rounded bg-emerald-500/30 px-1 py-px text-[7px] font-black tracking-[0.12em] text-emerald-100">
+              PEN
+            </span>
+          ) : null}
         </span>
-        <span className="shrink-0 font-black tabular-nums text-tf-app-fg">
-          {goals ?? '—'}
-        </span>
+        {scoreCell}
       </Link>
     )
   }
   return (
-    <div className="flex items-center justify-between gap-2 px-1 py-1 text-tf-app-muted">
+    <div className={cn(rowClass, 'text-tf-app-muted')}>
       <span className="truncate">{label ?? '—'}</span>
-      <span aria-hidden>—</span>
+      {scoreCell}
     </div>
   )
 }

@@ -61,6 +61,20 @@ export function Cdm2026DataProvider({ children }: { children: ReactNode }) {
     refresh()
   }, [refresh])
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh()
+    }, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.clearInterval(pollId)
+    }
+  }, [refresh])
+
   const value = useMemo<Cdm2026DataContextValue>(() => {
     return {
       dataset,

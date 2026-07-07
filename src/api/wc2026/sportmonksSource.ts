@@ -7,10 +7,18 @@ import { WC_DATASET } from '../../data/wc2026Mock'
 import { getNationByIso } from '../../data/nations'
 import { resolveSportMonksWc2026SeasonId } from '../../data/wc2026SportMonks'
 import type { Nation } from '../../data/nations'
-import type { WcDataset } from '../../types/wc2026'
+import type { WcDataset, WcMatch } from '../../types/wc2026'
 import { getSportMonksToken } from '../../utils/apiTokens'
-import { fetchSportMonksStandingsBySeason, fetchSportMonksTeamSquad } from '../sportMonks/sportMonksApi'
+import {
+  fetchSportMonksFixturesForSeason,
+  fetchSportMonksStandingsBySeason,
+  fetchSportMonksTeamSquad,
+} from '../sportMonks/sportMonksApi'
 import { extractWcGroupsAndStandingsFromSmEnvelope } from '../sportMonks/extractStandingsFromSm'
+import {
+  extractWcMatchesFromSmFixtures,
+  mergeWcBracketWithMatches,
+} from './extractWcMatchesFromSmFixtures'
 import {
   extractNationSmTeamIdsFromStandingsEnvelope,
   wcSquadFromSportMonksEnvelope,
@@ -18,6 +26,9 @@ import {
 import { wc2026MockSource } from './mockSource'
 import type { WcDataSource } from './types'
 import type { WcSquad } from '../../types/wc2026'
+
+const WC_FIXTURE_INCLUDE =
+  'participants;scores.type;league;state;round;stage;venue;group;periods' as const
 
 let cachedNationSmTeamIds: Record<string, number> | null = null
 let cachedStandingsEnvelope: unknown = null
@@ -67,25 +78,68 @@ async function fetchWcGroupsFromSportMonks(): Promise<{
   }
 }
 
-function mergeLiveIntoBase(live: NonNullable<Awaited<ReturnType<typeof fetchWcGroupsFromSportMonks>>>): WcDataset {
+async function fetchWcMatchesFromSportMonks(): Promise<WcMatch[] | null> {
+  const token = getSportMonksToken()
+  if (!token) return null
+  const seasonId = resolveSportMonksWc2026SeasonId()
+  const fixtures = await fetchSportMonksFixturesForSeason(
+    token,
+    seasonId,
+    WC_FIXTURE_INCLUDE,
+  )
+  if (!fixtures.length) return null
+  const matches = extractWcMatchesFromSmFixtures(fixtures)
+  return matches.length ? matches : null
+}
+
+function mergeLiveIntoBase(
+  live: NonNullable<Awaited<ReturnType<typeof fetchWcGroupsFromSportMonks>>>,
+  matches: WcMatch[] | null,
+): WcDataset {
+  const resolvedMatches = matches?.length ? matches : WC_DATASET.matches
+  const bracket = matches?.length
+    ? mergeWcBracketWithMatches(WC_DATASET.bracket, matches)
+    : WC_DATASET.bracket
   return {
     ...WC_DATASET,
     groups: live.groups,
     standings: live.standings,
     nations: live.nations,
+    matches: resolvedMatches,
+    bracket,
     updatedAt: live.updatedAt,
   }
 }
 
-/** SportMonks pour poules / classements ; mock pour le reste (arbre, stades, effectifs). */
+function mergeMatchesOnly(matches: WcMatch[]): WcDataset {
+  return {
+    ...WC_DATASET,
+    matches,
+    bracket: mergeWcBracketWithMatches(WC_DATASET.bracket, matches),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+/** SportMonks pour poules, classements et calendrier éliminatoires ; mock en repli. */
 export const wc2026SportMonksSource: WcDataSource = {
   loadDataset: async () => {
     try {
-      const live = await fetchWcGroupsFromSportMonks()
-      if (live) return mergeLiveIntoBase(live)
+      const token = getSportMonksToken()
+      if (!token) return wc2026MockSource.loadDataset()
+
+      const [live, matches] = await Promise.all([
+        fetchWcGroupsFromSportMonks(),
+        fetchWcMatchesFromSportMonks(),
+      ])
+
+      if (live && matches?.length) {
+        return mergeLiveIntoBase(live, matches)
+      }
+      if (live) return mergeLiveIntoBase(live, null)
+      if (matches?.length) return mergeMatchesOnly(matches)
     } catch (err) {
       if (import.meta.env.DEV) {
-        console.warn('[TalkFoot] CDM poules SportMonks — repli mock:', err)
+        console.warn('[TalkFoot] CDM SportMonks — repli mock:', err)
       }
     }
     return wc2026MockSource.loadDataset()
@@ -93,11 +147,14 @@ export const wc2026SportMonksSource: WcDataSource = {
 
   refreshLive: async () => {
     try {
-      const live = await fetchWcGroupsFromSportMonks()
-      if (live) {
+      const [live, matches] = await Promise.all([
+        fetchWcGroupsFromSportMonks(),
+        fetchWcMatchesFromSportMonks(),
+      ])
+      if (live || matches?.length) {
         return {
-          matches: WC_DATASET.matches,
-          standings: live.standings,
+          matches: matches?.length ? matches : WC_DATASET.matches,
+          standings: live?.standings ?? WC_DATASET.standings,
           stats: WC_DATASET.stats,
         }
       }

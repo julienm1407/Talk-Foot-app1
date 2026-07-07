@@ -137,6 +137,9 @@ export type SmFixture = {
   round?: { id?: number; name?: string }
   /** Phase tournoi (ex. groupe, 8es) avec include `stage`. */
   stage?: { id?: number; name?: string }
+  /** Poule CDM avec include `group`. */
+  group?: { id?: number; name?: string }
+  group_id?: number
   participants?: SmParticipant[]
   scores?: SmScoreRow[]
   odds?: SmOdd[]
