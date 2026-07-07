@@ -111,7 +111,12 @@ function teamFromName(
 
 function smFixtureDecidedOnPenalties(f: SmFixture): boolean {
   const dev = String(f.state?.developer_name ?? f.state?.state ?? '').toUpperCase()
-  return dev.includes('PENALT') || dev.includes('AFTER PEN')
+  return (
+    dev.includes('PENALT') ||
+    dev.includes('AFTER PEN') ||
+    dev.includes('FT_PEN') ||
+    dev.endsWith('_PEN')
+  )
 }
 
 function groupIdFromFixture(f: SmFixture): WcGroupId | undefined {

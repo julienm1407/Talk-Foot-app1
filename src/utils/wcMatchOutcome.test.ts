@@ -15,6 +15,18 @@ function finishedMatch(partial: Partial<WcMatch>): WcMatch {
 }
 
 describe('resolveWcMatchOutcome', () => {
+  it('départage Pays-Bas – Maroc 1-1 (2-3 TAB)', () => {
+    const outcome = resolveWcMatchOutcome(
+      finishedMatch({
+        home: { label: 'Pays-Bas', goals: 1, penaltyGoals: 2 },
+        away: { label: 'Maroc', goals: 1, penaltyGoals: 3 },
+      }),
+    )
+    expect(outcome.winner).toBe('away')
+    expect(outcome.decidedOnPenalties).toBe(true)
+    expect(outcome.penaltyShootout).toEqual({ home: 2, away: 3 })
+  })
+
   it('départage un 1-1 aux tirs au but', () => {
     const outcome = resolveWcMatchOutcome(
       finishedMatch({

@@ -6,7 +6,7 @@ import { teams, teamColors } from '../../data/teams'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { localizeMatchTeams } from '../../utils/matchSideColors'
 import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventMinute'
-import { extractRegulationGoalsFromScores } from '../../utils/matchRegulationScore'
+import { extractRegulationGoalsFromScores, extractPenaltyShootoutFromScores } from '../../utils/matchRegulationScore'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 
@@ -364,11 +364,11 @@ export function extractCurrentGoalsFromSmFixture(f: SmFixture): { home: number; 
   return goalsFromScores(f.scores)
 }
 
-/** Tirs au but réussis (`PENALTIES` SM) — à afficher sous le score du temps de jeu. */
+/** Tirs au but réussis (`PENALTIES` / `PENALTY_SHOOTOUT` SM). */
 export function extractPenaltyShootoutScoreFromSmFixture(
   f: SmFixture,
 ): { home: number; away: number } | undefined {
-  return goalsFromScoreDescription(f.scores, 'PENALTIES')
+  return extractPenaltyShootoutFromScores(f.scores) ?? undefined
 }
 
 function minuteFromFixture(f: SmFixture, nowMs = Date.now()): number {

@@ -27,6 +27,25 @@ describe('matchRegulationScore', () => {
     })
   })
 
+  it('lit PENALTY_SHOOTOUT (format CDM 2026 SportMonks)', () => {
+    const scores = [
+      { description: 'CURRENT', score: { participant: 'home', goals: 1 } },
+      { description: 'CURRENT', score: { participant: 'away', goals: 1 } },
+      {
+        description: 'PENALTY_SHOOTOUT',
+        type: { developer_name: 'PENALTY_SHOOTOUT' },
+        score: { participant: 'home', goals: 2 },
+      },
+      {
+        description: 'PENALTY_SHOOTOUT',
+        type: { developer_name: 'PENALTY_SHOOTOUT' },
+        score: { participant: 'away', goals: 3 },
+      },
+    ]
+    expect(extractRegulationGoalsFromScores(scores)).toEqual({ home: 1, away: 1 })
+    expect(extractPenaltyShootoutFromScores(scores)).toEqual({ home: 2, away: 3 })
+  })
+
   it('lit le TAB depuis les commentaires live SM', () => {
     const comments = [
       {
