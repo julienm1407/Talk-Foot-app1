@@ -2,20 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { activeWcDataSource } from '../api/wc2026'
 import type { WcSquad } from '../types/wc2026'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { getNationByIso, findNationByName } from '../data/nations'
+import { getNationByIso } from '../data/nations'
 import { useMatches } from '../contexts/MatchesContext'
 import { useOptionalCdm2026Data } from '../contexts/Cdm2026DataContext'
 import { cdm2026JerseyByNationIso } from '../data/cdm2026Jerseys'
 import { useProfile } from '../hooks/useProfile'
-import { formatHubDayLabel, formatKickoff } from '../utils/time'
-import { WC_2026_COMP_ID } from '../utils/seasonMode'
+import {
+  nationFeaturedMatch,
+  nationLiveMatch,
+  nationUpcomingMatches,
+} from '../utils/resolveMatchNation'
 import { NationSquadList } from '../components/cdm/NationSquadList'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { NationFavoriteButton } from '../components/cdm/NationFavoriteButton'
 import { NationTribuneCard } from '../components/cdm/NationTribuneCard'
 import { NationJerseyImage } from '../components/cdm/NationJerseyImage'
-import { MatchTeamsVsInline } from '../components/match/MatchTeamSideLabel'
-import { cn } from '../utils/cn'
+import { MatchSpotlightCard } from '../components/match/MatchSpotlightCard'
+import { HubStripUpcoming } from '../components/match/HubMatchEncart'
 
 /**
  * Fiche d'une sélection nationale — version minimale CDM 2026.
@@ -31,24 +34,24 @@ export function NationPage() {
   const { ownsItem } = useProfile()
   const cdm = useOptionalCdm2026Data()
 
-  const upcoming = useMemo(() => {
-    if (!nation) return []
-    const target = nation.nameEn.toLowerCase()
-    return matches
-      .filter((m) => m.competition.id === WC_2026_COMP_ID)
-      .filter((m) => {
-        const h = m.home.name.toLowerCase()
-        const a = m.away.name.toLowerCase()
-        return (
-          h.includes(target) ||
-          a.includes(target) ||
-          findNationByName(m.home.name)?.iso === nation.iso ||
-          findNationByName(m.away.name)?.iso === nation.iso
-        )
-      })
-      .sort((a, b) => Date.parse(a.kickoffAt) - Date.parse(b.kickoffAt))
-      .slice(0, 8)
-  }, [matches, nation])
+  const featuredMatch = useMemo(
+    () => (nation ? nationFeaturedMatch(matches, nation.iso) : null),
+    [matches, nation],
+  )
+  const liveMatch = useMemo(
+    () => (nation ? nationLiveMatch(matches, nation.iso) : null),
+    [matches, nation],
+  )
+  const upcomingMatches = useMemo(
+    () => (nation ? nationUpcomingMatches(matches, nation.iso) : []),
+    [matches, nation],
+  )
+  const moreUpcoming = useMemo(() => {
+    if (!featuredMatch || featuredMatch.status === 'live') {
+      return upcomingMatches
+    }
+    return upcomingMatches.filter((m) => m.id !== featuredMatch.id)
+  }, [featuredMatch, upcomingMatches])
 
   const wcGroup = useMemo(() => {
     if (!nation || !cdm?.dataset) return null
@@ -164,7 +167,7 @@ export function NationPage() {
       </section>
 
       <section
-        aria-label="Prochains matchs"
+        aria-label={liveMatch ? 'Match en direct' : 'Prochain match'}
         className="rounded-tf-xl border border-tf-c30-border bg-tf-c30-surface p-4 shadow-tf-elev-1"
       >
         <header className="mb-3 flex items-end justify-between px-1">
@@ -173,7 +176,7 @@ export function NationPage() {
               Coupe du Monde 2026
             </p>
             <h2 className="font-display text-xl font-black tracking-tight text-tf-app-fg">
-              Prochains matchs
+              {liveMatch ? 'En direct' : 'Prochain match'}
             </h2>
           </div>
           <Link
@@ -183,40 +186,30 @@ export function NationPage() {
             Voir tout →
           </Link>
         </header>
-        {upcoming.length === 0 ? (
+        {!featuredMatch ? (
           <p className="rounded-xl border border-dashed border-tf-c30-border/80 px-4 py-8 text-center text-sm font-bold text-tf-app-muted">
-            Le calendrier complet de la sélection {nation.nameFr.toLowerCase()} apparaîtra ici dès la
-            publication des matchs par SportMonks.
+            Aucun match à venir pour la sélection {nation.nameFr.toLowerCase()} pour le moment.
           </p>
         ) : (
-          <ul className="grid gap-2">
-            {upcoming.map((m) => (
-              <li key={m.id}>
-                <Link
-                  to={`/channel/${encodeURIComponent(m.id)}`}
-                  className={cn(
-                    'flex items-center justify-between gap-3 rounded-xl border border-tf-c30-border bg-white/[0.04] px-3 py-2.5 transition',
-                    'hover:border-tf-cdm-gold/55 hover:bg-white/[0.08]',
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-tf-app-muted">
-                      <span>{formatHubDayLabel(m.kickoffAt)}</span>
-                      <span aria-hidden>·</span>
-                      <span>{formatKickoff(m.kickoffAt)}</span>
-                    </div>
-                    <MatchTeamsVsInline
-                      className="mt-0.5"
-                      home={m.home}
-                      away={m.away}
-                      competitionId={m.competition.id}
-                    />
-                  </div>
-                  <div className="text-xs font-black uppercase tracking-wide text-tf-app-muted">→</div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-2xl border border-tf-cdm-gold/35 bg-gradient-to-br from-tf-night via-tf-dark to-black shadow-tf-elev-2">
+              <MatchSpotlightCard match={featuredMatch} className="min-h-0 w-full min-w-0" />
+            </div>
+            {moreUpcoming.length > 0 ? (
+              <div>
+                <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-[0.18em] text-tf-app-muted">
+                  Ensuite
+                </p>
+                <ul className="grid gap-2">
+                  {moreUpcoming.slice(0, 2).map((m) => (
+                    <li key={m.id}>
+                      <HubStripUpcoming match={m} visualSize="minimal" className="min-w-0" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         )}
       </section>
 

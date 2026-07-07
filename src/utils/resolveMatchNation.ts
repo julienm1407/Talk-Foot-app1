@@ -3,6 +3,49 @@ import type { Match, Team } from '../types/match'
 import type { WcMatchTeam } from '../types/wc2026'
 import { isWorldCupCompetitionId } from './seasonMode'
 
+const UPCOMING_KICKOFF_GRACE_MS = 60_000
+
+/** Matchs CDM à venir pour une sélection (exclut terminés et coups d’envoi passés). */
+export function nationUpcomingMatches(
+  matches: readonly Match[],
+  nationIso: string,
+  nowMs: number = Date.now(),
+): Match[] {
+  return matches
+    .filter((m) => isWorldCupCompetitionId(m.competition.id))
+    .filter((m) => matchInvolvesNation(m, nationIso))
+    .filter(
+      (m) =>
+        m.status === 'upcoming' &&
+        Date.parse(m.kickoffAt) >= nowMs - UPCOMING_KICKOFF_GRACE_MS,
+    )
+    .sort((a, b) => Date.parse(a.kickoffAt) - Date.parse(b.kickoffAt))
+}
+
+/** Match CDM en direct pour une sélection, s’il existe. */
+export function nationLiveMatch(
+  matches: readonly Match[],
+  nationIso: string,
+): Match | null {
+  return (
+    matches.find(
+      (m) =>
+        isWorldCupCompetitionId(m.competition.id) &&
+        m.status === 'live' &&
+        matchInvolvesNation(m, nationIso),
+    ) ?? null
+  )
+}
+
+/** Prochain match à mettre en avant : live prioritaire, sinon le plus proche à venir. */
+export function nationFeaturedMatch(
+  matches: readonly Match[],
+  nationIso: string,
+  nowMs: number = Date.now(),
+): Match | null {
+  return nationLiveMatch(matches, nationIso) ?? nationUpcomingMatches(matches, nationIso, nowMs)[0] ?? null
+}
+
 /** Résout une nation à partir d'un ISO et/ou d'un libellé (EN ou FR). */
 export function resolveNationByIsoOrName(
   iso?: string | null,
