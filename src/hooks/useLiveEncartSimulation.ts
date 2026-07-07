@@ -14,6 +14,7 @@ import type { Match } from '../types/match'
 import type { LiveEncartBurst, LiveEncartRim, LiveEncartToast } from '../types/liveSimulation'
 import { createMatchRng, initialScoreFromMatch } from '../types/liveSimulation'
 import { getSportMonksToken } from '../utils/apiTokens'
+import { useEffectiveMatchStatus } from './useEffectiveMatchStatus'
 
 /** Avance du chrono démo (sans SportMonks) : 1 minute affichée ≈ 1 minute réelle. */
 const MINUTE_MS = 60_000
@@ -43,6 +44,7 @@ function seedMinuteFromMatch(match: Match): number {
 }
 
 export function useLiveEncartSimulation(match: Match | null) {
+  const effectiveStatus = useEffectiveMatchStatus(match)
   const [minute, setMinute] = useState(1)
   const [score, setScore] = useState({ home: 0, away: 0 })
   const [bumpSide, setBumpSide] = useState<'home' | 'away' | null>(null)
@@ -64,13 +66,13 @@ export function useLiveEncartSimulation(match: Match | null) {
 
   const rngRef = useRef<() => number>(() => 0.5)
   useEffect(() => {
-    if (match && match.status === 'live') {
+    if (match && effectiveStatus === 'live') {
       rngRef.current = createMatchRng(match.id)
     } else {
       rngRef.current = () => 0.5
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- id + statut live seulement
-  }, [match?.id, match?.status])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- id + statut live effectif
+  }, [match?.id, effectiveStatus])
 
   const bumpClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rimClearRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -81,7 +83,7 @@ export function useLiveEncartSimulation(match: Match | null) {
   /** Dernière minute « officielle » SM — pas d’extrapolation client entre deux syncs. */
   const minuteAnchorRef = useRef<{ m: number; atMs: number }>({ m: 1, atMs: Date.now() })
 
-  const active = Boolean(match && match.status === 'live')
+  const active = Boolean(match && effectiveStatus === 'live')
   const smTimelineDriving =
     active && Boolean(match?.sportMonksFixtureId) && Boolean(getSportMonksToken())
 
@@ -115,7 +117,7 @@ export function useLiveEncartSimulation(match: Match | null) {
   )
 
   useEffect(() => {
-    if (!match || match.status !== 'live') {
+    if (!match || effectiveStatus !== 'live') {
       minuteAnchorRef.current = { m: 1, atMs: Date.now() }
       setMinute(1)
       setScore({ home: 0, away: 0 })
@@ -137,8 +139,8 @@ export function useLiveEncartSimulation(match: Match | null) {
     setBurst(null)
     setToast(null)
     setRim(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset ciblé sur id + statut live (+ snap stable)
-  }, [match?.id, match?.status, snapMinuteFromAuthority])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset ciblé sur id + statut live effectif (+ snap stable)
+  }, [match?.id, effectiveStatus, snapMinuteFromAuthority])
 
   useEffect(() => {
     smSeenKeysRef.current = new Set()
@@ -147,18 +149,18 @@ export function useLiveEncartSimulation(match: Match | null) {
 
   /** Minute calendrier SM : quand la timeline conduit l’encart, réaligner sur le calendrier (même logique « cohérente » que le reset). */
   useEffect(() => {
-    if (!match || match.status !== 'live') return
+    if (!match || effectiveStatus !== 'live') return
     if (!smTimelineDriving) return
     const s = normalizeScore(initialScoreFromMatch(match))
     setScore(s)
     scoreRef.current = s
     const m = seedMinuteFromMatch(match)
     snapMinuteFromAuthority(m)
-  }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, match?.status, smTimelineDriving, snapMinuteFromAuthority])
+  }, [match?.id, match?.minute, match?.score?.home, match?.score?.away, effectiveStatus, smTimelineDriving, snapMinuteFromAuthority])
 
   /** À chaque refetch `MatchesContext` (~12 s) : réaligner score + minute SM sans réinitialiser tout l’encart. */
   useEffect(() => {
-    if (!match || match.status !== 'live') return
+    if (!match || effectiveStatus !== 'live') return
     if (smTimelineDriving) return
     const s = normalizeScore(initialScoreFromMatch(match))
     const m = seedMinuteFromMatch(match)

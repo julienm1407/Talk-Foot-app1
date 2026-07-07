@@ -66,6 +66,7 @@ import { useAppearanceOptional } from '../contexts/AppearanceContext'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useLiveMatchClockLabel } from '../hooks/useLiveMatchClockLabel'
 import { useLiveMatchForClock } from '../hooks/useLiveMatchForClock'
+import { useEffectiveMatchStatus } from '../hooks/useEffectiveMatchStatus'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { formatGoalEventMinute } from '../utils/matchEventMinute'
@@ -974,7 +975,7 @@ export function ChannelPage() {
   const initialHomeScore = match?.score?.home ?? 0
   const initialAwayScore = match?.score?.away ?? 0
   const [clockScore, setClockScore] = useState({ home: initialHomeScore, away: initialAwayScore })
-  const status = match?.status ?? 'upcoming'
+  const status = useEffectiveMatchStatus(match)
   const isUpcoming = status === 'upcoming'
   const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
   const matchForClock = useLiveMatchForClock(match) ?? match

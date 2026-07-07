@@ -35,7 +35,7 @@ function mirrorForCard(
   liveMirror: CarouselLiveMirror | undefined,
   m: Match,
 ): LiveMirrorForCard | undefined {
-  if (!liveMirror || m.id !== liveMirror.matchId || m.status !== 'live') return undefined
+  if (!liveMirror || m.id !== liveMirror.matchId || !liveMirror.active) return undefined
   return {
     active: liveMirror.active,
     minute: liveMirror.minute,

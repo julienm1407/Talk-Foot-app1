@@ -8,6 +8,11 @@ import {
   type ReactNode,
 } from 'react'
 import { activeWcDataSource } from '../api/wc2026'
+import { mergeWcBracketWithMatches } from '../api/wc2026/extractWcMatchesFromSmFixtures'
+import { WC_DATASET } from '../data/wc2026Mock'
+import { getSportMonksTokenSource } from '../utils/apiTokens'
+import { wcMatchNeedsLiveAttention } from '../utils/footballMatchAttention'
+import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
 import type {
   WcDataset,
   WcGroup,
@@ -17,6 +22,11 @@ import type {
   WcTournamentStats,
   WcVenue,
 } from '../types/wc2026'
+
+/** Pendant un match / TAB : même cadence que MatchesContext. */
+const CDM_LIVE_POLL_MS = 12_000
+/** Filet hors match : classements et arbre sans F5. */
+const CDM_BACKGROUND_POLL_MS = 60_000
 
 type Cdm2026DataContextValue = {
   dataset: WcDataset | null
@@ -40,12 +50,26 @@ function dayKeyUtcOf(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
 }
 
+function mergeLivePatch(prev: WcDataset | null, patch: Pick<WcDataset, 'matches' | 'standings' | 'stats'>): WcDataset {
+  const base = prev ?? WC_DATASET
+  const matches = patch.matches
+  return {
+    ...base,
+    matches,
+    standings: patch.standings ?? base.standings,
+    stats: patch.stats ?? base.stats,
+    bracket: mergeWcBracketWithMatches(base.bracket, matches),
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 export function Cdm2026DataProvider({ children }: { children: ReactNode }) {
   const [dataset, setDataset] = useState<WcDataset | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [attentionTick, setAttentionTick] = useState(0)
 
-  const refresh = useCallback(async () => {
+  const refreshFull = useCallback(async () => {
     setError(null)
     try {
       const next = await activeWcDataSource.loadDataset()
@@ -57,23 +81,57 @@ export function Cdm2026DataProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+  const refreshSilent = useCallback(async () => {
+    setError(null)
+    try {
+      if (activeWcDataSource.refreshLive) {
+        const patch = await activeWcDataSource.refreshLive()
+        setDataset((prev) => mergeLivePatch(prev, patch))
+      } else {
+        const next = await activeWcDataSource.loadDataset()
+        setDataset(next)
+      }
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.warn('[TalkFoot] CDM refresh silencieux:', e)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const refresh = refreshFull
 
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void refresh()
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    const pollId = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh()
-    }, 60_000)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible)
-      window.clearInterval(pollId)
-    }
-  }, [refresh])
+    void refreshFull()
+  }, [refreshFull])
+
+  useEffect(() => {
+    const id = window.setInterval(() => setAttentionTick((n) => n + 1), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const needsLiveAttention = useMemo(() => {
+    void attentionTick
+    const matches = dataset?.matches ?? []
+    return matches.some((m) => wcMatchNeedsLiveAttention(m))
+  }, [dataset?.matches, attentionTick])
+
+  const smEnabled = getSportMonksTokenSource() !== 'none'
+
+  useVisibilityAwareInterval(
+    () => void refreshSilent(),
+    CDM_LIVE_POLL_MS,
+    smEnabled && needsLiveAttention,
+    true,
+  )
+
+  useVisibilityAwareInterval(
+    () => void refreshSilent(),
+    CDM_BACKGROUND_POLL_MS,
+    smEnabled,
+    true,
+  )
 
   const value = useMemo<Cdm2026DataContextValue>(() => {
     return {

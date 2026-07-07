@@ -30,6 +30,7 @@ import {
 } from '../utils/time'
 import { useKickoffScheduledRefetch } from '../hooks/useKickoffScheduledRefetch'
 import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
+import { matchNeedsLiveAttention } from '../utils/footballMatchAttention'
 import {
   readMatchesSessionCache,
   writeMatchesSessionCache,
@@ -261,11 +262,16 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     getSportMonksTokenSource() !== 'none',
   )
 
-  /** Live en cours : cadence plus courte pour remonter rapidement les buts et animations. */
+  /** Live en cours ou fenêtre autour du KO : cadence courte (évite d’attendre F5 si SM tarde sur le statut). */
+  const needsLiveAttention = useMemo(
+    () => matches.some((m) => matchNeedsLiveAttention(m)),
+    [matches, tick],
+  )
+
   useVisibilityAwareInterval(
     () => void silentRefetch(),
     LIVE_SILENT_POLL_MS,
-    getSportMonksTokenSource() !== 'none' && matches.some((m) => m.status === 'live'),
+    getSportMonksTokenSource() !== 'none' && needsLiveAttention,
     true,
   )
 

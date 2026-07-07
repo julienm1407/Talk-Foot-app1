@@ -11,16 +11,18 @@ import {
 import type { Match } from '../types/match'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
+import { useEffectiveMatchStatus } from './useEffectiveMatchStatus'
 
 /**
  * Match enrichi pour le chrono live (minute SM, mi-temps, ticking…) — même logique que la page salon live.
  */
 export function useLiveMatchForClock(match: Match | null | undefined): Match | null {
-  const status = match?.status ?? 'upcoming'
-  const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
+  const effectiveStatus = useEffectiveMatchStatus(match)
+  const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, effectiveStatus)
   const [clockFallbackFixture, setClockFallbackFixture] = useState<SmFixture | null>(null)
   const bundleMinute = liveBundleFixture ? extractLiveMinuteFromSmFixture(liveBundleFixture) : 0
-  const needsFallbackPoll = status === 'live' && Boolean(match?.sportMonksFixtureId) && bundleMinute <= 0
+  const needsFallbackPoll =
+    effectiveStatus === 'live' && Boolean(match?.sportMonksFixtureId) && bundleMinute <= 0
   const fallbackPollActiveRef = useRef(false)
 
   useEffect(() => {
@@ -66,14 +68,14 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
   }, [liveBundleFixture, clockFallbackFixture, bundleMinute])
 
   const liveSnapshot = useMemo(() => {
-    if (!clockFixture || status !== 'live') return null
+    if (!clockFixture || effectiveStatus !== 'live') return null
     return {
       score: extractCurrentGoalsFromSmFixture(clockFixture),
       minute: extractLiveMinuteFromSmFixture(clockFixture),
       paused: liveClockPausedFromSmFixture(clockFixture),
       inSecondHalf: liveSecondHalfFromSmFixture(clockFixture),
     }
-  }, [clockFixture, status])
+  }, [clockFixture, effectiveStatus])
 
   return useMemo(() => {
     if (!match) return null

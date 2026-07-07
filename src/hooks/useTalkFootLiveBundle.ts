@@ -10,6 +10,7 @@ type FixtureChannel = {
   listeners: Set<FixtureListener>
   es: EventSource | null
   pollId: ReturnType<typeof setInterval> | null
+  pollMs: number | null
 }
 
 const CHANNELS = new Map<number, FixtureChannel>()
@@ -23,7 +24,7 @@ function pollMsForStatus(status: MatchStatus): number {
 function channelFor(fixtureId: number): FixtureChannel {
   let ch = CHANNELS.get(fixtureId)
   if (!ch) {
-    ch = { fixture: null, listeners: new Set(), es: null, pollId: null }
+    ch = { fixture: null, listeners: new Set(), es: null, pollId: null, pollMs: null }
     CHANNELS.set(fixtureId, ch)
   }
   return ch
@@ -64,16 +65,24 @@ function ensureTransport(fixtureId: number, status: MatchStatus) {
     }
   }
 
+  const runPoll = async () => {
+    const fx = await fetchTalkFootLiveBundleFixture(fixtureId)
+    if (!fx) return
+    ch.fixture = fx
+    broadcast(ch)
+  }
+
+  if (ch.pollId != null && ch.pollMs !== pollMs) {
+    clearInterval(ch.pollId)
+    ch.pollId = null
+    ch.pollMs = null
+  }
+
   if (!ch.pollId) {
-    const run = async () => {
-      const fx = await fetchTalkFootLiveBundleFixture(fixtureId)
-      if (!fx) return
-      ch.fixture = fx
-      broadcast(ch)
-    }
-    void run()
+    void runPoll()
+    ch.pollMs = pollMs
     ch.pollId = setInterval(() => {
-      void run()
+      void runPoll()
     }, pollMs)
   }
 }
