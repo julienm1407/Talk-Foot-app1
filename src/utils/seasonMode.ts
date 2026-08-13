@@ -11,19 +11,26 @@ export type SeasonModeId = 'standard' | 'cdm2026'
 export type SeasonModeOverride = 'auto' | 'on' | 'off'
 
 /**
- * Fenêtre d'activation automatique du mode CDM 2026.
+ * Fenêtre d'activation automatique du mode CDM 2026 (historique).
  *
- * On démarre dès le 1er mai 2026 (préparation : amicaux, listes des 26, hype)
- * jusqu'au 31 juillet 2026 (incl. finale 19 juillet + retombées). Dates en UTC.
+ * Mondial terminé : le site est recentré sur les 5 grands championnats et les
+ * coupes européennes. La fenêtre reste lisible pour l’admin / tests, mais
+ * `auto` ne réactive plus le mode CDM après la fin de compétition.
  */
 export const CDM2026_AUTO_WINDOW = {
   start: Date.UTC(2026, 4, 1, 0, 0, 0), // 1er mai 2026 00:00 UTC
   end: Date.UTC(2026, 6, 31, 23, 59, 59), // 31 juillet 2026 23:59 UTC
 } as const
 
+/** True uniquement pendant la fenêtre historique May–Jul 2026. */
 export function isInsideCdm2026Window(now: Date = new Date()): boolean {
   const t = now.getTime()
   return t >= CDM2026_AUTO_WINDOW.start && t <= CDM2026_AUTO_WINDOW.end
+}
+
+/** Mondial terminé : plus d’activation auto du chrome CDM. */
+export function isCdm2026SeasonClosed(now: Date = new Date()): boolean {
+  return now.getTime() > CDM2026_AUTO_WINDOW.end
 }
 
 export function resolveSeasonMode(

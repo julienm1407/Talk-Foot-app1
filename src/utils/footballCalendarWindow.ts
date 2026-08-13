@@ -1,4 +1,3 @@
-import { isInsideCdm2026Window } from './seasonMode'
 import {
   addParisCalendarDays,
   endOfParisCalendarDayMs,
@@ -8,18 +7,20 @@ import {
 
 /**
  * Fenêtre **glissante** (Paris) pour limiter le quota API : ~1 semaine de résultats + ~10 jours
- * de matchs à venir. Recalculée chaque jour à partir de « aujourd’hui » (ex. 24 avr. → passé
- * depuis le 17 avr., à venir jusqu’au 4 mai ; au 1er mai la fenêtre se décale avec les mêmes durées).
+ * de matchs à venir (Big 5 + C1 / C3 / C4). Recalculée chaque jour à partir de « aujourd’hui ».
  */
 export const PARIS_SM_WINDOW_DAYS_PAST = 7
 export const PARIS_SM_WINDOW_DAYS_FUTURE = 10
 
-/** Fin du calendrier CDM affiché (aligné sur la fenêtre mode saison `cdm2026`). */
+/** Fin du calendrier CDM (historique) — uniquement si `cdmExtended: true` est passé explicitement. */
 export const CDM2026_CALENDAR_END_DAY = '2026-07-31'
 
 /**
  * Fenêtre calendrier + API SportMonks : bornes `YYYY-MM-DD` et instants ms alignés sur
  * le jour civil **Europe/Paris**.
+ *
+ * Par défaut : fenêtre club (pas d’extension Mondial). Passer `cdmExtended: true`
+ * seulement quand le mode saison CDM est forcé ON.
  */
 export function getFootballCalendarWindow(
   referenceDate: Date = new Date(),
@@ -27,7 +28,7 @@ export function getFootballCalendarWindow(
 ) {
   const todayParis = matchCalendarDayKeyParis(referenceDate)
   const from = addParisCalendarDays(todayParis, -PARIS_SM_WINDOW_DAYS_PAST)
-  const cdmExtended = options?.cdmExtended ?? isInsideCdm2026Window(referenceDate)
+  const cdmExtended = options?.cdmExtended === true
   const to = cdmExtended
     ? CDM2026_CALENDAR_END_DAY
     : addParisCalendarDays(todayParis, PARIS_SM_WINDOW_DAYS_FUTURE)

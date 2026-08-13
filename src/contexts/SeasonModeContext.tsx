@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useLocalStorageState } from '../hooks/useLocalStorage'
 import {
+  isCdm2026SeasonClosed,
   resolveSeasonMode,
   type SeasonModeId,
   type SeasonModeOverride,
@@ -22,6 +23,16 @@ function isStoredOverride(parsed: unknown): parsed is StoredOverride {
   if (!parsed || typeof parsed !== 'object') return false
   const v = (parsed as { override?: unknown }).override
   return v === 'auto' || v === 'on' || v === 'off'
+}
+
+/**
+ * Après le Mondial : `auto` devient `off` (championnats + coupes).
+ * L’admin peut encore forcer ON pour des tests.
+ */
+function normalizePostCdmOverride(override: SeasonModeOverride): SeasonModeOverride {
+  if (!isCdm2026SeasonClosed()) return override
+  if (override === 'auto') return 'off'
+  return override
 }
 
 export type SeasonModeContextValue = {
@@ -41,10 +52,15 @@ const SeasonModeContext = createContext<SeasonModeContextValue | null>(null)
 export function SeasonModeProvider({ children }: { children: ReactNode }) {
   const [stored, setStored] = useLocalStorageState<StoredOverride>(
     OVERRIDE_STORAGE_KEY,
-    { override: 'auto' },
+    { override: 'off' },
     isStoredOverride,
   )
-  const override = stored.override
+  const override = normalizePostCdmOverride(stored.override)
+
+  useEffect(() => {
+    if (stored.override === override) return
+    setStored({ override })
+  }, [override, setStored, stored.override])
 
   const [now, setNow] = useState<Date>(() => new Date())
   useEffect(() => {

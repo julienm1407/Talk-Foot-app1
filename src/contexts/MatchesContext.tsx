@@ -31,6 +31,7 @@ import {
 import { useKickoffScheduledRefetch } from '../hooks/useKickoffScheduledRefetch'
 import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
 import { matchNeedsLiveAttention } from '../utils/footballMatchAttention'
+import { useOptionalSeasonMode } from './SeasonModeContext'
 import {
   readMatchesSessionCache,
   writeMatchesSessionCache,
@@ -80,6 +81,8 @@ type MatchesContextValue = {
 const MatchesContext = createContext<MatchesContextValue | null>(null)
 
 export function MatchesProvider({ children }: { children: React.ReactNode }) {
+  const season = useOptionalSeasonMode()
+  const cdmSeasonActive = season?.isCdm2026 === true
   const cachedOnMount = useMemo(() => readMatchesSessionCache(), [])
   const [matches, setMatches] = useState<Match[]>(() => cachedOnMount)
   const [loading, setLoading] = useState(() => cachedOnMount.length === 0)
@@ -107,7 +110,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         setError(null)
       }
       try {
-        const range = getFootballCalendarWindow()
+        const range = getFootballCalendarWindow(new Date(), { cdmExtended: cdmSeasonActive })
         const cdmExtended = range.cdmExtended
         const todayParis = matchCalendarDayKeyParis(new Date())
         const [inplaySettled, betweenSettled] = await Promise.allSettled([
@@ -232,7 +235,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     setMatches([])
     setError(NO_SM_TOKEN_MESSAGE_FR)
     setLoading(false)
-  }, [])
+  }, [cdmSeasonActive])
 
   useEffect(() => {
     const bump = () => setTokenRev((n) => n + 1)
@@ -317,7 +320,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
   const carouselMatches = useMemo(() => {
     const lives = matches.filter((m) => m.status === 'live')
     const liveIds = new Set(lives.map((m) => m.id))
-    const win = getFootballCalendarWindow()
+    const win = getFootballCalendarWindow(new Date(), { cdmExtended: cdmSeasonActive })
     const rest = matches
       .filter((m) => !liveIds.has(m.id))
       .filter((m) => {
@@ -327,7 +330,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
       .slice(0, 14)
     return [...lives, ...rest]
-  }, [matches, tick])
+  }, [matches, tick, cdmSeasonActive])
 
   const value: MatchesContextValue = {
     matches,

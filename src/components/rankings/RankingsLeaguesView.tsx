@@ -70,16 +70,8 @@ export function RankingsLeaguesView() {
         uppercaseTitle={false}
         eyebrow="Classements"
         title="Big 5 · Forme des équipes"
-        description="Classements des championnats et analyses de forme. Pendant le Mondial, les poules CDM sont sur cette page en mode Coupe du Monde."
+        description="Classements des cinq grands championnats et analyses de forme."
       />
-
-      <p className="rounded-2xl border border-tf-cdm-gold/35 bg-tf-cdm-gold/10 px-4 py-3 text-sm font-semibold text-tf-app-fg">
-        Pendant le Mondial 2026, les classements des poules sont sur{' '}
-        <Link to="/cdm/groupes" className="font-black text-tf-cdm-gold underline-offset-2 hover:underline">
-          CDM → Poules
-        </Link>{' '}
-        ou active le mode Coupe du Monde dans ton profil.
-      </p>
 
       <p className="rounded-2xl border border-tf-electric/25 bg-tf-electric-soft/35 px-4 py-3 text-sm font-semibold text-tf-dark">
         Classement des parieurs (points, victoires) :{' '}

@@ -20,7 +20,6 @@ import {
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
-import { WC_2026_COMP_ID, isInsideCdm2026Window } from '../utils/seasonMode'
 
 /** Matchs mis en avant sous « À la une » (hors live) — prochains coup d’envoi. */
 const CALENDAR_ALAUNE_MAX = 8
@@ -58,7 +57,7 @@ export function CalendarPage() {
   const L = appearance === 'light'
   const { supporterTintActive, team } = useSupporterTintMode()
   const season = useOptionalSeasonMode()
-  const isCdm = season?.isCdm2026 ?? isInsideCdm2026Window()
+  const isCdm = season?.isCdm2026 ?? false
 
   const { matches, loading, error: matchesError } = useMatches()
 
@@ -105,9 +104,7 @@ export function CalendarPage() {
     return Array.from(map.values()).sort((a, b) => a.shortName.localeCompare(b.shortName))
   }, [sorted])
 
-  const [competitionId, setCompetitionId] = useState<string>(() =>
-    isInsideCdm2026Window() ? WC_2026_COMP_ID : 'all',
-  )
+  const [competitionId, setCompetitionId] = useState<string>('all')
   const [dayKey, setDayKey] = useState<string>('all')
   /** Vue principale : accès direct aux résultats sans défiler les à venir. */
   const [primaryTab, setPrimaryTab] = useState<'upcoming' | 'past'>('upcoming')

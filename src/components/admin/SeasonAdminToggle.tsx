@@ -6,10 +6,18 @@ const OPTIONS: { id: SeasonModeOverride; label: string; hint: string }[] = [
   {
     id: 'auto',
     label: 'Auto',
-    hint: 'Activé automatiquement entre le 1er juin et le 31 juillet 2026.',
+    hint: 'Historique : activé entre le 1er mai et le 31 juillet 2026. Hors fenêtre = mode standard (championnats + coupes européennes).',
   },
-  { id: 'on', label: 'Forcer ON', hint: 'Active le mode CDM dès maintenant, peu importe la date.' },
-  { id: 'off', label: 'Forcer OFF', hint: 'Désactive le mode CDM, même pendant la fenêtre auto.' },
+  {
+    id: 'on',
+    label: 'Forcer ON',
+    hint: 'Réactive le chrome CDM pour tests (le site reste centré clubs hors de ce forçage).',
+  },
+  {
+    id: 'off',
+    label: 'Forcer OFF',
+    hint: 'Mode standard : Big 5 + Ligue des champions, Europa et Conference.',
+  },
 ]
 
 function describeApplied(value: SeasonModeContextValue): string {
