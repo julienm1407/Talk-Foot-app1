@@ -22,6 +22,7 @@ export {
   fetchSportMonksPlayer,
   fetchSportMonksTeamSquad,
   fetchSportMonksLeaguesByDate,
+  fetchSportMonksLeagueById,
   fetchSportMonksStandingsLiveByLeague,
   fetchSportMonksStandingsBySeason,
   fetchSportMonksTeamsBySeason,
@@ -99,6 +100,10 @@ export {
   extractLeagueStandingRowsFromSmTeamsSeasonEnvelope,
 } from './extractStandingsFromSm'
 export { pickActiveSeasonIdFromSmTeamPayload } from './pickActiveSeasonIdFromSmTeam'
+export {
+  pickStandingSeasonFromSmLeaguePayload,
+  type SmLeagueSeasonPick,
+} from './pickStandingSeasonIdFromSmLeague'
 export {
   extractStartingXisFromFixture,
   extractMatchLineupBundleFromFixture,

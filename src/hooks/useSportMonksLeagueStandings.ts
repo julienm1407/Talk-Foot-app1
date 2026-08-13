@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import {
   extractLeagueStandingRowsFromSmStandingsEnvelope,
   extractLeagueStandingRowsFromSmTeamsSeasonEnvelope,
+  fetchSportMonksLeagueById,
   fetchSportMonksStandingsBySeason,
   fetchSportMonksStandingsLiveByLeague,
   fetchSportMonksTeamsBySeason,
+  pickStandingSeasonFromSmLeaguePayload,
+  type SmLeagueSeasonPick,
 } from '../api/sportMonks'
 import { apiNameToOurId, SM_LEAGUE_ID_BY_TALKFOOT_COMP } from '../api/footballApi'
 import type { BigFiveLeagueId, LeagueStandingRow } from '../data/leagueStandings'
@@ -20,6 +23,10 @@ function envSeasonFallback(): number | undefined {
 }
 
 export type StandingsDataSource = 'live' | 'season' | 'teamsSeason' | null
+
+export function isStandingsPreSeason(rows: LeagueStandingRow[]): boolean {
+  return rows.length > 0 && rows.every((r) => r.played === 0)
+}
 
 function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagueId): LeagueStandingRow[] {
   const idsByLeague = new Map<string, Set<string>>()
@@ -89,6 +96,7 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
 export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
   const [rows, setRows] = useState<LeagueStandingRow[]>([])
   const [source, setSource] = useState<StandingsDataSource>(null)
+  const [seasonMeta, setSeasonMeta] = useState<SmLeagueSeasonPick | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -97,6 +105,7 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
     if (!token) {
       setRows([])
       setSource(null)
+      setSeasonMeta(null)
       setLoading(false)
       setError(null)
       return
@@ -107,15 +116,17 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
     setError(null)
     setRows([])
     setSource(null)
+    setSeasonMeta(null)
 
     const smLid = SM_LEAGUE_ID_BY_TALKFOOT_COMP[leagueId]
-    const seasonId =
+    const staticSeasonId =
       SPORTMONKS_STANDING_SEASON_ID_BY_LEAGUE[leagueId] ?? envSeasonFallback()
 
     void (async () => {
       let lastError: string | null = null
       let next: LeagueStandingRow[] = []
       let src: StandingsDataSource = null
+      let resolvedSeason: SmLeagueSeasonPick | null = null
 
       try {
         try {
@@ -125,6 +136,19 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
           if (next.length) src = 'live'
         } catch (e) {
           lastError = e instanceof Error ? e.message : String(e)
+        }
+
+        let seasonId = staticSeasonId ?? null
+        if (!next.length) {
+          try {
+            const leagueJson = await fetchSportMonksLeagueById(token, smLid)
+            if (cancelled) return
+            resolvedSeason = pickStandingSeasonFromSmLeaguePayload(leagueJson) ?? null
+            if (resolvedSeason?.seasonId) seasonId = resolvedSeason.seasonId
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e)
+            if (!lastError) lastError = msg
+          }
         }
 
         if (!next.length && seasonId != null) {
@@ -159,11 +183,13 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
 
         setRows(sanitizeRowsForLeague(next, leagueId))
         setSource(src)
+        setSeasonMeta(resolvedSeason)
         setError(next.length ? null : lastError)
       } catch (e) {
         if (!cancelled) {
           setRows([])
           setSource(null)
+          setSeasonMeta(null)
           setError(e instanceof Error ? e.message : 'Erreur classements SportMonks')
         }
       } finally {
@@ -179,6 +205,8 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
   return {
     standingsRows: rows,
     standingsSource: source,
+    standingsSeasonMeta: seasonMeta,
+    standingsPreSeason: isStandingsPreSeason(rows),
     standingsLoading: loading,
     standingsError: error,
   }

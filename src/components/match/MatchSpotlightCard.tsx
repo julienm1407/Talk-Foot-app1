@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useMemo } from 'react'
 import type { Match } from '../../types/match'
 import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
@@ -7,10 +8,11 @@ import { formatKickoff } from '../../utils/time'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import {
-  matchSpotlightGradient,
-  resolveTeamColors,
+  resolveSpotlightMatchColors,
   resolveTeamDisplayName,
+  spotlightGradientFromSides,
 } from '../../utils/matchSideColors'
+import { useMatchSpotlightLogoColors } from '../../hooks/useTeamLogoColors'
 import { formatHubDayLabel, HubStripLive } from './HubMatchEncart'
 import { MatchTeamBackdrop, patternFor } from './MatchTeamBackdrop'
 import { MatchResultScore } from './MatchResultScore'
@@ -70,9 +72,17 @@ export function MatchSpotlightCard({
   const compId = match.competition.id
   const homeLabel = resolveTeamDisplayName(match.home, compId)
   const awayLabel = resolveTeamDisplayName(match.away, compId)
-  const homeColors = resolveTeamColors(match.home, compId)
-  const awayColors = resolveTeamColors(match.away, compId)
-  const gradient = matchSpotlightGradient(match.home, match.away, compId)
+  const fallbackSides = useMemo(
+    () => resolveSpotlightMatchColors(match.home, match.away, compId),
+    [match.home, match.away, compId],
+  )
+  const { home: homeColors, away: awayColors } = useMatchSpotlightLogoColors(
+    match.home,
+    match.away,
+    fallbackSides,
+    compId,
+  )
+  const gradient = spotlightGradientFromSides(homeColors, awayColors)
 
   if (match.status === 'finished') {
     const fsc = match.score ?? { home: 0, away: 0 }

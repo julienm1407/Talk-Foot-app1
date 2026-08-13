@@ -127,7 +127,7 @@ export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchPro
   return (
     <div ref={wrapRef} className={cn('relative w-full min-w-0', className)}>
       <label htmlFor={inputId} className="sr-only">
-        Rechercher sur Talk Foot (matchs, groupes, débats, actus)
+        Rechercher sur Talk Foot (matchs, clubs, ligues, compétitions, groupes, débats, actus)
       </label>
       <div className={cn('relative', hub && 'flex items-center')}>
         <span
@@ -148,7 +148,7 @@ export const HomeSiteSearch = forwardRef<HomeSiteSearchHandle, HomeSiteSearchPro
           aria-controls={showPanel ? listId : undefined}
           aria-autocomplete="list"
           autoComplete="off"
-          placeholder="Rechercher match, club, groupe, débat, actu…"
+          placeholder="Rechercher match, club, ligue, compétition, débat, actu…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)

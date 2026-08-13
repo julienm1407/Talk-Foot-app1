@@ -19,6 +19,15 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
     labelBg: 'bg-sky-100',
     labelText: 'text-sky-900',
   },
+  'ligue-2': {
+    id: 'ligue-2',
+    name: 'Ligue 2',
+    shortName: 'L2',
+    accent: '#1e293b',
+    accent2: '#94a3b8',
+    labelBg: 'bg-slate-100',
+    labelText: 'text-slate-900',
+  },
   epl: {
     id: 'epl',
     name: 'Premier League',

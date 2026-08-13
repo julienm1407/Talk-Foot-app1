@@ -3,9 +3,20 @@ import type { SupporterGroup } from '../types/group'
 import type { Debate } from '../data/debates'
 import type { NewsItem } from '../data/news'
 import { ALL_CLUBS_CATALOG } from '../data/allClubsCatalog'
+import {
+  COMPETITION_SEARCH_ALIAS_TO_ID,
+  COMPETITION_SEARCH_ENTRIES,
+} from '../data/competitionSearchCatalog'
 import { clubPathForId } from './clubRoute'
 
-export type SiteSearchResultKind = 'match' | 'group' | 'debate' | 'article' | 'page' | 'club'
+export type SiteSearchResultKind =
+  | 'match'
+  | 'group'
+  | 'debate'
+  | 'article'
+  | 'page'
+  | 'club'
+  | 'competition'
 
 export type SiteSearchResult = {
   kind: SiteSearchResultKind
@@ -33,6 +44,24 @@ function scoreBlob(blob: string, queryNorm: string, words: string[]): number {
     if (w.length >= 2 && blob.includes(w)) s += 4
   }
   return s
+}
+
+function scoreCompetition(
+  entry: (typeof COMPETITION_SEARCH_ENTRIES)[number],
+  queryNorm: string,
+  words: string[],
+): number {
+  const blob = normalize(`${entry.name} ${entry.shortName} ${entry.keywords}`)
+  let sc = scoreBlob(blob, queryNorm, words)
+  const short = normalize(entry.shortName)
+  const name = normalize(entry.name)
+  if (queryNorm === short || queryNorm === normalize(entry.id)) sc += 48
+  if (queryNorm === name) sc += 44
+  if (COMPETITION_SEARCH_ALIAS_TO_ID[queryNorm] === entry.id) sc += 52
+  for (const w of words) {
+    if (COMPETITION_SEARCH_ALIAS_TO_ID[w] === entry.id) sc += 28
+  }
+  return sc
 }
 
 const STATIC_PAGES: { title: string; subtitle: string; href: string; kw: string }[] = [
@@ -79,6 +108,20 @@ export function runSiteSearch(
         subtitle: p.subtitle,
         href: p.href,
         score: sc,
+      })
+    }
+  }
+
+  for (const comp of COMPETITION_SEARCH_ENTRIES) {
+    const sc = scoreCompetition(comp, queryNorm, words)
+    if (sc > 0) {
+      out.push({
+        kind: 'competition',
+        id: comp.id,
+        title: comp.name,
+        subtitle: `${comp.shortName} · ${comp.subtitle}`,
+        href: comp.href,
+        score: sc + 6,
       })
     }
   }
@@ -194,6 +237,8 @@ export function kindLabel(kind: SiteSearchResultKind): string {
       return 'Page'
     case 'club':
       return 'Club'
+    case 'competition':
+      return 'Compétition'
     default:
       return ''
   }

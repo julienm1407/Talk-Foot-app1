@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Card } from '../ui/Card'
@@ -24,29 +25,57 @@ type MainTab = 'ligues' | 'forme'
 /** Classements Big 5 — affiché hors mode Coupe du Monde 2026. */
 export function RankingsLeaguesView() {
   const { appearance } = useAppearance()
+  const [searchParams] = useSearchParams()
   const L = appearance === 'light'
   const [mainTab, setMainTab] = useState<MainTab>('ligues')
   const [leagueId, setLeagueId] = useState<BigFiveLeagueId>('ligue-1')
   const reducedMotion = useReducedMotion()
 
-  const { standingsRows, standingsSource, standingsLoading, standingsError } =
-    useSportMonksLeagueStandings(leagueId)
+  const leagueFromUrl = searchParams.get('league')?.trim() ?? ''
+  useEffect(() => {
+    if (!leagueFromUrl) return
+    if ((BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(leagueFromUrl)) {
+      setLeagueId(leagueFromUrl as BigFiveLeagueId)
+    }
+  }, [leagueFromUrl])
+
+  const {
+    standingsRows,
+    standingsSource,
+    standingsSeasonMeta,
+    standingsPreSeason,
+    standingsLoading,
+    standingsError,
+  } = useSportMonksLeagueStandings(leagueId)
 
   const mockStandings = useMemo(() => getStandingsForLeague(leagueId), [leagueId])
   const hasToken = Boolean(getSportMonksToken())
-  const standings = standingsRows.length ? standingsRows : mockStandings
+  const standings = hasToken ? standingsRows : mockStandings
+  const seasonStartLabel = standingsSeasonMeta?.seasonStartsAt
+    ? new Date(`${standingsSeasonMeta.seasonStartsAt}T12:00:00`).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : undefined
   const dataSourceLabel =
     standingsRows.length && standingsSource === 'live'
       ? 'SportMonks · classement live'
-      : standingsRows.length && standingsSource === 'season'
-        ? 'SportMonks · classement saison'
-        : standingsRows.length && standingsSource === 'teamsSeason'
-          ? 'SportMonks · stats équipes (saison, tri points)'
-          : standingsRows.length
-            ? 'SportMonks'
-            : hasToken
-              ? 'Données de secours (maquette)'
-              : 'Maquette (clé SportMonks requise pour les vrais classements)'
+      : standingsRows.length && standingsPreSeason
+        ? standingsSeasonMeta?.seasonName
+          ? `SportMonks · ${standingsSeasonMeta.seasonName} · reprise${seasonStartLabel ? ` le ${seasonStartLabel}` : ' fin août'}`
+          : `SportMonks · intersaison${seasonStartLabel ? ` · reprise le ${seasonStartLabel}` : ''}`
+        : standingsRows.length && standingsSource === 'season'
+          ? standingsSeasonMeta?.seasonName
+            ? `SportMonks · classement ${standingsSeasonMeta.seasonName}`
+            : 'SportMonks · classement saison'
+          : standingsRows.length && standingsSource === 'teamsSeason'
+            ? 'SportMonks · stats équipes (saison, tri points)'
+            : standingsRows.length
+              ? 'SportMonks'
+              : hasToken
+                ? 'SportMonks · classement indisponible'
+                : 'Maquette (clé SportMonks requise pour les vrais classements)'
 
   const theme = competitionThemes[leagueId]
 
@@ -60,7 +89,9 @@ export function RankingsLeaguesView() {
 
   const matrixCaption = standingsRows.length
     ? `${dataSourceLabel} — indicateurs dérivés des mêmes lignes.`
-    : 'Données d’illustration — avec une clé SportMonks, la matrice reflète le championnat réel.'
+    : hasToken
+      ? 'Classement SportMonks indisponible pour le moment.'
+      : 'Données d’illustration — avec une clé SportMonks, la matrice reflète le championnat réel.'
 
   return (
     <div className="space-y-6">
@@ -146,6 +177,23 @@ export function RankingsLeaguesView() {
                 API classements : {standingsError}. Vérifie ton abonnement SM ou configure un id saison (
                 <code className="rounded bg-black/10 px-1 font-mono text-xs">VITE_SPORTMONKS_STANDING_SEASON_ID</code>
                 ).
+              </p>
+            ) : null}
+
+            {hasToken && standingsPreSeason ? (
+              <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
+                Championnat en pause —{' '}
+                {seasonStartLabel
+                  ? `la saison reprend le ${seasonStartLabel}.`
+                  : 'les championnats reprennent fin août.'}{' '}
+                Le tableau liste les clubs inscrits (0 match joué pour l’instant).
+              </p>
+            ) : null}
+
+            {hasToken && !standingsLoading && !standingsRows.length ? (
+              <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
+                Aucun classement SportMonks disponible pour cette ligue en ce moment. Les championnats reprennent fin
+                août.
               </p>
             ) : null}
 

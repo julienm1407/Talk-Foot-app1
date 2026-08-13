@@ -58,6 +58,8 @@ export const CLUB_OFFICIAL_LOGO_BY_ID: Readonly<Record<string, string>> = {
   metz: 'https://upload.wikimedia.org/wikipedia/en/6/6d/FC_Metz_2021_logo.svg',
   auxerre: 'https://upload.wikimedia.org/wikipedia/en/5/51/AJ_Auxerre_logo.svg',
   angers: 'https://upload.wikimedia.org/wikipedia/en/5/5c/Angers_SCO_logo.svg',
+  lemans: 'https://cdn.sportmonks.com/images/soccer/teams/14/7758.png',
+  troyes: 'https://cdn.sportmonks.com/images/soccer/teams/7/7047.png',
   stetienne: 'https://upload.wikimedia.org/wikipedia/en/3/3c/AS_Saint-%C3%89tienne_logo.svg',
   sociedad: 'https://upload.wikimedia.org/wikipedia/en/f/f1/Real_Sociedad_logo.svg',
   getafe: 'https://upload.wikimedia.org/wikipedia/en/4/46/Getafe_CF_logo.svg',

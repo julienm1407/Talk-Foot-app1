@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useMatches } from '../contexts/MatchesContext'
 import { HubMatchStrip, HubRailRowLive } from '../components/match/HubMatchEncart'
 import { MatchSpotlightCard } from '../components/match/MatchSpotlightCard'
 import { Card } from '../components/ui/Card'
 import { HubEncartTopAccent } from '../components/ui/HubEncartTopAccent'
-import { themeForCompetition } from '../data/competitionThemes'
+import { competitionThemes, themeForCompetition } from '../data/competitionThemes'
 import type { Match } from '../types/match'
 import { cn } from '../utils/cn'
 import {
@@ -53,6 +53,7 @@ function groupMatchesByParisDay(matches: Match[], order: 'asc' | 'desc'): ParisD
 
 export function CalendarPage() {
   const now = Date.now()
+  const [searchParams] = useSearchParams()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { supporterTintActive, team } = useSupporterTintMode()
@@ -110,6 +111,14 @@ export function CalendarPage() {
   const [primaryTab, setPrimaryTab] = useState<'upcoming' | 'past'>('upcoming')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const resultsSectionRef = useRef<HTMLDivElement>(null)
+
+  const compFromUrl = searchParams.get('comp')?.trim() ?? ''
+  useEffect(() => {
+    if (!compFromUrl) return
+    if (compFromUrl === 'all' || competitionThemes[compFromUrl]) {
+      setCompetitionId(compFromUrl)
+    }
+  }, [compFromUrl])
 
   const poolFiltered = useMemo(() => {
     return competitionId === 'all'

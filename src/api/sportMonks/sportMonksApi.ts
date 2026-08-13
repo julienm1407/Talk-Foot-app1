@@ -405,6 +405,13 @@ export async function fetchSportMonksLeaguesByDate(token: string, dateYmd: strin
   })
 }
 
+/** Ligue + saisons (résolution id saison pour classements hors live). */
+export async function fetchSportMonksLeagueById(token: string, smLeagueId: number) {
+  return sportMonksFetchJson<{ data: unknown }>(`/leagues/${smLeagueId}`, token, {
+    include: 'currentSeason;seasons',
+  })
+}
+
 /**
  * Classement live par ligue — chemin officiel v3 : `…/live/leagues/{id}` (pluriel `leagues`).
  * @see https://docs.sportmonks.com/v3/endpoints-and-entities/endpoints/standings/get-live-standings-by-league-id

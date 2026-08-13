@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
-import { HubStripUpcoming } from '../match/HubMatchEncart'
 import { MatchSpotlightCard } from '../match/MatchSpotlightCard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
@@ -59,7 +58,7 @@ export function HomeUpcomingHero({
           {rest.length > 0 ? (
             <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3.5">
               {rest.map((m) => (
-                <HubStripUpcoming key={m.id} match={m} className="min-w-0" />
+                <MatchSpotlightCard key={m.id} match={m} density="grid" className="min-h-0 min-w-0" />
               ))}
             </div>
           ) : null}

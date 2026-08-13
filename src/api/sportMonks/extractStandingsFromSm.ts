@@ -512,7 +512,6 @@ export function extractLeagueStandingRowsFromSmTeamsSeasonEnvelope(
         ? Math.round(pointsFromStats)
         : Math.round(Math.max(0, won * 3 + drawn))
     if (!played && won + drawn + lost > 0) played = won + drawn + lost
-    if (!played) played = Math.max(1, won + drawn + lost)
     if (flat.length === 0 && !ov && points === 0 && won + drawn + lost === 0 && gf === 0 && (ga ?? 0) === 0)
       continue
 
@@ -600,7 +599,6 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
     const sumWdl = won + drawn + lost
     if (played > 0 && sumWdl > played) played = sumWdl
     if (!played && won + drawn + lost > 0) played = won + drawn + lost
-    if (!played) played = Math.max(1, won + drawn + lost)
 
     const form = parseForm(row.form)
 

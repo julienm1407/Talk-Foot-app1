@@ -70,6 +70,8 @@ const CLUBS = {
   metz: 'Metz',
   auxerre: 'Auxerre',
   angers: 'Angers',
+  lemans: 'Le Mans',
+  troyes: 'Troyes',
   stetienne: 'Saint-Étienne',
 }
 

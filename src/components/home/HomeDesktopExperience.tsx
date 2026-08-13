@@ -347,7 +347,7 @@ export function HomeDesktopExperience({
               {headerUpcomingPrimary.length > 1 ? (
                 <div className="mx-auto grid w-full min-w-0 max-w-3xl auto-rows-auto grid-cols-1 items-start gap-4 sm:grid-cols-2 sm:gap-4">
                   {headerUpcomingPrimary.slice(1).map((m) => (
-                    <HubStripUpcoming key={m.id} match={m} visualSize="hubCard" className="h-auto self-start" />
+                    <MatchSpotlightCard key={m.id} match={m} density="grid" className="h-auto min-h-0 self-start" />
                   ))}
                 </div>
               ) : null}
