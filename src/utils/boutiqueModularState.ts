@@ -22,6 +22,8 @@ export function modularJerseyId(item: AvatarItem): string | null {
   if (item.nationIso) return `jerseys-jersey-${item.nationIso.toLowerCase()}`
   const base = item.id.match(/^kit-base-(.+)$/)?.[1]
   if (base) return `jerseys-jersey-base-${base}`
+  const club = item.id.match(/^club-([a-z0-9-]+)$/)?.[1]
+  if (club) return `jerseys-jersey-club-${club}`
   const cdm = item.id.match(/^cdm2026-(?!short-|pack-)([a-z]+)$/)?.[1]
   if (cdm) return `jerseys-jersey-${cdm}`
   return null

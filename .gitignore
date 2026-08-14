@@ -42,3 +42,7 @@ DerivedData/
 
 # Fichiers HTML de test / preview locaux (Rive, etc.)
 .tmp-rive-*.html
+
+# Import temporaire maillots (zip décompressé)
+_import_club_kits/
+_import_club_kits_v2/

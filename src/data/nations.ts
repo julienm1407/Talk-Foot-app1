@@ -44,7 +44,7 @@ export type Nation = {
  * maillots restent en cache (le chemin de fichier ne change pas, on importe
  * juste un nouveau binaire). Bump cette constante à chaque import majeur.
  */
-const KIT_ASSET_VERSION = '2026-06-17a'
+const KIT_ASSET_VERSION = '2026-08-14b'
 function jersey(iso: string): string {
   return `/jerseys/nations/${iso.toLowerCase()}.png?v=${KIT_ASSET_VERSION}`
 }

@@ -2,6 +2,7 @@ import type { AvatarItem } from '../types/profile'
 import { cdm2026BundleItems } from '../data/cdm2026Bundles'
 import { cdm2026JerseyItems } from '../data/cdm2026Jerseys'
 import { cdm2026ShortItems } from '../data/cdm2026Shorts'
+import { clubJerseyItems } from '../data/clubJerseys'
 import { boutiqueShoeItems } from '../data/boutiqueShoes'
 
 export type CatalogFilter = 'jerseys' | 'shorts' | 'packs' | 'shoes'
@@ -11,6 +12,7 @@ export type CatalogSort = 'name_asc' | 'price_medals_asc' | 'price_medals_desc'
 export type CatalogRow = { kind: 'cosmetic'; item: AvatarItem }
 
 export const BOUTIQUE_CATALOG_ITEMS: AvatarItem[] = [
+  ...clubJerseyItems,
   ...cdm2026JerseyItems,
   ...cdm2026ShortItems,
   ...cdm2026BundleItems,

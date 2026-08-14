@@ -44,6 +44,8 @@ export function shopItemIdFromModularAsset(
   if (category === 'jerseys') {
     const base = modularAssetId.match(/^jerseys-jersey-base-(.+)$/)
     if (base) return `kit-base-${base[1]}`
+    const club = modularAssetId.match(/^jerseys-jersey-club-([a-z0-9-]+)$/)
+    if (club) return `club-${club[1]}`
     const nation = modularAssetId.match(/^jerseys-jersey-([a-z]{3})$/)
     if (nation) return `cdm2026-${nation[1]}`
     return null

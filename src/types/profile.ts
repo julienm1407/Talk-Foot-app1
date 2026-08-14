@@ -53,9 +53,11 @@ export type AvatarItem = {
   /** Texte neutre du type d’inspiration (sans marque) */
   inspirationNote?: string
   /** Collection — utilisée pour filtrer la boutique (mode CDM 2026, etc.) */
-  collection?: 'standard' | 'cdm2026'
+  collection?: 'standard' | 'cdm2026' | 'clubs'
   /** Code nation ISO (alpha-3) si l’item est rattaché à une sélection nationale. */
   nationIso?: string
+  /** Id club (`teams.ts`) pour les maillots championnats. */
+  clubId?: string
   /** Pack boutique : débloque ces `id` d’articles à l’achat (maillot + short, etc.). */
   bundleIncludes?: string[]
   /** Visuel pack unique (maillot + short sur une seule image). */
