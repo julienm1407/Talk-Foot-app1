@@ -1,4 +1,5 @@
 import type { Bet } from '../types/bet'
+import { buildCdmBetaBadge } from './cdmBetaParticipant'
 
 export type PronoHubStats = {
   total: number
@@ -57,8 +58,16 @@ export function computePronoHubStats(bets: Bet[]): PronoHubStats {
   return { total, decided: decided.length, won, accuracy, points, streak, fav }
 }
 
-export function buildPronoBadges(stats: PronoHubStats, light: boolean): PronoBadge[] {
+export function buildPronoBadges(
+  stats: PronoHubStats,
+  light: boolean,
+  opts?: { cdmBetaParticipant?: boolean },
+): PronoBadge[] {
   const b: PronoBadge[] = []
+
+  if (opts?.cdmBetaParticipant) {
+    b.push(buildCdmBetaBadge(light))
+  }
 
   if (stats.total >= 5) {
     b.push({

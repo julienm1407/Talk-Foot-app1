@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { BottomNav } from './BottomNav'
 import { TopBar } from './TopBar'
@@ -42,6 +43,14 @@ export function AppShell() {
     enabled: !isChannel && !isGroupTribune,
     order: ['/', '/match', '/groups'],
   })
+
+  /** Onglet Match fréquent : précharger le chunk avant la navigation pour éviter PageLoader long. */
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      void import('../pages/Calendar')
+    }, 800)
+    return () => window.clearTimeout(id)
+  }, [])
 
   return (
     <>

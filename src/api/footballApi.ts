@@ -37,7 +37,7 @@ export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
   2286: 'uel',
   1371: 'uecl',
   271: 'uecl',
-  5: 'wc-2026',
+  /** Coupe du Monde 2026 — ne pas mapper l’ancien id SM `5` (qualifs européennes chez SM). */
   732: 'wc-2026',
 }
 

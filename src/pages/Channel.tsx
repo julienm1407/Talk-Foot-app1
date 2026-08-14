@@ -810,6 +810,78 @@ function ChannelLiveStatBar({
   )
 }
 
+function ChannelPitchStatsStrip({
+  dangerousLeader,
+  livePitchPressure,
+  possessionRow,
+  possessionRatioHome,
+  pitchStatPills,
+}: {
+  dangerousLeader: 'home' | 'away' | 'equal'
+  livePitchPressure: { dh: number; da: number; homeRatio: number }
+  possessionRow: { home: number; away: number } | null
+  possessionRatioHome: number | null
+  pitchStatPills: Array<{ label: string; home: number; away: number }>
+}) {
+  return (
+    <div className="tf-live-tactical-strip mb-1.5 shrink-0 space-y-1.5">
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <p className="text-[9px] font-bold uppercase tracking-wide text-sky-200/90">
+          {dangerousLeader === 'home'
+            ? 'Pression · domicile'
+            : dangerousLeader === 'away'
+              ? 'Pression · extérieur'
+              : 'Équilibre offensif'}
+        </p>
+        <span className="shrink-0 text-[9px] font-black tabular-nums text-sky-50">
+          {livePitchPressure.dh} – {livePitchPressure.da}
+        </span>
+      </div>
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/35">
+        <div
+          className="absolute inset-y-0 left-0 rounded-l-full bg-gradient-to-r from-emerald-500/95 to-emerald-400/75 transition-[width] duration-700 ease-out"
+          style={{ width: `${livePitchPressure.homeRatio * 100}%` }}
+        />
+        <div
+          className="absolute inset-y-0 right-0 rounded-r-full bg-gradient-to-l from-rose-500/95 to-rose-400/75 transition-[width] duration-700 ease-out"
+          style={{ width: `${(1 - livePitchPressure.homeRatio) * 100}%` }}
+        />
+      </div>
+      {possessionRow && possessionRatioHome != null ? (
+        <div className="space-y-0.5 px-0.5">
+          <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-wide text-sky-100">
+            <span>Possession</span>
+            <span className="tabular-nums text-sky-50">
+              {Math.round(possessionRow.home)}% – {Math.round(possessionRow.away)}%
+            </span>
+          </div>
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/40 ring-1 ring-white/10">
+            <div
+              className="absolute inset-y-0 left-0 rounded-l-full bg-sky-400/90 transition-[width] duration-700"
+              style={{ width: `${possessionRatioHome * 100}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+      {pitchStatPills.length > 0 ? (
+        <div className="-mx-0.5 flex max-w-full gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+          {pitchStatPills.map((row) => (
+            <span
+              key={row.label}
+              className="tf-live-stat-pill shrink-0 rounded-md border border-white/18 bg-[#0a1828]/95 px-2.5 py-1 text-[10px] font-black text-sky-50 shadow-sm"
+            >
+              <span className="text-sky-200">{row.label}</span>{' '}
+              <span className="tabular-nums text-white">{row.home}</span>
+              <span className="text-sky-400/75">-</span>
+              <span className="tabular-nums text-white">{row.away}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function MatchRow({
   home,
   away,
@@ -1345,7 +1417,7 @@ export function ChannelPage() {
   const channelDesktopGrid = showMobileChannelChrome ? CHANNEL_TOUCH_GRID : CHANNEL_DESKTOP_GRID
   const betCardRef = useRef<HTMLDivElement | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
-  const [desktopFeedTab, setDesktopFeedTab] = useState<'actions' | 'classement'>('actions')
+  const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'actions' | 'classement'>('actions')
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
   const [paidFxLayers, setPaidFxLayers] = useState<PaidFxLayer[]>([])
@@ -3333,16 +3405,22 @@ export function ChannelPage() {
             <>
               <Card className="tf-card-prematch !p-3.5">
                 <div className="flex items-center justify-between gap-2">
-                  <SectionTitle>Avant-match</SectionTitle>
+                  <SectionTitle>
+                    {status === 'finished' ? 'Stats finales' : status === 'live' ? 'Stats live' : 'Avant-match'}
+                  </SectionTitle>
                   {status === 'live' ? (
                     <span className="shrink-0 rounded-lg border border-rose-400/60 bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-100">
                       En direct
                     </span>
+                  ) : status === 'finished' ? (
+                    <span className="shrink-0 rounded-lg border border-sky-400/45 bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-100">
+                      Terminé
+                    </span>
                   ) : null}
                 </div>
                 <div className="mt-2.5 space-y-2">
-                  {status === 'live' && tacticalRows.length > 0 ? (
-                    tacticalRows.slice(0, 4).map((row) => (
+                  {(status === 'live' || status === 'finished') && tacticalRows.length > 0 ? (
+                    tacticalRows.slice(0, 6).map((row) => (
                       <div
                         key={`prematch-live-${row.label}`}
                         className="flex items-center justify-between gap-2 rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2 text-xs"
@@ -3354,9 +3432,15 @@ export function ChannelPage() {
                         <span className="font-bold text-white">{row.away}</span>
                       </div>
                     ))
+                  ) : liveStatsLoading && (status === 'live' || status === 'finished') ? (
+                    <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2.5 text-center text-xs font-semibold text-sky-100">
+                      Chargement des stats…
+                    </div>
                   ) : (
                     <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2.5 text-center text-xs font-semibold text-sky-100">
-                      Aucune stat exploitable pour le moment.
+                      {status === 'finished'
+                        ? 'Stats finales indisponibles pour ce match.'
+                        : 'Aucune stat exploitable pour le moment.'}
                     </div>
                   )}
                 </div>
@@ -3899,88 +3983,61 @@ export function ChannelPage() {
           <Card className="tf-card-live shrink-0 md:min-h-[140px] md:max-h-[min(260px,34vh)] md:overflow-hidden">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:justify-between md:gap-2">
-              <SectionTitle>Live</SectionTitle>
+              <SectionTitle>{status === 'finished' ? 'Résumé' : 'Live'}</SectionTitle>
               <div className="tf-live-soft-surface min-w-0 w-full rounded-md bg-[#122940] px-2 py-1 text-[10px] text-sky-100/90 md:w-[90%]">
                 {latestHighlight ? (
                   <span className="block truncate font-semibold">
                     {highlightMinuteLabel(latestHighlight)} {latestHighlightText}
                   </span>
                 ) : (
-                  <span className="block truncate font-semibold text-sky-200/70">Moments forts en attente...</span>
+                  <span className="block truncate font-semibold text-sky-200/70">
+                    {status === 'finished' ? 'Match terminé — stats finales ci-dessous' : 'Moments forts en attente...'}
+                  </span>
                 )}
               </div>
             </div>
-            {status === 'live' ? (
+            {status === 'live' || (isFinished && (tacticalRows.length > 0 || liveStatsLoading)) ? (
               <div className="tf-live-pitch-shell mt-2 flex max-h-[min(260px,36vh)] min-h-0 shrink-0 flex-col overflow-hidden rounded-lg bg-[#101c2a] p-2">
-                <div className="tf-live-tactical-strip mb-1.5 shrink-0 space-y-1.5">
-                  <div className="flex items-center justify-between gap-2 px-0.5">
-                    <p className="text-[9px] font-bold uppercase tracking-wide text-sky-200/90">
-                      {dangerousLeader === 'home'
-                        ? 'Pression · domicile'
-                        : dangerousLeader === 'away'
-                          ? 'Pression · extérieur'
-                          : 'Équilibre offensif'}
-                    </p>
-                    <span className="shrink-0 text-[9px] font-black tabular-nums text-sky-50">
-                      {livePitchPressure.dh} – {livePitchPressure.da}
-                    </span>
-                  </div>
-                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/35">
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-l-full bg-gradient-to-r from-emerald-500/95 to-emerald-400/75 transition-[width] duration-700 ease-out"
-                      style={{ width: `${livePitchPressure.homeRatio * 100}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 right-0 rounded-r-full bg-gradient-to-l from-rose-500/95 to-rose-400/75 transition-[width] duration-700 ease-out"
-                      style={{ width: `${(1 - livePitchPressure.homeRatio) * 100}%` }}
+                {isFinished ? (
+                  <div className="mb-1.5 flex shrink-0 items-center justify-center gap-2 rounded-lg border border-[#3a6690]/55 bg-[#0f2740]/85 px-3 py-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-sky-200/80">Score final</span>
+                    <MatchResultScore
+                      home={homeScore}
+                      away={awayScore}
+                      penaltyScore={penaltyScore}
+                      size="sm"
+                      scoreClassName="text-sky-50"
+                      penaltyClassName="text-sky-200/75"
                     />
                   </div>
-                  {possessionRow && possessionRatioHome != null ? (
-                    <div className="space-y-0.5 px-0.5">
-                      <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-wide text-sky-100">
-                        <span>Possession</span>
-                        <span className="tabular-nums text-sky-50">
-                          {Math.round(possessionRow.home)}% – {Math.round(possessionRow.away)}%
-                        </span>
-                      </div>
-                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/40 ring-1 ring-white/10">
-                        <div
-                          className="absolute inset-y-0 left-0 rounded-l-full bg-sky-400/90 transition-[width] duration-700"
-                          style={{ width: `${possessionRatioHome * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                  {pitchStatPills.length > 0 ? (
-                    <div className="-mx-0.5 flex max-w-full gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-                      {pitchStatPills.map((row) => (
-                        <span
-                          key={row.label}
-                          className="tf-live-stat-pill shrink-0 rounded-md border border-white/18 bg-[#0a1828]/95 px-2.5 py-1 text-[10px] font-black text-sky-50 shadow-sm"
-                        >
-                          <span className="text-sky-200">{row.label}</span>{' '}
-                          <span className="tabular-nums text-white">{row.home}</span>
-                          <span className="text-sky-400/75">-</span>
-                          <span className="tabular-nums text-white">{row.away}</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <LivePitchActionBanner
-                  highlight={latestHighlight}
-                  highlightText={latestHighlightText}
-                  detectSide={detectHighlightSide}
-                  dangerousLeader={dangerousLeader}
-                  dangerousDelta={dangerousDelta}
-                  homeLabel={homeHeaderLabel}
-                  awayLabel={awayHeaderLabel}
-                  homeColor={homeColor}
-                  awayColor={awayColor}
-                  pitchPressureTint={pitchPressureTint}
-                  liveClockPaused={matchForClock?.liveClockPaused}
-                  liveInSecondHalf={matchForClock?.liveInSecondHalf}
-                />
+                ) : null}
+                {liveStatsLoading && tacticalRows.length === 0 ? (
+                  <p className="py-4 text-center text-[11px] font-semibold text-sky-200/80">Chargement des stats…</p>
+                ) : (
+                  <ChannelPitchStatsStrip
+                    dangerousLeader={dangerousLeader}
+                    livePitchPressure={livePitchPressure}
+                    possessionRow={possessionRow}
+                    possessionRatioHome={possessionRatioHome}
+                    pitchStatPills={pitchStatPills}
+                  />
+                )}
+                {status === 'live' ? (
+                  <LivePitchActionBanner
+                    highlight={latestHighlight}
+                    highlightText={latestHighlightText}
+                    detectSide={detectHighlightSide}
+                    dangerousLeader={dangerousLeader}
+                    dangerousDelta={dangerousDelta}
+                    homeLabel={homeHeaderLabel}
+                    awayLabel={awayHeaderLabel}
+                    homeColor={homeColor}
+                    awayColor={awayColor}
+                    pitchPressureTint={pitchPressureTint}
+                    liveClockPaused={matchForClock?.liveClockPaused}
+                    liveInSecondHalf={matchForClock?.liveInSecondHalf}
+                  />
+                ) : null}
               </div>
             ) : isFinished ? (
               <div className="tf-live-pitch-shell mt-2 flex min-h-0 flex-1 flex-col justify-center rounded-lg bg-[#101c2a] p-3">
@@ -3995,7 +4052,7 @@ export function ChannelPage() {
                     penaltyClassName="text-sky-200/75"
                   />
                   <p className="mt-1 text-[11px] font-semibold text-sky-200/75">
-                    Statistiques finales disponibles dans les panneaux du match.
+                    Stats finales indisponibles pour ce match (plan SportMonks ou données absentes).
                   </p>
                 </div>
               </div>
@@ -4026,6 +4083,17 @@ export function ChannelPage() {
                 <div className="inline-flex rounded-md bg-[#0a1f35]/80 p-0.5">
                   <button
                     type="button"
+                    onClick={() => setDesktopFeedTab('stats')}
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
+                      desktopFeedTab === 'stats'
+                        ? 'bg-sky-300/25 text-sky-50'
+                        : 'text-sky-200/70 hover:text-sky-50'
+                    }`}
+                  >
+                    Stats
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setDesktopFeedTab('actions')}
                     className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
                       desktopFeedTab === 'actions'
@@ -4049,7 +4117,23 @@ export function ChannelPage() {
                 </div>
               </div>
               <div className="max-h-[min(320px,36vh)] overflow-y-auto pr-0.5 [scrollbar-width:thin]">
-                {desktopFeedTab === 'actions' ? (
+                {desktopFeedTab === 'stats' ? (
+                  <div className="space-y-2">
+                    {liveStatsLoading && mobileStatRows.length === 0 ? (
+                      <p className="rounded-lg border border-white/10 bg-[#0a1f35]/70 px-3 py-2 text-center text-[11px] font-semibold text-sky-200/80">
+                        Chargement des stats…
+                      </p>
+                    ) : null}
+                    {mobileStatRows.map((row, i) => (
+                      <ChannelLiveStatBar key={`desktop-stat-${row.key ?? i}`} row={row} />
+                    ))}
+                    {!liveStatsLoading && mobileStatRows.length === 0 ? (
+                      <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-[11px] font-semibold text-amber-100/90">
+                        Stats SportMonks indisponibles pour ce match.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : desktopFeedTab === 'actions' ? (
                   <MatchHighlights
                     items={smTimelineHighlights}
                     activeId={latestHighlight?.id}

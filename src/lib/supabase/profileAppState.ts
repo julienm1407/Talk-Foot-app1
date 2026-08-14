@@ -23,6 +23,7 @@ export type TalkfootPublicProfileRow = {
   modularAvatar: unknown
   profilePhotoDataUrl: string | null
   subscriptionTier: SubscriptionTierId | null
+  cdmBetaParticipant: boolean
 }
 
 export async function fetchTalkfootPublicProfiles(
@@ -52,6 +53,7 @@ export async function fetchTalkfootPublicProfiles(
       profilePhotoDataUrl:
         profilePhotoRaw?.trim().startsWith('data:image/') ? profilePhotoRaw.trim() : null,
       subscriptionTier: parsePublicSubscriptionTier(row.subscription_tier),
+      cdmBetaParticipant: row.cdm_beta_participant === true,
     })
   }
   return out

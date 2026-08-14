@@ -58,6 +58,11 @@ function nationForTeam(team: Team) {
   return findNationByName(team.name) ?? findNationByName(team.shortName)
 }
 
+/** Sélection nationale reconnue (Coupe du Monde) — pas un club. */
+export function isWcNationTeam(team: Team): boolean {
+  return nationForTeam(team) != null
+}
+
 /** Libellé affiché : nom FR pour les sélections CDM quand connues. */
 export function resolveTeamDisplayName(team: Team, competitionId?: string | null): string {
   if (isWorldCupCompetitionId(competitionId)) {
@@ -104,7 +109,8 @@ export function resolveSpotlightTeamColors(
   pairOffset = 0,
 ): SideColors {
   const base = resolveTeamColors(team, competitionId)
-  if (isWorldCupCompetitionId(competitionId) || !isBlandClubColors(base)) return base
+  if (isWorldCupCompetitionId(competitionId) && isWcNationTeam(team)) return base
+  if (!isBlandClubColors(base)) return base
   return paletteForClubSeed(teamColorSeed(team), pairOffset)
 }
 

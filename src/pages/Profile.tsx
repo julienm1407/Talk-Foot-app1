@@ -19,6 +19,7 @@ import { useWallet } from '../hooks/useWallet'
 import { useSubscription } from '../hooks/useSubscription'
 import { VerifiedBadge } from '../components/subscription/VerifiedBadge'
 import { AmbassadorBadge } from '../components/subscription/AmbassadorBadge'
+import { CdmBetaBadge } from '../components/profile/CdmBetaBadge'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { competitionThemes } from '../data/competitionThemes'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
@@ -140,11 +141,13 @@ export function ProfilePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <DisplayNameEditor />
+            {profile.cdmBetaParticipant ? <CdmBetaBadge /> : null}
             {hasVerifiedBadge ? <VerifiedBadge /> : null}
             {hasAmbassadorStatus ? <AmbassadorBadge /> : null}
           </div>
           <p className="text-sm font-semibold text-tf-app-muted">
             {subPlan.name}
+            {profile.cdmBetaParticipant ? ' · beta CDM 2026' : ''}
             {hasAmbassadorStatus ? ' · Ambassadeur' : hasVerifiedBadge ? ' · compte vérifié' : ''} — visible sur le
             live et les tribunes.
           </p>

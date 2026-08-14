@@ -10,6 +10,7 @@ import { UserProfileAvatar } from '../components/profile/UserProfileAvatar'
 import { FriendPronosticsPanel } from '../components/social/FriendPronosticsPanel'
 import { ProfilePronoStatsSection } from '../components/profile/ProfilePronoStatsSection'
 import { ProfileIdentitySection } from '../components/profile/ProfileIdentitySection'
+import { CdmBetaBadge } from '../components/profile/CdmBetaBadge'
 import { usePublicProfileIdentity } from '../hooks/useProfileIdentity'
 import { useFriendPronostics } from '../hooks/useFriendPronostics'
 import { usePublicBettorStats, usePronoStatsFromBets } from '../hooks/usePublicBettorStats'
@@ -70,10 +71,12 @@ export function UserProfilePage() {
 
   const publicBettorStats = usePublicBettorStats(
     peer && !peer.isTalkFootBot && isSupabaseConfigured() ? peer.id : null,
+    { cdmBetaParticipant: cloudProfile?.cdmBetaParticipant },
   )
   const friendBettorStats = usePronoStatsFromBets(
     friendPronostics.bets,
     canViewFriendPronostics && friendPronostics.loading,
+    { cdmBetaParticipant: cloudProfile?.cdmBetaParticipant },
   )
   const peerPronoStats =
     canViewFriendPronostics && friendPronostics.bets.length > 0 ? friendBettorStats : publicBettorStats
@@ -208,6 +211,7 @@ export function UserProfilePage() {
                     displayUsername
                   )}
                 </h1>
+                {cloudProfile?.cdmBetaParticipant ? <CdmBetaBadge /> : null}
                 {peer.isTalkFootBot ? (
                   <span
                     className={cn(

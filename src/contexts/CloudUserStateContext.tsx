@@ -63,6 +63,13 @@ function withReconciledBetTokens(app: UserAppStateV1): {
   return reconcileBetTokenCredits(app, betTokenMultiplier(tier))
 }
 
+function rawProfileHadCdmBeta(appState: unknown): boolean {
+  if (appState === null || typeof appState !== 'object' || Array.isArray(appState)) return false
+  const profile = (appState as Record<string, unknown>).profile
+  if (profile === null || typeof profile !== 'object' || Array.isArray(profile)) return false
+  return (profile as Record<string, unknown>).cdmBetaParticipant === true
+}
+
 type CloudUserStateValue = {
   /** Profil cloud chargé (évite d’écraser le serveur avant hydratation). */
   syncReady: boolean
@@ -333,7 +340,11 @@ function CloudUserStateLoader({
         }
         const sessionAvatar = resolveModularAvatarState(appRef.current.profile.modularAvatar)
         const rawModularAvatar = extractStoredModularAvatar(appState)
+        const hadCdmBeta = rawProfileHadCdmBeta(appState)
         let merged = mergeUserAppState(appState)
+        if (!hadCdmBeta && merged.profile.cdmBetaParticipant) {
+          hasLocalEditsRef.current = true
+        }
         if (wouldDowngradeModularAvatar(rawModularAvatar, merged.profile.modularAvatar)) {
           const coerced = coerceModularAvatarFromStored(rawModularAvatar)
           if (coerced) {

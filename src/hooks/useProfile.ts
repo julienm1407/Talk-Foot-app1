@@ -32,6 +32,7 @@ import {
 } from '../utils/modularAvatarBackup'
 import { XP_REWARDS } from '../data/xpRewards'
 import { isXpEventCredited, markXpEventCredited, xpDedupeKey } from '../utils/xpGrant'
+import { withCdmBetaParticipant } from '../utils/cdmBetaParticipant'
 
 function catalogItemOwned(itemId: string, ownedItemIds: string[]): boolean {
   return isBoutiqueShopItemOwned(itemId, ownedItemIds)
@@ -171,6 +172,14 @@ export function useProfile() {
   useEffect(() => {
     if (!authUser?.id) backupSyncRef.current = false
   }, [authUser?.id])
+
+  useEffect(() => {
+    if (cloud !== undefined) return
+    const next = withCdmBetaParticipant(localProfile)
+    if (next.cdmBetaParticipant && !localProfile.cdmBetaParticipant) {
+      setLocalProfileRaw(next)
+    }
+  }, [cloud, localProfile, setLocalProfileRaw])
 
   const scheduleProfileCloudFlush = useCallback(() => {
     if (!cloud) return

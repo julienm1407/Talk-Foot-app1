@@ -55,6 +55,7 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
           ...base,
           ...(modular ? { modularAvatar: modular } : {}),
           ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
+          cdmBetaParticipant: row?.cdmBetaParticipant === true,
         })
       })
       .catch(() => {

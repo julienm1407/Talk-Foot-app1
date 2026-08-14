@@ -13,6 +13,7 @@ import {
   sanitizeModularAvatarState,
   resolveModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
+import { withCdmBetaParticipant } from '../utils/cdmBetaParticipant'
 
 export const defaultUserProfile: UserProfile = {
   level: 1,
@@ -80,12 +81,12 @@ export function mergeUserAppState(raw: unknown): UserAppStateV1 {
             const modularAvatar =
               modularFromCloud ??
               sanitizeModularAvatarState(resolveModularAvatarState(base.profile.modularAvatar))
-            return {
+            return withCdmBetaParticipant({
               ...base.profile,
               ...incoming,
               characterLook: mergeCharacterLook(incoming.characterLook ?? base.profile.characterLook),
               modularAvatar,
-            }
+            })
           })()
         : base.profile,
     wallet: normalizeWallet(

@@ -4,7 +4,7 @@ import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { findNationByName } from '../../data/nations'
 import { teams, teamColors } from '../../data/teams'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
-import { localizeMatchTeams } from '../../utils/matchSideColors'
+import { localizeMatchTeams, resolveSpotlightTeamColors } from '../../utils/matchSideColors'
 import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventMinute'
 import { extractRegulationGoalsFromScores, extractPenaltyShootoutFromScores } from '../../utils/matchRegulationScore'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
@@ -447,12 +447,17 @@ function getTeam(
     }
   }
   if (!compTeams) {
-    return {
+    const shortName = apiName.slice(0, 3).toUpperCase()
+    const stub: Team = {
       id: ourId,
       name: apiName,
-      shortName: apiName.slice(0, 3).toUpperCase(),
+      shortName,
       colors: { primary: '#111827', secondary: '#f9fafb' },
       ...sm,
+    }
+    return {
+      ...stub,
+      colors: resolveSpotlightTeamColors(stub, compId, 0),
     }
   }
   const t = compTeams.find((x) => x.id === ourId)

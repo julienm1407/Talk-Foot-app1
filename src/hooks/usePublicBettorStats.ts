@@ -12,7 +12,10 @@ import type { Bet } from '../types/bet'
 import { useAppearance } from '../contexts/AppearanceContext'
 
 /** Stats badges / progression pour un profil tiers (RPC cloud). */
-export function usePublicBettorStats(actorKey: string | null | undefined) {
+export function usePublicBettorStats(
+  actorKey: string | null | undefined,
+  opts?: { cdmBetaParticipant?: boolean },
+) {
   const [stats, setStats] = useState<PronoHubStats | null>(null)
   const [loading, setLoading] = useState(false)
   const { appearance } = useAppearance()
@@ -60,15 +63,19 @@ export function usePublicBettorStats(actorKey: string | null | undefined) {
     () => ({
       loading,
       stats: hub,
-      badges: buildPronoBadges(hub, L),
+      badges: buildPronoBadges(hub, L, { cdmBetaParticipant: opts?.cdmBetaParticipant }),
       progress: buildPronoProgress(hub),
     }),
-    [hub, L, loading],
+    [hub, L, loading, opts?.cdmBetaParticipant],
   )
 }
 
 /** Réutilise des paris déjà chargés (ex. amis) sans second appel RPC. */
-export function usePronoStatsFromBets(bets: Bet[], loading = false) {
+export function usePronoStatsFromBets(
+  bets: Bet[],
+  loading = false,
+  opts?: { cdmBetaParticipant?: boolean },
+) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
 
@@ -77,8 +84,8 @@ export function usePronoStatsFromBets(bets: Bet[], loading = false) {
     return {
       loading,
       stats,
-      badges: buildPronoBadges(stats, L),
+      badges: buildPronoBadges(stats, L, { cdmBetaParticipant: opts?.cdmBetaParticipant }),
       progress: buildPronoProgress(stats),
     }
-  }, [bets, L, loading])
+  }, [bets, L, loading, opts?.cdmBetaParticipant])
 }

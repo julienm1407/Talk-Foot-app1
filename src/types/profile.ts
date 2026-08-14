@@ -196,6 +196,8 @@ export type UserProfile = {
   }
   /** Créateur avatar modulaire (PNG) — source de vérité pour la vignette tête profil. */
   modularAvatar?: ModularAvatarState
+  /** Badge « Beta CDM 2026 » — comptes inscrits pendant la beta Coupe du Monde. */
+  cdmBetaParticipant?: boolean
   premiumInventory?: {
     ownedItemIds: string[]
     equippedByCategory: { kit?: string; accessory?: string }
