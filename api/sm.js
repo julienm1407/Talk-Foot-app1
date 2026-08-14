@@ -3,7 +3,11 @@
  * Le client appelle GET /api/sm?__sm_path=/fixtures/inplay&include=…
  * La clé API est lue ici : SPORTMONKS_TOKEN ou VITE_SPORTMONKS_TOKEN (Project → Environment Variables).
  */
+import { handleCapacitorCors } from './corsCapacitor.js'
+
 export default async function handler(req, res) {
+  if (handleCapacitorCors(req, res)) return
+
   const token = String(process.env.SPORTMONKS_TOKEN || process.env.VITE_SPORTMONKS_TOKEN || '').trim()
   if (!token) {
     res.statusCode = 503

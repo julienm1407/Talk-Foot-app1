@@ -8,6 +8,8 @@
  *   GET /api/live-bundle?fixtureId=12345
  */
 
+import { handleCapacitorCors } from './corsCapacitor.js'
+
 const INFLIGHT = new Map()
 const MEM_CACHE = new Map()
 
@@ -125,6 +127,8 @@ async function loadLiveBundle(token, fixtureId) {
 }
 
 export default async function handler(req, res) {
+  if (handleCapacitorCors(req, res)) return
+
   if (req.method !== 'GET') {
     res.statusCode = 405
     res.setHeader('Allow', 'GET')

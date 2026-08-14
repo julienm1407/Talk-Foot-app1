@@ -1,4 +1,5 @@
 import { TF_SM_SERVER_RELAY_PLACEHOLDER } from '../../utils/apiTokens'
+import { getTalkFootApiOrigin } from '../../utils/sportMonksRelayOrigin'
 import { LS_KEY_SPORTMONKS_TOKEN } from '../../constants/apiKeysStorage'
 import { sortSearchParamsForStableCaching } from '../../utils/sportMonksRequestUtils'
 
@@ -23,12 +24,7 @@ function buildSmRequestUrl(
 ): URL {
   let u: URL
   if (viaServerRelay) {
-    const o =
-      typeof globalThis !== 'undefined' && 'location' in globalThis
-        ? (globalThis as { location?: { origin?: string } }).location?.origin
-        : undefined
-    if (!o) throw new Error('Relais SportMonks : origine du site indisponible')
-    u = new URL(`${o}/api/sm`)
+    u = new URL(`${getTalkFootApiOrigin()}/api/sm`)
     u.searchParams.set('__sm_path', pathWithLeadingSlash)
   } else {
     u = new URL(sportMonksRequestHref(pathWithLeadingSlash))

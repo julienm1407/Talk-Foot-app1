@@ -18,6 +18,30 @@ export function catalogTabForShopItem(item: AvatarItem): CatalogFilter {
   return 'jerseys'
 }
 
+/** URL boutique médailles avec contexte d’achat (article + retour catalogue). */
+export function boutiqueMedalPacksHref(item: AvatarItem, returnTo?: string): string {
+  const tab = catalogTabForShopItem(item)
+  const ret = returnTo ?? `/boutique?tab=${tab}`
+  const params = new URLSearchParams({
+    need: String(getEffectiveMedalCost(item)),
+    item: item.id,
+    return: ret,
+  })
+  return `/boutique/medailles?${params.toString()}`
+}
+
+export function canAffordCosmeticWithMedals(item: AvatarItem, walletMedals: number): boolean {
+  return walletMedals >= getEffectiveMedalCost(item)
+}
+
+export function canAffordCosmeticWithTokens(item: AvatarItem, walletTokens: number): boolean {
+  return walletTokens >= getEffectiveTokenCost(item)
+}
+
+export function canAffordCosmetic(item: AvatarItem, walletMedals: number, walletTokens: number): boolean {
+  return canAffordCosmeticWithMedals(item, walletMedals) || canAffordCosmeticWithTokens(item, walletTokens)
+}
+
 export function rememberRecentStudioAsset(modularAssetId: string) {
   try {
     sessionStorage.setItem(RECENT_STUDIO_ASSET_KEY, modularAssetId)

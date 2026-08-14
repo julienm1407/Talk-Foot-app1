@@ -3,6 +3,7 @@ import {
   type SportMonksListEnvelope,
   sportMonksPaginationHasMore,
 } from './client'
+import { getTalkFootApiOrigin } from '../../utils/sportMonksRelayOrigin'
 import {
   SM_INCLUDE_FIXTURE_EVENTS_COMMENTS,
   SM_INCLUDE_FIXTURE_EVENTS_TIMELINE,
@@ -268,13 +269,11 @@ export async function fetchTalkFootLiveBundleFixture(
   let p = liveBundleInflight.get(fixtureId)
   if (!p) {
     p = (async () => {
-      const origin =
-        typeof globalThis !== 'undefined' && 'location' in globalThis
-          ? (globalThis as { location?: { origin?: string } }).location?.origin
-          : undefined
-      if (!origin) return null
       try {
-        const res = await fetch(`${origin}/api/live-bundle?fixtureId=${fixtureId}`, { cache: 'no-store' })
+        const res = await fetch(
+          `${getTalkFootApiOrigin()}/api/live-bundle?fixtureId=${fixtureId}`,
+          { cache: 'no-store' },
+        )
         if (!res.ok) return null
         const body = (await res.json()) as { fixture?: unknown }
         const fx = body?.fixture

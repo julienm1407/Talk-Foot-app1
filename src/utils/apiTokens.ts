@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { API_TOKENS_CHANGED_EVENT, LS_KEY_SPORTMONKS_TOKEN } from '../constants/apiKeysStorage'
 
 /** Valeur sentinelle : `sportMonksFetchJson` appelle `/api/sm` (Vercel) qui ajoute la clé côté serveur. */
@@ -6,6 +7,11 @@ export const TF_SM_SERVER_RELAY_PLACEHOLDER = '\0tf-sm-server-relay\0'
 function trimOrUndef(s: string | undefined | null): string | undefined {
   const t = s?.trim()
   return t || undefined
+}
+
+/** APK/IPA prod : toujours le relais serveur (jamais de clé embarquée / localStorage). */
+function isNativeProdRelay(): boolean {
+  return Capacitor.isNativePlatform() && import.meta.env.PROD
 }
 
 /** D’où vient le jeton utilisé pour les `fetch` vers api.sportmonks.com. */
@@ -18,6 +24,7 @@ export function buildEmbedSportMonksTokenAtViteBuild(): boolean {
 
 export function getSportMonksTokenSource(): SportMonksTokenSource {
   if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) return 'env'
+  if (isNativeProdRelay()) return 'env'
   if (import.meta.env.VITE_SPORTMONKS_RELAY_ONLY === 'true' || import.meta.env.VITE_SPORTMONKS_RELAY_ONLY === '1')
     return 'env'
   if (
@@ -43,6 +50,9 @@ export function getSportMonksTokenSource(): SportMonksTokenSource {
  */
 export function getSportMonksToken(): string | undefined {
   if (typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) {
+    return TF_SM_SERVER_RELAY_PLACEHOLDER
+  }
+  if (isNativeProdRelay()) {
     return TF_SM_SERVER_RELAY_PLACEHOLDER
   }
   const relayOnly =

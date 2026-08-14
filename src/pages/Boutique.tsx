@@ -16,12 +16,12 @@ import type { AvatarItem as AvatarItemType } from '../types/profile'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
-import { getBoutiqueDailyDeal, getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
+import { getBoutiqueDailyDeal, getEffectiveMedalCost, getEffectiveTokenCost } from '../data/boutiqueDailyDeal'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
 import { BoutiqueItemPurchaseModal } from '../components/shop/BoutiqueItemPurchaseModal'
-import { catalogTabForShopItem } from '../utils/boutiquePurchaseFlow'
+import { catalogTabForShopItem, boutiqueMedalPacksHref, canAffordCosmetic } from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'packs', label: 'Packs' },
@@ -89,17 +89,14 @@ export function BoutiquePage() {
   }
 
   const redirectToMedalPacks = (item: AvatarItemType) => {
-    const tab = catalogTabForShopItem(item)
-    const returnTo = `/boutique?tab=${tab}`
-    const params = new URLSearchParams({
-      need: String(getEffectiveMedalCost(item)),
-      item: item.id,
-      return: returnTo,
-    })
-    navigate(`/boutique/medailles?${params.toString()}`)
+    navigate(boutiqueMedalPacksHref(item, `/boutique?tab=${catalogTabForShopItem(item)}`))
   }
 
   const openItemPreview = (item: AvatarItemType) => {
+    if (!canAffordCosmetic(item, wallet.medals, wallet.tokens)) {
+      redirectToMedalPacks(item)
+      return
+    }
     setConfirmingPurchase(false)
     setPurchaseFlow({ item, step: 'preview' })
   }
@@ -139,7 +136,7 @@ export function BoutiquePage() {
       return
     }
     if (result.code === 'insufficient_tokens') {
-      showNotice('err', 'Pas assez de jetons — paris gagnés ou bonus quotidien.')
+      redirectToMedalPacks(item)
       return
     }
     if (result.code === 'payment_failed') {
@@ -169,22 +166,28 @@ export function BoutiquePage() {
       walletTokens={wallet.tokens}
       confirming={confirmingPurchase}
       onClose={closePurchaseFlow}
-      onChooseCurrency={(currency) =>
+      onChooseCurrency={(currency) => {
+        const item = purchaseFlow.item
+        const canPay =
+          currency === 'medals'
+            ? wallet.medals >= getEffectiveMedalCost(item)
+            : wallet.tokens >= getEffectiveTokenCost(item)
+        if (!canPay) {
+          setPurchaseFlow(null)
+          redirectToMedalPacks(item)
+          return
+        }
         setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
-      }
+      }}
       onBack={() =>
         setPurchaseFlow((prev) => (prev ? { ...prev, step: 'preview', currency: undefined } : null))
       }
       onConfirm={() => void handleConfirmPurchase()}
-      onNeedMedals={
-        purchaseFlow.currency === 'medals'
-          ? () => {
-              const item = purchaseFlow.item
-              setPurchaseFlow(null)
-              redirectToMedalPacks(item)
-            }
-          : undefined
-      }
+      onNeedMedals={() => {
+        const item = purchaseFlow.item
+        setPurchaseFlow(null)
+        redirectToMedalPacks(item)
+      }}
     />
   ) : null
 

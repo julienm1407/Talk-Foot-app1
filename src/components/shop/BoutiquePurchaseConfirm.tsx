@@ -88,12 +88,12 @@ export function BoutiquePurchaseConfirm({
           ) : null}
           {insufficientTokens ? (
             <p className="text-center text-xs font-bold text-amber-200">
-              Pas assez de jetons pour cet achat.
+              Pas assez de jetons pour cet achat — achète des médailles pour payer autrement.
             </p>
           ) : null}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-            {insufficientMedals && onNeedMedals ? (
+            {(insufficientMedals || insufficientTokens) && onNeedMedals ? (
               <button
                 type="button"
                 onClick={onNeedMedals}
