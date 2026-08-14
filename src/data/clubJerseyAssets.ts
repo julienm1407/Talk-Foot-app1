@@ -1,5 +1,5 @@
 /** Bump à chaque import majeur de maillots clubs. */
-export const CLUB_KIT_ASSET_VERSION = '2026-08-14b'
+export const CLUB_KIT_ASSET_VERSION = '2026-08-14c'
 
 export function clubJerseyUrl(clubId: string): string {
   return `/jerseys/clubs/${clubId.toLowerCase()}.png?v=${CLUB_KIT_ASSET_VERSION}`
@@ -87,6 +87,25 @@ export const CLUB_JERSEY_ASSET_IDS = [
   'bremen',
   'gladbach',
   'koln',
+  'como',
+  'sassuolo',
+  'parma',
+  'venezia',
+  'frosinone',
+  'leeds',
+  'ipswich',
+  'sunderland',
+  'coventry',
+  'hull',
+  'levante',
+  'elche',
+  'malaga',
+  'coruna',
+  'santander',
+  'hamburg',
+  'schalke',
+  'paderborn',
+  'elversberg',
 ] as const
 
 export type ClubJerseyAssetId = (typeof CLUB_JERSEY_ASSET_IDS)[number]
