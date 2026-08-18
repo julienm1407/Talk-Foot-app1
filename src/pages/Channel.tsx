@@ -1049,7 +1049,7 @@ export function ChannelPage() {
   const [clockScore, setClockScore] = useState({ home: initialHomeScore, away: initialAwayScore })
   const status = useEffectiveMatchStatus(match)
   const isUpcoming = status === 'upcoming'
-  const { liveBundleFixture } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
+  const { liveBundleFixture, liveBundleSettled } = useTalkFootLiveBundle(match?.sportMonksFixtureId, status)
   const matchForClock = useLiveMatchForClock(match) ?? match
   useEffect(() => {
     const fromClock = matchForClock?.score
@@ -1096,7 +1096,13 @@ export function ChannelPage() {
   const homeFlagSrc = homeNation ? (nationFlagUrl(homeNation.iso, 40) ?? undefined) : undefined
   const awayFlagSrc = awayNation ? (nationFlagUrl(awayNation.iso, 40) ?? undefined) : undefined
   const isFinished = status === 'finished'
-  const { starters, bench, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId)
+  const showMobileChannelChrome = useIsMobileTouchViewport()
+  const [standingsModalOpen, setStandingsModalOpen] = useState(false)
+  const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
+  const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
+  const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
+  const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'actions' | 'classement'>('actions')
+  const { starters, bench, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId, status)
   const betting = useBetting(match?.id ?? '', match ?? null)
   const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
@@ -1160,8 +1166,16 @@ export function ChannelPage() {
   }, [shootoutDisplay, liveBundleFixture, match?.penaltyScore])
 
   const standingsLeagueId = match && isBigFiveLeagueId(match.competition.id) ? match.competition.id : null
+  const standingsFetchEnabled = Boolean(
+    standingsLeagueId &&
+      (standingsModalOpen ||
+        desktopFeedTab === 'classement' ||
+        (showMobileChannelChrome &&
+          ((mobilePanel === 'match' && mobileMatchTab === 'classement') || mobilePanel === 'paris')) ||
+        !showMobileChannelChrome),
+  )
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
-    useSportMonksLeagueStandings(standingsLeagueId ?? 'ligue-1')
+    useSportMonksLeagueStandings(standingsLeagueId, standingsFetchEnabled)
   const standingsSourceLabel = useMemo(() => {
     if (standingsSource === 'live') return 'SportMonks · classement live'
     if (standingsSource === 'season') return 'SportMonks · saison en cours'
@@ -1410,14 +1424,8 @@ export function ChannelPage() {
   const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [flareColor, setFlareColor] = useState<FlareColor>('red')
-  const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
-  const [standingsModalOpen, setStandingsModalOpen] = useState(false)
-  const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
-  const showMobileChannelChrome = useIsMobileTouchViewport()
   const channelDesktopGrid = showMobileChannelChrome ? CHANNEL_TOUCH_GRID : CHANNEL_DESKTOP_GRID
   const betCardRef = useRef<HTMLDivElement | null>(null)
-  const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
-  const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'actions' | 'classement'>('actions')
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
   const [paidFxLayers, setPaidFxLayers] = useState<PaidFxLayer[]>([])
@@ -2417,6 +2425,8 @@ export function ChannelPage() {
       return
     }
 
+    if (!liveBundleSettled) return
+
     const fromBundle = extractSubstitutesFromSmFixture(liveBundleFixture)
     if (fromBundle.home.length + fromBundle.away.length > 0) {
       setLineupSubsFallbackFixture(null)
@@ -2442,7 +2452,7 @@ export function ChannelPage() {
     return () => {
       cancelled = true
     }
-  }, [match?.sportMonksFixtureId, status, liveBundleFixture])
+  }, [match?.sportMonksFixtureId, status, liveBundleFixture, liveBundleSettled])
 
   const fixtureForLineupSubs = useMemo((): SmFixture | null => {
     if (!liveBundleFixture && !lineupSubsFallbackFixture) return null

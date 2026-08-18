@@ -16,12 +16,12 @@ import type { AvatarItem as AvatarItemType } from '../types/profile'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
-import { getBoutiqueDailyDeal, getEffectiveMedalCost, getEffectiveTokenCost } from '../data/boutiqueDailyDeal'
+import { getBoutiqueDailyDeal } from '../data/boutiqueDailyDeal'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
 import { BoutiqueItemPurchaseModal } from '../components/shop/BoutiqueItemPurchaseModal'
-import { catalogTabForShopItem, boutiqueMedalPacksHref, canAffordCosmetic } from '../utils/boutiquePurchaseFlow'
+import { catalogTabForShopItem, boutiqueMedalPacksHref } from '../utils/boutiquePurchaseFlow'
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'packs', label: 'Packs' },
@@ -93,10 +93,6 @@ export function BoutiquePage() {
   }
 
   const openItemPreview = (item: AvatarItemType) => {
-    if (!canAffordCosmetic(item, wallet.medals, wallet.tokens)) {
-      redirectToMedalPacks(item)
-      return
-    }
     setConfirmingPurchase(false)
     setPurchaseFlow({ item, step: 'preview' })
   }
@@ -167,16 +163,6 @@ export function BoutiquePage() {
       confirming={confirmingPurchase}
       onClose={closePurchaseFlow}
       onChooseCurrency={(currency) => {
-        const item = purchaseFlow.item
-        const canPay =
-          currency === 'medals'
-            ? wallet.medals >= getEffectiveMedalCost(item)
-            : wallet.tokens >= getEffectiveTokenCost(item)
-        if (!canPay) {
-          setPurchaseFlow(null)
-          redirectToMedalPacks(item)
-          return
-        }
         setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
       }}
       onBack={() =>

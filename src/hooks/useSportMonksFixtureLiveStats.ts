@@ -4,6 +4,7 @@ import {
   extractTimelineHighlightsFromSmFixture,
   fetchSportMonksFixtureEventsWeather,
   type LiveFixtureStatRow,
+  type SmFixture,
 } from '../api/sportMonks'
 import type { Highlight } from '../data/highlights'
 import { getSportMonksToken } from '../utils/apiTokens'
@@ -21,6 +22,13 @@ function liveStatRowsSignature(rows: LiveFixtureStatRow[]): string {
   return rows.map((r) => `${r.label}:${r.home}:${r.away}`).join('|')
 }
 
+function bundleCoversLiveStats(fixture: SmFixture | null): boolean {
+  if (!fixture) return false
+  if (extractLiveFixtureStatistics(fixture).length > 0) return true
+  const events = fixture.events
+  return Array.isArray(events) && events.length > 0
+}
+
 /**
  * Statistiques équipe (`statistics` + `statistics.type`) pour un match live ou terminé.
  */
@@ -30,14 +38,18 @@ export function useSportMonksFixtureLiveStats(
   /** Identifiant tribune (`Match.id`) pour la timeline « Moments forts ». */
   channelMatchId?: string,
 ) {
-  const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, matchStatus)
+  const { liveBundleFixture, liveBundleSettled } = useTalkFootLiveBundle(
+    sportMonksFixtureId,
+    matchStatus,
+  )
   const [rows, setRows] = useState<LiveFixtureStatRow[]>([])
   const [timeline, setTimeline] = useState<Highlight[]>([])
   const [loading, setLoading] = useState(false)
   const cancelledRef = useRef(false)
   const runRef = useRef<() => void>(() => {})
 
-  const pollLive = matchStatus === 'live' && !liveBundleFixture
+  const bundleCovers = bundleCoversLiveStats(liveBundleFixture)
+  const pollLive = matchStatus === 'live' && liveBundleSettled && !bundleCovers
 
   useEffect(() => {
     cancelledRef.current = false
@@ -52,6 +64,13 @@ export function useSportMonksFixtureLiveStats(
       setRows([])
       setTimeline([])
       setLoading(false)
+      return
+    }
+
+    if (liveBundleFixture && bundleCoversLiveStats(liveBundleFixture)) return
+
+    if (!liveBundleSettled) {
+      setLoading(true)
       return
     }
 
@@ -88,7 +107,7 @@ export function useSportMonksFixtureLiveStats(
     return () => {
       cancelledRef.current = true
     }
-  }, [sportMonksFixtureId, matchStatus, channelMatchId, pollLive])
+  }, [sportMonksFixtureId, matchStatus, channelMatchId, liveBundleFixture, liveBundleSettled])
 
   useVisibilityAwareInterval(
     () => runRef.current(),

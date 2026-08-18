@@ -1,6 +1,6 @@
 import type { AvatarItem } from '../types/profile'
 import { ALL_CLUBS_BY_ID } from './allClubsCatalog'
-import { CLUB_JERSEY_MEDALS } from './boutiqueMedalCosts'
+import { CDM_JERSEY_MEDALS } from './boutiqueMedalCosts'
 import { teamColors } from './teams'
 import {
   boutiqueClubJerseyUrl,
@@ -18,7 +18,7 @@ function buildClubJersey(clubId: ClubJerseyAssetId): AvatarItem | null {
     name: `Maillot ${meta.shortName} (dom.)`,
     slot: 'jersey',
     emoji: '👕',
-    cost: CLUB_JERSEY_MEDALS,
+    cost: CDM_JERSEY_MEDALS,
     rarity: 'rare',
     description: `Maillot domicile ${meta.name} — ${meta.leagueName}.`,
     inspirationNote: `Inspiré ${meta.name} · domicile`,

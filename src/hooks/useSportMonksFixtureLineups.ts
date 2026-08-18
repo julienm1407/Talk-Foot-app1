@@ -3,6 +3,7 @@ import {
   extractMatchLineupBundleFromFixture,
   extractSmRecentFormFromFixture,
   fetchSportMonksFixtureLineups,
+  type SmFixture,
   type SmMatchLineupBundle,
   type SmStartingXIs,
 } from '../api/sportMonks'
@@ -10,11 +11,37 @@ import type { FormResult } from '../types/standings'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
-export function useSportMonksFixtureLineups(sportMonksFixtureId: number | undefined) {
-  const { liveBundleFixture } = useTalkFootLiveBundle(sportMonksFixtureId, 'upcoming')
+function fixtureHasLineupData(fixture: SmFixture | null): boolean {
+  const bundle = extractMatchLineupBundleFromFixture(fixture)
+  if (!bundle) return false
+  return Boolean(
+    (bundle.starters?.home?.length ?? 0) > 0 ||
+      (bundle.starters?.away?.length ?? 0) > 0 ||
+      (bundle.bench?.home?.length ?? 0) > 0 ||
+      (bundle.bench?.away?.length ?? 0) > 0 ||
+      bundle.formations.home ||
+      bundle.formations.away,
+  )
+}
+
+export function useSportMonksFixtureLineups(
+  sportMonksFixtureId: number | undefined,
+  matchStatus: 'upcoming' | 'live' | 'finished' = 'upcoming',
+) {
+  const { liveBundleFixture, liveBundleSettled } = useTalkFootLiveBundle(
+    sportMonksFixtureId,
+    matchStatus,
+  )
   const [bundle, setBundle] = useState<SmMatchLineupBundle | null>(null)
   const [recentForm, setRecentForm] = useState<{ home: FormResult[]; away: FormResult[] } | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!liveBundleFixture || !fixtureHasLineupData(liveBundleFixture)) return
+    setBundle(extractMatchLineupBundleFromFixture(liveBundleFixture))
+    setRecentForm(extractSmRecentFormFromFixture(liveBundleFixture))
+    setLoading(false)
+  }, [liveBundleFixture])
 
   useEffect(() => {
     if (!sportMonksFixtureId) {
@@ -30,10 +57,16 @@ export function useSportMonksFixtureLineups(sportMonksFixtureId: number | undefi
       setLoading(false)
       return
     }
+
+    if (liveBundleFixture && fixtureHasLineupData(liveBundleFixture)) return
+
+    if (!liveBundleSettled) {
+      setLoading(true)
+      return
+    }
+
     let cancelled = false
     setLoading(true)
-    setBundle(null)
-    setRecentForm(null)
     fetchSportMonksFixtureLineups(token, sportMonksFixtureId)
       .then((fx) => {
         if (cancelled) return
@@ -52,14 +85,7 @@ export function useSportMonksFixtureLineups(sportMonksFixtureId: number | undefi
     return () => {
       cancelled = true
     }
-  }, [sportMonksFixtureId])
-
-  useEffect(() => {
-    if (!liveBundleFixture) return
-    setBundle(extractMatchLineupBundleFromFixture(liveBundleFixture))
-    setRecentForm(extractSmRecentFormFromFixture(liveBundleFixture))
-    setLoading(false)
-  }, [liveBundleFixture])
+  }, [sportMonksFixtureId, liveBundleFixture, liveBundleSettled])
 
   const starters: SmStartingXIs | null = bundle?.starters ?? null
   const bench: SmStartingXIs | null = bundle?.bench ?? null

@@ -3,10 +3,11 @@ import { fetchTalkFootLiveBundleFixture, normalizeSmFixtureIncludes, type SmFixt
 
 type MatchStatus = 'upcoming' | 'live' | 'finished'
 
-type FixtureListener = (fixture: SmFixture | null) => void
+type FixtureListener = (fixture: SmFixture | null, settled: boolean) => void
 
 type FixtureChannel = {
   fixture: SmFixture | null
+  pollSettled: boolean
   listeners: Set<FixtureListener>
   es: EventSource | null
   pollId: ReturnType<typeof setInterval> | null
@@ -24,14 +25,21 @@ function pollMsForStatus(status: MatchStatus): number {
 function channelFor(fixtureId: number): FixtureChannel {
   let ch = CHANNELS.get(fixtureId)
   if (!ch) {
-    ch = { fixture: null, listeners: new Set(), es: null, pollId: null, pollMs: null }
+    ch = {
+      fixture: null,
+      pollSettled: false,
+      listeners: new Set(),
+      es: null,
+      pollId: null,
+      pollMs: null,
+    }
     CHANNELS.set(fixtureId, ch)
   }
   return ch
 }
 
 function broadcast(ch: FixtureChannel) {
-  for (const l of ch.listeners) l(ch.fixture)
+  for (const l of ch.listeners) l(ch.fixture, ch.pollSettled)
 }
 
 function ensureTransport(fixtureId: number, status: MatchStatus) {
@@ -66,10 +74,13 @@ function ensureTransport(fixtureId: number, status: MatchStatus) {
   }
 
   const runPoll = async () => {
-    const fx = await fetchTalkFootLiveBundleFixture(fixtureId)
-    if (!fx) return
-    ch.fixture = fx
-    broadcast(ch)
+    try {
+      const fx = await fetchTalkFootLiveBundleFixture(fixtureId)
+      if (fx) ch.fixture = fx
+    } finally {
+      ch.pollSettled = true
+      broadcast(ch)
+    }
   }
 
   if (ch.pollId != null && ch.pollMs !== pollMs) {
@@ -104,16 +115,22 @@ function maybeStopTransport(fixtureId: number) {
 
 export function useTalkFootLiveBundle(fixtureId: number | undefined, matchStatus: MatchStatus) {
   const [fixture, setFixture] = useState<SmFixture | null>(null)
+  const [liveBundleSettled, setLiveBundleSettled] = useState(false)
 
   useEffect(() => {
     if (!fixtureId || !Number.isFinite(fixtureId)) {
       setFixture(null)
+      setLiveBundleSettled(false)
       return
     }
     const ch = channelFor(fixtureId)
-    const listener: FixtureListener = (fx) => setFixture(fx)
+    const listener: FixtureListener = (fx, settled) => {
+      setFixture(fx)
+      setLiveBundleSettled(settled)
+    }
     ch.listeners.add(listener)
     setFixture(ch.fixture)
+    setLiveBundleSettled(ch.pollSettled)
     ensureTransport(fixtureId, matchStatus)
 
     return () => {
@@ -122,6 +139,5 @@ export function useTalkFootLiveBundle(fixtureId: number | undefined, matchStatus
     }
   }, [fixtureId, matchStatus])
 
-  return { liveBundleFixture: fixture }
+  return { liveBundleFixture: fixture, liveBundleSettled }
 }
-

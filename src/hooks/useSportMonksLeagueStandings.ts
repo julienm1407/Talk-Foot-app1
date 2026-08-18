@@ -93,14 +93,26 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
  * 2. si vide ou erreur : `standings/seasons/{seasonId}` (map / `VITE_SPORTMONKS_STANDING_SEASON_ID`)
  * 3. si encore vide : `teams/seasons/{seasonId}?include=statistics.details.type` (même id saison que ton exemple SM)
  */
-export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
+export function useSportMonksLeagueStandings(
+  leagueId: BigFiveLeagueId | null,
+  enabled = true,
+) {
   const [rows, setRows] = useState<LeagueStandingRow[]>([])
   const [source, setSource] = useState<StandingsDataSource>(null)
   const [seasonMeta, setSeasonMeta] = useState<SmLeagueSeasonPick | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!enabled || !leagueId) {
+      setRows([])
+      setSource(null)
+      setSeasonMeta(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     const token = getSportMonksToken()
     if (!token) {
       setRows([])
@@ -200,7 +212,7 @@ export function useSportMonksLeagueStandings(leagueId: BigFiveLeagueId) {
     return () => {
       cancelled = true
     }
-  }, [leagueId])
+  }, [leagueId, enabled])
 
   return {
     standingsRows: rows,
