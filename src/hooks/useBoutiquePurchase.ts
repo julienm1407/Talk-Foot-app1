@@ -4,6 +4,8 @@ import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { mergeOwnedItemsIntoProfile, useProfile } from './useProfile'
 import { useWallet } from './useWallet'
 import { normalizeWallet } from '../utils/walletNormalize'
+import { writeOwnedItemsBackup } from '../utils/ownedItemsBackup'
+import { useAuth } from '../contexts/AuthContext'
 import {
   purchaseCosmeticItem,
   type CommitCosmeticPurchaseInput,
@@ -19,6 +21,7 @@ export type { CommitCosmeticPurchaseInput, CommitCosmeticPurchaseResult }
  */
 export function useBoutiquePurchase() {
   const cloud = useOptionalCloudUserState()
+  const { user } = useAuth()
   const { wallet, spendMedals, spendTokens } = useWallet()
   const { ownsItem, addOwnedItems } = useProfile()
 
@@ -26,6 +29,7 @@ export function useBoutiquePurchase() {
     (input: CommitCosmeticPurchaseInput): CommitCosmeticPurchaseResult => {
       if (cloud) {
         let result: CommitCosmeticPurchaseResult = { ok: false }
+        let nextOwned: string[] = []
         cloud.patchApp((prev) => {
           const w = normalizeWallet(prev.wallet)
           if (input.currency === 'medals') {
@@ -34,23 +38,30 @@ export function useBoutiquePurchase() {
               return prev
             }
             result = { ok: true }
+            const profile = mergeOwnedItemsIntoProfile(prev.profile, input.grantIds)
+            nextOwned = profile.ownedItemIds
             return {
               ...prev,
               wallet: { ...w, medals: w.medals - input.medalCost },
-              profile: mergeOwnedItemsIntoProfile(prev.profile, input.grantIds),
+              profile,
             }
           } else if (w.tokens < input.tokenCost) {
             result = { ok: false, insufficientTokens: true }
             return prev
           }
           result = { ok: true }
+          const profile = mergeOwnedItemsIntoProfile(prev.profile, input.grantIds)
+          nextOwned = profile.ownedItemIds
           return {
             ...prev,
             wallet: { ...w, tokens: w.tokens - input.tokenCost },
-            profile: mergeOwnedItemsIntoProfile(prev.profile, input.grantIds),
+            profile,
           }
         })
-        if (result.ok) void cloud.flushAppSave()
+        if (result.ok) {
+          if (user?.id && nextOwned.length) writeOwnedItemsBackup(user.id, nextOwned)
+          void cloud.flushAppSave()
+        }
         return result
       }
 
@@ -66,7 +77,7 @@ export function useBoutiquePurchase() {
       addOwnedItems(input.grantIds)
       return { ok: true }
     },
-    [cloud, spendMedals, spendTokens, addOwnedItems],
+    [cloud, spendMedals, spendTokens, addOwnedItems, user?.id],
   )
 
   const purchaseCosmetic = useCallback(

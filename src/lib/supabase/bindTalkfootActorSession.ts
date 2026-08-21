@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getTalkFootApiOrigin } from '../../utils/sportMonksRelayOrigin'
 import { isClerkAuthMode } from './talkfootSession'
 
 export type BindTalkfootActorResult = { ok: true } | { ok: false; error: string }
@@ -39,7 +40,14 @@ export async function bindTalkfootActorSession(
     return { ok: true }
   }
 
-  const res = await fetch('/api/bind-talkfoot-actor', {
+  let apiOrigin: string
+  try {
+    apiOrigin = getTalkFootApiOrigin()
+  } catch {
+    return { ok: false, error: 'api_origin_unavailable' }
+  }
+
+  const res = await fetch(`${apiOrigin}/api/bind-talkfoot-actor`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

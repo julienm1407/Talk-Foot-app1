@@ -11,14 +11,16 @@ export function applyCapacitorCorsHeaders(req, res) {
   if (origin && CAPACITOR_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin)
     res.setHeader('Vary', 'Origin')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   }
 }
 
 /** Répond aux preflight OPTIONS ; applique les en-têtes CORS sur toutes les requêtes. */
-export function handleCapacitorCors(req, res) {
+export function handleCapacitorCors(req, res, methods = 'GET, OPTIONS') {
   applyCapacitorCorsHeaders(req, res)
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    res.setHeader('Access-Control-Allow-Methods', methods)
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     res.setHeader('Access-Control-Max-Age', '86400')
     res.statusCode = 204
     res.end()

@@ -79,8 +79,9 @@ export function resolveDisplayModularAvatar(
 
   const backupResolved = backup.modularAvatar
   if (isLikelyDefaultModularAvatar(backupResolved)) return resolved
-  if (isLikelyDefaultModularAvatar(resolved)) return backupResolved
-  return resolved
+  // Cloud custom → source de vérité (évite divergence téléphone / PC).
+  if (!isLikelyDefaultModularAvatar(resolved)) return resolved
+  return backupResolved
 }
 
 /** Avant écriture cloud : ne jamais envoyer un skin par défaut si la sauvegarde locale est custom. */
@@ -129,26 +130,15 @@ export function mergeModularAvatarBackupIntoApp(
   if (serverSig === backupSig) return { app, restoredFromBackup: false }
 
   const serverLooksDefault = isLikelyDefaultModularAvatar(app.profile.modularAvatar)
-  const serverResolved = resolveModularAvatarState(app.profile.modularAvatar)
-  const backupResolved = backup.modularAvatar
-  const backupHasMoreCustomization =
-    Boolean(backupResolved.data.beard && !serverResolved.data.beard) ||
-    Boolean(backupResolved.data.hair && backupResolved.data.hair !== serverResolved.data.hair) ||
-    Boolean(backupResolved.data.jersey && backupResolved.data.jersey !== serverResolved.data.jersey)
-
-  const serverHasCustomization = !serverLooksDefault
   const backupHasCustomization = !isLikelyDefaultModularAvatar(backup.modularAvatar)
 
-  // Ne jamais remplacer un avatar cloud custom par une sauvegarde locale plus pauvre / obsolète.
-  if (serverHasCustomization && !backupHasCustomization) {
-    return { app, restoredFromBackup: false }
-  }
-  if (serverHasCustomization && backupHasCustomization && !backupHasMoreCustomization) {
+  // Ne jamais remplacer un avatar cloud custom par une sauvegarde locale.
+  // Sinon téléphone et PC divergent (localStorage isolé par origine).
+  if (!serverLooksDefault) {
     return { app, restoredFromBackup: false }
   }
 
-  const shouldRestore =
-    (serverLooksDefault && backupHasCustomization) || backupHasMoreCustomization
+  const shouldRestore = backupHasCustomization
 
   if (!shouldRestore) return { app, restoredFromBackup: false }
 

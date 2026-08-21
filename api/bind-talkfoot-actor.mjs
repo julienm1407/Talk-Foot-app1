@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { handleCapacitorCors } from './corsCapacitor.js'
 
 function json(res, status, body) {
   res.statusCode = status
@@ -62,6 +63,8 @@ async function verifySupabaseAccessToken(accessToken) {
  * Lie auth.uid() (session Supabase) à l'identifiant Clerk après vérification serveur.
  */
 export default async function handler(req, res) {
+  if (handleCapacitorCors(req, res, 'POST, OPTIONS')) return
+
   if (req.method !== 'POST') {
     res.statusCode = 405
     res.setHeader('Allow', 'POST')

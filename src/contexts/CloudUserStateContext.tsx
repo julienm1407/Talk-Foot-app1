@@ -50,6 +50,11 @@ import {
   mergeBetsBackupIntoApp,
   writeBetsBackup,
 } from '../utils/betsBackup'
+import {
+  coalesceAppStateWithOwnedItemsBackup,
+  mergeOwnedItemsBackupIntoApp,
+  writeOwnedItemsBackup,
+} from '../utils/ownedItemsBackup'
 import { reconcileBetTokenCredits } from '../utils/betTokenReconcile'
 import { betTokenMultiplier, normalizeSubscription } from '../utils/subscriptionEntitlements'
 import { useAuth } from './AuthContext'
@@ -234,6 +239,7 @@ function CloudUserStateLoader({
       let payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
       payload = coalesceAppStateWithWalletBackup(user.id, payload)
       payload = coalesceAppStateWithBetsBackup(user.id, payload)
+      payload = coalesceAppStateWithOwnedItemsBackup(user.id, payload)
       const betTokensReconciled = withReconciledBetTokens(payload)
       payload = betTokensReconciled.app
       if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
@@ -257,6 +263,7 @@ function CloudUserStateLoader({
       )
       writeWalletBackup(user.id, payload.wallet)
       writeBetsBackup(user.id, payload.bets)
+      writeOwnedItemsBackup(user.id, payload.profile.ownedItemIds ?? [])
       const { data: sessionWrap } = await sb.auth.getSession()
       const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
       invalidateChatAuthorAvatars(
@@ -360,6 +367,8 @@ function CloudUserStateLoader({
         merged = walletRestored.app
         const betsRestored = mergeBetsBackupIntoApp(user.id, merged)
         merged = betsRestored.app
+        const ownedRestored = mergeOwnedItemsBackupIntoApp(user.id, merged)
+        merged = ownedRestored.app
         const betTokensReconciled = withReconciledBetTokens(merged)
         merged = betTokensReconciled.app
         if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
@@ -380,11 +389,17 @@ function CloudUserStateLoader({
         appRef.current = merged
         writeWalletBackup(user.id, merged.wallet)
         writeBetsBackup(user.id, merged.bets)
+        writeOwnedItemsBackup(user.id, merged.profile.ownedItemIds ?? [])
         setOnboardingCompleteCol(onboardingComplete)
         setOauthNeedsProfile(!oauthCompleted)
         cloudHydratedRef.current = true
         setReady(true)
-        return restored.restoredFromBackup || walletRestored.restoredFromBackup || betsRestored.restoredFromBackup
+        return (
+          restored.restoredFromBackup ||
+          walletRestored.restoredFromBackup ||
+          betsRestored.restoredFromBackup ||
+          ownedRestored.restoredFromBackup
+        )
       }
 
       let lastErr: unknown = null
