@@ -7,7 +7,7 @@ import {
 import { isBoutiqueShopItemOwned, isCosmeticOwned } from '../data/boutiqueEconomy'
 import { cdm2026BundleItems } from '../data/cdm2026Bundles'
 import { clubBundleItems } from '../data/clubBundles'
-import { boutiqueItemToModularState, shopItemToModularAssetId } from './boutiqueModularState'
+import { modularJerseyId, modularShortsId, shopItemToModularAssetId } from './boutiqueModularIds'
 
 export const RECENT_STUDIO_ASSET_KEY = 'talkfoot.recentStudioAsset'
 export const RECENT_STUDIO_PACK_KEY = 'talkfoot.recentStudioPackEquip'
@@ -55,13 +55,19 @@ export function rememberRecentStudioAsset(modularAssetId: string) {
 export function rememberRecentStudioPack(item: AvatarItem) {
   if (!item.bundleIncludes?.length) return
   try {
-    const modular = boutiqueItemToModularState(item)
+    const jerseyShopId = item.bundleIncludes.find(
+      (id) => !id.includes('short') && !id.includes('pack'),
+    )
+    const shortShopId = item.bundleIncludes.find((id) => id.includes('short'))
+    const jersey = jerseyShopId
+      ? modularJerseyId({ ...item, id: jerseyShopId, slot: 'jersey', bundleIncludes: undefined })
+      : null
+    const shorts = shortShopId
+      ? modularShortsId({ ...item, id: shortShopId, slot: 'pants', bundleIncludes: undefined })
+      : null
     sessionStorage.setItem(
       RECENT_STUDIO_PACK_KEY,
-      JSON.stringify({
-        jersey: modular.data.jersey,
-        shorts: modular.data.shorts,
-      }),
+      JSON.stringify({ jersey, shorts }),
     )
   } catch {
     /* quota / private mode */
