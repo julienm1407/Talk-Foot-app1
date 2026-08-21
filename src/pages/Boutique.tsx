@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -20,8 +20,14 @@ import { getBoutiqueDailyDeal } from '../data/boutiqueDailyDeal'
 import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
-import { BoutiqueItemPurchaseModal } from '../components/shop/BoutiqueItemPurchaseModal'
 import { catalogTabForShopItem, boutiqueMedalPacksHref } from '../utils/boutiquePurchaseFlow'
+
+/** Canvas studio lourd : chargé seulement à l’ouverture d’un article. */
+const BoutiqueItemPurchaseModal = lazy(() =>
+  import('../components/shop/BoutiqueItemPurchaseModal').then((m) => ({
+    default: m.BoutiqueItemPurchaseModal,
+  })),
+)
 
 const FILTER_TABS: { id: CatalogFilter; label: string }[] = [
   { id: 'packs', label: 'Packs' },
@@ -154,27 +160,29 @@ export function BoutiquePage() {
           : 'Chaussures standards'
 
   const purchaseModal = purchaseFlow ? (
-    <BoutiqueItemPurchaseModal
-      item={purchaseFlow.item}
-      step={purchaseFlow.step}
-      currency={purchaseFlow.currency}
-      walletMedals={wallet.medals}
-      walletTokens={wallet.tokens}
-      confirming={confirmingPurchase}
-      onClose={closePurchaseFlow}
-      onChooseCurrency={(currency) => {
-        setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
-      }}
-      onBack={() =>
-        setPurchaseFlow((prev) => (prev ? { ...prev, step: 'preview', currency: undefined } : null))
-      }
-      onConfirm={() => void handleConfirmPurchase()}
-      onNeedMedals={() => {
-        const item = purchaseFlow.item
-        setPurchaseFlow(null)
-        redirectToMedalPacks(item)
-      }}
-    />
+    <Suspense fallback={null}>
+      <BoutiqueItemPurchaseModal
+        item={purchaseFlow.item}
+        step={purchaseFlow.step}
+        currency={purchaseFlow.currency}
+        walletMedals={wallet.medals}
+        walletTokens={wallet.tokens}
+        confirming={confirmingPurchase}
+        onClose={closePurchaseFlow}
+        onChooseCurrency={(currency) => {
+          setPurchaseFlow((prev) => (prev ? { ...prev, step: 'confirm', currency } : null))
+        }}
+        onBack={() =>
+          setPurchaseFlow((prev) => (prev ? { ...prev, step: 'preview', currency: undefined } : null))
+        }
+        onConfirm={() => void handleConfirmPurchase()}
+        onNeedMedals={() => {
+          const item = purchaseFlow.item
+          setPurchaseFlow(null)
+          redirectToMedalPacks(item)
+        }}
+      />
+    </Suspense>
   ) : null
 
   return (

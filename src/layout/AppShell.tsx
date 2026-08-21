@@ -44,10 +44,11 @@ export function AppShell() {
     order: ['/', '/match', '/groups'],
   })
 
-  /** Onglet Match fréquent : précharger le chunk avant la navigation pour éviter PageLoader long. */
+  /** Précharger les chunks fréquents pour éviter un PageLoader long. */
   useEffect(() => {
     const id = window.setTimeout(() => {
       void import('../pages/Calendar')
+      void import('../pages/Boutique')
     }, 800)
     return () => window.clearTimeout(id)
   }, [])

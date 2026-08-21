@@ -1,5 +1,5 @@
 import { TokenGlyph } from '../ui/TokenGlyph'
-import { BoutiqueKitStudioPreview } from './BoutiqueKitStudioPreview'
+import { BoutiqueCatalogThumb } from './BoutiqueCatalogThumb'
 import { shopEncartButtonClass, shopEncartTokenButtonClass } from './ShopRarityEncart'
 import {
   getEffectiveMedalCost,
@@ -81,7 +81,7 @@ function EncartBody({
               Toucher pour visualiser
             </span>
           ) : null}
-          <BoutiqueKitStudioPreview item={item} className="relative z-[1]" />
+          <BoutiqueCatalogThumb item={item} />
         </div>
       ) : (
         <div className="pointer-events-none relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white p-3">
