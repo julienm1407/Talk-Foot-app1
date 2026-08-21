@@ -19,11 +19,17 @@ export function resolveBoutiqueGarmentShow(item: AvatarItem): BoutiqueGarmentSho
 
 /** IDs assets modulaires (`assets/jerseys/jersey_fra.png` → `jerseys-jersey-fra`). */
 export function modularJerseyId(item: AvatarItem): string | null {
-  if (item.nationIso) return `jerseys-jersey-${item.nationIso.toLowerCase()}`
+  if (item.nationIso && item.slot !== 'pants' && !item.id.includes('short')) {
+    return `jerseys-jersey-${item.nationIso.toLowerCase()}`
+  }
   const base = item.id.match(/^kit-base-(.+)$/)?.[1]
   if (base) return `jerseys-jersey-base-${base}`
-  const club = item.id.match(/^club-([a-z0-9-]+)$/)?.[1]
+  // Exclure club-short-* et club-pack-* (sinon « pack-rma » / « short-rma » passent pour un club)
+  const club = item.id.match(/^club-(?!short-|pack-)([a-z0-9-]+)$/)?.[1]
   if (club) return `jerseys-jersey-club-${club}`
+  if (item.clubId && item.slot === 'jersey' && !item.bundleIncludes?.length) {
+    return `jerseys-jersey-club-${item.clubId}`
+  }
   const cdm = item.id.match(/^cdm2026-(?!short-|pack-)([a-z]+)$/)?.[1]
   if (cdm) return `jerseys-jersey-${cdm}`
   return null

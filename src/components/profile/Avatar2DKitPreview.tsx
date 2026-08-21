@@ -45,6 +45,30 @@ export function resolveKitPreviewPair(item: AvatarItem): {
   const defaultKit = findItem('kit-default')!
   const defaultPants = findItem('pants-kit')!
 
+  // Packs : résoudre explicitement maillot + short du même club / nation
+  if (item.bundleIncludes?.length) {
+    const jerseyId = item.bundleIncludes.find(
+      (id) => !id.includes('short') && !id.includes('pack'),
+    )
+    const shortId = item.bundleIncludes.find((id) => id.includes('short'))
+    let kit = (jerseyId ? findItem(jerseyId) : undefined) ?? defaultKit
+    let pants = (shortId ? findItem(shortId) : undefined) ?? defaultPants
+
+    if (kit === defaultKit && item.clubId && clubJerseyByClubId[item.clubId]) {
+      kit = clubJerseyByClubId[item.clubId]
+    }
+    if (kit === defaultKit && item.nationIso && cdm2026JerseyByNationIso[item.nationIso]) {
+      kit = cdm2026JerseyByNationIso[item.nationIso]
+    }
+    if (pants === defaultPants && item.clubId && clubShortByClubId[item.clubId]) {
+      pants = clubShortByClubId[item.clubId]
+    }
+    if (pants === defaultPants && item.nationIso && cdm2026ShortByNationIso[item.nationIso]) {
+      pants = cdm2026ShortByNationIso[item.nationIso]
+    }
+    return { kit, pants }
+  }
+
   if (item.slot === 'jersey') {
     let pants = defaultPants
     if (item.nationIso && cdm2026ShortByNationIso[item.nationIso]) {
