@@ -1,6 +1,7 @@
 /** Économie boutique Talk Foot — possession packs et conversion jetons. */
 
 import { cdm2026BundleItems } from './cdm2026Bundles'
+import { clubBundleItems } from './clubBundles'
 import { TOKENS_PER_MEDAL } from './boutiqueMedalCosts'
 
 export {
@@ -11,7 +12,9 @@ export {
   STANDARD_SHOES_MEDALS,
 } from './boutiqueMedalCosts'
 
-const PACK_ITEMS = cdm2026BundleItems.filter((i) => (i.bundleIncludes?.length ?? 0) > 0)
+const PACK_ITEMS = [...cdm2026BundleItems, ...clubBundleItems].filter(
+  (i) => (i.bundleIncludes?.length ?? 0) > 0,
+)
 
 function isFreeShopItem(shopItemId: string): boolean {
   return (

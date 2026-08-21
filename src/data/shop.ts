@@ -2,7 +2,9 @@ import type { AvatarItem, MedalPack } from '../types/profile'
 import { cdm2026BundleItems } from './cdm2026Bundles'
 import { cdm2026JerseyItems } from './cdm2026Jerseys'
 import { cdm2026ShortItems } from './cdm2026Shorts'
+import { clubBundleItems } from './clubBundles'
 import { clubJerseyItems } from './clubJerseys'
+import { clubShortItems } from './clubShorts'
 import { STANDARD_SHOES_MEDALS } from './boutiqueMedalCosts'
 import { baseJerseyUrl, baseShortsUrl } from './nations'
 
@@ -185,6 +187,8 @@ export const baseAvatarItems: AvatarItem[] = [
 export const avatarItems: AvatarItem[] = [
   ...baseAvatarItems,
   ...clubJerseyItems,
+  ...clubShortItems,
+  ...clubBundleItems,
   ...cdm2026JerseyItems,
   ...cdm2026ShortItems,
   ...cdm2026BundleItems,

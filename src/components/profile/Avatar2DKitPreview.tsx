@@ -5,6 +5,8 @@ import { DEFAULT_CHARACTER_LOOK, mergeCharacterLook } from '../../data/character
 import { avatarItems } from '../../data/shop'
 import { cdm2026JerseyByNationIso } from '../../data/cdm2026Jerseys'
 import { cdm2026ShortByNationIso } from '../../data/cdm2026Shorts'
+import { clubJerseyByClubId } from '../../data/clubJerseys'
+import { clubShortByClubId } from '../../data/clubShorts'
 import { viteBasePath } from '../../seo/basePath'
 
 function assetUrl(path: string): string {
@@ -47,6 +49,8 @@ export function resolveKitPreviewPair(item: AvatarItem): {
     let pants = defaultPants
     if (item.nationIso && cdm2026ShortByNationIso[item.nationIso]) {
       pants = cdm2026ShortByNationIso[item.nationIso]
+    } else if (item.clubId && clubShortByClubId[item.clubId]) {
+      pants = clubShortByClubId[item.clubId]
     } else {
       const baseColor = item.id.match(/^kit-base-(.+)$/)?.[1]
       if (baseColor) pants = findItem(`pants-base-${baseColor}`) ?? defaultPants
@@ -58,6 +62,8 @@ export function resolveKitPreviewPair(item: AvatarItem): {
     let kit = defaultKit
     if (item.nationIso && cdm2026JerseyByNationIso[item.nationIso]) {
       kit = cdm2026JerseyByNationIso[item.nationIso]
+    } else if (item.clubId && clubJerseyByClubId[item.clubId]) {
+      kit = clubJerseyByClubId[item.clubId]
     } else {
       const baseColor = item.id.match(/^pants-base-(.+)$/)?.[1]
       if (baseColor) kit = findItem(`kit-base-${baseColor}`) ?? defaultKit

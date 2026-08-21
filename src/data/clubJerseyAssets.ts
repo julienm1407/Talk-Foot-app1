@@ -1,5 +1,5 @@
-/** Bump à chaque import majeur de maillots clubs. */
-export const CLUB_KIT_ASSET_VERSION = '2026-08-14c'
+/** Bump à chaque import majeur de kits clubs (maillots / shorts). */
+export const CLUB_KIT_ASSET_VERSION = '2026-08-21a'
 
 export function clubJerseyUrl(clubId: string): string {
   return `/jerseys/clubs/${clubId.toLowerCase()}.png?v=${CLUB_KIT_ASSET_VERSION}`
@@ -9,7 +9,15 @@ export function boutiqueClubJerseyUrl(clubId: string): string {
   return `/jerseys/clubs/${clubId.toLowerCase()}-boutique.png?v=${CLUB_KIT_ASSET_VERSION}`
 }
 
-/** IDs club avec un PNG domicile importé (Big 5 + bases). */
+export function clubShortsUrl(clubId: string): string {
+  return `/shorts/clubs/${clubId.toLowerCase()}.png?v=${CLUB_KIT_ASSET_VERSION}`
+}
+
+export function boutiqueClubShortsUrl(clubId: string): string {
+  return `/shorts/clubs/${clubId.toLowerCase()}-boutique.png?v=${CLUB_KIT_ASSET_VERSION}`
+}
+
+/** IDs club avec un PNG domicile importé (Big 5 + montées). */
 export const CLUB_JERSEY_ASSET_IDS = [
   'psg',
   'parisfc',
@@ -108,8 +116,16 @@ export const CLUB_JERSEY_ASSET_IDS = [
   'elversberg',
 ] as const
 
+/** Même périmètre que les maillots (shorts importés en parallèle). */
+export const CLUB_SHORT_ASSET_IDS = CLUB_JERSEY_ASSET_IDS
+
 export type ClubJerseyAssetId = (typeof CLUB_JERSEY_ASSET_IDS)[number]
+export type ClubShortAssetId = (typeof CLUB_SHORT_ASSET_IDS)[number]
 
 export function hasClubJerseyAsset(clubId: string): clubId is ClubJerseyAssetId {
   return (CLUB_JERSEY_ASSET_IDS as readonly string[]).includes(clubId)
+}
+
+export function hasClubShortAsset(clubId: string): clubId is ClubShortAssetId {
+  return (CLUB_SHORT_ASSET_IDS as readonly string[]).includes(clubId)
 }

@@ -6,6 +6,7 @@ import {
 } from '../data/boutiqueDailyDeal'
 import { isBoutiqueShopItemOwned, isCosmeticOwned } from '../data/boutiqueEconomy'
 import { cdm2026BundleItems } from '../data/cdm2026Bundles'
+import { clubBundleItems } from '../data/clubBundles'
 import { boutiqueItemToModularState, shopItemToModularAssetId } from './boutiqueModularState'
 
 export const RECENT_STUDIO_ASSET_KEY = 'talkfoot.recentStudioAsset'
@@ -257,6 +258,7 @@ export function validateMedalCosmeticPurchase(
     item.id,
     ...grantIds,
     ...cdm2026BundleItems.flatMap((p) => [p.id, ...(p.bundleIncludes ?? [])]),
+    ...clubBundleItems.flatMap((p) => [p.id, ...(p.bundleIncludes ?? [])]),
   ]
   for (const id of probeIds) {
     if (ownsItem(id) && !owned.includes(id)) owned.push(id)

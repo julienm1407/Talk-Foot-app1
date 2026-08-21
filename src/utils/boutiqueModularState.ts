@@ -34,6 +34,8 @@ export function modularShortsId(item: AvatarItem): string | null {
   if (item.nationIso) return `shorts-short-${item.nationIso.toLowerCase()}`
   const base = item.id.match(/^pants-base-(.+)$/)?.[1]
   if (base) return `shorts-short-base-${base}`
+  const club = item.id.match(/^club-short-([a-z0-9-]+)$/)?.[1]
+  if (club) return `shorts-short-club-${club}`
   const cdm = item.id.match(/^cdm2026-short-([a-z]+)$/)?.[1]
   if (cdm) return `shorts-short-${cdm}`
   return null

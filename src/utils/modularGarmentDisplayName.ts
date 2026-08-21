@@ -1,4 +1,5 @@
 import type { AvatarAsset, AvatarAssetCategory } from '../features/avatar2d/types'
+import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { NATIONS } from '../data/nations'
 import { isModularAssetUnlocked, isModularGarmentFree } from './modularGarmentAccess'
 
@@ -17,6 +18,10 @@ function nationNameFromSlug(slug: string): string {
   return NATION_NAME_BY_SLUG.get(slug.toLowerCase()) ?? slug.toUpperCase()
 }
 
+function clubNameFromId(clubId: string): string {
+  return ALL_CLUBS_BY_ID[clubId]?.shortName ?? clubId
+}
+
 /** Libellé studio : « Maillot France », « Maillot blanc », etc. */
 export function modularJerseyDisplayName(assetId: string): string | null {
   const base = assetId.match(/^jerseys-jersey-base-(.+)$/)
@@ -24,6 +29,8 @@ export function modularJerseyDisplayName(assetId: string): string | null {
     const color = BASE_COLOR_FR[base[1]] ?? base[1]
     return `Maillot ${color}`
   }
+  const club = assetId.match(/^jerseys-jersey-club-([a-z0-9-]+)$/i)
+  if (club) return `Maillot ${clubNameFromId(club[1].toLowerCase())}`
   const nation = assetId.match(/^jerseys-jersey-([a-z]{3})$/i)
   if (nation) return `Maillot ${nationNameFromSlug(nation[1])}`
   return null
@@ -36,6 +43,8 @@ export function modularShortsDisplayName(assetId: string): string | null {
     const color = BASE_COLOR_FR[base[1]] ?? base[1]
     return `Short ${color}`
   }
+  const club = assetId.match(/^shorts-short-club-([a-z0-9-]+)$/i)
+  if (club) return `Short ${clubNameFromId(club[1].toLowerCase())}`
   const nation = assetId.match(/^shorts-short-([a-z]{3})$/i)
   if (nation) return `Short ${nationNameFromSlug(nation[1])}`
   return null

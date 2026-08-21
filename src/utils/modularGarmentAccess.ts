@@ -53,6 +53,8 @@ export function shopItemIdFromModularAsset(
   if (category === 'shorts') {
     const base = modularAssetId.match(/^shorts-short-base-(.+)$/)
     if (base) return `pants-base-${base[1]}`
+    const club = modularAssetId.match(/^shorts-short-club-([a-z0-9-]+)$/)
+    if (club) return `club-short-${club[1]}`
     const nation = modularAssetId.match(/^shorts-short-([a-z]{3})$/)
     if (nation) return `cdm2026-short-${nation[1]}`
     return null
