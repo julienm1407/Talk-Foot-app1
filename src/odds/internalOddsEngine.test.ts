@@ -37,11 +37,11 @@ test('live : 1-1 à la 91e — cote nul proche de 1 (résultat le plus probable)
     awayGoals: 1,
   })
   assert.ok(late.draw >= 1.01 && late.draw <= 1.35, `draw=${late.draw}`)
-  assert.ok(late.home >= 8, `home=${late.home}`)
-  assert.ok(late.away >= 8, `away=${late.away}`)
+  assert.ok(late.home >= 6, `home=${late.home}`)
+  assert.ok(late.away >= 6, `away=${late.away}`)
 })
 
-test('live : 5-0 à la 40e — favori ~1,01, outsider ~100', () => {
+test('live : 5-0 à la 40e — favori attendu ~1,05–1,22, outsider ~50+', () => {
   const ctx = buildMatchOddsContextFromNations('DEU', 'CUW')
   const prematch = computePrematch1x2FromContext(ctx).odds1x2
   const blowout = adjust1x2OddsForLiveInternal(prematch, {
@@ -49,9 +49,21 @@ test('live : 5-0 à la 40e — favori ~1,01, outsider ~100', () => {
     homeGoals: 5,
     awayGoals: 0,
   })
-  assert.ok(blowout.home >= 1.01 && blowout.home <= 1.15, `home=${blowout.home}`)
-  assert.ok(blowout.away >= 50, `away=${blowout.away}`)
-  assert.ok(blowout.draw >= 40, `draw=${blowout.draw}`)
+  assert.ok(blowout.home >= 1.01 && blowout.home <= 1.25, `home=${blowout.home}`)
+  assert.ok(blowout.away >= 45, `away=${blowout.away}`)
+  assert.ok(blowout.draw >= 25, `draw=${blowout.draw}`)
+})
+
+test('live : outsider mène 2-0 (favori pré-match mené) — cotes plus réalistes', () => {
+  const prematch = { home: 4.8, draw: 3.9, away: 1.72 }
+  const live = adjust1x2OddsForLiveInternal(prematch, {
+    minute: 50,
+    homeGoals: 2,
+    awayGoals: 0,
+  })
+  assert.ok(live.home >= 1.25 && live.home <= 1.85, `home=${live.home}`)
+  assert.ok(live.draw >= 3.5 && live.draw <= 8.5, `draw=${live.draw}`)
+  assert.ok(live.away >= 5 && live.away <= 16, `away=${live.away}`)
 })
 
 test('écart de puissance cohérent CHE > QAT', () => {

@@ -101,9 +101,21 @@ export function probabilityToDecimalOdd(
   p: number,
   marginPct = DEFAULT_BOOK_MARGIN,
   minOdd = 1.02,
+  maxOdd = 80,
+  impliedFloor = 0.018,
 ): number {
-  const implied = clamp(p * (1 + clamp(marginPct, 0.05, 0.1)), 0.018, 0.98)
-  return round2(clamp(1 / implied, minOdd, 80))
+  const implied = clamp(p * (1 + clamp(marginPct, 0.05, 0.1)), impliedFloor, 0.98)
+  return round2(clamp(1 / implied, minOdd, maxOdd))
+}
+
+/** Cotes score exact : plancher plus bas pour différencier les probabilités faibles. */
+export function probabilityToExactScoreOdd(
+  p: number,
+  marginPct = DEFAULT_BOOK_MARGIN,
+  minOdd = 4.5,
+  maxOdd = 150,
+): number {
+  return probabilityToDecimalOdd(p, marginPct, minOdd, maxOdd, 0.0015)
 }
 
 export function probabilitiesToDecimalOdds(
@@ -279,8 +291,23 @@ function blendProbabilities(a: Probabilities1x2, b: Probabilities1x2, w: number)
   )
 }
 
+function isUpsetLead(
+  prematch: SmBookOdds1x2 | undefined,
+  homeGoals: number,
+  awayGoals: number,
+): boolean {
+  if (!prematch || homeGoals === awayGoals) return false
+  const probs = impliedProbsFromDecimalOdds(prematch)
+  const skew = Math.abs(probs.pHome - probs.pAway)
+  if (skew < 0.08) return false
+  const favHome = probs.pHome >= probs.pAway
+  const leaderHome = homeGoals > awayGoals
+  return favHome !== leaderHome
+}
+
 /**
  * Ajustements live : modèle score + temps (Poisson), puis cartons rouges et tirs cadrés.
+ * Le poids live reste partiel si le score contredit le favori pré-match (ex. cup upset).
  */
 export function adjustProbabilities1x2ForLive(
   base: Probabilities1x2,
@@ -289,19 +316,54 @@ export function adjustProbabilities1x2ForLive(
   const { minute, homeGoals, awayGoals } = live
   const diff = homeGoals - awayGoals
   const absDiff = Math.abs(diff)
-  const homeShare = clamp(base.pHome / Math.max(0.08, base.pHome + base.pAway), 0.28, 0.72)
+  const prematchSkew = Math.abs(base.pHome - base.pAway)
+  const favHome = base.pHome >= base.pAway
+  const upsetLead =
+    prematchSkew >= 0.1 &&
+    absDiff >= 1 &&
+    ((favHome && awayGoals > homeGoals) || (!favHome && homeGoals > awayGoals))
+
+  let homeShare = clamp(base.pHome / Math.max(0.08, base.pHome + base.pAway), 0.28, 0.72)
+  if (upsetLead) {
+    if (homeGoals > awayGoals && !favHome) {
+      homeShare = clamp(homeShare * 0.78, 0.24, 0.42)
+    } else if (awayGoals > homeGoals && favHome) {
+      homeShare = clamp(homeShare * 1.28, 0.58, 0.76)
+    }
+  }
+
   const fromScore = liveOutcomeProbsFromScore(homeGoals, awayGoals, minute, homeShare)
   let liveWeight = clamp(
-    ((minute + 5) / 90) * (1 + Math.min(absDiff, 5) * 0.2),
+    ((minute + 5) / 90) * (1 + Math.min(absDiff, 5) * 0.15),
     0,
-    1,
+    0.82,
   )
+  if (minute >= 88 && homeGoals === awayGoals) {
+    liveWeight = Math.max(liveWeight, 0.9)
+  }
   if (homeGoals === awayGoals && homeGoals === 0) {
     const favSkew = Math.abs(base.pHome - base.pAway)
     const damp = clamp(1.2 - favSkew * 1.35, 0.22, 1)
     liveWeight *= damp
   }
   let probs = blendProbabilities(base, fromScore, liveWeight)
+
+  if (upsetLead && absDiff >= 1) {
+    const trailBoost = clamp(prematchSkew * 0.72, 0.08, 0.26)
+    if (homeGoals > awayGoals) {
+      probs = normalize3(
+        probs.pHome * (1 - trailBoost * 0.28),
+        probs.pDraw + trailBoost * 0.18,
+        probs.pAway + trailBoost * 0.78,
+      )
+    } else {
+      probs = normalize3(
+        probs.pHome + trailBoost * 0.78,
+        probs.pDraw + trailBoost * 0.18,
+        probs.pAway * (1 - trailBoost * 0.28),
+      )
+    }
+  }
 
   const hRed = live.homeRedCards ?? 0
   const aRed = live.awayRedCards ?? 0
@@ -334,23 +396,25 @@ export function adjustProbabilities1x2ForLive(
   return probs
 }
 
-/** Bornes réalistes par issue (favori ~1,01, outsider mené tardivement ~100). */
+/** Bornes réalistes par issue — plus souples si le meneur surprend le favori pré-match. */
 export function capLive1x2Odds(
   odds: SmBookOdds1x2,
   homeGoals: number,
   awayGoals: number,
   minute: number,
+  prematch?: SmBookOdds1x2,
 ): SmBookOdds1x2 {
   const diff = homeGoals - awayGoals
   const absDiff = Math.abs(diff)
   const totalGoals = homeGoals + awayGoals
+  const upset = isUpsetLead(prematch, homeGoals, awayGoals)
 
-  let homeLo = 1.04
-  let drawLo = 1.04
-  let awayLo = 1.04
-  let homeHi = 100
-  let drawHi = 100
-  let awayHi = 100
+  let homeLo = 1.08
+  let drawLo = 1.08
+  let awayLo = 1.08
+  let homeHi = 60
+  let drawHi = 40
+  let awayHi = 60
 
   if (diff === 0 && totalGoals > 0 && minute >= 78) {
     drawLo = 1.01
@@ -365,41 +429,55 @@ export function capLive1x2Odds(
 
   if (absDiff === 1 && minute >= 75) {
     if (diff > 0) {
-      homeLo = 1.01
-      homeHi = 2.8
-      drawHi = 6
-      awayHi = 45
+      homeLo = 1.05
+      homeHi = upset ? 2.2 : 2.8
+      drawHi = upset ? 4.5 : 6
+      awayHi = upset ? 12 : 35
     } else {
-      awayLo = 1.01
-      awayHi = 2.8
-      drawHi = 6
-      homeHi = 45
+      awayLo = 1.05
+      awayHi = upset ? 2.2 : 2.8
+      drawHi = upset ? 4.5 : 6
+      homeHi = upset ? 12 : 35
     }
   }
 
-  if (absDiff >= 2 && minute >= 55) {
+  if (absDiff >= 2 && (minute >= 55 || (upset && minute >= 40))) {
     if (diff > 0) {
-      homeLo = 1.01
-      homeHi = absDiff >= 4 ? 1.12 : 1.35
-      drawHi = absDiff >= 4 ? 60 : 25
-      awayHi = 100
+      homeLo = upset ? 1.18 : 1.08
+      homeHi = upset ? (minute >= 75 ? 1.45 : 1.65) : absDiff >= 4 ? 1.18 : 1.48
+      drawHi = upset ? (minute >= 75 ? 5.5 : 7) : absDiff >= 4 ? 18 : 12
+      awayHi = upset ? (minute >= 75 ? 10 : 15) : absDiff >= 4 ? 45 : 28
+      awayLo = upset ? 5 : awayLo
     } else {
-      awayLo = 1.01
-      awayHi = absDiff >= 4 ? 1.12 : 1.35
-      drawHi = absDiff >= 4 ? 60 : 25
-      homeHi = 100
+      awayLo = upset ? 1.18 : 1.08
+      awayHi = upset ? (minute >= 75 ? 1.45 : 1.65) : absDiff >= 4 ? 1.18 : 1.48
+      drawHi = upset ? (minute >= 75 ? 5.5 : 7) : absDiff >= 4 ? 18 : 12
+      homeHi = upset ? (minute >= 75 ? 10 : 15) : absDiff >= 4 ? 45 : 28
+      homeLo = upset ? 5 : homeLo
     }
-  } else if (absDiff >= 3 && minute >= 35) {
+  } else if (absDiff >= 3 && minute >= 35 && !upset) {
     if (diff > 0) {
-      homeLo = 1.01
-      homeHi = 1.15
-      drawHi = 80
-      awayHi = 100
+      homeLo = 1.05
+      homeHi = 1.22
+      drawHi = 35
+      awayHi = 55
     } else {
-      awayLo = 1.01
-      awayHi = 1.15
-      drawHi = 80
-      homeHi = 100
+      awayLo = 1.05
+      awayHi = 1.22
+      drawHi = 35
+      homeHi = 55
+    }
+  } else if (absDiff >= 3 && minute >= 35 && upset) {
+    if (diff > 0) {
+      homeLo = 1.15
+      homeHi = 1.75
+      drawHi = 8
+      awayHi = 14
+    } else {
+      awayLo = 1.15
+      awayHi = 1.75
+      drawHi = 8
+      homeHi = 14
     }
   }
 
@@ -423,7 +501,7 @@ export function adjust1x2OddsForLiveInternal(
     draw: probabilityToDecimalOdd(adjusted.pDraw, liveMargin, 1.01),
     away: probabilityToDecimalOdd(adjusted.pAway, liveMargin, 1.01),
   }
-  return capLive1x2Odds(odds, live.homeGoals, live.awayGoals, live.minute)
+  return capLive1x2Odds(odds, live.homeGoals, live.awayGoals, live.minute, prematch)
 }
 
 /**

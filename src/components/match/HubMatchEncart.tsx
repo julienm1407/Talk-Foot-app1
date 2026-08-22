@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
-import type { LiveEncartSimulation, LiveMirrorForCard } from '../../types/liveSimulation'
+import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
 import { useLiveMatchForClock } from '../../hooks/useLiveMatchForClock'
@@ -149,16 +149,6 @@ export function HubStripLive({
   const crestLive =
     visualSize === 'compact' ? crestSm : visualSize === 'hero' ? crestHero : crestMd
 
-  const simulationForPresence: LiveEncartSimulation = {
-    active: Boolean(sim),
-    minute,
-    score: sc,
-    bumpSide: bump,
-    burst: sim?.burst ?? null,
-    toast: sim?.toast ?? null,
-    rim: sim?.rim ?? null,
-  }
-
   const shellClass = cn(
     stripLinkBase,
     rim,
@@ -258,7 +248,7 @@ export function HubStripLive({
       {visualSize === 'hero' ? (
         <div className="rounded-b-2xl border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">
           <div className="flex flex-col gap-2.5">
-            <LiveSalonPresenceStrip match={match} simulation={simulationForPresence} />
+            <LiveSalonPresenceStrip match={match} />
             <div className="flex justify-end border-t border-white/5 pt-2">
               <span className="shrink-0 rounded-xl bg-gradient-to-b from-sky-500 to-blue-600 px-4 py-1.5 text-xs font-black text-white shadow-[0_4px_16px_rgba(14,165,233,0.4)] transition group-hover:from-sky-400 group-hover:to-blue-500">
                 Rejoindre

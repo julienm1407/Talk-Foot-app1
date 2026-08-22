@@ -2,10 +2,9 @@ import type { BetSelection } from '../types/bet'
 import {
   DEFAULT_BOOK_MARGIN,
   impliedProbsFromDecimalOdds,
-  probabilityToDecimalOdd,
+  probabilityToExactScoreOdd,
 } from './internalOddsEngine'
-import type { Probabilities1x2 } from './types'
-import type { SmBookOdds1x2 } from './types'
+import type { Probabilities1x2, SmBookOdds1x2 } from './types'
 
 export type ExactScoreCategory = 'home' | 'draw' | 'away'
 
@@ -112,7 +111,32 @@ function scoreProbabilityGrid(opts: {
 function probToOdds(p: number, marginPct = DEFAULT_BOOK_MARGIN): number {
   const minOdd =
     p >= 0.14 ? 4.5 : p >= 0.08 ? 5.5 : p >= 0.04 ? 7 : p >= 0.02 ? 9 : 12
-  return round2(clamp(probabilityToDecimalOdd(p, marginPct, minOdd), minOdd, 90))
+  return probabilityToExactScoreOdd(p, marginPct, minOdd, 150)
+}
+
+function resolveExpectedGoals(
+  odds1x2: SmBookOdds1x2,
+  opts?: {
+    prematchOdds1x2?: SmBookOdds1x2 | null
+    liveMinute?: number | null
+    isLive?: boolean
+  },
+): { lamH: number; lamA: number } {
+  const liveProbs = impliedProbsFromDecimalOdds(odds1x2)
+  const prematchProbs = opts?.prematchOdds1x2
+    ? impliedProbsFromDecimalOdds(opts.prematchOdds1x2)
+    : liveProbs
+  const liveFull = expectedGoalsFrom1x2Probs(liveProbs)
+  const prematchFull = expectedGoalsFrom1x2Probs(prematchProbs)
+
+  if (!opts?.isLive) return prematchFull
+
+  const minute = opts.liveMinute ?? 0
+  const liveBlend = clamp(minute / 90, 0.15, 0.65)
+  return {
+    lamH: prematchFull.lamH * (1 - liveBlend) + liveFull.lamH * liveBlend,
+    lamA: prematchFull.lamA * (1 - liveBlend) + liveFull.lamA * liveBlend,
+  }
 }
 
 /**
@@ -123,16 +147,20 @@ export function exactScorePicksFrom1x2(
   opts?: {
     liveScore?: { home: number; away: number } | null
     liveMinute?: number | null
+    prematchOdds1x2?: SmBookOdds1x2 | null
     maxGoals?: number
     marginPct?: number
   },
 ): ExactScorePick[] {
-  const probs = impliedProbsFromDecimalOdds(odds1x2)
-  const full = expectedGoalsFrom1x2Probs(probs)
   const scoreHome = Math.max(0, opts?.liveScore?.home ?? 0)
   const scoreAway = Math.max(0, opts?.liveScore?.away ?? 0)
   const minute = opts?.liveMinute ?? 0
   const isLive = minute > 0 || scoreHome > 0 || scoreAway > 0
+  const full = resolveExpectedGoals(odds1x2, {
+    prematchOdds1x2: opts?.prematchOdds1x2,
+    liveMinute: minute,
+    isLive,
+  })
   const remainShare = isLive ? remainingGoalsExpectancy(minute) / 2.55 : 1
   const lamH = full.lamH * clamp(remainShare, 0.08, 1)
   const lamA = full.lamA * clamp(remainShare, 0.08, 1)

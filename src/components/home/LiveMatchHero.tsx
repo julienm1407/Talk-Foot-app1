@@ -441,11 +441,7 @@ export function LiveMatchHero({
         {spotlight ? (
           <div className="flex min-w-0 flex-col gap-2 sm:gap-2.5 lg:flex-row lg:items-stretch lg:justify-between lg:gap-3">
             <div className="min-w-0 w-full flex-1">
-              <LiveSalonPresenceStrip
-                match={match}
-                simulation={simulation}
-                variant="dense"
-              />
+              <LiveSalonPresenceStrip match={match} variant="dense" />
             </div>
             <div className="flex w-full min-w-0 justify-stretch sm:justify-end lg:w-auto lg:shrink-0">
               <Link
@@ -459,7 +455,7 @@ export function LiveMatchHero({
           </div>
         ) : (
           <div className={cn('flex flex-col gap-3', compact && 'gap-2')}>
-            <LiveSalonPresenceStrip match={match} simulation={simulation} compact={compact} />
+            <LiveSalonPresenceStrip match={match} compact={compact} />
             <div className="flex min-w-0 flex-wrap items-stretch justify-end border-t border-white/5 pt-2.5 sm:pt-3">
               <Link
                 to={`/channel/${match.id}`}

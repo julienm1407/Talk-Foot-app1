@@ -233,8 +233,9 @@ export function BetWidget({
     return exactScorePicksFrom1x2(x12Displayed, {
       liveScore: isLive || scoreHome > 0 || scoreAway > 0 ? { home: scoreHome, away: scoreAway } : null,
       liveMinute: isLive ? minuteLive : null,
+      prematchOdds1x2: x12Resolved,
     })
-  }, [x12Displayed, isLive, scoreHome, scoreAway, minuteLive])
+  }, [x12Displayed, x12Resolved, isLive, scoreHome, scoreAway, minuteLive])
 
   const userExactScoreBets = useMemo(
     () => matchBets.filter((b) => b.market === 'exact_score' && b.status !== 'cancelled'),

@@ -1,11 +1,3 @@
-import type { Match } from '../types/match'
-import type { LiveEncartSimulation } from '../types/liveSimulation'
-import { createMatchRng } from '../types/liveSimulation'
-
-function hubFansK(m: Match) {
-  return 8 + (m.home.shortName.length + m.away.shortName.length) * 0.42
-}
-
 export type LiveSalonTier = 'calm' | 'warm' | 'hot' | 'fire'
 
 export type LiveSalonPresenceSnapshot = {
@@ -16,70 +8,43 @@ export type LiveSalonPresenceSnapshot = {
   messages: number
 }
 
-/** Modèle démo : cohérent par match, évolution liée au temps de jeu, aux buts et à la simulation. */
-export function getLiveSalonPresenceSnapshot(
-  match: Match,
-  sim: LiveEncartSimulation,
-  tick: number,
+/** Intensité tribune dérivée des messages réels (0 si tribune vide). */
+export function getLiveSalonPresenceFromStats(
+  messagesCount: number,
+  participantsCount: number,
 ): LiveSalonPresenceSnapshot {
-  const t = tick * 0.35
-  const rng = createMatchRng(`${match.id}:${Math.floor(tick / 6)}`)
-  const h = Number(sim.score.home)
-  const aw = Number(sim.score.away)
-  const homeN = Number.isFinite(h) ? h : 0
-  const awayN = Number.isFinite(aw) ? aw : 0
-  const goals = homeN + awayN
-  const closeGame = Math.abs(homeN - awayN) <= 1 ? 1 : 0
+  const messages = Math.max(0, messagesCount)
+  const viewers = Math.max(0, participantsCount)
 
-  let intensity =
-    30 +
-    (sim.minute / 90) * 28 +
-    goals * 6 +
-    closeGame * 5 +
-    (sim.burst?.kind === 'goal' ? 22 : 0) +
-    (sim.burst?.kind === 'var' ? 8 : 0) +
-    (sim.toast?.kind === 'chance' ? 6 : 0) +
-    Math.sin(t) * 7 +
-    (rng() - 0.5) * 9
+  if (messages === 0) {
+    return {
+      intensity: 0,
+      tier: 'calm',
+      tierLabel: 'Tribune calme',
+      viewers,
+      messages: 0,
+    }
+  }
 
-  intensity = Math.round(Math.min(100, Math.max(14, intensity)))
-
-  const fans = hubFansK(match)
-  const baseViewers = Math.round(fans * 1000 + rng() * 420)
-  const viewers = Math.max(
-    120,
-    baseViewers + Math.round(Math.sin(t * 1.2) * 48) + (sim.burst?.kind === 'goal' ? 210 : 0),
-  )
-
-  const baseMsgs = 380 + match.id.length * 17 + goals * 120
-  const messages = Math.max(200, Math.round(baseMsgs + sim.minute * 22 + tick * 2.8 + rng() * 60))
+  const msgBoost = Math.log10(messages + 1) * 32
+  const participantBoost = Math.min(viewers, 12) * 3.5
+  const intensity = Math.round(Math.min(100, Math.max(6, 10 + msgBoost + participantBoost)))
 
   let tier: LiveSalonTier
   let tierLabel: string
   if (intensity >= 82) {
     tier = 'fire'
     tierLabel = 'Électrique'
-  } else if (intensity >= 62) {
+  } else if (intensity >= 58) {
     tier = 'hot'
     tierLabel = 'Tribune en feu'
-  } else if (intensity >= 42) {
+  } else if (intensity >= 32) {
     tier = 'warm'
     tierLabel = 'Ambiance montée'
   } else {
     tier = 'calm'
-    tierLabel = 'Ça chauffe'
+    tierLabel = 'Ça démarre'
   }
 
   return { intensity, tier, tierLabel, viewers, messages }
-}
-
-export function liveSalonActiveSeeds(matchId: string): { seed: string; accent: 'rose' | 'violet' | 'emerald' }[] {
-  const rng = createMatchRng(`${matchId}:actifs`)
-  const accents: Array<'rose' | 'violet' | 'emerald'> = ['rose', 'violet', 'emerald']
-  const initials = ['K', 'M', 'L', 'R', 'T', 'P', 'V', 'N']
-  const start = Math.floor(rng() * initials.length)
-  return [0, 1, 2].map((i) => ({
-    seed: initials[(start + i * 3) % initials.length]!,
-    accent: accents[i]!,
-  }))
 }
