@@ -588,7 +588,15 @@ function CloudUserStateLoader({
           if (betsChanged) {
             writeBetsBackup(user.id, next.bets)
           }
-          if (walletChanged || betsChanged) {
+          const prevOwned = prev.profile.ownedItemIds ?? []
+          const nextOwned = next.profile.ownedItemIds ?? []
+          const ownedChanged =
+            prevOwned.length !== nextOwned.length ||
+            prevOwned.some((id, i) => id !== nextOwned[i])
+          if (ownedChanged) {
+            writeOwnedItemsBackup(user.id, nextOwned)
+          }
+          if (walletChanged || betsChanged || ownedChanged) {
             hasLocalEditsRef.current = true
           }
         }

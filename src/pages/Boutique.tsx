@@ -141,6 +141,10 @@ export function BoutiquePage() {
       redirectToMedalPacks(item)
       return
     }
+    if (result.code === 'already_owned') {
+      showNotice('ok', 'Tu possèdes déjà cet article.')
+      return
+    }
     if (result.code === 'payment_failed') {
       showNotice('err', 'Paiement impossible — réessaie dans un instant.')
       return
