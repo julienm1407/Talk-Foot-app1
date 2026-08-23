@@ -120,7 +120,7 @@ export function nationPowerFactorsFromIso(
     form: Math.round(clamp(formBase, 28, 96)),
     attack: Math.round(strength),
     defense: Math.round(clamp(strength * 0.94 + 4, 30, 95)),
-    home: isHomeInMatch ? 100 : 0,
+    home: isHomeInMatch ? 72 : 48,
     ranking: Math.round(clamp(rankingScore, 8, 100)),
   }
 }

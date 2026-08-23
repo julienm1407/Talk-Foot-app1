@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildMatchOddsContextFromNations } from './buildTeamOddsInput'
+import { buildMatchOddsContext, buildMatchOddsContextFromNations } from './buildTeamOddsInput'
+import type { LeagueStandingRow } from '../data/leagueStandings'
 import {
   adjust1x2OddsForLiveInternal,
   calibrate1x2OddsForMarket,
@@ -8,12 +9,94 @@ import {
   teamPowerScore,
 } from './internalOddsEngine'
 
+function standing(
+  partial: Pick<LeagueStandingRow, 'teamId' | 'rank' | 'attackIndex' | 'defenseIndex' | 'momentumIndex'> & {
+    form?: LeagueStandingRow['form']
+  },
+): LeagueStandingRow {
+  return {
+    teamId: partial.teamId,
+    name: partial.teamId,
+    shortName: partial.teamId.slice(0, 3).toUpperCase(),
+    rank: partial.rank,
+    played: 22,
+    won: 0,
+    drawn: 0,
+    lost: 0,
+    gf: 0,
+    ga: 0,
+    gd: 0,
+    points: 0,
+    form: partial.form ?? ['W', 'D', 'W', 'L', 'D'],
+    attackIndex: partial.attackIndex,
+    defenseIndex: partial.defenseIndex,
+    momentumIndex: partial.momentumIndex,
+  }
+}
+
 test('Suisse vs Qatar — favori clair (~1,15–1,35 / nul ~6–8 / outsider ~10–18)', () => {
   const ctx = buildMatchOddsContextFromNations('CHE', 'QAT')
   const { odds1x2 } = computePrematch1x2FromContext(ctx)
   assert.ok(odds1x2.home >= 1.12 && odds1x2.home <= 1.38, `home=${odds1x2.home}`)
   assert.ok(odds1x2.draw >= 5.5 && odds1x2.draw <= 8.5, `draw=${odds1x2.draw}`)
   assert.ok(odds1x2.away >= 9 && odds1x2.away <= 20, `away=${odds1x2.away}`)
+})
+
+test('Angers (domicile) vs Lille — Lille reste largement favori', () => {
+  const ctx = buildMatchOddsContext(
+    standing({
+      teamId: 'angers',
+      rank: 14,
+      attackIndex: 44,
+      defenseIndex: 42,
+      momentumIndex: 40,
+      form: ['L', 'D', 'W', 'L', 'D'],
+    }),
+    standing({
+      teamId: 'lille',
+      rank: 4,
+      attackIndex: 74,
+      defenseIndex: 76,
+      momentumIndex: 72,
+      form: ['W', 'W', 'D', 'W', 'W'],
+    }),
+    'angers',
+    'lille',
+    { leagueSize: 18 },
+  )
+  assert.ok(ctx)
+  const { odds1x2 } = computePrematch1x2FromContext(ctx)
+  assert.ok(odds1x2.away < odds1x2.home, `Lille doit être favori (home=${odds1x2.home} away=${odds1x2.away})`)
+  assert.ok(odds1x2.away <= 2.35, `away Lille trop haut: ${odds1x2.away}`)
+  assert.ok(odds1x2.home >= 2.7, `home Angers trop bas: ${odds1x2.home}`)
+})
+
+test('gros favori à l’extérieur reste favori (City @ Monaco-style)', () => {
+  const ctx = buildMatchOddsContext(
+    standing({
+      teamId: 'monaco',
+      rank: 6,
+      attackIndex: 68,
+      defenseIndex: 62,
+      momentumIndex: 64,
+      form: ['W', 'D', 'W', 'W', 'L'],
+    }),
+    standing({
+      teamId: 'mci',
+      rank: 1,
+      attackIndex: 92,
+      defenseIndex: 88,
+      momentumIndex: 90,
+      form: ['W', 'W', 'W', 'D', 'W'],
+    }),
+    'monaco',
+    'mci',
+    { leagueSize: 18 },
+  )
+  assert.ok(ctx)
+  const { odds1x2 } = computePrematch1x2FromContext(ctx)
+  assert.ok(odds1x2.away < odds1x2.home, `City favori à l’extérieur (home=${odds1x2.home} away=${odds1x2.away})`)
+  assert.ok(odds1x2.away <= 2.1, `City away trop haut: ${odds1x2.away}`)
 })
 
 test('live : but outsider resserre sa cote et allonge celle du favori', () => {

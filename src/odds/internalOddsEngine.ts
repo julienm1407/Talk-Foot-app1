@@ -9,13 +9,13 @@ import type {
   TeamPowerFactors,
 } from './types'
 
-/** Pondérations demandées pour la puissance équipe. */
+/** Pondérations puissance : le classement / qualité pèse plus que le simple domicile. */
 export const TEAM_POWER_WEIGHTS = {
-  form: 0.35,
-  attack: 0.25,
-  defense: 0.2,
-  home: 0.1,
-  ranking: 0.1,
+  form: 0.26,
+  attack: 0.22,
+  defense: 0.18,
+  home: 0.05,
+  ranking: 0.29,
 } as const
 
 /** Marge bookmaker par défaut (légèrement plus généreuse qu’avant). */
@@ -62,8 +62,9 @@ export function probabilities1x2FromPower(homePower: number, awayPower: number):
   const diff = clamp(homePower - awayPower, -55, 55)
   const absDiff = Math.abs(diff)
 
-  const homeWinShare = 1 / (1 + Math.exp(-0.088 * diff))
-  let pDraw = 0.21 * Math.exp(-0.032 * absDiff) + 0.05
+  // Courbe un peu plus sensible à l’écart de qualité (moins de « tout le monde à domicile »).
+  const homeWinShare = 1 / (1 + Math.exp(-0.1 * diff))
+  let pDraw = 0.22 * Math.exp(-0.034 * absDiff) + 0.05
   pDraw = clamp(pDraw, 0.05, 0.3)
 
   const remain = 1 - pDraw

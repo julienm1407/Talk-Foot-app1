@@ -90,8 +90,20 @@ function parseForm(raw: unknown): FormResult[] {
     }
     if (!item || typeof item !== 'object') continue
     const o = item as Record<string, unknown>
+    const statusBlob = String(
+      o.status ?? o.state ?? o.fixture_status ?? o.description ?? '',
+    ).toUpperCase()
+    // Ne pas compter un match non joué / reporté dans la forme.
+    if (
+      /NS|TBD|POSTP|SUSP|CANCEL|ABAND|SCHEDULED|NOT[\s_-]?STARTED|UPCOMING|À VENIR|A VENIR/i.test(
+        statusBlob,
+      )
+    ) {
+      continue
+    }
     /** Champ officiel `StandingForm.form` : une lettre W / D / L (doc SportMonks). */
     const smForm = String(o.form ?? '').trim().toUpperCase()
+    if (!smForm && !o.result) continue
     if (smForm.startsWith('W')) {
       out.push('W')
       continue
@@ -138,32 +150,56 @@ function compactClubName(s: string): string {
   )
 }
 
+/** Fuzzy trop large : « Paris » ⊂ « Paris Saint-Germain » fusionnait Paris FC → PSG. */
+function fuzzyNameMatch(
+  participantNorm: string,
+  participantCompact: string,
+  teamNorm: string,
+  teamCompact: string,
+): boolean {
+  const closeEnough = (a: string, b: string) => {
+    if (a.length < 5 || b.length < 5) return false
+    if (a === b) return true
+    const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a]
+    if (!longer.includes(shorter)) return false
+    // Exige un chevauchement réel (évite paris ⊂ parissaintgermain).
+    return shorter.length / longer.length >= 0.72
+  }
+  return (
+    closeEnough(participantCompact, teamCompact) || closeEnough(participantNorm, teamNorm)
+  )
+}
+
 function resolveTeamId(
   participantId: number,
   participantName: string,
   talkFootLeagueId: string,
 ): { teamId: string; displayName?: string } {
   const pool = teams[talkFootLeagueId as keyof typeof teams]
+  const inPool = (id: string) => Boolean(pool?.some((x) => x.id === id))
+
+  // 1) Id SportMonks (source de vérité) — avant tout fuzzy sur le nom.
+  for (const [clubId, smId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
+    if (smId === participantId && inPool(clubId)) return { teamId: clubId }
+  }
+
   if (pool?.length) {
     const n = normalizeName(participantName)
     const c = compactClubName(participantName)
     const exact = pool.find((x) => normalizeName(x.name) === n || normalizeName(x.shortName) === n)
     if (exact) return { teamId: exact.id }
-    const fuzzy = pool.find((x) => {
-      const xn = normalizeName(x.name)
-      const xc = compactClubName(x.name)
-      return (
-        (c.length >= 4 && xc.length >= 4 && (c.includes(xc) || xc.includes(c))) ||
-        (n.length >= 5 && (n.includes(xn) || xn.includes(n)))
-      )
-    })
+
+    // 2) Alias de noms connus (parisfootballclub → parisfc) avant fuzzy.
+    const guessed = apiNameToOurId(participantName)
+    if (inPool(guessed)) return { teamId: guessed }
+
+    // 3) Fuzzy strict uniquement.
+    const fuzzy = pool.find((x) =>
+      fuzzyNameMatch(n, c, normalizeName(x.name), compactClubName(x.name)),
+    )
     if (fuzzy) return { teamId: fuzzy.id }
   }
-  const guessed = apiNameToOurId(participantName)
-  if (pool?.some((x) => x.id === guessed)) return { teamId: guessed }
-  for (const [clubId, smId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
-    if (smId === participantId && pool?.some((x) => x.id === clubId)) return { teamId: clubId }
-  }
+
   return {
     teamId: `sm-${participantId}`,
     displayName: shortParticipantLabel(participantName),
@@ -181,6 +217,7 @@ function parseDetailBlob(details: unknown): {
   hasExplicitGf: boolean
   hasExplicitGa: boolean
   hasExplicitGd: boolean
+  hasExplicitPlayed: boolean
 } {
   const out = {
     played: 0,
@@ -193,6 +230,7 @@ function parseDetailBlob(details: unknown): {
     hasExplicitGf: false,
     hasExplicitGa: false,
     hasExplicitGd: false,
+    hasExplicitPlayed: false,
   }
   if (!Array.isArray(details)) return out
   type MutableStats = Pick<typeof out, 'played' | 'won' | 'drawn' | 'lost' | 'gf' | 'ga'>
@@ -228,7 +266,9 @@ function parseDetailBlob(details: unknown): {
     const blob = `${dev} ${nm}`
     const isHomeAway = /HOME|AWAY|DOMICILE|EXTERIEUR/i.test(blob)
     const isOverall = /OVERALL|TOTAL|ALL/i.test(blob) && !isHomeAway
-    const score = isOverall ? 3 : isHomeAway ? 1 : 2
+    // Préférer overall ; ignorer home/away pour le tableau (évite PJ=1 fantôme).
+    if (isHomeAway) continue
+    const score = isOverall ? 3 : 2
     const val = parseNum(d.value ?? d.total)
     if (val == null) continue
 
@@ -261,11 +301,13 @@ function parseDetailBlob(details: unknown): {
     }
     if (dev === 'MATCHES_PLAYED' || dev === 'GAMES_PLAYED' || dev === 'PLAYED') {
       putBest('played', val, 5, out, quality)
+      out.hasExplicitPlayed = true
       continue
     }
 
     if (/PLAYED|GAMES?\s*PLAY|MATCHES?\s*PLAY|PJ\b|MP\b/i.test(blob)) {
       putBest('played', val, score, out, quality)
+      if (score >= 3) out.hasExplicitPlayed = true
     } else if (
       /OVERALL.*WIN|^WINS?$|TOTAL.*WIN/i.test(blob) ||
       (/\bWIN\b/.test(blob) && !/HOME|AWAY|DOMICILE|EXTERIEUR/.test(blob))
@@ -478,6 +520,48 @@ function derivedIndices(row: {
 }
 
 /**
+ * Corrige les lignes « fantômes » (PJ/forme d’une autre équipe ou saison précédente)
+ * quand aucun point / but / V-N n’indique un match réellement joué.
+ * Une défaite réelle a toujours BC ≥ 1 ; 0-0-0 pts/BP/BC + P≥1 est incohérent.
+ */
+function sanitizeStandingMatchStats(stats: {
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  gf: number
+  ga: number
+  points: number
+  form: FormResult[]
+}): {
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  gf: number
+  ga: number
+  points: number
+  form: FormResult[]
+} {
+  let { played, won, drawn, lost, gf, ga, points, form } = stats
+  const sumWdl = won + drawn + lost
+
+  if (points === 0 && won === 0 && drawn === 0 && gf === 0 && ga === 0) {
+    return { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0, form: [] }
+  }
+
+  if (played > 0 && sumWdl > played) played = sumWdl
+  else if (!played && sumWdl > 0) played = sumWdl
+
+  if (played <= 0) {
+    return { played: 0, won: 0, drawn: 0, lost: 0, gf, ga, points, form: [] }
+  }
+
+  if (form.length > played) form = form.slice(-played)
+  return { played, won, drawn, lost, gf, ga, points, form }
+}
+
+/**
  * Repli : `GET /teams/seasons/{seasonId}?include=statistics.details.type` — une ligne par équipe,
  * classement reconstitué par tri sur les points (pas de place officielle dans cette liste).
  */
@@ -504,32 +588,39 @@ export function extractLeagueStandingRowsFromSmTeamsSeasonEnvelope(
     if (ov) d = mergeStandingCore(d, ov)
 
     const { won, drawn, lost, gf } = d
-    const ga = resolveGoalsAgainst(gf, d.ga, d.gd)
-    let played = d.played
+    const ga = resolveGoalsAgainst(gf, d.ga, d.gd) ?? 0
     const pointsFromStats = parsePointsFromStatisticDetails(flat)
     const points =
       pointsFromStats != null
         ? Math.round(pointsFromStats)
         : Math.round(Math.max(0, won * 3 + drawn))
-    if (!played && won + drawn + lost > 0) played = won + drawn + lost
-    if (flat.length === 0 && !ov && points === 0 && won + drawn + lost === 0 && gf === 0 && (ga ?? 0) === 0)
+    if (flat.length === 0 && !ov && points === 0 && won + drawn + lost === 0 && gf === 0 && ga === 0)
       continue
 
-    const form: FormResult[] = []
-    const base = { played, won, drawn, lost, gf, ga: ga ?? 0, points, form }
+    const cleaned = sanitizeStandingMatchStats({
+      played: d.played,
+      won,
+      drawn,
+      lost,
+      gf,
+      ga,
+      points,
+      form: [],
+    })
+    const base = cleaned
     const idx = derivedIndices(base)
 
     rows.push({
       rank: 0,
       teamId,
-      played,
-      won,
-      drawn,
-      lost,
-      gf,
-      ga: ga ?? 0,
-      points,
-      form,
+      played: cleaned.played,
+      won: cleaned.won,
+      drawn: cleaned.drawn,
+      lost: cleaned.lost,
+      gf: cleaned.gf,
+      ga: cleaned.ga,
+      points: cleaned.points,
+      form: cleaned.form,
       ...idx,
       ...(displayName ? { displayName } : {}),
       sportMonksParticipantId: tid,
@@ -594,28 +685,32 @@ export function extractLeagueStandingRowsFromSmStandingsEnvelope(
 
     const { won, drawn, lost, gf } = d
     const rowGd = parseGoalDiff(row)
-    const ga = resolveGoalsAgainst(gf, d.ga, rowGd ?? d.gd)
-    let played = d.played
-    const sumWdl = won + drawn + lost
-    if (played > 0 && sumWdl > played) played = sumWdl
-    if (!played && won + drawn + lost > 0) played = won + drawn + lost
-
+    const ga = resolveGoalsAgainst(gf, d.ga, rowGd ?? d.gd) ?? 0
     const form = parseForm(row.form)
 
-    const base = { played, won, drawn, lost, gf, ga: ga ?? 0, points, form }
-    const idx = derivedIndices(base)
-
-    rows.push({
-      rank,
-      teamId,
-      played,
+    const cleaned = sanitizeStandingMatchStats({
+      played: d.played,
       won,
       drawn,
       lost,
       gf,
-      ga: ga ?? 0,
+      ga,
       points,
       form,
+    })
+    const idx = derivedIndices(cleaned)
+
+    rows.push({
+      rank,
+      teamId,
+      played: cleaned.played,
+      won: cleaned.won,
+      drawn: cleaned.drawn,
+      lost: cleaned.lost,
+      gf: cleaned.gf,
+      ga: cleaned.ga,
+      points: cleaned.points,
+      form: cleaned.form,
       ...idx,
       ...(displayName ? { displayName } : {}),
       trend: trendFromResult(row.result),
@@ -660,27 +755,32 @@ function smStandingRowToWcStats(raw: Record<string, unknown>): {
   const { won, drawn, lost, gf } = d
   const rowGd = parseGoalDiff(raw)
   const ga = resolveGoalsAgainst(gf, d.ga, rowGd ?? d.gd) ?? 0
-  let played = d.played
-  const sumWdl = won + drawn + lost
-  if (played > 0 && sumWdl > played) played = sumWdl
-  if (!played && sumWdl > 0) played = sumWdl
-
-  const goalsFor = gf ?? 0
-  const goalsAgainst = ga
-  const goalDiff = rowGd ?? d.gd ?? goalsFor - goalsAgainst
   const formArr = parseForm(raw.form)
-  const form = formArr.length ? formArr.join('') : undefined
-
-  return {
-    rank,
-    played,
+  const cleaned = sanitizeStandingMatchStats({
+    played: d.played,
     won,
     drawn,
     lost,
+    gf: gf ?? 0,
+    ga,
+    points,
+    form: formArr,
+  })
+  const goalsFor = cleaned.gf
+  const goalsAgainst = cleaned.ga
+  const goalDiff = rowGd ?? d.gd ?? goalsFor - goalsAgainst
+  const form = cleaned.form.length ? cleaned.form.join('') : undefined
+
+  return {
+    rank,
+    played: cleaned.played,
+    won: cleaned.won,
+    drawn: cleaned.drawn,
+    lost: cleaned.lost,
     goalsFor,
     goalsAgainst,
     goalDiff,
-    points,
+    points: cleaned.points,
     form,
   }
 }

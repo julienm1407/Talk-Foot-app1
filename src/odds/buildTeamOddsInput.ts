@@ -46,7 +46,8 @@ export function buildTeamPowerFactors(
     form: Math.max(0, Math.min(100, formScore)),
     attack: slice.attackIndex,
     defense: slice.defenseIndex,
-    home: opts.isHomeInMatch ? 100 : 0,
+    // Léger bonus domicile (~bookmaker), pas 100 vs 0 qui écrasait le classement.
+    home: opts.isHomeInMatch ? 72 : 48,
     ranking: rankingScoreFromRank(slice.rank, opts.leagueSize),
   }
 }
