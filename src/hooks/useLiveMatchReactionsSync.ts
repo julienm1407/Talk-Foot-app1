@@ -17,6 +17,11 @@ type ReactionRow = {
 
 const BROADCAST_REACTION_EVENT = 'live_match_reaction'
 
+/** Nom partagé entre tous les clients du même match — obligatoire pour le broadcast. */
+function reactionChannelName(matchId: string) {
+  return `live_match_rx:${matchId}`
+}
+
 function broadcastPayloadToRow(msg: unknown, fallbackMatchId: string): ReactionRow | null {
   if (!msg || typeof msg !== 'object') return null
   const o = msg as Record<string, unknown>
@@ -85,15 +90,18 @@ export function useLiveMatchReactionsSync(options: {
   type Sb = NonNullable<ReturnType<typeof getSupabaseBrowserClient>>
   type ReactionRealtimeChannel = ReturnType<Sb['channel']>
   const reactionChannelRef = useRef<ReactionRealtimeChannel | null>(null)
+  const reactionSubscribedRef = useRef(false)
+  /** Ids déjà livrés via broadcast — évite un second FX basique via postgres. */
+  const deliveredViaBroadcastRef = useRef(new Set<string>())
 
-  const waitForReactionChannel = useCallback(async (maxMs = 2500) => {
+  const waitForReactionChannel = useCallback(async (maxMs = 4000) => {
     const started = Date.now()
     while (Date.now() - started < maxMs) {
       const ch = reactionChannelRef.current
-      if (ch) return ch
+      if (ch && reactionSubscribedRef.current) return ch
       await new Promise((resolve) => window.setTimeout(resolve, 50))
     }
-    return reactionChannelRef.current
+    return reactionSubscribedRef.current ? reactionChannelRef.current : null
   }, [])
 
   const publishReaction = useCallback(
@@ -123,9 +131,11 @@ export function useLiveMatchReactionsSync(options: {
       const ev = rowToReactionEvent(row, matchId, meta)
       if (!ev) return { ok: false as const, error: 'invalid_type' }
 
+      deliveredViaBroadcastRef.current.add(row.id)
+
       const ch = await waitForReactionChannel()
       if (ch) {
-        void ch.send({
+        const { error: sendErr } = await ch.send({
           type: 'broadcast',
           event: BROADCAST_REACTION_EVENT,
           payload: {
@@ -138,6 +148,11 @@ export function useLiveMatchReactionsSync(options: {
             ...(meta?.flareColor ? { flare_color: meta.flareColor } : {}),
           },
         })
+        if (sendErr && import.meta.env.DEV) {
+          console.warn('[Talk Foot] live_match_reaction broadcast:', sendErr.message)
+        }
+      } else if (import.meta.env.DEV) {
+        console.warn('[Talk Foot] live_match_reaction: canal non prêt, FX sans broadcast')
       }
 
       return { ok: true as const, event: ev }
@@ -152,7 +167,8 @@ export function useLiveMatchReactionsSync(options: {
     if (!sb) return
 
     let cancelled = false
-    const mountId = Date.now()
+    deliveredViaBroadcastRef.current = new Set()
+    reactionSubscribedRef.current = false
 
     const run = async () => {
       const session = await ensureSupabaseChatSession(sb)
@@ -174,13 +190,21 @@ export function useLiveMatchReactionsSync(options: {
           .filter((e): e is ReactionEvent => e != null)
         if (events.length) onHydrateRef.current(events)
       }
-      // Pas de replay FX à l’hydratation — onHydrate sert uniquement à amorcer les ids vus côté Channel.
 
       if (cancelled) return
 
+      // Retirer un éventuel canal orphelin du même topic (StrictMode / remount).
+      const topic = reactionChannelName(matchId)
+      for (const existing of sb.getChannels()) {
+        const t = existing.topic ?? ''
+        if (t === topic || t === `realtime:${topic}` || t.endsWith(`:${topic}`)) {
+          void sb.removeChannel(existing)
+        }
+      }
+
       const matchFilter = postgresChangesEqFilter('match_id', matchId)
       const channel = sb
-        .channel(`live_match_rx:${matchId}:${mountId}`, {
+        .channel(topic, {
           config: { broadcast: { self: true } },
         })
         .on(
@@ -192,8 +216,16 @@ export function useLiveMatchReactionsSync(options: {
             filter: matchFilter,
           },
           (payload: RealtimePostgresChangesPayload<ReactionRow>) => {
-            void payload
-            // FX via broadcast uniquement (métadonnées tifo / couleur fumigène) — dédoublonnage par id côté Channel.
+            const row = payload.new
+            if (!row || typeof row !== 'object') return
+            const typed = row as ReactionRow
+            // Repli si le broadcast (méta tifo/couleur) n’arrive pas — délai pour laisser le broadcast gagner.
+            window.setTimeout(() => {
+              if (cancelled) return
+              if (deliveredViaBroadcastRef.current.has(typed.id)) return
+              const ev = rowToReactionEvent(typed, matchId)
+              if (ev) onLiveInsertRef.current(ev)
+            }, 450)
           },
         )
         .on('broadcast', { event: BROADCAST_REACTION_EVENT }, (msg: unknown) => {
@@ -208,6 +240,7 @@ export function useLiveMatchReactionsSync(options: {
                     : o
                 })()
               : undefined
+          deliveredViaBroadcastRef.current.add(row.id)
           const ev = rowToReactionEvent(row, matchId, {
             tifoSide: tifoSideFromPayload(inner),
             flareColor: flareColorFromPayload(inner),
@@ -215,6 +248,10 @@ export function useLiveMatchReactionsSync(options: {
           if (ev) onLiveInsertRef.current(ev)
         })
         .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            reactionSubscribedRef.current = true
+            reactionChannelRef.current = channel
+          }
           if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
             console.warn('[Talk Foot] live_match_reactions realtime:', status)
           }
@@ -231,6 +268,7 @@ export function useLiveMatchReactionsSync(options: {
 
     return () => {
       cancelled = true
+      reactionSubscribedRef.current = false
       const ch = reactionChannelRef.current
       reactionChannelRef.current = null
       if (ch) {

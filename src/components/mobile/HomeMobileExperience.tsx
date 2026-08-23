@@ -198,6 +198,26 @@ export function HomeMobileExperience({
 
   return (
     <div className="tf-mobile-home mx-auto w-full max-w-tf-content space-y-4 pb-2 sm:space-y-5">
+      <div
+        className={cn(
+          'sticky top-0 z-30 -mx-[var(--tf-page-gutter,0px)] border-b px-[var(--tf-page-gutter,0.75rem)] py-2.5 backdrop-blur-md sm:rounded-none',
+          L
+            ? 'border-tf-dark/10 bg-[#f3f7fb]/95'
+            : 'border-white/10 bg-[#071422]/92',
+        )}
+      >
+        <HomeSiteSearch
+          ref={mobileSearchRef}
+          inputId="home-mobile-search-v2"
+          className="w-full [&_input]:min-h-tf-touch [&_input]:text-base"
+        />
+        <SearchTrends12h
+          className="mt-2 w-full min-w-0"
+          maxTerms={3}
+          onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
+        />
+      </div>
+
       <HomeMobileMonEspaceStrip />
 
       {isCdm ? <CdmHomeReminder /> : null}
@@ -325,7 +345,7 @@ export function HomeMobileExperience({
 
       <MobileCollapsibleSection
         title="Explorer"
-        subtitle="Actus, recherche et tendances"
+        subtitle="Actus et débats tendances"
         preview={
           explorerPreviewArticle && newsItemHasArticlePage(explorerPreviewArticle) ? (
             <Link
@@ -352,24 +372,6 @@ export function HomeMobileExperience({
         }
       >
         <div className="space-y-4">
-          <div
-            className={cn(
-              'rounded-xl border p-2.5',
-              L ? 'border-tf-electric/20 bg-white/95' : 'border-sky-400/20 bg-[#0a1e36]/95',
-            )}
-          >
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-sky-400/90">Rechercher</p>
-            <HomeSiteSearch
-              ref={mobileSearchRef}
-              inputId="home-mobile-search-v2"
-              className="w-full [&_input]:min-h-tf-touch [&_input]:text-base"
-            />
-            <SearchTrends12h
-              className="mt-2 w-full min-w-0"
-              maxTerms={3}
-              onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
-            />
-          </div>
           <HomeEditorialIntro />
           <section className={cn('w-full', trendsShell)} aria-label="Débats tendances">
             <TrendingDebatesSection debates={trendingDebates} loading={debatesLoading} variant="band" />
