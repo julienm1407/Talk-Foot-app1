@@ -22,10 +22,6 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n))
 }
 
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
-}
-
 function poissonPMF(k: number, lambda: number): number {
   if (lambda <= 0) return k === 0 ? 1 : 0
   if (k < 0) return 0
