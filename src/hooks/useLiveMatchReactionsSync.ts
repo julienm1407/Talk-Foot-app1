@@ -135,7 +135,7 @@ export function useLiveMatchReactionsSync(options: {
 
       const ch = await waitForReactionChannel()
       if (ch) {
-        const { error: sendErr } = await ch.send({
+        const sendStatus = await ch.send({
           type: 'broadcast',
           event: BROADCAST_REACTION_EVENT,
           payload: {
@@ -148,8 +148,8 @@ export function useLiveMatchReactionsSync(options: {
             ...(meta?.flareColor ? { flare_color: meta.flareColor } : {}),
           },
         })
-        if (sendErr && import.meta.env.DEV) {
-          console.warn('[Talk Foot] live_match_reaction broadcast:', sendErr.message)
+        if (sendStatus !== 'ok' && import.meta.env.DEV) {
+          console.warn('[Talk Foot] live_match_reaction broadcast:', sendStatus)
         }
       } else if (import.meta.env.DEV) {
         console.warn('[Talk Foot] live_match_reaction: canal non prêt, FX sans broadcast')
