@@ -4,7 +4,7 @@
  */
 export const SPORTMONKS_TEAM_ID_BY_CLUB_ID: Readonly<Record<string, number>> = {
   alaves: 2975,
-  angers: 47,
+  angers: 776,
   ars: 19,
   atalanta: 708,
   atleti: 7980,

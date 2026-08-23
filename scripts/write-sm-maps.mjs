@@ -4,7 +4,7 @@ const synced = JSON.parse(fs.readFileSync('scripts/sm-team-ids-output.json', 'ut
 const base = {
   psg: 591, om: 44, monaco: 6789, nice: 450, lille: 690, lyon: 79, lens: 271, rennes: 598,
   brest: 266, nantes: 59, strasbourg: 686, montpellier: 581, reims: 1028, toulouse: 289,
-  lorient: 9257, lehavre: 1055, metz: 3513, auxerre: 3682, angers: 47, stetienne: 108, parisfc: 4508,
+  lorient: 9257, lehavre: 1055, metz: 3513, auxerre: 3682, angers: 776, stetienne: 108, parisfc: 4508,
   mci: 9, liv: 8, ars: 19, che: 18, mun: 14, tot: 6, new: 20, avl: 15,
   rma: 3468, fcb: 83, atleti: 7980, sevilla: 676, villarreal: 3477,
   bayern: 503, bay: 503, bvb: 68, leverkusen: 3321, leipzig: 277,
