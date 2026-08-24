@@ -46,6 +46,8 @@ function LayerImage({
   filter?: string
   priority?: boolean
 }) {
+  const [failed, setFailed] = useState(false)
+  if (!src || failed) return null
   return (
     <img
       src={src}
@@ -59,6 +61,7 @@ function LayerImage({
       fetchPriority={priority ? 'high' : undefined}
       decoding={priority ? 'sync' : 'async'}
       draggable={false}
+      onError={() => setFailed(true)}
     />
   )
 }

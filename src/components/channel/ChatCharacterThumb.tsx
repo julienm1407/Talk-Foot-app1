@@ -132,6 +132,37 @@ export function ChatCharacterThumb({
     className,
   )
 
+  const dicebearFallback = (
+    <img
+      src={dicebearAvatarUrl(dicebearSeed, 96, 0)}
+      alt=""
+      className={cn('size-full rounded-full object-cover', thumbBorderClass)}
+    />
+  )
+
+  const modularFigure = (
+    <ProfileCharacterThumb
+      profile={profile}
+      shellPx={shellPx}
+      size={size === 'compact' ? 'xs' : 'sm'}
+      imagePriority
+      {...chatFraming}
+      className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
+      aria-label={ariaLabel}
+    />
+  )
+
+  const photoFigure =
+    photoUrl && !photoFailed ? (
+      <img
+        src={photoUrl}
+        alt=""
+        className={cn('size-full rounded-full object-cover object-top', thumbBorderClass)}
+        onError={() => setPhotoFailed(true)}
+      />
+    ) : null
+
+  // Jamais de cercle noir vide : pending → photo ou dicebear ; modular sinon.
   const figure = isBot ? (
     <SalonBotHeadThumb
       seed={botSeed}
@@ -140,47 +171,16 @@ export function ChatCharacterThumb({
       className="size-full"
       aria-label={ariaLabel}
     />
+  ) : avatarPending && !preferModularOverPhoto ? (
+    photoFigure ?? dicebearFallback
   ) : preferModularOverPhoto && useModularThumb ? (
-    <ProfileCharacterThumb
-      profile={profile}
-      shellPx={shellPx}
-      size={size === 'compact' ? 'xs' : 'sm'}
-      imagePriority
-      {...chatFraming}
-      className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
-      aria-label={ariaLabel}
-    />
-  ) : photoUrl && !photoFailed ? (
-    <img
-      src={photoUrl}
-      alt=""
-      className={cn('size-full rounded-full object-cover object-top', thumbBorderClass)}
-      onError={() => setPhotoFailed(true)}
-    />
+    modularFigure
+  ) : photoFigure ? (
+    photoFigure
   ) : useModularThumb ? (
-    <ProfileCharacterThumb
-      profile={profile}
-      shellPx={shellPx}
-      size={size === 'compact' ? 'xs' : 'sm'}
-      imagePriority
-      {...chatFraming}
-      className={cn('!h-full !w-full !min-h-0 !min-w-0 rounded-full', thumbBorderClass)}
-      aria-label={ariaLabel}
-    />
-  ) : avatarPending ? (
-    <div
-      className={cn(
-        'size-full rounded-full bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
-        thumbBorderClass,
-      )}
-      aria-hidden
-    />
+    modularFigure
   ) : (
-    <img
-      src={dicebearAvatarUrl(dicebearSeed, 96, 0)}
-      alt=""
-      className={cn('size-full rounded-full object-cover', thumbBorderClass)}
-    />
+    dicebearFallback
   )
 
   const avatarBody = (

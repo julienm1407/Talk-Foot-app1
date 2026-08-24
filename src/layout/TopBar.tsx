@@ -418,6 +418,7 @@ export function TopBar() {
             <ProfileCharacterThumb
               profile={profile}
               size="sm"
+              shellPx={28}
               {...MODULAR_PP_NAV_FRAMING}
               className="!h-6 !w-6 !min-h-6 !min-w-6 shrink-0 rounded-full border-0 p-0 ring-2 ring-white/25 min-[420px]:!h-7 min-[420px]:!w-7 min-[420px]:!min-h-7 min-[420px]:!min-w-7 sm:!h-8 sm:!w-8 sm:!min-h-8 sm:!min-w-8"
               aria-label="Mon avatar in-app"
