@@ -5,6 +5,8 @@ import { mergeOwnedItemsIntoProfile, useProfile } from './useProfile'
 import { useWallet } from './useWallet'
 import { normalizeWallet } from '../utils/walletNormalize'
 import { writeOwnedItemsBackup } from '../utils/ownedItemsBackup'
+import { writeModularAvatarBackup } from '../utils/modularAvatarBackup'
+import { applyShopGrantIdsToModularAvatar } from '../utils/boutiqueModularIds'
 import { useAuth } from '../contexts/AuthContext'
 import {
   purchaseCosmeticItem,
@@ -30,6 +32,7 @@ export function useBoutiquePurchase() {
       if (cloud) {
         let result: CommitCosmeticPurchaseResult = { ok: false }
         let nextOwned: string[] = []
+        let nextModular: ReturnType<typeof applyShopGrantIdsToModularAvatar> | null = null
         cloud.patchApp((prev) => {
           const w = normalizeWallet(prev.wallet)
           if (input.currency === 'medals') {
@@ -40,10 +43,11 @@ export function useBoutiquePurchase() {
             result = { ok: true }
             const profile = mergeOwnedItemsIntoProfile(prev.profile, input.grantIds)
             nextOwned = profile.ownedItemIds
+            nextModular = applyShopGrantIdsToModularAvatar(profile.modularAvatar, input.grantIds)
             return {
               ...prev,
               wallet: { ...w, medals: w.medals - input.medalCost },
-              profile,
+              profile: { ...profile, modularAvatar: nextModular },
             }
           } else if (w.tokens < input.tokenCost) {
             result = { ok: false, insufficientTokens: true }
@@ -52,14 +56,16 @@ export function useBoutiquePurchase() {
           result = { ok: true }
           const profile = mergeOwnedItemsIntoProfile(prev.profile, input.grantIds)
           nextOwned = profile.ownedItemIds
+          nextModular = applyShopGrantIdsToModularAvatar(profile.modularAvatar, input.grantIds)
           return {
             ...prev,
             wallet: { ...w, tokens: w.tokens - input.tokenCost },
-            profile,
+            profile: { ...profile, modularAvatar: nextModular },
           }
         })
-        if (result.ok && user?.id && nextOwned.length) {
-          writeOwnedItemsBackup(user.id, nextOwned)
+        if (result.ok && user?.id) {
+          if (nextOwned.length) writeOwnedItemsBackup(user.id, nextOwned)
+          if (nextModular) writeModularAvatarBackup(user.id, nextModular)
         }
         return result
       }

@@ -6,6 +6,11 @@ import {
   sanitizeModularAvatarState,
   type ModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
+import {
+  DEFAULT_MODULAR_JERSEY,
+  DEFAULT_MODULAR_SHOES,
+  DEFAULT_MODULAR_SHORTS,
+} from './modularGarmentAccess'
 
 type ModularAvatarBackupV1 = {
   v: 1
@@ -32,8 +37,9 @@ function resolvedAvatar(state: ModularAvatarState | undefined | null): ModularAv
 
 /** Visage seulement (ignore maillot / short / chaussures). */
 export function isLikelyDefaultFace(state: ModularAvatarState | undefined | null): boolean {
-  const d = resolvedAvatar(state).data
-  const colors = resolvedAvatar(state).slotColors
+  const resolved = resolvedAvatar(state)
+  const d = resolved.data
+  const colors = resolved.slotColors
   const def = createDefaultModularAvatarState()
   return (
     d.skinTone === def.data.skinTone &&
@@ -48,21 +54,34 @@ export function isLikelyDefaultFace(state: ModularAvatarState | undefined | null
   )
 }
 
+/** Tenue boutique (maillot / short / chaussures). */
+export function isLikelyDefaultKit(state: ModularAvatarState | undefined | null): boolean {
+  const d = resolvedAvatar(state).data
+  const def = createDefaultModularAvatarState().data
+  const jerseyDefault =
+    !d.jersey || d.jersey === def.data.jersey || d.jersey === DEFAULT_MODULAR_JERSEY
+  const shortsDefault =
+    !d.shorts || d.shorts === def.data.shorts || d.shorts === DEFAULT_MODULAR_SHORTS
+  const shoesDefault =
+    !d.shoes || d.shoes === def.data.shoes || d.shoes === DEFAULT_MODULAR_SHOES
+  return jerseyDefault && shortsDefault && shoesDefault
+}
+
 /**
- * Kit (maillot/short/chaussures) du premier argument + visage du second
- * si le premier n’a qu’un visage par défaut (achat boutique ne doit pas
- * écraser cheveux / barbe).
+ * Fusionne deux avatars : le `preferred` gagne s’il a un visage / kit custom,
+ * sinon on complète avec le `fallback` (backup local ou autre appareil).
  */
-export function mergeModularAvatarKeepFace(
-  kitSource: ModularAvatarState | undefined | null,
-  faceSource: ModularAvatarState | undefined | null,
+export function mergeModularAvatarLayers(
+  preferred: ModularAvatarState | undefined | null,
+  fallback: ModularAvatarState | undefined | null,
 ): ModularAvatarState {
-  const kit = resolvedAvatar(kitSource)
-  const face = resolvedAvatar(faceSource)
-  if (!isLikelyDefaultFace(kit) || isLikelyDefaultFace(face)) return kit
+  const a = resolvedAvatar(preferred)
+  const b = resolvedAvatar(fallback)
+  const face = !isLikelyDefaultFace(a) ? a : b
+  const kit = !isLikelyDefaultKit(a) ? a : b
   return {
     data: {
-      ...kit.data,
+      ...a.data,
       skinTone: face.data.skinTone,
       body: face.data.body,
       hair: face.data.hair,
@@ -71,13 +90,27 @@ export function mergeModularAvatarKeepFace(
       nose: face.data.nose,
       mouth: face.data.mouth,
       beard: face.data.beard,
+      jersey: kit.data.jersey,
+      shorts: kit.data.shorts,
+      shoes: kit.data.shoes,
     },
     slotColors: {
-      ...kit.slotColors,
+      ...a.slotColors,
       hair: face.slotColors.hair,
       beard: face.slotColors.beard,
+      jersey: kit.slotColors.jersey,
+      shorts: kit.slotColors.shorts,
+      shoes: kit.slotColors.shoes,
     },
   }
+}
+
+/** @deprecated Prefer mergeModularAvatarLayers — kept for call-site clarity. */
+export function mergeModularAvatarKeepFace(
+  kitSource: ModularAvatarState | undefined | null,
+  faceSource: ModularAvatarState | undefined | null,
+): ModularAvatarState {
+  return mergeModularAvatarLayers(kitSource, faceSource)
 }
 
 function withMergedAvatar(app: UserAppStateV1, modularAvatar: ModularAvatarState): UserAppStateV1 {
@@ -98,8 +131,15 @@ export function wouldDowngradeModularAvatar(
   const prev = coerceModularAvatarFromStored(previous)
   const nxt = coerceModularAvatarFromStored(next)
   if (!prev) return false
-  if (!nxt) return !isLikelyDefaultFace(prev) || !isLikelyDefaultModularAvatar(prev)
+  if (!nxt) {
+    return (
+      !isLikelyDefaultFace(prev) ||
+      !isLikelyDefaultKit(prev) ||
+      !isLikelyDefaultModularAvatar(prev)
+    )
+  }
   if (!isLikelyDefaultFace(prev) && isLikelyDefaultFace(nxt)) return true
+  if (!isLikelyDefaultKit(prev) && isLikelyDefaultKit(nxt)) return true
   if (!isLikelyDefaultModularAvatar(prev) && isLikelyDefaultModularAvatar(nxt)) return true
   return false
 }
@@ -121,7 +161,7 @@ export function writeModularAvatarBackup(userId: string, modularAvatar: ModularA
   if (!key) return
   const prev = readModularAvatarBackup(key)
   const merged = prev
-    ? mergeModularAvatarKeepFace(modularAvatar, prev.modularAvatar)
+    ? mergeModularAvatarLayers(modularAvatar, prev.modularAvatar)
     : resolvedAvatar(modularAvatar)
   const payload: ModularAvatarBackupV1 = {
     v: 1,
@@ -140,7 +180,7 @@ export function writeModularAvatarBackup(userId: string, modularAvatar: ModularA
   }
 }
 
-/** Avatar affiché : visage local si le cloud n’a encore que le kit / le défaut. */
+/** Avatar affiché : complète kit/visage depuis le backup local si le cloud est en retard. */
 export function resolveDisplayModularAvatar(
   userId: string | undefined,
   stored: ModularAvatarState | undefined | null,
@@ -151,17 +191,17 @@ export function resolveDisplayModularAvatar(
 
   const backup = readModularAvatarBackup(key)
   if (!backup) return resolved
-  return mergeModularAvatarKeepFace(resolved, backup.modularAvatar)
+  return mergeModularAvatarLayers(resolved, backup.modularAvatar)
 }
 
-/** Avant écriture cloud : garder le visage local si le payload n’a que le kit. */
+/** Avant écriture cloud : ne jamais perdre visage ou kit custom stockés localement. */
 export function coalesceAppStateWithModularBackup(
   userId: string,
   app: UserAppStateV1,
 ): UserAppStateV1 {
   const backup = readModularAvatarBackup(userId)
   if (!backup) return app
-  const merged = mergeModularAvatarKeepFace(app.profile.modularAvatar, backup.modularAvatar)
+  const merged = mergeModularAvatarLayers(app.profile.modularAvatar, backup.modularAvatar)
   if (modularSignature(merged) === modularSignature(app.profile.modularAvatar)) return app
   return withMergedAvatar(app, merged)
 }
@@ -189,7 +229,7 @@ export function readModularAvatarBackup(userId: string): ModularAvatarBackupV1 |
   return fromLocal ?? fromSession
 }
 
-/** À l’hydratation : union visage local ∪ kit cloud (puis flush vers le compte). */
+/** À l’hydratation : union visage/kit local ∪ cloud (puis flush vers le compte). */
 export function mergeModularAvatarBackupIntoApp(
   userId: string,
   app: UserAppStateV1,
@@ -197,7 +237,7 @@ export function mergeModularAvatarBackupIntoApp(
   const backup = readModularAvatarBackup(userId)
   if (!backup) return { app, restoredFromBackup: false }
 
-  const merged = mergeModularAvatarKeepFace(app.profile.modularAvatar, backup.modularAvatar)
+  const merged = mergeModularAvatarLayers(app.profile.modularAvatar, backup.modularAvatar)
   if (modularSignature(merged) === modularSignature(app.profile.modularAvatar)) {
     return { app, restoredFromBackup: false }
   }

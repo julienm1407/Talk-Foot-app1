@@ -1,4 +1,8 @@
 import type { AvatarItem } from '../types/profile'
+import {
+  resolveModularAvatarState,
+  type ModularAvatarState,
+} from '../features/avatar2d/modularAvatarState'
 
 export type BoutiqueGarmentShow = 'both' | 'jersey' | 'shorts' | 'shoes'
 
@@ -66,4 +70,44 @@ export function shopItemToModularAssetId(item: AvatarItem): string | null {
   }
   if (item.slot === 'jersey') return modularJerseyId(item)
   return null
+}
+
+function shopIdAsItem(id: string, slot: AvatarItem['slot']): AvatarItem {
+  return { id, name: id, slot, emoji: '👕', cost: 0, rarity: 'common' }
+}
+
+/** Équipe maillot / short / chaussures à partir des ids boutique accordés (achat / pack). */
+export function applyShopGrantIdsToModularAvatar(
+  state: ModularAvatarState,
+  grantIds: string[],
+): ModularAvatarState {
+  const current = resolveModularAvatarState(state)
+  let jersey = current.data.jersey
+  let shorts = current.data.shorts
+  let shoes = current.data.shoes
+  for (const raw of grantIds) {
+    const id = raw.trim()
+    if (!id || id.includes('-pack-') || id.endsWith('-pack') || id.startsWith('pack-')) continue
+    const asJersey = modularJerseyId(shopIdAsItem(id, 'jersey'))
+    if (asJersey) {
+      jersey = asJersey
+      continue
+    }
+    const asShorts = modularShortsId(shopIdAsItem(id, 'pants'))
+    if (asShorts) {
+      shorts = asShorts
+      continue
+    }
+    const asShoes = modularShoesId(shopIdAsItem(id, 'shoes'))
+    if (asShoes) shoes = asShoes
+  }
+  return {
+    ...current,
+    data: {
+      ...current.data,
+      jersey,
+      shorts,
+      shoes,
+    },
+  }
 }

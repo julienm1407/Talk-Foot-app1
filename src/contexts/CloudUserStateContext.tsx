@@ -36,6 +36,7 @@ import {
   coalesceAppStateWithModularBackup,
   extractStoredModularAvatar,
   mergeModularAvatarBackupIntoApp,
+  mergeModularAvatarLayers,
   isLikelyDefaultModularAvatar,
   wouldDowngradeModularAvatar,
   writeModularAvatarBackup,
@@ -53,6 +54,7 @@ import {
 import {
   coalesceAppStateWithOwnedItemsBackup,
   mergeOwnedItemsBackupIntoApp,
+  unionOwnedItemIds,
   writeOwnedItemsBackup,
 } from '../utils/ownedItemsBackup'
 import { reconcileBetTokenCredits } from '../utils/betTokenReconcile'
@@ -404,16 +406,52 @@ function CloudUserStateLoader({
       ): boolean => {
         resyncSessionAvatar = false
         if (hasLocalEditsRef.current) {
-          const keptWallet = mergeWalletBackupIntoApp(user.id, appRef.current)
-          const keptOwned = mergeOwnedItemsBackupIntoApp(user.id, keptWallet.app)
-          const keptAvatar = mergeModularAvatarBackupIntoApp(user.id, keptOwned.app)
-          if (keptAvatar.app !== appRef.current) {
-            appRef.current = keptAvatar.app
-            setApp(keptAvatar.app)
+          // Toujours absorber l’inventaire / kit cloud (autre appareil) sans écraser
+          // les edits locaux de médailles / paris en cours.
+          const cloudMerged = mergeUserAppState(appState)
+          const ownedUnion = unionOwnedItemIds(
+            appRef.current.profile.ownedItemIds ?? [],
+            cloudMerged.profile.ownedItemIds ?? [],
+          )
+          let next = {
+            ...appRef.current,
+            profile: {
+              ...appRef.current.profile,
+              ownedItemIds: ownedUnion,
+              premiumInventory: {
+                ownedItemIds: unionOwnedItemIds(
+                  appRef.current.profile.premiumInventory?.ownedItemIds ?? [],
+                  cloudMerged.profile.premiumInventory?.ownedItemIds ?? [],
+                ),
+                equippedByCategory:
+                  appRef.current.profile.premiumInventory?.equippedByCategory ?? {},
+              },
+              modularAvatar: mergeModularAvatarLayers(
+                appRef.current.profile.modularAvatar,
+                cloudMerged.profile.modularAvatar,
+              ),
+            },
           }
+          const keptWallet = mergeWalletBackupIntoApp(user.id, next)
+          next = keptWallet.app
+          const keptOwned = mergeOwnedItemsBackupIntoApp(user.id, next)
+          next = keptOwned.app
+          const keptAvatar = mergeModularAvatarBackupIntoApp(user.id, next)
+          next = keptAvatar.app
+          const ownedChanged =
+            ownedUnion.length !== (appRef.current.profile.ownedItemIds ?? []).length ||
+            ownedUnion.some((id) => !(appRef.current.profile.ownedItemIds ?? []).includes(id))
+          appRef.current = next
+          setApp(next)
+          writeOwnedItemsBackup(user.id, next.profile.ownedItemIds ?? [])
+          writeModularAvatarBackup(
+            user.id,
+            resolveModularAvatarState(next.profile.modularAvatar),
+          )
           cloudHydratedRef.current = true
           setReady(true)
           return (
+            ownedChanged ||
             keptOwned.restoredFromBackup ||
             keptWallet.restoredFromBackup ||
             keptAvatar.restoredFromBackup
@@ -435,6 +473,17 @@ function CloudUserStateLoader({
             }
           }
         }
+        // Session / backup local : garder kit + visage équipés si le cloud est en retard.
+        merged = {
+          ...merged,
+          profile: {
+            ...merged.profile,
+            modularAvatar: mergeModularAvatarLayers(
+              sessionAvatar,
+              merged.profile.modularAvatar,
+            ),
+          },
+        }
         const restored = mergeModularAvatarBackupIntoApp(user.id, merged)
         merged = restored.app
         const walletRestored = mergeWalletBackupIntoApp(user.id, merged)
@@ -448,15 +497,10 @@ function CloudUserStateLoader({
         if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
           hasLocalEditsRef.current = true
         }
-        if (
-          readyRef.current &&
+        const pushedLocalKitOrFace =
           !isLikelyDefaultModularAvatar(sessionAvatar) &&
-          wouldDowngradeModularAvatar(sessionAvatar, merged.profile.modularAvatar)
-        ) {
-          merged = {
-            ...merged,
-            profile: { ...merged.profile, modularAvatar: sessionAvatar },
-          }
+          wouldDowngradeModularAvatar(sessionAvatar, mergeUserAppState(appState).profile.modularAvatar)
+        if (pushedLocalKitOrFace) {
           resyncSessionAvatar = true
         }
         setApp(merged)
@@ -464,6 +508,10 @@ function CloudUserStateLoader({
         writeWalletBackup(user.id, merged.wallet)
         writeBetsBackup(user.id, merged.bets)
         writeOwnedItemsBackup(user.id, merged.profile.ownedItemIds ?? [])
+        writeModularAvatarBackup(
+          user.id,
+          resolveModularAvatarState(merged.profile.modularAvatar),
+        )
         setOnboardingCompleteCol(onboardingComplete)
         setOauthNeedsProfile(!oauthCompleted)
         cloudHydratedRef.current = true
@@ -472,7 +520,8 @@ function CloudUserStateLoader({
           restored.restoredFromBackup ||
           walletRestored.restoredFromBackup ||
           betsRestored.restoredFromBackup ||
-          ownedRestored.restoredFromBackup
+          ownedRestored.restoredFromBackup ||
+          resyncSessionAvatar
         )
       }
 
@@ -512,21 +561,18 @@ function CloudUserStateLoader({
             snapshot.oauthProfileCompleted,
           )
 
-          if (restoredFromBackup && !cancelled) {
+          // Toujours pousser l’union inventaire locale ∪ cloud pour aligner PC / téléphone.
+          if (!cancelled) {
             try {
               await flushSaveRef.current()
             } catch (syncErr) {
-              console.warn('[Talk Foot] Reprise avatar local → cloud:', syncErr)
+              console.warn('[Talk Foot] Sync inventaire après chargement:', syncErr)
             }
-          } else if (resyncSessionAvatar && !cancelled) {
+          }
+
+          if (!hasLocalEditsRef.current && !cancelled && !resyncSessionAvatar) {
             try {
-              await flushSaveRef.current()
-            } catch (syncErr) {
-              console.warn('[Talk Foot] Resync avatar session → cloud:', syncErr)
-            }
-          } else if (!hasLocalEditsRef.current && !cancelled && !resyncSessionAvatar) {
-            try {
-              const merged = mergeUserAppState(snapshot.appState)
+              const merged = mergeUserAppState(appRef.current)
               const rawModularAvatar = extractStoredModularAvatar(snapshot.appState)
               const { data: sessionWrap } = await sb.auth.getSession()
               const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
@@ -638,6 +684,87 @@ function CloudUserStateLoader({
     })()
     return () => {
       cancelled = true
+    }
+  }, [user?.id, clerkSessionId])
+
+  // Au retour sur l’onglet / l’app : récupérer l’inventaire acheté sur l’autre appareil.
+  useEffect(() => {
+    if (!user?.id) return
+    let lastAt = 0
+    const softResync = async () => {
+      if (!cloudHydratedRef.current || !readyRef.current) return
+      const now = Date.now()
+      if (now - lastAt < 12_000) return
+      lastAt = now
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return
+      try {
+        await ensureTalkFootSupabaseSession(sb)
+        if (isClerkAuthMode() && clerkSessionId) {
+          await bindTalkfootActorSession(sb, user.id, clerkSessionId)
+        }
+        const snapshot = await fetchTalkfootProfileSnapshot(sb, user.id)
+        if (!snapshot) return
+        const cloudMerged = mergeUserAppState(snapshot.appState)
+        const beforeOwned = [...(appRef.current.profile.ownedItemIds ?? [])].sort().join(',')
+        const beforeModular = JSON.stringify(appRef.current.profile.modularAvatar ?? {})
+        const ownedUnion = unionOwnedItemIds(
+          appRef.current.profile.ownedItemIds ?? [],
+          cloudMerged.profile.ownedItemIds ?? [],
+        )
+        const modular = mergeModularAvatarLayers(
+          appRef.current.profile.modularAvatar,
+          cloudMerged.profile.modularAvatar,
+        )
+        const next = {
+          ...appRef.current,
+          profile: {
+            ...appRef.current.profile,
+            ownedItemIds: ownedUnion,
+            premiumInventory: {
+              ownedItemIds: unionOwnedItemIds(
+                appRef.current.profile.premiumInventory?.ownedItemIds ?? [],
+                cloudMerged.profile.premiumInventory?.ownedItemIds ?? [],
+              ),
+              equippedByCategory:
+                appRef.current.profile.premiumInventory?.equippedByCategory ?? {},
+            },
+            modularAvatar: modular,
+          },
+        }
+        const withBackup = mergeOwnedItemsBackupIntoApp(
+          user.id,
+          mergeModularAvatarBackupIntoApp(user.id, next).app,
+        ).app
+        const afterOwned = [...(withBackup.profile.ownedItemIds ?? [])].sort().join(',')
+        const afterModular = JSON.stringify(withBackup.profile.modularAvatar ?? {})
+        const changed = afterOwned !== beforeOwned || afterModular !== beforeModular
+        appRef.current = withBackup
+        setApp(withBackup)
+        writeOwnedItemsBackup(user.id, withBackup.profile.ownedItemIds ?? [])
+        writeModularAvatarBackup(
+          user.id,
+          resolveModularAvatarState(withBackup.profile.modularAvatar),
+        )
+        if (changed) {
+          hasLocalEditsRef.current = true
+          void flushSaveRef.current()
+        }
+      } catch (err) {
+        console.warn('[Talk Foot] Soft resync inventaire:', err)
+      }
+    }
+    const onFocus = () => {
+      void softResync()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void softResync()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [user?.id, clerkSessionId])
 
