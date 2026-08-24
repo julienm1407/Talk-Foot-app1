@@ -57,6 +57,12 @@ import {
   unionOwnedItemIds,
   writeOwnedItemsBackup,
 } from '../utils/ownedItemsBackup'
+import {
+  coalesceAppStateWithFanPreferencesBackup,
+  mergeFanPreferencesBackupIntoApp,
+  mergeFanPreferencesKeepFilled,
+  writeFanPreferencesBackup,
+} from '../utils/fanPreferencesBackup'
 import { reconcileBetTokenCredits } from '../utils/betTokenReconcile'
 import { betTokenMultiplier, normalizeSubscription } from '../utils/subscriptionEntitlements'
 import { useAuth } from './AuthContext'
@@ -266,6 +272,7 @@ function CloudUserStateLoader({
         payload = coalesceAppStateWithWalletBackup(user.id, payload)
         payload = coalesceAppStateWithBetsBackup(user.id, payload)
         payload = coalesceAppStateWithOwnedItemsBackup(user.id, payload)
+        payload = coalesceAppStateWithFanPreferencesBackup(user.id, payload)
         const betTokensReconciled = withReconciledBetTokens(payload)
         payload = betTokensReconciled.app
         if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
@@ -288,6 +295,7 @@ function CloudUserStateLoader({
         writeWalletBackup(user.id, payload.wallet)
         writeBetsBackup(user.id, payload.bets)
         writeOwnedItemsBackup(user.id, payload.profile.ownedItemIds ?? [])
+        writeFanPreferencesBackup(user.id, payload.fanPreferences)
         const { data: sessionWrap } = await sb.auth.getSession()
         const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
         invalidateChatAuthorAvatars(
@@ -388,13 +396,15 @@ function CloudUserStateLoader({
       const earlyWallet = mergeWalletBackupIntoApp(user.id, appRef.current)
       const earlyOwned = mergeOwnedItemsBackupIntoApp(user.id, earlyWallet.app)
       const earlyAvatar = mergeModularAvatarBackupIntoApp(user.id, earlyOwned.app)
+      const earlyFan = mergeFanPreferencesBackupIntoApp(user.id, earlyAvatar.app)
       if (
         earlyOwned.restoredFromBackup ||
         earlyWallet.restoredFromBackup ||
-        earlyAvatar.restoredFromBackup
+        earlyAvatar.restoredFromBackup ||
+        earlyFan.restoredFromBackup
       ) {
-        appRef.current = earlyAvatar.app
-        setApp(earlyAvatar.app)
+        appRef.current = earlyFan.app
+        setApp(earlyFan.app)
       }
 
       let resyncSessionAvatar = false
@@ -415,6 +425,10 @@ function CloudUserStateLoader({
           )
           let next: UserAppStateV1 = {
             ...appRef.current,
+            fanPreferences: mergeFanPreferencesKeepFilled(
+              appRef.current.fanPreferences,
+              cloudMerged.fanPreferences,
+            ),
             profile: {
               ...appRef.current.profile,
               ownedItemIds: ownedUnion,
@@ -438,6 +452,8 @@ function CloudUserStateLoader({
           next = keptOwned.app
           const keptAvatar = mergeModularAvatarBackupIntoApp(user.id, next)
           next = keptAvatar.app
+          const keptFan = mergeFanPreferencesBackupIntoApp(user.id, next)
+          next = keptFan.app
           const ownedChanged =
             ownedUnion.length !== (appRef.current.profile.ownedItemIds ?? []).length ||
             ownedUnion.some((id) => !(appRef.current.profile.ownedItemIds ?? []).includes(id))
@@ -448,13 +464,15 @@ function CloudUserStateLoader({
             user.id,
             resolveModularAvatarState(next.profile.modularAvatar),
           )
+          writeFanPreferencesBackup(user.id, next.fanPreferences)
           cloudHydratedRef.current = true
           setReady(true)
           return (
             ownedChanged ||
             keptOwned.restoredFromBackup ||
             keptWallet.restoredFromBackup ||
-            keptAvatar.restoredFromBackup
+            keptAvatar.restoredFromBackup ||
+            keptFan.restoredFromBackup
           )
         }
         const sessionAvatar = resolveModularAvatarState(appRef.current.profile.modularAvatar)
@@ -476,6 +494,10 @@ function CloudUserStateLoader({
         // Cloud d’abord : le dernier équipement (téléphone) doit gagner sur le cache PC.
         merged = {
           ...merged,
+          fanPreferences: mergeFanPreferencesKeepFilled(
+            merged.fanPreferences,
+            appRef.current.fanPreferences,
+          ),
           profile: {
             ...merged.profile,
             modularAvatar: mergeModularAvatarLayers(
@@ -492,6 +514,8 @@ function CloudUserStateLoader({
         merged = betsRestored.app
         const ownedRestored = mergeOwnedItemsBackupIntoApp(user.id, merged)
         merged = ownedRestored.app
+        const fanRestored = mergeFanPreferencesBackupIntoApp(user.id, merged)
+        merged = fanRestored.app
         const betTokensReconciled = withReconciledBetTokens(merged)
         merged = betTokensReconciled.app
         if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
@@ -512,6 +536,7 @@ function CloudUserStateLoader({
           user.id,
           resolveModularAvatarState(merged.profile.modularAvatar),
         )
+        writeFanPreferencesBackup(user.id, merged.fanPreferences)
         setOnboardingCompleteCol(onboardingComplete)
         setOauthNeedsProfile(!oauthCompleted)
         cloudHydratedRef.current = true
@@ -521,6 +546,7 @@ function CloudUserStateLoader({
           walletRestored.restoredFromBackup ||
           betsRestored.restoredFromBackup ||
           ownedRestored.restoredFromBackup ||
+          fanRestored.restoredFromBackup ||
           resyncSessionAvatar
         )
       }
@@ -708,6 +734,7 @@ function CloudUserStateLoader({
         const cloudMerged = mergeUserAppState(snapshot.appState)
         const beforeOwned = [...(appRef.current.profile.ownedItemIds ?? [])].sort().join(',')
         const beforeModular = JSON.stringify(appRef.current.profile.modularAvatar ?? {})
+        const beforeFan = JSON.stringify(appRef.current.fanPreferences ?? {})
         const ownedUnion = unionOwnedItemIds(
           appRef.current.profile.ownedItemIds ?? [],
           cloudMerged.profile.ownedItemIds ?? [],
@@ -718,6 +745,10 @@ function CloudUserStateLoader({
         )
         const next = {
           ...appRef.current,
+          fanPreferences: mergeFanPreferencesKeepFilled(
+            appRef.current.fanPreferences,
+            cloudMerged.fanPreferences,
+          ),
           profile: {
             ...appRef.current.profile,
             ownedItemIds: ownedUnion,
@@ -732,13 +763,18 @@ function CloudUserStateLoader({
             modularAvatar: modular,
           },
         }
-        const withBackup = mergeOwnedItemsBackupIntoApp(
+        const withBackup = mergeFanPreferencesBackupIntoApp(
           user.id,
-          mergeModularAvatarBackupIntoApp(user.id, next).app,
+          mergeOwnedItemsBackupIntoApp(
+            user.id,
+            mergeModularAvatarBackupIntoApp(user.id, next).app,
+          ).app,
         ).app
         const afterOwned = [...(withBackup.profile.ownedItemIds ?? [])].sort().join(',')
         const afterModular = JSON.stringify(withBackup.profile.modularAvatar ?? {})
-        const changed = afterOwned !== beforeOwned || afterModular !== beforeModular
+        const afterFan = JSON.stringify(withBackup.fanPreferences ?? {})
+        const changed =
+          afterOwned !== beforeOwned || afterModular !== beforeModular || afterFan !== beforeFan
         appRef.current = withBackup
         setApp(withBackup)
         writeOwnedItemsBackup(user.id, withBackup.profile.ownedItemIds ?? [])
@@ -746,6 +782,7 @@ function CloudUserStateLoader({
           user.id,
           resolveModularAvatarState(withBackup.profile.modularAvatar),
         )
+        writeFanPreferencesBackup(user.id, withBackup.fanPreferences)
         if (changed) {
           hasLocalEditsRef.current = true
           void flushSaveRef.current()
@@ -825,10 +862,15 @@ function CloudUserStateLoader({
           setOnboardingCompleteCol(true)
           ocRef.current = true
         }
+        if (user?.id) {
+          writeFanPreferencesBackup(user.id, nextFan)
+        }
         return { ...prev, fanPreferences: nextFan }
       })
+      cancelScheduledSave()
+      void flushSaveRef.current()
     },
-    [patchApp],
+    [patchApp, user?.id, cancelScheduledSave],
   )
 
   const setOnboardingComplete = useCallback(
