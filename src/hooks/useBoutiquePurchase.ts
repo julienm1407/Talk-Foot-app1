@@ -103,11 +103,7 @@ export function useBoutiquePurchase() {
       if (!result.ok) return result
       if (cloud) {
         cloud.cancelScheduledSave()
-        let saved = await cloud.flushAppSave()
-        if (!saved.ok) {
-          saved = await cloud.flushAppSave()
-        }
-        if (!saved.ok) return { ok: false, code: 'save_failed' }
+        void cloud.flushAppSave()
       }
       return result
     },

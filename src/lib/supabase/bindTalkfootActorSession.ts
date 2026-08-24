@@ -47,15 +47,21 @@ export async function bindTalkfootActorSession(
     return { ok: false, error: 'api_origin_unavailable' }
   }
 
-  const res = await fetch(`${apiOrigin}/api/bind-talkfoot-actor`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      actorKey: key,
-      clerkSessionId: sessionId,
-      supabaseAccessToken: accessToken,
-    }),
-  })
+  let res: Response
+  try {
+    res = await fetch(`${apiOrigin}/api/bind-talkfoot-actor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({
+        actorKey: key,
+        clerkSessionId: sessionId,
+        supabaseAccessToken: accessToken,
+      }),
+    })
+  } catch {
+    return { ok: false, error: 'bind_timeout' }
+  }
 
   let payload: { ok?: boolean; error?: string } = {}
   try {

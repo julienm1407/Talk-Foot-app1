@@ -16,6 +16,17 @@ function rpcFailed(message: string, code?: string): Error {
   return err
 }
 
+const MAX_CLOUD_PHOTO_CHARS = 8_000
+
+/** Évite de bloquer le RPC profil avec une photo data-URL trop lourde. */
+export function slimAppStateForCloudSave(appState: UserAppStateV1): UserAppStateV1 {
+  const photo = appState.profile.profilePhotoDataUrl
+  if (!photo || photo.length <= MAX_CLOUD_PHOTO_CHARS) return appState
+  const nextProfile = { ...appState.profile }
+  delete nextProfile.profilePhotoDataUrl
+  return { ...appState, profile: nextProfile }
+}
+
 export type TalkfootPublicProfileRow = {
   actorKey: string
   profileId: string
@@ -105,7 +116,7 @@ export async function saveTalkfootProfileAppState(
 ): Promise<void> {
   const { data, error } = await sb.rpc('save_talkfoot_user_app_state', {
     p_actor_key: actorKey,
-    p_app_state: appState,
+    p_app_state: slimAppStateForCloudSave(appState),
     p_onboarding_complete: onboardingComplete,
   })
   if (error) throw rpcFailed(error.message, error.code)
@@ -132,11 +143,9 @@ export async function saveTalkfootProfileAppStateWithChatSync(
   const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
   if (!chatActorId || chatActorId === primary) return
 
-  // Copie chat : jamais bloquer un achat / studio si cette 2e ligne échoue.
-  try {
-    await ensureTalkfootProfile(sb, chatActorId, displayName.trim() || 'Supporter', true)
-    await saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete)
-  } catch (err) {
-    console.warn('[Talk Foot] Sync profil chat (non bloquant):', err)
-  }
+  void ensureTalkfootProfile(sb, chatActorId, displayName.trim() || 'Supporter', true)
+    .then(() => saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete))
+    .catch((err) => {
+      console.warn('[Talk Foot] Sync profil chat (non bloquant):', err)
+    })
 }

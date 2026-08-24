@@ -69,24 +69,36 @@ export function writeWalletBackup(userId: string, wallet: Wallet): void {
   }
   try {
     localStorage.setItem(storageKey(key), JSON.stringify(payload))
+    sessionStorage.setItem(storageKey(key), JSON.stringify(payload))
   } catch {
-    /* quota / private mode */
+    try {
+      sessionStorage.setItem(storageKey(key), JSON.stringify(payload))
+    } catch {
+      /* quota / private mode */
+    }
   }
 }
 
 export function readWalletBackup(userId: string): WalletBackupV1 | null {
   const key = userId.trim()
   if (!key) return null
-  try {
-    const raw = localStorage.getItem(storageKey(key))
+  const parse = (raw: string | null): WalletBackupV1 | null => {
     if (!raw) return null
-    const parsed = JSON.parse(raw) as Partial<WalletBackupV1>
-    if (parsed.v !== 1 || typeof parsed.savedAt !== 'number') return null
-    if (!parsed.wallet) return null
-    return { v: 1, savedAt: parsed.savedAt, wallet: normalizeWallet(parsed.wallet) }
-  } catch {
-    return null
+    try {
+      const parsed = JSON.parse(raw) as Partial<WalletBackupV1>
+      if (parsed.v !== 1 || typeof parsed.savedAt !== 'number') return null
+      if (!parsed.wallet) return null
+      return { v: 1, savedAt: parsed.savedAt, wallet: normalizeWallet(parsed.wallet) }
+    } catch {
+      return null
+    }
   }
+  const fromLocal = parse(localStorage.getItem(storageKey(key)))
+  const fromSession = parse(sessionStorage.getItem(storageKey(key)))
+  if (fromLocal && fromSession) {
+    return fromLocal.savedAt >= fromSession.savedAt ? fromLocal : fromSession
+  }
+  return fromLocal ?? fromSession
 }
 
 /** Réapplique le solde local si le cloud est en retard ou réinitialisé (100 jetons par défaut). */

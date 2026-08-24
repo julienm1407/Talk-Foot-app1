@@ -42,23 +42,52 @@ export function writeOwnedItemsBackup(userId: string, ownedItemIds: string[]): v
   }
   try {
     localStorage.setItem(storageKey(key), JSON.stringify(payload))
+    sessionStorage.setItem(storageKey(key), JSON.stringify(payload))
+    sessionStorage.setItem('talkfoot.ownedItems.backup.v1.last', JSON.stringify({ ...payload, userId: key }))
   } catch {
-    /* quota / private mode */
+    try {
+      sessionStorage.setItem(storageKey(key), JSON.stringify(payload))
+    } catch {
+      /* quota / private mode */
+    }
   }
 }
 
 export function readOwnedItemsBackup(userId: string): OwnedItemsBackupV1 | null {
   const key = userId.trim()
   if (!key) return null
-  try {
-    const raw = localStorage.getItem(storageKey(key))
+  const parse = (raw: string | null): OwnedItemsBackupV1 | null => {
     if (!raw) return null
-    const parsed = JSON.parse(raw) as Partial<OwnedItemsBackupV1>
-    if (parsed.v !== 1 || typeof parsed.savedAt !== 'number') return null
-    return { v: 1, savedAt: parsed.savedAt, ownedItemIds: normalizeIds(parsed.ownedItemIds) }
-  } catch {
-    return null
+    try {
+      const parsed = JSON.parse(raw) as Partial<OwnedItemsBackupV1> & { userId?: string }
+      if (parsed.v !== 1 || typeof parsed.savedAt !== 'number') return null
+      return { v: 1, savedAt: parsed.savedAt, ownedItemIds: normalizeIds(parsed.ownedItemIds) }
+    } catch {
+      return null
+    }
   }
+  const fromLocal = parse(localStorage.getItem(storageKey(key)))
+  const fromSession = parse(sessionStorage.getItem(storageKey(key)))
+  let fromLast: OwnedItemsBackupV1 | null = null
+  try {
+    const lastRaw = sessionStorage.getItem('talkfoot.ownedItems.backup.v1.last')
+    if (lastRaw) {
+      const parsed = JSON.parse(lastRaw) as Partial<OwnedItemsBackupV1> & { userId?: string }
+      if (parsed.userId === key || !parsed.userId) {
+        fromLast = parse(lastRaw)
+      }
+    }
+  } catch {
+    fromLast = null
+  }
+  const candidates = [fromLocal, fromSession, fromLast].filter(Boolean) as OwnedItemsBackupV1[]
+  if (!candidates.length) return null
+  const ownedItemIds = unionOwnedItemIds(
+    [],
+    candidates.flatMap((c) => c.ownedItemIds),
+  )
+  const savedAt = Math.max(...candidates.map((c) => c.savedAt))
+  return { v: 1, savedAt, ownedItemIds }
 }
 
 /** Avant écriture cloud : ne jamais perdre des ids déjà acquis sur cet appareil. */
