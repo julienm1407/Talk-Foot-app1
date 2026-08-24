@@ -427,8 +427,8 @@ function CloudUserStateLoader({
                   appRef.current.profile.premiumInventory?.equippedByCategory ?? {},
               },
               modularAvatar: mergeModularAvatarLayers(
-                appRef.current.profile.modularAvatar,
                 cloudMerged.profile.modularAvatar,
+                appRef.current.profile.modularAvatar,
               ),
             },
           }
@@ -473,14 +473,14 @@ function CloudUserStateLoader({
             }
           }
         }
-        // Session / backup local : garder kit + visage équipés si le cloud est en retard.
+        // Cloud d’abord : le dernier équipement (téléphone) doit gagner sur le cache PC.
         merged = {
           ...merged,
           profile: {
             ...merged.profile,
             modularAvatar: mergeModularAvatarLayers(
-              sessionAvatar,
               merged.profile.modularAvatar,
+              sessionAvatar,
             ),
           },
         }
@@ -694,7 +694,7 @@ function CloudUserStateLoader({
     const softResync = async () => {
       if (!cloudHydratedRef.current || !readyRef.current) return
       const now = Date.now()
-      if (now - lastAt < 12_000) return
+      if (now - lastAt < 2_500) return
       lastAt = now
       const sb = getSupabaseBrowserClient()
       if (!sb) return
@@ -713,8 +713,8 @@ function CloudUserStateLoader({
           cloudMerged.profile.ownedItemIds ?? [],
         )
         const modular = mergeModularAvatarLayers(
-          appRef.current.profile.modularAvatar,
           cloudMerged.profile.modularAvatar,
+          appRef.current.profile.modularAvatar,
         )
         const next = {
           ...appRef.current,

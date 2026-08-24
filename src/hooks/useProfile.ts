@@ -21,6 +21,7 @@ import {
   isModularAvatarState,
   resolveModularAvatarState,
   sanitizeModularAvatarState,
+  touchModularAvatar,
   type ModularAvatarState,
 } from '../features/avatar2d/modularAvatarState'
 import { isBoutiqueShopItemOwned, repairPackOwnedItemIds } from '../data/boutiqueEconomy'
@@ -403,7 +404,9 @@ export function useProfile() {
           updater(resolveModularAvatarState(p.modularAvatar)),
           owned,
         )
-        const modularAvatar = sanitizeModularAvatarState(next)
+        const modularAvatar = touchModularAvatar(
+          sanitizeModularAvatarState(next),
+        )
         if (authUser?.id) {
           writeModularAvatarBackup(authUser.id, modularAvatar)
         }
@@ -413,7 +416,10 @@ export function useProfile() {
         }
       })
       scheduleProfileCloudFlush()
-      if (cloud) void cloud.flushAppSave()
+      if (cloud) {
+        cloud.cancelScheduledSave?.()
+        void cloud.flushAppSave()
+      }
     },
     [authUser?.id, setProfileStore, scheduleProfileCloudFlush, cloud],
   )

@@ -19,6 +19,8 @@ export type ModularSlotColors = Record<ModularColorizableSlot, ModularColorVaria
 export type ModularAvatarState = {
   data: AvatarData
   slotColors: ModularSlotColors
+  /** Horodatage équipement / studio — sert à synchroniser PC ↔ téléphone. */
+  updatedAt?: number
 }
 
 export const DEFAULT_MODULAR_SLOT_COLORS: ModularSlotColors = {
@@ -73,6 +75,9 @@ export function resolveModularAvatarState(
       accessory: null,
     },
     slotColors: { ...DEFAULT_MODULAR_SLOT_COLORS, ...stored.slotColors },
+    ...(typeof stored.updatedAt === 'number' && Number.isFinite(stored.updatedAt)
+      ? { updatedAt: stored.updatedAt }
+      : {}),
   }
 }
 
@@ -142,6 +147,9 @@ export function coerceModularAvatarFromStored(value: unknown): ModularAvatarStat
       accessory: coerceNullableAssetId(d.accessory),
     },
     slotColors,
+    ...(typeof o.updatedAt === 'number' && Number.isFinite(o.updatedAt)
+      ? { updatedAt: o.updatedAt }
+      : {}),
   }
   return sanitizeModularAvatarState(resolveModularAvatarState(partial))
 }
@@ -177,5 +185,16 @@ export function sanitizeModularAvatarState(state: ModularAvatarState): ModularAv
       accessory: null,
     },
     slotColors: { ...DEFAULT_MODULAR_SLOT_COLORS, ...state.slotColors },
+    ...(typeof state.updatedAt === 'number' && Number.isFinite(state.updatedAt)
+      ? { updatedAt: state.updatedAt }
+      : {}),
+  }
+}
+
+/** Marque un changement d’équipement / studio pour la sync multi-appareils. */
+export function touchModularAvatar(state: ModularAvatarState): ModularAvatarState {
+  return {
+    ...sanitizeModularAvatarState(state),
+    updatedAt: Date.now(),
   }
 }

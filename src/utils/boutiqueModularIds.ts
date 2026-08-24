@@ -109,5 +109,6 @@ export function applyShopGrantIdsToModularAvatar(
       shorts,
       shoes,
     },
+    updatedAt: Date.now(),
   }
 }

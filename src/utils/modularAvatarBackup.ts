@@ -68,20 +68,27 @@ export function isLikelyDefaultKit(state: ModularAvatarState | undefined | null)
 }
 
 /**
- * Fusionne deux avatars : le `preferred` gagne s’il a un visage / kit custom,
- * sinon on complète avec le `fallback` (backup local ou autre appareil).
+ * Fusionne deux avatars.
+ * - Si `updatedAt` diffère : le plus récent gagne (PC ↔ téléphone).
+ * - Sinon `preferred` gagne pour kit/visage custom, `fallback` complète les défauts.
  */
 export function mergeModularAvatarLayers(
   preferred: ModularAvatarState | undefined | null,
   fallback: ModularAvatarState | undefined | null,
 ): ModularAvatarState {
-  const a = resolvedAvatar(preferred)
-  const b = resolvedAvatar(fallback)
-  const face = !isLikelyDefaultFace(a) ? a : b
-  const kit = !isLikelyDefaultKit(a) ? a : b
+  const rawA = preferred ?? null
+  const rawB = fallback ?? null
+  const aAt = typeof rawA?.updatedAt === 'number' ? rawA.updatedAt : 0
+  const bAt = typeof rawB?.updatedAt === 'number' ? rawB.updatedAt : 0
+  const newerFirst = bAt > aAt
+  const primary = resolvedAvatar(newerFirst ? rawB : rawA)
+  const secondary = resolvedAvatar(newerFirst ? rawA : rawB)
+  const face = !isLikelyDefaultFace(primary) ? primary : secondary
+  const kit = !isLikelyDefaultKit(primary) ? primary : secondary
+  const updatedAt = Math.max(aAt, bAt)
   return {
     data: {
-      ...a.data,
+      ...primary.data,
       skinTone: face.data.skinTone,
       body: face.data.body,
       hair: face.data.hair,
@@ -95,13 +102,14 @@ export function mergeModularAvatarLayers(
       shoes: kit.data.shoes,
     },
     slotColors: {
-      ...a.slotColors,
+      ...primary.slotColors,
       hair: face.slotColors.hair,
       beard: face.slotColors.beard,
       jersey: kit.slotColors.jersey,
       shorts: kit.slotColors.shorts,
       shoes: kit.slotColors.shoes,
     },
+    ...(updatedAt > 0 ? { updatedAt } : {}),
   }
 }
 
