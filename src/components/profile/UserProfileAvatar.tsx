@@ -11,7 +11,7 @@ import { SalonBotHeadThumb } from '../channel/SalonBotHeadThumb'
 const AVATAR_SHELL =
   'relative mx-auto shrink-0 overflow-hidden rounded-2xl shadow-lg ring-4 ring-white/40 ' +
   'border border-white/10 bg-gradient-to-b from-[#0e1018] to-[#0a0c12] ' +
-  'h-[16rem] w-[11rem] sm:mx-0 sm:h-[12.75rem] sm:w-[8.75rem]'
+  'h-[17.5rem] w-[11rem] sm:mx-0 sm:h-[14rem] sm:w-[9rem]'
 
 export function UserProfileAvatar({
   peer,
@@ -72,7 +72,7 @@ export function UserProfileAvatar({
       <div
         className={shellClass}
         role="img"
-        aria-label={`Avatar de ${labelName} — maillot et tenue`}
+        aria-label={`Avatar de ${labelName} — tenue complète`}
       >
         <ModularAvatarPortrait state={modularState} imagePriority className="size-full" />
       </div>
@@ -83,7 +83,7 @@ export function UserProfileAvatar({
     <div
       className={cn(shellClass, 'overflow-hidden')}
       role="img"
-      aria-label={`Avatar de ${labelName} — maillot et tenue`}
+      aria-label={`Avatar de ${labelName} — tenue complète`}
     >
       <DressableCharacter
         profile={profile}

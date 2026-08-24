@@ -5,7 +5,7 @@ import { ClubCrest } from '../brand/ClubCrest'
 import { useProfile } from '../../hooks/useProfile'
 import type { UserProfile } from '../../types/profile'
 import {
-  MODULAR_PP_NAV_FRAMING,
+  MODULAR_PP_CHAT_FRAMING,
   ProfileCharacterThumb,
 } from '../profile/ProfileCharacterThumb'
 import { findTeamInAnyLeague } from '../../data/allClubsCatalog'
@@ -100,7 +100,7 @@ function LiveFanFaceRow({
             profile={meProfile}
             size="sm"
             imagePriority
-            {...MODULAR_PP_NAV_FRAMING}
+            {...MODULAR_PP_CHAT_FRAMING}
             className="!h-full !w-full !min-h-0 !min-w-0 rounded-full border-0 p-0"
             aria-label="Mon avatar in-app"
           />

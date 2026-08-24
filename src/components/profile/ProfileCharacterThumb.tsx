@@ -9,6 +9,7 @@ import {
   MODULAR_PP_HEAD_RENDER_BASE_PX,
   MODULAR_PP_LEADERBOARD_FRAMING,
   MODULAR_PP_NAV_FRAMING,
+  type ModularThumbCrop,
 } from './modularPPFraming'
 
 export {
@@ -53,6 +54,7 @@ export function ProfileCharacterThumb({
   size = 'md',
   shellPx: shellPxProp,
   framingMode = 'auto',
+  crop = 'head',
   headOffsetPx = 0,
   headScale = 1,
   imagePriority = false,
@@ -64,6 +66,8 @@ export function ProfileCharacterThumb({
   /** Taille réelle du cercle (px) — évite le décalage preset vs conteneur CSS. */
   shellPx?: number
   framingMode?: 'auto' | 'topbar'
+  /** `bust` = tête + maillot (chat / tribune) ; `head` = visage (nav). */
+  crop?: ModularThumbCrop
   headOffsetPx?: number
   headScale?: number
   /** Chargement immédiat des calques (vignette visible au-dessus de la ligne de flottaison). */
@@ -120,7 +124,12 @@ export function ProfileCharacterThumb({
           : { width: thumbPx, height: thumbPx, minWidth: thumbPx, minHeight: thumbPx }
       }
       role="img"
-      aria-label={ariaLabel ?? 'Photo de profil — tête de mon avatar modulaire'}
+      aria-label={
+        ariaLabel ??
+        (crop === 'bust'
+          ? 'Photo de profil — buste de mon avatar modulaire'
+          : 'Photo de profil — tête de mon avatar modulaire')
+      }
     >
       <div className="absolute inset-0 flex items-center justify-center">
         <div
@@ -132,6 +141,7 @@ export function ProfileCharacterThumb({
           <ModularAvatarHeadThumb
             state={modularState}
             size={renderState.renderSize}
+            crop={crop}
             imagePriority={imagePriority}
           />
         </div>

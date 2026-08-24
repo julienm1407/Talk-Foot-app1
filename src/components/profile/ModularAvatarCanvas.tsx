@@ -10,11 +10,17 @@ import {
 } from '../../features/avatar2d/modularAvatarState'
 import type { BoutiqueGarmentShow } from '../../utils/boutiqueModularState'
 import {
+  MODULAR_PP_BUST_MARGIN_TOP_PX,
+  MODULAR_PP_BUST_MARGIN_TOP_SMALL_PX,
+  MODULAR_PP_BUST_ORIGIN,
+  MODULAR_PP_BUST_ZOOM,
+  MODULAR_PP_BUST_ZOOM_SMALL,
   MODULAR_PP_HEAD_MARGIN_TOP_PX,
   MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX,
   MODULAR_PP_HEAD_ORIGIN,
   MODULAR_PP_HEAD_ZOOM,
   MODULAR_PP_HEAD_ZOOM_SMALL,
+  type ModularThumbCrop,
 } from './modularPPFraming'
 
 export const MODULAR_COLOR_VARIANTS: Record<ModularColorVariantKey, { label: string; filter: string }> = {
@@ -92,7 +98,7 @@ function resolveSelectedAssets(avatar: AvatarData) {
 
 type CanvasProps = {
   state?: ModularAvatarState
-  crop?: 'full' | 'head'
+  crop?: 'full' | ModularThumbCrop
   /** `garments` : maillot + short uniquement (aperçu boutique). */
   layersMode?: 'full' | 'garments'
   /** Recadre et zoome la zone torse (cartes boutique, comme le studio profil). */
@@ -127,9 +133,9 @@ const GARMENT_FOCUS_CLIP: Record<BoutiqueGarmentShow, string> = {
 }
 const GARMENT_FOCUS_COVER_BOOST = 1.08
 /** Marge intérieure — corps entier visible dans le cadre portrait (profil joueur). */
-const PORTRAIT_FRAME_CONTAIN_PAD = 1
-/** Zoom léger pour compenser le vide transparent des sprites (reste clipé). */
-const PORTRAIT_FRAME_ZOOM = 1.28
+const PORTRAIT_FRAME_CONTAIN_PAD = 0.96
+/** Léger zoom : compense le vide PNG sans couper pieds / tête. */
+const PORTRAIT_FRAME_ZOOM = 1.06
 
 function garmentFocusClip(show: BoutiqueGarmentShow): string {
   return GARMENT_FOCUS_CLIP[show]
@@ -153,6 +159,9 @@ export function ModularAvatarCanvas({
 }: CanvasProps) {
   const { data: avatar, slotColors } = resolveModularAvatarState(state)
   const isHead = crop === 'head'
+  const isBust = crop === 'bust'
+  /** Tête seule : on masque maillot / short / chaussures. Le buste les garde. */
+  const hideBodyGarments = isHead
   const garmentsOnly = layersMode === 'garments'
   const focusGarments = garmentsOnly && garmentsFocus
   const selectedAssets = useMemo(() => resolveSelectedAssets(avatar), [avatar])
@@ -217,7 +226,7 @@ export function ModularAvatarCanvas({
   const showShoesLayer = garmentsShow === 'shoes'
   const shoesLayerSrc = selectedAssets.shoes?.src ?? garmentFallbackSrc
 
-  const eagerLayers = imagePriority || (isHead && Boolean(fitSize))
+  const eagerLayers = imagePriority || ((isHead || isBust) && Boolean(fitSize))
   const imgProps = { priority: eagerLayers }
 
   const bodyWithSkinTint =
@@ -230,26 +239,26 @@ export function ModularAvatarCanvas({
 
   const layers = garmentsOnly ? (
     <>
-      {!isHead && showShortsLayer && selectedAssets.shorts?.src ? (
+      {!hideBodyGarments && showShortsLayer && selectedAssets.shorts?.src ? (
         <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} {...imgProps} />
       ) : null}
-      {!isHead && showJerseyLayer && selectedAssets.jersey?.src ? (
+      {!hideBodyGarments && showJerseyLayer && selectedAssets.jersey?.src ? (
         <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} {...imgProps} />
       ) : null}
-      {!isHead && showShoesLayer && shoesLayerSrc ? (
+      {!hideBodyGarments && showShoesLayer && shoesLayerSrc ? (
         <LayerImage src={shoesLayerSrc} alt="" filter={filterFor('shoes')} {...imgProps} />
       ) : null}
     </>
   ) : (
     <>
       {bodyWithSkinTint}
-      {!isHead && selectedAssets.shorts?.src ? (
+      {!hideBodyGarments && selectedAssets.shorts?.src ? (
         <LayerImage src={selectedAssets.shorts.src} alt="" filter={filterFor('shorts')} {...imgProps} />
       ) : null}
-      {!isHead && selectedAssets.jersey?.src ? (
+      {!hideBodyGarments && selectedAssets.jersey?.src ? (
         <LayerImage src={selectedAssets.jersey.src} alt="" filter={filterFor('jersey')} {...imgProps} />
       ) : null}
-      {!isHead && shoesLayerSrc ? (
+      {!hideBodyGarments && shoesLayerSrc ? (
         <LayerImage src={shoesLayerSrc} alt="" filter={filterFor('shoes')} {...imgProps} />
       ) : null}
       {selectedAssets.eyes?.src ? <LayerImage src={selectedAssets.eyes.src} alt="" {...imgProps} /> : null}
@@ -264,11 +273,24 @@ export function ModularAvatarCanvas({
     </>
   )
 
-  if (isHead && fitSize) {
+  if ((isHead || isBust) && fitSize) {
     const smallThumb = fitSize < 40
-    const headZoom = smallThumb ? MODULAR_PP_HEAD_ZOOM_SMALL : MODULAR_PP_HEAD_ZOOM
-    const marginTop = smallThumb ? MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX : MODULAR_PP_HEAD_MARGIN_TOP_PX
-    const baseScale = (fitSize / canvasSize.width) * headZoom
+    const zoom = isBust
+      ? smallThumb
+        ? MODULAR_PP_BUST_ZOOM_SMALL
+        : MODULAR_PP_BUST_ZOOM
+      : smallThumb
+        ? MODULAR_PP_HEAD_ZOOM_SMALL
+        : MODULAR_PP_HEAD_ZOOM
+    const marginTop = isBust
+      ? smallThumb
+        ? MODULAR_PP_BUST_MARGIN_TOP_SMALL_PX
+        : MODULAR_PP_BUST_MARGIN_TOP_PX
+      : smallThumb
+        ? MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX
+        : MODULAR_PP_HEAD_MARGIN_TOP_PX
+    const origin = isBust ? MODULAR_PP_BUST_ORIGIN : MODULAR_PP_HEAD_ORIGIN
+    const baseScale = (fitSize / canvasSize.width) * zoom
     return (
       <div
         className={cn('relative overflow-hidden', className)}
@@ -282,7 +304,7 @@ export function ModularAvatarCanvas({
             marginLeft: -canvasSize.width / 2,
             marginTop,
             transform: `scale(${baseScale}) translateZ(0)`,
-            transformOrigin: MODULAR_PP_HEAD_ORIGIN,
+            transformOrigin: origin,
           }}
         >
           <div
@@ -317,18 +339,19 @@ export function ModularAvatarCanvas({
   )
 
   if (fill && portraitFocus) {
+    // Corps entier centré dans le cadre profil (tête → pieds).
     const fitScale =
       Math.min(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * PORTRAIT_FRAME_CONTAIN_PAD
     const baseScale = fitScale * PORTRAIT_FRAME_ZOOM
     return (
       <div ref={fillRef} className={cn('relative h-full w-full overflow-hidden', className)}>
         <div
-          className="absolute left-1/2 bottom-0"
+          className="absolute left-1/2 top-1/2"
           style={{
             width: canvasSize.width,
             height: canvasSize.height,
-            transform: `translateX(-50%) scale(${baseScale})`,
-            transformOrigin: '50% 100%',
+            transform: `translate(-50%, -50%) scale(${baseScale})`,
+            transformOrigin: '50% 50%',
           }}
         >
           {layerStack}
@@ -439,18 +462,21 @@ export function ModularAvatarCanvas({
 export function ModularAvatarHeadThumb({
   state,
   size = 56,
+  crop = 'head',
   imagePriority = false,
   className,
 }: {
   state?: ModularAvatarState
   size?: number
+  /** `head` = visage seul ; `bust` = tête + maillot (chat / tribune). */
+  crop?: ModularThumbCrop
   imagePriority?: boolean
   className?: string
 }) {
   return (
     <ModularAvatarCanvas
       state={state}
-      crop="head"
+      crop={crop}
       fitSize={size}
       imagePriority={imagePriority}
       className={className}
@@ -458,7 +484,7 @@ export function ModularAvatarHeadThumb({
   )
 }
 
-/** Portrait buste (tête + maillot) — page profil public, fiches joueur. */
+/** Portrait corps entier — page profil public, fiches joueur. */
 export function ModularAvatarPortrait({
   state,
   width,
