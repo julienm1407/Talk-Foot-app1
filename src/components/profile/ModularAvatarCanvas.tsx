@@ -10,18 +10,29 @@ import {
 } from '../../features/avatar2d/modularAvatarState'
 import type { BoutiqueGarmentShow } from '../../utils/boutiqueModularState'
 import {
-  MODULAR_PP_BUST_MARGIN_TOP_PX,
-  MODULAR_PP_BUST_MARGIN_TOP_SMALL_PX,
-  MODULAR_PP_BUST_ORIGIN,
-  MODULAR_PP_BUST_ZOOM,
-  MODULAR_PP_BUST_ZOOM_SMALL,
-  MODULAR_PP_HEAD_MARGIN_TOP_PX,
-  MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX,
-  MODULAR_PP_HEAD_ORIGIN,
-  MODULAR_PP_HEAD_ZOOM,
-  MODULAR_PP_HEAD_ZOOM_SMALL,
+  SPRITE_CHAR_BOX,
+  SPRITE_HEAD_BOX,
+  SPRITE_KIT_BOX,
   type ModularThumbCrop,
 } from './modularPPFraming'
+
+type SpriteBox = { left: number; top: number; width: number; height: number }
+
+function spriteBoxForCrop(crop: 'full' | ModularThumbCrop | undefined): SpriteBox {
+  if (crop === 'head') return SPRITE_HEAD_BOX
+  if (crop === 'full') return SPRITE_CHAR_BOX
+  return SPRITE_KIT_BOX
+}
+
+/** Place une zone du sprite 1000² dans un carré (cover). */
+function spriteCoverTransform(fitSize: number, canvas: { width: number; height: number }, box: SpriteBox) {
+  const boxW = Math.max(1, box.width * canvas.width)
+  const boxH = Math.max(1, box.height * canvas.height)
+  const scale = Math.max(fitSize / boxW, fitSize / boxH)
+  const cx = (box.left + box.width / 2) * canvas.width
+  const cy = (box.top + box.height / 2) * canvas.height
+  return { scale, cx, cy }
+}
 
 export const MODULAR_COLOR_VARIANTS: Record<ModularColorVariantKey, { label: string; filter: string }> = {
   default: { label: 'Base', filter: 'none' },
@@ -162,8 +173,8 @@ export function ModularAvatarCanvas({
 }: CanvasProps) {
   const { data: avatar, slotColors } = resolveModularAvatarState(state)
   const isHead = crop === 'head'
-  const isBust = crop === 'bust'
-  /** Tête seule : on masque maillot / short / chaussures. Le buste les garde. */
+  const isKitThumb = crop === 'bust' || crop === 'kit' || crop === 'head'
+  /** Tête seule : on masque maillot / short / chaussures. Kit / buste les gardent. */
   const hideBodyGarments = isHead
   const garmentsOnly = layersMode === 'garments'
   const focusGarments = garmentsOnly && garmentsFocus
@@ -229,7 +240,7 @@ export function ModularAvatarCanvas({
   const showShoesLayer = garmentsShow === 'shoes'
   const shoesLayerSrc = selectedAssets.shoes?.src ?? garmentFallbackSrc
 
-  const eagerLayers = imagePriority || ((isHead || isBust) && Boolean(fitSize))
+  const eagerLayers = imagePriority || (isKitThumb && Boolean(fitSize))
   const imgProps = { priority: eagerLayers }
 
   const bodyWithSkinTint =
@@ -276,38 +287,20 @@ export function ModularAvatarCanvas({
     </>
   )
 
-  if ((isHead || isBust) && fitSize) {
-    const smallThumb = fitSize < 40
-    const zoom = isBust
-      ? smallThumb
-        ? MODULAR_PP_BUST_ZOOM_SMALL
-        : MODULAR_PP_BUST_ZOOM
-      : smallThumb
-        ? MODULAR_PP_HEAD_ZOOM_SMALL
-        : MODULAR_PP_HEAD_ZOOM
-    const marginTop = isBust
-      ? smallThumb
-        ? MODULAR_PP_BUST_MARGIN_TOP_SMALL_PX
-        : MODULAR_PP_BUST_MARGIN_TOP_PX
-      : smallThumb
-        ? MODULAR_PP_HEAD_MARGIN_TOP_SMALL_PX
-        : MODULAR_PP_HEAD_MARGIN_TOP_PX
-    const origin = isBust ? MODULAR_PP_BUST_ORIGIN : MODULAR_PP_HEAD_ORIGIN
-    const baseScale = (fitSize / canvasSize.width) * zoom
+  if (isKitThumb && fitSize) {
+    const { scale, cx, cy } = spriteCoverTransform(fitSize, canvasSize, spriteBoxForCrop(crop))
     return (
       <div
         className={cn('relative overflow-hidden', className)}
         style={{ width: fitSize, height: fitSize }}
       >
         <div
-          className="absolute left-1/2 top-0"
+          className="absolute left-0 top-0"
           style={{
             width: canvasSize.width,
             height: canvasSize.height,
-            marginLeft: -canvasSize.width / 2,
-            marginTop,
-            transform: `scale(${baseScale}) translateZ(0)`,
-            transformOrigin: origin,
+            transform: `translate(${fitSize / 2}px, ${fitSize / 2}px) scale(${scale}) translate(${-cx}px, ${-cy}px)`,
+            transformOrigin: '0 0',
           }}
         >
           <div
@@ -342,19 +335,22 @@ export function ModularAvatarCanvas({
   )
 
   if (fill && portraitFocus) {
-    // Corps entier centré dans le cadre profil (tête → pieds).
-    const fitScale =
-      Math.min(fillBox.w / canvasSize.width, fillBox.h / canvasSize.height) * PORTRAIT_FRAME_CONTAIN_PAD
-    const baseScale = fitScale * PORTRAIT_FRAME_ZOOM
+    const box = SPRITE_CHAR_BOX
+    const boxW = box.width * canvasSize.width
+    const boxH = box.height * canvasSize.height
+    const scale =
+      Math.min(fillBox.w / boxW, fillBox.h / boxH) * PORTRAIT_FRAME_CONTAIN_PAD * PORTRAIT_FRAME_ZOOM
+    const cx = (box.left + box.width / 2) * canvasSize.width
+    const cy = (box.top + box.height / 2) * canvasSize.height
     return (
       <div ref={fillRef} className={cn('relative h-full w-full overflow-hidden', className)}>
         <div
-          className="absolute left-1/2 top-1/2"
+          className="absolute left-0 top-0"
           style={{
             width: canvasSize.width,
             height: canvasSize.height,
-            transform: `translate(-50%, -50%) scale(${baseScale})`,
-            transformOrigin: '50% 50%',
+            transform: `translate(${fillBox.w / 2}px, ${fillBox.h / 2}px) scale(${scale}) translate(${-cx}px, ${-cy}px)`,
+            transformOrigin: '0 0',
           }}
         >
           {layerStack}
@@ -471,7 +467,7 @@ export function ModularAvatarHeadThumb({
 }: {
   state?: ModularAvatarState
   size?: number
-  /** `head` = visage seul ; `bust` = tête + maillot (chat / tribune). */
+  /** `kit` / `bust` = tête + maillot + short ; `head` = visage. */
   crop?: ModularThumbCrop
   imagePriority?: boolean
   className?: string

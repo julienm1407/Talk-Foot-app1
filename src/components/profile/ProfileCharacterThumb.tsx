@@ -114,7 +114,7 @@ export function ProfileCharacterThumb({
     <div
       ref={shellRef}
       className={cn(
-        'relative shrink-0 overflow-hidden rounded-full border-2 border-tf-grey-pastel/50 bg-gradient-to-b from-[#0e1018] to-[#0a0c12]',
+        'relative shrink-0 overflow-hidden rounded-full border-2 border-tf-grey-pastel/50 bg-[color:color-mix(in_srgb,var(--tf-c30-surface)_70%,#1a2744)]',
         fillParent && 'h-full w-full min-h-0 min-w-0',
         className,
       )}
