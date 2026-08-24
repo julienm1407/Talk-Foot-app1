@@ -59,11 +59,11 @@ export function isLikelyDefaultKit(state: ModularAvatarState | undefined | null)
   const d = resolvedAvatar(state).data
   const def = createDefaultModularAvatarState().data
   const jerseyDefault =
-    !d.jersey || d.jersey === def.data.jersey || d.jersey === DEFAULT_MODULAR_JERSEY
+    !d.jersey || d.jersey === def.jersey || d.jersey === DEFAULT_MODULAR_JERSEY
   const shortsDefault =
-    !d.shorts || d.shorts === def.data.shorts || d.shorts === DEFAULT_MODULAR_SHORTS
+    !d.shorts || d.shorts === def.shorts || d.shorts === DEFAULT_MODULAR_SHORTS
   const shoesDefault =
-    !d.shoes || d.shoes === def.data.shoes || d.shoes === DEFAULT_MODULAR_SHOES
+    !d.shoes || d.shoes === def.shoes || d.shoes === DEFAULT_MODULAR_SHOES
   return jerseyDefault && shortsDefault && shoesDefault
 }
 

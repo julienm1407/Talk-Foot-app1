@@ -7,6 +7,7 @@ import { normalizeWallet } from '../utils/walletNormalize'
 import { writeOwnedItemsBackup } from '../utils/ownedItemsBackup'
 import { writeModularAvatarBackup } from '../utils/modularAvatarBackup'
 import { applyShopGrantIdsToModularAvatar } from '../utils/boutiqueModularIds'
+import { resolveModularAvatarState } from '../features/avatar2d/modularAvatarState'
 import { useAuth } from '../contexts/AuthContext'
 import {
   purchaseCosmeticItem,
@@ -43,7 +44,10 @@ export function useBoutiquePurchase() {
             result = { ok: true }
             const profile = mergeOwnedItemsIntoProfile(prev.profile, input.grantIds)
             nextOwned = profile.ownedItemIds
-            nextModular = applyShopGrantIdsToModularAvatar(profile.modularAvatar, input.grantIds)
+            nextModular = applyShopGrantIdsToModularAvatar(
+              resolveModularAvatarState(profile.modularAvatar),
+              input.grantIds,
+            )
             return {
               ...prev,
               wallet: { ...w, medals: w.medals - input.medalCost },
@@ -56,7 +60,10 @@ export function useBoutiquePurchase() {
           result = { ok: true }
           const profile = mergeOwnedItemsIntoProfile(prev.profile, input.grantIds)
           nextOwned = profile.ownedItemIds
-          nextModular = applyShopGrantIdsToModularAvatar(profile.modularAvatar, input.grantIds)
+          nextModular = applyShopGrantIdsToModularAvatar(
+            resolveModularAvatarState(profile.modularAvatar),
+            input.grantIds,
+          )
           return {
             ...prev,
             wallet: { ...w, tokens: w.tokens - input.tokenCost },

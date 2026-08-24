@@ -413,7 +413,7 @@ function CloudUserStateLoader({
             appRef.current.profile.ownedItemIds ?? [],
             cloudMerged.profile.ownedItemIds ?? [],
           )
-          let next = {
+          let next: UserAppStateV1 = {
             ...appRef.current,
             profile: {
               ...appRef.current.profile,
