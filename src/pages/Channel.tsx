@@ -1554,16 +1554,19 @@ export function ChannelPage() {
       const label = resolveChatDisplayLabel(map[id]?.username, cloudAuthorNames[id])
       const subscriptionTier = subscriptionTiersByAuthor[id]
       const profilePhotoDataUrl = profilePhotoByAuthor[id]
-      const safeModular = resolveProfileModularAvatarForDisplay(modularAvatar)
+      const isSelfId = selfAvatarKeys.includes(id)
+      const safeModular = isSelfId
+        ? resolveProfileModularAvatarForDisplay(selfProfile.modularAvatar)
+        : resolveProfileModularAvatarForDisplay(modularAvatar)
       if (map[id]) {
         map[id] = {
           ...map[id],
           username: label,
           modularAvatar: safeModular,
-          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
+          ...(profilePhotoDataUrl && !isSelfId ? { profilePhotoDataUrl } : {}),
           ...(subscriptionTier ? { subscriptionTier } : {}),
         }
-      } else {
+      } else if (!isSelfId) {
         map[id] = {
           id,
           username: label || id.replace(/-/g, '').slice(0, 12),
@@ -1577,11 +1580,19 @@ export function ChannelPage() {
     }
     for (const [id, profilePhotoDataUrl] of Object.entries(profilePhotoByAuthor)) {
       if (!map[id] || map[id].profilePhotoDataUrl) continue
+      if (selfAvatarKeys.includes(id)) continue
       map[id] = { ...map[id], profilePhotoDataUrl }
     }
     for (const m of chatMessages) {
       const clerkKey = m.clerkActorKey
       if (!clerkKey || !map[m.userId]) continue
+      if (selfAvatarKeys.includes(m.userId) || selfAvatarKeys.includes(clerkKey)) {
+        map[m.userId] = {
+          ...map[m.userId],
+          modularAvatar: resolveProfileModularAvatarForDisplay(selfProfile.modularAvatar),
+        }
+        continue
+      }
       const modularAvatar = modularByAuthor[clerkKey]
       const profilePhotoDataUrl = profilePhotoByAuthor[clerkKey]
       const subscriptionTier = subscriptionTiersByAuthor[clerkKey]
@@ -1592,13 +1603,12 @@ export function ChannelPage() {
         ...(label
           ? { username: resolveChatDisplayLabel(map[m.userId]?.username, label) }
           : {}),
-        ...(modularAvatar && !map[m.userId].modularAvatar
+        // Toujours préférer l’avatar Clerk (plus à jour que la ligne chat uuid).
+        ...(modularAvatar
           ? { modularAvatar: resolveProfileModularAvatarForDisplay(modularAvatar) }
           : {}),
-        ...(profilePhotoDataUrl && !map[m.userId].profilePhotoDataUrl
-          ? { profilePhotoDataUrl }
-          : {}),
-        ...(subscriptionTier && !map[m.userId].subscriptionTier ? { subscriptionTier } : {}),
+        ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
+        ...(subscriptionTier ? { subscriptionTier } : {}),
       }
     }
     for (const id of chatAuthorKeys) {
@@ -1625,6 +1635,7 @@ export function ChannelPage() {
     subscriptionTiersByAuthor,
     authUser,
     chatActorId,
+    selfAvatarKeys,
     selfProfile.modularAvatar,
     tier,
   ])

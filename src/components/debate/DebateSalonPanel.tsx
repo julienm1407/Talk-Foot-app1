@@ -179,15 +179,16 @@ export function DebateSalonPanel({
       const label = resolveChatDisplayLabel(authorNameByUserId.get(id), cloudAuthorNames[id])
       const subscriptionTier = subscriptionTiersByAuthor[id]
       const profilePhotoDataUrl = profilePhotoByAuthor[id]
+      const isSelfId = selfAvatarKeys.includes(id)
       if (base[id]) {
         base[id] = {
           ...base[id],
           username: label,
-          modularAvatar,
-          ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
+          modularAvatar: isSelfId ? selfProfile.modularAvatar : modularAvatar,
+          ...(profilePhotoDataUrl && !isSelfId ? { profilePhotoDataUrl } : {}),
           ...(subscriptionTier ? { subscriptionTier } : {}),
         }
-      } else {
+      } else if (!isSelfId) {
         base[id] = {
           id,
           username: label,
@@ -236,6 +237,7 @@ export function DebateSalonPanel({
     profilePhotoByAuthor,
     subscriptionTiersByAuthor,
     selfChatUserId,
+    selfAvatarKeys,
     selfProfile.modularAvatar,
     tier,
   ])

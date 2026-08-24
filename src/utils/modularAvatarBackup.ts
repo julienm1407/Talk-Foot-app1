@@ -26,7 +26,7 @@ function modularSignature(state: ModularAvatarState | undefined | null): string 
   return modularAvatarSignature(state)
 }
 
-/** True si le nouvel état efface une customisation cloud existante. */
+/** True si le nouvel état efface une customisation (remplacée par défaut / vide). */
 export function wouldDowngradeModularAvatar(
   previous: ModularAvatarState | unknown,
   next: ModularAvatarState | unknown,
@@ -34,8 +34,9 @@ export function wouldDowngradeModularAvatar(
   const prev = coerceModularAvatarFromStored(previous)
   const nxt = coerceModularAvatarFromStored(next)
   if (!prev || isLikelyDefaultModularAvatar(prev)) return false
+  // Custom → défaut / invalide = downgrade. Custom → autre custom = mise à jour OK.
   if (!nxt || isLikelyDefaultModularAvatar(nxt)) return true
-  return modularSignature(prev) !== modularSignature(nxt)
+  return false
 }
 
 export function extractStoredModularAvatar(appState: unknown): unknown {

@@ -11,15 +11,33 @@ import {
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 
+const PEER_PROFILE_REFRESH_MS = 12_000
+
 /** Charge le profil public (pseudo + avatar modulaire) d’un autre joueur depuis Supabase. */
 export function usePeerPublicProfile(peer: User | undefined, selfUserId: string | undefined) {
   const [cloudProfile, setCloudProfile] = useState<UserProfile | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [refreshTick, setRefreshTick] = useState(0)
 
   useEffect(() => {
-    setCloudProfile(null)
-    setDisplayName(null)
+    if (!peer?.id) return
+    const id = window.setInterval(() => setRefreshTick((n) => n + 1), PEER_PROFILE_REFRESH_MS)
+    const onVis = () => {
+      if (document.visibilityState === 'visible') setRefreshTick((n) => n + 1)
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [peer?.id])
+
+  useEffect(() => {
+    if (refreshTick === 0) {
+      setCloudProfile(null)
+      setDisplayName(null)
+    }
     if (!peer || peer.isTalkFootBot || !isSupabaseConfigured()) {
       setLoading(false)
       return
@@ -36,7 +54,7 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
     }
 
     let cancelled = false
-    setLoading(true)
+    if (refreshTick === 0) setLoading(true)
 
     void fetchTalkfootPublicProfiles(sb, [peer.id])
       .then((rows) => {
@@ -59,7 +77,7 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
         })
       })
       .catch(() => {
-        if (!cancelled) {
+        if (!cancelled && refreshTick === 0) {
           setCloudProfile(null)
           setDisplayName(null)
         }
@@ -71,7 +89,7 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
     return () => {
       cancelled = true
     }
-  }, [peer?.id, peer?.isTalkFootBot, selfUserId])
+  }, [peer?.id, peer?.isTalkFootBot, selfUserId, refreshTick, peer])
 
   return { cloudProfile, displayName, loading }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ModularAvatarState } from '../features/avatar2d/modularAvatarState'
 import type { SubscriptionTierId } from '../types/subscription'
 import { fetchTalkfootPublicProfiles } from '../lib/supabase/profileAppState'
@@ -16,24 +16,45 @@ type AuthorCacheEntry = {
   subscriptionTier: SubscriptionTierId | null
   profilePhotoDataUrl: string | null
   loaded: boolean
+  fetchedAt: number
 }
 
 const authorCache = new Map<string, AuthorCacheEntry>()
 const cacheInvalidateListeners = new Set<() => void>()
 
+/** Rafraîchir les PP des autres joueurs assez vite après un changement de tenue. */
+const AVATAR_CACHE_TTL_MS = 12_000
+
 function notifyCacheInvalidate() {
   cacheInvalidateListeners.forEach((fn) => fn())
 }
 
-function markAuthorCacheLoaded(actorKey: string, partial?: Partial<Omit<AuthorCacheEntry, 'loaded'>>) {
+function markAuthorCacheLoaded(
+  actorKey: string,
+  partial?: Partial<Omit<AuthorCacheEntry, 'loaded' | 'fetchedAt'>>,
+) {
   const prev = authorCache.get(actorKey)
+  const has = (k: keyof NonNullable<typeof partial>) =>
+    Boolean(partial && Object.prototype.hasOwnProperty.call(partial, k))
   authorCache.set(actorKey, {
-    modularAvatar: partial?.modularAvatar ?? prev?.modularAvatar ?? null,
-    displayName: partial?.displayName ?? prev?.displayName ?? null,
-    subscriptionTier: partial?.subscriptionTier ?? prev?.subscriptionTier ?? null,
-    profilePhotoDataUrl: partial?.profilePhotoDataUrl ?? prev?.profilePhotoDataUrl ?? null,
+    modularAvatar: has('modularAvatar')
+      ? (partial!.modularAvatar ?? null)
+      : (prev?.modularAvatar ?? null),
+    displayName: has('displayName') ? (partial!.displayName ?? null) : (prev?.displayName ?? null),
+    subscriptionTier: has('subscriptionTier')
+      ? (partial!.subscriptionTier ?? null)
+      : (prev?.subscriptionTier ?? null),
+    profilePhotoDataUrl: has('profilePhotoDataUrl')
+      ? (partial!.profilePhotoDataUrl ?? null)
+      : (prev?.profilePhotoDataUrl ?? null),
     loaded: true,
+    fetchedAt: Date.now(),
   })
+}
+
+function isCacheFresh(entry: AuthorCacheEntry | undefined): boolean {
+  if (!entry?.loaded) return false
+  return Date.now() - entry.fetchedAt < AVATAR_CACHE_TTL_MS
 }
 
 /** Réinitialise le cache d’un ou plusieurs auteurs et relance le fetch côté chat. */
@@ -81,6 +102,7 @@ export function useChatAuthorModularAvatars(
   const selfUserKeys = options?.selfUserKeys
   const selfModularAvatar = options?.selfModularAvatar
   const selfSubscriptionTier = options?.selfSubscriptionTier
+  const prevSelfRef = useRef(selfUserId)
 
   useEffect(() => {
     const bump = () => setCacheEpoch((n) => n + 1)
@@ -90,10 +112,24 @@ export function useChatAuthorModularAvatars(
     }
   }, [])
 
+  // Changement de compte : ne jamais réutiliser le cache de l’autre session.
+  useEffect(() => {
+    if (prevSelfRef.current === selfUserId) return
+    prevSelfRef.current = selfUserId
+    authorCache.clear()
+    notifyCacheInvalidate()
+  }, [selfUserId])
+
+  // TTL : relancer les fetches périodiquement pour voir les tenues à jour.
+  useEffect(() => {
+    const id = window.setInterval(() => setCacheEpoch((n) => n + 1), AVATAR_CACHE_TTL_MS)
+    return () => window.clearInterval(id)
+  }, [])
+
   const pendingKey = useMemo(() => {
     return [...new Set(userIds)]
       .filter((id) => shouldFetchCloudChatAvatar(id, selfUserId))
-      .filter((id) => !authorCache.get(id)?.loaded)
+      .filter((id) => !isCacheFresh(authorCache.get(id)))
       .sort()
       .join(',')
   }, [userIds, selfUserId, cacheEpoch])
@@ -107,7 +143,12 @@ export function useChatAuthorModularAvatars(
     const markUnresolvedLoaded = () => {
       for (const actorKey of ids) {
         if (!authorCache.get(actorKey)?.loaded) {
-          markAuthorCacheLoaded(actorKey)
+          markAuthorCacheLoaded(actorKey, {
+            modularAvatar: null,
+            displayName: null,
+            subscriptionTier: null,
+            profilePhotoDataUrl: null,
+          })
         }
       }
     }
@@ -135,19 +176,18 @@ export function useChatAuthorModularAvatars(
           const profilePhotoDataUrl = row
             ? profilePhotoFromPublicRow(row.profilePhotoDataUrl) ?? null
             : null
-          markAuthorCacheLoaded(actorKey, {
+          const payload = {
             modularAvatar,
             displayName,
             subscriptionTier,
             profilePhotoDataUrl,
-          })
+          }
+          markAuthorCacheLoaded(actorKey, payload)
           if (row?.profileId && row.profileId !== actorKey) {
-            markAuthorCacheLoaded(row.profileId, {
-              modularAvatar,
-              displayName,
-              subscriptionTier,
-              profilePhotoDataUrl,
-            })
+            markAuthorCacheLoaded(row.profileId, payload)
+          }
+          if (row?.actorKey && row.actorKey !== actorKey && row.actorKey !== row.profileId) {
+            markAuthorCacheLoaded(row.actorKey, payload)
           }
         }
       } catch {
@@ -180,15 +220,20 @@ export function useChatAuthorModularAvatars(
       }
     }
 
+    const selfKeySet = new Set(selfUserKeys?.filter(Boolean) ?? [])
+
     for (const id of userIds) {
+      if (selfKeySet.has(id) && avatars[id]) continue
       const cached = authorCache.get(id)
-      if (cached?.modularAvatar && !avatars[id]) avatars[id] = cached.modularAvatar
+      if (cached?.modularAvatar) avatars[id] = cached.modularAvatar
       if (cached?.profilePhotoDataUrl && !profilePhotos[id]) {
         profilePhotos[id] = cached.profilePhotoDataUrl
       }
       if (cached?.displayName) displayNames[id] = cached.displayName
-      if (cached?.subscriptionTier) subscriptionTiers[id] = cached.subscriptionTier
+      if (cached?.subscriptionTier && !subscriptionTiers[id]) {
+        subscriptionTiers[id] = cached.subscriptionTier
+      }
     }
     return { avatars, profilePhotos, displayNames, subscriptionTiers }
-  }, [userIds, tick, selfModularAvatar, selfSubscriptionTier, selfUserKeys])
+  }, [userIds, tick, cacheEpoch, selfModularAvatar, selfSubscriptionTier, selfUserKeys])
 }
