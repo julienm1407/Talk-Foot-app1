@@ -24,11 +24,20 @@ function spriteBoxForCrop(crop: 'full' | ModularThumbCrop | undefined): SpriteBo
   return SPRITE_KIT_BOX
 }
 
-/** Place une zone du sprite 1000² dans un carré (cover). */
-function spriteCoverTransform(fitSize: number, canvas: { width: number; height: number }, box: SpriteBox) {
+/** Place une zone du sprite dans un carré.
+ * `contain` = tout visible (pas de coupe cheveux) ; `cover` = remplit le cercle. */
+function spriteFitTransform(
+  fitSize: number,
+  canvas: { width: number; height: number },
+  box: SpriteBox,
+  mode: 'contain' | 'cover',
+  pad = 1,
+) {
   const boxW = Math.max(1, box.width * canvas.width)
   const boxH = Math.max(1, box.height * canvas.height)
-  const scale = Math.max(fitSize / boxW, fitSize / boxH)
+  const scale =
+    (mode === 'contain' ? Math.min(fitSize / boxW, fitSize / boxH) : Math.max(fitSize / boxW, fitSize / boxH)) *
+    pad
   const cx = (box.left + box.width / 2) * canvas.width
   const cy = (box.top + box.height / 2) * canvas.height
   return { scale, cx, cy }
@@ -288,7 +297,14 @@ export function ModularAvatarCanvas({
   )
 
   if (isKitThumb && fitSize) {
-    const { scale, cx, cy } = spriteCoverTransform(fitSize, canvasSize, spriteBoxForCrop(crop))
+    // contain : tête/cheveux entiers visibles (cover coupait le haut du crâne).
+    const { scale, cx, cy } = spriteFitTransform(
+      fitSize,
+      canvasSize,
+      spriteBoxForCrop(crop),
+      'contain',
+      0.94,
+    )
     return (
       <div
         className={cn('relative overflow-hidden', className)}
