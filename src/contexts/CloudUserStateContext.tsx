@@ -385,9 +385,14 @@ function CloudUserStateLoader({
 
       const earlyWallet = mergeWalletBackupIntoApp(user.id, appRef.current)
       const earlyOwned = mergeOwnedItemsBackupIntoApp(user.id, earlyWallet.app)
-      if (earlyOwned.restoredFromBackup || earlyWallet.restoredFromBackup) {
-        appRef.current = earlyOwned.app
-        setApp(earlyOwned.app)
+      const earlyAvatar = mergeModularAvatarBackupIntoApp(user.id, earlyOwned.app)
+      if (
+        earlyOwned.restoredFromBackup ||
+        earlyWallet.restoredFromBackup ||
+        earlyAvatar.restoredFromBackup
+      ) {
+        appRef.current = earlyAvatar.app
+        setApp(earlyAvatar.app)
       }
 
       let resyncSessionAvatar = false
@@ -401,13 +406,18 @@ function CloudUserStateLoader({
         if (hasLocalEditsRef.current) {
           const keptWallet = mergeWalletBackupIntoApp(user.id, appRef.current)
           const keptOwned = mergeOwnedItemsBackupIntoApp(user.id, keptWallet.app)
-          if (keptOwned.app !== appRef.current) {
-            appRef.current = keptOwned.app
-            setApp(keptOwned.app)
+          const keptAvatar = mergeModularAvatarBackupIntoApp(user.id, keptOwned.app)
+          if (keptAvatar.app !== appRef.current) {
+            appRef.current = keptAvatar.app
+            setApp(keptAvatar.app)
           }
           cloudHydratedRef.current = true
           setReady(true)
-          return keptOwned.restoredFromBackup || keptWallet.restoredFromBackup
+          return (
+            keptOwned.restoredFromBackup ||
+            keptWallet.restoredFromBackup ||
+            keptAvatar.restoredFromBackup
+          )
         }
         const sessionAvatar = resolveModularAvatarState(appRef.current.profile.modularAvatar)
         const rawModularAvatar = extractStoredModularAvatar(appState)
