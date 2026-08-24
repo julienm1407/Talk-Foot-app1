@@ -1348,11 +1348,11 @@ export function ChannelPage() {
     odds1x2 && odds1x2.home >= 1.01 && odds1x2.draw >= 1.01 && odds1x2.away >= 1.01,
   )
 
+  // Toujours ticker : le compte à rebours « tchat verrouillé » (upcoming) en dépend aussi.
   useEffect(() => {
-    if (status === 'upcoming') return
     const id = window.setInterval(() => setNowMs(Date.now()), 1000)
     return () => window.clearInterval(id)
-  }, [status])
+  }, [])
   const [witnessedFinishedAtMs, setWitnessedFinishedAtMs] = useState<number | null>(null)
   const prevMatchStatusRef = useRef(status)
   useEffect(() => {
