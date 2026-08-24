@@ -28,13 +28,17 @@ export function unionOwnedItemIds(a: string[], b: string[]): string[] {
   return normalizeIds([...a, ...b])
 }
 
+/** Ne shrink jamais le backup local : union avec l’existant (évite perte d’achat au reload). */
 export function writeOwnedItemsBackup(userId: string, ownedItemIds: string[]): void {
   const key = userId.trim()
   if (!key) return
+  const prev = readOwnedItemsBackup(key)
+  const merged = unionOwnedItemIds(ownedItemIds, prev?.ownedItemIds ?? [])
+  if (!merged.length && !prev?.ownedItemIds.length) return
   const payload: OwnedItemsBackupV1 = {
     v: 1,
     savedAt: Date.now(),
-    ownedItemIds: normalizeIds(ownedItemIds),
+    ownedItemIds: merged,
   }
   try {
     localStorage.setItem(storageKey(key), JSON.stringify(payload))

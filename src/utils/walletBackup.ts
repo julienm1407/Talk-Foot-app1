@@ -18,38 +18,39 @@ function pickLatestGrant(a?: string, b?: string): string | undefined {
   return a >= b ? a : b
 }
 
-/** Aligné sur talkfoot_merge_client_app_state côté Supabase. */
+/**
+ * Jetons : le backup local reflète la session (dépenses / gains).
+ * Ne jamais réappliquer un backup « défaut 100 » par-dessus un cloud enrichi.
+ */
 export function mergeWalletTokens(serverTokens: number, backupTokens: number): number {
   const server = Math.max(0, serverTokens)
   const backup = Math.max(0, backupTokens)
   const defaultTokens = DEFAULT_WALLET.tokens
 
-  // Vieux onglet / client par défaut : ne pas écraser un solde cloud déjà enrichi.
   if (backup === defaultTokens && server > defaultTokens) return server
-  // Gain local pas encore synchronisé.
   if (backup > server) return backup
-  // Dépense locale ou solde déjà aligné : faire confiance au backup (y compris comptes admin).
   return backup
 }
 
-function mergeWalletMedals(
-  serverMedals: number,
-  backupMedals: number,
-  mergedTokens: number,
-  backupTokens: number,
-): number {
+/**
+ * Médailles : une dépense doit rester.
+ * - backup < cloud → dépense locale (ou cloud en retard) → garder backup
+ * - backup > cloud → cloud a déjà la dépense (ou backup périmé) → garder cloud
+ * - backup 0 et cloud > 0 → ne pas effacer le cloud
+ */
+export function mergeWalletMedals(serverMedals: number, backupMedals: number): number {
   const server = Math.max(0, serverMedals)
   const backup = Math.max(0, backupMedals)
-  if (backup > server) return backup
-  if (mergedTokens === backupTokens && backup <= server) return backup
-  return server
+  if (backup === 0 && server > 0) return server
+  if (server === 0 && backup > 0) return backup
+  return Math.min(server, backup)
 }
 
 function mergeWallets(server: Wallet, backup: Wallet): Wallet {
   const s = normalizeWallet(server)
   const b = normalizeWallet(backup)
   const tokens = mergeWalletTokens(s.tokens, b.tokens)
-  const medals = mergeWalletMedals(s.medals, b.medals, tokens, b.tokens)
+  const medals = mergeWalletMedals(s.medals, b.medals)
 
   return normalizeWallet({
     tokens,
@@ -112,7 +113,10 @@ export function mergeWalletBackupIntoApp(
   }
 }
 
-/** Avant écriture cloud : relève le solde seulement si la session ressemble au défaut non synchronisé. */
+/**
+ * Avant écriture cloud : ne JAMAIS remonter médailles/jetons depuis un vieux backup
+ * (sinon un achat boutique est annulé au flush). On ne sauve que d’un reset défaut.
+ */
 export function coalesceAppStateWithWalletBackup(userId: string, app: UserAppStateV1): UserAppStateV1 {
   const backup = readWalletBackup(userId)
   if (!backup) return app
@@ -121,11 +125,12 @@ export function coalesceAppStateWithWalletBackup(userId: string, app: UserAppSta
   const b = normalizeWallet(backup.wallet)
   const defaultTokens = DEFAULT_WALLET.tokens
 
-  if (current.tokens === defaultTokens && b.tokens > defaultTokens) {
-    return mergeWalletBackupIntoApp(userId, app).app
-  }
+  const looksLikeDefaultReset =
+    current.tokens === defaultTokens &&
+    current.medals === 0 &&
+    (b.tokens > defaultTokens || b.medals > 0)
 
-  if (b.tokens > current.tokens || b.medals > current.medals) {
+  if (looksLikeDefaultReset) {
     return mergeWalletBackupIntoApp(userId, app).app
   }
 
