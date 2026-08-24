@@ -28,7 +28,7 @@ export function BoutiqueShoesStudioPreview({
               src={src}
               alt=""
               draggable={false}
-              loading="eager"
+              loading="lazy"
               decoding="async"
               className="pointer-events-none max-h-[118%] w-[118%] max-w-none select-none object-contain object-[center_72%]"
             />

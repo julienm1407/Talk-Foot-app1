@@ -50,13 +50,17 @@ export function BoutiquePage() {
   const [searchParams] = useSearchParams()
   const tabFromUrl = parseCatalogTab(searchParams.get('tab'))
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>(() => tabFromUrl ?? 'packs')
+  const [catalogSort, setCatalogSort] = useState<CatalogSort>('name_asc')
+  const [catalogSearch, setCatalogSearch] = useState('')
+  const [catalogVisibleCount, setCatalogVisibleCount] = useState(24)
 
   useEffect(() => {
     const next = parseCatalogTab(searchParams.get('tab'))
     if (next) setCatalogFilter(next)
   }, [searchParams])
-  const [catalogSort, setCatalogSort] = useState<CatalogSort>('name_asc')
-  const [catalogSearch, setCatalogSearch] = useState('')
+  useEffect(() => {
+    setCatalogVisibleCount(24)
+  }, [catalogFilter, catalogSearch, catalogSort])
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
   const [purchaseFlow, setPurchaseFlow] = useState<{
     item: AvatarItemType
@@ -88,6 +92,12 @@ export function BoutiquePage() {
     copy.unshift(row)
     return copy
   }, [catalogRows, catalogSort, dailyDeal, catalogSearch])
+
+  const visibleCatalogRows = useMemo(
+    () => sortedCatalogRows.slice(0, catalogVisibleCount),
+    [sortedCatalogRows, catalogVisibleCount],
+  )
+  const hasMoreCatalogRows = sortedCatalogRows.length > visibleCatalogRows.length
 
   const showNotice = (tone: 'ok' | 'err', text: string) => {
     setNotice({ tone, text })
@@ -326,16 +336,32 @@ export function BoutiquePage() {
               Aucun article pour cette recherche.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:gap-5 xl:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-              {sortedCatalogRows.map((row) => (
-                <BoutiqueCosmeticGridItem
-                  key={row.item.id}
-                  item={row.item}
-                  owned={isCosmeticOwned(row.item, ownsItem)}
-                  onOpenItem={openItemPreview}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 min-[420px]:gap-5 xl:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+                {visibleCatalogRows.map((row) => (
+                  <BoutiqueCosmeticGridItem
+                    key={row.item.id}
+                    item={row.item}
+                    owned={isCosmeticOwned(row.item, ownsItem)}
+                    onOpenItem={openItemPreview}
+                  />
+                ))}
+              </div>
+              {hasMoreCatalogRows ? (
+                <div className="mt-5 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setCatalogVisibleCount((n) => n + 24)}
+                    className={cn(
+                      TF_FOCUS_VISIBLE,
+                      'rounded-xl border border-tf-dark/15 bg-white px-5 py-3 text-sm font-black text-tf-dark shadow-sm transition hover:border-tf-dark/30',
+                    )}
+                  >
+                    Voir plus ({sortedCatalogRows.length - visibleCatalogRows.length} restants)
+                  </button>
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       </Card>
