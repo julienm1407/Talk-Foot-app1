@@ -58,9 +58,8 @@ export function useBoutiquePurchase() {
             profile,
           }
         })
-        if (result.ok) {
-          if (user?.id && nextOwned.length) writeOwnedItemsBackup(user.id, nextOwned)
-          void cloud.flushAppSave()
+        if (result.ok && user?.id && nextOwned.length) {
+          writeOwnedItemsBackup(user.id, nextOwned)
         }
         return result
       }
@@ -103,7 +102,11 @@ export function useBoutiquePurchase() {
       )
       if (!result.ok) return result
       if (cloud) {
-        const saved = await cloud.flushAppSave()
+        cloud.cancelScheduledSave()
+        let saved = await cloud.flushAppSave()
+        if (!saved.ok) {
+          saved = await cloud.flushAppSave()
+        }
         if (!saved.ok) return { ok: false, code: 'save_failed' }
       }
       return result

@@ -116,6 +116,12 @@ function cloudErrorMessageFr(err: unknown): string {
   return raw
 }
 
+function inventoryFlushSignature(app: UserAppStateV1): string {
+  const w = normalizeWallet(app.wallet)
+  const owned = [...(app.profile.ownedItemIds ?? [])].sort().join(',')
+  return `${w.medals}|${w.tokens}|${owned}`
+}
+
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -183,6 +189,7 @@ function CloudUserStateLoader({
   const hasLocalEditsRef = useRef(false)
   const pendingCloudSaveRef = useRef(false)
   const flushInFlightRef = useRef(false)
+  const flushMutexRef = useRef(Promise.resolve())
   const loadUserIdRef = useRef<string | null>(null)
   const readyRef = useRef(false)
   const cloudHydratedRef = useRef(false)
@@ -227,89 +234,94 @@ function CloudUserStateLoader({
   const flushSave = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     const sb = getSupabaseBrowserClient()
     if (!sb || !user?.id) return { ok: false, error: 'no_session' }
-    if (!cloudHydratedRef.current) return { ok: false, error: 'not_hydrated' }
 
-    // Sérialise les flush : un vieux save ne doit pas écraser un achat boutique.
-    if (flushInFlightRef.current) {
-      pendingCloudSaveRef.current = true
-      return { ok: true }
-    }
-    flushInFlightRef.current = true
-
-    try {
-      await ensureTalkFootSupabaseSession(sb)
-
-      if (isClerkAuthMode()) {
-        if (!clerkSessionId) return { ok: false, error: 'missing_clerk_session' }
-        const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
-        if (!bindResult.ok) return { ok: false, error: bindResult.error ?? 'bind_failed' }
+    const run = async (): Promise<{ ok: boolean; error?: string }> => {
+      if (!cloudHydratedRef.current) {
+        for (let wait = 0; wait < 20 && !cloudHydratedRef.current; wait += 1) {
+          await sleep(150)
+        }
+        if (!cloudHydratedRef.current) return { ok: false, error: 'not_hydrated' }
       }
 
-      let lastError: string | undefined
-      for (let attempt = 0; attempt < 4; attempt += 1) {
-        pendingCloudSaveRef.current = false
-        const snapBefore = appRef.current
-        let payload = coalesceAppStateWithModularBackup(user.id, snapBefore)
-        payload = coalesceAppStateWithWalletBackup(user.id, payload)
-        payload = coalesceAppStateWithBetsBackup(user.id, payload)
-        payload = coalesceAppStateWithOwnedItemsBackup(user.id, payload)
-        const betTokensReconciled = withReconciledBetTokens(payload)
-        payload = betTokensReconciled.app
-        if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
-          hasLocalEditsRef.current = true
-        }
-        if (payload !== appRef.current) {
-          appRef.current = payload
-          setApp(payload)
+      flushInFlightRef.current = true
+      try {
+        await ensureTalkFootSupabaseSession(sb)
+
+        if (isClerkAuthMode()) {
+          if (!clerkSessionId) return { ok: false, error: 'missing_clerk_session' }
+          const bindResult = await bindTalkfootActorSession(sb, user.id, clerkSessionId)
+          if (!bindResult.ok) return { ok: false, error: bindResult.error ?? 'bind_failed' }
         }
 
-        try {
-          await saveTalkfootProfileAppStateWithChatSync(
-            sb,
-            user.id,
-            payload,
-            ocRef.current,
-            user.displayName?.trim() || 'Supporter',
-          )
-          writeModularAvatarBackup(
-            user.id,
-            resolveModularAvatarState(payload.profile.modularAvatar),
-          )
-          writeWalletBackup(user.id, payload.wallet)
-          writeBetsBackup(user.id, payload.bets)
-          writeOwnedItemsBackup(user.id, payload.profile.ownedItemIds ?? [])
-          const { data: sessionWrap } = await sb.auth.getSession()
-          const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
-          invalidateChatAuthorAvatars(
-            [user.id, chatActorId].filter((id, index, all) => Boolean(id) && all.indexOf(id) === index),
-          )
-          lastError = undefined
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : 'rpc_save_failed'
-          console.error('[Talk Foot] Sauvegarde profil cloud:', lastError)
-          break
+        let lastError: string | undefined
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          pendingCloudSaveRef.current = false
+          const sigBefore = inventoryFlushSignature(appRef.current)
+          let payload = coalesceAppStateWithModularBackup(user.id, appRef.current)
+          payload = coalesceAppStateWithWalletBackup(user.id, payload)
+          payload = coalesceAppStateWithBetsBackup(user.id, payload)
+          payload = coalesceAppStateWithOwnedItemsBackup(user.id, payload)
+          const betTokensReconciled = withReconciledBetTokens(payload)
+          payload = betTokensReconciled.app
+          if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {
+            hasLocalEditsRef.current = true
+          }
+          if (payload !== appRef.current) {
+            appRef.current = payload
+            setApp(payload)
+          }
+
+          try {
+            await saveTalkfootProfileAppStateWithChatSync(
+              sb,
+              user.id,
+              payload,
+              ocRef.current,
+              user.displayName?.trim() || 'Supporter',
+            )
+            writeModularAvatarBackup(
+              user.id,
+              resolveModularAvatarState(payload.profile.modularAvatar),
+            )
+            writeWalletBackup(user.id, payload.wallet)
+            writeBetsBackup(user.id, payload.bets)
+            writeOwnedItemsBackup(user.id, payload.profile.ownedItemIds ?? [])
+            const { data: sessionWrap } = await sb.auth.getSession()
+            const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
+            invalidateChatAuthorAvatars(
+              [user.id, chatActorId].filter((id, index, all) => Boolean(id) && all.indexOf(id) === index),
+            )
+            lastError = undefined
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : 'rpc_save_failed'
+            console.error('[Talk Foot] Sauvegarde profil cloud:', lastError)
+            if (attempt < 2) {
+              await sleep(400 * (attempt + 1))
+              continue
+            }
+            break
+          }
+
+          const sigAfter = inventoryFlushSignature(appRef.current)
+          if (sigAfter === sigBefore && !pendingCloudSaveRef.current) {
+            hasLocalEditsRef.current = false
+            break
+          }
         }
 
-        // Si un achat / patch est arrivé pendant l’await, on re-flush le dernier état.
-        if (!pendingCloudSaveRef.current && appRef.current === snapBefore) {
-          hasLocalEditsRef.current = false
-          break
-        }
-        if (!pendingCloudSaveRef.current && appRef.current !== snapBefore) {
-          // État changé sans flag : reboucler quand même.
-          continue
-        }
-      }
-
-      if (lastError) return { ok: false, error: lastError }
-      return { ok: true }
-    } finally {
-      flushInFlightRef.current = false
-      if (pendingCloudSaveRef.current) {
-        pendingCloudSaveRef.current = false
-        void flushSaveRef.current()
+        if (lastError) return { ok: false, error: lastError }
+        return { ok: true }
+      } finally {
+        flushInFlightRef.current = false
       }
     }
+
+    const queued = flushMutexRef.current.then(run, run)
+    flushMutexRef.current = queued.then(
+      () => undefined,
+      () => undefined,
+    )
+    return queued
   }, [user?.id, clerkSessionId])
 
   const flushSaveRef = useRef(flushSave)

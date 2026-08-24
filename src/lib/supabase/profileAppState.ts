@@ -132,11 +132,11 @@ export async function saveTalkfootProfileAppStateWithChatSync(
   const chatActorId = sessionWrap.session?.user?.id?.trim() ?? ''
   if (!chatActorId || chatActorId === primary) return
 
-  // La ligne auth.uid() doit exister pour que les autres joueurs voient l'avatar en chat.
+  // Copie chat : jamais bloquer un achat / studio si cette 2e ligne échoue.
   try {
     await ensureTalkfootProfile(sb, chatActorId, displayName.trim() || 'Supporter', true)
-  } catch {
-    /* profil chat déjà créé */
+    await saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete)
+  } catch (err) {
+    console.warn('[Talk Foot] Sync profil chat (non bloquant):', err)
   }
-  await saveTalkfootProfileAppState(sb, chatActorId, appState, onboardingComplete)
 }
