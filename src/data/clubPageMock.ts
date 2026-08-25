@@ -12,6 +12,33 @@ export type ClubSquadNode = {
   rating: number
 }
 
+/** Positions 4-3-3 + GK (haut = attaque). */
+export const CLUB_PITCH_433_LAYOUT: ReadonlyArray<{ x: number; y: number; number: string; role: string }> = [
+  { x: 50, y: 20, number: '9', role: 'att' },
+  { x: 24, y: 26, number: '11', role: 'att' },
+  { x: 76, y: 26, number: '7', role: 'att' },
+  { x: 32, y: 46, number: '8', role: 'mid' },
+  { x: 50, y: 48, number: '6', role: 'mid' },
+  { x: 68, y: 46, number: '10', role: 'mid' },
+  { x: 18, y: 70, number: '3', role: 'def' },
+  { x: 40, y: 72, number: '4', role: 'def' },
+  { x: 60, y: 72, number: '5', role: 'def' },
+  { x: 82, y: 70, number: '2', role: 'def' },
+  { x: 50, y: 90, number: '1', role: 'gk' },
+]
+
+/** 11 nœuds du onze type (placeholders jusqu’à l’effectif API). */
+export function defaultClubPitchFormation(pfx = 'club'): ClubSquadNode[] {
+  return CLUB_PITCH_433_LAYOUT.map((p, i) => ({
+    id: `${pfx}-p${i + 1}`,
+    label: 'Joueur',
+    number: p.number,
+    x: p.x,
+    y: p.y,
+    rating: 0,
+  }))
+}
+
 export type ClubDebateItem = {
   id: string
   title: string
@@ -59,6 +86,8 @@ export type ClubPageMock = {
     opponent: string
     kickoff: string
     venue: 'dom' | 'ext'
+    /** Id Talk Foot (`/channel/:id`) quand connu. */
+    matchId?: string
     homeName?: string
     awayName?: string
     homeLogoUrl?: string
@@ -104,8 +133,8 @@ export function buildEmptyClubPageShell(team: Team): ClubPageMock {
     activitySpike: '—',
     globalRank: '—',
     topFan: { name: '—', handle: '@—', seed: team.id },
-    squad: [],
-    hotPlayerId: '',
+    squad: defaultClubPitchFormation(team.id),
+    hotPlayerId: `${team.id}-p1`,
     debates: [],
     shop: [],
     stats: [],

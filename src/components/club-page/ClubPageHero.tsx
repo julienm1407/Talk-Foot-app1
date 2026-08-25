@@ -66,7 +66,7 @@ export function ClubPageHero({
   const { favoriteClubIds, setFavoriteClubIds } = useFanPreferences()
   const isFollowing = favoriteClubIds.includes(team.id)
   const mood = moodFromForm(data.formStrip)
-  const formSource = data.formStripFromApi ? 'SportMonks' : 'estimation interne'
+  const formSource = data.formStripFromApi ? 'calendrier' : 'estimation'
 
   const toggleFollow = useCallback(() => {
     if (isFollowing) {
@@ -145,6 +145,55 @@ export function ClubPageHero({
     (data.upcoming.venue === 'dom'
       ? { id: `${team.id}-opponent`, shortName: data.upcoming.opponent.slice(0, 3).toUpperCase(), colors: team.colors }
       : { id: team.id, shortName: team.shortName, colors: team.colors })
+  const matchHref = data.upcoming.matchId ? `/channel/${encodeURIComponent(data.upcoming.matchId)}` : null
+
+  const upcomingCardInner = (
+    <>
+      <p className="text-[10px] font-black uppercase tracking-wider text-sky-200/90">Prochain match</p>
+      <p className="mt-1 text-sm font-black text-white sm:text-base">
+        {data.upcoming.league} · {data.upcoming.matchday}
+      </p>
+      <div className="mt-1.5 flex items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/90">
+            {data.upcoming.venue === 'dom' ? 'Domicile' : 'Extérieur'}
+          </p>
+          <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <ClubCrest
+                id={homeCrest.id}
+                shortName={homeCrest.shortName}
+                colors={homeCrest.colors}
+                logoUrl={data.upcoming.homeLogoUrl}
+                sportMonksTeamId={homeCrest.sportMonksTeamId}
+                size={28}
+                clickable={false}
+                className="shrink-0 !rounded-full"
+              />
+              <span className="truncate text-sm font-black text-sky-50 sm:text-[15px]">{homeName}</span>
+            </div>
+            <span className="text-xs font-black uppercase tracking-wide text-sky-200/85">vs</span>
+            <div className="flex min-w-0 items-center justify-end gap-1.5">
+              <span className="truncate text-right text-sm font-black text-sky-50 sm:text-[15px]">{awayName}</span>
+              <ClubCrest
+                id={awayCrest.id}
+                shortName={awayCrest.shortName}
+                colors={awayCrest.colors}
+                logoUrl={data.upcoming.awayLogoUrl}
+                sportMonksTeamId={awayCrest.sportMonksTeamId}
+                size={28}
+                clickable={false}
+                className="shrink-0 !rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+        <p className="shrink-0 rounded-lg border border-amber-300/35 bg-amber-500/15 px-2.5 py-1 text-lg font-black leading-none text-amber-100 sm:text-xl">
+          {data.upcoming.kickoff}
+        </p>
+      </div>
+    </>
+  )
 
   return (
     <>
@@ -219,51 +268,23 @@ export function ClubPageHero({
               <p className="mt-0.5 text-sm font-bold text-sky-200/80">Espace supporters Talk Foot</p>
             </div>
           </div>
-          <div className="mt-3 w-full max-w-2xl rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5 sm:px-4">
-            <p className="text-[10px] font-black uppercase tracking-wider text-sky-200/90">Prochain match</p>
-            <p className="mt-1 text-sm font-black text-white sm:text-base">
-              {data.upcoming.league} · {data.upcoming.matchday}
-            </p>
-            <div className="mt-1.5 flex items-end justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/90">
-                  {data.upcoming.venue === 'dom' ? 'Domicile' : 'Extérieur'}
-                </p>
-                <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <ClubCrest
-                      id={homeCrest.id}
-                      shortName={homeCrest.shortName}
-                      colors={homeCrest.colors}
-                      logoUrl={data.upcoming.homeLogoUrl}
-                      sportMonksTeamId={homeCrest.sportMonksTeamId}
-                      size={28}
-                      clickable={false}
-                      className="shrink-0 !rounded-full"
-                    />
-                    <span className="truncate text-sm font-black text-sky-50 sm:text-[15px]">{homeName}</span>
-                  </div>
-                  <span className="text-xs font-black uppercase tracking-wide text-sky-200/85">vs</span>
-                  <div className="flex min-w-0 items-center justify-end gap-1.5">
-                    <span className="truncate text-right text-sm font-black text-sky-50 sm:text-[15px]">{awayName}</span>
-                    <ClubCrest
-                      id={awayCrest.id}
-                      shortName={awayCrest.shortName}
-                      colors={awayCrest.colors}
-                      logoUrl={data.upcoming.awayLogoUrl}
-                      sportMonksTeamId={awayCrest.sportMonksTeamId}
-                      size={28}
-                      clickable={false}
-                      className="shrink-0 !rounded-full"
-                    />
-                  </div>
-                </div>
-              </div>
-              <p className="shrink-0 rounded-lg border border-amber-300/35 bg-amber-500/15 px-2.5 py-1 text-lg font-black leading-none text-amber-100 sm:text-xl">
-                {data.upcoming.kickoff}
-              </p>
+          {matchHref ? (
+            <Link
+              to={matchHref}
+              className={cn(
+                'mt-3 block w-full max-w-2xl rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5 no-underline transition sm:px-4',
+                'hover:border-sky-300/45 hover:bg-sky-500/20',
+                TF_FOCUS_VISIBLE,
+              )}
+              aria-label={`Ouvrir le match ${homeName} contre ${awayName}`}
+            >
+              {upcomingCardInner}
+            </Link>
+          ) : (
+            <div className="mt-3 w-full max-w-2xl rounded-2xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5 sm:px-4">
+              {upcomingCardInner}
             </div>
-          </div>
+          )}
           <div className="mt-5 w-full max-w-2xl sm:mt-6">{ctaRow(false)}</div>
         </div>
         <div ref={heroEndRef} className="pointer-events-none absolute bottom-0 left-0 h-1 w-1 opacity-0" aria-hidden />

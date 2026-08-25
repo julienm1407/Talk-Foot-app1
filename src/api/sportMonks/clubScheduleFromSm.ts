@@ -214,6 +214,7 @@ export function findNextClubMatchFromTeamUpcoming(
   clubOurId: string,
   opts?: { sportMonksTeamId?: number },
 ): {
+  matchId: string
   opponent: string
   kickoffIso: string
   league: string
@@ -249,6 +250,7 @@ export function findNextClubMatchFromTeamUpcoming(
   const home = m.home
   const away = m.away
   return {
+    matchId: m.id,
     opponent: atHome ? m.away.name : m.home.name,
     kickoffIso: m.kickoffAt,
     league: m.competition.shortName,
@@ -269,6 +271,7 @@ export function findNextClubMatchFromSchedule(
   clubOurId: string,
   opts?: { sportMonksTeamId?: number },
 ): {
+  matchId: string
   opponent: string
   kickoffIso: string
   league: string
@@ -300,6 +303,7 @@ export function findNextClubMatchFromSchedule(
   const home = m.home
   const away = m.away
   return {
+    matchId: m.id,
     opponent: atHome ? m.away.name : m.home.name,
     kickoffIso: m.kickoffAt,
     league: m.competition.shortName,

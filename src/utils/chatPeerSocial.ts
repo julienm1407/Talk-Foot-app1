@@ -78,13 +78,11 @@ export function resolveChatMessagePeerUi(options: {
     !options.isBot &&
     canOpenChatPeerSocialMenu(options.userId, options.user, options.selfChatActorId)
 
-  const profileTo = peerSocial
-    ? undefined
+  const profileTo = isSelfMessage
+    ? '/profile'
     : options.isBot
       ? undefined
-      : isSelfMessage
-        ? '/profile'
-        : `/user/${options.userId}`
+      : `/user/${options.userId}`
 
   return {
     isSelfMessage,

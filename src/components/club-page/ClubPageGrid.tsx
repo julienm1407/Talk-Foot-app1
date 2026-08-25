@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
@@ -407,7 +407,7 @@ function ClubSeasonSnapshotBlock({
   const apiPosition = pickStatValue(seasonStatsRows, ['position', 'rank', 'standing'])
   const apiPoints = pickStatValue(seasonStatsRows, ['points', 'point'])
   const hasApiTable = apiPosition != null || apiPoints != null
-  const tableTitle = hasApiTable ? 'Championnat (SportMonks)' : 'Championnat'
+  const tableTitle = 'Championnat'
   const tablePosition = apiPosition != null ? `${Math.round(apiPosition)}e` : 'Classement indisponible'
   const tablePoints = apiPoints != null ? `${Math.round(apiPoints)} pts` : 'Points indisponibles'
   const tableLine = formStripFromApi ? `Forme 5j : ${formStrip.join(' - ')}` : 'Forme récente indisponible'
@@ -416,7 +416,7 @@ function ClubSeasonSnapshotBlock({
       className={cn('p-0 shadow-tf-elev-2', encartClass('season'), matchMode && 'ring-1 ring-rose-500/15')}
     >
       <div className="flex flex-wrap items-end justify-between gap-2 border-b border-sky-500/15 bg-black/15 p-3 sm:p-4">
-        <ClubEncartTitle kicker="Calendrier" kickerClass="text-sky-200/90" subtitle="Aperçu compétition (démo).">
+        <ClubEncartTitle kicker="Calendrier" kickerClass="text-sky-200/90" subtitle="Aperçu compétition.">
           Saison &amp; calendrier
         </ClubEncartTitle>
         <Link
@@ -460,8 +460,8 @@ function ClubSeasonSnapshotBlock({
             className="mt-1.5 flex flex-wrap gap-1.5"
             aria-label={
               formStripFromApi
-                ? 'Cinq derniers matchs terminés (SportMonks)'
-                : 'Cinq derniers matchs, démo'
+                ? 'Cinq derniers matchs terminés'
+                : 'Forme récente'
             }
           >
             {formStrip.map((r, i) => (
@@ -475,15 +475,15 @@ function ClubSeasonSnapshotBlock({
           </ul>
           <p className="mt-2 text-[10px] font-bold text-sky-200/80">
             {formStripFromApi
-              ? 'Résultats issus du calendrier équipe (SportMonks).'
-              : 'Données de forme indisponibles via API.'}
+              ? 'Résultats issus du calendrier équipe.'
+              : 'Données de forme indisponibles.'}
           </p>
         </div>
       </div>
       {clubLastMatch ? (
         <div className="mt-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 p-3 ring-1 ring-violet-500/10">
           <p className="text-[9px] font-black uppercase tracking-wider text-violet-200/95">
-            Dernier match (SportMonks)
+            Dernier match
           </p>
           <p className="mt-0.5 text-[11px] font-bold text-violet-200/90">
             {clubLastMatch.league}
@@ -557,7 +557,7 @@ function ClubSeasonSnapshotBlock({
       {seasonStatsRows?.length ? (
         <div className="mt-3 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3 ring-1 ring-sky-500/10">
           <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/95">
-            Stats saison (SportMonks)
+            Stats saison
           </p>
           <ul className="mt-2 max-h-[min(200px,38vh)] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
             {seasonStatsRows.slice(0, 14).map((r) => (
@@ -638,7 +638,7 @@ export function ClubPageGrid({
   clubGroups,
   clubScheduleHint,
   clubLastMatch,
-  squadFromSportMonks,
+  squadFromSportMonks: _squadFromSportMonks,
   clubSeasonStats,
   clubSeasonStatsHint,
   clubReadingLinks,
@@ -671,15 +671,20 @@ export function ClubPageGrid({
       sportMonksTeamId?: number
     }
   } | null
-  /** Noms sur le terrain alignés sur `squads/teams` (filtre stats saison optionnel). */
+  /** Noms sur le terrain alignés sur l’effectif API. */
   squadFromSportMonks?: boolean
   clubSeasonStats?: TeamSeasonStatRow[] | null
   clubSeasonStatsHint?: string | null
   clubReadingLinks: ClubReadingLink[]
 }) {
-  const [selId, setSelId] = useState(data.hotPlayerId)
+  const [selId, setSelId] = useState(data.hotPlayerId || data.squad[0]?.id || '')
   const [shopPreview, setShopPreview] = useState<string | null>(null)
   const selected = data.squad.find((p) => p.id === selId) ?? data.squad[0]
+
+  useEffect(() => {
+    const next = data.hotPlayerId || data.squad[0]?.id || ''
+    if (next && !data.squad.some((p) => p.id === selId)) setSelId(next)
+  }, [data.hotPlayerId, data.squad, selId])
 
   return (
     <div
@@ -698,15 +703,11 @@ export function ClubPageGrid({
         >
           <div className="border-b border-emerald-500/20 bg-black/20 p-3 sm:p-4">
             <ClubEncartTitle
-              kicker={squadFromSportMonks ? '11 titulaires (SportMonks)' : '11 titulaires (démo)'}
+              kicker="11 titulaires"
               kickerClass="text-emerald-200/90"
-              subtitle={
-                squadFromSportMonks
-                  ? 'Noms et numéros depuis l’effectif API (ordre maillot sur la formation 4-3-3) — tape un nœud.'
-                  : 'Formation 4-3-3 + gardien : onze joueurs — tape un nœud sur le terrain.'
-              }
+              subtitle="Formation 4-3-3 — tape un joueur sur le terrain."
             >
-              Effectif (interactif)
+              Effectif
             </ClubEncartTitle>
           </div>
           <div className="flex flex-col gap-3 p-3 sm:flex-row sm:gap-4 sm:p-4">

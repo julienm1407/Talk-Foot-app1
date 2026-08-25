@@ -72,6 +72,13 @@ function BettorRowThumb({
       setVisible(true)
       return
     }
+    let root: Element | null = el.parentElement
+    while (root) {
+      const style = window.getComputedStyle(root)
+      const overflowY = style.overflowY
+      if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') break
+      root = root.parentElement
+    }
     const io = new IntersectionObserver(
       ([observed]) => {
         if (observed?.isIntersecting) {
@@ -79,10 +86,15 @@ function BettorRowThumb({
           io.disconnect()
         }
       },
-      { rootMargin: '64px 0px', threshold: 0.01 },
+      { root: root ?? null, rootMargin: '96px 0px', threshold: 0.01 },
     )
     io.observe(el)
-    return () => io.disconnect()
+    // Filet de sécurité : ne jamais rester bloqué sur le placeholder.
+    const failsafe = window.setTimeout(() => setVisible(true), 1800)
+    return () => {
+      io.disconnect()
+      window.clearTimeout(failsafe)
+    }
   }, [lazyMount, visible])
 
   useEffect(() => {
@@ -175,7 +187,12 @@ function BettorRowThumb({
 
   if (profileTo) {
     return (
-      <Link to={profileTo} className={shellClass} aria-label={ariaLabel}>
+      <Link
+        to={profileTo}
+        state={{ username: entry.username }}
+        className={shellClass}
+        aria-label={ariaLabel}
+      >
         <span ref={shellRef} className="block size-full">
           {figure}
         </span>
@@ -393,6 +410,7 @@ export function BettorLeaderboard({
               ) : peer.profileTo ? (
                 <Link
                   to={peer.profileTo}
+                  state={{ username: e.username }}
                   className={cn(
                     'min-w-0 flex-1 truncate text-xs font-bold sm:text-sm',
                     dark ? 'text-sky-50' : 'text-tf-dark',

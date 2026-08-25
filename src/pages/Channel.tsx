@@ -4378,9 +4378,9 @@ export function ChannelPage() {
                   />
                   <div
                     className={cn(
-                      'relative z-10 flex w-full max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] flex-col overflow-hidden rounded-2xl border shadow-2xl',
+                      'relative z-10 flex w-full max-h-[min(88dvh,calc(100dvh-5.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] flex-col overflow-hidden rounded-2xl border shadow-2xl',
                       mobilePanel === 'paris' &&
-                        'tf-channel-mobile-sheet-panel--paris min-h-[min(78dvh,calc(100dvh-5.5rem-env(safe-area-inset-bottom,0px)))] max-h-[min(92dvh,calc(100dvh-4rem-env(safe-area-inset-bottom,0px)))]',
+                        'tf-channel-mobile-sheet-panel--paris min-h-[min(78dvh,calc(100dvh-5.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))] max-h-[min(92dvh,calc(100dvh-4rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)))]',
                       chSheetPanel,
                     )}
                     onClick={(e) => e.stopPropagation()}
@@ -4389,7 +4389,7 @@ export function ChannelPage() {
                       type="button"
                       onClick={() => setMobilePanel(null)}
                       className={cn(
-                        'absolute right-3 top-3',
+                        'absolute right-2.5 top-2.5',
                         mobilePanel === 'paris' ? 'z-50' : 'z-30',
                         chSheetCloseBtn,
                       )}
@@ -4399,7 +4399,7 @@ export function ChannelPage() {
                     </button>
             <div
               className={cn(
-                'shrink-0 border-b px-3 pb-2 pt-3 pr-14',
+                'shrink-0 border-b px-3 pb-2 pt-3.5 pr-16',
                 L ? 'border-slate-200 bg-white' : 'border-[#3a6690]/80 bg-[#0b2440]',
               )}
             >

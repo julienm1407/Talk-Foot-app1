@@ -246,7 +246,7 @@ export function ClubPage() {
       setSmScheduleUi(null)
       setSmSeasonIdFromFixtures(null)
       setClubScheduleHint(
-        'Jeton SportMonks introuvable dans ce navigateur : menu Profil → Données, ou variable VITE_SPORTMONKS_TOKEN + redémarrage de `npm run dev`.',
+        'Jeton API introuvable dans ce navigateur : menu Profil → Données, ou variable VITE_SPORTMONKS_TOKEN + redémarrage de `npm run dev`.',
       )
       return
     }
@@ -285,6 +285,7 @@ export function ClubPage() {
                 opponent: next.opponent,
                 kickoff: formatKickoff(next.kickoffIso),
                 venue: next.venue,
+                matchId: next.matchId,
               homeName: next.homeName,
               awayName: next.awayName,
               homeLogoUrl: next.homeLogoUrl,
@@ -315,7 +316,7 @@ export function ClubPage() {
         if (cancelled || seq !== scheduleFetchSeq.current) return
         const msg = err instanceof Error ? err.message : String(err)
         setClubScheduleHint(
-          `Impossible de charger le calendrier SportMonks (${msg}). L’encart reste en démo.`,
+          `Impossible de charger le calendrier (${msg}).`,
         )
         setSmScheduleUi(null)
         setSmSeasonIdFromFixtures(null)
@@ -401,8 +402,9 @@ export function ClubPage() {
     if (smSquadPlayers?.length) {
       out = {
         ...out,
-        squad: overlayClubSquadWithSmPlayers(out.squad, smSquadPlayers),
+        squad: overlayClubSquadWithSmPlayers(out.squad, smSquadPlayers, team?.id ?? 'club'),
         squadFromSportMonks: true,
+        hotPlayerId: out.hotPlayerId || `${team?.id ?? 'club'}-p1`,
       }
     }
     out = { ...out, openRooms: salonChannelCount }

@@ -75,6 +75,25 @@ export function clearChatAuthorAvatarCache(userId?: string) {
   notifyCacheInvalidate()
 }
 
+/** Lecture synchrone du cache PP (ex. profil ouvert depuis le classement). */
+export function peekChatAuthorAvatarCache(userId: string): {
+  modularAvatar: ModularAvatarState | null
+  displayName: string | null
+  profilePhotoDataUrl: string | null
+  loaded: boolean
+} | null {
+  const id = userId.trim()
+  if (!id) return null
+  const entry = authorCache.get(id)
+  if (!entry?.loaded) return null
+  return {
+    modularAvatar: entry.modularAvatar,
+    displayName: entry.displayName,
+    profilePhotoDataUrl: entry.profilePhotoDataUrl,
+    loaded: true,
+  }
+}
+
 /** Vrai tant que l’avatar cloud d’un auteur n’a pas encore été résolu. */
 export function isChatAuthorAvatarPending(userId: string, selfUserId: string): boolean {
   if (!shouldFetchCloudChatAvatar(userId, selfUserId)) return false

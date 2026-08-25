@@ -152,6 +152,7 @@ export function ChatPeerQuickMenu({
 
             <Link
               to={`/user/${peer.id}`}
+              state={{ username: peer.username }}
               className={cn(btn, 'inline-block text-center no-underline')}
               onClick={onClose}
             >

@@ -91,15 +91,28 @@ export function getUserProfileById(userId: string): User | undefined {
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/** Profil minimal pour `/user/<uuid>` hors démo (nom complété côté client si ami). */
+/** Id Clerk (`user_…`) ou autre actor_key Talk Foot hors bots / démo. */
+function isTalkfootPublicActorKey(userId: string): boolean {
+  const id = userId.trim()
+  if (!id || id === 'me') return false
+  if (id.startsWith('group-bot:') || id.startsWith('u-')) return false
+  if (id === 'u-tf-bot') return false
+  if (UUID_RE.test(id)) return true
+  // Clerk user id
+  if (/^user_[a-zA-Z0-9]+$/.test(id)) return true
+  // Autre clé profil cloud raisonnable
+  return id.length >= 8 && !id.includes('/')
+}
+
+/** Profil minimal pour `/user/<id>` (UUID Supabase, Clerk, ou persona démo). */
 export function resolveProfilePeer(userId: string): User | undefined {
   const known = getUserProfileById(userId)
   if (known) return known
-  if (!UUID_RE.test(userId)) return undefined
+  if (!isTalkfootPublicActorKey(userId)) return undefined
   return {
-    id: userId,
+    id: userId.trim(),
     username: 'Supporter',
-    avatarSeed: userId.replace(/-/g, '').slice(0, 16),
+    avatarSeed: userId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16) || 'supporter',
     accent: 'violet',
   }
 }

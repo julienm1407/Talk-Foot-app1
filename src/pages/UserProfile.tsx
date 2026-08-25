@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useDirectMessagesContext } from '../contexts/DirectMessagesContext'
 import { usePrivateMessagesUi } from '../contexts/PrivateMessagesUiContext'
@@ -30,13 +30,25 @@ const GENERIC_PROFILE_NAMES = new Set(['supporter', 'parieur'])
 export function UserProfilePage() {
   const { userId = '' } = useParams<{ userId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user: authUser } = useAuth()
   const pm = usePrivateMessagesUi()
   const dm = useDirectMessagesContext()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+  const hintUsername =
+    typeof (location.state as { username?: unknown } | null)?.username === 'string'
+      ? String((location.state as { username: string }).username).trim()
+      : ''
 
-  const peer = resolveProfilePeer(userId)
+  const peer = useMemo(() => {
+    const resolved = resolveProfilePeer(userId)
+    if (!resolved) return undefined
+    if (hintUsername && hintUsername.toLowerCase() !== 'supporter') {
+      return { ...resolved, username: hintUsername }
+    }
+    return resolved
+  }, [userId, hintUsername])
   const viewerActorId = useTalkFootChatActorId()
   const [friendActionHint, setFriendActionHint] = useState<string | null>(null)
   const [friendBusy, setFriendBusy] = useState(false)
@@ -205,7 +217,7 @@ export function UserProfilePage() {
                     L ? 'text-tf-dark' : 'text-white',
                   )}
                 >
-                  {profileLoading && !cloudDisplayName ? (
+                  {profileLoading && !cloudDisplayName && !fallbackName ? (
                     <span className="inline-block h-8 w-36 animate-pulse rounded-lg bg-white/15" aria-hidden />
                   ) : (
                     displayUsername

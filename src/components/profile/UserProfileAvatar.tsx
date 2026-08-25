@@ -22,7 +22,7 @@ export function UserProfileAvatar({
 }: {
   peer: User
   cloudProfile: UserProfile | null
-  /** Chargement cloud en cours — évite d’afficher une tenue factice avant la vraie. */
+  /** Chargement cloud — on n’affiche plus un bloc noir : contenu provisoire puis upgrade. */
   profileLoading?: boolean
   displayName?: string
   className?: string
@@ -34,7 +34,9 @@ export function UserProfileAvatar({
   const shellClass = cn(AVATAR_SHELL, className)
   const labelName = displayName?.trim() || peer.username
 
-  if (profileLoading) {
+  // Skeleton seulement si vraiment rien à montrer (pas de cloud, pas de photo, pas de modular).
+  const hasAnythingToShow = Boolean(photoUrl || hasModular || cloudProfile || !profileLoading)
+  if (profileLoading && !hasAnythingToShow) {
     return (
       <div
         className={cn(shellClass, 'animate-pulse bg-slate-800/50')}
@@ -81,8 +83,9 @@ export function UserProfileAvatar({
 
   return (
     <div
-      className={cn(shellClass, 'overflow-hidden')}
+      className={cn(shellClass, 'overflow-hidden', profileLoading && 'opacity-80')}
       role="img"
+      aria-busy={profileLoading || undefined}
       aria-label={`Avatar de ${labelName} — tenue complète`}
     >
       <DressableCharacter

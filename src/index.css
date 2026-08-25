@@ -3125,11 +3125,13 @@ body::before {
 .tf-channel-mobile-sheet-layer {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 2147482501 !important;
+  /* Au-dessus de la TopBar mobile (2147482770) pour que la croix reste cliquable / visible. */
+  z-index: 2147482785 !important;
   display: flex !important;
   flex-direction: column;
   justify-content: flex-end;
   padding: 0.5rem;
+  padding-top: max(0.5rem, calc(env(safe-area-inset-top, 0px) + 0.35rem));
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem);
   pointer-events: auto !important;
   touch-action: manipulation;
