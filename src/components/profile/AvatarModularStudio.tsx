@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
 import { avatarAssetMap, findAssetById, slotToCategory } from '../../features/avatar2d/catalog'
@@ -28,6 +28,7 @@ import {
   studioSlotForModularAssetId,
 } from '../../utils/boutiquePurchaseFlow'
 import { findBoutiqueCatalogItem } from '../../utils/boutiqueCatalog'
+import { hardNavigateTo } from '../../utils/hardNavigate'
 
 const SLOT_ORDER: AvatarSlotKey[] = [
   'body',
@@ -317,7 +318,6 @@ const SLOT_COLOR_PRESETS: Record<ColorizableSlot, ColorVariantKey[]> = {
 }
 
 export function AvatarModularStudio() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { profile, updateModularAvatar } = useProfile()
   const purchaseFocusApplied = useRef(false)
@@ -402,9 +402,10 @@ export function AvatarModularStudio() {
 
   const goToBoutiqueForAsset = useCallback(
     (category: 'jerseys' | 'shorts' | 'shoes', modularAssetId: string) => {
-      navigate(boutiqueHrefForModularAsset(modularAssetId, category))
+      // Depuis /profile, React Router rate souvent la nav — hard assign.
+      hardNavigateTo(boutiqueHrefForModularAsset(modularAssetId, category))
     },
-    [navigate],
+    [],
   )
 
   const applySlot = (slot: AvatarSlotKey, value: string | null) => {
@@ -714,12 +715,15 @@ export function AvatarModularStudio() {
                 chaussures : uniquement les modèles de base sont gratuits (maillot/short blanc, bleu, jaune, rouge ·
                 crampons blancs).
               </p>
-              <Link
-                to={`/boutique?tab=${boutiqueTabForModularCategory(activeGarmentCategory)}`}
+              <button
+                type="button"
+                onClick={() =>
+                  hardNavigateTo(`/boutique?tab=${boutiqueTabForModularCategory(activeGarmentCategory)}`)
+                }
                 className="mt-1.5 inline-block text-[11px] font-black text-amber-200 underline-offset-2 hover:text-amber-100 hover:underline"
               >
                 Ouvrir la boutique →
-              </Link>
+              </button>
             </div>
           ) : null}
 

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -17,7 +17,13 @@ import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { getBoutiqueDailyDeal } from '../data/boutiqueDailyDeal'
-import { buildCatalogRows, sortCatalogRows, type CatalogFilter, type CatalogSort } from '../utils/boutiqueCatalog'
+import {
+  buildCatalogRows,
+  findBoutiqueCatalogItem,
+  sortCatalogRows,
+  type CatalogFilter,
+  type CatalogSort,
+} from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
 import { catalogTabForShopItem, boutiqueMedalPacksHref } from '../utils/boutiquePurchaseFlow'
@@ -68,6 +74,7 @@ export function BoutiquePage() {
     currency?: 'medals' | 'tokens'
   } | null>(null)
   const [confirmingPurchase, setConfirmingPurchase] = useState(false)
+  const deepLinkedItemRef = useRef<string | null>(null)
 
   const shop = getAppSectionTheme('boutique')
   const dailyDeal = useMemo(() => getBoutiqueDailyDeal(), [])
@@ -77,6 +84,18 @@ export function BoutiquePage() {
     const tab = catalogTabForShopItem(dailyDeal.item)
     setCatalogFilter(tab)
   }, [searchParams, dailyDeal])
+
+  /** Deep-link studio → `/boutique?tab=jerseys&item=cdm2026-eng` : ouvre l’aperçu achat. */
+  useEffect(() => {
+    const itemId = searchParams.get('item')
+    if (!itemId || deepLinkedItemRef.current === itemId) return
+    const item = findBoutiqueCatalogItem(itemId)
+    if (!item) return
+    deepLinkedItemRef.current = itemId
+    setCatalogFilter(catalogTabForShopItem(item))
+    setConfirmingPurchase(false)
+    setPurchaseFlow({ item, step: 'preview' })
+  }, [searchParams])
 
   const catalogRows = useMemo(
     () => buildCatalogRows(catalogFilter, catalogSearch),
@@ -116,6 +135,11 @@ export function BoutiquePage() {
   const closePurchaseFlow = () => {
     setPurchaseFlow(null)
     setConfirmingPurchase(false)
+    if (!searchParams.get('item')) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('item')
+    const qs = next.toString()
+    navigate(qs ? `/boutique?${qs}` : '/boutique', { replace: true })
   }
 
   const handleConfirmPurchase = async () => {
