@@ -407,13 +407,6 @@ export function AvatarModularStudio() {
     [navigate],
   )
 
-  const goToBoutiqueForCategory = useCallback(
-    (category: 'jerseys' | 'shorts' | 'shoes') => {
-      navigate(`/boutique?tab=${boutiqueTabForModularCategory(category)}`)
-    },
-    [navigate],
-  )
-
   const applySlot = (slot: AvatarSlotKey, value: string | null) => {
     const cat = slotToCategory[slot]
     if (value && isModularGarmentSlot(cat) && !isModularAssetUnlocked(value, cat, ownedItemIds)) {
