@@ -58,6 +58,10 @@ function mergeAppState(raw) {
   }
 }
 
+function isUuid(key) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)
+}
+
 /** Toutes les clés possibles pour retrouver le profil Supabase (Clerk + UUID). */
 export function actorKeysFromSession(session) {
   const keys = []
@@ -88,34 +92,111 @@ function getSupabaseAdmin() {
   return createClient(url, serviceKey, { auth: { persistSession: false } })
 }
 
-async function loadSnapshot(sb, actorKey) {
-  const { data: snap, error: snapErr } = await sb.rpc('get_talkfoot_user_snapshot', {
-    p_actor_key: actorKey,
-  })
-  if (snapErr) throw new Error(snapErr.message)
-  if (!snap?.ok) return null
-  return snap
+/**
+ * Lecture directe `profiles` (service role) — plus fiable que le RPC snapshot
+ * qui peut renvoyer forbidden / profile_not_found selon le JWT.
+ */
+async function loadProfileRow(sb, actorKey) {
+  const key = String(actorKey ?? '').trim()
+  if (!key) return null
+
+  if (isUuid(key)) {
+    const byId = await sb.from('profiles').select('*').eq('id', key).maybeSingle()
+    if (byId.error) throw new Error(byId.error.message)
+    if (byId.data) return byId.data
+  }
+
+  const byClerk = await sb.from('profiles').select('*').eq('clerk_id', key).maybeSingle()
+  if (byClerk.error) throw new Error(byClerk.error.message)
+  if (byClerk.data) return byClerk.data
+
+  return null
 }
 
-async function saveAppState(sb, actorKey, merged, onboardingComplete) {
+async function ensureProfileRow(sb, actorKey, displayName = 'Supporter') {
+  const existing = await loadProfileRow(sb, actorKey)
+  if (existing) return existing
+
+  const name = String(displayName || 'Supporter').trim() || 'Supporter'
+  const key = String(actorKey).trim()
+
+  if (isUuid(key)) {
+    const { data, error } = await sb
+      .from('profiles')
+      .insert({
+        id: key,
+        clerk_id: key,
+        display_name: name,
+        onboarding_complete: false,
+        oauth_profile_completed: true,
+        app_state: {},
+      })
+      .select('*')
+      .maybeSingle()
+    if (error) {
+      // Course : déjà créé → relire
+      const again = await loadProfileRow(sb, key)
+      if (again) return again
+      throw new Error(error.message)
+    }
+    return data
+  }
+
+  const { data, error } = await sb
+    .from('profiles')
+    .insert({
+      clerk_id: key,
+      display_name: name,
+      onboarding_complete: false,
+      oauth_profile_completed: true,
+      app_state: {},
+    })
+    .select('*')
+    .maybeSingle()
+  if (error) {
+    const again = await loadProfileRow(sb, key)
+    if (again) return again
+    throw new Error(error.message)
+  }
+  return data
+}
+
+async function saveProfileAppState(sb, profileId, actorKey, merged, onboardingComplete) {
+  // 1) RPC dédié service (bypass trigger + assert)
+  const { data: serviceSaved, error: serviceErr } = await sb.rpc('talkfoot_service_write_app_state', {
+    p_profile_id: profileId,
+    p_app_state: merged,
+    p_onboarding_complete:
+      typeof onboardingComplete === 'boolean' ? onboardingComplete : null,
+  })
+  if (!serviceErr && serviceSaved?.ok === true) return
+
+  // 2) RPC historique (si migration pas encore appliquée)
   const { data: saved, error: saveErr } = await sb.rpc('save_talkfoot_user_app_state', {
     p_actor_key: actorKey,
     p_app_state: merged,
     p_onboarding_complete: Boolean(onboardingComplete),
   })
-  if (saveErr) throw new Error(saveErr.message)
-  if (!saved?.ok) throw new Error(String(saved?.error ?? 'save_failed'))
+  if (!saveErr && saved?.ok === true) return
+
+  const detail =
+    (serviceSaved && serviceSaved.error) ||
+    (saved && saved.error) ||
+    serviceErr?.message ||
+    saveErr?.message ||
+    'save_failed'
+  throw new Error(String(detail))
 }
 
-async function fulfillForActor(sb, actorKey, session) {
-  const snap = await loadSnapshot(sb, actorKey)
-  if (!snap) return { ok: false, error: 'profile_not_found', actorKey }
+async function fulfillForActor(sb, actorKey, session, displayName) {
+  const row = await ensureProfileRow(sb, actorKey, displayName)
+  if (!row?.id) return { ok: false, error: 'profile_not_found', actorKey }
 
   const sessionId = session.id
-  const app = mergeAppState(snap.app_state)
+  const app = mergeAppState(row.app_state)
   const prior = app.stripeFulfillmentBySessionId?.[sessionId]
   if (prior) {
-    return { ok: true, alreadyFulfilled: true, actorKey, prior }
+    return { ok: true, alreadyFulfilled: true, actorKey, profileId: row.id, prior }
   }
 
   const kind = session.metadata?.kind
@@ -141,8 +222,8 @@ async function fulfillForActor(sb, actorKey, session) {
         [sessionId]: { ...stamp, kind: 'subscription', tier },
       },
     }
-    await saveAppState(sb, actorKey, merged, snap.onboarding_complete)
-    return { ok: true, kind: 'subscription', tier, actorKey }
+    await saveProfileAppState(sb, row.id, actorKey, merged, row.onboarding_complete)
+    return { ok: true, kind: 'subscription', tier, actorKey, profileId: row.id }
   }
 
   if (kind === 'medal_pack' || session.mode === 'payment') {
@@ -161,8 +242,8 @@ async function fulfillForActor(sb, actorKey, session) {
         [sessionId]: { ...stamp, kind: 'medal_pack', packId, medals: grant },
       },
     }
-    await saveAppState(sb, actorKey, merged, snap.onboarding_complete)
-    return { ok: true, kind: 'medal_pack', packId, medals: grant, actorKey }
+    await saveProfileAppState(sb, row.id, actorKey, merged, row.onboarding_complete)
+    return { ok: true, kind: 'medal_pack', packId, medals: grant, actorKey, profileId: row.id }
   }
 
   return { ok: false, error: 'unknown_kind', actorKey }
@@ -179,20 +260,30 @@ export async function fulfillCheckoutSession(session) {
     return { ok: false, error: 'supabase_service_not_configured', actorKeys: keys }
   }
 
+  const displayName =
+    session.customer_details?.name ||
+    session.customer_email ||
+    session.customer_details?.email ||
+    'Supporter'
+
   let lastErr = 'profile_not_found'
+  const attempts = []
   for (const actorKey of keys) {
     try {
-      const result = await fulfillForActor(sb, actorKey, session)
+      const result = await fulfillForActor(sb, actorKey, session, displayName)
+      attempts.push({ actorKey, ...result })
       if (result.ok) return result
       lastErr = result.error ?? lastErr
-      if (result.error !== 'profile_not_found') return result
+      if (result.error !== 'profile_not_found') return { ...result, attempts }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'fulfill_failed'
-      return { ok: false, error: message, actorKey }
+      attempts.push({ actorKey, ok: false, error: message })
+      lastErr = message
+      // Essayer la clé suivante (Clerk vs UUID) avant d’abandonner.
     }
   }
 
-  return { ok: false, error: lastErr, actorKeys: keys }
+  return { ok: false, error: lastErr, actorKeys: keys, attempts }
 }
 
 /** Part du montant remboursé (0–1) pour ajuster le retrait de médailles. */
@@ -220,10 +311,10 @@ export async function resolveCheckoutSessionId(stripe, charge) {
 }
 
 async function revokeForActor(sb, actorKey, sessionId, session, refundFraction) {
-  const snap = await loadSnapshot(sb, actorKey)
-  if (!snap) return { ok: false, error: 'profile_not_found', actorKey }
+  const row = await loadProfileRow(sb, actorKey)
+  if (!row?.id) return { ok: false, error: 'profile_not_found', actorKey }
 
-  const app = mergeAppState(snap.app_state)
+  const app = mergeAppState(row.app_state)
   let prior = app.stripeFulfillmentBySessionId?.[sessionId]
   if (!prior && session && (session.metadata?.kind === 'medal_pack' || session.mode === 'payment')) {
     const packId = session.metadata?.medal_pack_id
@@ -262,7 +353,7 @@ async function revokeForActor(sb, actorKey, sessionId, session, refundFraction) 
         },
       },
     }
-    await saveAppState(sb, actorKey, merged, snap.onboarding_complete)
+    await saveProfileAppState(sb, row.id, actorKey, merged, row.onboarding_complete)
     return {
       ok: true,
       kind: 'medal_pack',
@@ -286,7 +377,7 @@ async function revokeForActor(sb, actorKey, sessionId, session, refundFraction) 
         [sessionId]: { ...prior, refundedAt: stamp, tierRevoked: prior.tier },
       },
     }
-    await saveAppState(sb, actorKey, merged, snap.onboarding_complete)
+    await saveProfileAppState(sb, row.id, actorKey, merged, row.onboarding_complete)
     return { ok: true, kind: 'subscription', actorKey, tierRevoked: prior.tier }
   }
 
@@ -352,12 +443,20 @@ export async function revokeFulfillmentForCharge(stripe, charge) {
 
 function sessionOwnedByUser(session, userId, supabaseUserId) {
   const allowed = actorKeysFromSession(session)
+  if (!allowed.length) {
+    // Ancienne session sans metadata : on accepte uniquement si on va forcer le compte connecté.
+    return Boolean(userId)
+  }
   if (allowed.includes(userId)) return true
   if (supabaseUserId && allowed.includes(supabaseUserId)) return true
   return false
 }
 
-/** POST { sessionId, userId, supabaseUserId? } — crédite après retour Checkout. */
+/**
+ * POST { sessionId, userId, supabaseUserId? }
+ * Crédite après retour Checkout. Si les clés session sont vides / incomplètes,
+ * on ajoute aussi le userId / supabaseUserId du client connecté.
+ */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.statusCode = 405
@@ -391,12 +490,47 @@ export default async function handler(req, res) {
   const stripe = new Stripe(secret)
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId)
-    if (!sessionOwnedByUser(session, userId, supabaseUserId)) {
+
+    // Enrichir les clés si metadata manquante (anciennes sessions / bugs).
+    const meta = { ...(session.metadata ?? {}) }
+    if (!meta.clerk_user_id && userId) meta.clerk_user_id = userId
+    if (!meta.supabase_user_id && supabaseUserId) meta.supabase_user_id = supabaseUserId
+    const enriched = {
+      ...session,
+      metadata: meta,
+      client_reference_id: session.client_reference_id || userId,
+    }
+
+    if (!sessionOwnedByUser(enriched, userId, supabaseUserId)) {
       json(res, 403, { ok: false, error: 'session_user_mismatch' })
       return
     }
 
-    const result = await fulfillCheckoutSession(session)
+    // Essayer d’abord les clés session, puis forcer le compte connecté.
+    let result = await fulfillCheckoutSession(enriched)
+    if (!result.ok && (result.error === 'profile_not_found' || result.error === 'missing_actor')) {
+      const forcedKeys = [userId, supabaseUserId].filter(Boolean)
+      for (const key of forcedKeys) {
+        const sb = getSupabaseAdmin()
+        if (!sb) break
+        try {
+          result = await fulfillForActor(
+            sb,
+            key,
+            enriched,
+            enriched.customer_details?.name || enriched.customer_email || 'Supporter',
+          )
+          if (result.ok) break
+        } catch (err) {
+          result = {
+            ok: false,
+            error: err instanceof Error ? err.message : 'fulfill_failed',
+            actorKey: key,
+          }
+        }
+      }
+    }
+
     json(res, result.ok ? 200 : 500, result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'fulfill_failed'
