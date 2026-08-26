@@ -1,5 +1,5 @@
 import { Suspense, type ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { AdsenseScriptLoader } from './components/ads/AdsenseScriptLoader'
 import { PageLoader } from './components/ui/PageLoader'
 import { AppShell } from './layout/AppShell'
@@ -50,6 +50,13 @@ import { AppShellProviders } from './providers/AppShellProviders'
 
 function RouteSuspense({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
+}
+
+/** Ancienne URL Stripe (`/boutique/packs-medailles`) → page réelle, en gardant `?checkout=&session_id=`. */
+function BoutiqueMedalPacksLegacyRedirect() {
+  const [params] = useSearchParams()
+  const q = params.toString()
+  return <Navigate to={q ? `/boutique/medailles?${q}` : '/boutique/medailles'} replace />
 }
 
 function RequireAuthRoute({ children }: { children: React.ReactNode }) {
@@ -233,6 +240,7 @@ export default function App() {
               </RouteSuspense>
             }
           />
+          <Route path="boutique/packs-medailles" element={<BoutiqueMedalPacksLegacyRedirect />} />
           <Route
             path="boutique/achat-reussi"
             element={

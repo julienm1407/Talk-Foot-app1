@@ -111,7 +111,7 @@ export function BoutiqueMedalPacksPage() {
       return
     }
     if (!user?.id) {
-      navigate(`/login?next=${encodeURIComponent('/boutique/packs-medailles')}`)
+      navigate(`/login?next=${encodeURIComponent('/boutique/medailles')}`)
       return
     }
     setStripeError(null)

@@ -90,8 +90,8 @@ export default async function handler(req, res) {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${origin}/boutique/packs-medailles?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/boutique/packs-medailles?checkout=cancel`,
+        success_url: `${origin}/boutique/medailles?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/boutique/medailles?checkout=cancel`,
         client_reference_id: userId,
         customer_email: email || undefined,
         metadata: {
