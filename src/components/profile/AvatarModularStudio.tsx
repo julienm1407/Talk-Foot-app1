@@ -15,6 +15,7 @@ import { useOptionalCloudUserState } from '../../contexts/CloudUserStateContext'
 import { ModularAvatarCanvas, MODULAR_COLOR_VARIANTS } from './ModularAvatarCanvas'
 import type { AvatarData } from '../../features/avatar2d/types'
 import {
+  boutiqueHrefForModularAsset,
   boutiqueTabForModularCategory,
   isModularAssetUnlocked,
   isModularGarmentSlot,
@@ -202,7 +203,7 @@ function ModularAssetPicker({
   selectedAsset: AvatarAsset | null | undefined
   ownedItemIds: string[]
   onPick: (id: string | null) => void
-  onLockedPick: () => void
+  onLockedPick: (modularAssetId: string) => void
 }) {
   const useCollapsible = options.length > INLINE_GRID_MAX
   const [open, setOpen] = useState(!useCollapsible)
@@ -248,7 +249,7 @@ function ModularAssetPicker({
             imageSrc={asset.src}
             onClick={() => {
               if (locked) {
-                onLockedPick()
+                onLockedPick(asset.id)
                 return
               }
               onPick(asset.id)
@@ -399,6 +400,13 @@ export function AvatarModularStudio() {
     [updateModularAvatar, persistAvatar],
   )
 
+  const goToBoutiqueForAsset = useCallback(
+    (category: 'jerseys' | 'shorts' | 'shoes', modularAssetId: string) => {
+      navigate(boutiqueHrefForModularAsset(modularAssetId, category))
+    },
+    [navigate],
+  )
+
   const goToBoutiqueForCategory = useCallback(
     (category: 'jerseys' | 'shorts' | 'shoes') => {
       navigate(`/boutique?tab=${boutiqueTabForModularCategory(category)}`)
@@ -409,7 +417,7 @@ export function AvatarModularStudio() {
   const applySlot = (slot: AvatarSlotKey, value: string | null) => {
     const cat = slotToCategory[slot]
     if (value && isModularGarmentSlot(cat) && !isModularAssetUnlocked(value, cat, ownedItemIds)) {
-      goToBoutiqueForCategory(cat)
+      goToBoutiqueForAsset(cat, value)
       return
     }
     patchModular((prev) => ({
@@ -746,8 +754,10 @@ export function AvatarModularStudio() {
                   selectedAsset={selectedAsset}
                   ownedItemIds={ownedItemIds}
                   onPick={(id) => applySlot(activeSlot, id)}
-                  onLockedPick={() => {
-                    if (activeGarmentCategory) goToBoutiqueForCategory(activeGarmentCategory)
+                  onLockedPick={(modularAssetId) => {
+                    if (activeGarmentCategory) {
+                      goToBoutiqueForAsset(activeGarmentCategory, modularAssetId)
+                    }
                   }}
                 />
               )}

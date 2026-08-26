@@ -85,6 +85,18 @@ export function boutiqueTabForModularCategory(
   return 'shoes'
 }
 
+/** Lien boutique pour un asset studio verrouillé (onglet + article ciblé). */
+export function boutiqueHrefForModularAsset(
+  modularAssetId: string,
+  category: 'jerseys' | 'shorts' | 'shoes',
+): string {
+  const tab = boutiqueTabForModularCategory(category)
+  const shopId = shopItemIdFromModularAsset(modularAssetId, category)
+  const params = new URLSearchParams({ tab })
+  if (shopId) params.set('item', shopId)
+  return `/boutique?${params.toString()}`
+}
+
 export function sanitizeModularGarmentAccess(
   state: ModularAvatarState,
   ownedItemIds: string[],

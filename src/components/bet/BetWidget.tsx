@@ -162,6 +162,8 @@ export function BetWidget({
   const hideInlineForSheet = compact && sheetOpen
 
   const [stake, setStake] = useState(25)
+  /** Texte du champ libre — laisse taper 200, 234… avant clamp au blur. */
+  const [stakeDraft, setStakeDraft] = useState('25')
   const [pending, setPending] = useState<null | {
     market: BetMarket
     selection: BetSelection
@@ -180,6 +182,26 @@ export function BetWidget({
 
   const maxStake = Math.max(0, wallet.tokens)
   const minStake = 5
+
+  const applyStake = useCallback(
+    (raw: number) => {
+      if (!Number.isFinite(raw)) return
+      const next = Math.min(maxStake, Math.max(minStake, Math.round(raw)))
+      if (maxStake < minStake) return
+      setStake(next)
+      setStakeDraft(String(next))
+    },
+    [maxStake, minStake],
+  )
+
+  const commitStakeDraft = useCallback(() => {
+    const parsed = Number.parseInt(stakeDraft.replace(/\s/g, ''), 10)
+    if (!Number.isFinite(parsed)) {
+      setStakeDraft(String(stake))
+      return
+    }
+    applyStake(parsed)
+  }, [applyStake, stake, stakeDraft])
 
   /** Triplet 1N2 affichable : API, puis fallback estimé stable par match. */
   const x12Resolved = useMemo((): SmBookOdds1x2 | null => {
@@ -544,6 +566,11 @@ export function BetWidget({
       setPending(pick)
       if (maxStake >= minStake) {
         setStake((s) => Math.min(Math.max(s, minStake), maxStake))
+        setStakeDraft((draft) => {
+          const parsed = Number.parseInt(draft, 10)
+          const base = Number.isFinite(parsed) ? parsed : minStake
+          return String(Math.min(Math.max(base, minStake), maxStake))
+        })
       }
       const shouldScroll =
         options?.scrollToConfirm ??
@@ -976,15 +1003,51 @@ export function BetWidget({
                   >
                     Ta mise
                   </span>
-                  <span
+                  <label
                     className={cn(
-                      'font-black tabular-nums',
+                      'flex items-center gap-1.5 font-black tabular-nums',
                       sheetDense ? 'text-base' : 'text-lg',
                       canStake ? TF_TEXT_FG : 'text-rose-500',
                     )}
                   >
-                    {stake} j.
-                  </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      value={stakeDraft}
+                      disabled={maxStake < minStake}
+                      onChange={(e) => {
+                        const next = e.target.value.replace(/[^\d]/g, '')
+                        setStakeDraft(next)
+                        if (next === '') return
+                        const parsed = Number.parseInt(next, 10)
+                        if (!Number.isFinite(parsed)) return
+                        if (parsed >= minStake && parsed <= maxStake) {
+                          setStake(parsed)
+                        }
+                      }}
+                      onBlur={commitStakeDraft}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          commitStakeDraft()
+                          ;(e.target as HTMLInputElement).blur()
+                        }
+                      }}
+                      className={cn(
+                        'w-[4.5rem] rounded-xl border px-2 py-1 text-right font-black tabular-nums outline-none transition',
+                        sheetDense ? 'h-8 text-sm' : 'h-9 text-base',
+                        sheetLight
+                          ? 'border-sky-200/80 bg-white text-sky-950 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/25'
+                          : 'border-white/20 bg-black/25 text-white focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30',
+                        !canStake && 'border-rose-400/60 text-rose-500',
+                        maxStake < minStake && 'cursor-not-allowed opacity-60',
+                      )}
+                      aria-label="Montant de la mise en jetons"
+                    />
+                    <span className="shrink-0">j.</span>
+                  </label>
                 </div>
                 {maxStake < minStake ? (
                   <p className="mt-2 text-xs font-semibold text-rose-600">
@@ -992,14 +1055,18 @@ export function BetWidget({
                   </p>
                 ) : (
                   <>
+                    <p className={cn('mt-1.5 text-[10px] font-semibold', TF_TEXT_SUBTLE)}>
+                      Saisis un montant (min. {minStake} · max. {maxStake.toLocaleString('fr-FR')}) ou
+                      choisis un raccourci.
+                    </p>
                     <div className={cn(sheetDense ? 'mt-2' : 'mt-3')}>
                       <input
                         type="range"
                         min={minStake}
                         max={maxStake}
-                        step={5}
+                        step={1}
                         value={Math.min(stake, maxStake)}
-                        onChange={(e) => setStake(Number(e.target.value))}
+                        onChange={(e) => applyStake(Number(e.target.value))}
                         className={cn(
                           'w-full cursor-pointer accent-sky-600',
                           sheetDense ? 'h-1.5' : 'h-2',
@@ -1024,7 +1091,7 @@ export function BetWidget({
                               'border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-500/35',
                           )}
                           disabled={n > maxStake}
-                          onClick={() => setStake(Math.min(n, maxStake))}
+                          onClick={() => applyStake(n)}
                         >
                           {n}
                         </Button>
@@ -1040,7 +1107,7 @@ export function BetWidget({
                             'border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-500/35',
                         )}
                         disabled={maxStake < minStake}
-                        onClick={() => setStake(maxStake)}
+                        onClick={() => applyStake(maxStake)}
                       >
                         Max
                       </Button>
