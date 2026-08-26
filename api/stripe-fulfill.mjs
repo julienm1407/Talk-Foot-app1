@@ -268,22 +268,38 @@ export async function fulfillCheckoutSession(session) {
 
   let lastErr = 'profile_not_found'
   const attempts = []
+  let medalGrant = null
+  const packId = session.metadata?.medal_pack_id
+  if ((session.metadata?.kind === 'medal_pack' || session.mode === 'payment') && packId) {
+    const grant = MEDAL_PACK_GRANTS[packId]
+    if (grant) medalGrant = { kind: 'medal_pack', packId, medals: grant }
+  }
+
   for (const actorKey of keys) {
     try {
       const result = await fulfillForActor(sb, actorKey, session, displayName)
-      attempts.push({ actorKey, ...result })
+      attempts.push({ actorKey, ok: result.ok, error: result.error })
       if (result.ok) return result
       lastErr = result.error ?? lastErr
-      if (result.error !== 'profile_not_found') return { ...result, attempts }
+      if (result.error !== 'profile_not_found') {
+        return medalGrant
+          ? { ok: false, error: result.error ?? lastErr, clientGrant: medalGrant, attempts }
+          : { ...result, attempts }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'fulfill_failed'
       attempts.push({ actorKey, ok: false, error: message })
       lastErr = message
-      // Essayer la clé suivante (Clerk vs UUID) avant d’abandonner.
     }
   }
 
-  return { ok: false, error: lastErr, actorKeys: keys, attempts }
+  return {
+    ok: false,
+    error: lastErr,
+    actorKeys: keys,
+    attempts,
+    ...(medalGrant ? { clientGrant: medalGrant } : {}),
+  }
 }
 
 /** Part du montant remboursé (0–1) pour ajuster le retrait de médailles. */
@@ -531,7 +547,21 @@ export default async function handler(req, res) {
       }
     }
 
-    json(res, result.ok ? 200 : 500, result)
+    // Paiement vérifié mais écriture cloud KO → le client peut créditer localement + flush.
+    if (!result.ok && sessionPaid(enriched) && !result.clientGrant) {
+      const packId = enriched.metadata?.medal_pack_id
+      const grant = packId ? MEDAL_PACK_GRANTS[packId] : null
+      if (grant && (enriched.metadata?.kind === 'medal_pack' || enriched.mode === 'payment')) {
+        result = {
+          ...result,
+          clientGrant: { kind: 'medal_pack', packId, medals: grant },
+        }
+      }
+    }
+
+    // Toujours 200 si clientGrant : le front applique le crédit même si le cloud a échoué.
+    const httpOk = result.ok || Boolean(result.clientGrant)
+    json(res, httpOk ? 200 : 500, result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'fulfill_failed'
     console.error('[stripe-fulfill]', message)

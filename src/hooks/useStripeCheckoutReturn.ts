@@ -5,7 +5,28 @@ import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { fulfillStripeSession } from '../lib/stripe/checkout'
 import { useTalkFootChatActorId } from './useTalkFootChatActorId'
 import { useSubscription } from './useSubscription'
+import { useWallet } from './useWallet'
 import type { SubscriptionTierId } from '../types/subscription'
+
+const CREDITED_SESSIONS_LS_KEY = 'tf-stripe-credited-sessions-v1'
+
+function readCreditedSessions(): Set<string> {
+  try {
+    const raw = localStorage.getItem(CREDITED_SESSIONS_LS_KEY)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return new Set()
+    return new Set(parsed.filter((x): x is string => typeof x === 'string' && x.length > 0))
+  } catch {
+    return new Set()
+  }
+}
+
+function markSessionCredited(sessionId: string) {
+  const set = readCreditedSessions()
+  set.add(sessionId)
+  localStorage.setItem(CREDITED_SESSIONS_LS_KEY, JSON.stringify([...set].slice(-80)))
+}
 
 function errorMessageFr(code: string | undefined): string {
   switch (code) {
@@ -17,20 +38,25 @@ function errorMessageFr(code: string | undefined): string {
       return 'Session de paiement non liée à ce compte. Ouvre la page avec le compte utilisé au paiement.'
     case 'unknown_pack':
       return 'Pack inconnu côté serveur — contacte le support avec la date d’achat.'
+    case 'not_paid':
+      return 'Paiement pas encore confirmé par Stripe — réessaie dans une minute.'
     default:
-      return 'Paiement reçu — recharge la page dans 1 minute ou contacte le support.'
+      return code
+        ? `Paiement reçu — sync en cours (${code}). Réessaie le crédit.`
+        : 'Paiement reçu — recharge la page dans 1 minute ou contacte le support.'
   }
 }
 
 /**
  * Après retour Stripe (`?checkout=success&session_id=…`), crédite formule ou médailles.
- * Nécessite `SUPABASE_SERVICE_ROLE_KEY` côté Vercel pour persister le cloud.
+ * Si le cloud refuse l’écriture, applique un crédit client sécurisé (session payée vérifiée).
  */
 export function useStripeCheckoutReturn() {
   const [params, setParams] = useSearchParams()
   const { user } = useAuth()
   const supabaseActorId = useTalkFootChatActorId()
   const cloud = useOptionalCloudUserState()
+  const { addMedals } = useWallet()
   const { setTier } = useSubscription()
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -76,30 +102,57 @@ export function useStripeCheckoutReturn() {
       return
     }
 
+    // Médailles
+    const alreadyLocal = readCreditedSessions().has(sessionId)
+    if (result.appliedVia === 'client' && !result.alreadyFulfilled && !alreadyLocal) {
+      addMedals(result.medals)
+      markSessionCredited(sessionId)
+      setStatus('done')
+      setMessage(`${result.medals.toLocaleString('fr-FR')} médailles créditées.`)
+      clearCheckoutParams()
+      window.setTimeout(() => window.location.reload(), 1200)
+      return
+    }
+
+    if (result.appliedVia === 'client' && alreadyLocal) {
+      setStatus('done')
+      setMessage('Achat déjà crédité sur ton compte.')
+      clearCheckoutParams()
+      return
+    }
+
+    if (!alreadyLocal && !result.alreadyFulfilled && result.appliedVia === 'server') {
+      markSessionCredited(sessionId)
+    }
+
     setStatus('done')
     setMessage(
-      result.alreadyFulfilled
+      result.alreadyFulfilled || alreadyLocal
         ? 'Achat déjà crédité sur ton compte.'
         : `${result.medals.toLocaleString('fr-FR')} médailles créditées.`,
     )
     clearCheckoutParams()
     window.setTimeout(() => window.location.reload(), 1200)
-  }, [sessionId, user?.id, supabaseActorId, setTier, clearCheckoutParams, cloud])
+  }, [sessionId, user?.id, supabaseActorId, setTier, clearCheckoutParams, cloud, addMedals])
 
   useEffect(() => {
     if (autoRan.current) return
     if (!checkoutSuccess || !sessionId || !user?.id) return
     autoRan.current = true
-    void runFulfill().catch(() => {
+    void runFulfill().catch((err) => {
       setStatus('error')
-      setMessage('Paiement reçu — réessaie ou utilise la demande de remboursement ci-dessous.')
+      setMessage(
+        `Paiement reçu — réessaie (${err instanceof Error ? err.message : 'erreur'}).`,
+      )
     })
   }, [checkoutSuccess, sessionId, user?.id, runFulfill])
 
   const retryFulfill = useCallback(() => {
-    void runFulfill().catch(() => {
+    void runFulfill().catch((err) => {
       setStatus('error')
-      setMessage('Synchronisation impossible — vérifie SUPABASE_SERVICE_ROLE_KEY sur Vercel.')
+      setMessage(
+        `Synchronisation impossible (${err instanceof Error ? err.message : 'erreur'}).`,
+      )
     })
   }, [runFulfill])
 

@@ -2,6 +2,12 @@ import { isStripePublishableConfigured } from '../../config/stripe'
 
 export type StripeCheckoutKind = 'subscription' | 'medal_pack'
 
+export type StripeClientGrant = {
+  kind: 'medal_pack'
+  packId: string
+  medals: number
+}
+
 export async function startStripeCheckout(opts: {
   kind: StripeCheckoutKind
   productId: string
@@ -45,8 +51,15 @@ export async function fulfillStripeSession(opts: {
   supabaseUserId?: string | null
 }): Promise<
   | { ok: true; kind: 'subscription'; tier: string; alreadyFulfilled?: boolean }
-  | { ok: true; kind: 'medal_pack'; packId: string; medals: number; alreadyFulfilled?: boolean }
-  | { ok: false; error: string }
+  | {
+      ok: true
+      kind: 'medal_pack'
+      packId: string
+      medals: number
+      alreadyFulfilled?: boolean
+      appliedVia?: 'server' | 'client'
+    }
+  | { ok: false; error: string; clientGrant?: StripeClientGrant }
 > {
   const res = await fetch('/api/stripe-fulfill', {
     method: 'POST',
@@ -65,22 +78,56 @@ export async function fulfillStripeSession(opts: {
     return { ok: false, error: 'invalid_response' }
   }
 
+  const clientGrantRaw = data.clientGrant
+  const clientGrant =
+    clientGrantRaw &&
+    typeof clientGrantRaw === 'object' &&
+    !Array.isArray(clientGrantRaw) &&
+    (clientGrantRaw as { kind?: string }).kind === 'medal_pack' &&
+    typeof (clientGrantRaw as { packId?: unknown }).packId === 'string' &&
+    typeof (clientGrantRaw as { medals?: unknown }).medals === 'number'
+      ? {
+          kind: 'medal_pack' as const,
+          packId: String((clientGrantRaw as { packId: string }).packId),
+          medals: Number((clientGrantRaw as { medals: number }).medals),
+        }
+      : undefined
+
+  if (data.ok === true) {
+    const alreadyFulfilled = data.alreadyFulfilled === true
+    if (data.kind === 'subscription' && typeof data.tier === 'string') {
+      return { ok: true, kind: 'subscription', tier: data.tier, alreadyFulfilled }
+    }
+    if (
+      data.kind === 'medal_pack' &&
+      typeof data.packId === 'string' &&
+      typeof data.medals === 'number'
+    ) {
+      return {
+        ok: true,
+        kind: 'medal_pack',
+        packId: data.packId,
+        medals: data.medals,
+        alreadyFulfilled,
+        appliedVia: 'server',
+      }
+    }
+  }
+
+  // Serveur n’a pas pu écrire le cloud, mais le paiement est validé → crédit client.
+  if (clientGrant && clientGrant.medals > 0) {
+    return {
+      ok: true,
+      kind: 'medal_pack',
+      packId: clientGrant.packId,
+      medals: clientGrant.medals,
+      appliedVia: 'client',
+    }
+  }
+
   if (!res.ok || data.ok !== true) {
-    return { ok: false, error: String(data.error ?? 'fulfill_failed') }
+    return { ok: false, error: String(data.error ?? 'fulfill_failed'), clientGrant }
   }
 
-  const alreadyFulfilled = data.alreadyFulfilled === true
-
-  if (data.kind === 'subscription' && typeof data.tier === 'string') {
-    return { ok: true, kind: 'subscription', tier: data.tier, alreadyFulfilled }
-  }
-  if (
-    data.kind === 'medal_pack' &&
-    typeof data.packId === 'string' &&
-    typeof data.medals === 'number'
-  ) {
-    return { ok: true, kind: 'medal_pack', packId: data.packId, medals: data.medals, alreadyFulfilled }
-  }
-
-  return { ok: false, error: 'unexpected_fulfill_payload' }
+  return { ok: false, error: 'unexpected_fulfill_payload', clientGrant }
 }

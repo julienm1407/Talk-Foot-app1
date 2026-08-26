@@ -1,5 +1,4 @@
--- Stripe fulfill (service role) : grants + écriture app_state fiable.
--- Corrige « profil introuvable » / échec de crédit après Checkout.
+-- Stripe fulfill : écriture app_state réservée au service_role (via GRANT, sans check JWT fragile).
 
 create or replace function public.talkfoot_is_service_role()
 returns boolean
@@ -11,7 +10,7 @@ as $$
     or coalesce(current_setting('request.jwt.claim.role', true), '') = 'service_role';
 $$;
 
--- Écriture médailles / abonnement depuis les API Stripe (service_role only).
+-- Sécurité = GRANT execute TO service_role uniquement (pas de check JWT interne).
 create or replace function public.talkfoot_service_write_app_state(
   p_profile_id uuid,
   p_app_state jsonb,
@@ -25,9 +24,6 @@ as $$
 declare
   v_rows int;
 begin
-  if not public.talkfoot_is_service_role() then
-    return jsonb_build_object('ok', false, 'error', 'forbidden');
-  end if;
   if p_profile_id is null then
     return jsonb_build_object('ok', false, 'error', 'invalid_profile');
   end if;
@@ -51,11 +47,12 @@ begin
   return jsonb_build_object('ok', true);
 exception
   when others then
-    return jsonb_build_object('ok', false, 'error', coalesce(sqlerrm, 'forbidden'));
+    return jsonb_build_object('ok', false, 'error', coalesce(sqlerrm, 'write_failed'));
 end;
 $$;
 
 revoke all on function public.talkfoot_service_write_app_state(uuid, jsonb, boolean) from public;
+revoke all on function public.talkfoot_service_write_app_state(uuid, jsonb, boolean) from anon, authenticated;
 grant execute on function public.talkfoot_service_write_app_state(uuid, jsonb, boolean) to service_role;
 
 grant execute on function public.get_talkfoot_user_snapshot(text) to service_role;
