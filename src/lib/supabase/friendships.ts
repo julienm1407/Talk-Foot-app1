@@ -111,6 +111,28 @@ export async function acceptFriendRequest(sb: SupabaseClient, myId: string, requ
   return { ok: true }
 }
 
+/** Retire un ami accepté, ou annule / refuse une demande en attente. */
+export async function removeFriendship(
+  sb: SupabaseClient,
+  myId: string,
+  peerId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (myId === peerId) return { ok: false, error: 'invalid' }
+  const { user_low, user_high } = canonicalFriendshipPair(myId, peerId)
+  const { data, error } = await sb
+    .from('friendships')
+    .delete()
+    .eq('user_low', user_low)
+    .eq('user_high', user_high)
+    .select('user_low')
+    .maybeSingle()
+  if (error) return { ok: false, error: error.message }
+  if (!data) return { ok: false, error: 'not_found' }
+  await dismissFriendRequestInboxNotifications(sb, myId, peerId)
+  await dismissFriendRequestInboxNotifications(sb, peerId, myId)
+  return { ok: true }
+}
+
 export function p2pKeysForPeers(myId: string, peerIds: string[]): string[] {
   const keys: string[] = []
   for (const pid of peerIds) {

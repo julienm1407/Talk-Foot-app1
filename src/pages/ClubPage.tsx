@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useLocation, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { API_TOKENS_CHANGED_EVENT, LS_KEY_SPORTMONKS_TOKEN } from '../constants/apiKeysStorage'
 import {
   extractSquadPlayersFromSmEnvelope,
@@ -93,6 +93,7 @@ function inferSeasonIdFromSmFixturePayload(payload: unknown): number | null {
 export function ClubPage() {
   const { clubSlug = '' } = useParams()
   const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
   const [infoOpen, setInfoOpen] = useState(false)
   const { sportMonksTeamIdByClubId } = useMatches()
   const { articles: publishedArticles } = useArticles()
@@ -168,16 +169,40 @@ export function ClubPage() {
   }, [])
 
   const team = useMemo(() => {
-    const id = resolveClubIdFromSlug(clubSlug)
-    if (!id) return null
-    return findTeamById(id)
-  }, [clubSlug])
+    const fromSlug = resolveClubIdFromSlug(clubSlug)
+    if (fromSlug) {
+      const catalog = findTeamById(fromSlug)
+      if (catalog) return catalog
+    }
+    const rawId = (fromSlug ?? clubSlug.trim().toLowerCase())
+      .replace(/[^a-z0-9_-]/gi, '')
+      .slice(0, 48)
+    if (!rawId) return null
+
+    const smRaw = searchParams.get('sm')
+    const smNum = smRaw != null ? Number(smRaw) : NaN
+    const name = searchParams.get('n')?.trim()
+    const short = searchParams.get('s')?.trim()
+    const hasProvisionalMeta =
+      (Number.isFinite(smNum) && smNum > 0) || Boolean(name) || Boolean(short)
+    if (!hasProvisionalMeta && !fromSlug) return null
+
+    return {
+      id: rawId,
+      name: name || rawId,
+      shortName: short || (name ? name.slice(0, 4).toUpperCase() : rawId.slice(0, 4).toUpperCase()),
+      colors: { primary: '#0ea5e9', secondary: '#0f172a' },
+      ...(Number.isFinite(smNum) && smNum > 0 ? { sportMonksTeamId: Math.floor(smNum) } : {}),
+    }
+  }, [clubSlug, searchParams])
 
   const { debates: allDebates } = useDebates()
   const dataBase = useMemo(() => (team ? buildEmptyClubPageShell(team) : null), [team])
 
   const smTeamId = team
-    ? sportMonksTeamIdByClubId[team.id] ?? SPORTMONKS_TEAM_ID_BY_CLUB_ID[team.id]
+    ? sportMonksTeamIdByClubId[team.id] ??
+      SPORTMONKS_TEAM_ID_BY_CLUB_ID[team.id] ??
+      team.sportMonksTeamId
     : undefined
 
   /** Id **saison** SM optionnel — sinon déduit via `activeSeasons` sur `/teams/{id}`. */

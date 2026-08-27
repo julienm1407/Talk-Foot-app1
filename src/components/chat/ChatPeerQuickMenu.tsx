@@ -83,6 +83,25 @@ export function ChatPeerQuickMenu({
     else setHint(out.error ?? 'Impossible d’accepter.')
   }
 
+  const onRemoveFriend = async () => {
+    const label = isFriend
+      ? `Retirer ${peer.username} de tes amis ?`
+      : outgoing
+        ? 'Annuler la demande d’ami ?'
+        : `Supprimer la relation avec ${peer.username} ?`
+    if (!window.confirm(label)) return
+    setHint(null)
+    setBusy(true)
+    const out = await dm.removeFriend(peer.id)
+    setBusy(false)
+    if (out.ok) {
+      setHint(isFriend ? 'Ami retiré de ta liste.' : 'Demande annulée.')
+    } else if (out.error === 'not_found') {
+      setHint('Plus de relation à supprimer.')
+      void dm.refreshFriends()
+    } else setHint(out.error ?? 'Impossible de retirer.')
+  }
+
   const shell = dark
     ? 'border-slate-600/50 bg-[#0d2135] text-slate-50 shadow-2xl'
     : 'border-tf-dark/12 bg-white text-tf-dark shadow-xl'
@@ -141,9 +160,34 @@ export function ChatPeerQuickMenu({
                 Accepter la demande d’ami
               </button>
             ) : isFriend ? (
-              <p className={cn('px-1 text-xs font-semibold', muted)}>Déjà dans tes amis.</p>
+              <>
+                <p className={cn('px-1 text-xs font-semibold', muted)}>Déjà dans tes amis.</p>
+                <button
+                  type="button"
+                  className={cn(
+                    btn,
+                    dark
+                      ? 'border-rose-400/35 text-rose-200 hover:bg-rose-500/15'
+                      : 'border-rose-300/60 text-rose-800 hover:bg-rose-50',
+                  )}
+                  disabled={busy}
+                  onClick={() => void onRemoveFriend()}
+                >
+                  Retirer des amis
+                </button>
+              </>
             ) : outgoing ? (
-              <p className={cn('px-1 text-xs font-semibold', muted)}>Demande d’ami en attente.</p>
+              <>
+                <p className={cn('px-1 text-xs font-semibold', muted)}>Demande d’ami en attente.</p>
+                <button
+                  type="button"
+                  className={btn}
+                  disabled={busy}
+                  onClick={() => void onRemoveFriend()}
+                >
+                  Annuler la demande
+                </button>
+              </>
             ) : (
               <button type="button" className={btn} disabled={busy} onClick={() => void onAddFriend()}>
                 Demander en ami

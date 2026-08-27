@@ -18,26 +18,33 @@ export function MatchClubHit({
 }) {
   const navigate = useNavigate()
   const path = teamHubPathForMatch(team, match.competition.id)
-  if (!path) {
-    return <div className={className}>{children}</div>
+
+  const goClub = (e: { preventDefault: () => void; stopPropagation: () => void }) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!path) return
+    navigate(path)
   }
+
   return (
     <div
-      role="link"
-      tabIndex={0}
-      className={cn(className, 'cursor-pointer outline-none')}
-      title={`Page ${team.name}`}
-      aria-label={`Ouvrir la page ${team.name}`}
+      role={path ? 'link' : undefined}
+      tabIndex={path ? 0 : undefined}
+      className={cn(className, path && 'cursor-pointer outline-none')}
+      title={path ? `Page ${team.name}` : undefined}
+      aria-label={path ? `Ouvrir la page ${team.name}` : undefined}
+      onClickCapture={(e: MouseEvent) => {
+        if (!path) return
+        goClub(e)
+      }}
       onClick={(e: MouseEvent) => {
-        e.preventDefault()
-        e.stopPropagation()
-        navigate(path)
+        if (!path) return
+        goClub(e)
       }}
       onKeyDown={(e) => {
+        if (!path) return
         if (e.key !== 'Enter' && e.key !== ' ') return
-        e.preventDefault()
-        e.stopPropagation()
-        navigate(path)
+        goClub(e)
       }}
     >
       {children}

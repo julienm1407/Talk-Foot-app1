@@ -139,6 +139,23 @@ export function UserProfilePage() {
     UUID_RE.test(peer.id) &&
     !dm.isCloudFriend(peer.id)
 
+  const canRemoveCloudFriend =
+    useCloudFriends &&
+    authUser &&
+    peer.id !== authUser.id &&
+    !peer.isTalkFootBot &&
+    UUID_RE.test(peer.id) &&
+    dm.isCloudFriend(peer.id)
+
+  const canCancelOutgoingRequest =
+    useCloudFriends &&
+    authUser &&
+    peer.id !== authUser.id &&
+    !peer.isTalkFootBot &&
+    UUID_RE.test(peer.id) &&
+    dm.hasOutgoingFriendRequestTo(peer.id) &&
+    !dm.isCloudFriend(peer.id)
+
   const pendingFromThisUser =
     useCloudFriends &&
     authUser &&
@@ -176,6 +193,28 @@ export function UserProfilePage() {
       setFriendActionHint('Vous êtes maintenant amis — la conversation est dans les messages.')
       window.setTimeout(() => scrollToFriendPronostics(), 400)
     } else setFriendActionHint(out.error ?? 'Impossible d’accepter.')
+  }
+
+  const onRemoveFriend = async () => {
+    if (!peer) return
+    const ok = window.confirm(
+      canRemoveCloudFriend
+        ? `Retirer ${displayUsername} de tes amis ?`
+        : 'Annuler la demande d’ami ?',
+    )
+    if (!ok) return
+    setFriendActionHint(null)
+    setFriendBusy(true)
+    const out = await dm.removeFriend(peer.id)
+    setFriendBusy(false)
+    if (out.ok) {
+      setFriendActionHint(
+        canRemoveCloudFriend ? 'Ami retiré de ta liste.' : 'Demande d’ami annulée.',
+      )
+    } else if (out.error === 'not_found') {
+      setFriendActionHint('Plus de relation à supprimer.')
+      void dm.refreshFriends()
+    } else setFriendActionHint(out.error ?? 'Impossible de retirer.')
   }
 
   return (
@@ -300,6 +339,35 @@ export function UserProfilePage() {
                 onClick={() => void onAddFriend()}
               >
                 Ajouter en ami
+              </Button>
+            ) : null}
+
+            {canCancelOutgoingRequest ? (
+              <Button
+                type="button"
+                variant="soft"
+                disabled={friendBusy}
+                className="font-black"
+                onClick={() => void onRemoveFriend()}
+              >
+                Annuler la demande
+              </Button>
+            ) : null}
+
+            {canRemoveCloudFriend ? (
+              <Button
+                type="button"
+                variant="soft"
+                disabled={friendBusy}
+                className={cn(
+                  'font-black',
+                  L
+                    ? 'border-rose-300/70 text-rose-800 hover:bg-rose-50'
+                    : 'border-rose-400/40 text-rose-200 hover:bg-rose-500/15',
+                )}
+                onClick={() => void onRemoveFriend()}
+              >
+                Retirer des amis
               </Button>
             ) : null}
 

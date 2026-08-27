@@ -19,6 +19,7 @@ import {
   acceptFriendRequest as acceptFriendRequestApi,
   sendFriendRequest as sendFriendRequestApi,
   declineFriendRequest as declineFriendRequestApi,
+  removeFriendship as removeFriendshipApi,
 } from '../lib/supabase/friendships'
 
 export type RegisterPeerForPrivateChatInput = {
@@ -45,6 +46,8 @@ type DirectMessagesApi = ReturnType<typeof useDirectMessages> & {
   sendFriendRequest: (peerId: string) => Promise<{ ok: boolean; error?: string }>
   acceptFriendRequest: (requesterId: string) => Promise<{ ok: boolean; error?: string }>
   declineFriendRequest: (requesterId: string) => Promise<{ ok: boolean; error?: string }>
+  /** Retire un ami accepté, ou annule / refuse une demande en attente. */
+  removeFriend: (peerId: string) => Promise<{ ok: boolean; error?: string }>
 }
 
 const DirectMessagesContext = createContext<DirectMessagesApi | null>(null)
@@ -201,6 +204,21 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
     [authUser?.id, cf.refresh],
   )
 
+  const removeFriend = useCallback(
+    async (peerId: string): Promise<{ ok: boolean; error?: string }> => {
+      if (!authUser?.id || !isSupabaseConfigured()) return { ok: false, error: 'offline' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false, error: 'no_client' }
+      const session = await ensureTalkFootSupabaseSession(sb)
+      const myId = session?.user.id
+      if (!myId) return { ok: false, error: 'session' }
+      const out = await removeFriendshipApi(sb, myId, peerId)
+      if (out.ok) await cf.refresh()
+      return out
+    },
+    [authUser?.id, cf.refresh],
+  )
+
   const value = useMemo(
     () => ({
       ...dm,
@@ -216,6 +234,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       sendFriendRequest,
       acceptFriendRequest,
       declineFriendRequest,
+      removeFriend,
     }),
     [
       dm,
@@ -230,6 +249,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       sendFriendRequest,
       acceptFriendRequest,
       declineFriendRequest,
+      removeFriend,
     ],
   )
 
