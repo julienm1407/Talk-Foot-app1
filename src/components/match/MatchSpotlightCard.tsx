@@ -17,6 +17,7 @@ import { formatHubDayLabel, HubStripLive } from './HubMatchEncart'
 import { MatchTeamBackdrop, patternFor } from './MatchTeamBackdrop'
 import { MatchResultScore } from './MatchResultScore'
 import { SalonAudienceFooter } from './SalonAudienceFooter'
+import { MatchClubHit } from './MatchClubHit'
 
 function fixtureMetaLine(match: Match): string | null {
   const bits = [match.stageName, match.roundName, match.venueName].filter(Boolean)
@@ -149,22 +150,27 @@ export function MatchSpotlightCard({
                 grid ? 'mt-2 md:mt-4' : 'mt-4',
               )}
             >
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
+              <MatchClubHit
+                match={match}
+                team={match.home}
+                className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
+              >
                 <MatchTeamCrest
                   team={match.home}
                   competitionId={match.competition.id}
                   size={grid ? 30 : 44}
                   className={grid ? 'md:!size-11' : undefined}
+                  clickable={false}
                 />
                 <span
                   className={cn(
-                    'w-full truncate font-black text-white',
+                    'w-full truncate font-black text-white underline-offset-2 hover:underline',
                     grid ? cn('text-[10px]', gridTextShadow, 'md:text-sm lg:text-base') : 'text-sm drop-shadow-md sm:text-base',
                   )}
                 >
                   {homeLabel}
                 </span>
-              </div>
+              </MatchClubHit>
               <div className="shrink-0 text-center">
                 <MatchResultScore
                   home={fsc.home}
@@ -178,22 +184,27 @@ export function MatchSpotlightCard({
                   Score final
                 </span>
               </div>
-              <div className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center">
+              <MatchClubHit
+                match={match}
+                team={match.away}
+                className="flex min-w-0 flex-1 flex-col items-center gap-2 text-center"
+              >
                 <MatchTeamCrest
                   team={match.away}
                   competitionId={match.competition.id}
                   size={grid ? 30 : 44}
                   className={grid ? 'md:!size-11' : undefined}
+                  clickable={false}
                 />
                 <span
                   className={cn(
-                    'w-full truncate font-black text-white',
+                    'w-full truncate font-black text-white underline-offset-2 hover:underline',
                     grid ? cn('text-[10px]', gridTextShadow, 'md:text-sm lg:text-base') : 'text-sm drop-shadow-md sm:text-base',
                   )}
                 >
                   {awayLabel}
                 </span>
-              </div>
+              </MatchClubHit>
             </div>
           </div>
         </div>
@@ -313,7 +324,9 @@ export function MatchSpotlightCard({
               grid ? 'mt-2 md:mt-5 md:gap-2 lg:gap-4' : 'mt-5 gap-2 sm:gap-4',
             )}
           >
-            <div
+            <MatchClubHit
+              match={match}
+              team={match.home}
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center text-center',
                 grid ? 'gap-1 md:gap-2.5' : 'gap-2.5',
@@ -324,10 +337,11 @@ export function MatchSpotlightCard({
                 competitionId={match.competition.id}
                 size={grid ? 30 : 48}
                 className={grid ? 'md:!size-12' : undefined}
+                clickable={false}
               />
               <span
                 className={cn(
-                  'w-full truncate font-black leading-tight text-white',
+                  'w-full truncate font-black leading-tight text-white underline-offset-2 hover:underline',
                   grid
                     ? cn('max-w-[4.5rem] text-[10px]', gridTextShadow, 'md:max-w-[10rem] md:text-sm lg:max-w-[13rem] lg:text-base')
                     : 'max-w-[10rem] text-sm drop-shadow-md sm:max-w-[13rem] sm:text-base',
@@ -335,7 +349,7 @@ export function MatchSpotlightCard({
               >
                 {homeLabel}
               </span>
-            </div>
+            </MatchClubHit>
 
             <div className="flex shrink-0 flex-col items-center gap-1 px-0.5 md:gap-1.5 md:px-1">
               <p
@@ -356,7 +370,9 @@ export function MatchSpotlightCard({
               </span>
             </div>
 
-            <div
+            <MatchClubHit
+              match={match}
+              team={match.away}
               className={cn(
                 'flex min-w-0 flex-1 flex-col items-center text-center',
                 grid ? 'gap-1 md:gap-2.5' : 'gap-2.5',
@@ -367,10 +383,11 @@ export function MatchSpotlightCard({
                 competitionId={match.competition.id}
                 size={grid ? 30 : 48}
                 className={grid ? 'md:!size-12' : undefined}
+                clickable={false}
               />
               <span
                 className={cn(
-                  'w-full truncate font-black leading-tight text-white',
+                  'w-full truncate font-black leading-tight text-white underline-offset-2 hover:underline',
                   grid
                     ? cn('max-w-[4.5rem] text-[10px]', gridTextShadow, 'md:max-w-[10rem] md:text-sm lg:max-w-[13rem] lg:text-base')
                     : 'max-w-[10rem] text-sm drop-shadow-md sm:max-w-[13rem] sm:text-base',
@@ -378,7 +395,7 @@ export function MatchSpotlightCard({
               >
                 {awayLabel}
               </span>
-            </div>
+            </MatchClubHit>
           </div>
 
         </div>

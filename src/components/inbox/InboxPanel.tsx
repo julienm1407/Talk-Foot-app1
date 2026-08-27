@@ -169,9 +169,69 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
           <p className={cn('px-4 py-8 text-center text-sm font-semibold', muted)}>Rien pour l’instant.</p>
         ) : (
           <>
+            {byKind.friends.length > 0 ? (
+              <section aria-label="Demandes d'amis">
+                <SectionTitle className={muted}>
+                  Demandes d&apos;amis
+                  {byKind.friends.some((f) => !isRead(f.id)) ? (
+                    <span className="ml-1.5 text-sky-400">· {byKind.friends.filter((f) => !isRead(f.id)).length}</span>
+                  ) : null}
+                </SectionTitle>
+                <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
+                  {byKind.friends.map((f: InboxFriendItem) => (
+                    <li key={f.id} className="px-3 py-3 md:py-2.5">
+                      <div className="flex gap-2">
+                        <UnreadDot show={!isRead(f.id)} />
+                        <div className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              'inline-block rounded-md px-1.5 py-px text-[9px] font-black uppercase',
+                              L ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-200',
+                            )}
+                          >
+                            Ami
+                          </span>
+                          <p className="mt-1 text-xs font-black leading-snug">{f.displayName}</p>
+                          <p className={cn('mt-0.5 text-[11px] font-semibold leading-snug', muted)}>
+                            Souhaite t&apos;ajouter en ami
+                          </p>
+                          {f.mutualHint ? (
+                            <p className={cn('mt-0.5 text-[11px] font-semibold', muted)}>{f.mutualHint}</p>
+                          ) : null}
+                          <p className={cn('mt-1 text-[10px] font-bold', muted)}>{f.createdAtLabel}</p>
+                          <div className="mt-2 flex flex-col gap-2 max-md:w-full md:flex-row md:flex-wrap">
+                            <button
+                              type="button"
+                              disabled={Boolean(acceptingFriendId)}
+                              onClick={() => void onAcceptFriend(f)}
+                              className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
+                            >
+                              {acceptingFriendId === f.requesterId ? 'Acceptation…' : 'Accepter'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void onDeclineFriend(f)}
+                              className={cn(
+                                'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
+                                L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',
+                              )}
+                            >
+                              Refuser
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             {byKind.likes.length > 0 ? (
               <section aria-label="Likes sur tes messages">
-                <SectionTitle className={muted}>Likes & tribunes</SectionTitle>
+                <SectionTitle className={cn(byKind.friends.length > 0 && 'border-t', subtleBorder, muted)}>
+                  Likes & tribunes
+                </SectionTitle>
                 <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
                   {byKind.likes.map((n) => (
                     <li key={n.id}>
@@ -217,7 +277,7 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
 
             {byKind.news.length > 0 ? (
               <section aria-label="Top actus">
-                <SectionTitle className={muted}>Top actus</SectionTitle>
+                <SectionTitle className={cn('border-t', subtleBorder, muted)}>Top actus</SectionTitle>
                 <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
                   {byKind.news.map((n) => (
                     <li key={n.id}>
@@ -285,64 +345,6 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                             <button
                               type="button"
                               onClick={() => onDeclineInvite(inv.id)}
-                              className={cn(
-                                'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
-                                L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',
-                              )}
-                            >
-                              Refuser
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            {byKind.friends.length > 0 ? (
-              <section aria-label="Demandes d'amis">
-                <SectionTitle className={cn('border-t', subtleBorder, muted)}>
-                  Demandes d&apos;amis
-                  {byKind.friends.some((f) => !isRead(f.id)) ? (
-                    <span className="ml-1.5 text-sky-400">· {byKind.friends.filter((f) => !isRead(f.id)).length}</span>
-                  ) : null}
-                </SectionTitle>
-                <ul className="divide-y" style={{ borderColor: L ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)' }}>
-                  {byKind.friends.map((f: InboxFriendItem) => (
-                    <li key={f.id} className="px-3 py-3 md:py-2.5">
-                      <div className="flex gap-2">
-                        <UnreadDot show={!isRead(f.id)} />
-                        <div className="min-w-0 flex-1">
-                          <span
-                            className={cn(
-                              'inline-block rounded-md px-1.5 py-px text-[9px] font-black uppercase',
-                              L ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-200',
-                            )}
-                          >
-                            Ami
-                          </span>
-                          <p className="mt-1 text-xs font-black leading-snug">{f.displayName}</p>
-                          <p className={cn('mt-0.5 text-[11px] font-semibold leading-snug', muted)}>
-                            Souhaite t&apos;ajouter en ami
-                          </p>
-                          {f.mutualHint ? (
-                            <p className={cn('mt-0.5 text-[11px] font-semibold', muted)}>{f.mutualHint}</p>
-                          ) : null}
-                          <p className={cn('mt-1 text-[10px] font-bold', muted)}>{f.createdAtLabel}</p>
-                          <div className="mt-2 flex flex-col gap-2 max-md:w-full md:flex-row md:flex-wrap">
-                            <button
-                              type="button"
-                              disabled={Boolean(acceptingFriendId)}
-                              onClick={() => void onAcceptFriend(f)}
-                              className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
-                            >
-                              {acceptingFriendId === f.requesterId ? 'Acceptation…' : 'Accepter'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void onDeclineFriend(f)}
                               className={cn(
                                 'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
                                 L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',

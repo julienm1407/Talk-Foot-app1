@@ -97,7 +97,7 @@ export function useInbox() {
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*',
             schema: 'public',
             table: 'inbox_notifications',
             filter: recipientFilter,
@@ -106,7 +106,12 @@ export function useInbox() {
             void refreshCloudNotifs()
           },
         )
-        .subscribe()
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] inbox_notifications realtime:', status)
+          }
+          if (status === 'SUBSCRIBED') void refreshCloudNotifs()
+        })
 
       if (cancelled) {
         void sb.removeChannel(channel)
@@ -126,6 +131,27 @@ export function useInbox() {
     }
   }, [authUser?.id, authUser?.isAnonymous, refreshCloudNotifs])
 
+  /** Filet si le realtime inbox rate (onglet en fond, auth lag) — likes / amis sans refresh manuel. */
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !authUser?.id || authUser.isAnonymous) return
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void refreshCloudNotifs()
+    }
+    const onFocus = () => void refreshCloudNotifs()
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', onFocus)
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refreshCloudNotifs()
+    }, 12_000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', onFocus)
+      window.clearInterval(pollId)
+    }
+  }, [authUser?.id, authUser?.isAnonymous, refreshCloudNotifs])
+
   const all = useMemo(() => {
     const fromCloud = cloudNotifs
     const friendFromInbox = fromCloud.filter((i): i is InboxFriendItem => i.kind === 'friend')
@@ -136,10 +162,14 @@ export function useInbox() {
     )
     const merged: InboxItem[] = [...fromCloud, ...pendingFriends, ...seed]
     return merged.sort((a, b) => {
-      const ta =
-        a.kind === 'like' || a.kind === 'friend' ? a.createdAtMs : 0
-      const tb =
-        b.kind === 'like' || b.kind === 'friend' ? b.createdAtMs : 0
+      // Demandes d'amis toujours au-dessus des likes / actus.
+      const rank = (i: InboxItem) =>
+        i.kind === 'friend' ? 0 : i.kind === 'like' ? 1 : i.kind === 'invite' ? 2 : 3
+      const ra = rank(a)
+      const rb = rank(b)
+      if (ra !== rb) return ra - rb
+      const ta = a.kind === 'like' || a.kind === 'friend' ? a.createdAtMs : 0
+      const tb = b.kind === 'like' || b.kind === 'friend' ? b.createdAtMs : 0
       if (ta !== tb) return tb - ta
       return 0
     })

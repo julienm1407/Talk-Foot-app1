@@ -17,6 +17,7 @@ import { isWorldCupCompetitionId } from '../../utils/seasonMode'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { SalonAudienceFooter } from './SalonAudienceFooter'
 import { MatchResultScore } from './MatchResultScore'
+import { MatchClubHit } from './MatchClubHit'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
@@ -188,17 +189,22 @@ export function HubStripLive({
               visualSize === 'compact' ? 'pt-4' : visualSize === 'hero' ? 'pt-4' : 'pt-6',
             )}
           >
-            <div className="flex min-w-0 items-center gap-2">
-              <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={crestLive} />
+            <MatchClubHit match={match} team={match.home} className="flex min-w-0 items-center gap-2">
+              <MatchTeamCrest
+                team={match.home}
+                competitionId={match.competition.id}
+                size={crestLive}
+                clickable={false}
+              />
               <span
                 className={cn(
-                  'truncate font-black text-white drop-shadow-md',
+                  'truncate font-black text-white drop-shadow-md underline-offset-2 hover:underline',
                   visualSize === 'hero' ? 'text-sm' : 'text-xs',
                 )}
               >
                 {match.home.shortName}
               </span>
-            </div>
+            </MatchClubHit>
             <div className="flex shrink-0 flex-col items-center px-1">
               <StripScore
                 home={sc.home}
@@ -221,17 +227,26 @@ export function HubStripLive({
                 {clockLabel || `${minute}′`}
               </span>
             </div>
-            <div className="flex min-w-0 items-center justify-end gap-2 text-right">
+            <MatchClubHit
+              match={match}
+              team={match.away}
+              className="flex min-w-0 items-center justify-end gap-2 text-right"
+            >
               <span
                 className={cn(
-                  'truncate font-black text-white drop-shadow-md',
+                  'truncate font-black text-white drop-shadow-md underline-offset-2 hover:underline',
                   visualSize === 'hero' ? 'text-sm' : 'text-xs',
                 )}
               >
                 {match.away.shortName}
               </span>
-              <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={crestLive} />
-            </div>
+              <MatchTeamCrest
+                team={match.away}
+                competitionId={match.competition.id}
+                size={crestLive}
+                clickable={false}
+              />
+            </MatchClubHit>
           </div>
           {showProgress ? (
             <div
@@ -672,18 +687,40 @@ export function HubStripUpcoming({
             isSidebar ? 'bottom-1 left-2 right-2 gap-1' : 'bottom-2 left-3 right-3 gap-2',
           )}
         >
-          <div className={cn('flex min-w-0 items-center', isSidebar ? 'gap-1' : 'gap-2')}>
-            <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={crestUp} />
-            <span className={nameCls(isSidebar)}>{match.home.shortName}</span>
-          </div>
+          <MatchClubHit
+            match={match}
+            team={match.home}
+            className={cn('flex min-w-0 items-center', isSidebar ? 'gap-1' : 'gap-2')}
+          >
+            <MatchTeamCrest
+              team={match.home}
+              competitionId={match.competition.id}
+              size={crestUp}
+              clickable={false}
+            />
+            <span className={cn(nameCls(isSidebar), 'underline-offset-2 hover:underline')}>
+              {match.home.shortName}
+            </span>
+          </MatchClubHit>
           <div className="flex shrink-0 flex-col items-center px-0.5">
             <p className={scoreTimeCls}>{formatKickoff(match.kickoffAt)}</p>
             <span className={dayChipCls}>{formatHubDayLabel(match.kickoffAt)}</span>
           </div>
-          <div className={cn('flex min-w-0 items-center justify-end text-right', isSidebar ? 'gap-1' : 'gap-2')}>
-            <span className={nameCls(isSidebar)}>{match.away.shortName}</span>
-            <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={crestUp} />
-          </div>
+          <MatchClubHit
+            match={match}
+            team={match.away}
+            className={cn('flex min-w-0 items-center justify-end text-right', isSidebar ? 'gap-1' : 'gap-2')}
+          >
+            <span className={cn(nameCls(isSidebar), 'underline-offset-2 hover:underline')}>
+              {match.away.shortName}
+            </span>
+            <MatchTeamCrest
+              team={match.away}
+              competitionId={match.competition.id}
+              size={crestUp}
+              clickable={false}
+            />
+          </MatchClubHit>
         </div>
       </div>
       <div
@@ -739,10 +776,17 @@ export function HubStripFinished({ match, className }: { match: Match; className
           Terminé
         </span>
         <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={crestMd} />
-            <span className="truncate text-xs font-black text-white drop-shadow-md">{match.home.shortName}</span>
-          </div>
+          <MatchClubHit match={match} team={match.home} className="flex min-w-0 items-center gap-2">
+            <MatchTeamCrest
+              team={match.home}
+              competitionId={match.competition.id}
+              size={crestMd}
+              clickable={false}
+            />
+            <span className="truncate text-xs font-black text-white drop-shadow-md underline-offset-2 hover:underline">
+              {match.home.shortName}
+            </span>
+          </MatchClubHit>
           <div className="flex shrink-0 flex-col items-center px-1">
             <MatchResultScore
               home={sc.home}
@@ -754,10 +798,21 @@ export function HubStripFinished({ match, className }: { match: Match; className
             />
             <span className="mt-0.5 text-[10px] font-bold text-sky-100/80">Score final</span>
           </div>
-          <div className="flex min-w-0 items-center justify-end gap-2 text-right">
-            <span className="truncate text-xs font-black text-white drop-shadow-md">{match.away.shortName}</span>
-            <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={crestMd} />
-          </div>
+          <MatchClubHit
+            match={match}
+            team={match.away}
+            className="flex min-w-0 items-center justify-end gap-2 text-right"
+          >
+            <span className="truncate text-xs font-black text-white drop-shadow-md underline-offset-2 hover:underline">
+              {match.away.shortName}
+            </span>
+            <MatchTeamCrest
+              team={match.away}
+              competitionId={match.competition.id}
+              size={crestMd}
+              clickable={false}
+            />
+          </MatchClubHit>
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 rounded-b-2xl border-t border-white/10 bg-[#071422]/90 px-3 py-2.5">

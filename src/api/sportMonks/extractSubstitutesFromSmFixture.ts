@@ -21,8 +21,11 @@ export type LineupSubstitutesBySide = {
 
 const SUBSTITUTION_TYPE_ID = 18
 
-const SUBSTITUTION_COMMENT_RE =
-  /^Substitution,?\s+(.+?):\s*(.+?)\s+(?:is replaced by|replaced by)\s+(.+?)\.?$/i
+const SUBSTITUTION_COMMENT_RES = [
+  /^Substitution,?\s+(.+?):\s*(.+?)\s+(?:is replaced by|replaced by)\s+(.+?)\.?$/i,
+  /^Remplacement,?\s+(.+?)\s*:\s*(.+?)\s+(?:est remplac[ée] par|remplac[ée] par)\s+(.+?)\.?$/i,
+  /^Changement(?:\s+pour)?\s+(.+?)\s*:\s*(.+?)\s+remplac[ée]\s+par\s+(.+?)\.?$/i,
+]
 
 function lineupPlayerId(row: SmLineupRow): number | undefined {
   if (typeof row.player_id === 'number') return row.player_id
@@ -94,12 +97,15 @@ function playerNameFromEvent(ev: SmFixtureEventRow, kind: 'in' | 'out'): string 
 function parseSubstitutionFromFreeText(text: string): { team?: string; outName: string; inName: string } | null {
   const cleaned = String(text ?? '').trim()
   if (!cleaned) return null
-  const m = cleaned.match(SUBSTITUTION_COMMENT_RE)
-  if (!m) return null
-  const outName = m[2]?.trim() ?? ''
-  const inName = m[3]?.trim() ?? ''
-  if (!inName) return null
-  return { team: m[1]?.trim(), outName, inName }
+  for (const re of SUBSTITUTION_COMMENT_RES) {
+    const m = cleaned.match(re)
+    if (!m) continue
+    const outName = m[2]?.trim() ?? ''
+    const inName = m[3]?.trim() ?? ''
+    if (!inName) continue
+    return { team: m[1]?.trim(), outName, inName }
+  }
+  return null
 }
 
 /** Nom court style Flashscore : « Pulisic C. » */
@@ -171,13 +177,20 @@ function sideFromLineupPlayerId(
 export function isSubstitutionEvent(ev: SmFixtureEventRow): boolean {
   const typeId = eventTypeId(ev)
   if (typeId === SUBSTITUTION_TYPE_ID) return true
-  if (typeId != null) return false
 
   const dev = eventDev(ev)
   if (dev.includes('YELLOW') || dev.includes('REDCARD') || dev.includes('RED_CARD')) return false
-  if (dev.includes('GOAL') || dev.includes('PENALTY') || dev.includes('VAR')) return false
-  if (dev.includes('SUBSTITUTION')) return true
-  if (dev === 'SUB') return true
+  if (dev.includes('GOAL') || dev.includes('PENALTY') || (dev.includes('VAR') && !dev.includes('SUB'))) {
+    return false
+  }
+  if (dev.includes('SUBSTITUTION') || dev.includes('SUBSTITUT')) return true
+  if (dev === 'SUB' || dev.startsWith('SUB ') || dev.endsWith(' SUB')) return true
+
+  const infoText = `${ev.info ?? ''} ${ev.addition ?? ''}`.trim()
+  if (parseSubstitutionFromFreeText(infoText)) return true
+
+  // type_id inconnu : ne pas bloquer si le libellé ressemble clairement à un changement.
+  if (typeId != null && !dev) return false
   return false
 }
 
@@ -225,8 +238,10 @@ function resolveSubstitutionSide(
   homeId: number | undefined,
   awayId: number | undefined,
 ): 'home' | 'away' | undefined {
+  const teamIdRaw = (ev as { team_id?: number | null }).team_id
   return (
     sideFromParticipant(ev.participant_id, homeId, awayId) ??
+    sideFromParticipant(typeof teamIdRaw === 'number' ? teamIdRaw : undefined, homeId, awayId) ??
     sideFromLineupPlayerId(inPid, lineupByPlayerId, homeId, awayId) ??
     sideFromLineupPlayerId(outPid, lineupByPlayerId, homeId, awayId)
   )
@@ -284,7 +299,13 @@ function extractSubstitutesFromEvents(
     const { inName, outName, inPid, outPid } = resolveSubstitutionPlayers(ev, lineupByPlayerId)
     if (!inName) continue
 
-    const side = resolveSubstitutionSide(ev, inPid, outPid, lineupByPlayerId, homeId, awayId)
+    const side =
+      resolveSubstitutionSide(ev, inPid, outPid, lineupByPlayerId, homeId, awayId) ??
+      (homeId != null && awayId == null
+        ? 'home'
+        : awayId != null && homeId == null
+          ? 'away'
+          : undefined)
     if (!side) continue
 
     pushSubstitute(

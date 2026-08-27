@@ -2469,11 +2469,26 @@ export function ChannelPage() {
     if (!liveBundleFixture && !lineupSubsFallbackFixture) return null
     if (!liveBundleFixture) return lineupSubsFallbackFixture
     if (!lineupSubsFallbackFixture) return liveBundleFixture
+
+    const mergeById = <T extends { id?: number }>(a?: T[] | null, b?: T[] | null): T[] => {
+      const map = new Map<string, T>()
+      for (const row of [...(a ?? []), ...(b ?? [])]) {
+        const key =
+          typeof row.id === 'number'
+            ? `id:${row.id}`
+            : `row:${JSON.stringify(row).slice(0, 120)}`
+        if (!map.has(key)) map.set(key, row)
+      }
+      return [...map.values()]
+    }
+
     return {
       ...liveBundleFixture,
-      events: liveBundleFixture.events?.length ? liveBundleFixture.events : lineupSubsFallbackFixture.events,
-      comments: liveBundleFixture.comments?.length ? liveBundleFixture.comments : lineupSubsFallbackFixture.comments,
-      lineups: liveBundleFixture.lineups?.length ? liveBundleFixture.lineups : lineupSubsFallbackFixture.lineups,
+      events: mergeById(liveBundleFixture.events, lineupSubsFallbackFixture.events),
+      comments: mergeById(liveBundleFixture.comments, lineupSubsFallbackFixture.comments),
+      lineups: liveBundleFixture.lineups?.length
+        ? liveBundleFixture.lineups
+        : lineupSubsFallbackFixture.lineups,
       participants: liveBundleFixture.participants?.length
         ? liveBundleFixture.participants
         : lineupSubsFallbackFixture.participants,
@@ -2594,16 +2609,23 @@ export function ChannelPage() {
     lineupOverlayRoster,
     status,
   ])
-  const displayedLineupSubstitutes = useMemo((): LineupSubstituteWithOverlay[] => {
-    const pool = lineupSide === 'home' ? lineupSubstitutes.home : lineupSubstitutes.away
-    return pool.map((p) => ({
-      ...p,
-      overlay: resolveLineupPlayerOverlay(lineupOverlays, {
-        playerId: p.playerId,
-        name: p.label,
-      }),
-    }))
-  }, [lineupSide, lineupSubstitutes, lineupOverlays])
+  const lineupSubstitutesWithOverlays = useMemo((): {
+    home: LineupSubstituteWithOverlay[]
+    away: LineupSubstituteWithOverlay[]
+  } => {
+    const mapSide = (pool: typeof lineupSubstitutes.home) =>
+      pool.map((p) => ({
+        ...p,
+        overlay: resolveLineupPlayerOverlay(lineupOverlays, {
+          playerId: p.playerId,
+          name: p.label,
+        }),
+      }))
+    return {
+      home: mapSide(lineupSubstitutes.home),
+      away: mapSide(lineupSubstitutes.away),
+    }
+  }, [lineupSubstitutes, lineupOverlays])
   const displayedLineupLayout = useMemo(() => {
     const formation = lineupSide === 'home' ? formations.home : formations.away
     const layout = computeLineupPitchLayout(displayedLineupPlayers, formation)
@@ -4239,8 +4261,9 @@ export function ChannelPage() {
               compact
             />
             <MatchLineupSubstitutes
-              home={lineupSide === 'home' ? displayedLineupSubstitutes : []}
-              away={lineupSide === 'away' ? displayedLineupSubstitutes : []}
+              home={lineupSubstitutesWithOverlays.home}
+              away={lineupSubstitutesWithOverlays.away}
+              showBothTeams
               showWhenEmpty={status === 'live' || status === 'finished'}
               light={L}
             />
@@ -4559,8 +4582,9 @@ export function ChannelPage() {
                   className="w-full min-w-0"
                 />
                 <MatchLineupSubstitutes
-                  home={lineupSide === 'home' ? displayedLineupSubstitutes : []}
-                  away={lineupSide === 'away' ? displayedLineupSubstitutes : []}
+                  home={lineupSubstitutesWithOverlays.home}
+                  away={lineupSubstitutesWithOverlays.away}
+                  showBothTeams
                   showWhenEmpty={status === 'live' || status === 'finished'}
                   light={L}
                 />

@@ -1,5 +1,5 @@
 import type { Team } from '../types/match'
-import { clubPathForId } from './clubRoute'
+import { clubPathForId, findTeamById, resolveClubIdFromSlug } from './clubRoute'
 import { resolveNationForTeam } from './resolveMatchNation'
 import { isWorldCupCompetitionId } from './seasonMode'
 
@@ -10,5 +10,7 @@ export function teamHubPathForMatch(team: Team, competitionId?: string | null): 
     const nation = resolveNationForTeam(team, competitionId)
     if (nation) return `/nation/${nation.iso.toLowerCase()}`
   }
-  return clubPathForId(team.id)
+  const catalogId = resolveClubIdFromSlug(team.id) ?? team.id.trim().toLowerCase()
+  if (!findTeamById(catalogId)) return null
+  return clubPathForId(catalogId)
 }

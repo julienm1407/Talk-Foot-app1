@@ -47,7 +47,7 @@ export const SM_INCLUDE_FIXTURE_XG =
   'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;xGFixture.type;lineups.player;lineups.xGlineup.type;lineups.details.type' as const
 
 export const SM_INCLUDE_FIXTURE_EVENTS =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport;lineups.player;lineups.type' as const
 
 /** Même base que `SM_INCLUDE_FIXTURE_EVENTS` + textes commentaire live (include `comments` sur la fixture). */
 export const SM_INCLUDE_FIXTURE_EVENTS_COMMENTS =

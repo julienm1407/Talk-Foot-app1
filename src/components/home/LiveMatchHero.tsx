@@ -340,11 +340,15 @@ export function LiveMatchHero({
                 to={teamHubPathForMatch(match.home, match.competition.id) ?? '#'}
                 className="group/home flex min-w-0 flex-1 flex-col items-center gap-1 text-center outline-none"
                 title={`Hub ${match.home.name}`}
+                onClick={(e) => {
+                  if (!teamHubPathForMatch(match.home, match.competition.id)) e.preventDefault()
+                }}
               >
                 <MatchTeamCrest
                   team={match.home}
                   competitionId={match.competition.id}
                   size={crestSize}
+                  clickable={false}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
                     'group-focus-visible/home:ring-2 group-focus-visible/home:ring-sky-400/70 group-focus-visible/home:ring-offset-2 group-focus-visible/home:ring-offset-[#030b18]/90',
@@ -392,11 +396,15 @@ export function LiveMatchHero({
                 to={teamHubPathForMatch(match.away, match.competition.id) ?? '#'}
                 className="group/away flex min-w-0 flex-1 flex-col items-center gap-1 text-center outline-none"
                 title={`Hub ${match.away.name}`}
+                onClick={(e) => {
+                  if (!teamHubPathForMatch(match.away, match.competition.id)) e.preventDefault()
+                }}
               >
                 <MatchTeamCrest
                   team={match.away}
                   competitionId={match.competition.id}
                   size={crestSize}
+                  clickable={false}
                   className={cn(
                     'shrink-0 drop-shadow-lg transition-transform duration-500',
                     'group-focus-visible/away:ring-2 group-focus-visible/away:ring-sky-400/70 group-focus-visible/away:ring-offset-2 group-focus-visible/away:ring-offset-[#030b18]/90',

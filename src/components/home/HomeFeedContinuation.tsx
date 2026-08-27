@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, type MouseEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import type { NewsItem } from '../../data/news'
 import type { LiveEncartSimulation } from '../../types/liveSimulation'
@@ -14,13 +14,24 @@ import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { hubGlassPanel } from '../../utils/hubSurface'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
+import { teamHubPathForMatch } from '../../utils/teamHubRoute'
 /** Infos club pour sous-titres (évite d’imposer tout le type Team depuis les hooks). */
 export type HomeFeedTeamHint = { name: string; shortName: string } | null
 
 function HomeResultPreviewCard({ match }: { match: Match }) {
   const { appearance } = useAppearance()
+  const navigate = useNavigate()
   const L = appearance === 'light'
   const sc = match.score ?? { home: 0, away: 0 }
+
+  const openClub = (side: 'home' | 'away') => (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const team = side === 'home' ? match.home : match.away
+    const path = teamHubPathForMatch(team, match.competition.id)
+    if (path) navigate(path)
+  }
+
   return (
     <Link
       to={`/channel/${match.id}`}
@@ -46,19 +57,43 @@ function HomeResultPreviewCard({ match }: { match: Match }) {
         </span>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={28} />
-          <span className="truncate text-xs font-black text-tf-app-fg">{match.home.shortName}</span>
-        </div>
+        <button
+          type="button"
+          onClick={openClub('home')}
+          className="flex min-w-0 flex-1 items-center gap-1.5 text-left outline-none"
+          title={`Page ${match.home.name}`}
+        >
+          <MatchTeamCrest
+            team={match.home}
+            competitionId={match.competition.id}
+            size={28}
+            clickable={false}
+          />
+          <span className="truncate text-xs font-black text-tf-app-fg underline-offset-2 hover:underline">
+            {match.home.shortName}
+          </span>
+        </button>
         <p className="shrink-0 font-display text-lg font-black tabular-nums text-tf-app-fg sm:text-xl">
           {sc.home}
           <span className="mx-0.5 font-semibold opacity-40">–</span>
           {sc.away}
         </p>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-          <span className="truncate text-right text-xs font-black text-tf-app-fg">{match.away.shortName}</span>
-          <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={28} />
-        </div>
+        <button
+          type="button"
+          onClick={openClub('away')}
+          className="flex min-w-0 flex-1 items-center justify-end gap-1.5 text-right outline-none"
+          title={`Page ${match.away.name}`}
+        >
+          <span className="truncate text-xs font-black text-tf-app-fg underline-offset-2 hover:underline">
+            {match.away.shortName}
+          </span>
+          <MatchTeamCrest
+            team={match.away}
+            competitionId={match.competition.id}
+            size={28}
+            clickable={false}
+          />
+        </button>
       </div>
       <span
         className={cn(
