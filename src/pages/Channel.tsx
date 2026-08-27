@@ -67,11 +67,6 @@ import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useLiveMatchClockLabel } from '../hooks/useLiveMatchClockLabel'
 import { useLiveMatchForClock } from '../hooks/useLiveMatchForClock'
 import { useEffectiveMatchStatus } from '../hooks/useEffectiveMatchStatus'
-import {
-  DEMO_BARCA_PSG_CHAT_SEEDS,
-  DEMO_BARCA_PSG_FX_CUES,
-  isDemoBarcaPsgShowcaseMatch,
-} from '../data/demoBarcaPsgShowcase'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { useAutoScroll } from '../hooks/useAutoScroll'
 import { formatGoalEventMinute } from '../utils/matchEventMinute'
@@ -1107,11 +1102,7 @@ export function ChannelPage() {
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
   const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'actions' | 'classement'>('actions')
-  const { starters, bench, formations } = useSportMonksFixtureLineups(
-    match?.sportMonksFixtureId,
-    status,
-    match?.id,
-  )
+  const { starters, bench, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId, status)
   const betting = useBetting(match?.id ?? '', match ?? null)
   const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
@@ -1706,44 +1697,6 @@ export function ChannelPage() {
     seenReactionIdsRef.current = new Set()
     setStadiumFxTotal(0)
   }, [match?.id])
-
-  /** Showcase temporaire Barça–PSG : chat + effets payants auto. */
-  useEffect(() => {
-    if (!isDemoBarcaPsgShowcaseMatch(match?.id)) return
-    const timers: number[] = []
-    for (const seed of DEMO_BARCA_PSG_CHAT_SEEDS) {
-      const { delayMs, ...msg } = seed
-      timers.push(
-        window.setTimeout(() => {
-          setChatMessages((prev) => {
-            if (prev.some((m) => m.id === msg.id)) return prev
-            return [...prev, msg].sort(
-              (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
-            )
-          })
-        }, delayMs),
-      )
-    }
-    for (const cue of DEMO_BARCA_PSG_FX_CUES) {
-      timers.push(
-        window.setTimeout(() => {
-          pushPaidFxLayer(
-            {
-              id: cue.id,
-              label: cue.label,
-              tifoSide: cue.tifoSide,
-              flareColor: cue.flareColor,
-            },
-            Date.now() + Math.random(),
-          )
-        }, cue.delayMs),
-      )
-    }
-    return () => {
-      for (const t of timers) window.clearTimeout(t)
-    }
-  }, [match?.id, pushPaidFxLayer])
-
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
     if (chatClosedAfterMatch) return

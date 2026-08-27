@@ -10,10 +10,6 @@ import {
 import type { FormResult } from '../types/standings'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
-import {
-  DEMO_BARCA_PSG_LINEUPS,
-  isDemoBarcaPsgShowcaseMatch,
-} from '../data/demoBarcaPsgShowcase'
 
 function fixtureHasLineupData(fixture: SmFixture | null): boolean {
   const bundle = extractMatchLineupBundleFromFixture(fixture)
@@ -31,39 +27,23 @@ function fixtureHasLineupData(fixture: SmFixture | null): boolean {
 export function useSportMonksFixtureLineups(
   sportMonksFixtureId: number | undefined,
   matchStatus: 'upcoming' | 'live' | 'finished' = 'upcoming',
-  talkFootMatchId?: string,
 ) {
-  const isShowcase = isDemoBarcaPsgShowcaseMatch(talkFootMatchId)
   const { liveBundleFixture, liveBundleSettled } = useTalkFootLiveBundle(
-    isShowcase ? undefined : sportMonksFixtureId,
+    sportMonksFixtureId,
     matchStatus,
   )
-  const [bundle, setBundle] = useState<SmMatchLineupBundle | null>(
-    isShowcase ? DEMO_BARCA_PSG_LINEUPS : null,
-  )
+  const [bundle, setBundle] = useState<SmMatchLineupBundle | null>(null)
   const [recentForm, setRecentForm] = useState<{ home: FormResult[]; away: FormResult[] } | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (isShowcase) {
-      setBundle(DEMO_BARCA_PSG_LINEUPS)
-      setRecentForm(null)
-      setLoading(false)
-      return
-    }
     if (!liveBundleFixture || !fixtureHasLineupData(liveBundleFixture)) return
     setBundle(extractMatchLineupBundleFromFixture(liveBundleFixture))
     setRecentForm(extractSmRecentFormFromFixture(liveBundleFixture))
     setLoading(false)
-  }, [liveBundleFixture, isShowcase])
+  }, [liveBundleFixture])
 
   useEffect(() => {
-    if (isShowcase) {
-      setBundle(DEMO_BARCA_PSG_LINEUPS)
-      setRecentForm(null)
-      setLoading(false)
-      return
-    }
     if (!sportMonksFixtureId) {
       setBundle(null)
       setRecentForm(null)
@@ -105,7 +85,7 @@ export function useSportMonksFixtureLineups(
     return () => {
       cancelled = true
     }
-  }, [sportMonksFixtureId, liveBundleFixture, liveBundleSettled, isShowcase])
+  }, [sportMonksFixtureId, liveBundleFixture, liveBundleSettled])
 
   const starters: SmStartingXIs | null = bundle?.starters ?? null
   const bench: SmStartingXIs | null = bundle?.bench ?? null

@@ -10,11 +10,6 @@ import type { Highlight } from '../data/highlights'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
 import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
-import {
-  demoBarcaPsgLiveStats,
-  demoBarcaPsgTimeline,
-  isDemoBarcaPsgShowcaseMatch,
-} from '../data/demoBarcaPsgShowcase'
 
 /** Live : cadence renforcée pour éviter les buts invisibles sans F5. */
 const LIVE_POLL_MS = 5_000
@@ -43,34 +38,21 @@ export function useSportMonksFixtureLiveStats(
   /** Identifiant tribune (`Match.id`) pour la timeline « Moments forts ». */
   channelMatchId?: string,
 ) {
-  const isShowcase = isDemoBarcaPsgShowcaseMatch(channelMatchId)
   const { liveBundleFixture, liveBundleSettled } = useTalkFootLiveBundle(
-    isShowcase ? undefined : sportMonksFixtureId,
+    sportMonksFixtureId,
     matchStatus,
   )
-  const [rows, setRows] = useState<LiveFixtureStatRow[]>(() =>
-    isShowcase ? demoBarcaPsgLiveStats() : [],
-  )
-  const [timeline, setTimeline] = useState<Highlight[]>(() =>
-    isShowcase && channelMatchId ? demoBarcaPsgTimeline(channelMatchId) : [],
-  )
+  const [rows, setRows] = useState<LiveFixtureStatRow[]>([])
+  const [timeline, setTimeline] = useState<Highlight[]>([])
   const [loading, setLoading] = useState(false)
   const cancelledRef = useRef(false)
   const runRef = useRef<() => void>(() => {})
 
   const bundleCovers = bundleCoversLiveStats(liveBundleFixture)
-  const pollLive = !isShowcase && matchStatus === 'live' && liveBundleSettled && !bundleCovers
-
-  useEffect(() => {
-    if (!isShowcase || !channelMatchId) return
-    setRows(demoBarcaPsgLiveStats())
-    setTimeline(demoBarcaPsgTimeline(channelMatchId))
-    setLoading(false)
-  }, [isShowcase, channelMatchId])
+  const pollLive = matchStatus === 'live' && liveBundleSettled && !bundleCovers
 
   useEffect(() => {
     cancelledRef.current = false
-    if (isShowcase) return
     if (!sportMonksFixtureId || matchStatus === 'upcoming') {
       setRows([])
       setTimeline([])
@@ -125,16 +107,15 @@ export function useSportMonksFixtureLiveStats(
     return () => {
       cancelledRef.current = true
     }
-  }, [sportMonksFixtureId, matchStatus, channelMatchId, liveBundleFixture, liveBundleSettled, isShowcase])
+  }, [sportMonksFixtureId, matchStatus, channelMatchId, liveBundleFixture, liveBundleSettled])
 
   useVisibilityAwareInterval(
     () => runRef.current(),
     LIVE_POLL_MS,
-    Boolean(!isShowcase && sportMonksFixtureId && pollLive),
+    Boolean(sportMonksFixtureId && pollLive),
   )
 
   useEffect(() => {
-    if (isShowcase) return
     if (!liveBundleFixture) return
     const nextRows = extractLiveFixtureStatistics(liveBundleFixture)
     const nextTimeline = channelMatchId
@@ -147,11 +128,7 @@ export function useSportMonksFixtureLiveStats(
       highlightIdsSignature(prev) === highlightIdsSignature(nextTimeline) ? prev : nextTimeline,
     )
     setLoading(false)
-  }, [liveBundleFixture, channelMatchId, isShowcase])
+  }, [liveBundleFixture, channelMatchId])
 
-  return {
-    liveStatRows: rows,
-    liveStatsLoading: loading,
-    smTimelineHighlights: timeline,
-  }
+  return { liveStatRows: rows, liveStatsLoading: loading, smTimelineHighlights: timeline }
 }

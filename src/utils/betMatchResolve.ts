@@ -6,10 +6,6 @@ import {
 import type { Bet, BetMatchLabel } from '../types/bet'
 import type { Match } from '../types/match'
 import { getSportMonksToken } from './apiTokens'
-import {
-  buildDemoBarcaPsgLiveMatch,
-  isDemoBarcaPsgShowcaseMatch,
-} from '../data/demoBarcaPsgShowcase'
 
 const BET_MATCH_CACHE_KEY = 'talkfoot.bet-match-cache.v1'
 
@@ -113,12 +109,6 @@ export function resolveBetMatch(bet: Bet, live: Match | null | undefined): Match
 }
 
 export async function fetchMatchByTalkFootId(matchId: string): Promise<Match | null> {
-  if (isDemoBarcaPsgShowcaseMatch(matchId)) {
-    const demo = buildDemoBarcaPsgLiveMatch()
-    writeBetMatchCacheEntry(demo, matchId)
-    return demo
-  }
-
   const cached = readCachedMatchForBetId(matchId)
   if (cached) return cached
 
