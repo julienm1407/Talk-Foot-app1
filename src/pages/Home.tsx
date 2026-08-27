@@ -29,6 +29,7 @@ import { CdmNationsRail } from '../components/cdm/CdmNationsRail'
 import { FavoriteNationsHomeSection } from '../components/cdm/FavoriteNationsHomeSection'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
+import { mergeDemoBarcaPsgShowcase } from '../data/demoBarcaPsgShowcase'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -97,9 +98,9 @@ export function HomePage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [heroSlide, setHeroSlide] = useState(0)
 
-  /** Hub : tous les matchs en direct renvoyés par SportMonks (ordre du carrousel). */
+  /** Hub : tous les matchs en direct (+ showcase Barça–PSG en tête si activé). */
   const hubLiveMatches = useMemo(
-    () => displayMatches.filter((m) => m.status === 'live'),
+    () => mergeDemoBarcaPsgShowcase(displayMatches.filter((m) => m.status === 'live')),
     [displayMatches],
   )
 

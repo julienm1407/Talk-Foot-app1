@@ -15,6 +15,7 @@ import type { LiveEncartBurst, LiveEncartRim, LiveEncartToast } from '../types/l
 import { createMatchRng, initialScoreFromMatch } from '../types/liveSimulation'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { useEffectiveMatchStatus } from './useEffectiveMatchStatus'
+import { isDemoBarcaPsgShowcaseMatch } from '../data/demoBarcaPsgShowcase'
 
 /** Avance du chrono démo (sans SportMonks) : 1 minute affichée ≈ 1 minute réelle. */
 const MINUTE_MS = 60_000
@@ -300,6 +301,49 @@ export function useLiveEncartSimulation(match: Match | null) {
   useEffect(() => {
     if (!active) return
     if (match?.sportMonksFixtureId && getSportMonksToken()) return
+    if (isDemoBarcaPsgShowcaseMatch(match?.id)) {
+      let cancelled = false
+      const timers: number[] = []
+      const pulse = (delay: number, run: () => void) => {
+        timers.push(
+          window.setTimeout(() => {
+            if (!cancelled) run()
+          }, delay),
+        )
+      }
+      pulse(2500, () => {
+        flashRim('yellow', 650)
+        showToast({ kind: 'yellow', text: 'Carton jaune — Vitinha (PSG)', side: 'away' })
+      })
+      pulse(7000, () => {
+        flashRim('goal', 400)
+        showToast({ kind: 'chance', text: 'Grosse occasion Barça — Yamal trouve Ferran !' })
+      })
+      pulse(12_000, () => {
+        flashRim('var', 1200)
+        setBurst({ kind: 'var', line: 'VAR — hors-jeu parisien vérifié' })
+        window.setTimeout(() => {
+          if (cancelled) return
+          setBurst(null)
+          showToast({ kind: 'var_line', text: 'Décision : situation validée' })
+        }, 2200)
+      })
+      pulse(18_000, () => {
+        flashRim('yellow', 650)
+        showToast({ kind: 'yellow', text: 'Carton jaune — Frenkie de Jong (FCB)', side: 'home' })
+      })
+      pulse(24_000, () => {
+        showToast({
+          kind: 'chance',
+          text: 'Barcola accélère — Szczesny détourne en corner !',
+        })
+        flashRim('goal', 400)
+      })
+      return () => {
+        cancelled = true
+        for (const t of timers) window.clearTimeout(t)
+      }
+    }
 
     let cancelled = false
     let timeoutId: ReturnType<typeof setTimeout> | null = null

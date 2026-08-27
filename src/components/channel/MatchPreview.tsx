@@ -95,7 +95,7 @@ export function MatchPreview({
   const awayForm = formFor(match.away.id ?? match.away.shortName)
   const smId = match.sportMonksFixtureId
   const { starters: smStarters, formations, lineupSource, recentForm: lineupRecentForm, lineupsLoading } =
-    useSportMonksFixtureLineups(smId, match.status)
+    useSportMonksFixtureLineups(smId, match.status, match.id)
 
   const useSmApi = Boolean(smId)
   const trendsWaiting = Boolean(trendsHookLoading)

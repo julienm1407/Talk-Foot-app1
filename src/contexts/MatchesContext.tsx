@@ -37,6 +37,7 @@ import {
   readMatchesSessionCache,
   writeMatchesSessionCache,
 } from '../utils/matchesSessionCache'
+import { mergeDemoBarcaPsgShowcase } from '../data/demoBarcaPsgShowcase'
 
 /** Appels `leagues/date` par vague pour compléter le calendrier (surtout matchs à venir). */
 const LEAGUES_DATE_BATCH = 10
@@ -103,7 +104,7 @@ const MatchesContext = createContext<MatchesContextValue | null>(null)
 export function MatchesProvider({ children }: { children: React.ReactNode }) {
   const season = useOptionalSeasonMode()
   const cdmSeasonActive = season?.isCdm2026 === true
-  const cachedOnMount = useMemo(() => readMatchesSessionCache(), [])
+  const cachedOnMount = useMemo(() => mergeDemoBarcaPsgShowcase(readMatchesSessionCache()), [])
   const [matches, setMatches] = useState<Match[]>(() => cachedOnMount)
   const [loading, setLoading] = useState(() => cachedOnMount.length === 0)
   const [error, setError] = useState<string | null>(null)
@@ -117,6 +118,10 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     const id = window.setInterval(() => setTick((t) => t + 1), 60_000)
     return () => window.clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    setMatches((prev) => mergeDemoBarcaPsgShowcase(prev))
+  }, [tick])
 
   const fetchMatches = useCallback(async (opts?: FetchMatchesOptions) => {
     const silent = Boolean(opts?.silent)
@@ -179,9 +184,10 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
          * compléter avec `leagues/date` en arrière-plan (~17 jours, plusieurs appels).
          */
         const applyMatchList = (baseList: Match[]) => {
-          if (baseList.length > 0) {
-            setMatches(baseList)
-            writeMatchesSessionCache(baseList)
+          const list = mergeDemoBarcaPsgShowcase(baseList)
+          if (list.length > 0) {
+            setMatches(list)
+            writeMatchesSessionCache(list)
             setError(null)
           } else if (silent) {
             /* poll silencieux : ne pas vider une liste déjà correcte */
@@ -195,7 +201,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
                       : 'SportMonks a renvoyé une liste vide (quota, filtre ou coupure). La dernière version du calendrier reste affichée.',
                   ),
                 )
-                return prev
+                return mergeDemoBarcaPsgShowcase(prev)
               }
               queueMicrotask(() =>
                 setError(
@@ -206,7 +212,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
                       : 'SportMonks n’a renvoyé aucun match pour cette période (~7 jours passés + ~10 jours à venir, fuseau Paris). Vérifie ton plan SportMonks (ligues / pays inclus) ou un créneau sans matchs du Big 5.',
                 ),
               )
-              return []
+              return mergeDemoBarcaPsgShowcase([])
             })
           }
         }
@@ -269,7 +275,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    setMatches([])
+    setMatches(mergeDemoBarcaPsgShowcase([]))
     setError(NO_SM_TOKEN_MESSAGE_FR)
     setLoading(false)
   }, [cdmSeasonActive])
