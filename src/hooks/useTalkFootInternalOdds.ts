@@ -9,6 +9,7 @@ import {
   synthetic1x2FromSeed,
   prematchOverUnder25From1x2,
   impliedProbsFromDecimalOdds,
+  DEFAULT_BOOK_MARGIN,
 } from '../odds/internalOddsEngine'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../odds/types'
 import type { Match } from '../types/match'
@@ -22,10 +23,15 @@ function statValue(rows: LiveFixtureStatRow[], key: string, side: 'home' | 'away
 }
 
 export type TalkFootOddsMeta = {
-  source: 'talkfoot' | 'fallback'
+  source: 'talkfoot' | 'bookmaker' | 'fallback'
   marginPct: number
   homePower?: number
   awayPower?: number
+}
+
+export type ExternalPrematchOdds = {
+  odds1x2: SmBookOdds1x2
+  oddsOverUnder25?: SmBookOddsOverUnder25 | null
 }
 
 export function useTalkFootInternalOdds(opts: {
@@ -41,6 +47,10 @@ export function useTalkFootInternalOdds(opts: {
   liveMinute?: number | null
   homeNationIso?: string | null
   awayNationIso?: string | null
+  /** Cotes bookmaker SportMonks — prioritaires sur le modèle interne. */
+  externalPrematch?: ExternalPrematchOdds | null
+  /** En cours de chargement des cotes bookmaker (évite flash fallback). */
+  bookOddsLoading?: boolean
 }) {
   const {
     match,
@@ -55,10 +65,24 @@ export function useTalkFootInternalOdds(opts: {
     liveMinute,
     homeNationIso,
     awayNationIso,
+    externalPrematch,
+    bookOddsLoading = false,
   } = opts
 
   const prematch = useMemo(() => {
     if (!match) return null
+
+    if (externalPrematch?.odds1x2) {
+      const probs = impliedProbsFromDecimalOdds(externalPrematch.odds1x2)
+      return {
+        odds1x2: externalPrematch.odds1x2,
+        oddsOverUnder25:
+          externalPrematch.oddsOverUnder25 ?? prematchOverUnder25From1x2(probs),
+        probs1x2: probs,
+        source: 'bookmaker' as const,
+        marginPct: DEFAULT_BOOK_MARGIN,
+      }
+    }
 
     if (homeNationIso && awayNationIso) {
       const ctx = buildMatchOddsContextFromNations(homeNationIso, awayNationIso, {
@@ -70,8 +94,8 @@ export function useTalkFootInternalOdds(opts: {
       return computePrematch1x2FromContext(ctx)
     }
 
-    const homeRow = findStandingForTeam(standingsRows, match.home.id)
-    const awayRow = findStandingForTeam(standingsRows, match.away.id)
+    const homeRow = findStandingForTeam(standingsRows, match.home.id, match.home.sportMonksTeamId)
+    const awayRow = findStandingForTeam(standingsRows, match.away.id, match.away.sportMonksTeamId)
     const leagueSize = Math.max(standingsRows.length, 18)
 
     if (homeRow || awayRow) {
@@ -104,6 +128,7 @@ export function useTalkFootInternalOdds(opts: {
     awayAbsences,
     homeNationIso,
     awayNationIso,
+    externalPrematch,
   ])
 
   const isLive = match?.status === 'live'
@@ -145,7 +170,11 @@ export function useTalkFootInternalOdds(opts: {
     [prematch],
   )
 
-  const loading = Boolean(match?.sportMonksFixtureId && standingsLoading && standingsRows.length === 0)
+  const loading = Boolean(
+    match?.sportMonksFixtureId &&
+      ((standingsLoading && standingsRows.length === 0) ||
+        (bookOddsLoading && !externalPrematch?.odds1x2)),
+  )
 
   return {
     odds1x2,
@@ -168,9 +197,11 @@ export function teamAttackIndicesFromStandings(
   standingsRows: LeagueStandingRow[],
   homeTeamId: string,
   awayTeamId: string,
+  homeSportMonksTeamId?: number,
+  awaySportMonksTeamId?: number,
 ): { home: number; away: number } {
-  const h = findStandingForTeam(standingsRows, homeTeamId)
-  const a = findStandingForTeam(standingsRows, awayTeamId)
+  const h = findStandingForTeam(standingsRows, homeTeamId, homeSportMonksTeamId)
+  const a = findStandingForTeam(standingsRows, awayTeamId, awaySportMonksTeamId)
   return {
     home: h?.attackIndex ?? 50,
     away: a?.attackIndex ?? 50,

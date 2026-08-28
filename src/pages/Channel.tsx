@@ -9,11 +9,8 @@ import { requestTifoEngagementSync } from '../utils/tifoEngagementEvents'
 import { nationFlagUrl } from '../utils/nationFlagUrl'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSportMonksFixtureLineups } from '../hooks/useSportMonksFixtureLineups'
-import {
-  teamAttackIndicesFromNations,
-  teamAttackIndicesFromStandings,
-  useTalkFootInternalOdds,
-} from '../hooks/useTalkFootInternalOdds'
+import { useTalkFootInternalOdds, teamAttackIndicesFromNations, teamAttackIndicesFromStandings } from '../hooks/useTalkFootInternalOdds'
+import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
 import { useSportMonksTeamLatestFormPair } from '../hooks/useSportMonksTeamLatestFormPair'
 import { extractSidelinedCountsFromSmFixture } from '../api/sportMonks/extractSidelinedFromSm'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
@@ -1315,9 +1312,22 @@ export function ChannelPage() {
     formMatch,
     Boolean(formMatch && status === 'upcoming'),
   )
+  const smBookOdds = useSportMonksRound1x2Odds(
+    match?.sportMonksFixtureId,
+    match?.sportMonksRoundId,
+    status,
+  )
+  const smBookPrematch = useMemo(() => {
+    if (!smBookOdds.odds1x2) return null
+    if (smBookOdds.oddsError?.includes('estimées')) return null
+    return {
+      odds1x2: smBookOdds.odds1x2,
+      oddsOverUnder25: smBookOdds.oddsOverUnder25,
+    }
+  }, [smBookOdds.odds1x2, smBookOdds.oddsOverUnder25, smBookOdds.oddsError])
   const { odds1x2, oddsOverUnder25, oddsLoading, oddsMeta } = useTalkFootInternalOdds({
     match,
-    standingsRows: displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+    standingsRows,
     standingsLoading,
     homeFormOverride: teamPairForm?.home,
     awayFormOverride: teamPairForm?.away,
@@ -1328,6 +1338,8 @@ export function ChannelPage() {
     liveMinute: liveDisplayedMinute,
     homeNationIso: homeNation?.iso ?? null,
     awayNationIso: awayNation?.iso ?? null,
+    externalPrematch: smBookPrematch,
+    bookOddsLoading: smBookOdds.oddsLoading,
   })
   const attackIndices = useMemo(
     () => {
@@ -1336,12 +1348,14 @@ export function ChannelPage() {
         return teamAttackIndicesFromNations(homeNation.iso, awayNation.iso)
       }
       return teamAttackIndicesFromStandings(
-        displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+        standingsRows,
         match.home.id,
         match.away.id,
+        match.home.sportMonksTeamId,
+        match.away.sportMonksTeamId,
       )
     },
-    [match, homeNation?.iso, awayNation?.iso, displayedStandingsRows, standingsRows],
+    [match, homeNation?.iso, awayNation?.iso, standingsRows],
   )
   const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
   const oddsReady = Boolean(

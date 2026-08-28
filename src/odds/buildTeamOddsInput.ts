@@ -1,4 +1,5 @@
 import type { LeagueStandingRow } from '../data/leagueStandings'
+import { SPORTMONKS_TEAM_ID_BY_CLUB_ID } from '../data/sportMonksKnownTeamIds'
 import type { FormResult } from '../types/standings'
 import { nationPowerFactorsFromIso } from '../data/nationFifaStrength'
 import type { MatchOddsContext, StandingSlice, TeamOddsContext, TeamPowerFactors } from './types'
@@ -78,8 +79,30 @@ export function buildTeamOddsContext(
 export function findStandingForTeam(
   rows: LeagueStandingRow[],
   teamId: string,
+  sportMonksTeamId?: number,
 ): LeagueStandingRow | null {
-  return rows.find((r) => r.teamId === teamId) ?? null
+  const direct = rows.find((r) => r.teamId === teamId)
+  if (direct) return direct
+
+  const smId = sportMonksTeamId ?? SPORTMONKS_TEAM_ID_BY_CLUB_ID[teamId]
+  if (smId != null) {
+    const bySm = rows.find((r) => r.teamId === `sm-${smId}`)
+    if (bySm) return bySm
+  }
+
+  if (teamId.startsWith('sm-')) {
+    const pid = Number(teamId.slice(3))
+    if (Number.isFinite(pid)) {
+      for (const [clubId, mappedSmId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
+        if (mappedSmId === pid) {
+          const byClub = rows.find((r) => r.teamId === clubId)
+          if (byClub) return byClub
+        }
+      }
+    }
+  }
+
+  return null
 }
 
 export function buildMatchOddsContext(
