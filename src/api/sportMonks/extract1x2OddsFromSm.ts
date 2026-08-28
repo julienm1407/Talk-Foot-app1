@@ -107,10 +107,11 @@ function resolveSide(
   homePid: number | undefined,
   awayPid: number | undefined,
 ): 'home' | 'draw' | 'away' | null {
-  const fromLabel = oddSideFromLabels(o.label ?? undefined, o.name ?? undefined)
-  if (fromLabel) return fromLabel
+  // IDs participants SM > libellés "1"/"2" (certains books inversent l’ordre des lignes).
   const fromPart = oddSideFromParticipants(o.participants, homePid, awayPid)
   if (fromPart) return fromPart
+  const fromLabel = oddSideFromLabels(o.label ?? undefined, o.name ?? undefined)
+  if (fromLabel) return fromLabel
   return null
 }
 

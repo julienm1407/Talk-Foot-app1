@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { LiveFixtureStatRow } from '../api/sportMonks/extractLiveFixtureStatistics'
-import type { LeagueStandingRow } from '../data/leagueStandings'
+import type { BigFiveLeagueId, LeagueStandingRow } from '../data/leagueStandings'
+import { standingsByLeague } from '../data/leagueStandings'
 import { buildMatchOddsContext, buildMatchOddsContextFromNations, findStandingForTeam } from '../odds/buildTeamOddsInput'
 import {
   adjust1x2OddsForLiveInternal,
@@ -11,10 +12,23 @@ import {
   impliedProbsFromDecimalOdds,
   DEFAULT_BOOK_MARGIN,
 } from '../odds/internalOddsEngine'
+import {
+  align1x2OddsToInternalFavorite,
+  isCredibleExternal1x2Odds,
+} from '../odds/prematchOddsValidation'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../odds/types'
 import type { Match } from '../types/match'
 import type { FormResult } from '../types/standings'
 import { getNationFifaRank, nationStrengthScoreFromRank } from '../data/nationFifaStrength'
+
+const BIG_FIVE_IDS = new Set<string>(['ligue-1', 'epl', 'laliga', 'serie-a', 'bundesliga'])
+
+function effectiveStandingsRows(match: Match | null, standingsRows: LeagueStandingRow[]): LeagueStandingRow[] {
+  if (standingsRows.length > 0) return standingsRows
+  const leagueId = match?.competition.id
+  if (!leagueId || !BIG_FIVE_IDS.has(leagueId)) return standingsRows
+  return standingsByLeague[leagueId as BigFiveLeagueId] ?? []
+}
 
 function statValue(rows: LiveFixtureStatRow[], key: string, side: 'home' | 'away'): number {
   const row = rows.find((r) => r.key === key || r.key.replace(/_/g, '') === key.replace(/_/g, ''))
@@ -66,23 +80,16 @@ export function useTalkFootInternalOdds(opts: {
     homeNationIso,
     awayNationIso,
     externalPrematch,
-    bookOddsLoading = false,
+    bookOddsLoading: _bookOddsLoading = false,
   } = opts
+  void _bookOddsLoading
 
   const prematch = useMemo(() => {
     if (!match) return null
 
-    if (externalPrematch?.odds1x2) {
-      const probs = impliedProbsFromDecimalOdds(externalPrematch.odds1x2)
-      return {
-        odds1x2: externalPrematch.odds1x2,
-        oddsOverUnder25:
-          externalPrematch.oddsOverUnder25 ?? prematchOverUnder25From1x2(probs),
-        probs1x2: probs,
-        source: 'bookmaker' as const,
-        marginPct: DEFAULT_BOOK_MARGIN,
-      }
-    }
+    const rows = effectiveStandingsRows(match, standingsRows)
+
+    let internal: ReturnType<typeof computePrematch1x2FromContext> | null = null
 
     if (homeNationIso && awayNationIso) {
       const ctx = buildMatchOddsContextFromNations(homeNationIso, awayNationIso, {
@@ -91,23 +98,40 @@ export function useTalkFootInternalOdds(opts: {
         homeAbsences,
         awayAbsences,
       })
-      return computePrematch1x2FromContext(ctx)
+      internal = computePrematch1x2FromContext(ctx)
+    } else {
+      const homeRow = findStandingForTeam(rows, match.home.id, match.home.sportMonksTeamId)
+      const awayRow = findStandingForTeam(rows, match.away.id, match.away.sportMonksTeamId)
+      const leagueSize = Math.max(rows.length, 18)
+
+      if (homeRow || awayRow) {
+        const ctx = buildMatchOddsContext(homeRow, awayRow, match.home.id, match.away.id, {
+          leagueSize,
+          homeFormOverride,
+          awayFormOverride,
+          homeAbsences,
+          awayAbsences,
+        })
+        if (ctx) internal = computePrematch1x2FromContext(ctx)
+      }
     }
 
-    const homeRow = findStandingForTeam(standingsRows, match.home.id, match.home.sportMonksTeamId)
-    const awayRow = findStandingForTeam(standingsRows, match.away.id, match.away.sportMonksTeamId)
-    const leagueSize = Math.max(standingsRows.length, 18)
-
-    if (homeRow || awayRow) {
-      const ctx = buildMatchOddsContext(homeRow, awayRow, match.home.id, match.away.id, {
-        leagueSize,
-        homeFormOverride,
-        awayFormOverride,
-        homeAbsences,
-        awayAbsences,
-      })
-      if (ctx) return computePrematch1x2FromContext(ctx)
+    if (externalPrematch?.odds1x2 && internal) {
+      const aligned = align1x2OddsToInternalFavorite(externalPrematch.odds1x2, internal.odds1x2)
+      if (isCredibleExternal1x2Odds(aligned, internal.odds1x2)) {
+        const probs = impliedProbsFromDecimalOdds(aligned)
+        return {
+          odds1x2: aligned,
+          oddsOverUnder25:
+            externalPrematch.oddsOverUnder25 ?? prematchOverUnder25From1x2(probs),
+          probs1x2: probs,
+          source: 'bookmaker' as const,
+          marginPct: DEFAULT_BOOK_MARGIN,
+        }
+      }
     }
+
+    if (internal) return internal
 
     const fid = match.sportMonksFixtureId ?? hashMatchId(match.id)
     const odds1x2 = synthetic1x2FromSeed(fid)
@@ -172,8 +196,9 @@ export function useTalkFootInternalOdds(opts: {
 
   const loading = Boolean(
     match?.sportMonksFixtureId &&
-      ((standingsLoading && standingsRows.length === 0) ||
-        (bookOddsLoading && !externalPrematch?.odds1x2)),
+      standingsLoading &&
+      standingsRows.length === 0 &&
+      effectiveStandingsRows(match, standingsRows).length === 0,
   )
 
   return {

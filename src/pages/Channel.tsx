@@ -1163,14 +1163,7 @@ export function ChannelPage() {
   }, [shootoutDisplay, liveBundleFixture, match?.penaltyScore])
 
   const standingsLeagueId = match && isBigFiveLeagueId(match.competition.id) ? match.competition.id : null
-  const standingsFetchEnabled = Boolean(
-    standingsLeagueId &&
-      (standingsModalOpen ||
-        desktopFeedTab === 'classement' ||
-        (showMobileChannelChrome &&
-          ((mobilePanel === 'match' && mobileMatchTab === 'classement') || mobilePanel === 'paris')) ||
-        !showMobileChannelChrome),
-  )
+  const standingsFetchEnabled = Boolean(standingsLeagueId && match)
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
     useSportMonksLeagueStandings(standingsLeagueId, standingsFetchEnabled)
   const standingsSourceLabel = useMemo(() => {
