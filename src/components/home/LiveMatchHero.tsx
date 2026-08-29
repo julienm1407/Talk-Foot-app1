@@ -221,8 +221,8 @@ export function LiveMatchHero({
             className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center px-3 pt-3"
             aria-live="polite"
           >
-            <div className="tf-live-var-bar max-w-lg rounded-b-2xl border border-violet-400/40 bg-gradient-to-r from-violet-950/95 via-indigo-950/92 to-violet-950/95 px-5 py-2.5 text-center shadow-lg backdrop-blur-md">
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-violet-200/90">Vidéo</span>
+            <div className="tf-live-var-bar max-w-lg rounded-b-2xl border border-violet-300/55 bg-violet-950 px-5 py-2.5 text-center shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-violet-200">Vidéo</span>
               <p className="mt-0.5 text-sm font-bold text-white">{burst.line}</p>
             </div>
           </div>

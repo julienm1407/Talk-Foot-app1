@@ -281,7 +281,7 @@ export function MatchCard({
               className="pointer-events-none absolute inset-x-1 top-8 z-[15] flex justify-center"
               aria-hidden
             >
-              <span className="tf-live-var-bar max-w-[95%] truncate rounded-lg border border-violet-400/40 bg-violet-950/90 px-2 py-1 text-center text-[9px] font-bold leading-tight text-violet-100">
+              <span className="tf-live-var-bar max-w-[95%] truncate rounded-lg border border-violet-300/55 bg-violet-950 px-2 py-1 text-center text-[9px] font-bold leading-tight text-violet-50 shadow-md">
                 {sim.burst.line}
               </span>
             </div>

@@ -211,7 +211,10 @@ export function GroupPage() {
       const cur = g.presentationMedia
       if (!cur || cur.moderationStatus !== 'pending' || cur.url !== pendingUrl) return
       const caption =
-        cur.caption === 'Soumis — modération plateforme (démo).' ? undefined : cur.caption
+        cur.caption === 'Soumis — modération plateforme (démo).' ||
+        cur.caption === 'Soumis — en attente de validation plateforme.'
+          ? undefined
+          : cur.caption
       updateGroup(gid, {
         presentationMedia: { ...cur, moderationStatus: 'approved', caption },
       })

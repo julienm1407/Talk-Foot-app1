@@ -333,7 +333,7 @@ export function EditGroupModal({
           <div className="mt-4 border-t border-slate-200/80 pt-4">
             <div className="text-sm font-black text-slate-900">Écharpe du groupe</div>
             <p className="mt-1 text-[11px] font-semibold text-slate-500">
-              Les membres peuvent l’envoyer dans le live et les tribunes (démo).
+              Les membres peuvent l’envoyer dans le live et les tribunes.
             </p>
             <Input
               value={scarfLabel}
@@ -375,7 +375,7 @@ export function EditGroupModal({
           <div className="mt-4 border-t border-slate-200/80 pt-4">
             <div className="text-sm font-black text-slate-900">Média de présentation</div>
             <p className="mt-1 text-[11px] font-semibold text-slate-500">
-              Photo ou vidéo supporters — soumis à validation plateforme (démo : URL directe).
+              Photo ou vidéo supporters — soumis à validation plateforme.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button
@@ -460,7 +460,7 @@ export function EditGroupModal({
                       type: presType,
                       url: presUrl.trim(),
                       moderationStatus: 'pending',
-                      caption: 'Soumis — modération plateforme (démo).',
+                      caption: 'Soumis — en attente de validation plateforme.',
                     }
                   : undefined
 

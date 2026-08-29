@@ -72,7 +72,7 @@ export function StadeDashboardRichBody({
           </span>
         </div>
         <Sparkline values={series} stroke="#0d9488" />
-        <p className="text-[10px] font-semibold text-tf-grey">Agrégat réactions + bruit tribune (mock)</p>
+        <p className="text-[10px] font-semibold text-tf-grey">Agrégat réactions + bruit tribune</p>
       </div>
       <div className="space-y-2.5">
         {splits.map((row) => (
@@ -179,7 +179,7 @@ export function BetsRichBody({ slices }: { slices: BetVolumeSlice[] }) {
   return (
     <div className="mt-3 space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900/80">
-        Volume des paris (mock) · ce match
+        Volume des paris · ce match
       </p>
       <div className="flex h-3 overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/80">
         {slices.map((s) => (

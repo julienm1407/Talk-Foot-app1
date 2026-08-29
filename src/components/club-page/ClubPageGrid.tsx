@@ -162,7 +162,7 @@ function ClubDebatesBlock({
         <ClubEncartTitle
           kicker="Opinions & sondages"
           kickerClass="text-rose-200/90"
-          subtitle="Les pourcentages agrègent les avis (démo)."
+          subtitle="Les pourcentages agrègent les avis."
         >
           Actu &amp; débats
         </ClubEncartTitle>
@@ -262,7 +262,7 @@ function ClubShopBlock({
         <ClubEncartTitle
           kicker="Cosmétiques & tribune"
           kickerClass="text-amber-200/90"
-          subtitle="Skins, badges, effets — aperçu sur ton avatar (démo)."
+          subtitle="Skins, badges, effets — aperçu sur ton avatar."
         >
           Boutique club (déco)
         </ClubEncartTitle>
@@ -283,7 +283,7 @@ function ClubShopBlock({
             ) : null}
           </div>
           <p className="min-w-0 flex-1 text-xs text-sky-100/80">
-            Choisis un article pour simuler l’équipement visuel en tribune.
+            Choisis un article pour l’équiper visuellement en tribune.
           </p>
         </div>
         <div className="grid shrink-0 grid-cols-2 gap-2 sm:w-44 sm:shrink-0">
@@ -752,13 +752,13 @@ export function ClubPageGrid({
                     Note {selected.rating}
                   </p>
                   <p className="mt-2 text-xs leading-relaxed text-sky-100/90">
-                    Débats, vocaux, réactions (mock) sur le joueur sélectionné.
+                    Débats, vocaux et réactions sur le joueur sélectionné.
                   </p>
                 </div>
               ) : null}
               {selected ? (
                 <div className="rounded-2xl border border-white/10 bg-black/40 p-2.5 text-[10px]">
-                  <p className="font-black uppercase tracking-wide text-sky-200/80">Aperçu social (démo)</p>
+                  <p className="font-black uppercase tracking-wide text-sky-200/80">Aperçu social</p>
                   <dl className="mt-1.5 space-y-1 text-sky-100/90">
                     <div className="flex justify-between gap-2">
                       <dt className="text-sky-200/75">Réactions 7j</dt>
@@ -868,7 +868,7 @@ export function ClubPageGrid({
             <ClubEncartTitle
               kicker="Chiffres clés"
               kickerClass="text-teal-200/90"
-              subtitle="Engagement Talk Foot (agrégat démo, pas en temps réel)."
+              subtitle="Engagement Talk Foot."
             >
               Stats communauté
             </ClubEncartTitle>
@@ -925,7 +925,7 @@ export function ClubPageGrid({
             <ClubEncartTitle
               kicker="Activité 24h"
               kickerClass="text-rose-200/90"
-              subtitle={`Focal ${team.shortName} · rafraîchissement démo.`}
+              subtitle={`Focal ${team.shortName}.`}
             >
               Pulse hub
             </ClubEncartTitle>
@@ -943,9 +943,6 @@ export function ClubPageGrid({
                 </li>
               ))}
             </ul>
-            <p className="mt-2.5 text-[9px] font-bold leading-relaxed text-tf-app-subtle/95">
-              Indicateurs de démonstration, non en temps réel.
-            </p>
           </div>
         </Card>
 

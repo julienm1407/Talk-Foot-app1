@@ -10,7 +10,7 @@ import { cn } from '../../utils/cn'
 export function AdSlot({
   title = 'Publicité',
   brand = 'Talk Foot',
-  body = 'Emplacement publicitaire (mock).',
+  body = 'Emplacement publicitaire.',
   tone = 'blue',
   imageSeed = 'ad',
   compact,

@@ -89,9 +89,7 @@ export function OverlayMenu({
         </nav>
 
         <div className="border-t border-tf-grey-pastel/50 px-4 py-3">
-          <div className="text-xs font-semibold text-tf-grey">
-            Astuce: glisse horizontalement pour changer de page.
-          </div>
+          <div className="text-xs font-semibold text-tf-grey">Talk Foot</div>
         </div>
       </div>
     </div>

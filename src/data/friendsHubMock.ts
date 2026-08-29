@@ -90,7 +90,7 @@ export type MockBroncaSnapshot = {
 }
 
 export const mockBroncaSnapshot: MockBroncaSnapshot = {
-  matchLabel: 'Replay démo (tribune)',
+  matchLabel: 'Live tribune',
   leaderUsername: 'SarahGoal',
   friendsInSalon: 3,
   expiresInLabel: 'jusqu’à la fin du live',

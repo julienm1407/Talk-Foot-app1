@@ -253,9 +253,10 @@ export function CalendarPage() {
         )}
         role="status"
       >
-        Les matchs affichés viennent du <strong>mode démo</strong> (pas de réponse SportMonks avec ta clé). Pour le
-        vrai calendrier : <Link to="/settings/donnees#tf-sportmonks-cle">coller la clé SportMonks</Link> puis redémarrer
-        le serveur si tu utilises <code className="font-mono text-xs">.env</code>.
+        Calendrier hors SportMonks — pour le vrai planning :{' '}
+        <Link to="/settings/donnees#tf-sportmonks-cle">coller la clé SportMonks</Link>
+        {', '}
+        puis redémarrer le serveur si tu utilises <code className="font-mono text-xs">.env</code>.
       </div>
     ) : null
 

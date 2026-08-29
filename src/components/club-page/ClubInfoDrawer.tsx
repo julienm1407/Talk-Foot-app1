@@ -51,24 +51,24 @@ export function ClubInfoDrawer({
           </button>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-sm text-tf-app-fg">
-          <p className="text-xs font-bold uppercase tracking-wider text-sky-300/80">Secondaire (démo)</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-sky-300/80">Infos club</p>
           <p className="text-tf-app-muted">
             Les stats « classiques » (effectif LFP, calendrier officiel) sont volontairement en second plan.
             Ici : rappel coach, stade, prochain rendez-vous.
           </p>
           <ul className="space-y-2 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-tf-app-fg">
             <li>
-              <span className="text-tf-app-muted">Coach (démo) :</span> {data.infoSummary.coach}
+              <span className="text-tf-app-muted">Coach :</span> {data.infoSummary.coach}
             </li>
             <li>
-              <span className="text-tf-app-muted">Stade (générique) :</span> {data.infoSummary.stadium}
+              <span className="text-tf-app-muted">Stade :</span> {data.infoSummary.stadium}
             </li>
             <li>
-              <span className="text-tf-app-muted">Prochain choc (cal.) :</span> {data.infoSummary.nextOpponent}
+              <span className="text-tf-app-muted">Prochain choc :</span> {data.infoSummary.nextOpponent}
             </li>
           </ul>
           <div>
-            <p className="mb-2 text-xs font-bold text-tf-app-muted">Palmarès (illustration)</p>
+            <p className="mb-2 text-xs font-bold text-tf-app-muted">Palmarès</p>
             <ul className="flex flex-wrap gap-2">
               {data.trophies.map((t) => (
                 <li

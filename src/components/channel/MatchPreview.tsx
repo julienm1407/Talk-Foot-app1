@@ -382,9 +382,6 @@ export function MatchPreview({
             })}
           </div>
         ) : null}
-        {!useSmApi ? (
-          <p className="mt-2 text-[10px] font-medium text-slate-400">Démo locale — branche une clé SportMonks pour les vrais effectifs.</p>
-        ) : null}
       </section>
 
       <section className="rounded-xl border border-slate-200/60 bg-white/80 p-4">

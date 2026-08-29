@@ -179,6 +179,37 @@ html {
   touch-action: manipulation;
 }
 
+/* Popups but / carton / VAR : pas de blur (iOS) + texte clair (mode jour force sinon du navy). */
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-white\/75 {
+  color: rgba(248, 250, 252, 0.78) !important;
+}
+
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-sky-50,
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-violet-100,
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-sky-200,
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-white {
+  color: #f8fafc !important;
+}
+
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-violet-100 {
+  color: #ede9fe !important;
+}
+
+.tf-live-fullscreen-fx .tf-live-fullscreen-popup .text-sky-200 {
+  color: #bae6fd !important;
+}
+
+.tf-live-var-bar {
+  background: linear-gradient(90deg, #2e1065 0%, #1e1b4b 50%, #2e1065 100%) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 @media (pointer: coarse) {
   .tf-live-fullscreen-fx .tf-live-fullscreen-popup {
     -webkit-backdrop-filter: none;

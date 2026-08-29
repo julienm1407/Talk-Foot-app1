@@ -47,7 +47,7 @@ const LEAGUES_DATE_FULL_FORWARD = 10
 const LIVE_SILENT_POLL_MS = 12_000
 
 const NO_SM_TOKEN_MESSAGE_FR =
-  'Aucune clé SportMonks : ajoute-la dans Profil → Données (ou VITE_SPORTMONKS_TOKEN dans .env.local), puis recharge la page. Les matchs démo ne sont plus affichés.'
+  'Aucune clé SportMonks : ajoute-la dans Profil → Données (ou VITE_SPORTMONKS_TOKEN dans .env.local), puis recharge la page.'
 
 function reasonFromSettled(r: PromiseRejectedResult): string {
   const x = r.reason

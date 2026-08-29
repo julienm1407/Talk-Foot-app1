@@ -209,7 +209,7 @@ export function DataSourcesSettingsPage() {
             {tokenSource === 'none' && (
               <>
                 <strong className="text-tf-app-fg">Aucun jeton détecté</strong> — l’app n’envoie aucune requête à
-                SportMonks et affiche des matchs de démo.{' '}
+                SportMonks et affiche le calendrier disponible.{' '}
                 {!smTokenBakedAtBuild && import.meta.env.PROD && !(typeof __TF_VERCEL_DEPLOY__ !== 'undefined' && __TF_VERCEL_DEPLOY__) ? (
                   <>
                     <span className="block pt-2 font-black text-tf-app-fg">
@@ -328,7 +328,7 @@ export function DataSourcesSettingsPage() {
         </Card>
 
         <p className={cn('mt-8 max-w-2xl text-xs leading-relaxed', label)}>
-          Sans clé : l’app affiche des matchs de démo. En production, un backend qui relaie SportMonks évite d’exposer le
+          Sans clé : configure SportMonks pour charger le calendrier. En production, un backend qui relaie SportMonks évite d’exposer le
           jeton dans le navigateur.
         </p>
       </PageContainer>

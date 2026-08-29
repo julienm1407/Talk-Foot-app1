@@ -4914,7 +4914,7 @@ export function ChannelPage() {
         : null}
       {!isFinished && fullscreenEvent ? (
         <div className="tf-live-fullscreen-fx pointer-events-none fixed inset-0 z-[2147482400] overflow-hidden">
-          <div className="absolute inset-0 bg-black/28" />
+          <div className="absolute inset-0 bg-black/62" />
           <div
             className={`absolute inset-[-16%] animate-[tf-goal-bg_1100ms_ease-out_forwards] ${
               fullscreenEvent.kind === 'goal'
@@ -4922,13 +4922,13 @@ export function ChannelPage() {
                 : fullscreenEvent.kind === 'card'
                   ? ''
                   : fullscreenEvent.kind === 'kickoff'
-                    ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
-                    : 'bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.44),rgba(6,17,30,0.12)_55%,transparent_78%)]'
+                    ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.5),rgba(6,17,30,0.55)_55%,rgba(2,8,18,0.72)_78%)]'
+                    : 'bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.5),rgba(6,17,30,0.55)_55%,rgba(2,8,18,0.72)_78%)]'
             }`}
             style={
               (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
                 ? {
-                    background: `radial-gradient(circle at 50% 50%, color-mix(in srgb, ${fullscreenPopupAccent} 52%, transparent), rgba(6,17,30,0.12) 55%, transparent 78%)`,
+                    background: `radial-gradient(circle at 50% 50%, color-mix(in srgb, ${fullscreenPopupAccent} 55%, transparent), rgba(6,17,30,0.55) 55%, rgba(2,8,18,0.72) 78%)`,
                   }
                 : undefined
             }
@@ -5025,14 +5025,14 @@ export function ChannelPage() {
             }`}
           >
             <div
-              className={`tf-live-fullscreen-popup w-full max-w-xl rounded-2xl border px-7 py-5 text-center shadow-2xl backdrop-blur-md [transform:translateZ(0)] ${
+              className={`tf-live-fullscreen-popup w-full max-w-xl rounded-2xl border px-7 py-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.65)] [transform:translateZ(0)] ${
                 fullscreenEvent.kind === 'goal'
-                  ? ''
+                  ? 'border-amber-300/70 bg-[#091425]'
                   : fullscreenEvent.kind === 'card'
-                    ? ''
+                    ? 'border-white/40 bg-[#091425]'
                     : fullscreenEvent.kind === 'kickoff'
-                      ? 'border-sky-300/85 bg-[#0b1f35]/84'
-                      : 'border-violet-300/85 bg-[#1a1333]/82'
+                      ? 'border-sky-300/85 bg-[#0b1f35]'
+                      : 'border-violet-300/85 bg-[#1a1333]'
               }`}
               style={{
                 borderColor:
@@ -5041,7 +5041,7 @@ export function ChannelPage() {
                     : undefined,
                 background:
                   (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
-                    ? `color-mix(in srgb, ${fullscreenPopupAccent} 22%, #091425)`
+                    ? `color-mix(in srgb, ${fullscreenPopupAccent} 28%, #091425)`
                     : undefined,
                 animation:
                   fullscreenEvent.kind === 'var'
@@ -5051,14 +5051,14 @@ export function ChannelPage() {
             >
               <p className="text-[11px] font-black uppercase tracking-[0.28em] text-white/75">Ambiance stade</p>
               <p
-                className={`mt-1 text-5xl font-black tracking-wider ${
+                className={`mt-1 text-5xl font-black tracking-wider text-white ${
                   fullscreenEvent.kind === 'goal'
                     ? 'animate-[tf-goal-shake_760ms_ease-out_1]'
                     : fullscreenEvent.kind === 'card'
                       ? 'animate-[tf-goal-shake_760ms_ease-out_1]'
                       : fullscreenEvent.kind === 'kickoff'
                         ? 'text-sky-200 animate-[tf-goal-shake_760ms_ease-out_1]'
-                        : 'text-violet-200'
+                        : 'text-violet-100'
                 }`}
                 style={
                   (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent

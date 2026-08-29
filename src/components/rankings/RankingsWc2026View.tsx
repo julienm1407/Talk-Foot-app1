@@ -109,7 +109,7 @@ export function RankingsWc2026View() {
           <Link to="/settings/donnees#tf-sportmonks-cle" className="underline underline-offset-2">
             configurer
           </Link>
-          . Données de démonstration en attendant.
+          .
         </p>
       ) : null}
 

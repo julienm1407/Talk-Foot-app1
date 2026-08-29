@@ -18,7 +18,7 @@ export function pickTalkFootBotReply(userMessage: string): string {
     return 'Avec plaisir ! Bon match — continue à tester les messages privés si tu veux 🙂'
   }
   if (/\?|comment|pourquoi|où|ou se/.test(t)) {
-    return 'Astuce : les actus passent par la cloche ; nos échanges, par la bulle Messages en haut. Le live est dans Matchs.'
+    return 'Les actus passent par la cloche ; nos échanges, par la bulle Messages en haut. Le live est dans Matchs.'
   }
-  return 'Merci pour ton message. Pour la démo : live dans Matchs, MP ici, perso et jetons dans Profil. Une question plus précise ?'
+  return 'Merci pour ton message. Live dans Matchs, MP ici, perso et jetons dans Profil. Une question plus précise ?'
 }

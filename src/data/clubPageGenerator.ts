@@ -337,7 +337,7 @@ export function buildClubPageMock(team: Team): ClubPageMock {
 
   const pts = tone === 'hot' ? 48 - (h % 8) : 28 + (h % 10)
   const lineGap =
-    tone === 'hot' ? (h % 2 ? 'Derniers résultats : rassurants' : 'Raccourci 1ʳᵉ : −' + (h % 3)) : 'Débats serrés sur l’entraîneur (démo)'
+    tone === 'hot' ? (h % 2 ? 'Derniers résultats : rassurants' : 'Raccourci 1ʳᵉ : −' + (h % 3)) : 'Débats serrés sur l’entraîneur'
 
   const heroTag =
     tone === 'hot'
@@ -347,7 +347,7 @@ export function buildClubPageMock(team: Team): ClubPageMock {
         : 'Hub vocal & tribunes'
   const popularityLabel =
     tier === 'E'
-      ? `${numFmt(fansM)} supporteurs actifs (démo)`
+      ? `${numFmt(fansM)} supporteurs actifs`
       : `${numFmt(Math.max(2_200, fansM * 0.1))} fans (niche) — ${leagueS}`
 
   const coach = COACH_KNOWN[id] ?? `Staff technique (25-26) · ${team.shortName}`
@@ -395,23 +395,23 @@ export function buildClubPageMock(team: Team): ClubPageMock {
     ],
     mvpTitle: tone === 'hot' ? 'Fan of the day — tifo validé' : 'Fan of the day — sondage tribune',
     trophies: [
-      { label: 'Ligues (illustr.)', count: String(t1 + (tier === 'E' ? 3 : 0)) },
-      { label: 'Coupes (illustr.)', count: String(t2) },
+      { label: 'Ligues', count: String(t1 + (tier === 'E' ? 3 : 0)) },
+      { label: 'Coupes', count: String(t2) },
     ],
     infoSummary: {
       coach,
       stadium,
-      nextOpponent: `vs ${op} · prochaine fenêtre (cal. démo)`,
+      nextOpponent: `vs ${op} · prochaine fenêtre`,
     },
     upcoming: {
       league: leagueS,
       matchday: `J${8 + (h % 20)}`,
-      opponent: h % 2 ? `vs ${op}` : 'dépl. (stade visiteur) — cal. démo',
+      opponent: h % 2 ? `vs ${op}` : 'dépl. (stade visiteur)',
       kickoff: h % 2 ? 'ven. 21:00' : 'dim. 15:00',
       venue: h % 2 === 0 ? 'ext' : 'dom',
     },
     formStrip: strip,
-    tableSnapshot: { position: posTable, points: `${pts} pts (simu)`, line: lineGap },
+    tableSnapshot: { position: posTable, points: `${pts} pts`, line: lineGap },
     shopWallet: {
       balance: (1800 + (h % 6_000)).toLocaleString('fr-FR'),
       owned: String(4 + (h % 18)),
