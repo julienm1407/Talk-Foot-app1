@@ -30,3 +30,15 @@ test('cotes SM inversées (10,3 domicile) corrigées puis validées', () => {
   assert.ok(aligned.home < 2, `aligned home=${aligned.home}`)
   assert.ok(isCredibleExternal1x2Odds(aligned, internal))
 })
+
+test('Strasbourg–Lens : cotes SM aberrantes (16,5 / 8,98 / 2,45) rejetées', () => {
+  const rows = standingsByLeague['ligue-1']
+  const h = findStandingForTeam(rows, 'strasbourg', 686)
+  const a = findStandingForTeam(rows, 'lens', 271)
+  assert.ok(h && a)
+  const { odds1x2: internal } = computePrematch1x2FromContext(
+    buildMatchOddsContext(h, a, 'strasbourg', 'lens')!,
+  )
+  const smBad = { home: 16.5, draw: 8.98, away: 2.45 }
+  assert.equal(isCredibleExternal1x2Odds(smBad, internal), false)
+})

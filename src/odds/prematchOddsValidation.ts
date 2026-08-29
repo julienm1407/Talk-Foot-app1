@@ -31,7 +31,20 @@ export function isCredibleExternal1x2Odds(
   const aligned = align1x2OddsToInternalFavorite(external, internal)
   const intFav = Math.min(internal.home, internal.away)
   const extFav = Math.min(aligned.home, aligned.away)
-  const ratio = extFav / intFav
-  if (!Number.isFinite(ratio) || ratio < 0.55 || ratio > 1.85) return false
+  const intDog = Math.max(internal.home, internal.away)
+  const extDog = Math.max(aligned.home, aligned.away)
+
+  const favRatio = extFav / intFav
+  if (!Number.isFinite(favRatio) || favRatio < 0.55 || favRatio > 1.85) return false
+
+  const dogRatio = extDog / intDog
+  if (!Number.isFinite(dogRatio) || dogRatio < 0.55 || dogRatio > 2.25) return false
+
+  const drawRatio = aligned.draw / internal.draw
+  if (!Number.isFinite(drawRatio) || drawRatio < 0.55 || drawRatio > 2) return false
+
+  // Prematch club : outsider bookmaker > 12 peu crédible si le modèle le voit < 8
+  if (intDog <= 8 && extDog > 12) return false
+
   return true
 }
