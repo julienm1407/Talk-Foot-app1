@@ -15,6 +15,7 @@ import {
   useTalkFootInternalOdds,
 } from '../hooks/useTalkFootInternalOdds'
 import { buildOddsStandingsPool } from '../odds/buildTeamOddsInput'
+import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
 import { useSportMonksTeamLatestFormPair } from '../hooks/useSportMonksTeamLatestFormPair'
 import { extractSidelinedCountsFromSmFixture } from '../api/sportMonks/extractSidelinedFromSm'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
@@ -1167,14 +1168,7 @@ export function ChannelPage() {
   }, [shootoutDisplay, liveBundleFixture, match?.penaltyScore])
 
   const standingsLeagueId = match && isBigFiveLeagueId(match.competition.id) ? match.competition.id : null
-  const standingsFetchEnabled = Boolean(
-    standingsLeagueId &&
-      (standingsModalOpen ||
-        desktopFeedTab === 'classement' ||
-        (showMobileChannelChrome &&
-          ((mobilePanel === 'match' && mobileMatchTab === 'classement') || mobilePanel === 'paris')) ||
-        !showMobileChannelChrome),
-  )
+  const standingsFetchEnabled = Boolean(standingsLeagueId && match)
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
     useSportMonksLeagueStandings(standingsLeagueId, standingsFetchEnabled)
   const standingsSourceLabel = useMemo(() => {
@@ -1322,9 +1316,22 @@ export function ChannelPage() {
     formMatch,
     Boolean(formMatch && status === 'upcoming'),
   )
+  const smBookOdds = useSportMonksRound1x2Odds(
+    match?.sportMonksFixtureId,
+    match?.sportMonksRoundId,
+    status,
+  )
+  const smBookPrematch = useMemo(() => {
+    if (!smBookOdds.odds1x2) return null
+    if (smBookOdds.oddsError?.includes('estimées')) return null
+    return {
+      odds1x2: smBookOdds.odds1x2,
+      oddsOverUnder25: smBookOdds.oddsOverUnder25,
+    }
+  }, [smBookOdds.odds1x2, smBookOdds.oddsOverUnder25, smBookOdds.oddsError])
   const { odds1x2, oddsOverUnder25, oddsLoading, oddsMeta } = useTalkFootInternalOdds({
     match,
-    standingsRows: displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+    standingsRows,
     standingsLoading,
     homeFormOverride: teamPairForm?.home,
     awayFormOverride: teamPairForm?.away,
@@ -1335,6 +1342,8 @@ export function ChannelPage() {
     liveMinute: liveDisplayedMinute,
     homeNationIso: homeNation?.iso ?? null,
     awayNationIso: awayNation?.iso ?? null,
+    externalPrematch: smBookPrematch,
+    bookOddsLoading: smBookOdds.oddsLoading,
   })
   const attackIndices = useMemo(
     () => {

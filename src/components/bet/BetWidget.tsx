@@ -77,7 +77,7 @@ export function BetWidget({
   bookOddsOverUnder25?: SmBookOddsOverUnder25 | null
   bookOddsLoading?: boolean
   /** Origine des cotes affichées (moteur Talk Foot par défaut). */
-  oddsSource?: 'talkfoot' | 'fallback'
+  oddsSource?: 'talkfoot' | 'bookmaker' | 'fallback'
   teamAttackIndices?: { home: number; away: number } | null
   compact?: boolean
   /** Panneau mobile / zone étroite : cotes et boutons plus grands. */
@@ -231,7 +231,11 @@ export function BetWidget({
   )
 
   const oddsSourceLabel =
-    oddsSource === 'talkfoot' ? 'Cotes Talk Foot' : 'Cotes estimées'
+    oddsSource === 'bookmaker'
+      ? 'Cotes bookmaker'
+      : oddsSource === 'talkfoot'
+        ? 'Cotes Talk Foot'
+        : 'Cotes estimées'
 
   const scorerPicksSplit = useMemo(() => {
     if (!x12Resolved) return { home: [] as ScorerPickRow[], away: [] as ScorerPickRow[] }
