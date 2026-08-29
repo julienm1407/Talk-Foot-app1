@@ -1,5 +1,4 @@
 import { currentUser } from '../data/users'
-import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Card } from '../components/ui/Card'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
@@ -37,6 +36,8 @@ import type { Appearance } from '../contexts/AppearanceContext'
 import { LeagueMark } from '../components/brand/LeagueMark'
 import { ClubCrest } from '../components/brand/ClubCrest'
 import { resolveClubCatalogLogoUrl } from '../utils/catalogLogos'
+import { HardNavLink } from '../components/nav/HardNavLink'
+import { hardNavigateTo } from '../utils/hardNavigate'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -58,7 +59,6 @@ function profileIncard(appearance: Appearance) {
 }
 
 export function ProfilePage() {
-  const navigate = useNavigate()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { user: authUser, logout } = useAuth()
@@ -115,9 +115,18 @@ export function ProfilePage() {
     if (wonBets.length) creditWonBets(wonBets)
   }, [bets, creditWonBets])
 
+  /** iOS / PWA : libère overlays fantômes qui bloquent les taps sur le profil. */
+  useEffect(() => {
+    document.body.style.overflow = ''
+    for (const id of ['tf-shop-modal-root', 'tf-app-modal-root'] as const) {
+      const root = document.getElementById(id)
+      if (root?.childElementCount) root.replaceChildren()
+    }
+  }, [])
+
   const handleLogout = () => {
     logout()
-    navigate('/login', { replace: true })
+    hardNavigateTo('/login')
   }
 
   const pr = getAppSectionTheme('profile')
@@ -126,7 +135,7 @@ export function ProfilePage() {
     <div className="space-y-5 sm:space-y-6 lg:space-y-7">
       <header
         className={cn(
-          'flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
+          'relative z-20 flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-start sm:justify-between',
           L ? pr.page.borderBottomClass : 'border-white/15',
         )}
       >
@@ -152,8 +161,8 @@ export function ProfilePage() {
             live et les tribunes.
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
-          <Link
+        <div className="relative z-20 flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+          <HardNavLink
             to="/formules"
             className={cn(
               TF_FOCUS_VISIBLE,
@@ -164,9 +173,9 @@ export function ProfilePage() {
             )}
           >
             Formules
-          </Link>
+          </HardNavLink>
           {mayEditArticles ? (
-            <Link
+            <HardNavLink
               to="/admin"
               className={cn(
                 TF_FOCUS_VISIBLE,
@@ -178,7 +187,7 @@ export function ProfilePage() {
               aria-label="Rédaction et administration"
             >
               {authUser?.isAdmin ? 'Admin' : 'Rédaction'}
-            </Link>
+            </HardNavLink>
           ) : null}
           <Button
             variant="ghost"
@@ -198,7 +207,7 @@ export function ProfilePage() {
 
       <div id="compte" className="scroll-mt-4 space-y-3 sm:space-y-4">
         {mayEditArticles ? (
-          <Link
+          <HardNavLink
             to="/admin"
             className={cn(
               TF_FOCUS_VISIBLE,
@@ -212,7 +221,7 @@ export function ProfilePage() {
             <span aria-hidden className="text-lg">
               →
             </span>
-          </Link>
+          </HardNavLink>
         ) : null}
         {authUser?.isAdmin ? <SeasonAdminToggle /> : null}
         {canStreamSalon || canCreatePrivateLiveMatches ? (
@@ -349,9 +358,9 @@ export function ProfilePage() {
         </div>
       </Card>
 
-      <Link
+      <HardNavLink
         to="/boutique"
-        className="block scroll-mt-4 outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 rounded-3xl"
+        className="relative z-10 block scroll-mt-4 outline-none focus-visible:ring-2 focus-visible:ring-tf-electric/35 rounded-3xl"
         id="boutique"
         aria-label="Ouvrir la boutique Talk Foot"
       >
@@ -394,7 +403,7 @@ export function ProfilePage() {
             </span>
           </div>
         </Card>
-      </Link>
+      </HardNavLink>
 
       <Card id="monnaie" className="scroll-mt-4 p-5 sm:p-6" elevation="soft">
         <div className="flex flex-col gap-4 sm:gap-5">
@@ -508,7 +517,7 @@ export function ProfilePage() {
             {favoriteClubEntries.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-2">
                 {favoriteClubEntries.map(({ id, meta, team }) => (
-                  <Link
+                  <HardNavLink
                     key={id}
                     to={clubPathForId(id)}
                     className={cn(
@@ -529,7 +538,7 @@ export function ProfilePage() {
                       />
                     ) : null}
                     {meta?.name ?? id}
-                  </Link>
+                  </HardNavLink>
                 ))}
               </div>
             ) : (

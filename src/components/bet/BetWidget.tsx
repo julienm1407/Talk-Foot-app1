@@ -34,40 +34,6 @@ function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
 }
 
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n))
-}
-
-function seeded01(seed: number): number {
-  const x = Math.sin(seed * 12_989.123) * 43_758.5453
-  return x - Math.floor(x)
-}
-
-function hashMatchSeed(match: Match): number {
-  const s = `${match.id}|${match.home.id}|${match.away.id}|${match.kickoffAt}`
-  let h = 0
-  for (let i = 0; i < s.length; i += 1) {
-    h = (h * 31 + s.charCodeAt(i)) >>> 0
-  }
-  return h || 1
-}
-
-function synthetic1x2ForMatch(match: Match): SmBookOdds1x2 {
-  const seed = hashMatchSeed(match)
-  const h = seeded01(seed + 11)
-  const d = seeded01(seed + 23)
-  const pHome = 0.42 + (h - 0.5) * 0.16 + 0.06
-  const pDraw = 0.26 + (d - 0.5) * 0.1
-  const pAway = clamp(1 - pHome - pDraw, 0.15, 0.56)
-  const sum = pHome + pDraw + pAway
-  const overround = 1.06
-  const toOdd = (p: number) => {
-    const implied = clamp((p / sum) * overround, 0.02, 0.92)
-    return Math.round(clamp(1 / implied, 1.2, 25) * 100) / 100
-  }
-  return { home: toOdd(pHome), draw: toOdd(pDraw), away: toOdd(pAway) }
-}
-
 type ScorerPickRow = {
   id: BetSelection
   label: string
@@ -203,7 +169,7 @@ export function BetWidget({
     applyStake(parsed)
   }, [applyStake, stake, stakeDraft])
 
-  /** Triplet 1N2 affichable : API, puis fallback estimé stable par match. */
+  /** Triplet 1N2 affichable : moteur Talk Foot uniquement (pas de synthèse biaisée domicile). */
   const x12Resolved = useMemo((): SmBookOdds1x2 | null => {
     if (
       bookOdds1x2 &&
@@ -213,8 +179,8 @@ export function BetWidget({
     ) {
       return bookOdds1x2
     }
-    return synthetic1x2ForMatch(match)
-  }, [bookOdds1x2, match])
+    return null
+  }, [bookOdds1x2])
 
   const x12Ready = Boolean(x12Resolved)
   const x12OddsPending = Boolean(match.sportMonksFixtureId && bookOddsLoading && !x12Ready)

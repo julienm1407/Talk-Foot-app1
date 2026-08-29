@@ -14,6 +14,7 @@ import {
   teamAttackIndicesFromStandings,
   useTalkFootInternalOdds,
 } from '../hooks/useTalkFootInternalOdds'
+import { buildOddsStandingsPool } from '../odds/buildTeamOddsInput'
 import { useSportMonksTeamLatestFormPair } from '../hooks/useSportMonksTeamLatestFormPair'
 import { extractSidelinedCountsFromSmFixture } from '../api/sportMonks/extractSidelinedFromSm'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
@@ -1193,6 +1194,12 @@ export function ChannelPage() {
     })
   }, [standingsLeagueId, standingsRows, match, status, homeScore, awayScore])
 
+  const oddsStandingsPool = useMemo(() => {
+    if (!match) return []
+    const smRows = displayedStandingsRows.length ? displayedStandingsRows : standingsRows
+    return buildOddsStandingsPool(match, smRows)
+  }, [match, displayedStandingsRows, standingsRows])
+
   const matchWcGroup = useMemo(() => {
     if (!match || !isWorldCupCompetitionId(match.competition.id) || !cdm?.dataset) return null
     const isos = new Set([homeNation?.iso, awayNation?.iso].filter(Boolean) as string[])
@@ -1336,12 +1343,20 @@ export function ChannelPage() {
         return teamAttackIndicesFromNations(homeNation.iso, awayNation.iso)
       }
       return teamAttackIndicesFromStandings(
-        displayedStandingsRows.length ? displayedStandingsRows : standingsRows,
+        oddsStandingsPool,
         match.home.id,
         match.away.id,
+        {
+          homeSportMonksTeamId: match.home.sportMonksTeamId,
+          awaySportMonksTeamId: match.away.sportMonksTeamId,
+          homeName: match.home.name,
+          awayName: match.away.name,
+          homeShortName: match.home.shortName,
+          awayShortName: match.away.shortName,
+        },
       )
     },
-    [match, homeNation?.iso, awayNation?.iso, displayedStandingsRows, standingsRows],
+    [match, homeNation?.iso, awayNation?.iso, oddsStandingsPool],
   )
   const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
   const oddsReady = Boolean(

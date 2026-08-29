@@ -58,12 +58,17 @@ export function teamPowerScore(factors: TeamPowerFactors, absenceFactor = 1): nu
  * Convertit deux puissances en probabilités 1 / N / 2.
  * Courbe calibrée sur des cotes bookmaker (favori ~1,15–1,35, outsider ~8–20).
  */
-export function probabilities1x2FromPower(homePower: number, awayPower: number): Probabilities1x2 {
-  const diff = clamp(homePower - awayPower, -55, 55)
+export function probabilities1x2FromPower(
+  homePower: number,
+  awayPower: number,
+  maxAbsDiff = 14,
+): Probabilities1x2 {
+  /** Limite l’écart utilisé : évite outsiders systématiques à 16,50 sur gros mismatches en club. */
+  const cap = clamp(maxAbsDiff, 8, 28)
+  const diff = clamp(homePower - awayPower, -cap, cap)
   const absDiff = Math.abs(diff)
 
-  // Courbe un peu plus sensible à l’écart de qualité (moins de « tout le monde à domicile »).
-  const homeWinShare = 1 / (1 + Math.exp(-0.1 * diff))
+  const homeWinShare = 1 / (1 + Math.exp(-0.11 * diff))
   let pDraw = 0.22 * Math.exp(-0.034 * absDiff) + 0.05
   pDraw = clamp(pDraw, 0.05, 0.3)
 
@@ -122,74 +127,101 @@ export function probabilityToExactScoreOdd(
 export function probabilitiesToDecimalOdds(
   probs: Probabilities1x2,
   marginPct = DEFAULT_BOOK_MARGIN,
+  maxPowerDiff = 14,
 ): SmBookOdds1x2 {
-  return calibrate1x2OddsForMarket(
+  const withMargin = applyBookmakerMargin(probs, marginPct)
+  const toOdd = (p: number, maxOdd: number) =>
+    round2(clamp(1 / clamp(p, 0.028, 0.92), 1.02, maxOdd))
+  return softCapPrematch1x2Odds(
     {
-      home: probabilityToDecimalOdd(probs.pHome, marginPct),
-      draw: probabilityToDecimalOdd(probs.pDraw, marginPct),
-      away: probabilityToDecimalOdd(probs.pAway, marginPct),
+      home: toOdd(withMargin.pHome, maxPowerDiff >= 20 ? 18 : 14),
+      draw: toOdd(withMargin.pDraw, 6.5),
+      away: toOdd(withMargin.pAway, maxPowerDiff >= 20 ? 18 : 14),
     },
-    marginPct,
+    maxPowerDiff >= 20,
   )
 }
 
+/** Plafonds doux pour éviter des outsiders/nuls irréalistes (ex. 16,50 systématique en club). */
+function softCapPrematch1x2Odds(odds: SmBookOdds1x2, generousOutsider = false): SmBookOdds1x2 {
+  const fav = Math.min(odds.home, odds.away)
+  const maxDog = generousOutsider
+    ? fav <= 1.15
+      ? 16
+      : fav <= 1.28
+        ? 12
+        : fav <= 1.45
+          ? 9.5
+          : fav <= 1.75
+            ? 7.5
+            : 6
+    : fav <= 1.32
+      ? 8.5
+      : fav <= 1.5
+        ? 7
+        : fav <= 1.75
+          ? 6
+          : fav <= 2.05
+            ? 5.5
+            : 5
+  const maxDraw = generousOutsider
+    ? fav <= 1.15
+      ? 7.5
+      : fav <= 1.28
+        ? 6.5
+        : fav <= 1.45
+          ? 5.5
+          : 4.8
+    : fav <= 1.32
+      ? 5.5
+      : fav <= 1.5
+        ? 4.9
+        : fav <= 1.75
+          ? 4.5
+          : 4.2
+
+  const capDog = (v: number) => round2(clamp(v, 1.02, maxDog))
+  const capDraw = (v: number) => round2(clamp(v, 1.02, maxDraw))
+  const capFav = (v: number) => round2(clamp(v, 1.02, 14))
+
+  const homeIsDog = odds.home >= odds.away
+  return {
+    home: homeIsDog && odds.home > fav * 1.12 ? capDog(odds.home) : capFav(odds.home),
+    draw: capDraw(odds.draw),
+    away: !homeIsDog && odds.away > fav * 1.12 ? capDog(odds.away) : capFav(odds.away),
+  }
+}
+
 /**
- * Rapproche les cotes bookmaker : favori un peu moins écrasé, outsider plus haut.
- * (ex. PRT ~1,25–1,32 / COD ~10–14 plutôt que 1,15 / 22 ou 1,42 / 5,8 en live.)
+ * Legacy helper — conservé pour les tests ; la calibration agressive a été retirée du flux prematch.
  */
 export function calibrate1x2OddsForMarket(
   odds: SmBookOdds1x2,
-  marginPct = DEFAULT_BOOK_MARGIN,
+  _marginPct = DEFAULT_BOOK_MARGIN,
 ): SmBookOdds1x2 {
-  const probs = impliedProbsFromDecimalOdds(odds)
-  const skew = Math.max(probs.pHome, probs.pDraw, probs.pAway) -
-    Math.min(probs.pHome, probs.pDraw, probs.pAway)
-  if (skew < 0.28) return odds
+  return softCapPrematch1x2Odds(odds)
+}
 
-  const gamma = skew >= 0.55 ? 0.86 : skew >= 0.4 ? 0.9 : 0.93
-  const shaped = normalize3(
-    Math.pow(probs.pHome, gamma),
-    Math.pow(probs.pDraw, Math.min(1, gamma + 0.04)),
-    Math.pow(probs.pAway, gamma),
-  )
-  const generousMargin = marginPct * 0.94
-  let result: SmBookOdds1x2 = {
-    home: probabilityToDecimalOdd(shaped.pHome, generousMargin),
-    draw: probabilityToDecimalOdd(shaped.pDraw, generousMargin),
-    away: probabilityToDecimalOdd(shaped.pAway, generousMargin),
-  }
+/**
+ * Si l’écart de puissance est net mais la cote la plus basse est du mauvais côté, recalcule.
+ */
+export function enforceFavoriteConsistency(
+  odds: SmBookOdds1x2,
+  homePower: number,
+  awayPower: number,
+  marginPct = DEFAULT_BOOK_MARGIN,
+  maxPowerDiff = 14,
+  powerThreshold = 3.5,
+): SmBookOdds1x2 {
+  const diff = homePower - awayPower
+  if (Math.abs(diff) < powerThreshold) return odds
 
-  const favOdd = Math.min(result.home, result.away)
-  const dogOdd = Math.max(result.home, result.away)
-  if (dogOdd >= 8.5 && favOdd < 1.27) {
-    const scale = 1.27 / favOdd
-    if (result.home <= result.away) {
-      result = {
-        home: round2(result.home * scale),
-        draw: round2(result.draw * 0.96),
-        away: round2(result.away * 1.06),
-      }
-    } else {
-      result = {
-        home: round2(result.home * 1.06),
-        draw: round2(result.draw * 0.96),
-        away: round2(result.away * scale),
-      }
-    }
-  }
+  const powerFavHome = diff > 0
+  const marketFavHome = odds.home <= odds.away
+  if (powerFavHome === marketFavHome) return odds
 
-  const favAfter = Math.min(result.home, result.away)
-  const dogAfter = Math.max(result.home, result.away)
-  const maxDog = favAfter < 1.28 ? 16.5 : favAfter < 1.45 ? 11.5 : 8.5
-  if (dogAfter > maxDog) {
-    if (result.away >= result.home) {
-      result = { ...result, away: round2(maxDog) }
-    } else {
-      result = { ...result, home: round2(maxDog) }
-    }
-  }
-
-  return result
+  const probs = probabilities1x2FromPower(homePower, awayPower, maxPowerDiff)
+  return probabilitiesToDecimalOdds(probs, marginPct, maxPowerDiff)
 }
 
 export function computePrematch1x2FromContext(
@@ -198,8 +230,10 @@ export function computePrematch1x2FromContext(
 ): InternalOddsResult {
   const homePower = teamPowerScore(ctx.home.factors, ctx.home.absenceFactor ?? 1)
   const awayPower = teamPowerScore(ctx.away.factors, ctx.away.absenceFactor ?? 1)
-  const probs = probabilities1x2FromPower(homePower, awayPower)
-  const odds1x2 = probabilitiesToDecimalOdds(probs, marginPct)
+  const maxDiff = ctx.maxPowerDiff ?? 14
+  const probs = probabilities1x2FromPower(homePower, awayPower, maxDiff)
+  let odds1x2 = probabilitiesToDecimalOdds(probs, marginPct, maxDiff)
+  odds1x2 = enforceFavoriteConsistency(odds1x2, homePower, awayPower, marginPct, maxDiff)
   const ou = prematchOverUnder25From1x2(probs, marginPct)
   return {
     odds1x2,

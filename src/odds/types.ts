@@ -23,6 +23,8 @@ export type MatchOddsContext = {
   home: TeamOddsContext
   away: TeamOddsContext
   leagueSize: number
+  /** Plafond d’écart de puissance prematch (clubs ~14, sélections ~22). */
+  maxPowerDiff?: number
 }
 
 export type Probabilities1x2 = { pHome: number; pDraw: number; pAway: number }

@@ -2886,11 +2886,15 @@ body::before {
   inset-inline: 0 !important;
   top: 0 !important;
   z-index: 2147482770 !important;
-  pointer-events: auto !important;
+  pointer-events: none !important;
   touch-action: manipulation;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   isolation: isolate;
+}
+
+.tf-app-topbar-mobile-shell > * {
+  pointer-events: auto !important;
 }
 
 .tf-app-topbar-spacer {
@@ -2933,8 +2937,18 @@ body::before {
 .tf-profile-page-scroll {
   -webkit-overflow-scrolling: auto;
   overscroll-behavior-y: contain;
+  touch-action: manipulation;
   /* Le scroll profil ne doit pas intercepter les clics sur la barre haute (portail ou sticky). */
   isolation: isolate;
+}
+
+.tf-profile-page-scroll a,
+.tf-profile-page-scroll button,
+.tf-profile-page-scroll label,
+.tf-profile-page-scroll input,
+.tf-profile-page-scroll select,
+.tf-profile-page-scroll textarea {
+  touch-action: manipulation;
 }
 
 /* Force un nouveau contexte de rendu à chaque changement de route (Safari / PWA). */

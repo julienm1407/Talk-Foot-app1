@@ -82,7 +82,15 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
     if (nextScore > prevScore) byKey.set(key, r)
   }
 
-  return [...byKey.values()].sort(
+  return [...byKey.values()]
+    .map((r) => {
+      const inferred = inferredIdFromRow(r)
+      if (inferred && r.teamId !== inferred) {
+        return { ...r, teamId: inferred }
+      }
+      return r
+    })
+    .sort(
     (a, b) => a.rank - b.rank || b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga),
   )
 }
