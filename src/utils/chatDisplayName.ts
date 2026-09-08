@@ -1,10 +1,10 @@
-const GENERIC_CHAT_LABELS = new Set(['supporteur', 'supporter', 'inconnu'])
+import { pickHumanDisplayName } from './displayNameFromAuth'
 
 export function safeChatDisplayName(
   name: string | null | undefined,
   fallback = 'Supporteur',
 ): string {
-  return (typeof name === 'string' ? name : '').trim() || fallback
+  return pickHumanDisplayName(typeof name === 'string' ? name : null, fallback)
 }
 
 export function safeChatAvatarSeed(
@@ -20,9 +20,5 @@ export function resolveChatDisplayLabel(
   userUsername?: string | null,
   fallback = 'Supporteur',
 ): string {
-  const fromMsg = authorDisplayName?.trim()
-  const fromUser = userUsername?.trim()
-  if (fromMsg && !GENERIC_CHAT_LABELS.has(fromMsg.toLowerCase())) return fromMsg
-  if (fromUser && !GENERIC_CHAT_LABELS.has(fromUser.toLowerCase())) return fromUser
-  return fromMsg || fromUser || fallback
+  return pickHumanDisplayName(authorDisplayName, userUsername, fallback)
 }

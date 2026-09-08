@@ -109,6 +109,14 @@ export function useSubscription() {
     [patchSubscription, cloud],
   )
 
+  /** Après achat store / fulfill Stripe vérifié — disponible pour tous les comptes connectés. */
+  const grantPurchasedTier = useCallback(
+    (nextTier: SubscriptionTierId) => {
+      setTier(nextTier)
+    },
+    [setTier],
+  )
+
   const patchUsage = useCallback(
     (fn: (u: NonNullable<SubscriptionState['usage']>) => SubscriptionState['usage']) => {
       patchSubscription((prev) => ({
@@ -136,7 +144,8 @@ export function useSubscription() {
     liveMatchTokensPerHour: plan.limits.liveMatchTokensPerHour,
     patchSubscription,
     patchUsage,
-    /** Dev / admin : bascule de formule (Stripe à brancher). */
+    grantPurchasedTier,
+    /** Dev / admin : bascule manuelle de formule. */
     setTier: user?.isAdmin ? setTier : undefined,
   }
 }

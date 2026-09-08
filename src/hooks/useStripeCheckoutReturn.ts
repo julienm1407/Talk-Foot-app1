@@ -57,7 +57,7 @@ export function useStripeCheckoutReturn() {
   const supabaseActorId = useTalkFootChatActorId()
   const cloud = useOptionalCloudUserState()
   const { addMedals } = useWallet()
-  const { setTier } = useSubscription()
+  const { grantPurchasedTier } = useSubscription()
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
   const autoRan = useRef(false)
@@ -90,7 +90,7 @@ export function useStripeCheckoutReturn() {
     }
 
     if (result.kind === 'subscription') {
-      setTier?.(result.tier as SubscriptionTierId)
+      grantPurchasedTier(result.tier as SubscriptionTierId)
       setStatus('done')
       setMessage(
         result.alreadyFulfilled
@@ -133,7 +133,7 @@ export function useStripeCheckoutReturn() {
     )
     clearCheckoutParams()
     window.setTimeout(() => window.location.reload(), 1200)
-  }, [sessionId, user?.id, supabaseActorId, setTier, clearCheckoutParams, cloud, addMedals])
+  }, [sessionId, user?.id, supabaseActorId, grantPurchasedTier, clearCheckoutParams, cloud, addMedals])
 
   useEffect(() => {
     if (autoRan.current) return

@@ -5,9 +5,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Card } from '../ui/Card'
 import { competitionThemes } from '../../data/competitionThemes'
 import {
-  BIG_FIVE_LEAGUE_IDS,
+  RANKINGS_LEAGUE_IDS,
+  UEFA_CUP_LEAGUE_IDS,
   getStandingsForLeague,
-  type BigFiveLeagueId,
+  isRankingsLeagueId,
+  type RankingsLeagueId,
 } from '../../data/leagueStandings'
 import { LeagueStandingsTable } from './LeagueStandingsTable'
 import { StandingsInsightsStrip } from './StandingsInsightsStrip'
@@ -22,21 +24,26 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 
 type MainTab = 'ligues' | 'forme'
 
-/** Classements Big 5 — affiché hors mode Coupe du Monde 2026. */
+/** Libellés courts pour les pastilles (les noms complets restent dans le thème / carte). */
+const RANKINGS_PILL_LABEL: Partial<Record<RankingsLeagueId, string>> = {
+  ucl: 'LDC',
+  uel: 'Europa',
+  uecl: 'Conference',
+}
+
+/** Classements Big 5 + coupes UEFA — affiché hors mode Coupe du Monde 2026. */
 export function RankingsLeaguesView() {
   const { appearance } = useAppearance()
   const [searchParams] = useSearchParams()
   const L = appearance === 'light'
   const [mainTab, setMainTab] = useState<MainTab>('ligues')
-  const [leagueId, setLeagueId] = useState<BigFiveLeagueId>('ligue-1')
+  const [leagueId, setLeagueId] = useState<RankingsLeagueId>('ligue-1')
   const reducedMotion = useReducedMotion()
 
   const leagueFromUrl = searchParams.get('league')?.trim() ?? ''
   useEffect(() => {
     if (!leagueFromUrl) return
-    if ((BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(leagueFromUrl)) {
-      setLeagueId(leagueFromUrl as BigFiveLeagueId)
-    }
+    if (isRankingsLeagueId(leagueFromUrl)) setLeagueId(leagueFromUrl)
   }, [leagueFromUrl])
 
   const {
@@ -50,7 +57,8 @@ export function RankingsLeaguesView() {
 
   const mockStandings = useMemo(() => getStandingsForLeague(leagueId), [leagueId])
   const hasToken = Boolean(getSportMonksToken())
-  const standings = hasToken ? standingsRows : mockStandings
+  const isUefaCup = (UEFA_CUP_LEAGUE_IDS as readonly string[]).includes(leagueId)
+  const standings = hasToken ? standingsRows : isUefaCup ? standingsRows : mockStandings
   const seasonStartLabel = standingsSeasonMeta?.seasonStartsAt
     ? new Date(`${standingsSeasonMeta.seasonStartsAt}T12:00:00`).toLocaleDateString('fr-FR', {
         day: 'numeric',
@@ -93,6 +101,37 @@ export function RankingsLeaguesView() {
       ? 'Classement SportMonks indisponible pour le moment.'
       : 'Données d’illustration — avec une clé SportMonks, la matrice reflète le championnat réel.'
 
+  const leaguePills = (compact: boolean) =>
+    RANKINGS_LEAGUE_IDS.map((id) => {
+      const th = competitionThemes[id]
+      const active = leagueId === id
+      return (
+        <button
+          key={id}
+          type="button"
+          onClick={() => setLeagueId(id)}
+          className={cn(
+            'rounded-2xl border-2 font-black transition',
+            compact ? 'px-3 py-2 text-[11px] sm:px-4 sm:text-xs' : 'px-4 py-2 text-xs sm:text-sm',
+            active
+              ? L
+                ? 'border-tf-dark bg-tf-dark text-white shadow-md'
+                : 'border-sky-300/45 bg-sky-500/20 text-white shadow-md'
+              : L
+                ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35'
+                : 'border-white/20 bg-white/[0.06] text-sky-100 hover:border-sky-300/40 hover:bg-white/[0.1]',
+          )}
+          style={
+            active && th
+              ? { borderColor: th.accent, backgroundColor: th.accent }
+              : undefined
+          }
+        >
+          {RANKINGS_PILL_LABEL[id] ?? th?.name ?? id}
+        </button>
+      )
+    })
+
   return (
     <div className="space-y-6">
       <SectionIntro
@@ -100,8 +139,8 @@ export function RankingsLeaguesView() {
         titleAs="h1"
         uppercaseTitle={false}
         eyebrow="Classements"
-        title="Big 5 · Forme des équipes"
-        description="Classements des cinq grands championnats et analyses de forme."
+        title="Ligues & coupes · Forme"
+        description="Big 5, Ligue des champions, Europa, Conference — classements et analyses de forme."
       />
 
       <p className="rounded-2xl border border-tf-electric/25 bg-tf-electric-soft/35 px-4 py-3 text-sm font-semibold text-tf-dark">
@@ -114,7 +153,7 @@ export function RankingsLeaguesView() {
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" role="tablist" aria-label="Sections classements">
         <button type="button" className={tabClass('ligues')} onClick={() => setMainTab('ligues')}>
-          5 grands championnats
+          Ligues & coupes
         </button>
         <button type="button" className={tabClass('forme')} onClick={() => setMainTab('forme')}>
           Dashboard forme
@@ -131,36 +170,7 @@ export function RankingsLeaguesView() {
             exit={reducedMotion ? {} : { opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="flex flex-wrap gap-2">
-              {BIG_FIVE_LEAGUE_IDS.map((id) => {
-                const th = competitionThemes[id]
-                const active = leagueId === id
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setLeagueId(id)}
-                    className={cn(
-                      'rounded-2xl border-2 px-4 py-2 text-xs font-black transition sm:text-sm',
-                      active
-                        ? L
-                          ? 'border-tf-dark bg-tf-dark text-white shadow-md'
-                          : 'border-sky-300/45 bg-sky-500/20 text-white shadow-md'
-                        : L
-                          ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35'
-                          : 'border-white/20 bg-white/[0.06] text-sky-100 hover:border-sky-300/40 hover:bg-white/[0.1]',
-                    )}
-                    style={
-                      active && th
-                        ? { borderColor: th.accent, backgroundColor: th.accent }
-                        : undefined
-                    }
-                  >
-                    {th?.name ?? id}
-                  </button>
-                )
-              })}
-            </div>
+            <div className="flex flex-wrap gap-2">{leaguePills(false)}</div>
 
             {!hasToken ? (
               <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-950">
@@ -168,7 +178,7 @@ export function RankingsLeaguesView() {
                 <Link to="/settings/donnees#tf-sportmonks-cle" className="underline underline-offset-2">
                   ajoute ta clé
                 </Link>
-                . En attendant, le tableau ci-dessous reste une illustration.
+                . En attendant, le tableau ci-dessous reste une illustration (Big 5).
               </p>
             ) : null}
 
@@ -192,8 +202,7 @@ export function RankingsLeaguesView() {
 
             {hasToken && !standingsLoading && !standingsRows.length ? (
               <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
-                Aucun classement SportMonks disponible pour cette ligue en ce moment. Les championnats reprennent fin
-                août.
+                Aucun classement SportMonks disponible pour cette compétition en ce moment.
               </p>
             ) : null}
 
@@ -232,32 +241,7 @@ export function RankingsLeaguesView() {
             exit={reducedMotion ? {} : { opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="flex flex-wrap gap-2">
-              {BIG_FIVE_LEAGUE_IDS.map((id) => {
-                const th = competitionThemes[id]
-                const active = leagueId === id
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setLeagueId(id)}
-                    className={cn(
-                      'rounded-2xl border-2 px-3 py-2 text-[11px] font-black sm:px-4 sm:text-xs',
-                      active
-                        ? L
-                          ? 'border-tf-dark bg-tf-dark text-white'
-                          : 'border-sky-300/45 bg-sky-500/20 text-white'
-                        : L
-                          ? 'border-tf-grey-pastel/60 bg-white text-tf-dark hover:border-tf-electric/35'
-                          : 'border-white/20 bg-white/[0.06] text-sky-100 hover:border-sky-300/40 hover:bg-white/[0.1]',
-                    )}
-                    style={active && th ? { borderColor: th.accent, backgroundColor: th.accent } : undefined}
-                  >
-                    {th?.name ?? id}
-                  </button>
-                )
-              })}
-            </div>
+            <div className="flex flex-wrap gap-2">{leaguePills(true)}</div>
 
             {standings.length ? <StandingsInsightsStrip leagueId={leagueId} rows={standings} /> : null}
 
@@ -273,7 +257,7 @@ export function RankingsLeaguesView() {
             <p className="text-xs font-semibold leading-relaxed text-tf-grey">
               <strong className="text-tf-dark">{theme?.name}</strong> — une matrice (tous les croisements utiles) et deux
               vues graphiques : profil buts et tension saison / forme récente. Le détail match par match reste dans l’onglet
-              « 5 grands championnats ».
+              « Ligues & coupes ».
             </p>
 
             <RankingsCrossMatrix rows={standings} leagueId={leagueId} caption={matrixCaption} />

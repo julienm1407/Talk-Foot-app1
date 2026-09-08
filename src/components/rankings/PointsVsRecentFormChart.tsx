@@ -1,4 +1,4 @@
-import type { BigFiveLeagueId, LeagueStandingRow } from '../../data/leagueStandings'
+import type { LeagueStandingRow, RankingsLeagueId } from '../../data/leagueStandings'
 import { cn } from '../../utils/cn'
 import { rankingsTeamShort } from '../../utils/rankingsTeamLabel'
 import { formWindowPoints } from '../../utils/rankingsMetrics'
@@ -14,7 +14,7 @@ export function PointsVsRecentFormChart({
   accent,
 }: {
   rows: LeagueStandingRow[]
-  leagueId: BigFiveLeagueId
+  leagueId: RankingsLeagueId
   className?: string
   accent?: string
 }) {

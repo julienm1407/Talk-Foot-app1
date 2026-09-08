@@ -48,6 +48,9 @@ export const SM_LEAGUE_ID_BY_TALKFOOT_COMP: Record<string, number> = {
   laliga: 564,
   'serie-a': 384,
   bund: 82,
+  ucl: 2,
+  uel: 2286,
+  uecl: 1371,
   'wc-2026': 732,
 }
 

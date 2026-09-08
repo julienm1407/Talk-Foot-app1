@@ -121,6 +121,18 @@ export const standingsByLeague: Record<string, LeagueStandingRow[]> = {
 export const BIG_FIVE_LEAGUE_IDS = ['ligue-1', 'epl', 'laliga', 'serie-a', 'bund'] as const
 export type BigFiveLeagueId = (typeof BIG_FIVE_LEAGUE_IDS)[number]
 
+/** Coupes UEFA — classements (groupes / phase ligue). */
+export const UEFA_CUP_LEAGUE_IDS = ['ucl', 'uel', 'uecl'] as const
+export type UefaCupLeagueId = (typeof UEFA_CUP_LEAGUE_IDS)[number]
+
+/** Ligues affichées dans Classements (Big 5 + C1 / Europa / Conference). */
+export const RANKINGS_LEAGUE_IDS = [...BIG_FIVE_LEAGUE_IDS, ...UEFA_CUP_LEAGUE_IDS] as const
+export type RankingsLeagueId = (typeof RANKINGS_LEAGUE_IDS)[number]
+
+export function isRankingsLeagueId(id: string): id is RankingsLeagueId {
+  return (RANKINGS_LEAGUE_IDS as readonly string[]).includes(id)
+}
+
 export function getStandingsForLeague(leagueId: string): LeagueStandingRow[] {
   return standingsByLeague[leagueId] ?? []
 }

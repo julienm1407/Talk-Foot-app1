@@ -7,10 +7,10 @@ import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
 import { MedalPaymentModal } from '../components/shop/MedalPaymentModal'
 import { isStripePublishableConfigured } from '../config/stripe'
-import { startStripeCheckout } from '../lib/stripe/checkout'
+import { isRevenueCatConfigured } from '../config/revenueCatCatalog'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
+import { useTalkFootPurchase } from '../hooks/useTalkFootPurchase'
 import { useAuth } from '../contexts/AuthContext'
-import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { Button } from '../components/ui/Button'
 import { StripeRefundRequestPanel } from '../components/shop/StripeRefundRequestPanel'
 import { getEffectiveMedalCost } from '../data/boutiqueDailyDeal'
@@ -19,17 +19,22 @@ import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiqueP
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import type { MedalPack } from '../types/profile'
+import { usesStoreBilling } from '../utils/nativePlatform'
 
 export function BoutiqueMedalPacksPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
-  const supabaseActorId = useTalkFootChatActorId()
   const { wallet, addMedals } = useWallet()
   const { status: checkoutStatus, message: checkoutMessage, canRetry, retryFulfill } =
     useStripeCheckoutReturn()
+  const {
+    busy,
+    error: purchaseError,
+    purchaseMedalPack,
+    usesStoreBilling: storeBilling,
+  } = useTalkFootPurchase()
   const [stripeLoadingPackId, setStripeLoadingPackId] = useState<string | null>(null)
-  const [stripeError, setStripeError] = useState<string | null>(null)
   const { ownsItem, purchaseCosmetic } = useBoutiquePurchase()
   const [selectedPackId, setSelectedPackId] = useState<string | null>(null)
   const [pendingAutoBuy, setPendingAutoBuy] = useState(false)
@@ -105,8 +110,12 @@ export function BoutiqueMedalPacksPage() {
     if (pendingItem) setPendingAutoBuy(true)
   }
 
+  const paymentsReady = storeBilling
+    ? isRevenueCatConfigured()
+    : isStripePublishableConfigured()
+
   const handleSelectPack = async (packId: string) => {
-    if (!isStripePublishableConfigured()) {
+    if (!paymentsReady) {
       setSelectedPackId(packId)
       return
     }
@@ -114,21 +123,12 @@ export function BoutiqueMedalPacksPage() {
       navigate(`/login?next=${encodeURIComponent('/boutique/medailles')}`)
       return
     }
-    setStripeError(null)
     setStripeLoadingPackId(packId)
-    const result = await startStripeCheckout({
-      kind: 'medal_pack',
-      productId: packId,
-      userId: user.id,
-      supabaseUserId: supabaseActorId,
-      email: user.email,
-    })
+    const result = await purchaseMedalPack(packId)
     setStripeLoadingPackId(null)
-    if (!result.ok) {
-      setStripeError('Paiement indisponible — réessaie ou contacte le support.')
-      return
+    if (result.ok && result.channel === 'store' && pendingItem) {
+      setPendingAutoBuy(true)
     }
-    window.location.assign(result.url)
   }
 
   const showPendingBanner = pendingItem && shortfall > 0
@@ -139,7 +139,9 @@ export function BoutiqueMedalPacksPage() {
         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-200/90">Recharge</p>
         <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Packs de médailles</h1>
         <p className="mt-2 max-w-xl text-sm font-medium text-amber-100/90">
-          Achète des médailles en euros (Stripe) pour débloquer maillots, shorts et packs CDM.
+          {usesStoreBilling()
+            ? 'Achète des médailles via Google Play / App Store pour débloquer maillots, shorts et packs CDM.'
+            : 'Achète des médailles en euros (Stripe) pour débloquer maillots, shorts et packs CDM.'}
         </p>
         {checkoutMessage ? (
           <div className="mt-3 space-y-2">
@@ -159,7 +161,7 @@ export function BoutiqueMedalPacksPage() {
           </div>
         ) : null}
         <StripeRefundRequestPanel className="mt-4" purchaseKind="medal_pack" />
-        {stripeError ? <p className="mt-2 text-sm font-bold text-rose-200">{stripeError}</p> : null}
+        {purchaseError ? <p className="mt-2 text-sm font-bold text-rose-200">{purchaseError}</p> : null}
         <div className="mt-4 inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
           <span className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Solde actuel</span>
           <span className="ml-3 font-display text-2xl font-black text-white">
@@ -191,7 +193,7 @@ export function BoutiqueMedalPacksPage() {
               key={pack.id}
               pack={pack}
               onSelect={handleSelectPack}
-              disabled={stripeLoadingPackId === pack.id}
+              disabled={busy || stripeLoadingPackId === pack.id}
             />
           ))}
         </div>
@@ -203,7 +205,7 @@ export function BoutiqueMedalPacksPage() {
         </Link>
       </p>
 
-      {selectedPack && !isStripePublishableConfigured() ? (
+      {selectedPack && !paymentsReady ? (
         <MedalPaymentModal
           pack={selectedPack}
           creatorCode=""

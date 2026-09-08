@@ -38,6 +38,7 @@ import { ClubCrest } from '../components/brand/ClubCrest'
 import { resolveClubCatalogLogoUrl } from '../utils/catalogLogos'
 import { HardNavLink } from '../components/nav/HardNavLink'
 import { hardNavigateTo } from '../utils/hardNavigate'
+import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
 
 const TIER_COLORS: Record<string, string> = {
   bronze: 'from-amber-700 to-amber-900',
@@ -108,7 +109,7 @@ export function ProfilePage() {
   const { lines: identityLines } = useProfileIdentity()
   const { profile, tier, xpProgress, creditWonBets } = useProfile()
   const [bets] = useUserBets()
-  const profilePseudo = authUser?.displayName?.trim() || currentUser.username || 'Supporteur'
+  const profilePseudo = pickHumanDisplayName(authUser?.displayName, currentUser.username, 'Supporteur')
 
   useEffect(() => {
     const wonBets = bets.filter((b) => b.status === 'won').map((b) => b.id)

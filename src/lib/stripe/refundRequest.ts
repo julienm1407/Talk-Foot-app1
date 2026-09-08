@@ -1,3 +1,5 @@
+import { getTalkFootApiOrigin } from '../../utils/sportMonksRelayOrigin'
+
 export type RefundPurchaseKind = 'medal_pack' | 'subscription'
 
 export async function submitRefundRequest(input: {
@@ -10,7 +12,8 @@ export async function submitRefundRequest(input: {
   | { ok: true; requestId: string; emailSent: boolean }
   | { ok: false; error: string }
 > {
-  const res = await fetch('/api/refund-request', {
+  const origin = getTalkFootApiOrigin().replace(/\/$/, '')
+  const res = await fetch(`${origin}/api/refund-request`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

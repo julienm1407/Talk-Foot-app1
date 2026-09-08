@@ -40,6 +40,7 @@ import {
 } from './routes/lazyPages'
 import { useAuth } from './contexts/AuthContext'
 import { useSubscription } from './hooks/useSubscription'
+import { useRevenueCatIdentity } from './hooks/useRevenueCatIdentity'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
 import { CloudUserStateGate } from './contexts/CloudUserStateContext'
@@ -50,6 +51,11 @@ import { AppShellProviders } from './providers/AppShellProviders'
 
 function RouteSuspense({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
+}
+
+function RevenueCatIdentityBridge() {
+  useRevenueCatIdentity()
+  return null
 }
 
 /** Ancienne URL Stripe (`/boutique/packs-medailles`) → page réelle, en gardant `?checkout=&session_id=`. */
@@ -100,6 +106,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <>
+      <RevenueCatIdentityBridge />
       <AdsenseScriptLoader />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

@@ -1,4 +1,4 @@
-import type { BigFiveLeagueId, LeagueStandingRow } from '../../data/leagueStandings'
+import type { LeagueStandingRow, RankingsLeagueId } from '../../data/leagueStandings'
 import { cn } from '../../utils/cn'
 import { rankingsTeamShort } from '../../utils/rankingsTeamLabel'
 import {
@@ -23,7 +23,7 @@ export function RankingsCrossMatrix({
   caption,
 }: {
   rows: LeagueStandingRow[]
-  leagueId: BigFiveLeagueId
+  leagueId: RankingsLeagueId
   className?: string
   caption?: string
 }) {

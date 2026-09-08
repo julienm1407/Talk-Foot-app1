@@ -7,9 +7,28 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'https',
-    // Décommente pour charger le site prod dans la WebView (sans rebuild natif) :
-    // url: 'https://talk-foot.com',
-    // cleartext: false,
+    // Phase test USB : charge le site prod. allowNavigation = OAuth Google/Clerk
+    // reste DANS la WebView (sinon Android ouvre Chrome hors de l’app).
+    // Note : talk-foot.fr ne résout pas partout (ERR_NAME_NOT_RESOLVED) → .com.
+    url: 'https://talk-foot.com',
+    cleartext: false,
+    allowNavigation: [
+      'talk-foot.com',
+      'www.talk-foot.com',
+      'talk-foot.fr',
+      'www.talk-foot.fr',
+      '*.clerk.com',
+      '*.clerk.accounts.dev',
+      'accounts.clerk.com',
+      'clerk.talk-foot.fr',
+      'clerk.talk-foot.com',
+      '*.google.com',
+      '*.google.fr',
+      'accounts.google.com',
+      '*.gstatic.com',
+      '*.googleapis.com',
+      '*.supabase.co',
+    ],
   },
   plugins: {
     SplashScreen: {

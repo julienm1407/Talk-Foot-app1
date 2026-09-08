@@ -23,6 +23,7 @@ import { isTalkFootOAuthProvider } from '../config/oauthProviders'
 import { isClerkAuthMode } from '../lib/supabase/talkfootSession'
 import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
+import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
 import { changeDisplayNameCloud, checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import {
   ensureTalkfootProfile,
@@ -391,7 +392,11 @@ function CloudUserStateLoader({
         return
       }
       setLoadError(null)
-      const displayName = user.displayName?.trim() || user.email?.split('@')[0] || 'Supporter'
+      const displayName = pickHumanDisplayName(
+        user.displayName,
+        user.email?.split('@')[0],
+        'Supporteur',
+      )
 
       const earlyWallet = mergeWalletBackupIntoApp(user.id, appRef.current)
       const earlyOwned = mergeOwnedItemsBackupIntoApp(user.id, earlyWallet.app)

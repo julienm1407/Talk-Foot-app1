@@ -1,4 +1,4 @@
-import type { BigFiveLeagueId, LeagueStandingRow } from '../../data/leagueStandings'
+import type { LeagueStandingRow, RankingsLeagueId } from '../../data/leagueStandings'
 import { cn } from '../../utils/cn'
 import { rankingsTeamShort } from '../../utils/rankingsTeamLabel'
 import { gaPerMatch, gfPerMatch } from '../../utils/rankingsMetrics'
@@ -16,7 +16,7 @@ export function RankingsScatterQuadrant({
   accent,
 }: {
   rows: LeagueStandingRow[]
-  leagueId: BigFiveLeagueId
+  leagueId: RankingsLeagueId
   title?: string
   subtitle?: string
   className?: string

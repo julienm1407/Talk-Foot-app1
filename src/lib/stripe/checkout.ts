@@ -1,4 +1,5 @@
 import { isStripePublishableConfigured } from '../../config/stripe'
+import { getTalkFootApiOrigin } from '../../utils/sportMonksRelayOrigin'
 
 export type StripeCheckoutKind = 'subscription' | 'medal_pack'
 
@@ -6,6 +7,11 @@ export type StripeClientGrant = {
   kind: 'medal_pack'
   packId: string
   medals: number
+}
+
+function stripeApiUrl(path: string): string {
+  const origin = getTalkFootApiOrigin().replace(/\/$/, '')
+  return `${origin}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 export async function startStripeCheckout(opts: {
@@ -19,7 +25,7 @@ export async function startStripeCheckout(opts: {
     return { ok: false, error: 'stripe_not_configured' }
   }
 
-  const res = await fetch('/api/stripe-checkout', {
+  const res = await fetch(stripeApiUrl('/api/stripe-checkout'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -61,7 +67,7 @@ export async function fulfillStripeSession(opts: {
     }
   | { ok: false; error: string; clientGrant?: StripeClientGrant }
 > {
-  const res = await fetch('/api/stripe-fulfill', {
+  const res = await fetch(stripeApiUrl('/api/stripe-fulfill'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

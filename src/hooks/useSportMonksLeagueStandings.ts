@@ -10,7 +10,7 @@ import {
   type SmLeagueSeasonPick,
 } from '../api/sportMonks'
 import { apiNameToOurId, SM_LEAGUE_ID_BY_TALKFOOT_COMP } from '../api/footballApi'
-import type { BigFiveLeagueId, LeagueStandingRow } from '../data/leagueStandings'
+import type { LeagueStandingRow, RankingsLeagueId } from '../data/leagueStandings'
 import { SPORTMONKS_STANDING_SEASON_ID_BY_LEAGUE } from '../data/sportMonksStandingSeasons'
 import { teams } from '../data/teams'
 import { getSportMonksToken } from '../utils/apiTokens'
@@ -28,7 +28,7 @@ export function isStandingsPreSeason(rows: LeagueStandingRow[]): boolean {
   return rows.length > 0 && rows.every((r) => r.played === 0)
 }
 
-function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagueId): LeagueStandingRow[] {
+function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: RankingsLeagueId): LeagueStandingRow[] {
   const idsByLeague = new Map<string, Set<string>>()
   for (const [lid, list] of Object.entries(teams)) {
     idsByLeague.set(
@@ -42,6 +42,9 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
     for (const id of ids) allKnownIds.add(id)
   }
 
+  // Coupes UEFA : pas de catalogue `teams[ucl]` — ne pas filtrer les clubs Big 5.
+  const allowCrossLeagueCatalog = currentIds.size === 0
+
   const inferredIdFromRow = (r: LeagueStandingRow): string | null => {
     if (allKnownIds.has(r.teamId)) return r.teamId
     const label = r.displayName?.trim()
@@ -50,14 +53,14 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
     return allKnownIds.has(inferred) ? inferred : null
   }
 
-  // Retire les équipes connues d'autres ligues.
-  // On exploite aussi l'id inféré depuis `displayName` quand il est fiable.
-  const crossLeagueFiltered = rows.filter((r) => {
-    const inferred = inferredIdFromRow(r)
-    if (inferred != null) return currentIds.has(inferred)
-    if (allKnownIds.has(r.teamId)) return currentIds.has(r.teamId)
-    return true
-  })
+  const crossLeagueFiltered = allowCrossLeagueCatalog
+    ? rows
+    : rows.filter((r) => {
+        const inferred = inferredIdFromRow(r)
+        if (inferred != null) return currentIds.has(inferred)
+        if (allKnownIds.has(r.teamId)) return currentIds.has(r.teamId)
+        return true
+      })
 
   // Déduplique les lignes par équipe canonique (évite les doublons PSG, etc.).
   const byKey = new Map<string, LeagueStandingRow>()
@@ -96,13 +99,13 @@ function sanitizeRowsForLeague(rows: LeagueStandingRow[], leagueId: BigFiveLeagu
 }
 
 /**
- * Classement Big 5 :
+ * Classement Big 5 + coupes UEFA :
  * 1. `standings/live/leagues/{leagueId}`
  * 2. si vide ou erreur : `standings/seasons/{seasonId}` (map / `VITE_SPORTMONKS_STANDING_SEASON_ID`)
- * 3. si encore vide : `teams/seasons/{seasonId}?include=statistics.details.type` (même id saison que ton exemple SM)
+ * 3. si encore vide : `teams/seasons/{seasonId}?include=statistics.details.type`
  */
 export function useSportMonksLeagueStandings(
-  leagueId: BigFiveLeagueId | null,
+  leagueId: RankingsLeagueId | null,
   enabled = true,
 ) {
   const [rows, setRows] = useState<LeagueStandingRow[]>([])

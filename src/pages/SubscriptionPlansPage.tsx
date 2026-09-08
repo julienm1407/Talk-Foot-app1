@@ -12,47 +12,32 @@ import { cn } from '../utils/cn'
 import type { SubscriptionTierId } from '../types/subscription'
 import { isStripePublishableConfigured, stripeModeLabel } from '../config/stripe'
 import { isPaidSubscriptionTier } from '../config/stripeCatalog'
-import { startStripeCheckout } from '../lib/stripe/checkout'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
-import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
+import { useTalkFootPurchase } from '../hooks/useTalkFootPurchase'
 import { StripeRefundRequestPanel } from '../components/shop/StripeRefundRequestPanel'
+import { usesStoreBilling } from '../utils/nativePlatform'
 
 export function SubscriptionPlansPage() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { user } = useAuth()
-  const supabaseActorId = useTalkFootChatActorId()
   const { tier, setTier } = useSubscription()
   const { status: checkoutStatus, message: checkoutMessage, canRetry, retryFulfill } =
     useStripeCheckoutReturn()
+  const {
+    busy,
+    error: payError,
+    purchaseSubscription,
+    usesStoreBilling: storeBilling,
+  } = useTalkFootPurchase()
   const [payingTier, setPayingTier] = useState<SubscriptionTierId | null>(null)
-  const [payError, setPayError] = useState<string | null>(null)
 
   async function handleSubscribe(tierId: SubscriptionTierId) {
     if (!isPaidSubscriptionTier(tierId)) return
-    if (!user?.id) {
-      setPayError('Connecte-toi pour t’abonner.')
-      return
-    }
-    setPayError(null)
+    if (!user?.id) return
     setPayingTier(tierId)
-    const result = await startStripeCheckout({
-      kind: 'subscription',
-      productId: tierId,
-      userId: user.id,
-      supabaseUserId: supabaseActorId,
-      email: user.email,
-    })
+    await purchaseSubscription(tierId)
     setPayingTier(null)
-    if (!result.ok) {
-      setPayError(
-        result.error === 'stripe_not_configured'
-          ? 'Paiement Stripe non configuré sur cet environnement.'
-          : 'Impossible d’ouvrir le paiement. Réessaie dans un instant.',
-      )
-      return
-    }
-    window.location.assign(result.url)
   }
 
   return (
@@ -71,11 +56,22 @@ export function SubscriptionPlansPage() {
         </h1>
         <p className={cn('max-w-2xl text-sm', TF_TEXT_MUTED)}>
           Trois niveaux : Supporter (gratuit) pour rejoindre la communauté, Ultra à 4,99 €/mois pour les
-          membres actifs, Ambassadeur à 14,99 €/mois pour les créateurs. Paiement sécurisé par Stripe.
-          {isStripePublishableConfigured() ? (
-            <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
+          membres actifs, Ambassadeur à 14,99 €/mois pour les créateurs.{' '}
+          {storeBilling || usesStoreBilling() ? (
+            <>Paiement via Google Play / App Store (RevenueCat).</>
           ) : (
-            <> Ajoute <code className={TF_TEXT_FG}>VITE_STRIPE_PUBLISHABLE_KEY</code> sur Vercel pour activer le paiement.</>
+            <>
+              Paiement sécurisé par Stripe.
+              {isStripePublishableConfigured() ? (
+                <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
+              ) : (
+                <>
+                  {' '}
+                  Ajoute <code className={TF_TEXT_FG}>VITE_STRIPE_PUBLISHABLE_KEY</code> sur Vercel pour
+                  activer le paiement.
+                </>
+              )}
+            </>
           )}
         </p>
         {checkoutMessage ? (
@@ -191,18 +187,24 @@ export function SubscriptionPlansPage() {
                   </Button>
                 ) : id === 'freemium' ? (
                   <p className={cn('text-center text-xs', TF_TEXT_MUTED)}>Inclus à l’inscription</p>
-                ) : isStripePublishableConfigured() ? (
+                ) : storeBilling || isStripePublishableConfigured() ? (
                   <Button
                     type="button"
                     className="w-full"
-                    disabled={payingTier === id}
+                    disabled={busy || payingTier === id || !user}
                     onClick={() => void handleSubscribe(id)}
                   >
-                    {payingTier === id ? 'Redirection Stripe…' : `S’abonner — ${plan.priceLabel}`}
+                    {!user
+                      ? 'Connecte-toi pour t’abonner'
+                      : payingTier === id
+                        ? storeBilling
+                          ? 'Achat store…'
+                          : 'Redirection Stripe…'
+                        : `S’abonner — ${plan.priceLabel}`}
                   </Button>
                 ) : user ? (
                   <Button type="button" className="w-full" disabled>
-                    Stripe non configuré
+                    {storeBilling ? 'Store non configuré' : 'Stripe non configuré'}
                   </Button>
                 ) : (
                   <Link

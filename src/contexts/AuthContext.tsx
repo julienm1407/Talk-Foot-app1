@@ -12,7 +12,9 @@ import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
-import { getSupabaseOAuthRedirectTo, getSupabasePasswordResetRedirectTo } from '../lib/supabase/oauthRedirect'
+import { getSupabaseOAuthRedirectTo, getSupabasePasswordResetRedirectTo, getClerkOAuthRedirectUrl, getClerkOAuthCompleteUrl } from '../lib/supabase/oauthRedirect'
+import { openExternalUrl } from '../mobile/openExternalUrl'
+import { Capacitor } from '@capacitor/core'
 import { resolveLocalLoginEmail, resolveLoginEmail } from '../lib/supabase/loginIdentifier'
 import { logSiteActivity } from '../lib/activityLog'
 import { isCloudAdminEmail } from '../lib/supabase/adminUsers'
@@ -23,6 +25,7 @@ import {
 import { containsBannedWord } from '../utils/bannedWords'
 import { checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
+import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
 
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
@@ -109,18 +112,18 @@ function readOAuthProvider(u: SupabaseUser): AuthUser['provider'] {
 function mapSupabaseUser(u: SupabaseUser): AuthUser {
   const meta = u.user_metadata as Record<string, unknown> | undefined
   const provider = readOAuthProvider(u)
-  const dn =
-    (typeof meta?.display_name === 'string' && meta.display_name.trim()) ||
-    (typeof meta?.full_name === 'string' && meta.full_name.trim()) ||
-    (typeof meta?.name === 'string' && meta.name.trim()) ||
-    (typeof meta?.user_name === 'string' && meta.user_name.trim()) ||
-    (typeof meta?.preferred_username === 'string' && meta.preferred_username.trim()) ||
-    u.email?.split('@')[0] ||
-    'Supporteur'
+  const dn = pickHumanDisplayName(
+    typeof meta?.display_name === 'string' ? meta.display_name : null,
+    typeof meta?.full_name === 'string' ? meta.full_name : null,
+    typeof meta?.name === 'string' ? meta.name : null,
+    typeof meta?.user_name === 'string' ? meta.user_name : null,
+    typeof meta?.preferred_username === 'string' ? meta.preferred_username : null,
+    u.email?.split('@')[0],
+  )
   return withAdminFlag({
     id: u.id,
     email: u.email ?? undefined,
-    displayName: dn.trim(),
+    displayName: dn,
     provider,
     isAnonymous: Boolean(u.is_anonymous),
     avatarUrl:
@@ -563,16 +566,20 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
     setAuthNotice(null)
     const redirectTo = getSupabaseOAuthRedirectTo()
-    const { error } = await sb.auth.signInWithOAuth({
+    const { data, error } = await sb.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo,
+        skipBrowserRedirect: Capacitor.isNativePlatform(),
         queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
       },
     })
     if (error) {
       setAuthNotice(error.message)
       return false
+    }
+    if (Capacitor.isNativePlatform() && data?.url) {
+      await openExternalUrl(data.url)
     }
     return true
   }, [])
@@ -691,14 +698,17 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (user) {
+      const googleAccount = user.externalAccounts?.find((a) => a.provider === 'google')
       const next = withAdminFlag({
         id: user.id,
         email: user.primaryEmailAddress?.emailAddress,
-        displayName:
-          [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
-          user.username ||
-          user.primaryEmailAddress?.emailAddress?.split('@')[0] ||
-          'Supporteur',
+        displayName: pickHumanDisplayName(
+          user.fullName,
+          [user.firstName, user.lastName].filter(Boolean).join(' '),
+          [googleAccount?.firstName, googleAccount?.lastName].filter(Boolean).join(' '),
+          user.username,
+          user.primaryEmailAddress?.emailAddress?.split('@')[0],
+        ),
         provider: user.externalAccounts?.some((a) => a.provider === 'google') ? 'google' : 'email',
         avatarUrl: user.imageUrl,
       })
@@ -814,16 +824,21 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
       setAuthNotice(null)
       if (signIn) {
         try {
-          const base = window.location.origin + (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '')
           await signIn.authenticateWithRedirect({
             strategy: 'oauth_google',
-            redirectUrl: `${base}/login/sso-callback`,
-            redirectUrlComplete: fallback,
+            redirectUrl: getClerkOAuthRedirectUrl(),
+            redirectUrlComplete: getClerkOAuthCompleteUrl(fallback),
           })
           return true
         } catch {
           /* repli Clerk hébergé */
         }
+      }
+      if (Capacitor.isNativePlatform()) {
+        // Hosted Clerk dans le navigateur système (Google refuse souvent la WebView).
+        const complete = encodeURIComponent(getClerkOAuthCompleteUrl(fallback))
+        await openExternalUrl(`https://accounts.clerk.com/sign-in?redirect_url=${complete}`)
+        return true
       }
       await clerk.redirectToSignIn({ signInFallbackRedirectUrl: fallback })
       return true

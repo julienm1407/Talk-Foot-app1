@@ -7,8 +7,11 @@
     </base-config>
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">talk-foot.com</domain>
+        <domain includeSubdomains="true">talk-foot.fr</domain>
         <domain includeSubdomains="true">supabase.co</domain>
         <domain includeSubdomains="true">clerk.com</domain>
+        <domain includeSubdomains="true">clerk.accounts.dev</domain>
+        <domain includeSubdomains="true">google.com</domain>
         <domain includeSubdomains="true">sportmonks.com</domain>
     </domain-config>
 </network-security-config>

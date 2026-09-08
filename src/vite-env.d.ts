@@ -51,6 +51,12 @@ interface ImportMetaEnv {
   readonly VITE_ADSENSE_SLOT_CLUB_INLINE?: string
   /** Stripe Checkout (clé publique `pk_…` uniquement). */
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string
+  /** RevenueCat — clé publique SDK Android (goog_…). */
+  readonly VITE_REVENUECAT_ANDROID_API_KEY?: string
+  /** RevenueCat — clé publique SDK iOS (appl_…). */
+  readonly VITE_REVENUECAT_IOS_API_KEY?: string
+  /** RevenueCat — clé unique de secours (si Android/iOS non séparées). */
+  readonly VITE_REVENUECAT_API_KEY?: string
 }
 
 interface ImportMeta {
