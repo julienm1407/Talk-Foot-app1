@@ -379,3 +379,98 @@ export function lastFiveFormFromTeamSchedule(
   }
   return strip.length ? strip : null
 }
+
+export type ClubScheduleListItem = {
+  matchId: string
+  opponent: string
+  kickoffIso: string
+  league: string
+  matchday: string
+  venue: 'dom' | 'ext'
+  /** Présent uniquement pour les matchs terminés. */
+  scoreLine?: string
+  result?: 'V' | 'N' | 'D'
+  homeName: string
+  awayName: string
+  homeLogoUrl?: string
+  awayLogoUrl?: string
+  homeCrest: CrestFallback
+  awayCrest: CrestFallback
+}
+
+function toClubScheduleListItem(
+  m: Match,
+  clubOurId: string,
+  smTeamId: number | undefined,
+  roundName?: string,
+): ClubScheduleListItem | null {
+  if (!weInMatch(m, clubOurId, smTeamId)) return null
+  const atHome = weAreHome(m, clubOurId, smTeamId)
+  const result = resultLetterForClub(m, clubOurId, smTeamId) ?? undefined
+  return {
+    matchId: m.id,
+    opponent: atHome ? m.away.name : m.home.name,
+    kickoffIso: m.kickoffAt,
+    league: m.competition.shortName,
+    matchday: formatScheduleRoundLabel(roundName),
+    venue: atHome ? 'dom' : 'ext',
+    ...(m.status === 'finished' && m.score
+      ? {
+          scoreLine: `${m.score.home}-${m.score.away}`,
+          ...(result ? { result } : {}),
+        }
+      : {}),
+    homeName: m.home.name,
+    awayName: m.away.name,
+    homeLogoUrl: m.home.logoUrl,
+    awayLogoUrl: m.away.logoUrl,
+    homeCrest: crestFromTeam(m.home),
+    awayCrest: crestFromTeam(m.away),
+  }
+}
+
+function collectScheduleMatchRows(
+  envelope: { data?: unknown },
+): Array<{ match: Match; roundName?: string }> {
+  const rows: Array<{ match: Match; roundName?: string }> = []
+  for (const { fixture: fx, roundName } of teamScheduleFixtureRows(envelope)) {
+    try {
+      rows.push({ match: smFixtureToMatch(fx), roundName })
+    } catch {
+      /* fixture incomplète */
+    }
+  }
+  return rows
+}
+
+/** Derniers matchs terminés (plus récent en premier). */
+export function listRecentClubResults(
+  envelope: { data?: unknown },
+  clubOurId: string,
+  opts?: { sportMonksTeamId?: number; limit?: number },
+): ClubScheduleListItem[] {
+  const smTeamId = opts?.sportMonksTeamId
+  const limit = opts?.limit ?? 8
+  const finished = collectScheduleMatchRows(envelope)
+    .filter((x) => x.match.status === 'finished' && x.match.score != null)
+    .map((x) => ({ ...x, item: toClubScheduleListItem(x.match, clubOurId, smTeamId, x.roundName) }))
+    .filter((x): x is typeof x & { item: ClubScheduleListItem } => x.item != null)
+  finished.sort((a, b) => +new Date(b.match.kickoffAt) - +new Date(a.match.kickoffAt))
+  return finished.slice(0, Math.max(1, limit)).map((x) => x.item)
+}
+
+/** Prochaines rencontres (plus proche en premier). */
+export function listClubCalendarFixtures(
+  envelope: { data?: unknown },
+  clubOurId: string,
+  opts?: { sportMonksTeamId?: number; limit?: number },
+): ClubScheduleListItem[] {
+  const smTeamId = opts?.sportMonksTeamId
+  const limit = opts?.limit ?? 12
+  const upcoming = collectScheduleMatchRows(envelope)
+    .filter((x) => x.match.status === 'upcoming' || x.match.status === 'live')
+    .map((x) => ({ ...x, item: toClubScheduleListItem(x.match, clubOurId, smTeamId, x.roundName) }))
+    .filter((x): x is typeof x & { item: ClubScheduleListItem } => x.item != null)
+  upcoming.sort((a, b) => +new Date(a.match.kickoffAt) - +new Date(b.match.kickoffAt))
+  return upcoming.slice(0, Math.max(1, limit)).map((x) => x.item)
+}

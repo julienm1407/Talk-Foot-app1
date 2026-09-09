@@ -6,10 +6,13 @@ import { cn } from '../../utils/cn'
 import type { Team } from '../../types/match'
 import type { SupporterGroup } from '../../types/group'
 import type { ClubDebateItem, ClubPageMock, ClubSquadNode, ClubShopItem } from '../../data/clubPageMock'
-import type { TeamSeasonStatRow } from '../../api/sportMonks'
+import type { ClubScheduleListItem, SmSquadPlayerRow, TeamSeasonStatRow } from '../../api/sportMonks'
+import type { LeagueStandingRow } from '../../data/leagueStandings'
 import { Card } from '../ui/Card'
 import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
 import { ClubCrest } from '../brand/ClubCrest'
+import { LeagueStandingsTable } from '../rankings/LeagueStandingsTable'
+import { formatKickoff } from '../../utils/time'
 
 type ClubReadingLink = {
   id: string
@@ -364,12 +367,85 @@ function pickStatValue(
   return hit?.value ?? null
 }
 
+function roleBucketLabel(pos: string | undefined): 'Gardien' | 'Défense' | 'Milieu' | 'Attaque' | 'Effectif' {
+  const s = (pos ?? '').toLowerCase()
+  if (/goal|gardien|keeper|^gk\b/.test(s)) return 'Gardien'
+  if (/defen|arrière|back|centre.?back|^cb\b|^lb\b|^rb\b/.test(s)) return 'Défense'
+  if (/mid|milieu|wing.?back|^cm\b|^dm\b|^am\b/.test(s)) return 'Milieu'
+  if (/attack|forward|striker|ailier|winger|^st\b|^cf\b|^lw\b|^rw\b/.test(s)) return 'Attaque'
+  return 'Effectif'
+}
+
+function ClubScheduleMatchRow({ item }: { item: ClubScheduleListItem }) {
+  const inner = (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2">
+      <div className="flex min-w-0 items-center gap-2">
+        <ClubCrest
+          id={item.homeCrest.id}
+          shortName={item.homeCrest.shortName}
+          colors={item.homeCrest.colors}
+          logoUrl={item.homeLogoUrl}
+          sportMonksTeamId={item.homeCrest.sportMonksTeamId}
+          size={26}
+          clickable={false}
+          className="shrink-0 !rounded-full"
+        />
+        <p className="truncate text-[11px] font-bold text-sky-50">{item.homeName}</p>
+      </div>
+      <div className="text-center">
+        {item.scoreLine ? (
+          <p className="text-sm font-black tabular-nums text-amber-200">{item.scoreLine}</p>
+        ) : (
+          <p className="text-[10px] font-black uppercase text-sky-200/85">{item.venue === 'dom' ? 'DOM' : 'EXT'}</p>
+        )}
+        {item.result ? (
+          <p
+            className={cn(
+              'mt-0.5 text-[9px] font-black',
+              item.result === 'V' && 'text-emerald-300',
+              item.result === 'N' && 'text-slate-300',
+              item.result === 'D' && 'text-rose-300',
+            )}
+          >
+            {item.result}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex min-w-0 items-center justify-end gap-2">
+        <p className="truncate text-right text-[11px] font-bold text-sky-50">{item.awayName}</p>
+        <ClubCrest
+          id={item.awayCrest.id}
+          shortName={item.awayCrest.shortName}
+          colors={item.awayCrest.colors}
+          logoUrl={item.awayLogoUrl}
+          sportMonksTeamId={item.awayCrest.sportMonksTeamId}
+          size={26}
+          clickable={false}
+          className="shrink-0 !rounded-full"
+        />
+      </div>
+    </div>
+  )
+  if (!item.matchId) return inner
+  return (
+    <Link to={`/channel/${item.matchId}`} className={cn('block transition hover:brightness-110', TF_FOCUS_VISIBLE)}>
+      {inner}
+    </Link>
+  )
+}
+
 function ClubSeasonSnapshotBlock({
   data,
   team,
   matchMode,
   scheduleHint,
   clubLastMatch,
+  recentResults,
+  calendarFixtures,
+  standingsRows,
+  standingsLeagueId,
+  standingsLoading,
+  standingsHint,
   seasonStatsRows,
   seasonStatsHint,
 }: {
@@ -400,69 +476,44 @@ function ClubSeasonSnapshotBlock({
       sportMonksTeamId?: number
     }
   } | null
+  recentResults: ClubScheduleListItem[]
+  calendarFixtures: ClubScheduleListItem[]
+  standingsRows: LeagueStandingRow[]
+  standingsLeagueId: string
+  standingsLoading?: boolean
+  standingsHint?: string | null
   seasonStatsRows?: TeamSeasonStatRow[] | null
   seasonStatsHint?: string | null
 }) {
-  const { upcoming, formStrip, formStripFromApi, trophies } = data
+  const { upcoming, formStrip, formStripFromApi } = data
   const apiPosition = pickStatValue(seasonStatsRows, ['position', 'rank', 'standing'])
   const apiPoints = pickStatValue(seasonStatsRows, ['points', 'point'])
-  const hasApiTable = apiPosition != null || apiPoints != null
-  const tableTitle = 'Championnat'
-  const tablePosition = apiPosition != null ? `${Math.round(apiPosition)}e` : 'Classement indisponible'
-  const tablePoints = apiPoints != null ? `${Math.round(apiPoints)} pts` : 'Points indisponibles'
-  const tableLine = formStripFromApi ? `Forme 5j : ${formStrip.join(' - ')}` : 'Forme récente indisponible'
+  const ourStanding = standingsRows.find((r) => r.teamId === team.id)
+
   return (
     <Card
-      className={cn('p-0 shadow-tf-elev-2', encartClass('season'), matchMode && 'ring-1 ring-rose-500/15')}
+      id="club-hub"
+      className={cn(
+        'scroll-mt-24 p-0 shadow-tf-elev-2',
+        encartClass('season'),
+        matchMode && 'ring-1 ring-rose-500/15',
+      )}
     >
-      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-sky-500/15 bg-black/15 p-3 sm:p-4">
-        <ClubEncartTitle kicker="Calendrier" kickerClass="text-sky-200/90" subtitle="Aperçu compétition.">
-          Saison &amp; calendrier
-        </ClubEncartTitle>
-        <Link
-          to="/match"
-          className={cn(
-            'shrink-0 rounded-lg border border-sky-400/25 bg-sky-500/15 px-2.5 py-1.5 text-xs font-black text-sky-100/95 transition hover:border-sky-400/40',
-            TF_FOCUS_VISIBLE,
-          )}
+      <div className="border-b border-sky-500/15 bg-black/15 p-3 sm:p-4">
+        <ClubEncartTitle
+          kicker="Sport"
+          kickerClass="text-sky-200/90"
+          subtitle="Résultats, classement, calendrier — données live quand disponibles."
         >
-          Agenda match
-        </Link>
+          Hub compétition
+        </ClubEncartTitle>
       </div>
-      <div className="p-3 sm:p-4 sm:pt-3">
-        <div
-        className={cn(
-          'grid gap-3 sm:grid-cols-2',
-          'rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-500/12 to-slate-950/40 p-3 ring-1 ring-sky-500/10',
-        )}
-      >
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Prochain match</p>
-          <p className="mt-0.5 text-sm font-black text-tf-app-fg">
-            {upcoming.league} · {upcoming.matchday}
-          </p>
-          <p className="mt-0.5 text-xs font-bold text-sky-100/85">
-            {upcoming.venue === 'dom' ? (
-              <span>
-                {team.shortName} reçoit {upcoming.opponent}
-              </span>
-            ) : (
-              <span>
-                {upcoming.opponent} · {team.shortName} à l’extérieur
-              </span>
-            )}
-          </p>
-          <p className="mt-1.5 text-[11px] font-bold text-amber-200/90">Coup d’envoi {upcoming.kickoff}</p>
-        </div>
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Forme (5 j.)</p>
+      <div className="space-y-4 p-3 sm:p-4">
+        <section id="club-results" className="scroll-mt-24">
+          <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Derniers résultats</p>
           <ul
             className="mt-1.5 flex flex-wrap gap-1.5"
-            aria-label={
-              formStripFromApi
-                ? 'Cinq derniers matchs terminés'
-                : 'Forme récente'
-            }
+            aria-label={formStripFromApi ? 'Cinq derniers matchs terminés' : 'Forme récente'}
           >
             {formStrip.map((r, i) => (
               <li
@@ -473,110 +524,133 @@ function ClubSeasonSnapshotBlock({
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[10px] font-bold text-sky-200/80">
-            {formStripFromApi
-              ? 'Résultats issus du calendrier équipe.'
-              : 'Données de forme indisponibles.'}
-          </p>
-        </div>
-      </div>
-      {clubLastMatch ? (
-        <div className="mt-3 rounded-2xl border border-violet-500/25 bg-violet-500/10 p-3 ring-1 ring-violet-500/10">
-          <p className="text-[9px] font-black uppercase tracking-wider text-violet-200/95">
-            Dernier match
-          </p>
-          <p className="mt-0.5 text-[11px] font-bold text-violet-200/90">
-            {clubLastMatch.league}
-          </p>
-          <div className="mt-2 rounded-xl border border-violet-300/15 bg-black/25 px-3 py-3">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <ClubCrest
-                  id={clubLastMatch.homeCrest.id}
-                  shortName={clubLastMatch.homeCrest.shortName}
-                  colors={clubLastMatch.homeCrest.colors}
-                  logoUrl={clubLastMatch.homeLogoUrl}
-                  sportMonksTeamId={clubLastMatch.homeCrest.sportMonksTeamId}
-                  size={32}
-                  clickable={false}
-                  className="shrink-0 !rounded-full"
-                />
-                <p className="truncate text-xs font-black text-sky-50">{clubLastMatch.homeName}</p>
-              </div>
-              <p className="text-lg font-black leading-none text-amber-200 sm:text-xl">
-                {clubLastMatch.scoreLine}
+          {recentResults.length > 0 ? (
+            <ul className="mt-2 max-h-[min(280px,42vh)] space-y-1.5 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+              {recentResults.map((item) => (
+                <li key={`res-${item.matchId}-${item.kickoffIso}`}>
+                  <p className="mb-0.5 text-[10px] font-semibold text-sky-200/75">
+                    {item.league} · {item.matchday} · {formatKickoff(item.kickoffIso)}
+                  </p>
+                  <ClubScheduleMatchRow item={item} />
+                </li>
+              ))}
+            </ul>
+          ) : clubLastMatch ? (
+            <div className="mt-2">
+              <p className="mb-0.5 text-[10px] font-semibold text-sky-200/75">
+                {clubLastMatch.league} · {clubLastMatch.kickoff}
               </p>
-              <div className="flex min-w-0 items-center justify-end gap-2">
-                <p className="truncate text-right text-xs font-black text-sky-50">{clubLastMatch.awayName}</p>
-                <ClubCrest
-                  id={clubLastMatch.awayCrest.id}
-                  shortName={clubLastMatch.awayCrest.shortName}
-                  colors={clubLastMatch.awayCrest.colors}
-                  logoUrl={clubLastMatch.awayLogoUrl}
-                  sportMonksTeamId={clubLastMatch.awayCrest.sportMonksTeamId}
-                  size={32}
-                  clickable={false}
-                  className="shrink-0 !rounded-full"
-                />
-              </div>
+              <ClubScheduleMatchRow
+                item={{
+                  matchId: '',
+                  opponent: clubLastMatch.opponent,
+                  kickoffIso: '',
+                  league: clubLastMatch.league,
+                  matchday: '—',
+                  venue: clubLastMatch.venue,
+                  scoreLine: clubLastMatch.scoreLine,
+                  homeName: clubLastMatch.homeName,
+                  awayName: clubLastMatch.awayName,
+                  homeLogoUrl: clubLastMatch.homeLogoUrl,
+                  awayLogoUrl: clubLastMatch.awayLogoUrl,
+                  homeCrest: clubLastMatch.homeCrest,
+                  awayCrest: clubLastMatch.awayCrest,
+                }}
+              />
             </div>
+          ) : (
+            <p className="mt-2 text-xs font-semibold text-sky-100/75">Aucun résultat récent disponible.</p>
+          )}
+        </section>
+
+        <section id="club-standings" className="scroll-mt-24">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Classement</p>
+            {ourStanding || apiPosition != null || apiPoints != null ? (
+              <p className="text-[11px] font-black text-white">
+                {ourStanding
+                  ? `${ourStanding.rank}e · ${ourStanding.points} pts`
+                  : `${apiPosition != null ? `${Math.round(apiPosition)}e` : '—'} · ${
+                      apiPoints != null ? `${Math.round(apiPoints)} pts` : '—'
+                    }`}
+              </p>
+            ) : null}
           </div>
-        </div>
-      ) : null}
-      {scheduleHint ? (
-        <p className="mt-2 text-[10px] font-semibold leading-snug text-amber-200/95 [text-wrap:pretty]">
-          {scheduleHint}{' '}
-          <Link
-            to="/settings/donnees"
-            className={cn('font-black text-amber-100 underline underline-offset-2', TF_FOCUS_VISIBLE)}
-          >
-            Réglages → Données
-          </Link>
-        </p>
-      ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {hasApiTable
-          ? null
-          : trophies.map((t) => (
-              <div
-                key={t.label}
-                className="min-w-0 flex-1 rounded-xl border border-white/12 bg-black/35 px-2.5 py-2 ring-1 ring-white/5 sm:min-w-[7rem] sm:flex-initial"
+          {standingsLoading ? (
+            <p className="mt-2 text-xs font-semibold text-sky-100/80">Chargement du classement…</p>
+          ) : standingsRows.length > 0 ? (
+            <div className="mt-2">
+              <LeagueStandingsTable
+                leagueId={standingsLeagueId}
+                rows={standingsRows}
+                highlightTeamId={team.id}
+                compact
+                dataSourceLabel="SportMonks"
+              />
+            </div>
+          ) : (
+            <p className="mt-2 text-xs font-semibold text-sky-100/75">
+              {standingsHint ?? 'Classement indisponible pour ce championnat.'}
+            </p>
+          )}
+        </section>
+
+        <section id="club-calendar" className="scroll-mt-24">
+          <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Calendrier</p>
+          {upcoming?.opponent ? (
+            <p className="mt-1 text-xs font-bold text-sky-100/90">
+              Prochain : {upcoming.league} · {upcoming.matchday} —{' '}
+              {upcoming.venue === 'dom' ? `reçoit ${upcoming.opponent}` : `@ ${upcoming.opponent}`} ·{' '}
+              {upcoming.kickoff}
+            </p>
+          ) : null}
+          {calendarFixtures.length > 0 ? (
+            <ul className="mt-2 max-h-[min(280px,42vh)] space-y-1.5 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+              {calendarFixtures.map((item) => (
+                <li key={`cal-${item.matchId}-${item.kickoffIso}`}>
+                  <p className="mb-0.5 text-[10px] font-semibold text-sky-200/75">
+                    {item.league} · {item.matchday} · {formatKickoff(item.kickoffIso)} ·{' '}
+                    {item.venue === 'dom' ? 'Domicile' : 'Extérieur'}
+                  </p>
+                  <ClubScheduleMatchRow item={item} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs font-semibold text-sky-100/75">Aucune rencontre à venir listée.</p>
+          )}
+          {scheduleHint ? (
+            <p className="mt-2 text-[10px] font-semibold leading-snug text-amber-200/95 [text-wrap:pretty]">
+              {scheduleHint}{' '}
+              <Link
+                to="/settings/donnees"
+                className={cn('font-black text-amber-100 underline underline-offset-2', TF_FOCUS_VISIBLE)}
               >
-                <p className="text-[8px] font-bold uppercase text-sky-200/80">{t.label}</p>
-                <p className="text-sm font-black text-amber-100/95 [text-shadow:0_1px_0_rgba(0,0,0,0.5)]">{t.count}</p>
-              </div>
-            ))}
-        <div className="min-w-full rounded-xl border border-amber-400/30 bg-amber-500/12 px-2.5 py-2 sm:min-w-0 sm:flex-1 sm:pl-3">
-          <p className="text-[8px] font-bold uppercase text-amber-200/90">{tableTitle}</p>
-          <p className="text-sm font-black text-white [text-shadow:0_1px_0_rgba(0,0,0,0.45)]">
-            {tablePosition} · {tablePoints}
-          </p>
-          <p className="text-[10px] font-semibold text-sky-200/80">{tableLine}</p>
-        </div>
-      </div>
-      {seasonStatsRows?.length ? (
-        <div className="mt-3 rounded-2xl border border-sky-500/25 bg-sky-500/10 p-3 ring-1 ring-sky-500/10">
-          <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/95">
-            Stats saison
-          </p>
-          <ul className="mt-2 max-h-[min(200px,38vh)] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
-            {seasonStatsRows.slice(0, 14).map((r) => (
-              <li
-                key={r.key}
-                className="flex items-baseline justify-between gap-2 border-b border-white/5 pb-1.5 text-[11px] last:border-0 last:pb-0"
-              >
-                <span className="min-w-0 font-semibold leading-snug text-sky-100/90">{r.label}</span>
-                <span className="shrink-0 font-black tabular-nums text-white">{fmtSeasonStat(r.value)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {seasonStatsHint ? (
-        <p className="mt-2 text-[10px] font-semibold leading-snug text-amber-200/90 [text-wrap:pretty]">
-          {seasonStatsHint}
-        </p>
-      ) : null}
+                Réglages → Données
+              </Link>
+            </p>
+          ) : null}
+        </section>
+
+        {seasonStatsRows?.length ? (
+          <section>
+            <p className="text-[9px] font-black uppercase tracking-wider text-sky-200/90">Stats saison</p>
+            <ul className="mt-2 max-h-[min(180px,32vh)] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
+              {seasonStatsRows.slice(0, 14).map((r) => (
+                <li
+                  key={r.key}
+                  className="flex items-baseline justify-between gap-2 border-b border-white/5 pb-1.5 text-[11px] last:border-0 last:pb-0"
+                >
+                  <span className="min-w-0 font-semibold leading-snug text-sky-100/90">{r.label}</span>
+                  <span className="shrink-0 font-black tabular-nums text-white">{fmtSeasonStat(r.value)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {seasonStatsHint ? (
+          <p className="text-[10px] font-semibold leading-snug text-amber-200/90 [text-wrap:pretty]">{seasonStatsHint}</p>
+        ) : null}
       </div>
     </Card>
   )
@@ -638,7 +712,14 @@ export function ClubPageGrid({
   clubGroups,
   clubScheduleHint,
   clubLastMatch,
+  clubRecentResults = [],
+  clubCalendarFixtures = [],
+  clubStandingsRows = [],
+  clubStandingsLeagueId = 'ligue-1',
+  clubStandingsLoading = false,
+  clubStandingsHint = null,
   squadFromSportMonks: _squadFromSportMonks,
+  smSquadPlayers = null,
   clubSeasonStats,
   clubSeasonStatsHint,
   clubReadingLinks,
@@ -671,8 +752,15 @@ export function ClubPageGrid({
       sportMonksTeamId?: number
     }
   } | null
+  clubRecentResults?: ClubScheduleListItem[]
+  clubCalendarFixtures?: ClubScheduleListItem[]
+  clubStandingsRows?: LeagueStandingRow[]
+  clubStandingsLeagueId?: string
+  clubStandingsLoading?: boolean
+  clubStandingsHint?: string | null
   /** Noms sur le terrain alignés sur l’effectif API. */
   squadFromSportMonks?: boolean
+  smSquadPlayers?: SmSquadPlayerRow[] | null
   clubSeasonStats?: TeamSeasonStatRow[] | null
   clubSeasonStatsHint?: string | null
   clubReadingLinks: ClubReadingLink[]
@@ -680,6 +768,35 @@ export function ClubPageGrid({
   const [selId, setSelId] = useState(data.hotPlayerId || data.squad[0]?.id || '')
   const [shopPreview, setShopPreview] = useState<string | null>(null)
   const selected = data.squad.find((p) => p.id === selId) ?? data.squad[0]
+
+  const squadByRole = useMemo(() => {
+    const players = smSquadPlayers?.length ? smSquadPlayers : []
+    const order: Array<'Gardien' | 'Défense' | 'Milieu' | 'Attaque' | 'Effectif'> = [
+      'Gardien',
+      'Défense',
+      'Milieu',
+      'Attaque',
+      'Effectif',
+    ]
+    const buckets = new Map<string, SmSquadPlayerRow[]>()
+    for (const p of players) {
+      const key = roleBucketLabel(p.position)
+      const list = buckets.get(key) ?? []
+      list.push(p)
+      buckets.set(key, list)
+    }
+    for (const list of buckets.values()) {
+      list.sort((a, b) => {
+        const na = parseInt(a.number, 10)
+        const nb = parseInt(b.number, 10)
+        if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb
+        return a.label.localeCompare(b.label, 'fr')
+      })
+    }
+    return order
+      .map((label) => ({ label, players: buckets.get(label) ?? [] }))
+      .filter((g) => g.players.length > 0)
+  }, [smSquadPlayers])
 
   useEffect(() => {
     const next = data.hotPlayerId || data.squad[0]?.id || ''
@@ -695,8 +812,9 @@ export function ClubPageGrid({
     >
       <div className="min-w-0 space-y-4 lg:col-span-7">
         <Card
+          id="club-squad"
           className={cn(
-            'overflow-hidden p-0 shadow-tf-elev-2',
+            'scroll-mt-24 overflow-hidden p-0 shadow-tf-elev-2',
             encartClass('pitch'),
             matchMode && 'ring-1 ring-rose-500/20',
           )}
@@ -782,6 +900,35 @@ export function ClubPageGrid({
               ) : null}
             </div>
           </div>
+          {squadByRole.length > 0 ? (
+            <div className="border-t border-emerald-500/15 bg-black/20 p-3 sm:p-4">
+              <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200/90">
+                Effectif complet
+              </p>
+              <div className="mt-2 max-h-[min(360px,50vh)] space-y-3 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+                {squadByRole.map((group) => (
+                  <div key={group.label}>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">{group.label}</p>
+                    <ul className="mt-1.5 space-y-1">
+                      {group.players.map((p) => (
+                        <li
+                          key={p.playerSmId}
+                          className="flex items-center justify-between gap-2 rounded-lg border border-white/8 bg-black/30 px-2.5 py-1.5 text-[11px]"
+                        >
+                          <span className="min-w-0 truncate font-semibold text-sky-50">{p.label}</span>
+                          <span className="shrink-0 font-black tabular-nums text-emerald-200/95">#{p.number}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="border-t border-emerald-500/15 bg-black/20 px-3 py-2.5 sm:px-4">
+              <p className="text-xs font-semibold text-sky-100/75">Effectif complet indisponible pour le moment.</p>
+            </div>
+          )}
         </Card>
 
         <ClubDebatesBlock debates={data.debates} matchMode={matchMode} totalDebates={data.debates.length} />
@@ -797,6 +944,12 @@ export function ClubPageGrid({
           matchMode={matchMode}
           scheduleHint={clubScheduleHint}
           clubLastMatch={clubLastMatch}
+          recentResults={clubRecentResults}
+          calendarFixtures={clubCalendarFixtures}
+          standingsRows={clubStandingsRows}
+          standingsLeagueId={clubStandingsLeagueId}
+          standingsLoading={clubStandingsLoading}
+          standingsHint={clubStandingsHint}
           seasonStatsRows={clubSeasonStats}
           seasonStatsHint={clubSeasonStatsHint}
         />

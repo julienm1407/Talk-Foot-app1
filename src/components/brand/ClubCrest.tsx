@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clubPathForId, resolveClubIdFromSlug } from '../../utils/clubRoute'
+import { clubPathForId, findTeamById, resolveClubIdFromSlug } from '../../utils/clubRoute'
 import { cn } from '../../utils/cn'
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { sportMonksTeamLogoUrl, sportMonksTeamLogoUrlForClubId } from '../../data/sportMonksLogoUrls'
@@ -76,7 +76,17 @@ export function ClubCrest({
     if (!clickable) return
     ev?.preventDefault?.()
     ev?.stopPropagation?.()
-    navigate(clubPathForId(catalogId))
+    if (findTeamById(catalogId)) {
+      navigate(clubPathForId(catalogId))
+      return
+    }
+    const params = new URLSearchParams()
+    if (sportMonksTeamId != null && Number.isFinite(sportMonksTeamId)) {
+      params.set('sm', String(Math.floor(sportMonksTeamId)))
+    }
+    if (shortName?.trim()) params.set('s', shortName.trim().slice(0, 24))
+    const qs = params.toString()
+    navigate(qs ? `${clubPathForId(catalogId)}?${qs}` : clubPathForId(catalogId))
   }
 
   return (

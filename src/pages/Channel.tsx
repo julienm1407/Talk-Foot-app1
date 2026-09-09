@@ -932,6 +932,8 @@ function MatchRow({
   awayClubId,
   homeSportMonksTeamId,
   awaySportMonksTeamId,
+  homePath,
+  awayPath,
 }: {
   home: string
   away: string
@@ -943,6 +945,8 @@ function MatchRow({
   awayClubId?: string
   homeSportMonksTeamId?: number
   awaySportMonksTeamId?: number
+  homePath?: string | null
+  awayPath?: string | null
 }) {
   const homeResolved =
     homeClubId != null
@@ -961,15 +965,27 @@ function MatchRow({
   return (
     <div className="tf-live-soft-surface flex items-center justify-between rounded-lg bg-[#0a233d] px-3 py-2">
       <div className="flex min-w-0 items-center gap-2">
-        <TeamLogo label={home} logoUrl={homeResolved} />
-        <span className="truncate text-sm font-semibold text-sky-50">{home}</span>
+        <TeamLogoLink to={homePath} label={home} logoUrl={homeResolved} clubId={homeClubId} sportMonksTeamId={homeSportMonksTeamId} />
+        {homePath ? (
+          <Link to={homePath} className="truncate text-sm font-semibold text-sky-50 hover:underline">
+            {home}
+          </Link>
+        ) : (
+          <span className="truncate text-sm font-semibold text-sky-50">{home}</span>
+        )}
       </div>
       <span className="shrink-0 px-1 text-lg font-bold text-white">
         {homeScore} - {awayScore}
       </span>
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-sm font-semibold text-sky-50">{away}</span>
-        <TeamLogo label={away} logoUrl={awayResolved} />
+        {awayPath ? (
+          <Link to={awayPath} className="truncate text-sm font-semibold text-sky-50 hover:underline">
+            {away}
+          </Link>
+        ) : (
+          <span className="truncate text-sm font-semibold text-sky-50">{away}</span>
+        )}
+        <TeamLogoLink to={awayPath} label={away} logoUrl={awayResolved} clubId={awayClubId} sportMonksTeamId={awaySportMonksTeamId} />
       </div>
     </div>
   )
@@ -3513,6 +3529,14 @@ export function ChannelPage() {
                       awayClubId={selectedLiveMatch.away.id}
                       homeSportMonksTeamId={selectedLiveMatch.home.sportMonksTeamId}
                       awaySportMonksTeamId={selectedLiveMatch.away.sportMonksTeamId}
+                      homePath={teamHubPathForMatch(
+                        selectedLiveMatch.home,
+                        selectedLiveMatch.competition.id,
+                      )}
+                      awayPath={teamHubPathForMatch(
+                        selectedLiveMatch.away,
+                        selectedLiveMatch.competition.id,
+                      )}
                     />
                   ) : (
                     <div className={cn(chSideInset, 'px-2.5 py-2.5')}>
@@ -3643,6 +3667,14 @@ export function ChannelPage() {
                       awayClubId={selectedLiveMatch.away.id}
                       homeSportMonksTeamId={selectedLiveMatch.home.sportMonksTeamId}
                       awaySportMonksTeamId={selectedLiveMatch.away.sportMonksTeamId}
+                      homePath={teamHubPathForMatch(
+                        selectedLiveMatch.home,
+                        selectedLiveMatch.competition.id,
+                      )}
+                      awayPath={teamHubPathForMatch(
+                        selectedLiveMatch.away,
+                        selectedLiveMatch.competition.id,
+                      )}
                     />
                   ) : (
                     <div className={cn(chSideInset, 'px-3 py-3')}>

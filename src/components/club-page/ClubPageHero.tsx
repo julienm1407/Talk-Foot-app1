@@ -10,6 +10,39 @@ import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 const ctaBase =
   'tf-interactive-press inline-flex min-h-tf-touch min-w-0 items-center justify-center gap-1.5 rounded-2xl border px-3 py-2 text-center text-xs font-black sm:gap-2 sm:px-4 sm:text-sm'
 
+function scrollToClubSection(sectionId: string) {
+  const el = document.getElementById(sectionId)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const CLUB_SPORT_BUBBLES = [
+  {
+    id: 'club-results',
+    label: 'Résultats',
+    className:
+      'border-emerald-400/45 bg-emerald-500/15 text-emerald-100 shadow-[0_0_18px_rgba(16,185,129,0.16)] hover:border-emerald-400/60 hover:bg-emerald-500/25',
+  },
+  {
+    id: 'club-standings',
+    label: 'Classement',
+    className:
+      'border-amber-400/45 bg-amber-500/15 text-amber-100 shadow-[0_0_18px_rgba(245,158,11,0.16)] hover:border-amber-400/60 hover:bg-amber-500/25',
+  },
+  {
+    id: 'club-calendar',
+    label: 'Calendrier',
+    className:
+      'border-sky-400/45 bg-sky-500/15 text-sky-100 shadow-[0_0_18px_rgba(56,189,248,0.16)] hover:border-sky-400/60 hover:bg-sky-500/25',
+  },
+  {
+    id: 'club-squad',
+    label: 'Effectif',
+    className:
+      'border-teal-400/45 bg-teal-500/15 text-teal-100 shadow-[0_0_18px_rgba(45,212,191,0.16)] hover:border-teal-400/60 hover:bg-teal-500/25',
+  },
+] as const
+
 function formResultPoints(r: 'V' | 'N' | 'D'): number {
   if (r === 'V') return 1
   if (r === 'N') return 0.5
@@ -93,6 +126,40 @@ export function ClubPageHero({
     }
   }, [sync])
 
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    if (!hash.startsWith('club-')) return
+    const t = window.setTimeout(() => scrollToClubSection(hash), 120)
+    return () => window.clearTimeout(t)
+  }, [team.id])
+
+  const goToSection = useCallback((sectionId: string) => {
+    const url = `${window.location.pathname}${window.location.search}#${sectionId}`
+    window.history.replaceState(null, '', url)
+    scrollToClubSection(sectionId)
+  }, [])
+
+  const sportBubbles = (compact: boolean) =>
+    CLUB_SPORT_BUBBLES.map((b) => (
+      <a
+        key={b.id}
+        href={`#${b.id}`}
+        onClick={(e) => {
+          e.preventDefault()
+          goToSection(b.id)
+        }}
+        className={cn(
+          ctaBase,
+          b.className,
+          compact && 'min-h-10 px-2.5 py-1.5 text-[11px] sm:px-3',
+          'transition',
+          TF_FOCUS_VISIBLE,
+        )}
+      >
+        {b.label}
+      </a>
+    ))
+
   const ctaRow = (compact: boolean) => (
     <div
       className={cn(
@@ -100,25 +167,23 @@ export function ClubPageHero({
         compact ? 'sm:gap-1.5' : 'sm:gap-2',
       )}
     >
+      <div
+        className={cn('flex flex-wrap items-center justify-center gap-2', compact ? 'gap-1.5' : 'gap-2')}
+        role="navigation"
+        aria-label={`Sections sportives ${team.shortName}`}
+      >
+        {sportBubbles(compact)}
+      </div>
       <Link
         to="/groups"
         className={cn(
           ctaBase,
+          compact && 'min-h-10 px-2.5 py-1.5 text-[11px] sm:px-3',
           'border-tf-nav-groups/45 bg-tf-nav-groups/20 text-violet-100 shadow-[0_0_20px_rgba(108,92,231,0.18)] transition hover:border-tf-nav-groups/60 hover:bg-tf-nav-groups/30',
           TF_FOCUS_VISIBLE,
         )}
       >
         Tribunes &amp; groupes
-      </Link>
-      <Link
-        to="/match"
-        className={cn(
-          ctaBase,
-          'border-sky-400/40 bg-sky-500/10 text-sky-100 transition hover:border-sky-400/55 hover:bg-sky-500/20',
-          TF_FOCUS_VISIBLE,
-        )}
-      >
-        Matchs &amp; agenda
       </Link>
       <button
         type="button"
@@ -126,13 +191,13 @@ export function ClubPageHero({
         aria-pressed={isFollowing}
         className={cn(
           ctaBase,
-          'border-amber-400/35 bg-amber-500/10 text-amber-100 transition hover:border-amber-400/50 hover:bg-amber-500/20',
-          isFollowing && 'border-amber-300/50 bg-amber-500/20 ring-1 ring-amber-400/30',
+          compact && 'min-h-10 px-2.5 py-1.5 text-[11px] sm:px-3',
+          'border-white/20 bg-white/5 text-sky-100 transition hover:border-white/35 hover:bg-white/10',
+          isFollowing && 'border-amber-300/50 bg-amber-500/20 text-amber-100 ring-1 ring-amber-400/30',
           TF_FOCUS_VISIBLE,
         )}
       >
-        <span aria-hidden>{isFollowing ? '★' : '☆'}</span>{' '}
-        {isFollowing ? 'Dans mes favoris' : 'Suivre le club'}
+        <span aria-hidden>{isFollowing ? '★' : '☆'}</span> {isFollowing ? 'Favori' : 'Suivre'}
       </button>
     </div>
   )
@@ -143,7 +208,11 @@ export function ClubPageHero({
   const awayCrest =
     data.upcoming.awayCrest ??
     (data.upcoming.venue === 'dom'
-      ? { id: `${team.id}-opponent`, shortName: data.upcoming.opponent.slice(0, 3).toUpperCase(), colors: team.colors }
+      ? {
+          id: `${team.id}-opponent`,
+          shortName: data.upcoming.opponent.slice(0, 3).toUpperCase(),
+          colors: team.colors,
+        }
       : { id: team.id, shortName: team.shortName, colors: team.colors })
   const matchHref = data.upcoming.matchId ? `/channel/${encodeURIComponent(data.upcoming.matchId)}` : null
 
@@ -294,7 +363,7 @@ export function ClubPageHero({
         className={cn(
           'sticky top-0 z-40 w-full border-b border-white/10 transition-all duration-300',
           sticky
-            ? 'max-h-32 translate-y-0 opacity-100'
+            ? 'max-h-40 translate-y-0 opacity-100'
             : 'pointer-events-none -translate-y-1 max-h-0 overflow-hidden border-transparent py-0 opacity-0',
         )}
         style={{ background: 'color-mix(in srgb, #061222 88%, black)' }}
@@ -304,15 +373,7 @@ export function ClubPageHero({
             <p className="min-w-0 truncate text-center text-xs font-bold text-sky-100/90 sm:text-left">
               {team.shortName} · espace club
             </p>
-            <Link
-              to="/match"
-              className={cn(
-                'inline-flex min-h-tf-touch items-center justify-center rounded-xl border border-sky-400/30 bg-sky-500/10 px-3 text-xs font-bold text-sky-100 transition hover:border-sky-400/50 hover:bg-sky-500/20',
-                TF_FOCUS_VISIBLE,
-              )}
-            >
-              Voir les matchs
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">{sportBubbles(true)}</div>
           </div>
         </div>
       </div>

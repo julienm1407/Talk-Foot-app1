@@ -4,18 +4,23 @@ import { API_TOKENS_CHANGED_EVENT, LS_KEY_SPORTMONKS_TOKEN } from '../constants/
 import {
   extractSquadPlayersFromSmEnvelope,
   extractTeamSeasonStatisticsFromSmPayload,
+  extractLeagueStandingRowsFromSmStandingsEnvelope,
   fetchSportMonksTeamActiveSeasons,
   fetchSportMonksTeamSchedule,
   fetchSportMonksTeamStatisticsForSeason,
   fetchSportMonksTeamSquad,
+  fetchSportMonksStandingsBySeason,
   pickActiveSeasonIdFromSmTeamPayload,
   fetchSportMonksTeamUpcoming,
   findLastFinishedClubMatchFromTeamLatest,
   findNextClubMatchFromSchedule,
   findNextClubMatchFromTeamUpcoming,
   lastFiveFormFromTeamSchedule,
+  listClubCalendarFixtures,
+  listRecentClubResults,
   overlayClubSquadWithSmPlayers,
 } from '../api/sportMonks'
+import type { ClubScheduleListItem, SmSquadPlayerRow, TeamSeasonStatRow } from '../api/sportMonks'
 import { buildEmptyClubPageShell } from '../data/clubPageMock'
 import { useDebates } from '../contexts/DebatesContext'
 import type { ClubPageMock } from '../data/clubPageMock'
@@ -23,7 +28,8 @@ import { getExternalClubReadingLinks } from '../data/clubRelatedLinks'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { newsItemHasArticlePage, type NewsItem } from '../data/news'
 import { useArticles } from '../contexts/ArticlesContext'
-import type { SmSquadPlayerRow, TeamSeasonStatRow } from '../api/sportMonks'
+import { isRankingsLeagueId, type LeagueStandingRow, type RankingsLeagueId } from '../data/leagueStandings'
+import { useSportMonksLeagueStandings } from '../hooks/useSportMonksLeagueStandings'
 import { useMatches } from '../contexts/MatchesContext'
 import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { usePageSeo } from '../hooks/usePageSeo'
@@ -132,6 +138,8 @@ export function ClubPage() {
       homeCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
       awayCrest: { id: string; shortName: string; colors: { primary: string; secondary: string } }
     } | null
+    recentResults: ClubScheduleListItem[]
+    calendarFixtures: ClubScheduleListItem[]
   } | null>(null)
   /** Pourquoi l’encart reste en démo (token, CORS, 401, etc.). */
   const [clubScheduleHint, setClubScheduleHint] = useState<string | null>(null)
@@ -300,6 +308,14 @@ export function ClubPage() {
           upcomingJson && typeof upcomingJson === 'object'
             ? findLastFinishedClubMatchFromTeamLatest(upcomingJson, team.id, smOpts)
             : null
+        const recentResults = listRecentClubResults(scheduleJson, team.id, {
+          ...smOpts,
+          limit: 8,
+        })
+        const calendarFixtures = listClubCalendarFixtures(scheduleJson, team.id, {
+          ...smOpts,
+          limit: 12,
+        })
         setSmSeasonIdFromFixtures(inferredSeasonId)
         setClubScheduleHint(null)
         setSmScheduleUi({
@@ -335,6 +351,8 @@ export function ClubPage() {
                 awayCrest: lastFinished.awayCrest,
               }
             : null,
+          recentResults,
+          calendarFixtures,
         })
       })
       .catch((err: unknown) => {
@@ -405,6 +423,75 @@ export function ClubPage() {
       cancelled = true
     }
   }, [team, smTeamId, smSeasonIdOverride, smSeasonIdFromFixtures, smTokenTick])
+
+  const rankingsLeagueId = useMemo((): RankingsLeagueId | null => {
+    if (!team) return null
+    const lid = ALL_CLUBS_BY_ID[team.id]?.leagueId
+    return lid && isRankingsLeagueId(lid) ? lid : null
+  }, [team])
+
+  const {
+    standingsRows: rankingsStandingsRows,
+    standingsLoading: rankingsStandingsLoading,
+    standingsError: rankingsStandingsError,
+  } = useSportMonksLeagueStandings(rankingsLeagueId, Boolean(rankingsLeagueId))
+
+  const [seasonStandingsRows, setSeasonStandingsRows] = useState<LeagueStandingRow[] | null>(null)
+  const [seasonStandingsHint, setSeasonStandingsHint] = useState<string | null>(null)
+  const [seasonStandingsLoading, setSeasonStandingsLoading] = useState(false)
+  const standingsFetchSeq = useRef(0)
+
+  useEffect(() => {
+    if (rankingsLeagueId || !team) {
+      setSeasonStandingsRows(null)
+      setSeasonStandingsHint(null)
+      setSeasonStandingsLoading(false)
+      return
+    }
+    const seasonId = smSeasonIdOverride ?? smSeasonIdFromFixtures
+    const token = getSportMonksToken()
+    if (seasonId == null || !token) {
+      setSeasonStandingsRows(null)
+      setSeasonStandingsHint(
+        seasonId == null
+          ? 'Classement indisponible (saison SM inconnue pour ce club).'
+          : null,
+      )
+      setSeasonStandingsLoading(false)
+      return
+    }
+    const seq = ++standingsFetchSeq.current
+    setSeasonStandingsLoading(true)
+    setSeasonStandingsHint(null)
+    let cancelled = false
+    const talkFootLeagueId = ALL_CLUBS_BY_ID[team.id]?.leagueId ?? team.id
+    void fetchSportMonksStandingsBySeason(token, seasonId)
+      .then((json) => {
+        if (cancelled || seq !== standingsFetchSeq.current) return
+        const rows = extractLeagueStandingRowsFromSmStandingsEnvelope(json, talkFootLeagueId)
+        setSeasonStandingsRows(rows.length ? rows : null)
+        setSeasonStandingsHint(rows.length ? null : 'Classement saison SM vide pour ce club.')
+        setSeasonStandingsLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (cancelled || seq !== standingsFetchSeq.current) return
+        const msg = err instanceof Error ? err.message : String(err)
+        setSeasonStandingsRows(null)
+        setSeasonStandingsHint(`Classement indisponible (${msg}).`)
+        setSeasonStandingsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [rankingsLeagueId, team, smSeasonIdOverride, smSeasonIdFromFixtures, smTokenTick])
+
+  const clubStandingsRows = rankingsLeagueId ? rankingsStandingsRows : seasonStandingsRows ?? []
+  const clubStandingsLoading = rankingsLeagueId ? rankingsStandingsLoading : seasonStandingsLoading
+  const clubStandingsHint = rankingsLeagueId
+    ? rankingsStandingsError
+    : seasonStandingsHint
+  const clubStandingsLeagueId =
+    rankingsLeagueId ?? ALL_CLUBS_BY_ID[team?.id ?? '']?.leagueId ?? team?.id ?? 'ligue-1'
 
   const { groups } = useSupporterGroups()
   const clubGroups = useMemo(
@@ -561,7 +648,14 @@ export function ClubPage() {
         clubGroups={clubGroups}
         clubScheduleHint={clubScheduleHint}
         clubLastMatch={smScheduleUi?.lastMatch ?? null}
+        clubRecentResults={smScheduleUi?.recentResults ?? []}
+        clubCalendarFixtures={smScheduleUi?.calendarFixtures ?? []}
+        clubStandingsRows={clubStandingsRows}
+        clubStandingsLeagueId={clubStandingsLeagueId}
+        clubStandingsLoading={clubStandingsLoading}
+        clubStandingsHint={clubStandingsHint}
         squadFromSportMonks={Boolean(data.squadFromSportMonks)}
+        smSquadPlayers={smSquadPlayers}
         clubSeasonStats={clubSeasonStats}
         clubSeasonStatsHint={clubSeasonStatsHint}
         clubReadingLinks={clubReadingLinks}

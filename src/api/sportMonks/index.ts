@@ -47,13 +47,15 @@ export {
   formatScheduleRoundLabel,
   lastFiveFormFromTeamLatestEnvelope,
   lastFiveFormFromTeamSchedule,
+  listClubCalendarFixtures,
+  listRecentClubResults,
   smFixturesFromTeamLatestEnvelope,
   smFixturesFromTeamScheduleEnvelope,
   smFixturesFromSeasonScheduleEnvelope,
   smFixturesFromTeamUpcomingEnvelope,
   teamScheduleFixtureRows,
 } from './clubScheduleFromSm'
-export type { ClubLastMatchFromApi } from './clubScheduleFromSm'
+export type { ClubLastMatchFromApi, ClubScheduleListItem } from './clubScheduleFromSm'
 export type { TeamScheduleFixtureRow } from './clubScheduleFromSm'
 export { sportMonksFetchJson } from './client'
 export type { SmFixture, SmPlayer, SmRoundWithOdds } from './types'
