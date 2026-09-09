@@ -44,7 +44,7 @@ const LEAGUES_DATE_BATCH = 10
 const LEAGUES_DATE_FULL_BACK = 7
 const LEAGUES_DATE_FULL_FORWARD = 10
 /** Pendant un live, on rafraîchit plus souvent pour propager score/buts sans F5. */
-const LIVE_SILENT_POLL_MS = 12_000
+const LIVE_SILENT_POLL_MS = 8_000
 
 const NO_SM_TOKEN_MESSAGE_FR =
   'Aucune clé SportMonks : ajoute-la dans Profil → Données (ou VITE_SPORTMONKS_TOKEN dans .env.local), puis recharge la page.'

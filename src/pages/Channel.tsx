@@ -1524,6 +1524,8 @@ export function ChannelPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([])
   const chatDraftRef = useRef('')
   const chatInputRef = useRef<HTMLInputElement>(null)
+  const chatSendingRef = useRef(false)
+  const [chatSending, setChatSending] = useState(false)
   const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [flareColor, setFlareColor] = useState<FlareColor>('red')
@@ -1805,17 +1807,27 @@ export function ChannelPage() {
     if (chatClosedAfterMatch) return
     if (chatLocked) return
     if (!match?.id) return
+    if (chatSendingRef.current) return
     const text = chatDraftRef.current.trim()
     if (!text) return
+    chatSendingRef.current = true
+    setChatSending(true)
+    // Vider tout de suite pour éviter 5 clics → 5 envois quand le cloud est lent.
+    chatDraftRef.current = ''
+    if (chatInputRef.current) chatInputRef.current.value = ''
     try {
       const precheck = moderateChatText(text)
       if (!precheck.ok) {
+        chatDraftRef.current = text
+        if (chatInputRef.current) chatInputRef.current.value = text
         setAnimationNotice(precheck.message)
         window.setTimeout(() => setAnimationNotice(null), 2800)
         return
       }
       const chatGate = checkChatSend()
       if (!chatGate.ok) {
+        chatDraftRef.current = text
+        if (chatInputRef.current) chatInputRef.current.value = text
         setAnimationNotice(chatGate.reason ?? 'Envoi de message limité pour ta formule.')
         window.setTimeout(() => setAnimationNotice(null), 3200)
         return
@@ -1842,6 +1854,8 @@ export function ChannelPage() {
         clerkActorKey: authUser?.id,
       })
       if (!res.ok) {
+        chatDraftRef.current = text
+        if (chatInputRef.current) chatInputRef.current.value = text
         setAnimationNotice(
           res.error === 'moderation'
             ? MODERATION_REFUSED_MESSAGE_FR
@@ -1851,8 +1865,6 @@ export function ChannelPage() {
         return
       }
       recordChatSend()
-      chatDraftRef.current = ''
-      if (chatInputRef.current) chatInputRef.current.value = ''
       if (channelTifoGroupId) requestTifoEngagementSync(channelTifoGroupId, match.id)
       if (res.message) {
         const mapped = cloudMessageToUi(res.message)
@@ -1865,11 +1877,16 @@ export function ChannelPage() {
         })
       }
     } catch (err) {
+      chatDraftRef.current = text
+      if (chatInputRef.current) chatInputRef.current.value = text
       if (import.meta.env.DEV) {
         console.error('[Talk Foot] envoi tchat', err)
       }
       setAnimationNotice("Impossible d'envoyer le message. Réessaie dans un instant.")
       window.setTimeout(() => setAnimationNotice(null), 3200)
+    } finally {
+      chatSendingRef.current = false
+      setChatSending(false)
     }
   }
   const onToggleLikeMessage = (id: string) => {
@@ -2540,6 +2557,30 @@ export function ChannelPage() {
     headerDisplayScore.away,
     scoredButeurSlugs,
     betting.settleMatchResult,
+  ])
+
+  /** Valide les paris buteur gagnants dès qu’un but SM est confirmé (sans attendre la fin). */
+  useEffect(() => {
+    if (status !== 'live' || !match || scoredButeurSlugs.length === 0) return
+    const mid = match.id
+    const scorerEvents = liveGoalDisplayRows
+      .filter((r) => !r.ownGoal)
+      .map((r) => ({
+        side: r.side,
+        slug: slugScorer(compactScorerDisplayName(r.name)),
+        name: compactScorerDisplayName(r.name),
+      }))
+    if (!scorerEvents.length) return
+    const t = window.setTimeout(() => {
+      betting.settleWinningAnytimeScorers(scorerEvents, { forMatchId: mid })
+    }, 2_500)
+    return () => window.clearTimeout(t)
+  }, [
+    status,
+    match?.id,
+    scoredButeurSlugs,
+    liveGoalDisplayRows,
+    betting.settleWinningAnytimeScorers,
   ])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
   const [lineupSubsFallbackFixture, setLineupSubsFallbackFixture] = useState<SmFixture | null>(null)
@@ -4145,7 +4186,7 @@ export function ChannelPage() {
                       ? 'Chat cloud indisponible'
                       : 'Écrire un message…'
                 }
-                disabled={chatLocked || !isCloudChatConfigured}
+                disabled={chatLocked || !isCloudChatConfigured || chatSending}
                 className={`min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-base text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
                   L
                     ? 'placeholder:text-[#4a6682] disabled:placeholder:text-[#3d5670]'
@@ -4154,10 +4195,10 @@ export function ChannelPage() {
               />
               <button
                 type="submit"
-                disabled={chatLocked || !isCloudChatConfigured}
-                className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 md:px-4 md:text-sm"
+                disabled={chatLocked || !isCloudChatConfigured || chatSending}
+                className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:text-sm"
               >
-                {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : 'Envoyer'}
+                {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : chatSending ? 'Envoi…' : 'Envoyer'}
               </button>
             </form>
             </ChatPanelErrorBoundary>

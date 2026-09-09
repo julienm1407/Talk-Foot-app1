@@ -18,8 +18,8 @@ export const TEAM_POWER_WEIGHTS = {
   ranking: 0.29,
 } as const
 
-/** Marge bookmaker par défaut (légèrement plus généreuse qu’avant). */
-export const DEFAULT_BOOK_MARGIN = 0.062
+/** Marge bookmaker allégée (jetons gratuits → cotes plus généreuses). */
+export const DEFAULT_BOOK_MARGIN = 0.038
 
 export const SCORER_WEIGHTS = {
   recentForm: 0.4,
@@ -674,7 +674,14 @@ export function scorerProbabilityScore(ctx: ScorerOddsContext, teamAttackIndex: 
 
   const formPart = clamp((recent / 5) * 100, 0, 100)
   const gpgPart = clamp(gpg * 45, 0, 100)
-  const starterPart = ctx.isStarter ? 100 : 15
+  // Banc : moins pénaliser les attaquants/ailiers (évite des cotes jackpot type 16).
+  const starterPart = ctx.isStarter
+    ? 100
+    : tier === 'fwd'
+      ? 68
+      : tier === 'mid'
+        ? 48
+        : 22
   const penPart =
     ctx.isPenaltyTaker ?? guessPenaltyTaker(ctx.name, tier) ? 100 : tier === 'fwd' ? 25 : 8
 
@@ -684,8 +691,8 @@ export function scorerProbabilityScore(ctx: ScorerOddsContext, teamAttackIndex: 
     starterPart * SCORER_WEIGHTS.starter +
     penPart * SCORER_WEIGHTS.penalty
 
-  const tierCap = tier === 'fwd' ? 72 : tier === 'mid' ? 38 : 18
-  return clamp((raw / 100) * tierCap * 0.01, 0.006, tier === 'fwd' ? 0.52 : tier === 'mid' ? 0.22 : 0.08)
+  const tierCap = tier === 'fwd' ? 78 : tier === 'mid' ? 42 : 18
+  return clamp((raw / 100) * tierCap * 0.01, 0.008, tier === 'fwd' ? 0.55 : tier === 'mid' ? 0.26 : 0.09)
 }
 
 export function anytimeScorerOddsFromEngine(
@@ -702,9 +709,15 @@ export function anytimeScorerOddsFromEngine(
     p *= 1 - late * 0.35
   }
   const tier = scorerPositionTier(ctx.formationPosition)
-  const min = tier === 'gk' ? 80 : tier === 'def' ? 8 : tier === 'mid' ? 3.5 : 2.05
-  const max = tier === 'gk' ? 100 : tier === 'def' ? 28 : tier === 'mid' ? 16 : 12
-  return round2(clamp(probabilityToDecimalOdd(p, DEFAULT_BOOK_MARGIN), min, max))
+  const min = tier === 'gk' ? 80 : tier === 'def' ? 7 : tier === 'mid' ? 3.2 : 1.95
+  let max = tier === 'gk' ? 100 : tier === 'def' ? 24 : tier === 'mid' ? 14 : 11
+  if (!ctx.isStarter) {
+    // Banc : plafonner le jackpot (Kvara @16 trop risqué s’il rentre).
+    if (tier === 'fwd') max = Math.min(max, 7.5)
+    else if (tier === 'mid') max = Math.min(max, 9.5)
+    else if (tier === 'def') max = Math.min(max, 16)
+  }
+  return round2(clamp(probabilityToDecimalOdd(p, DEFAULT_BOOK_MARGIN * 0.85), min, max))
 }
 
 /** Fallback stable si pas de classement. */

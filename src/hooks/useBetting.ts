@@ -6,7 +6,7 @@ import {
   normalizeWallet,
 } from '../utils/walletNormalize'
 import { betWinTokenCredit } from '../utils/subscriptionEntitlements'
-import { settleOpenBetsForMatch } from '../utils/betSettlement'
+import { settleOpenBetsForMatch, settleWinningAnytimeScorersOnly } from '../utils/betSettlement'
 import { useWallet } from './useWallet'
 import { useUserBets } from './useUserBets'
 import { useSubscription } from './useSubscription'
@@ -270,6 +270,54 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
     [matchId, setBets, patchWallet, cloud, betMult, grantBetWon],
   )
 
+  /** Valide les paris buteur gagnants dès qu’un but confirmé apparaît (sans clôturer les perdants). */
+  const settleWinningAnytimeScorers = useCallback(
+    (
+      scorerEvents: { side: 'home' | 'away'; slug: string; name?: string }[],
+      opts?: { forMatchId?: string },
+    ) => {
+      if (!scorerEvents.length) return
+      const targetMatchId = opts?.forMatchId ?? matchId
+      if (isSupabaseConfigured() && cloud) {
+        let wonIds: string[] = []
+        cloud.patchApp((prev) => {
+          const { bets: next, tokenDelta, newlyWonBetIds: won } = settleWinningAnytimeScorersOnly(
+            prev.bets,
+            targetMatchId,
+            scorerEvents,
+            betMult,
+          )
+          wonIds = won
+          if (!won.length && !tokenDelta) return prev
+          const w = normalizeWallet(prev.wallet)
+          return {
+            ...prev,
+            bets: next,
+            wallet: tokenDelta ? { ...w, tokens: w.tokens + tokenDelta } : w,
+          }
+        })
+        if (wonIds.length) {
+          grantBetWon(wonIds)
+          void cloud.flushAppSave?.()
+        }
+        return
+      }
+      setBets((prev) => {
+        const { bets: next, tokenDelta, newlyWonBetIds: wonIds } = settleWinningAnytimeScorersOnly(
+          prev,
+          targetMatchId,
+          scorerEvents,
+          betMult,
+        )
+        if (!wonIds.length && !tokenDelta) return prev
+        if (tokenDelta) patchWallet((w) => ({ ...w, tokens: w.tokens + tokenDelta }))
+        if (wonIds.length) grantBetWon(wonIds)
+        return next
+      })
+    },
+    [matchId, setBets, patchWallet, cloud, betMult, grantBetWon],
+  )
+
   const spendTokens = useCallback(
     (amount: number, _reason: string) => {
       if (isSupabaseConfigured() && cloud) {
@@ -316,6 +364,7 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
     settleNextGoal,
     settleFirstGoal,
     settleMatchResult,
+    settleWinningAnytimeScorers,
     spendTokens,
   }
 }

@@ -52,7 +52,7 @@ export function ChannelSubscriptionExtras({
           {remaining > 0 ? (
             <>
               {' '}
-              · encore <span className="font-black tabular-nums">{remaining}</span> (1 / 90 s en
+              · encore <span className="font-black tabular-nums">{remaining}</span> (1 / 30 s en
               tribune)
             </>
           ) : (

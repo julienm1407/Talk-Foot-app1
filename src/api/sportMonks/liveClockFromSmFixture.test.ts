@@ -98,6 +98,38 @@ describe('live clock from SportMonks fixture', () => {
     expect(liveClockPausedFromSmFixture(fx)).toBe(false)
   })
 
+  it('quitte la mi-temps si state HT mais 2e période déjà chronométrée', () => {
+    const fx = {
+      state: { id: 3, developer_name: 'HT', state: 'Half Time' },
+      periods: [
+        { ticking: false, counts_from: 0, minutes: 48 },
+        { ticking: false, counts_from: 45, minutes: 5 },
+      ],
+    } as SmFixture
+    expect(liveClockPausedFromSmFixture(fx)).toBe(false)
+    expect(liveSecondHalfFromSmFixture(fx)).toBe(true)
+  })
+
+  it('quitte la mi-temps si state HT mais 2e période démarrée depuis >45s', () => {
+    const started = Math.floor(Date.now() / 1000) - 90
+    const fx = {
+      state: { id: 3, developer_name: 'HT', state: 'Half Time' },
+      periods: [
+        { ticking: false, counts_from: 0, minutes: 47 },
+        { ticking: false, counts_from: 45, minutes: 0, started },
+      ],
+    } as SmFixture
+    expect(liveClockPausedFromSmFixture(fx)).toBe(false)
+  })
+
+  it('reste en mi-temps si seule la 1re période est à 45+ sans 2e période', () => {
+    const fx = {
+      state: { id: 3, developer_name: 'HT', state: 'Half Time' },
+      periods: [{ ticking: false, counts_from: 0, minutes: 47 }],
+    } as SmFixture
+    expect(liveClockPausedFromSmFixture(fx)).toBe(true)
+  })
+
   it('lit la minute depuis les commentaires live si periods restent à 0', () => {
     const fx = {
       state: { id: 2, developer_name: 'INPLAY_1ST_HALF' },
@@ -140,6 +172,17 @@ describe('live clock from SportMonks fixture', () => {
       events: [{ minute: 51, extra_minute: 0, period: { counts_from: 0 } }],
     } as SmFixture
     expect(extractLiveMinuteFromSmFixture(fx)).toBe(46)
+  })
+
+  it('rattrape via periods.started si minutes SM sont figées', () => {
+    const startedSec = Math.floor(Date.now() / 1000) - 12 * 60
+    const fx = {
+      state: { id: 2, developer_name: 'INPLAY_1ST_HALF' },
+      periods: [{ ticking: true, counts_from: 0, minutes: 3, started: startedSec }],
+    } as SmFixture
+    const min = extractLiveMinuteFromSmFixture(fx)
+    expect(min).toBeGreaterThanOrEqual(11)
+    expect(min).toBeLessThanOrEqual(14)
   })
 
   it('sépare score temps de jeu et tirs au but (prolongations)', () => {

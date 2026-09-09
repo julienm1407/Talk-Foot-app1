@@ -108,3 +108,46 @@ export function settleOpenBetsForMatch(
 
   return { bets: next, tokenDelta, newlyWonBetIds: newlyWonBetIds(bets, next) }
 }
+
+export type ScorerSettleEvent = { side: 'home' | 'away'; slug: string; name?: string }
+
+/**
+ * Valide seulement les paris « buteur à tout moment » déjà gagnants (but confirmé).
+ * Ne marque pas les autres en perdu — à appeler en live ; la fin de match règle le reste.
+ */
+export function settleWinningAnytimeScorersOnly(
+  bets: Bet[],
+  targetMatchId: string,
+  scorerEvents: ScorerSettleEvent[],
+  tokenMultiplier: number,
+  opts?: { now?: string },
+): { bets: Bet[]; tokenDelta: number; newlyWonBetIds: string[] } {
+  if (!scorerEvents.length) {
+    return { bets, tokenDelta: 0, newlyWonBetIds: [] }
+  }
+  const now = opts?.now ?? new Date().toISOString()
+  let tokenDelta = 0
+
+  const next = bets.map((b) => {
+    if (b.matchId !== targetMatchId) return b
+    if (b.status !== 'open') return b
+    if (b.market !== 'anytime_scorer') return b
+    if (typeof b.selection !== 'string' || !b.selection.startsWith('scor:')) return b
+
+    const rest = b.selection.slice('scor:'.length)
+    const idx = rest.indexOf(':')
+    if (idx === -1) return b
+    const side = rest.slice(0, idx) as 'home' | 'away'
+    const slug = rest.slice(idx + 1)
+    const won = scorerEvents.some(
+      (e) => e.side === side && scorerLineupMatchesScoredGoal(slug, e),
+    )
+    if (!won) return b
+
+    const payout = Math.round(b.stake * b.odds)
+    tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
+    return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
+  })
+
+  return { bets: next, tokenDelta, newlyWonBetIds: newlyWonBetIds(bets, next) }
+}

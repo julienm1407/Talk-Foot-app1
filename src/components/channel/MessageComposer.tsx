@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Message } from '../../types/chat'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -44,7 +44,9 @@ export function MessageComposer({
   const [showGif, setShowGif] = useState(false)
   const [showEmote, setShowEmote] = useState(false)
   const [scarfOpen, setScarfOpen] = useState(false)
-  const canSend = useMemo(() => text.trim().length > 0, [text])
+  const [sending, setSending] = useState(false)
+  const sendingRef = useRef(false)
+  const canSend = useMemo(() => text.trim().length > 0 && !sending, [text, sending])
   const hasExtras = richMedia && Boolean(onSendGif || onSendEmote)
   const showQuickRow = Boolean(
     (quickEmotes && quickEmotes.length > 0 && onQuickEmote) ||
@@ -167,7 +169,7 @@ export function MessageComposer({
         className="flex min-w-0 max-w-full items-center gap-1.5 sm:gap-2"
         onSubmit={(e) => {
           e.preventDefault()
-          if (!canSend) return
+          if (!canSend || sendingRef.current) return
           const trimmed = text.trim()
           const check = moderateChatText(trimmed)
           if (!check.ok) {
@@ -175,8 +177,17 @@ export function MessageComposer({
             return
           }
           setModerationHint(null)
-          onSend(trimmed)
+          sendingRef.current = true
+          setSending(true)
           setText('')
+          try {
+            onSend(trimmed)
+          } finally {
+            window.setTimeout(() => {
+              sendingRef.current = false
+              setSending(false)
+            }, 700)
+          }
         }}
       >
         {hasExtras && (
@@ -243,7 +254,7 @@ export function MessageComposer({
           className="shrink-0 rounded-lg px-3 py-2 text-sm font-bold sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-base"
           aria-label="Envoyer"
         >
-          Envoyer
+          {sending ? 'Envoi…' : 'Envoyer'}
         </Button>
       </form>
     </div>

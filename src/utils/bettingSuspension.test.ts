@@ -37,7 +37,7 @@ describe('deriveBettingSuspension', () => {
     expect(res.suspended).toBe(false)
   })
 
-  it('verrouille 90 s après détection score (goalLockUntilMs)', () => {
+  it('verrouille brièvement après détection score (goalLockUntilMs)', () => {
     const res = deriveBettingSuspension({
       status: 'live',
       minute: 88,
@@ -49,18 +49,7 @@ describe('deriveBettingSuspension', () => {
     expect(res.reason).toMatch(/mise à jour des cotes/i)
   })
 
-  it('ne suspend pas une action dangereuse trop ancienne', () => {
-    const res = deriveBettingSuspension({
-      status: 'live',
-      minute: 60,
-      highlights: [h({ id: 'd1', type: 'Occasion', minute: 55, title: 'Big chance' })],
-      sessionAnchorMinute: 10,
-      nowMs: now,
-    })
-    expect(res.suspended).toBe(false)
-  })
-
-  it('suspend une action dangereuse récente', () => {
+  it('ne suspend plus les actions dangereuses (occasions)', () => {
     const res = deriveBettingSuspension({
       status: 'live',
       minute: 60,
@@ -68,7 +57,28 @@ describe('deriveBettingSuspension', () => {
       sessionAnchorMinute: 10,
       nowMs: now,
     })
-    expect(res.suspended).toBe(true)
-    expect(res.reason).toMatch(/action dangereuse/i)
+    expect(res.suspended).toBe(false)
+  })
+
+  it('ne suspend plus les cartons récents', () => {
+    const res = deriveBettingSuspension({
+      status: 'live',
+      minute: 60,
+      highlights: [h({ id: 'c1', type: 'Carton', minute: 60, title: 'Yellow card' })],
+      sessionAnchorMinute: 10,
+      nowMs: now,
+    })
+    expect(res.suspended).toBe(false)
+  })
+
+  it('laisse parier pendant la mi-temps', () => {
+    const res = deriveBettingSuspension({
+      status: 'live',
+      liveClockPaused: true,
+      minute: 45,
+      highlights: [],
+      nowMs: now,
+    })
+    expect(res.suspended).toBe(false)
   })
 })

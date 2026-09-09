@@ -57,12 +57,11 @@ function periodMinuteValue(p: SmPeriodRow, nowMs = Date.now()): number | null {
   const fromSm = periodMinuteTotal(p)
   if (!p?.ticking) return fromSm
 
-  // Horloge SM fiable : ne jamais préférer un elapsed wall-clock (mi-temps incluse).
-  if (typeof p.minutes === 'number' && p.minutes > 0) return fromSm
-
   const fromStarted = minuteFromPeriodStarted(p, nowMs)
   if (fromStarted == null) return fromSm
   if (fromSm == null || fromSm <= 0) return fromStarted
+  // SM peut figer `minutes` plusieurs minutes : rattraper via `started` (période ticking).
+  if (fromStarted > fromSm + 1) return fromStarted
   return fromSm
 }
 
@@ -146,6 +145,45 @@ export function liveSecondHalfFromSmFixture(f: SmFixture): boolean {
   return total > 50
 }
 
+/**
+ * Preuves que la 2e période a (re)démarré — même si SM garde encore l’état HT / ticking false.
+ * Évite d’afficher « Mi-temps » plusieurs minutes après la reprise.
+ */
+function hasSecondHalfPlayEvidence(fx: SmFixture, nowMs = Date.now()): boolean {
+  const sid = stateIdOf(fx)
+  if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return true
+
+  const periods = fx.periods
+  if (Array.isArray(periods)) {
+    for (const p of periods) {
+      if (!p) continue
+      const cf = periodCountsFrom(p)
+      if (cf < 45) continue
+      if (p.ticking) return true
+      if (typeof p.minutes === 'number' && p.minutes > 0) return true
+      const started = p.started
+      if (typeof started === 'number' && started > 0) {
+        const elapsedSec = nowMs / 1000 - started
+        // ~45 s après le coup d’envoi 2e MT : plus en pause même si state HT.
+        if (Number.isFinite(elapsedSec) && elapsedSec >= 45) return true
+      }
+    }
+  }
+
+  const events = fx.events
+  if (Array.isArray(events)) {
+    for (const ev of events) {
+      const cf = ev?.period?.counts_from
+      if (typeof cf === 'number' && cf >= 45) return true
+      const m = typeof ev?.minute === 'number' ? ev.minute : 0
+      // Minutes locales 2e MT souvent 1–45 ; hors 1re MT (counts_from 0) les gros totaux.
+      if (cf == null && m >= 46) return true
+    }
+  }
+
+  return false
+}
+
 /** Mi-temps / pause : calé sur SportMonks (périodes + état), sans extrapolation client. */
 export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
   const fx = asClockFixture(f)
@@ -154,12 +192,10 @@ export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
 
   if (Array.isArray(fx.periods) && fx.periods.some((p) => p?.ticking)) return false
 
-  if (sid === 3) return true
+  // SM laisse souvent state=HT alors que la 2e période a déjà des minutes / un `started`.
+  if (hasSecondHalfPlayEvidence(fx)) return false
 
-  if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) {
-    const apiMin = typeof fx.minute === 'number' ? fx.minute : minuteFromPeriods(fx)
-    if (apiMin != null && apiMin >= 46) return false
-  }
+  if (sid === 3) return true
 
   if (
     /\bHT\b/.test(blob) ||
@@ -167,17 +203,11 @@ export function liveClockPausedFromSmFixture(f: SmFixture): boolean {
     blob.includes('HALFTIME') ||
     blob.includes('BREAK')
   ) {
-    if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
     return true
   }
 
   /** Fin 1re période, horloge arrêtée → mi-temps (même si le libellé HT tarde). */
   if (Array.isArray(fx.periods) && fx.periods.length > 0) {
-    if (fx.periods.some((p) => Boolean(p?.ticking) && typeof p.counts_from === 'number' && p.counts_from >= 45)) {
-      return false
-    }
-    if (sid != null && SECOND_HALF_STATE_IDS.has(sid)) return false
-
     const maxTotal = fx.periods.reduce((acc, p) => {
       const t = periodMinuteTotal(p)
       return t != null ? Math.max(acc, t) : acc

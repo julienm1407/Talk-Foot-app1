@@ -53,7 +53,7 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
     }
 
     void poll()
-    const id = window.setInterval(() => void poll(), 5_000)
+    const id = window.setInterval(() => void poll(), 3_000)
     return () => {
       cancelled = true
       fallbackPollActiveRef.current = false
@@ -67,6 +67,14 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
     return clockFallbackFixture ?? liveBundleFixture
   }, [liveBundleFixture, clockFallbackFixture, bundleMinute])
 
+  /** Recalcule la minute depuis `periods.started` même si le JSON fixture n’a pas changé. */
+  const [clockTick, setClockTick] = useState(0)
+  useEffect(() => {
+    if (effectiveStatus !== 'live') return
+    const id = window.setInterval(() => setClockTick((n) => n + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [effectiveStatus, match?.id])
+
   const liveSnapshot = useMemo(() => {
     if (!clockFixture || effectiveStatus !== 'live') return null
     return {
@@ -75,7 +83,9 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
       paused: liveClockPausedFromSmFixture(clockFixture),
       inSecondHalf: liveSecondHalfFromSmFixture(clockFixture),
     }
-  }, [clockFixture, effectiveStatus])
+    // clockTick : force le re-extract avec Date.now() (rattrapage via started)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick volontaire
+  }, [clockFixture, effectiveStatus, clockTick])
 
   return useMemo(() => {
     if (!match) return null

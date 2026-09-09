@@ -68,11 +68,11 @@ describe('subscriptionEntitlements', () => {
     expect(betWinTokenCredit(200, 100, 1)).toBe(200)
   })
 
-  it('liveMatchTokenGrantAllowed plafond 40/h', () => {
+  it('liveMatchTokenGrantAllowed plafond 120/h', () => {
     const hour = toLocalHourKey()
-    expect(liveMatchTokenGrantAllowed('freemium', {}, 1).limit).toBe(40)
+    expect(liveMatchTokenGrantAllowed('freemium', {}, 1).limit).toBe(120)
     expect(
-      liveMatchTokenGrantAllowed('freemium', { liveTokensHourKey: hour, liveTokensThisHour: 40 }, 1)
+      liveMatchTokenGrantAllowed('freemium', { liveTokensHourKey: hour, liveTokensThisHour: 120 }, 1)
         .ok,
     ).toBe(false)
     expect(liveTokensEarnedThisHour({ liveTokensHourKey: hour, liveTokensThisHour: 12 })).toBe(12)

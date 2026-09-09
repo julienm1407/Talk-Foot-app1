@@ -13,8 +13,8 @@ import { useSubscription } from './useSubscription'
 import { useWallet } from './useWallet'
 import { useXpGrant } from './useXpGrant'
 
-/** 40 jetons / h → 1 jeton toutes les 90 s (page tribune live, match en cours). */
-const LIVE_TOKEN_TICK_MS = 90_000
+/** 120 jetons / h → 1 jeton toutes les 30 s (page tribune live, match en cours). */
+const LIVE_TOKEN_TICK_MS = 30_000
 
 export function useLiveMatchTokenEarn(matchId: string | undefined, isLive: boolean) {
   const { user } = useAuth()

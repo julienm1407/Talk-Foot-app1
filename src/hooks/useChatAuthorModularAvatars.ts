@@ -23,7 +23,7 @@ const authorCache = new Map<string, AuthorCacheEntry>()
 const cacheInvalidateListeners = new Set<() => void>()
 
 /** Rafraîchir les PP des autres joueurs assez vite après un changement de tenue. */
-const AVATAR_CACHE_TTL_MS = 12_000
+const AVATAR_CACHE_TTL_MS = 6_000
 
 function notifyCacheInvalidate() {
   cacheInvalidateListeners.forEach((fn) => fn())

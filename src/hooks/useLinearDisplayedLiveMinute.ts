@@ -2,8 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import type { Match } from '../types/match'
 
 /**
- * Minute affichée : valeur SportMonks + lissage léger entre deux polls (max +1 min).
- * Pas d’estimation depuis le coup d’envoi (la mi-temps fausse l’horloge).
+ * Minute affichée : valeur SportMonks + lissage entre polls.
+ * Si l’API est en retard, on laisse le chrono avancer avec le mur (plafond élargi),
+ * puis on se recalibre quand la minute officielle rattrape.
  */
 export function useLinearDisplayedLiveMinute(match: Match | null | undefined): number {
   const isLive = match?.status === 'live'
@@ -36,7 +37,9 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
     const seed = official > 0 ? official : 1
     const drift = Math.floor((Date.now() - anchor.atMs) / 60_000)
     const linear = anchor.m + drift
-    const cap = official > 0 ? official + 1 : seed + 1
+    // Ancien plafond +1 figeait l’UI si SM/live-bundle stagnaient (ex. 3' → puis saut à 15').
+    const catchUp = Math.max(1, Math.min(12, drift + 1))
+    const cap = seed + catchUp
     const displayed = Math.min(99, Math.max(seed, official, Math.min(linear, cap)))
     // SM omet parfois `periods.ticking` alors que le match avance — ne pas figer le chrono pour autant.
     if (!periodTicking && official > 0) return displayed
