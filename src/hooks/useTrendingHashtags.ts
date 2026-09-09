@@ -3,6 +3,17 @@ import { useSupporterGroups } from './useSupporterGroups'
 import { useDebates } from '../contexts/DebatesContext'
 import type { TrendingHashtag } from '../data/trendingHashtags'
 
+/** Tags CDM / mondial — masqués hors période Coupe du monde. */
+const HIDDEN_TREND_TAGS = new Set([
+  'cdm',
+  'cdm2026',
+  'mondial',
+  'worldcup',
+  'world-cup',
+  'coupe-du-monde',
+  'coupedumonde',
+])
+
 /**
  * Hashtags dérivés des groupes cloud et de l’activité débats (plus de liste statique).
  */
@@ -17,6 +28,7 @@ export function useTrendingHashtags(max = 8): TrendingHashtag[] {
         const tag = raw.trim().replace(/^#+/, '')
         if (!tag) continue
         const key = tag.toLowerCase()
+        if (HIDDEN_TREND_TAGS.has(key)) continue
         heat.set(key, (heat.get(key) ?? 0) + Math.max(1, g.members))
       }
     }

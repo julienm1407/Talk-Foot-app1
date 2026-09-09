@@ -48,7 +48,6 @@ export function RankingsLeaguesView() {
 
   const {
     standingsRows,
-    standingsSource,
     standingsSeasonMeta,
     standingsPreSeason,
     standingsLoading,
@@ -67,23 +66,11 @@ export function RankingsLeaguesView() {
       })
     : undefined
   const dataSourceLabel =
-    standingsRows.length && standingsSource === 'live'
-      ? 'SportMonks · classement live'
-      : standingsRows.length && standingsPreSeason
-        ? standingsSeasonMeta?.seasonName
-          ? `SportMonks · ${standingsSeasonMeta.seasonName} · reprise${seasonStartLabel ? ` le ${seasonStartLabel}` : ' fin août'}`
-          : `SportMonks · intersaison${seasonStartLabel ? ` · reprise le ${seasonStartLabel}` : ''}`
-        : standingsRows.length && standingsSource === 'season'
-          ? standingsSeasonMeta?.seasonName
-            ? `SportMonks · classement ${standingsSeasonMeta.seasonName}`
-            : 'SportMonks · classement saison'
-          : standingsRows.length && standingsSource === 'teamsSeason'
-            ? 'SportMonks · stats équipes (saison, tri points)'
-            : standingsRows.length
-              ? 'SportMonks'
-              : hasToken
-                ? 'SportMonks · classement indisponible'
-                : 'Maquette (clé SportMonks requise pour les vrais classements)'
+    standingsRows.length
+      ? standingsSeasonMeta?.seasonName?.trim() || 'Classement en direct'
+      : hasToken
+        ? 'Classement indisponible pour le moment'
+        : 'Données d’illustration'
 
   const theme = competitionThemes[leagueId]
 
@@ -96,10 +83,10 @@ export function RankingsLeaguesView() {
     )
 
   const matrixCaption = standingsRows.length
-    ? `${dataSourceLabel} — indicateurs dérivés des mêmes lignes.`
+    ? 'Indicateurs dérivés du classement affiché.'
     : hasToken
-      ? 'Classement SportMonks indisponible pour le moment.'
-      : 'Données d’illustration — avec une clé SportMonks, la matrice reflète le championnat réel.'
+      ? 'Classement indisponible pour le moment.'
+      : 'Données d’illustration — le classement réel s’affiche avec une source API configurée.'
 
   const leaguePills = (compact: boolean) =>
     RANKINGS_LEAGUE_IDS.map((id) => {
@@ -174,9 +161,9 @@ export function RankingsLeaguesView() {
 
             {!hasToken ? (
               <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-950">
-                Pour afficher les vrais classements SportMonks :{' '}
+                Pour afficher les vrais classements :{' '}
                 <Link to="/settings/donnees#tf-sportmonks-cle" className="underline underline-offset-2">
-                  ajoute ta clé
+                  configure ta source de données
                 </Link>
                 . En attendant, le tableau ci-dessous reste une illustration (Big 5).
               </p>
@@ -184,9 +171,7 @@ export function RankingsLeaguesView() {
 
             {standingsError ? (
               <p className="rounded-2xl border border-amber-400/50 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
-                API classements : {standingsError}. Vérifie ton abonnement SM ou configure un id saison (
-                <code className="rounded bg-black/10 px-1 font-mono text-xs">VITE_SPORTMONKS_STANDING_SEASON_ID</code>
-                ).
+                Classement temporairement indisponible. Réessaie dans un instant.
               </p>
             ) : null}
 
@@ -202,7 +187,7 @@ export function RankingsLeaguesView() {
 
             {hasToken && !standingsLoading && !standingsRows.length ? (
               <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-950">
-                Aucun classement SportMonks disponible pour cette compétition en ce moment.
+                Aucun classement disponible pour cette compétition en ce moment.
               </p>
             ) : null}
 
@@ -247,7 +232,7 @@ export function RankingsLeaguesView() {
 
             {standingsError ? (
               <p className="rounded-2xl border border-amber-400/50 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
-                API classements : {standingsError}
+                Classement temporairement indisponible.
               </p>
             ) : null}
             {standingsLoading ? (

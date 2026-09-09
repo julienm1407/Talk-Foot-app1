@@ -1,10 +1,20 @@
 import { competitionThemes } from '../../data/competitionThemes'
 import type { LeagueStandingRow } from '../../data/leagueStandings'
+import { teams } from '../../data/teams'
 import { FormStrip } from './FormStrip'
 import { FormSparkline } from './FormSparkline'
+import { ClubCrest } from '../brand/ClubCrest'
 import { cn } from '../../utils/cn'
 import { rankingsTeamShort } from '../../utils/rankingsTeamLabel'
 import { gaPerMatch, gfPerMatch, ppg } from '../../utils/rankingsMetrics'
+
+function crestColorsForTeam(teamId: string): { primary: string; secondary: string } {
+  for (const list of Object.values(teams)) {
+    const hit = list.find((t) => t.id === teamId)
+    if (hit) return hit.colors
+  }
+  return { primary: '#0f172a', secondary: '#e2e8f0' }
+}
 
 function TrendBadge({ trend }: { trend?: LeagueStandingRow['trend'] }) {
   if (trend === 'up')
@@ -98,7 +108,20 @@ export function LeagueStandingsTable({
                 className="border-b border-[color:var(--tf-c30-border)] transition hover:bg-[color:rgb(var(--tf-app-fg-rgb)/0.07)]"
               >
                 <td className="px-3 py-2.5 pl-4 font-black text-tf-app-muted sm:px-4">{r.rank}</td>
-                <td className="px-2 py-2.5 font-bold text-tf-app-fg">{rankingsTeamShort(leagueId, r)}</td>
+                <td className="px-2 py-2.5 font-bold text-tf-app-fg">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <ClubCrest
+                      id={r.teamId}
+                      shortName={rankingsTeamShort(leagueId, r)}
+                      colors={crestColorsForTeam(r.teamId)}
+                      sportMonksTeamId={r.sportMonksParticipantId}
+                      size={28}
+                      clickable={false}
+                      className="shrink-0"
+                    />
+                    <span className="min-w-0 truncate">{rankingsTeamShort(leagueId, r)}</span>
+                  </div>
+                </td>
                 <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-muted">{r.played}</td>
                 <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-fg">{r.won}</td>
                 <td className="px-2 py-2.5 text-center tabular-nums text-tf-app-fg">{r.drawn}</td>

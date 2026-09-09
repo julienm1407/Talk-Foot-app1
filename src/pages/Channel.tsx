@@ -1172,9 +1172,9 @@ export function ChannelPage() {
   const { standingsRows, standingsSource, standingsLoading, standingsError } =
     useSportMonksLeagueStandings(standingsLeagueId, standingsFetchEnabled)
   const standingsSourceLabel = useMemo(() => {
-    if (standingsSource === 'live') return 'SportMonks · classement live'
-    if (standingsSource === 'season') return 'SportMonks · saison en cours'
-    if (standingsSource === 'teamsSeason') return 'SportMonks · stats équipes'
+    if (standingsSource === 'live') return 'Classement en direct'
+    if (standingsSource === 'season') return 'Saison en cours'
+    if (standingsSource === 'teamsSeason') return 'Classement saison'
     return undefined
   }, [standingsSource])
   const displayedStandingsRows = useMemo(() => {
@@ -1893,7 +1893,7 @@ export function ChannelPage() {
       kind: 'goal' | 'card' | 'var' | 'kickoff',
       title: string,
       subtitle?: string,
-      durationMs = 3200,
+      durationMs = 2400,
       side?: 'home' | 'away',
       cardColor?: 'yellow' | 'red',
     ) => {
@@ -2172,7 +2172,7 @@ export function ChannelPage() {
           'goal',
           'BUT',
           `${highlightMinuteLabel(enriched)} · ${scorerLabel}`,
-          6200,
+          2800,
           side,
         )
       } else if (kind === 'card') {
@@ -4119,7 +4119,7 @@ export function ChannelPage() {
                     penaltyClassName="text-sky-200/75"
                   />
                   <p className="mt-1 text-[11px] font-semibold text-sky-200/75">
-                    Stats finales indisponibles pour ce match (plan SportMonks ou données absentes).
+                    Stats finales indisponibles pour ce match.
                   </p>
                 </div>
               </div>
@@ -4196,7 +4196,7 @@ export function ChannelPage() {
                     ))}
                     {!liveStatsLoading && mobileStatRows.length === 0 ? (
                       <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-[11px] font-semibold text-amber-100/90">
-                        Stats SportMonks indisponibles pour ce match.
+                        Stats indisponibles pour ce match.
                       </p>
                     ) : null}
                   </div>
@@ -4521,7 +4521,7 @@ export function ChannelPage() {
                 ) : null}
                 {!isUpcoming && !liveStatsLoading && mobileStatRows.length === 0 ? (
                   <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-center text-[11px] font-semibold text-amber-100/90">
-                    Stats SportMonks indisponibles pour ce match (tirs, possession, etc.).
+                    Stats indisponibles pour ce match (tirs, possession, etc.).
                   </p>
                 ) : null}
                 {smTimelineHighlights.length > 0 ? (

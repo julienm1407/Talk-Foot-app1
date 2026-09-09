@@ -312,6 +312,7 @@ export function GroupPage() {
         setHasOlderOnServer(meta.hasMoreOlder)
       }
       setMessagesByThread((prev) => {
+        // Clé figée au moment du merge (évite d’écrire l’historique d’un salon dans un autre).
         const key = threadKeyRef.current
         if (!key) return prev
 
@@ -319,6 +320,8 @@ export function GroupPage() {
           const g = groupRef.current
           const ch = channelRef.current
           if (!g || !ch) return prev
+          const expectedKey = `${g.id}:${ch.id}:${ch.id === 'general' ? (debateRef.current?.id ?? 'global') : 'global'}`
+          if (key !== expectedKey) return prev
           const d = debateRef.current
           const seenCloud = new Set<string>()
           const cloud = incoming.filter((m) => {
@@ -327,6 +330,11 @@ export function GroupPage() {
             seenCloud.add(m.id)
             return true
           })
+          // Historique vide : garder le fil déjà affiché (seed) plutôt que de tout effacer.
+          if (!cloud.length) {
+            const existing = prev[key] ?? []
+            if (existing.length) return prev
+          }
           const merged = mergeGroupThreadWithOptionalSeed(
             botSeedUserIdRef.current,
             key,

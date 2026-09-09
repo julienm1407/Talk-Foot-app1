@@ -234,6 +234,7 @@ export function useLiveEncartSimulation(match: Match | null) {
           smSeenKeysRef.current.add(key)
           const pulse = encartPulseFromSmEvent(ev, m)
           if (!pulse) return
+          // Afficher l’anim but tout de suite (alignée sur le score), sans file d’attente lente.
           window.setTimeout(() => {
             if (cancelled) return
             const cur = matchRef.current
@@ -245,7 +246,7 @@ export function useLiveEncartSimulation(match: Match | null) {
             }
             if (pulse.burst) {
               setBurst(pulse.burst)
-              window.setTimeout(() => setBurst(null), 2600)
+              window.setTimeout(() => setBurst(null), 1600)
             }
             if (pulse.toast) showToast(pulse.toast)
             if (pulse.varFollowUp) {
@@ -253,7 +254,7 @@ export function useLiveEncartSimulation(match: Match | null) {
                 if (!cancelled) showToast(pulse.varFollowUp!.toast)
               }, pulse.varFollowUp.afterMs)
             }
-          }, i * 420)
+          }, i * 80)
         })
       } catch {
         /* réseau / quota : prochain poll */

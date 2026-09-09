@@ -57,7 +57,13 @@ export function mergeGroupThreadWithOptionalSeed(
   let seed: Message[] = []
   if (!isGroupBotThreadAcked(userId, threadKey)) {
     seed = buildSeed()
-    if (seed.length) markGroupBotThreadAcked(userId, threadKey)
+  }
+
+  // N’acquitter le seed que quand le salon a de vrais messages cloud.
+  // Sinon un fetch history vide (~1s) effaçait le message de bienvenue.
+  if (cloud.length > 0) {
+    markGroupBotThreadAcked(userId, threadKey)
+    seed = []
   }
 
   return [...seed, ...cloud]

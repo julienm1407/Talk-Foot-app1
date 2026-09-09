@@ -72,7 +72,7 @@ export function RankingsWc2026View() {
         uppercaseTitle={false}
         eyebrow="Coupe du Monde 2026"
         title="Classements · Phase de poules"
-        description="Les 12 poules du Mondial : points, différence de buts et qualification. Données SportMonks — pas de Ligue 1 ni des championnats européens pendant le Mondial."
+        description="Les 12 poules du Mondial : points, différence de buts et qualification."
         actions={
           <button
             type="button"
@@ -105,7 +105,7 @@ export function RankingsWc2026View() {
 
       {!hasToken ? (
         <p className="rounded-2xl border border-sky-300/50 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-950">
-          Clé SportMonks recommandée pour les vrais classements live —{' '}
+          Clé API recommandée pour les classements live —{' '}
           <Link to="/settings/donnees#tf-sportmonks-cle" className="underline underline-offset-2">
             configurer
           </Link>
@@ -115,9 +115,7 @@ export function RankingsWc2026View() {
 
       {error ? (
         <p className="rounded-2xl border border-amber-400/50 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
-          {error}. Vérifie la clé SportMonks et l’id saison CDM (
-          <code className="rounded bg-black/10 px-1 font-mono text-xs">VITE_SPORTMONKS_WC2026_SEASON_ID</code>
-          ).
+          Classement temporairement indisponible. Réessaie dans un instant.
         </p>
       ) : null}
 
@@ -137,7 +135,7 @@ export function RankingsWc2026View() {
           {WC_GROUP_IDS.map((id) => pouleBtn(id, id))}
         </div>
         {updatedLabel ? (
-          <p className="px-1 text-[10px] font-semibold text-tf-app-muted">{updatedLabel} · SportMonks</p>
+          <p className="px-1 text-[10px] font-semibold text-tf-app-muted">{updatedLabel}</p>
         ) : null}
       </div>
 
