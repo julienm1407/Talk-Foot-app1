@@ -64,7 +64,11 @@ export function encartPulseFromSmEvent(ev: SmFixtureEventRow, match: Match): SmL
   if (
     (dev.includes('CORNER') ||
       dev.includes('THROW') ||
-      (dev.includes('OFFSIDE') && !dev.includes('VAR'))) &&
+      (dev.includes('OFFSIDE') &&
+        !dev.includes('VAR') &&
+        !dev.includes('DISALLOW') &&
+        !dev.includes('CANCEL') &&
+        !dev.includes('GOAL'))) &&
     !dev.includes('GOAL')
   ) {
     return null
@@ -74,6 +78,32 @@ export function encartPulseFromSmEvent(ev: SmFixtureEventRow, match: Match): SmL
   const teamShort =
     side === 'home' ? match.home.shortName : side === 'away' ? match.away.shortName : undefined
   const pn = playerLabel(ev)
+
+  const disallowed =
+    dev.includes('DISALLOWED') ||
+    dev.includes('CANCELLED') ||
+    dev.includes('CANCELED') ||
+    dev.includes('NO GOAL') ||
+    (dev.includes('OFFSIDE') && (dev.includes('GOAL') || dev.includes('VAR') || dev.includes('DISALLOW')))
+  if (disallowed) {
+    const offside = dev.includes('OFFSIDE')
+    const line = offside
+      ? pn
+        ? `Hors-jeu — but refusé · ${pn}`
+        : 'Hors-jeu — but refusé'
+      : pn
+        ? `But refusé · ${pn}`
+        : 'But refusé après revue'
+    return {
+      rim: { tone: 'var', ms: 1100 },
+      burst: { kind: 'var', line: line.length > 96 ? `${line.slice(0, 93)}…` : line },
+      toast: {
+        kind: 'var_line',
+        text: line,
+        side: side ?? undefined,
+      },
+    }
+  }
 
   if (dev.includes('VAR')) {
     const line =
@@ -107,19 +137,6 @@ export function encartPulseFromSmEvent(ev: SmFixtureEventRow, match: Match): SmL
       toast: {
         kind: 'red',
         text: `Carton rouge${teamShort ? ` — ${teamShort}` : ''}${pn ? ` · ${pn}` : ''}`,
-        side: side ?? undefined,
-      },
-    }
-  }
-
-  const disallowed =
-    dev.includes('DISALLOWED') || dev.includes('CANCELLED') || dev.includes('NO GOAL')
-  if (disallowed) {
-    return {
-      rim: { tone: 'var', ms: 1000 },
-      toast: {
-        kind: 'var_line',
-        text: pn ? `But annulé — ${pn}` : 'But annulé après revue',
         side: side ?? undefined,
       },
     }

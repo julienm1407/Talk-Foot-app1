@@ -103,6 +103,15 @@ function commentMentionsVar(text: string): boolean {
 
 function highlightTypeFromEventDev(dev: string, ev?: SmFixtureEventRow): Highlight['type'] {
   const u = dev.toUpperCase()
+  if (
+    u.includes('DISALLOWED') ||
+    u.includes('CANCELLED') ||
+    u.includes('CANCELED') ||
+    u.includes('NO GOAL') ||
+    (u.includes('OFFSIDE') && (u.includes('GOAL') || u.includes('VAR') || u.includes('DISALLOW')))
+  ) {
+    return 'VAR'
+  }
   if (eventDevLooksLikeGoal(u, ev)) return 'But'
   if (eventDevLooksLikeCard(u)) return 'Carton'
   if (u.includes('VAR')) return 'VAR'
@@ -113,6 +122,18 @@ function highlightTypeFromEventDev(dev: string, ev?: SmFixtureEventRow): Highlig
 
 function highlightTypeFromComment(rawComment: string, isImportant: boolean): Highlight['type'] {
   const u = rawComment.toUpperCase()
+  if (
+    u.includes('DISALLOW') ||
+    u.includes('GOAL CANCEL') ||
+    u.includes('GOAL ANNUL') ||
+    u.includes('BUT REFUS') ||
+    u.includes('BUT ANNUL') ||
+    u.includes('NO GOAL') ||
+    ((u.includes('OFFSIDE') || u.includes('HORS-JEU') || u.includes('HORS JEU')) &&
+      (u.includes('GOAL') || u.includes('BUT') || u.includes('VAR')))
+  ) {
+    return 'VAR'
+  }
   if (commentLooksLikeGoal(rawComment)) return 'But'
   if (u.includes('YELLOW') || u.includes('JAUNE') || u.includes('RED') || u.includes('ROUGE')) {
     return 'Carton'

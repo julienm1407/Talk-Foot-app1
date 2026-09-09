@@ -463,8 +463,40 @@ function teamShortChip(label: string) {
   return parts[0].slice(0, 3).toUpperCase()
 }
 
-function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | null {
+function isDisallowedOrOffsideGoalText(raw: string): boolean {
+  const u = raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  const offside = u.includes('offside') || u.includes('hors-jeu') || u.includes('hors jeu') || u.includes('horsjeu')
+  const disallowed =
+    u.includes('disallow') ||
+    u.includes('cancel') ||
+    u.includes('annul') ||
+    u.includes('refus') ||
+    u.includes('no goal') ||
+    u.includes('but refuse') ||
+    u.includes('but annul')
+  if (disallowed) return true
+  // Hors-jeu qui invalide un but / revue VAR
+  if (offside && (u.includes('goal') || u.includes('but') || u.includes('var') || u.includes('disallow'))) {
+    return true
+  }
+  return false
+}
+
+function isOffsideDecisionText(raw: string): boolean {
+  const u = raw
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+  return u.includes('offside') || u.includes('hors-jeu') || u.includes('hors jeu') || u.includes('horsjeu')
+}
+
+function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | 'disallowed' | null {
+  const blob = `${h.title ?? ''} ${h.detail ?? ''} ${h.scorerName ?? ''}`
   const t = String(h.type || '').trim()
+  if (isDisallowedOrOffsideGoalText(blob)) return 'disallowed'
   if (t === 'But') return 'goal'
   if (t === 'Carton') return 'card'
   if (t === 'VAR') return 'var'
@@ -473,9 +505,14 @@ function fullscreenKindFromHighlight(h: Highlight): 'goal' | 'card' | 'var' | nu
 
 function fullscreenEventDedupeKey(
   h: Highlight,
-  kind: 'goal' | 'card' | 'var',
+  kind: 'goal' | 'card' | 'var' | 'disallowed',
   teamHints?: { home: LiveGoalTeamHints; away: LiveGoalTeamHints },
 ): string {
+  if (kind === 'disallowed') {
+    const identity = goalEventIdentityKey(h)
+    if (identity) return `disallowed|${identity}`
+    return `disallowed|${highlightFullscreenDedupeKey(h)}`
+  }
   if (kind === 'goal') {
     const identity = goalEventIdentityKey(h)
     if (identity) return `goal|${identity}`
@@ -1822,7 +1859,7 @@ export function ChannelPage() {
     return translateSportMonksLiveTextToFr(raw)
   }, [latestHighlight])
   const [fullscreenEvent, setFullscreenEvent] = useState<{
-    kind: 'goal' | 'card' | 'var' | 'kickoff'
+    kind: 'goal' | 'card' | 'var' | 'kickoff' | 'disallowed'
     title: string
     subtitle?: string
     side?: 'home' | 'away'
@@ -1860,7 +1897,7 @@ export function ChannelPage() {
   const fullscreenBusyRef = useRef(false)
   const fullscreenQueueRef = useRef<
     {
-      kind: 'goal' | 'card' | 'var' | 'kickoff'
+      kind: 'goal' | 'card' | 'var' | 'kickoff' | 'disallowed'
       title: string
       subtitle?: string
       durationMs: number
@@ -1890,7 +1927,7 @@ export function ChannelPage() {
 
   const launchFullscreenEvent = useCallback(
     (
-      kind: 'goal' | 'card' | 'var' | 'kickoff',
+      kind: 'goal' | 'card' | 'var' | 'kickoff' | 'disallowed',
       title: string,
       subtitle?: string,
       durationMs = 2400,
@@ -1993,7 +2030,7 @@ export function ChannelPage() {
     const cardTeamHints = goalTeamHints
       ? { home: goalTeamHints.home, away: goalTeamHints.away }
       : undefined
-    const dedupeKeyFor = (enriched: Highlight, kind: 'goal' | 'card' | 'var') =>
+    const dedupeKeyFor = (enriched: Highlight, kind: 'goal' | 'card' | 'var' | 'disallowed') =>
       fullscreenEventDedupeKey(enriched, kind, cardTeamHints)
 
     if (clockPaused && !liveClockPausedWasRef.current) {
@@ -2194,6 +2231,17 @@ export function ChannelPage() {
           4600,
           side,
           cardColor,
+        )
+      } else if (kind === 'disallowed') {
+        lastGoalFullscreenAtRef.current = Date.now()
+        const decisionBlob = `${hlText} ${enriched.title ?? ''} ${enriched.detail ?? ''}`
+        const offside = isOffsideDecisionText(decisionBlob)
+        launchFullscreenEvent(
+          'disallowed',
+          offside ? 'HORS-JEU' : 'BUT REFUSÉ',
+          `${highlightMinuteLabel(enriched)}${hlText ? ` · ${hlText}` : ''}${teamLabel ? ` · ${teamLabel}` : ''}`.trim(),
+          4200,
+          side,
         )
       } else {
         launchFullscreenEvent('var', 'VAR', `${highlightMinuteLabel(enriched)} ${hlText}`, 5200, side)
@@ -2700,7 +2748,9 @@ export function ChannelPage() {
       ? fullscreenEvent.cardColor === 'red'
         ? '#ef4444'
         : '#eab308'
-      : fullscreenAccentColor
+      : fullscreenEvent?.kind === 'disallowed'
+        ? '#f43f5e'
+        : fullscreenAccentColor
   const tribuneOptions = useMemo(
     () => [
       { id: 'home-ultras' as const, label: `Ultras ${homeName}`, vibe: 'Chants et ambiance chaude' },
@@ -4921,12 +4971,17 @@ export function ChannelPage() {
                 ? ''
                 : fullscreenEvent.kind === 'card'
                   ? ''
+                  : fullscreenEvent.kind === 'disallowed'
+                    ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.55),rgba(6,17,30,0.55)_55%,rgba(2,8,18,0.72)_78%)]'
                   : fullscreenEvent.kind === 'kickoff'
                     ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.5),rgba(6,17,30,0.55)_55%,rgba(2,8,18,0.72)_78%)]'
                     : 'bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.5),rgba(6,17,30,0.55)_55%,rgba(2,8,18,0.72)_78%)]'
             }`}
             style={
-              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+              (fullscreenEvent.kind === 'goal' ||
+                fullscreenEvent.kind === 'card' ||
+                fullscreenEvent.kind === 'disallowed') &&
+              fullscreenPopupAccent
                 ? {
                     background: `radial-gradient(circle at 50% 50%, color-mix(in srgb, ${fullscreenPopupAccent} 55%, transparent), rgba(6,17,30,0.55) 55%, rgba(2,8,18,0.72) 78%)`,
                   }
@@ -4939,12 +4994,17 @@ export function ChannelPage() {
                 ? ''
                 : fullscreenEvent.kind === 'card'
                   ? ''
+                  : fullscreenEvent.kind === 'disallowed'
+                    ? 'border-rose-400/85'
                   : fullscreenEvent.kind === 'kickoff'
                     ? 'border-sky-300/85'
                     : 'border-violet-300/85'
             }`}
             style={
-              (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+              (fullscreenEvent.kind === 'goal' ||
+                fullscreenEvent.kind === 'card' ||
+                fullscreenEvent.kind === 'disallowed') &&
+              fullscreenPopupAccent
                 ? { borderColor: `color-mix(in srgb, ${fullscreenPopupAccent} 72%, white)` }
                 : undefined
             }
@@ -4971,6 +5031,28 @@ export function ChannelPage() {
                   }}
                 >
                   GOAL
+                </span>
+              ))
+            : null}
+
+          {fullscreenEvent.kind === 'disallowed'
+            ? [
+                ['8%', '16%', 'text-xl', 0],
+                ['22%', '68%', 'text-3xl', 100],
+                ['46%', '12%', 'text-5xl', 50],
+                ['64%', '60%', 'text-2xl', 160],
+                ['78%', '30%', 'text-4xl', 80],
+              ].map(([l, t, size, d], i) => (
+                <span
+                  key={`disallowed-word-${i}`}
+                  className={`absolute font-black uppercase tracking-widest text-rose-200/90 ${size} animate-[tf-goal-pop_1100ms_ease-out_forwards]`}
+                  style={{
+                    left: l,
+                    top: t,
+                    animationDelay: `${d}ms`,
+                  }}
+                >
+                  {fullscreenEvent.title === 'HORS-JEU' ? 'OFFSIDE' : 'NO GOAL'}
                 </span>
               ))
             : null}
@@ -5030,17 +5112,25 @@ export function ChannelPage() {
                   ? 'border-amber-300/70 bg-[#091425]'
                   : fullscreenEvent.kind === 'card'
                     ? 'border-white/40 bg-[#091425]'
+                    : fullscreenEvent.kind === 'disallowed'
+                      ? 'border-rose-400/85 bg-[#2a0f18]'
                     : fullscreenEvent.kind === 'kickoff'
                       ? 'border-sky-300/85 bg-[#0b1f35]'
                       : 'border-violet-300/85 bg-[#1a1333]'
               }`}
               style={{
                 borderColor:
-                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+                  (fullscreenEvent.kind === 'goal' ||
+                    fullscreenEvent.kind === 'card' ||
+                    fullscreenEvent.kind === 'disallowed') &&
+                  fullscreenPopupAccent
                     ? `color-mix(in srgb, ${fullscreenPopupAccent} 72%, white)`
                     : undefined,
                 background:
-                  (fullscreenEvent.kind === 'goal' || fullscreenEvent.kind === 'card') && fullscreenPopupAccent
+                  (fullscreenEvent.kind === 'goal' ||
+                    fullscreenEvent.kind === 'card' ||
+                    fullscreenEvent.kind === 'disallowed') &&
+                  fullscreenPopupAccent
                     ? `color-mix(in srgb, ${fullscreenPopupAccent} 28%, #091425)`
                     : undefined,
                 animation:
@@ -5056,6 +5146,8 @@ export function ChannelPage() {
                     ? 'animate-[tf-goal-shake_760ms_ease-out_1]'
                     : fullscreenEvent.kind === 'card'
                       ? 'animate-[tf-goal-shake_760ms_ease-out_1]'
+                      : fullscreenEvent.kind === 'disallowed'
+                        ? 'text-rose-100 animate-[tf-goal-shake_760ms_ease-out_1]'
                       : fullscreenEvent.kind === 'kickoff'
                         ? 'text-sky-200 animate-[tf-goal-shake_760ms_ease-out_1]'
                         : 'text-violet-100'
@@ -5072,6 +5164,8 @@ export function ChannelPage() {
                     ? fullscreenEvent.cardColor === 'red'
                       ? '🟥'
                       : '🟨'
+                    : fullscreenEvent.kind === 'disallowed'
+                      ? '🚫'
                     : fullscreenEvent.kind === 'kickoff'
                       ? '🎺'
                       : '📺'}{' '}
