@@ -25,6 +25,8 @@ import { CdmHomeReminder } from '../cdm/CdmHomeReminder'
 import { FavoriteNationsHomeSection } from '../cdm/FavoriteNationsHomeSection'
 import { FavoriteNationsAlertBar } from '../cdm/FavoriteNationsAlertBar'
 import { useOptionalSeasonMode } from '../../contexts/SeasonModeContext'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
+import { sortUpcomingMatchesFavoriteFirst } from '../../utils/sortMatchesFavoriteFirst'
 
 function DesktopHubLiveStrip({
   match,
@@ -99,11 +101,12 @@ export function HomeDesktopExperience({
     setDeskLiveIndex(0)
   }, [liveIdsKey])
 
-  const upcomingSorted = useMemo(() => {
-    return [...upcomingMatches]
-      .filter((m) => m.status === 'upcoming')
-      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-  }, [upcomingMatches])
+  const { favoriteClubIds } = useFanPreferences()
+
+  const upcomingSorted = useMemo(
+    () => sortUpcomingMatchesFavoriteFirst(upcomingMatches, favoriteClubIds),
+    [upcomingMatches, favoriteClubIds],
+  )
 
   const hasLive = liveMatches.length > 0
   const showUpcomingInHeader = !hasLive && upcomingSorted.length > 0

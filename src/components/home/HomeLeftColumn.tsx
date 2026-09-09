@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import { AdSlot } from '../ui/AdSlot'
 import { HubStripFinished, HubStripUpcoming } from '../match/HubMatchEncart'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
+import { sortUpcomingMatchesFavoriteFirst } from '../../utils/sortMatchesFavoriteFirst'
 
 const hubListShell =
   'rounded-2xl border border-white/10 bg-[#030b18]/95 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:p-4'
@@ -17,12 +19,11 @@ export function HomeLeftColumn({
   /** Sur l’accueil : le hero couvre déjà les prochains matchs */
   omitUpcoming?: boolean
 }) {
+  const { favoriteClubIds } = useFanPreferences()
+
   const upcoming = useMemo(() => {
-    return [...upcomingPool]
-      .filter((m) => m.status === 'upcoming')
-      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-      .slice(0, 4)
-  }, [upcomingPool])
+    return sortUpcomingMatchesFavoriteFirst(upcomingPool, favoriteClubIds).slice(0, 4)
+  }, [upcomingPool, favoriteClubIds])
 
   const results = useMemo(() => {
     const fin = resultsPool.filter((m) => m.status === 'finished' && m.score)

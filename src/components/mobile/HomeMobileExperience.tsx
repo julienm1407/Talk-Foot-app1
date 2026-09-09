@@ -37,6 +37,7 @@ import { resolveArticleExcerpt } from '../../utils/articleExcerpt'
 import { newsItemHasArticlePage } from '../../data/news'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { CdmMobileSectionPreview } from '../cdm/CdmMobileSectionPreview'
+import { sortUpcomingMatchesFavoriteFirst } from '../../utils/sortMatchesFavoriteFirst'
 
 export type HomeMobileExperienceProps = {
   appearance: 'light' | 'dark'
@@ -105,15 +106,13 @@ export function HomeMobileExperience({
   const groupPreview = activeGroupsRail[0] ?? null
 
   const calendarPreviewMatch = useMemo(() => {
-    const upcoming = [...displayMatchesFull]
-      .filter((m) => m.status === 'upcoming')
-      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
+    const upcoming = sortUpcomingMatchesFavoriteFirst(displayMatchesFull, favoriteClubIds)
     const finished = [...displayMatchesFull]
       .filter((m) => m.status === 'finished' && m.score)
       .sort((a, b) => new Date(b.kickoffAt).getTime() - new Date(a.kickoffAt).getTime())
     if (heroLiveMatch) return finished[0] ?? upcoming[0] ?? null
     return upcoming[0] ?? finished[0] ?? null
-  }, [displayMatchesFull, heroLiveMatch])
+  }, [displayMatchesFull, heroLiveMatch, favoriteClubIds])
 
   const favPreviewLabel = useMemo(() => {
     const id = favoriteClubIds[0]

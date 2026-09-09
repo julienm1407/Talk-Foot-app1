@@ -29,6 +29,10 @@ import { CdmNationsRail } from '../components/cdm/CdmNationsRail'
 import { FavoriteNationsHomeSection } from '../components/cdm/FavoriteNationsHomeSection'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
+import {
+  sortLiveMatchesFavoriteFirst,
+  sortUpcomingMatchesFavoriteFirst,
+} from '../utils/sortMatchesFavoriteFirst'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -97,10 +101,13 @@ export function HomePage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [heroSlide, setHeroSlide] = useState(0)
 
-  /** Hub : tous les matchs en direct renvoyés par SportMonks (ordre du carrousel). */
+  /** Hub : lives avec club de cœur en premier. */
   const hubLiveMatches = useMemo(
-    () => displayMatches.filter((m) => m.status === 'live'),
-    [displayMatches],
+    () => sortLiveMatchesFavoriteFirst(
+      displayMatches.filter((m) => m.status === 'live'),
+      favoriteClubIds,
+    ),
+    [displayMatches, favoriteClubIds],
   )
 
   const hubLiveIds = hubLiveMatches.map((m) => m.id).join('|')
@@ -122,12 +129,11 @@ export function HomePage() {
 
   const supporterFocusUi = Boolean(supporterTintActive && team && favoriteClubIds.length > 0)
 
-  /** Prochains matchs (même logique que le hub desktop) : encart d’accueil tant qu’il n’y a pas de live. */
-  const upcomingSortedForHome = useMemo(() => {
-    return [...displayMatchesFull]
-      .filter((m) => m.status === 'upcoming')
-      .sort((a, b) => new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime())
-  }, [displayMatchesFull])
+  /** Prochains matchs : club de cœur d’abord, puis le reste du même soir. */
+  const upcomingSortedForHome = useMemo(
+    () => sortUpcomingMatchesFavoriteFirst(displayMatchesFull, favoriteClubIds),
+    [displayMatchesFull, favoriteClubIds],
+  )
 
   /** Sous le live : 2 lignes compactes rail, sans scroll horizontal */
   const upcomingUnderLiveStrip = useMemo(() => upcomingSortedForHome.slice(0, 2), [upcomingSortedForHome])
