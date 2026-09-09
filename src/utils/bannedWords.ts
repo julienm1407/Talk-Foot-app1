@@ -108,7 +108,7 @@ const DOMAIN_PATH_RE = new RegExp(
 
 /** Rappel charte / signalement (Google Play UGC, section User Generated Content). */
 export const MODERATION_POLICY_SUMMARY_FR =
-  'Talk Foot filtre automatiquement les insultes et propos haineux à l’envoi. Tu peux signaler un abus depuis ton profil (section Modération).'
+  'Talk Foot filtre automatiquement les insultes et propos haineux à l’envoi. Tu peux signaler un utilisateur depuis son profil ou en touchant sa photo dans le chat.'
 
 export type ModerationResult = { ok: true } | { ok: false; message: string }
 

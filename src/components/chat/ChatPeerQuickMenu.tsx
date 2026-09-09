@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useDirectMessagesContext } from '../../contexts/DirectMessagesContext'
 import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
 import { friendDmThreadId } from '../../data/directMessageConstants'
+import { ReportUserModal } from '../social/ReportUserModal'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
@@ -31,12 +32,14 @@ export function ChatPeerQuickMenu({
   const dm = useDirectMessagesContext()
   const [hint, setHint] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
   const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
 
   useEffect(() => {
     if (!open) return
     setHint(null)
     setBusy(false)
+    setReportOpen(false)
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -203,6 +206,19 @@ export function ChatPeerQuickMenu({
               Voir le profil
             </Link>
 
+            <button
+              type="button"
+              className={cn(
+                btn,
+                dark
+                  ? 'border-rose-400/35 text-rose-200 hover:bg-rose-500/15'
+                  : 'border-rose-300/60 text-rose-800 hover:bg-rose-50',
+              )}
+              onClick={() => setReportOpen(true)}
+            >
+              Signaler
+            </button>
+
             {hint ? <p className={cn('text-xs font-semibold', muted)}>{hint}</p> : null}
 
             <button
@@ -219,6 +235,16 @@ export function ChatPeerQuickMenu({
           </div>
         </div>
       </div>
+      <ReportUserModal
+        open={reportOpen}
+        onClose={() => {
+          setReportOpen(false)
+          onClose()
+        }}
+        reportedUserId={peer.id}
+        reportedDisplayName={peer.username}
+        dark={dark}
+      />
     </div>,
     portalTarget,
   )

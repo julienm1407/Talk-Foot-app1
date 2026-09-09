@@ -18,6 +18,7 @@ import { usePeerPublicProfile } from '../hooks/usePeerPublicProfile'
 import { useTalkFootChatActorId } from '../hooks/useTalkFootChatActorId'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { ReportUserModal } from '../components/social/ReportUserModal'
 import { cn } from '../utils/cn'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
@@ -52,6 +53,7 @@ export function UserProfilePage() {
   const viewerActorId = useTalkFootChatActorId()
   const [friendActionHint, setFriendActionHint] = useState<string | null>(null)
   const [friendBusy, setFriendBusy] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
   const friendPronosticsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -395,6 +397,23 @@ export function UserProfilePage() {
             </Link>
           </div>
 
+          {peer && !peer.isTalkFootBot && authUser?.id && !authUser.isAnonymous ? (
+            <div className="mt-4 flex justify-center sm:justify-start">
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className={cn(
+                  'rounded-xl border px-4 py-2.5 text-sm font-black transition',
+                  L
+                    ? 'border-rose-300/80 bg-rose-50 text-rose-800 hover:bg-rose-100'
+                    : 'border-rose-400/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25',
+                )}
+              >
+                Signaler l’utilisateur
+              </button>
+            </div>
+          ) : null}
+
           {friendActionHint ? (
             <p className={cn('mt-4 text-center text-xs font-semibold sm:text-left', L ? 'text-emerald-700' : 'text-emerald-300')}>
               {friendActionHint}
@@ -432,6 +451,16 @@ export function UserProfilePage() {
             counts={friendPronostics.counts}
           />
         </div>
+      ) : null}
+
+      {peer && !peer.isTalkFootBot ? (
+        <ReportUserModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          reportedUserId={peer.id}
+          reportedDisplayName={displayUsername}
+          dark={!L}
+        />
       ) : null}
     </div>
   )

@@ -33,6 +33,11 @@ import {
   type ArticleComment,
 } from '../lib/supabase/articleComments'
 import {
+  fetchUserReportsForModeration,
+  updateUserReportStatus,
+  type UserReportRow,
+} from '../lib/supabase/userReports'
+import {
   fetchEditorialUsers,
   upsertEditorialUser,
   type EditorialRole,
@@ -329,6 +334,7 @@ export function AdminPage() {
   const richEditorRef = useRef<HTMLDivElement>(null)
   const [dashboard, setDashboard] = useState<ArticleDashboardStats | null>(null)
   const [commentsToModerate, setCommentsToModerate] = useState<ArticleComment[]>([])
+  const [userReports, setUserReports] = useState<UserReportRow[]>([])
   const [editorialUsers, setEditorialUsers] = useState<Array<{ email: string; role: EditorialRole }>>([])
   const [roleEmail, setRoleEmail] = useState('')
   const [roleValue, setRoleValue] = useState<EditorialRole>('redacteur')
@@ -352,8 +358,10 @@ export function AdminPage() {
     [refundRequests],
   )
   const moderationAlertCount = useMemo(
-    () => commentsToModerate.filter((c) => c.reportedCount > 0 || c.status === 'pending').length,
-    [commentsToModerate],
+    () =>
+      commentsToModerate.filter((c) => c.reportedCount > 0 || c.status === 'pending').length +
+      userReports.filter((r) => r.status === 'open').length,
+    [commentsToModerate, userReports],
   )
   const sectionBadges = useMemo(
     () => ({
@@ -387,16 +395,18 @@ export function AdminPage() {
     setArticles(rows)
     const stats = await fetchArticleDashboardStats(sb)
     setDashboard(stats)
-    const [comments, roles, newsletter, refunds] = await Promise.all([
+    const [comments, roles, newsletter, refunds, reports] = await Promise.all([
       fetchCommentsForModeration(sb),
       fetchEditorialUsers(sb),
       fetchNewsletterCampaigns(sb),
       fetchRefundRequests(sb),
+      fetchUserReportsForModeration(sb),
     ])
     setCommentsToModerate(comments)
     setEditorialUsers(roles)
     setCampaigns(newsletter)
     setRefundRequests(refunds)
+    setUserReports(reports)
     setLoading(false)
   }, [sb])
 
@@ -1249,39 +1259,130 @@ export function AdminPage() {
           ) : null}
 
           {activeSection === 'moderation' ? (
-            <Card className="p-4">
-              <h2 className="font-display text-lg font-black text-tf-app-fg">Modération commentaires</h2>
-              <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                Commentaires signalés ou en attente de validation.
-              </p>
-              <div className="mt-3 space-y-2">
-                {commentsToModerate.length === 0 ? (
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucun commentaire à modérer.</p>
-                ) : (
-                  commentsToModerate.map((c) => (
-                    <div
-                      key={c.id}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-black text-slate-700 dark:text-slate-300">
-                          {c.authorName} · {c.reportedCount} signalement(s) · {c.status}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void publishComment(c.id)}>
-                            Publier
-                          </Button>
-                          <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void hideComment(c.id)}>
-                            Masquer
-                          </Button>
+            <div className="space-y-4">
+              <Card className="p-4">
+                <h2 className="font-display text-lg font-black text-tf-app-fg">Utilisateurs signalés</h2>
+                <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  Signalements envoyés depuis le chat ou le profil.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {userReports.length === 0 ? (
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                      Aucun signalement utilisateur pour le moment.
+                    </p>
+                  ) : (
+                    userReports.map((r) => (
+                      <div
+                        key={r.id}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">
+                            {r.reportedDisplayName || r.reportedUserId} · {r.reason} · {r.status}
+                          </p>
+                          <div className="flex gap-2">
+                            {r.status === 'open' ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  className="rounded-lg px-2 py-1 text-xs"
+                                  onClick={() =>
+                                    void (async () => {
+                                      if (!sb) return
+                                      const ok = await updateUserReportStatus(sb, {
+                                        reportId: r.id,
+                                        status: 'reviewed',
+                                      })
+                                      if (ok) {
+                                        setUserReports((prev) =>
+                                          prev.map((x) =>
+                                            x.id === r.id ? { ...x, status: 'reviewed' } : x,
+                                          ),
+                                        )
+                                      }
+                                    })()
+                                  }
+                                >
+                                  Traité
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  className="rounded-lg px-2 py-1 text-xs"
+                                  onClick={() =>
+                                    void (async () => {
+                                      if (!sb) return
+                                      const ok = await updateUserReportStatus(sb, {
+                                        reportId: r.id,
+                                        status: 'dismissed',
+                                      })
+                                      if (ok) {
+                                        setUserReports((prev) =>
+                                          prev.map((x) =>
+                                            x.id === r.id ? { ...x, status: 'dismissed' } : x,
+                                          ),
+                                        )
+                                      }
+                                    })()
+                                  }
+                                >
+                                  Ignorer
+                                </Button>
+                              </>
+                            ) : null}
+                            <Link
+                              to={`/user/${r.reportedUserId}`}
+                              className="rounded-lg px-2 py-1 text-xs font-black text-sky-700 underline-offset-2 hover:underline dark:text-sky-300"
+                            >
+                              Profil
+                            </Link>
+                          </div>
                         </div>
+                        {r.details ? (
+                          <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{r.details}</p>
+                        ) : null}
+                        <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                          Par {r.reporterId} · {new Date(r.createdAt).toLocaleString('fr-FR')}
+                        </p>
                       </div>
-                      <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{c.body}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Card>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <h2 className="font-display text-lg font-black text-tf-app-fg">Modération commentaires</h2>
+                <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  Commentaires signalés ou en attente de validation.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {commentsToModerate.length === 0 ? (
+                    <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aucun commentaire à modérer.</p>
+                  ) : (
+                    commentsToModerate.map((c) => (
+                      <div
+                        key={c.id}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300">
+                            {c.authorName} · {c.reportedCount} signalement(s) · {c.status}
+                          </p>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void publishComment(c.id)}>
+                              Publier
+                            </Button>
+                            <Button variant="ghost" className="rounded-lg px-2 py-1 text-xs" onClick={() => void hideComment(c.id)}>
+                              Masquer
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{c.body}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            </div>
           ) : null}
 
           {activeSection === 'operations' ? (
