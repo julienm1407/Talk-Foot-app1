@@ -13,8 +13,9 @@ create table if not exists public.user_reports (
 
 create index if not exists user_reports_reported_idx on public.user_reports (reported_user_id, created_at desc);
 create index if not exists user_reports_status_idx on public.user_reports (status, created_at desc);
+-- AT TIME ZONE 'UTC' = expression IMMUTABLE (contrairement à created_at::date).
 create unique index if not exists user_reports_dedupe_day_idx
-  on public.user_reports (reporter_id, reported_user_id, reason, (created_at::date));
+  on public.user_reports (reporter_id, reported_user_id, reason, ((created_at AT TIME ZONE 'UTC')::date));
 
 alter table public.user_reports enable row level security;
 

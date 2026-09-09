@@ -3,6 +3,7 @@ import type { LeagueStandingRow } from '../../data/leagueStandings'
 import { findNationByName } from '../../data/nations'
 import type { WcGroup, WcGroupId, WcStandingRow } from '../../types/wc2026'
 import { apiNameToOurId } from '../footballApi'
+import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { teams } from '../../data/teams'
 import { SPORTMONKS_TEAM_ID_BY_CLUB_ID } from '../../data/sportMonksKnownTeamIds'
 
@@ -127,11 +128,24 @@ function parseForm(raw: unknown): FormResult[] {
 function shortParticipantLabel(name: string): string {
   const t = name.trim()
   if (!t) return '?'
-  if (t.length <= 5) return t.toUpperCase()
+  // Déjà un sigle court (ex. PSG, RMA).
+  if (t.length <= 4 && !/\s/.test(t)) return t.toUpperCase()
+
   const parts = t.split(/\s+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return `${parts[0].slice(0, 3)}${parts[parts.length - 1].slice(0, 2)}`.toUpperCase()
+  const noise = new Set(['fc', 'cf', 'ac', 'sc', 'as', 'rc', 'afc', 'de', 'du', 'des', 'la', 'le', 'the', 'club'])
+  const meaningful = parts.filter((p) => !noise.has(p.toLowerCase().replace(/\./g, '')))
+  const words = meaningful.length ? meaningful : parts
+
+  // Initiales des mots utiles : Paris Saint-Germain → PSG, Real Madrid → RM
+  if (words.length >= 2) {
+    const initials = words
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 4)
+    if (initials.length >= 2) return initials
   }
+
   return t.slice(0, 4).toUpperCase()
 }
 
@@ -177,10 +191,13 @@ function resolveTeamId(
 ): { teamId: string; displayName?: string } {
   const pool = teams[talkFootLeagueId as keyof typeof teams]
   const inPool = (id: string) => Boolean(pool?.some((x) => x.id === id))
+  const catalogHas = (id: string) => Boolean(ALL_CLUBS_BY_ID[id])
 
-  // 1) Id SportMonks (source de vérité) — avant tout fuzzy sur le nom.
+  // 1) Id SportMonks (source de vérité) — y compris coupes UEFA (hors catalogue ligue).
   for (const [clubId, smId] of Object.entries(SPORTMONKS_TEAM_ID_BY_CLUB_ID)) {
-    if (smId === participantId && inPool(clubId)) return { teamId: clubId }
+    if (smId === participantId && (inPool(clubId) || catalogHas(clubId))) {
+      return { teamId: clubId }
+    }
   }
 
   if (pool?.length) {
@@ -198,6 +215,15 @@ function resolveTeamId(
       fuzzyNameMatch(n, c, normalizeName(x.name), compactClubName(x.name)),
     )
     if (fuzzy) return { teamId: fuzzy.id }
+  } else {
+    // Coupes : matching sur tout le catalogue clubs.
+    const guessed = apiNameToOurId(participantName)
+    if (catalogHas(guessed)) return { teamId: guessed }
+    const n = normalizeName(participantName)
+    for (const list of Object.values(teams)) {
+      const exact = list.find((x) => normalizeName(x.name) === n || normalizeName(x.shortName) === n)
+      if (exact) return { teamId: exact.id }
+    }
   }
 
   return {
