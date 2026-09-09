@@ -174,6 +174,18 @@ describe('live clock from SportMonks fixture', () => {
     expect(extractLiveMinuteFromSmFixture(fx)).toBe(46)
   })
 
+  it('calcule la minute depuis started même si ticking est false', () => {
+    const started = Math.floor(Date.now() / 1000) - 17 * 60
+    const fx = {
+      state: { id: 2, developer_name: 'INPLAY_1ST_HALF' },
+      periods: [{ ticking: false, counts_from: 0, minutes: 0, started }],
+    } as SmFixture
+    const min = extractLiveMinuteFromSmFixture(fx)
+    expect(min).toBeGreaterThanOrEqual(16)
+    expect(min).toBeLessThanOrEqual(18)
+    expect(liveClockPausedFromSmFixture(fx)).toBe(false)
+  })
+
   it('rattrape via periods.started si minutes SM sont figées', () => {
     const startedSec = Math.floor(Date.now() / 1000) - 12 * 60
     const fx = {

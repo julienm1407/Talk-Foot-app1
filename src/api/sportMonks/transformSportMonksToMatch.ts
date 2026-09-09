@@ -43,9 +43,8 @@ function periodMinuteTotal(p: SmPeriodRow): number | null {
   return base + p.minutes
 }
 
-/** Horloge live quand `has_timer` est false : SM garde `minutes` à 0 mais fournit `started`. */
+/** Horloge live : SM garde parfois `minutes` à 0 / `ticking` false mais fournit `started`. */
 function minuteFromPeriodStarted(p: SmPeriodRow, nowMs = Date.now()): number | null {
-  if (!p?.ticking) return null
   const started = p.started
   if (typeof started !== 'number' || started <= 0) return null
   const elapsedMin = Math.floor(nowMs / 1000 - started) / 60
@@ -55,13 +54,11 @@ function minuteFromPeriodStarted(p: SmPeriodRow, nowMs = Date.now()): number | n
 
 function periodMinuteValue(p: SmPeriodRow, nowMs = Date.now()): number | null {
   const fromSm = periodMinuteTotal(p)
-  if (!p?.ticking) return fromSm
-
   const fromStarted = minuteFromPeriodStarted(p, nowMs)
-  if (fromStarted == null) return fromSm
-  if (fromSm == null || fromSm <= 0) return fromStarted
-  // SM peut figer `minutes` plusieurs minutes : rattraper via `started` (période ticking).
-  if (fromStarted > fromSm + 1) return fromStarted
+  if (fromStarted != null) {
+    if (fromSm == null || fromSm <= 0) return fromStarted
+    if (fromStarted > fromSm + 1) return fromStarted
+  }
   return fromSm
 }
 
@@ -75,6 +72,16 @@ function minuteFromPeriods(f: SmFixture, nowMs = Date.now()): number | null {
       if (total != null) return total
     }
   }
+  let bestStarted: number | null = null
+  for (let i = periods.length - 1; i >= 0; i--) {
+    const p = periods[i]
+    if (!p) continue
+    const fromStarted = minuteFromPeriodStarted(p, nowMs)
+    if (fromStarted == null) continue
+    bestStarted = bestStarted == null ? fromStarted : Math.max(bestStarted, fromStarted)
+  }
+  if (bestStarted != null && bestStarted > 0) return bestStarted
+
   let best: number | null = null
   for (let i = periods.length - 1; i >= 0; i--) {
     const total = periodMinuteValue(periods[i], nowMs)
@@ -108,9 +115,18 @@ function minuteFromComments(f: SmFixture): number | null {
 
 export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
   const fx = asClockFixture(f)
+  if (liveClockPausedFromSmFixture(fx)) return false
   const periods = fx.periods
   if (!Array.isArray(periods)) return false
-  return periods.some((p) => Boolean(p?.ticking))
+  if (periods.some((p) => Boolean(p?.ticking))) return true
+  const nowMs = Date.now()
+  return periods.some((p) => {
+    if (!p) return false
+    const started = p.started
+    if (typeof started !== 'number' || started <= 0) return false
+    const elapsedSec = nowMs / 1000 - started
+    return Number.isFinite(elapsedSec) && elapsedSec >= 0 && elapsedSec < 60 * 55
+  })
 }
 
 /** 2e période en cours (pour afficher 46' vs 45+1). */

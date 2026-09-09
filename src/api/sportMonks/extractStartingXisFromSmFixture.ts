@@ -1,4 +1,5 @@
 import type { SmFixture, SmLineupRow } from './types'
+import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
 
 export type SmStartingXiPlayer = {
@@ -78,7 +79,7 @@ function lineupTypeBucket(row: SmLineupRow): 'confirmed' | 'probable' | 'other' 
 }
 
 function teamIdOf(row: SmLineupRow): number | null {
-  const raw = row.team_id
+  const raw = row.team_id ?? row.participant_id
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw
   if (typeof raw === 'string') {
     const n = Number(raw.trim())
@@ -90,10 +91,38 @@ function teamIdOf(row: SmLineupRow): number | null {
 function partitionLineups(rows: SmLineupRow[], homeId: number, awayId: number) {
   const home: SmLineupRow[] = []
   const away: SmLineupRow[] = []
+  const unmatched: SmLineupRow[] = []
   for (const r of rows) {
     const tid = teamIdOf(r)
     if (tid === homeId) home.push(r)
     else if (tid === awayId) away.push(r)
+    else unmatched.push(r)
+  }
+  // UCL / certains feeds : ids présents mais hors home/away résolus → 2 camps uniques dans les rows.
+  if ((!home.length || !away.length) && unmatched.length) {
+    const ids = [
+      ...new Set(
+        unmatched
+          .map(teamIdOf)
+          .filter((id): id is number => typeof id === 'number' && Number.isFinite(id)),
+      ),
+    ]
+    if (ids.length === 2 && !home.length && !away.length) {
+      const [a, b] = ids
+      for (const r of unmatched) {
+        const tid = teamIdOf(r)
+        if (tid === a) home.push(r)
+        else if (tid === b) away.push(r)
+      }
+    } else if (ids.length === 1) {
+      const only = ids[0]!
+      const target = !home.length ? home : !away.length ? away : null
+      if (target) {
+        for (const r of unmatched) {
+          if (teamIdOf(r) === only) target.push(r)
+        }
+      }
+    }
   }
   return { home, away }
 }
@@ -260,16 +289,31 @@ export function extractMatchLineupBundleFromFixture(
   fixture: SmFixture | null | undefined,
 ): SmMatchLineupBundle | null {
   if (!fixture) return null
-  const rows = fixture.lineups
+  const fx = normalizeSmFixtureIncludes(fixture) ?? fixture
+  const rows = fx.lineups
   if (!Array.isArray(rows) || !rows.length) {
-    const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+    const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fx)
     if (homeId == null || awayId == null) return null
-    const formations = extractFormations(fixture, homeId, awayId)
+    const formations = extractFormations(fx, homeId, awayId)
     if (!formations.home && !formations.away) return null
     return { starters: null, bench: null, formations, source: 'unknown' }
   }
 
-  const { homeId, awayId } = smFixtureHomeAwayParticipantIds(fixture)
+  let { homeId, awayId } = smFixtureHomeAwayParticipantIds(fx)
+  // Si participants manquent / mal formés : déduire les 2 ids depuis les lineups.
+  if (homeId == null || awayId == null) {
+    const ids = [
+      ...new Set(
+        rows
+          .map(teamIdOf)
+          .filter((id): id is number => typeof id === 'number' && Number.isFinite(id)),
+      ),
+    ]
+    if (ids.length >= 2) {
+      homeId = homeId ?? ids[0]
+      awayId = awayId ?? ids.find((id) => id !== homeId) ?? ids[1]
+    }
+  }
   if (homeId == null || awayId == null) return null
 
   const { home, away } = partitionLineups(rows, homeId, awayId)
@@ -279,7 +323,7 @@ export function extractMatchLineupBundleFromFixture(
   const ax = takeXiFromRows(pa.rows)
   const benchHome = takeBenchFromRows(home)
   const benchAway = takeBenchFromRows(away)
-  const formations = extractFormations(fixture, homeId, awayId)
+  const formations = extractFormations(fx, homeId, awayId)
 
   if (!hx.length && !ax.length) {
     if (!formations.home && !formations.away) return null

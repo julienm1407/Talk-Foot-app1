@@ -79,7 +79,7 @@ export default async function handler(req, res) {
   await tick()
   const intervalId = setInterval(() => {
     void tick()
-  }, 6_000)
+  }, 2_000)
   const heartbeatId = setInterval(() => {
     if (closed) return
     res.write(': ping\n\n')

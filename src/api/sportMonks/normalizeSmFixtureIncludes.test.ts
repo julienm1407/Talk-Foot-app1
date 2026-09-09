@@ -7,6 +7,12 @@ describe('normalizeSmFixtureIncludes', () => {
   it('déplie periods/events imbriqués dans data', () => {
     const fx = normalizeSmFixtureIncludes({
       id: 1,
+      participants: {
+        data: [
+          { id: 10, meta: { location: 'home' } },
+          { id: 20, meta: { location: 'away' } },
+        ],
+      },
       periods: { data: [{ ticking: true, counts_from: 0, minutes: 18 }] },
       events: {
         data: [
@@ -21,6 +27,7 @@ describe('normalizeSmFixtureIncludes', () => {
     } as unknown as SmFixture)
     expect(fx?.periods?.length).toBe(1)
     expect(fx?.events?.length).toBe(1)
+    expect(fx?.participants?.length).toBe(2)
     expect(extractLiveMinuteFromSmFixture(fx!)).toBe(18)
   })
 })

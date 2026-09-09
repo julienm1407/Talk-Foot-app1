@@ -9,20 +9,25 @@ import type { Match } from '../types/match'
 export function useLinearDisplayedLiveMinute(match: Match | null | undefined): number {
   const isLive = match?.status === 'live'
   const paused = Boolean(match?.liveClockPaused)
-  const periodTicking = match?.livePeriodTicking !== false
   const official = Math.min(99, Math.max(0, Math.round(Number(match?.minute) || 0)))
   const [tick, setTick] = useState(0)
 
   const [anchor, setAnchor] = useState<{ m: number; atMs: number }>(() => ({
-    m: official > 0 ? official : 1,
+    m: Math.max(1, official),
     atMs: Date.now(),
   }))
 
   useLayoutEffect(() => {
     if (!match || match.status !== 'live' || paused) return
-    // Minute SM à 0 = donnée absente (pas une vraie 0') — on amorce à 1' pour défiler entre deux polls.
     const seed = official > 0 ? official : 1
-    setAnchor({ m: seed, atMs: Date.now() })
+    setAnchor((prev) => {
+      // SM encore à 0 : ne pas reset un chrono déjà avancé localement.
+      if (official <= 0 && prev.m > 1) return prev
+      if (official > prev.m) return { m: official, atMs: Date.now() }
+      if (official > 0 && Math.abs(official - prev.m) <= 1) return prev
+      if (seed === prev.m) return prev
+      return { m: seed, atMs: Date.now() }
+    })
   }, [match?.id, match?.status, official, paused, match?.liveInSecondHalf])
 
   useEffect(() => {
@@ -33,17 +38,13 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
 
   return useMemo(() => {
     if (!match || match.status !== 'live') return Math.max(0, Math.round(Number(match?.minute) || 0))
-    if (paused) return official
-    const seed = official > 0 ? official : 1
+    if (paused) return official > 0 ? official : Math.max(1, anchor.m)
+    const seed = official > 0 ? official : Math.max(1, anchor.m)
     const drift = Math.floor((Date.now() - anchor.atMs) / 60_000)
     const linear = anchor.m + drift
-    // Ancien plafond +1 figeait l’UI si SM/live-bundle stagnaient (ex. 3' → puis saut à 15').
     const catchUp = Math.max(1, Math.min(12, drift + 1))
     const cap = seed + catchUp
-    const displayed = Math.min(99, Math.max(seed, official, Math.min(linear, cap)))
-    // SM omet parfois `periods.ticking` alors que le match avance — ne pas figer le chrono pour autant.
-    if (!periodTicking && official > 0) return displayed
-    if (!periodTicking && official <= 0) return seed
-    return displayed
-  }, [match, anchor, tick, paused, periodTicking, official])
+    // Toujours laisser le mur avancer (même si SM omet ticking / minute 0).
+    return Math.min(99, Math.max(seed, official, Math.min(linear, cap)))
+  }, [match, anchor, tick, paused, official])
 }

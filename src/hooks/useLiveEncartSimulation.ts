@@ -21,7 +21,7 @@ const MINUTE_MS = 60_000
 const EVENT_MIN_MS = 10_000
 const EVENT_MAX_MS = 22_000
 /** Rafraîchissement timeline événements SM (cartons, buts…) pour caler les animations. */
-const SM_TIMELINE_POLL_MS = 6_000
+const SM_TIMELINE_POLL_MS = 2_000
 
 function randomBetween(rng: () => number, a: number, b: number) {
   return a + rng() * (b - a)

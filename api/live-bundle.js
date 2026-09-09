@@ -22,10 +22,23 @@ function nowMs() {
 }
 
 function ttlSecondsForFixture(fx) {
-  const dev = String(fx?.state?.developer_name ?? '').toLowerCase()
-  if (dev.includes('live') || dev.includes('inplay')) return 6
-  if (dev.includes('finished') || dev.includes('ft')) return 45
-  return 20
+  const sid = Number(fx?.state?.id ?? fx?.state_id)
+  const dev = String(fx?.state?.developer_name ?? fx?.state?.state ?? '').toLowerCase()
+  // Live / HT / pauses : cache très court — sinon chrono + events arrivent avec des minutes de retard.
+  if (
+    [2, 3, 4, 6, 9, 21, 22, 25].includes(sid) ||
+    dev.includes('live') ||
+    dev.includes('inplay') ||
+    /\bht\b/.test(dev) ||
+    dev.includes('half') ||
+    dev.includes('break') ||
+    dev.includes('extra') ||
+    dev.includes('pen')
+  ) {
+    return 2
+  }
+  if (dev.includes('finished') || /\bft\b/.test(dev) || [5, 7, 8, 10].includes(sid)) return 45
+  return 8
 }
 
 function redisConfig() {

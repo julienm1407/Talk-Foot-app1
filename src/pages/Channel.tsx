@@ -875,7 +875,7 @@ function ChannelPitchStatsStrip({
         <span className="shrink-0 text-[9px] font-black tabular-nums text-sky-50">
           {livePitchPressure.dh} – {livePitchPressure.da}
         </span>
-      </div>
+        </div>
       <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/35">
         <div
           className="absolute inset-y-0 left-0 rounded-l-full bg-gradient-to-r from-emerald-500/95 to-emerald-400/75 transition-[width] duration-700 ease-out"
@@ -893,13 +893,13 @@ function ChannelPitchStatsStrip({
             <span className="tabular-nums text-sky-50">
               {Math.round(possessionRow.home)}% – {Math.round(possessionRow.away)}%
             </span>
-          </div>
+        </div>
           <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/40 ring-1 ring-white/10">
             <div
               className="absolute inset-y-0 left-0 rounded-l-full bg-sky-400/90 transition-[width] duration-700"
               style={{ width: `${possessionRatioHome * 100}%` }}
             />
-          </div>
+      </div>
         </div>
       ) : null}
       {pitchStatPills.length > 0 ? (
@@ -1853,7 +1853,7 @@ export function ChannelPage() {
         displayName: authUser?.displayName,
         clerkActorKey: authUser?.id,
       })
-      if (!res.ok) {
+    if (!res.ok) {
         chatDraftRef.current = text
         if (chatInputRef.current) chatInputRef.current.value = text
         setAnimationNotice(
@@ -1862,8 +1862,8 @@ export function ChannelPage() {
             : "Impossible d'envoyer le message (sync cloud indisponible).",
         )
         window.setTimeout(() => setAnimationNotice(null), 2800)
-        return
-      }
+      return
+    }
       recordChatSend()
       if (channelTifoGroupId) requestTifoEngagementSync(channelTifoGroupId, match.id)
       if (res.message) {
@@ -2110,8 +2110,33 @@ export function ChannelPage() {
 
     if (!fullscreenDedupePrimedRef.current) {
       if (liveStatsLoading) return
-      if (matchAlreadyStarted && effectiveMinute <= 1) return
+      // Attendre la timeline si le match a déjà démarré — sinon joinMinute=1 et tout flood à la reprise.
       if (smTimelineHighlights.length === 0 && matchAlreadyStarted) return
+      let maxHighlightMinute = 0
+      for (const h of smTimelineHighlights) {
+        if (typeof h.minute === 'number' && h.minute > maxHighlightMinute) {
+          maxHighlightMinute = h.minute
+        }
+        const kind = fullscreenKindFromHighlight(h)
+        if (!kind) continue
+        const enriched = highlightWithDetectedSide(h, detectHighlightSide)
+        rememberFullscreenSeenKey(
+          match?.id,
+          fullscreenDedupeKeysRef.current,
+          dedupeKeyFor(enriched, kind),
+        )
+        fullscreenShownHighlightIdsRef.current.add(h.id)
+      }
+      joinedAtLiveMinuteRef.current = Math.max(effectiveMinute, maxHighlightMinute)
+      fullscreenDedupePrimedRef.current = true
+      return
+    }
+
+    if (!smTimelineHighlights.length) return
+
+    const joinMinute = joinedAtLiveMinuteRef.current
+    // Gros rattrapage chrono (ex. 1' → 50') : absorber l’historique sans spammer l’écran.
+    if (effectiveMinute - joinMinute >= 6) {
       for (const h of smTimelineHighlights) {
         const kind = fullscreenKindFromHighlight(h)
         if (!kind) continue
@@ -2124,13 +2149,8 @@ export function ChannelPage() {
         fullscreenShownHighlightIdsRef.current.add(h.id)
       }
       joinedAtLiveMinuteRef.current = effectiveMinute
-      fullscreenDedupePrimedRef.current = true
       return
     }
-
-    if (!smTimelineHighlights.length) return
-
-    const joinMinute = joinedAtLiveMinuteRef.current
     const historyCutoff =
       joinMinute >= 0 ? joinMinute : Math.max(0, liveDisplayedMinute - 2)
     const pendingByKey = new Map<string, Highlight>()
@@ -2264,13 +2284,13 @@ export function ChannelPage() {
         }
         lastGoalFullscreenAtRef.current = Date.now()
         const scorerLabel = formatGoalScorerLabel(scorer!, assist, { ownGoal: enriched.ownGoal })
-        launchFullscreenEvent(
-          'goal',
-          'BUT',
+      launchFullscreenEvent(
+        'goal',
+        'BUT',
           `${highlightMinuteLabel(enriched)} · ${scorerLabel}`,
           2800,
-          side,
-        )
+        side,
+      )
       } else if (kind === 'card') {
         if (!goalTeamHints || !side) return
         const playerName = resolveCardPlayerNameFromHighlight(
@@ -3140,13 +3160,13 @@ export function ChannelPage() {
                   background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 11%, #f6fbff) 0%, #eef4fc 42%, color-mix(in srgb, ${awayToneColor} 9%, #f8fbff) 100%)`,
                 }
             : status === 'live'
-              ? {
-                  boxShadow: `0 0 0 1px ${homeColor}44, 0 0 24px ${awayColor}30`,
-                  background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 22%, #0b2440) 0%, #0b2440 42%, color-mix(in srgb, ${awayToneColor} 20%, #0b2440) 100%)`,
-                }
-              : {
-                  background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 20%, #0b2440) 0%, #0b2440 40%, color-mix(in srgb, ${awayToneColor} 18%, #0b2440) 100%)`,
-                }
+            ? {
+                boxShadow: `0 0 0 1px ${homeColor}44, 0 0 24px ${awayColor}30`,
+                background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 22%, #0b2440) 0%, #0b2440 42%, color-mix(in srgb, ${awayToneColor} 20%, #0b2440) 100%)`,
+              }
+            : {
+                background: `linear-gradient(115deg, color-mix(in srgb, ${homeToneColor} 20%, #0b2440) 0%, #0b2440 40%, color-mix(in srgb, ${awayToneColor} 18%, #0b2440) 100%)`,
+              }
         }
       >
         {status === 'live' ? (
@@ -3193,7 +3213,7 @@ export function ChannelPage() {
               >
                 {homeHeaderLabel}
               </Link>
-            </div>
+          </div>
             <div className="flex shrink-0 flex-col items-center gap-0.5 px-1">
               {isUpcoming ? (
                 <span
@@ -3296,29 +3316,29 @@ export function ChannelPage() {
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[auto_auto] gap-x-2 gap-y-0.5">
             <div className="col-start-2 row-start-1 flex flex-col items-center gap-1">
               <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
-                {status === 'live' ? (
+              {status === 'live' ? (
                   <span className="inline-flex items-center justify-center gap-1">
-                    <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
-                    {timerText}
-                  </span>
-                ) : (
-                  timerText
-                )}
-              </p>
+                  <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
+                  {timerText}
+                </span>
+              ) : (
+                timerText
+              )}
+            </p>
               {isUpcoming ? (
                 <span className={kickoffHeaderChipClass} title={`Coup d'envoi ${kickoffLabel}`}>
                   Coup d&apos;envoi · {kickoffLabel}
                 </span>
               ) : null}
-            </div>
+          </div>
             {status === 'live' || status === 'finished' ? (
               <>
                 <div className="col-start-1 row-start-2 min-w-0 justify-self-start self-start">
                   <LiveHeaderTeamEvents goals={headerHomeScorers} cards={headerHomeCards} align="left" light={L} />
-                </div>
+          </div>
                 <div className="col-start-3 row-start-2 min-w-0 justify-self-end self-start">
                   <LiveHeaderTeamEvents goals={headerAwayScorers} cards={headerAwayCards} align="right" light={L} />
-                </div>
+        </div>
               </>
             ) : null}
           </div>
@@ -3373,7 +3393,7 @@ export function ChannelPage() {
                   : 'border-white/25 bg-white/10 text-white'
               }
             />
-          </div>
+            </div>
           <div className="col-start-3 row-start-1 flex min-w-0 flex-col items-end gap-0.5 justify-self-end self-start">
             <div className="flex min-w-0 items-center justify-end gap-3">
               <Link
@@ -3416,7 +3436,7 @@ export function ChannelPage() {
                     {homeFullName}
                   </p>
                 )
-              ) : null}
+        ) : null}
               {awayFullName !== awayHeaderLabel ? (
                 awayTeamPath ? (
                   <Link
@@ -3486,7 +3506,7 @@ export function ChannelPage() {
           {isUpcoming ? (
             <>
               <Card className="tf-card-prematch shrink-0 !p-2.5">
-                <SectionTitle>Avant-match</SectionTitle>
+              <SectionTitle>Avant-match</SectionTitle>
                 <div className="mt-2 space-y-1.5">
                   <SideEncartRow
                     label="Ouverture tchat"
@@ -3518,7 +3538,7 @@ export function ChannelPage() {
                     className="mt-2 w-full rounded-lg border border-cyan-300/45 bg-cyan-500/12 px-2.5 py-2 text-xs font-bold text-cyan-50 transition hover:bg-cyan-500/22"
                   >
                     {matchWcGroup ? `Voir la poule ${matchWcGroup.id}` : 'Voir le classement'}
-                  </button>
+              </button>
                 ) : null}
               </Card>
 
@@ -3537,7 +3557,7 @@ export function ChannelPage() {
                   <SideInfoCell label="Composition">
                     {hasAnyLineup ? 'Publiée' : '—'}
                   </SideInfoCell>
-                </div>
+            </div>
               </Card>
 
               <Card className="tf-card-community shrink-0 !p-2.5">
@@ -3633,8 +3653,9 @@ export function ChannelPage() {
                   ) : null}
                 </div>
                 <div className="mt-2.5 space-y-2">
-                  {(status === 'live' || status === 'finished') && tacticalRows.length > 0 ? (
-                    tacticalRows.slice(0, 6).map((row) => (
+                  {(status === 'live' || status === 'finished') &&
+                  (tacticalRows.length > 0 || mobileStatRows.length > 0) ? (
+                    (tacticalRows.length > 0 ? tacticalRows : mobileStatRows).slice(0, 6).map((row) => (
                       <div
                         key={`prematch-live-${row.label}`}
                         className="flex items-center justify-between gap-2 rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2 text-xs"
@@ -3649,59 +3670,59 @@ export function ChannelPage() {
                   ) : liveStatsLoading && (status === 'live' || status === 'finished') ? (
                     <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2.5 text-center text-xs font-semibold text-sky-100">
                       Chargement des stats…
-                    </div>
-                  ) : (
+                </div>
+              ) : (
                     <div className="rounded-lg border border-[#4a7faa]/55 bg-[#0c2d4a] px-3 py-2.5 text-center text-xs font-semibold text-sky-100">
                       {status === 'finished'
                         ? 'Stats finales indisponibles pour ce match.'
                         : 'Aucune stat exploitable pour le moment.'}
-                    </div>
-                  )}
                 </div>
-              </Card>
+              )}
+            </div>
+          </Card>
 
               <Card className="tf-card-info !p-3.5 border border-[#3d78aa]/55 bg-[#10263f]">
                 <div
                   className="pointer-events-none absolute inset-x-0 top-0 h-1"
                   style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }}
                 />
-                <SectionTitle>Infos générales</SectionTitle>
+            <SectionTitle>Infos générales</SectionTitle>
                 <div className="mt-2.5 grid grid-cols-2 gap-2">
                   <SideInfoCell label="Compétition">
-                    {match?.competition.shortName ?? match?.competition.name ?? 'Ligue 1'}
+                  {match?.competition.shortName ?? match?.competition.name ?? 'Ligue 1'}
                   </SideInfoCell>
                   <SideInfoCell label="Coup d’envoi">{kickoffLabel}</SideInfoCell>
                   <SideInfoCell label="Statut">
-                    {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
+                  {status === 'live' ? 'Live' : status === 'finished' ? 'Terminé' : 'À venir'}
                   </SideInfoCell>
                   <SideInfoCell label="Minute">{status === 'live' ? liveClockLabel || '—' : '—'}</SideInfoCell>
-                </div>
-              </Card>
+            </div>
+          </Card>
 
               <Card className="tf-card-community shrink-0 !p-3.5">
-                <SectionTitle>En direct · Matchs</SectionTitle>
-                {liveMatches.length > 1 ? (
+            <SectionTitle>En direct · Matchs</SectionTitle>
+            {liveMatches.length > 1 ? (
                   <div className="mt-2.5">
-                    <select
-                      value={selectedLiveMatchId}
-                      onChange={(e) => setSelectedLiveMatchId(e.target.value)}
+                <select
+                  value={selectedLiveMatchId}
+                  onChange={(e) => setSelectedLiveMatchId(e.target.value)}
                       className={chSideSelect}
-                    >
-                      {liveMatches.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.home.shortName} vs {m.away.shortName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : null}
+                >
+                  {liveMatches.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.home.shortName} vs {m.away.shortName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
                 <div className="mt-2">
-                  {selectedLiveMatch ? (
-                    <MatchRow
-                      home={selectedLiveMatch.home.shortName}
-                      away={selectedLiveMatch.away.shortName}
-                      homeScore={selectedLiveMatch.score?.home ?? 0}
-                      awayScore={selectedLiveMatch.score?.away ?? 0}
+              {selectedLiveMatch ? (
+                <MatchRow
+                  home={selectedLiveMatch.home.shortName}
+                  away={selectedLiveMatch.away.shortName}
+                  homeScore={selectedLiveMatch.score?.home ?? 0}
+                  awayScore={selectedLiveMatch.score?.away ?? 0}
                       homeLogoUrl={selectedLiveMatch.home.logoUrl}
                       awayLogoUrl={selectedLiveMatch.away.logoUrl}
                       homeClubId={selectedLiveMatch.home.id}
@@ -3716,50 +3737,50 @@ export function ChannelPage() {
                         selectedLiveMatch.away,
                         selectedLiveMatch.competition.id,
                       )}
-                    />
-                  ) : (
+                />
+              ) : (
                     <div className={cn(chSideInset, 'px-3 py-3')}>
-                      Aucun autre match en direct
-                    </div>
-                  )}
+                  Aucun autre match en direct
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
-                  }}
-                  disabled={!selectedLiveMatch}
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedLiveMatch) navigate(`/channel/${selectedLiveMatch.id}`)
+              }}
+              disabled={!selectedLiveMatch}
                   className={cn(chSideActionBtn, 'px-3')}
-                >
-                  Rejoindre le live
-                </button>
-              </Card>
+            >
+              Rejoindre le live
+            </button>
+          </Card>
 
               <Card className="tf-card-tribune shrink-0 md:flex md:flex-1 md:flex-col !p-3.5">
-                <SectionTitle>Tribune supporters</SectionTitle>
+            <SectionTitle>Tribune supporters</SectionTitle>
                 <div className="tf-tribune-canvas relative mt-1.5 h-[68px] overflow-hidden rounded-lg border border-[#3b7fb1]/45 bg-[#050d17] md:h-auto md:min-h-[88px] md:flex-1">
-                  <div
-                    className="tf-tribune-canvas-bg absolute inset-0"
-                    style={{
-                      background: `
+              <div
+                className="tf-tribune-canvas-bg absolute inset-0"
+                style={{
+                  background: `
                     radial-gradient(ellipse 120% 70% at 50% -10%, rgba(255,255,255,0.14), transparent 46%),
                     radial-gradient(circle at 12% 32%, ${homeColor}55, transparent 35%),
                     radial-gradient(circle at 88% 32%, ${awayColor}55, transparent 35%),
                     linear-gradient(180deg, #0c1a2a 0%, #07111c 55%, #040911 100%)
                   `,
-                    }}
-                  />
-                  <div className="tf-tribune-overlay absolute inset-[4%] rounded-[16px] border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent" />
-                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[58px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/12" />
-                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[44px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/10" />
-                  <div
-                    className="absolute left-1/2 top-[52%] h-[30px] w-[48%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-cyan-200/35"
-                    style={{
-                      background: `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 26%, #0a3b5e) 0%, #0b4b73 45%, color-mix(in srgb, ${awayColor} 24%, #0a3b5e) 100%)`,
-                    }}
-                  />
-                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[30px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" />
-                  <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[8px] w-[8px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+                }}
+              />
+              <div className="tf-tribune-overlay absolute inset-[4%] rounded-[16px] border border-white/10 bg-gradient-to-b from-white/[0.06] to-transparent" />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[58px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/12" />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[44px] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-white/10" />
+              <div
+                className="absolute left-1/2 top-[52%] h-[30px] w-[48%] -translate-x-1/2 -translate-y-1/2 rounded-[999px] border border-cyan-200/35"
+                style={{
+                  background: `linear-gradient(125deg, color-mix(in srgb, ${homeColor} 26%, #0a3b5e) 0%, #0b4b73 45%, color-mix(in srgb, ${awayColor} 24%, #0a3b5e) 100%)`,
+                }}
+              />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[30px] w-px -translate-x-1/2 -translate-y-1/2 bg-white/25" />
+              <div className="tf-tribune-ring absolute left-1/2 top-[52%] h-[8px] w-[8px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
                   <div className="tf-tribune-label absolute left-[7%] top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-wide text-white/90">
                     Virage
                   </div>
@@ -3767,21 +3788,21 @@ export function ChannelPage() {
                     Parcage
                   </div>
                   <div className="tf-tribune-footer absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent pb-1 pt-4 text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/85">
-                    Plan stade
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setTribuneModalOpen(true)}
+                Plan stade
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTribuneModalOpen(true)}
                   className="mt-2 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-xs font-extrabold text-[#06242a] shadow-sm transition hover:bg-[#2be0c6]"
-                >
-                  Ouvrir la carte du stade
-                </button>
+            >
+              Ouvrir la carte du stade
+            </button>
                 <p className="mt-1.5 text-[11px] font-semibold leading-snug text-sky-100/90">
-                  Tribune actuelle · {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Aucune'}
+              Tribune actuelle · {tribuneOptions.find((t) => t.id === selectedTribune)?.label ?? 'Aucune'}
                   {status === 'live' ? ' · messages filtrés par zone' : ''}
-                </p>
-              </Card>
+            </p>
+          </Card>
             </>
           )}
         </div>
@@ -3992,8 +4013,8 @@ export function ChannelPage() {
                         !canJoinVoiceSalons
                           ? 'cursor-not-allowed border-[#4b6f90]/60 bg-[#0b2741]/60 text-sky-100/45'
                           : liveMicEnabled
-                            ? 'border-cyan-300/75 bg-cyan-300/16 text-cyan-100'
-                            : 'border-[#4b6f90] bg-[#0b2741] text-sky-100'
+                          ? 'border-cyan-300/75 bg-cyan-300/16 text-cyan-100'
+                          : 'border-[#4b6f90] bg-[#0b2741] text-sky-100'
                       }`}
                       title={
                         canJoinVoiceSalons
@@ -4059,9 +4080,9 @@ export function ChannelPage() {
                   </p>
                   <div className="grid shrink-0 grid-cols-4 gap-1">
                     {FLARE_COLOR_OPTIONS.map((opt) => (
-                      <button
+                    <button
                         key={opt.id}
-                        type="button"
+                      type="button"
                         title={`Fumigène ${opt.label}`}
                         onClick={() => {
                           setFlareColor(opt.id)
@@ -4084,7 +4105,7 @@ export function ChannelPage() {
                           aria-hidden
                         />
                         <span className="text-[9px] font-bold leading-tight">{opt.label}</span>
-                      </button>
+                    </button>
                     ))}
                   </div>
                   <p className={`mt-1 shrink-0 px-0.5 text-[10px] ${chFxSectionLabel}`}>
@@ -4093,16 +4114,16 @@ export function ChannelPage() {
                   <p className={`mb-0.5 mt-2 shrink-0 px-0.5 text-[9px] font-bold uppercase tracking-wide ${chFxSectionLabel}`}>
                     Confettis
                   </p>
-                  <button
-                    type="button"
+                      <button
+                        type="button"
                     onClick={() => void triggerPaidAnimation(paidAnimations[1])}
                     className={`${chFxPanelBtn} w-full shrink-0`}
-                  >
-                    <p className="text-[11px] font-bold text-sky-50">
+                      >
+                        <p className="text-[11px] font-bold text-sky-50">
                       {paidAnimations[1].emoji} {paidAnimations[1].label}
-                    </p>
+                        </p>
                     <p className={`mt-0.5 text-[10px] ${chFxSectionLabel}`}>{paidAnimations[1].cost} jetons</p>
-                  </button>
+                      </button>
                   <p className={`mb-0.5 mt-2 shrink-0 px-0.5 text-[9px] font-bold uppercase tracking-wide ${chFxSectionLabel}`}>
                     Tifo géant
                   </p>
@@ -4529,17 +4550,17 @@ export function ChannelPage() {
                 aria-label="Navigation match mobile"
                 data-tf-channel-dock="true"
               >
-                <button
-                  type="button"
+        <button
+          type="button"
                   className={chDockBtn(mobilePanel === 'match' && mobileMatchTab === 'stats')}
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => {
-                    setMobilePanel('match')
-                    setMobileMatchTab('stats')
-                  }}
-                >
-                  Match
-                </button>
+          onClick={() => {
+            setMobilePanel('match')
+            setMobileMatchTab('stats')
+          }}
+        >
+          Match
+        </button>
                 <button
                   type="button"
                   className={chDockBtn(mobilePanel === 'match' && mobileMatchTab === 'compo')}
@@ -4557,8 +4578,8 @@ export function ChannelPage() {
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => setMobilePanel('paris')}
                 >
-                  Paris
-                </button>
+          Paris
+        </button>
                 <button
                   type="button"
                   className={chDockBtn(mobilePanel === 'tribune')}
@@ -4567,10 +4588,10 @@ export function ChannelPage() {
                   aria-label="Stade — tribune et tifo"
                 >
                   Stade
-                </button>
-              </div>
+        </button>
+      </div>
 
-              {mobilePanel ? (
+      {mobilePanel ? (
                 <div
                   className={cn('tf-channel-mobile-sheet-layer', chSheetBackdrop)}
                   data-tf-modal="true"
@@ -4578,8 +4599,8 @@ export function ChannelPage() {
                   role="dialog"
                   aria-modal="true"
                 >
-                  <button
-                    type="button"
+                <button
+                  type="button"
                     className="absolute inset-0"
                     aria-label="Fermer le panneau"
                     onClick={() => setMobilePanel(null)}
@@ -4593,8 +4614,8 @@ export function ChannelPage() {
                     )}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <button
-                      type="button"
+                <button
+                  type="button"
                       onClick={() => setMobilePanel(null)}
                       className={cn(
                         'absolute right-2.5 top-2.5',
@@ -4604,7 +4625,7 @@ export function ChannelPage() {
                       aria-label="Fermer le panneau"
                     >
                       ×
-                    </button>
+                </button>
             <div
               className={cn(
                 'shrink-0 border-b px-3 pb-2 pt-3.5 pr-16',
@@ -4638,19 +4659,19 @@ export function ChannelPage() {
                       ['classement', 'Class.'],
                     ] as const
                   ).map(([tab, label]) => (
-                    <button
+                <button
                       key={tab}
-                      type="button"
+                  type="button"
                       onClick={() => setMobileMatchTab(tab)}
                       className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-bold ${
                         mobileMatchTab === tab ? chSheetTabActive : chSheetTabIdle
                       }`}
                     >
                       {label}
-                    </button>
+                </button>
                   ))}
-                </div>
-              ) : null}
+              </div>
+            ) : null}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]">
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
@@ -4666,7 +4687,7 @@ export function ChannelPage() {
                     penaltyClassName="text-sky-200/70"
                   />
                   <span className="truncate text-xs font-black text-white">{awayName}</span>
-                </div>
+                  </div>
                 {liveStatsLoading && !isUpcoming && mobileStatRows.length === 0 ? (
                   <p className="rounded-lg border border-white/10 bg-[#0a1f35]/70 px-3 py-2 text-center text-[11px] font-semibold text-sky-200/80">
                     Chargement des stats…
@@ -4756,7 +4777,7 @@ export function ChannelPage() {
                   >
                     {match?.away.shortName ?? teamShortChip(awayName)} · {awayName}
                   </button>
-                </div>
+                  </div>
                 <MatchLineupPitch
                   layout={displayedLineupLayout}
                   homeToneColor={homeToneColor}
@@ -5014,13 +5035,13 @@ export function ChannelPage() {
                 Match terminé — tu ne peux plus changer de tribune pour ce live.
               </p>
             ) : (
-              <button
-                type="button"
-                onClick={() => setTribuneModalOpen(false)}
-                className="mt-3 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-bold text-[#06242a] transition hover:bg-[#2be0c6]"
-              >
-                Rejoindre cette tribune
-              </button>
+            <button
+              type="button"
+              onClick={() => setTribuneModalOpen(false)}
+              className="mt-3 w-full rounded-lg border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2 text-xs font-bold text-[#06242a] transition hover:bg-[#2be0c6]"
+            >
+              Rejoindre cette tribune
+            </button>
             )}
           </div>
         </div>
@@ -5033,7 +5054,7 @@ export function ChannelPage() {
                   {layer.fx.id === 'stroboscope' ? <PaidPhoneFlashBurst seed={layer.seed} /> : null}
                   {layer.fx.id === 'fumigene' ? (
                     <PaidFlareBurst seed={layer.seed} color={layer.fx.flareColor ?? 'red'} />
-                  ) : null}
+          ) : null}
                   {layer.fx.id === 'ola' ? <PaidConfettiBurst seed={layer.seed} /> : null}
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:px-6 sm:pb-28 sm:pt-16"
@@ -5064,10 +5085,10 @@ export function ChannelPage() {
                         >
                           ALLEZ {(layer.fx.tifoSide === 'away' ? awayName : homeName).toUpperCase()}
                         </p>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
+            </div>
+          ) : null}
+          </div>
+        </div>
               ))}
             </div>,
             document.body,
@@ -5170,11 +5191,11 @@ export function ChannelPage() {
 
           {fullscreenEvent.kind === 'card'
             ? (fullscreenEvent.cardColor === 'red'
-                ? [
+            ? [
                     ['12%', '22%', '🟥', 'text-5xl', 0],
-                    ['24%', '70%', '🟥', 'text-4xl', 120],
+                ['24%', '70%', '🟥', 'text-4xl', 120],
                     ['44%', '18%', '🟥', 'text-6xl', 70],
-                    ['68%', '64%', '🟥', 'text-5xl', 180],
+                ['68%', '64%', '🟥', 'text-5xl', 180],
                     ['82%', '30%', '🟥', 'text-4xl', 90],
                   ]
                 : [
@@ -5182,7 +5203,7 @@ export function ChannelPage() {
                     ['24%', '70%', '🟨', 'text-4xl', 120],
                     ['44%', '18%', '🟨', 'text-6xl', 70],
                     ['68%', '64%', '🟨', 'text-5xl', 180],
-                    ['82%', '30%', '🟨', 'text-4xl', 90],
+                ['82%', '30%', '🟨', 'text-4xl', 90],
                   ]
               ).map(([l, t, emoji, size, d], i) => (
                 <span

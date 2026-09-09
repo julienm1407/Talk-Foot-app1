@@ -11,8 +11,7 @@ import { getSportMonksToken } from '../utils/apiTokens'
 import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
 import { useTalkFootLiveBundle } from './useTalkFootLiveBundle'
 
-/** Live : cadence renforcée pour éviter les buts invisibles sans F5. */
-const LIVE_POLL_MS = 3_000
+const LIVE_POLL_MS = 2_000
 
 function highlightIdsSignature(items: Highlight[]): string {
   return items.map((h) => h.id).join('|')
@@ -22,11 +21,10 @@ function liveStatRowsSignature(rows: LiveFixtureStatRow[]): string {
   return rows.map((r) => `${r.label}:${r.home}:${r.away}`).join('|')
 }
 
+/** Couverture = vraies stats extraites — pas seulement la présence d’events. */
 function bundleCoversLiveStats(fixture: SmFixture | null): boolean {
   if (!fixture) return false
-  if (extractLiveFixtureStatistics(fixture).length > 0) return true
-  const events = fixture.events
-  return Array.isArray(events) && events.length > 0
+  return extractLiveFixtureStatistics(fixture).length > 0
 }
 
 /**
@@ -35,7 +33,6 @@ function bundleCoversLiveStats(fixture: SmFixture | null): boolean {
 export function useSportMonksFixtureLiveStats(
   sportMonksFixtureId: number | undefined,
   matchStatus: 'upcoming' | 'live' | 'finished',
-  /** Identifiant tribune (`Match.id`) pour la timeline « Moments forts ». */
   channelMatchId?: string,
 ) {
   const { liveBundleFixture, liveBundleSettled } = useTalkFootLiveBundle(
@@ -83,18 +80,16 @@ export function useSportMonksFixtureLiveStats(
           const nextTimeline = channelMatchId
             ? extractTimelineHighlightsFromSmFixture(fx, channelMatchId)
             : []
-          setRows((prev) =>
-            liveStatRowsSignature(prev) === liveStatRowsSignature(nextRows) ? prev : nextRows,
-          )
+          setRows((prev) => {
+            if (!nextRows.length && prev.length) return prev
+            return liveStatRowsSignature(prev) === liveStatRowsSignature(nextRows) ? prev : nextRows
+          })
           setTimeline((prev) =>
             highlightIdsSignature(prev) === highlightIdsSignature(nextTimeline) ? prev : nextTimeline,
           )
         })
         .catch(() => {
-          if (!cancelledRef.current) {
-            setRows([])
-            setTimeline([])
-          }
+          /* garder les stats déjà affichées */
         })
         .finally(() => {
           if (!cancelledRef.current) setLoading(false)
@@ -121,13 +116,18 @@ export function useSportMonksFixtureLiveStats(
     const nextTimeline = channelMatchId
       ? extractTimelineHighlightsFromSmFixture(liveBundleFixture, channelMatchId)
       : []
-    setRows((prev) =>
-      liveStatRowsSignature(prev) === liveStatRowsSignature(nextRows) ? prev : nextRows,
-    )
+    setRows((prev) => {
+      if (!nextRows.length && prev.length) return prev
+      return liveStatRowsSignature(prev) === liveStatRowsSignature(nextRows) ? prev : nextRows
+    })
     setTimeline((prev) =>
-      highlightIdsSignature(prev) === highlightIdsSignature(nextTimeline) ? prev : nextTimeline,
+      highlightIdsSignature(prev) === highlightIdsSignature(nextTimeline)
+        ? prev
+        : nextTimeline.length
+          ? nextTimeline
+          : prev,
     )
-    setLoading(false)
+    if (nextRows.length) setLoading(false)
   }, [liveBundleFixture, channelMatchId])
 
   return { liveStatRows: rows, liveStatsLoading: loading, smTimelineHighlights: timeline }
