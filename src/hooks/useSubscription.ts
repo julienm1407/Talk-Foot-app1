@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getSubscriptionPlan, SUBSCRIPTION_TIER_ORDER } from '../data/subscriptionPlans'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { useAuth } from '../contexts/AuthContext'
+import { isGooglePlayReviewEmail } from '../config/adminAccess'
 import type { SubscriptionState, SubscriptionTierId } from '../types/subscription'
 import { DEFAULT_SUBSCRIPTION } from '../types/subscription'
 import {
@@ -13,6 +14,8 @@ import {
 } from '../utils/subscriptionEntitlements'
 
 const LOCAL_SUB_KEY = 'talkfoot.subscription.v1'
+const GOOGLE_REVIEW_TIER: SubscriptionTierId = 'ambassador'
+const GOOGLE_REVIEW_ACTIVE_UNTIL = '2099-12-31T23:59:59.000Z'
 
 function readLocalSubscription(userId: string | undefined): SubscriptionState {
   if (!userId) return { ...DEFAULT_SUBSCRIPTION, usage: {} }
@@ -33,6 +36,19 @@ function writeLocalSubscription(userId: string, sub: SubscriptionState) {
   }
 }
 
+function withGoogleReviewEntitlements(
+  sub: SubscriptionState,
+  email: string | undefined | null,
+): SubscriptionState {
+  if (!isGooglePlayReviewEmail(email)) return sub
+  return {
+    ...sub,
+    tier: GOOGLE_REVIEW_TIER,
+    activeUntil: GOOGLE_REVIEW_ACTIVE_UNTIL,
+    subscribedSince: sub.subscribedSince ?? new Date().toISOString(),
+  }
+}
+
 export function useSubscription() {
   const { user } = useAuth()
   const cloud = useOptionalCloudUserState()
@@ -45,18 +61,20 @@ export function useSubscription() {
   }, [user?.id])
 
   const subscription = useMemo((): SubscriptionState => {
-    if (cloud?.app.subscription) {
-      return normalizeSubscription(cloud.app.subscription)
-    }
-    return localSub
-  }, [cloud?.app.subscription, localSub])
+    const base = cloud?.app.subscription
+      ? normalizeSubscription(cloud.app.subscription)
+      : localSub
+    return withGoogleReviewEntitlements(base, user?.email)
+  }, [cloud?.app.subscription, localSub, user?.email])
 
   const tier = useMemo(() => effectiveTier(subscription), [subscription])
   const plan = useMemo(() => getSubscriptionPlan(tier), [tier])
+  const unlockAll = Boolean(user?.isAdmin) || isGooglePlayReviewEmail(user?.email)
 
   const patchSubscription = useCallback(
     (fn: (prev: SubscriptionState) => SubscriptionState) => {
-      const apply = (prev: SubscriptionState) => fn(normalizeSubscription(prev))
+      const apply = (prev: SubscriptionState) =>
+        withGoogleReviewEntitlements(fn(normalizeSubscription(prev)), user?.email)
       if (cloud) {
         if (!cloud.syncReady) {
           setLocalSub((prev) => {
@@ -80,15 +98,36 @@ export function useSubscription() {
         return next
       })
     },
-    [cloud, cloud?.syncReady, user?.id],
+    [cloud, cloud?.syncReady, user?.id, user?.email],
   )
 
   useEffect(() => {
     if (!cloud?.app.subscription || !user?.id) return
-    const synced = normalizeSubscription(cloud.app.subscription)
+    const synced = withGoogleReviewEntitlements(
+      normalizeSubscription(cloud.app.subscription),
+      user.email,
+    )
     writeLocalSubscription(user.id, synced)
     setLocalSub(synced)
-  }, [cloud?.app.subscription, user?.id])
+  }, [cloud?.app.subscription, user?.id, user?.email])
+
+  /** Persiste Ambassadeur pour le compte Google Review dès la connexion. */
+  useEffect(() => {
+    if (!isGooglePlayReviewEmail(user?.email)) return
+    if (
+      subscription.tier === GOOGLE_REVIEW_TIER &&
+      subscription.activeUntil === GOOGLE_REVIEW_ACTIVE_UNTIL
+    ) {
+      return
+    }
+    patchSubscription((prev) => ({
+      ...prev,
+      tier: GOOGLE_REVIEW_TIER,
+      activeUntil: GOOGLE_REVIEW_ACTIVE_UNTIL,
+      subscribedSince: prev.subscribedSince ?? new Date().toISOString(),
+    }))
+    void cloud?.flushAppSave?.()
+  }, [user?.email, subscription.tier, subscription.activeUntil, patchSubscription, cloud])
 
   const setTier = useCallback(
     (nextTier: SubscriptionTierId) => {
@@ -134,18 +173,18 @@ export function useSubscription() {
     tiers: SUBSCRIPTION_TIER_ORDER,
     monthlyTokens: monthlyTokenAllowance(tier),
     betTokenMultiplier: betTokenMultiplier(tier),
-    showAds: shouldShowAdsForTier(tier),
-    hasVerifiedBadge: plan.flags.verifiedBadge,
-    hasAmbassadorStatus: plan.flags.ambassadorStatus,
-    canStreamSalon: plan.flags.canStreamSalon,
-    canJoinVoiceSalons: plan.flags.canJoinVoiceSalons,
-    canWriteArticles: plan.flags.canWriteArticles,
-    canCreatePrivateLiveMatches: plan.flags.canCreatePrivateLiveMatches,
+    showAds: unlockAll ? false : shouldShowAdsForTier(tier),
+    hasVerifiedBadge: unlockAll || plan.flags.verifiedBadge,
+    hasAmbassadorStatus: unlockAll || plan.flags.ambassadorStatus,
+    canStreamSalon: unlockAll || plan.flags.canStreamSalon,
+    canJoinVoiceSalons: unlockAll || plan.flags.canJoinVoiceSalons,
+    canWriteArticles: unlockAll || plan.flags.canWriteArticles,
+    canCreatePrivateLiveMatches: unlockAll || plan.flags.canCreatePrivateLiveMatches,
     liveMatchTokensPerHour: plan.limits.liveMatchTokensPerHour,
     patchSubscription,
     patchUsage,
     grantPurchasedTier,
     /** Dev / admin : bascule manuelle de formule. */
-    setTier: user?.isAdmin ? setTier : undefined,
+    setTier: unlockAll ? setTier : undefined,
   }
 }

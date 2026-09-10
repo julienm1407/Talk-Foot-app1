@@ -137,7 +137,9 @@ export function chatSendAllowed(
   tier: SubscriptionTierId,
   usage: SubscriptionUsageCounters,
   now = Date.now(),
+  isAdmin = false,
 ): { ok: boolean; reason?: string; waitMs?: number } {
+  if (isAdmin) return { ok: true }
   const plan = getSubscriptionPlan(tier)
   if (plan.limits.chatCooldownSeconds > 0 && usage.lastChatSendAt) {
     const waitMs = plan.limits.chatCooldownSeconds * 1000 - (now - usage.lastChatSendAt)

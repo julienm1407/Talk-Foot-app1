@@ -1,14 +1,20 @@
 import { useCallback, useMemo } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from './useSubscription'
 import { bumpChatUsage, chatSendAllowed } from '../utils/subscriptionEntitlements'
 import { useXpGrant } from './useXpGrant'
 
 export function useChatSendGuard() {
+  const { user } = useAuth()
   const { tier, subscription, patchUsage } = useSubscription()
   const { grantChatMessage } = useXpGrant()
   const usage = subscription.usage ?? {}
+  const isAdmin = Boolean(user?.isAdmin)
 
-  const check = useCallback(() => chatSendAllowed(tier, usage), [tier, usage])
+  const check = useCallback(
+    () => chatSendAllowed(tier, usage, Date.now(), isAdmin),
+    [tier, usage, isAdmin],
+  )
 
   const guardReason = useMemo(() => {
     const r = check()
