@@ -10,6 +10,10 @@ https://talk-foot.com/terms
 
 https://talk-foot.com/delete-account
 
-# Contact éditeur
+# Normes CSAE / sécurité enfants (Google Play — URL des normes liées à la sécurité)
+
+https://talk-foot.com/child-safety
+
+# Contact éditeur / point de contact sécurité enfants
 
 app.talkfoot@gmail.com

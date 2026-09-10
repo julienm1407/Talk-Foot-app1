@@ -41,6 +41,12 @@ const DELETE_ACCOUNT: RouteSeoConfig = {
     'Demande ou effectue la suppression de ton compte Talk Foot et des données associées (exigence Google Play / RGPD).',
 }
 
+const CHILD_SAFETY: RouteSeoConfig = {
+  title: `Normes de sécurité des enfants (CSAE) — ${SITE_NAME}`,
+  description:
+    'Normes publiques Talk Foot contre l’exploitation et les abus sexuels sur mineurs (CSAE / CSAM) — exigence Google Play.',
+}
+
 const LOGIN: RouteSeoConfig = {
   title: `Connexion — ${SITE_NAME}`,
   description: `Connecte-toi à ${SITE_NAME} pour accéder au live, aux tribunes supporters et à ton profil.`,
@@ -152,6 +158,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/terms') return TERMS
   if (pathname === '/about') return ABOUT
   if (pathname === '/delete-account') return DELETE_ACCOUNT
+  if (pathname === '/child-safety') return CHILD_SAFETY
   if (pathname === '/login' || pathname === '/login/reset-password') {
     return pathname === '/login/reset-password' ? RESET_PASSWORD : LOGIN
   }

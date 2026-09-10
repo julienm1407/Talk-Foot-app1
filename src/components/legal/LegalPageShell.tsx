@@ -45,6 +45,9 @@ export function LegalPageShell({
               <Link to="/delete-account" className="text-tf-cta hover:underline">
                 Supprimer mon compte
               </Link>
+              <Link to="/child-safety" className="text-tf-cta hover:underline">
+                Sécurité enfants
+              </Link>
               {!user ? (
                 <Link to="/login" className="text-tf-cta hover:underline">
                   Connexion

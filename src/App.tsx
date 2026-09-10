@@ -11,6 +11,7 @@ import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { AboutPage } from './pages/AboutPage'
 import { DeleteAccountPage } from './pages/DeleteAccountPage'
+import { ChildSafetyPage } from './pages/ChildSafetyPage'
 import { SubscriptionPlansPage } from './pages/SubscriptionPlansPage'
 import { HomePage } from './pages/Home'
 import {
@@ -119,6 +120,7 @@ export default function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />
+        <Route path="/child-safety" element={<ChildSafetyPage />} />
         <Route
           path="/article/:slug"
           element={

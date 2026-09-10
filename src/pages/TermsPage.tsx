@@ -44,6 +44,13 @@ export function TermsPage() {
           <li>Respect des autres : pas d&apos;insultes, harcèlement, haine ou discrimination.</li>
           <li>Pas de contenus illicites, trompeurs ou portant atteinte aux droits de tiers.</li>
           <li>Pas de spam ni de perturbation technique du service.</li>
+          <li>
+            Interdiction absolue de l&apos;exploitation et des abus sexuels sur mineurs (CSAE / CSAM) — voir les{' '}
+            <Link to="/child-safety" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+              normes de sécurité des enfants
+            </Link>
+            .
+          </li>
         </ul>
       </section>
 
