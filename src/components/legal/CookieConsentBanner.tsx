@@ -6,7 +6,6 @@ import { CONSENT_DISMISS_SESSION_KEY } from '../../constants/privacyStorage'
 import { hasRecordedConsent, recordEssentialConsent } from '../../utils/privacyLocal'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useIsMobileTouchViewport } from '../../hooks/useIsMobileTouchViewport'
-import { useT } from '../../contexts/LocaleContext'
 
 /**
  * Information + consentement (stockage local + mention publicité AdSense sur pages éditoriales).
@@ -14,7 +13,6 @@ import { useT } from '../../contexts/LocaleContext'
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false)
   const { appearance } = useAppearance()
-  const t = useT()
   const L = appearance === 'light'
   const isMobileTouch = useIsMobileTouchViewport()
   const { pathname } = useLocation()
@@ -55,16 +53,18 @@ export function CookieConsentBanner() {
         <div className="mx-auto flex max-w-3xl flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="min-w-0 space-y-1">
             <p id="tf-consent-title" className={cn('text-sm font-black', L ? 'text-tf-dark' : 'text-white')}>
-              {t('cookies.title')}
+              Confidentialité & cookies
             </p>
             <p className={cn('text-xs font-medium leading-snug', L ? 'text-tf-grey' : 'text-slate-300')}>
-              {t('cookies.body')}{' '}
+              Talk Foot utilise le stockage de ton navigateur pour le compte et les préférences. Sur l&apos;accueil et
+              les pages éditoriales, Google AdSense peut déposer des cookies publicitaires. Les chats live et groupes
+              n&apos;affichent pas de publicité.{' '}
               <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-                {t('cookies.more')}
+                Politique de confidentialité
               </Link>
               {' · '}
               <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-                {t('chrome.terms')}
+                CGU
               </Link>
               .
             </p>
@@ -87,7 +87,7 @@ export function CookieConsentBanner() {
                 setVisible(false)
               }}
             >
-              {t('cookies.later')}
+              Plus tard
             </button>
             <button
               type="button"
@@ -97,7 +97,7 @@ export function CookieConsentBanner() {
                 setVisible(false)
               }}
             >
-              {t('cookies.accept')}
+              J&apos;accepte
             </button>
           </div>
         </div>

@@ -13,8 +13,6 @@ import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { BottomNavMoreSheet } from './BottomNavMoreSheet'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { hardNavigateTo, isProfilePath } from '../utils/hardNavigate'
-import { useSectionLabel } from '../hooks/useSectionLabel'
-import type { AppSectionId } from '../theme/appSectionThemes'
 
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
@@ -109,9 +107,7 @@ export function BottomNav() {
                 <span className="text-lg leading-none" aria-hidden="true">
                   {icon}
                 </span>
-                <span className="max-w-full truncate text-center">
-                  <BottomNavLabel section={section} />
-                </span>
+                <span className="max-w-full truncate text-center">{th.label}</span>
               </button>
             )
           })}
@@ -150,8 +146,4 @@ export function BottomNav() {
   }
 
   return chrome
-}
-
-function BottomNavLabel({ section }: { section: AppSectionId }) {
-  return <>{useSectionLabel(section)}</>
 }

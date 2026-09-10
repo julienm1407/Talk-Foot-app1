@@ -8,8 +8,6 @@ import {
 } from '../theme/appSectionThemes'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
-import { useSectionLabel } from '../hooks/useSectionLabel'
-import type { AppSectionId } from '../theme/appSectionThemes'
 
 /** Sous-menu mobile — Paris, classements, boutique (au-dessus de la BottomNav). */
 export function BottomNavMoreSheet({
@@ -141,9 +139,7 @@ export function BottomNavMoreSheet({
                   {icon}
                 </span>
                 <span className="min-w-0 flex-1 text-left">
-                  <span className="block text-sm font-black">
-                    <MoreNavLabel section={section} />
-                  </span>
+                  <span className="block text-sm font-black">{th.label}</span>
                   <span className="block text-[11px] font-semibold text-tf-app-muted">{hint}</span>
                 </span>
                 <span className="shrink-0 text-sm text-tf-app-muted" aria-hidden>
@@ -156,8 +152,4 @@ export function BottomNavMoreSheet({
       </div>
     </div>
   )
-}
-
-function MoreNavLabel({ section }: { section: AppSectionId }) {
-  return <>{useSectionLabel(section)}</>
 }

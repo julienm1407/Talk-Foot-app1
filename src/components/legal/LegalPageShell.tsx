@@ -5,9 +5,7 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 import { LEGAL_CONTACT_EMAIL, LEGAL_LAST_UPDATED_LABEL, legalContactMailto } from '../../constants/siteLegal'
 import { LogoEncart } from '../../layout/LogoMark'
 import { ThemeAppearanceToggle } from '../ui/ThemeAppearanceToggle'
-import { LanguageFlagToggle } from '../ui/LanguageFlagToggle'
 import { cn } from '../../utils/cn'
-import { useT } from '../../contexts/LocaleContext'
 
 export function LegalPageShell({
   title,
@@ -20,7 +18,6 @@ export function LegalPageShell({
 }) {
   const { user } = useAuth()
   const { appearance } = useAppearance()
-  const t = useT()
   const L = appearance === 'light'
 
   return (
@@ -34,30 +31,27 @@ export function LegalPageShell({
               aria-label="Navigation pages légales"
             >
               <Link to="/" className="text-tf-cta hover:underline">
-                ← {t('nav.home')}
+                ← Accueil
               </Link>
               <Link to="/about" className="text-tf-cta hover:underline">
-                {t('chrome.about')}
+                À propos
               </Link>
               <Link to="/privacy" className="text-tf-cta hover:underline">
-                {t('chrome.privacy')}
+                Confidentialité
               </Link>
               <Link to="/terms" className="text-tf-cta hover:underline">
-                {t('chrome.terms')}
+                CGU
               </Link>
               <Link to="/delete-account" className="text-tf-cta hover:underline">
-                {t('chrome.deleteAccount')}
+                Supprimer mon compte
               </Link>
               {!user ? (
                 <Link to="/login" className="text-tf-cta hover:underline">
-                  {t('deleteAccount.login')}
+                  Connexion
                 </Link>
               ) : null}
             </nav>
-            <div className="flex shrink-0 items-center gap-2">
-              <LanguageFlagToggle variant="compact" />
-              <ThemeAppearanceToggle variant="headerIcon" className="shrink-0" />
-            </div>
+            <ThemeAppearanceToggle variant="headerIcon" className="shrink-0" />
           </div>
           <div className="flex justify-center">
             <LogoEncart size="lg" isLight={L} />

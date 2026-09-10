@@ -29,7 +29,6 @@ import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 import { LIVE_FIL_EQUIPE_COEUR } from '../data/tribunes'
 import { clubPathForId } from '../utils/clubRoute'
 import { ProfilePrivacySection } from '../components/legal/ProfilePrivacySection'
-import { LanguageFlagToggle } from '../components/ui/LanguageFlagToggle'
 import { SeasonAdminToggle } from '../components/admin/SeasonAdminToggle'
 import { DisplayNameEditor } from '../components/profile/DisplayNameEditor'
 import { useAppearance } from '../contexts/AppearanceContext'
@@ -241,15 +240,6 @@ export function ProfilePage() {
         ) : null}
 
         <ProfilePrivacySection />
-
-        <section
-          className={cn(
-            'rounded-2xl border p-4 sm:p-5',
-            L ? 'border-sky-200/70 bg-sky-50/50' : 'border-sky-400/20 bg-sky-950/35',
-          )}
-        >
-          <LanguageFlagToggle variant="profile" />
-        </section>
 
       </div>
 

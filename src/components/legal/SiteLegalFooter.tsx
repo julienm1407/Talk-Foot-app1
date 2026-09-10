@@ -6,7 +6,6 @@ import {
   legalContactMailto,
 } from '../../constants/siteLegal'
 import { cn } from '../../utils/cn'
-import { useT } from '../../contexts/LocaleContext'
 
 export function SiteLegalFooter({
   className,
@@ -17,7 +16,6 @@ export function SiteLegalFooter({
   compact?: boolean
 }) {
   const { appearance } = useAppearance()
-  const t = useT()
   const L = appearance === 'light'
 
   const linkClass = cn(
@@ -42,19 +40,19 @@ export function SiteLegalFooter({
       >
         <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 font-semibold">
           <Link to="/about" className={linkClass}>
-            {t('chrome.about')}
+            À propos
           </Link>
           <Link to="/privacy" className={linkClass}>
-            {t('chrome.privacy')}
+            Confidentialité
           </Link>
           <Link to="/terms" className={linkClass}>
-            {t('chrome.terms')}
+            CGU
           </Link>
           <Link to="/delete-account" className={linkClass}>
-            {t('chrome.deleteAccount')}
+            Supprimer mon compte
           </Link>
           <a href={legalContactMailto('Contact Talk Foot')} className={linkClass}>
-            {t('chrome.contact')}
+            Contact
           </a>
         </nav>
         <p className={cn('font-medium leading-snug', L ? 'text-tf-app-muted' : 'text-sky-200/75')}>
@@ -65,7 +63,8 @@ export function SiteLegalFooter({
           {!compact ? (
             <>
               {' '}
-              · {t('footer.bettingNote')}
+              · Paris entre supporters (jetons fictifs, sans argent réel). Les tribunes de discussion n&apos;affichent
+              pas de publicité.
             </>
           ) : null}
         </p>
