@@ -41,6 +41,7 @@ import {
 } from '../data/sportMonksKnownTeamIds'
 import { findTeamById, resolveClubIdFromSlug } from '../utils/clubRoute'
 import { countSalonChannelsForClub, getGroupsForClubPage } from '../utils/groupsForClubPage'
+import { buildClubHubBarMetrics } from '../utils/clubPageHubMetrics'
 import { cn } from '../utils/cn'
 import { ClubDataBar } from '../components/club-page/ClubDataBar'
 import { ClubInfoDrawer } from '../components/club-page/ClubInfoDrawer'
@@ -531,8 +532,61 @@ export function ClubPage() {
         isLive: d.trending ?? false,
       }))
     if (clubDebates.length) out = { ...out, debates: clubDebates }
+
+    const hub = buildClubHubBarMetrics({
+      teamId: team?.id ?? '',
+      groups,
+      standingsRows: clubStandingsRows,
+      leagueName: ALL_CLUBS_BY_ID[team?.id ?? '']?.leagueName ?? 'Championnat',
+      sportMonksTeamId: smTeamId,
+      matchMode: out.matchMode,
+      debatesCount: clubDebates.length,
+    })
+    out = {
+      ...out,
+      popularityLabel: hub.popularityLabel,
+      liveMsgPerMin: hub.liveMsgPerMin,
+      activitySpike: hub.activitySpike,
+      globalRank: hub.globalRank,
+      topFan: hub.topFan,
+      topFans: hub.topFans,
+      stats: hub.stats,
+      hubPulse: hub.hubPulse,
+      mvpTitle: hub.mvpTitle,
+      openRooms: hub.openRooms,
+      onFire: hub.onFire || out.onFire,
+    }
+
+    // Classement mini tableau si SM a une ligne pour ce club
+    const standingRow = clubStandingsRows.find(
+      (r) =>
+        r.teamId === team?.id ||
+        (smTeamId != null && r.sportMonksParticipantId === smTeamId),
+    )
+    if (standingRow) {
+      out = {
+        ...out,
+        tableSnapshot: {
+          position: `${standingRow.rank}e`,
+          points: `${standingRow.points} pts`,
+          line: `${standingRow.played} j. · ${standingRow.gf}/${standingRow.ga}`,
+        },
+      }
+    }
+
     return out
-  }, [dataBase, smScheduleUi, smSquadPlayers, salonChannelCount, allDebates, clubGroups])
+  }, [
+    dataBase,
+    smScheduleUi,
+    smSquadPlayers,
+    salonChannelCount,
+    allDebates,
+    clubGroups,
+    groups,
+    clubStandingsRows,
+    team,
+    smTeamId,
+  ])
   const clubReadingLinks = useMemo<
     Array<{ id: string; title: string; excerpt: string; url: string; source: string; internal: boolean }>
   >(() => {

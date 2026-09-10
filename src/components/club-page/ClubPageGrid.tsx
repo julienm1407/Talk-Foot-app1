@@ -12,7 +12,16 @@ import { Card } from '../ui/Card'
 import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
 import { ClubCrest } from '../brand/ClubCrest'
 import { LeagueStandingsTable } from '../rankings/LeagueStandingsTable'
+import { UltraAvatarFrame } from '../subscription/UltraAvatarFrame'
 import { formatKickoff } from '../../utils/time'
+
+/** Nom court lisible sur le terrain (nom de famille en priorité). */
+function pitchShortLabel(full: string): string {
+  const parts = full.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '—'
+  if (parts.length === 1) return parts[0]!.slice(0, 10)
+  return parts[parts.length - 1]!.slice(0, 10)
+}
 
 type ClubReadingLink = {
   id: string
@@ -115,24 +124,47 @@ function PitchNode({
   primary: string
   secondary: string
 }) {
+  const short = pitchShortLabel(p.label)
   return (
     <button
       type="button"
       onClick={onSelect}
+      aria-pressed={selected}
+      aria-label={`#${p.number} ${p.label}`}
       className={cn(
-        'tf-interactive-press absolute -translate-x-1/2 -translate-y-1/2',
-        'flex size-10 sm:size-12 flex-col items-center justify-center rounded-full border-2 text-[9px] font-black text-white shadow-lg sm:text-[10px]',
-        selected ? 'ring-2 ring-sky-400' : 'ring-1 ring-white/20',
-        hot && 'ring-2 ring-amber-400/80',
+        'tf-interactive-press absolute z-[1] -translate-x-1/2 -translate-y-1/2',
+        'flex flex-col items-center gap-0.5',
+        selected && 'z-[2]',
       )}
       style={{
         left: `${p.x}%`,
         top: `${p.y}%`,
-        background: `linear-gradient(135deg, ${primary}, ${secondary})`,
       }}
     >
-      <span className="text-[7px] font-bold opacity-90 sm:text-[8px]">#{p.number}</span>
-      <span className="max-w-[2.4rem] truncate sm:max-w-[2.8rem]">{p.label.split('.')[0]}.</span>
+      <span
+        className={cn(
+          'relative flex size-11 items-center justify-center rounded-full border-2 text-white shadow-lg sm:size-12',
+          selected
+            ? 'border-amber-300/95 shadow-[0_0_12px_rgba(251,191,36,0.75)]'
+            : hot
+              ? 'border-amber-400/70'
+              : 'border-white/25',
+        )}
+        style={{
+          background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+        }}
+      >
+        {selected ? <UltraAvatarFrame size="salon" /> : null}
+        <span className="relative z-[1] text-[11px] font-black tabular-nums sm:text-xs">#{p.number}</span>
+      </span>
+      <span
+        className={cn(
+          'max-w-[4.6rem] truncate rounded-md px-1 py-px text-center text-[9px] font-black leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] sm:max-w-[5.2rem] sm:text-[10px]',
+          selected ? 'bg-amber-500/25 text-amber-50 ring-1 ring-amber-300/50' : 'text-white/95',
+        )}
+      >
+        {short}
+      </span>
     </button>
   )
 }
@@ -811,6 +843,21 @@ export function ClubPageGrid({
       )}
     >
       <div className="min-w-0 space-y-4 lg:col-span-7">
+        <ClubSeasonSnapshotBlock
+          data={data}
+          team={team}
+          matchMode={matchMode}
+          scheduleHint={clubScheduleHint}
+          clubLastMatch={clubLastMatch}
+          recentResults={clubRecentResults}
+          calendarFixtures={clubCalendarFixtures}
+          standingsRows={clubStandingsRows}
+          standingsLeagueId={clubStandingsLeagueId}
+          standingsLoading={clubStandingsLoading}
+          standingsHint={clubStandingsHint}
+          seasonStatsRows={clubSeasonStats}
+          seasonStatsHint={clubSeasonStatsHint}
+        />
         <Card
           id="club-squad"
           className={cn(
@@ -821,9 +868,9 @@ export function ClubPageGrid({
         >
           <div className="border-b border-emerald-500/20 bg-black/20 p-3 sm:p-4">
             <ClubEncartTitle
-              kicker="11 titulaires"
+              kicker="Onze type"
               kickerClass="text-emerald-200/90"
-              subtitle="Formation 4-3-3 — tape un joueur sur le terrain."
+              subtitle="Schéma 4-3-3 illustratif (pas la compo du prochain match) — tape un joueur pour l’agrandir."
             >
               Effectif
             </ClubEncartTitle>
@@ -847,7 +894,9 @@ export function ClubPageGrid({
                 }}
                 aria-hidden
               />
-              <p className="sr-only">Onze joueurs en 4-3-3 avec gardien, positions fictives, données communauté.</p>
+              <p className="sr-only">
+                Onze type en 4-3-3 : positions illustratives à partir de l’effectif, pas la composition officielle du match.
+              </p>
               {data.squad.map((p) => (
                 <PitchNode
                   key={p.id}
@@ -862,41 +911,35 @@ export function ClubPageGrid({
             </div>
             <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-[14rem] sm:shrink-0">
               {selected ? (
-                <div className="rounded-2xl border-2 border-emerald-400/35 bg-gradient-to-b from-emerald-500/20 to-slate-950/60 p-3.5 shadow-lg ring-1 ring-white/5">
-                  <p className="text-[10px] font-black uppercase text-emerald-200/90">
-                    #{selected.number} {selected.label}
-                  </p>
-                  <p className="mt-1.5 text-2xl font-black text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
-                    Note {selected.rating}
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-sky-100/90">
-                    Débats, vocaux et réactions sur le joueur sélectionné.
-                  </p>
+                <div className="rounded-2xl border-2 border-amber-400/55 bg-gradient-to-b from-amber-500/20 to-slate-950/70 p-3.5 shadow-[0_0_24px_rgba(251,191,36,0.18)] ring-1 ring-amber-300/25">
+                  <div className="flex flex-col items-center gap-3">
+                    <div
+                      className="relative flex size-24 items-center justify-center rounded-full border-2 border-amber-300/90 text-white shadow-[0_0_16px_rgba(251,191,36,0.55)] sm:size-28"
+                      style={{
+                        background: `linear-gradient(135deg, ${team.colors.primary}, ${team.colors.secondary})`,
+                      }}
+                      aria-hidden
+                    >
+                      <UltraAvatarFrame size="salon" />
+                      <span className="relative z-[1] text-2xl font-black tabular-nums sm:text-3xl">
+                        #{selected.number}
+                      </span>
+                    </div>
+                    <div className="min-w-0 text-center">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">
+                        Joueur sélectionné
+                      </p>
+                      <p className="mt-1 text-base font-black leading-snug text-white sm:text-lg">
+                        {selected.label}
+                      </p>
+                    </div>
+                  </div>
+                  {data.hotPlayerId === selected.id ? (
+                    <p className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/15 px-2 py-1.5 text-[9px] font-black uppercase text-amber-100">
+                      <span aria-hidden>🔥</span> Joueur le + débattu
+                    </p>
+                  ) : null}
                 </div>
-              ) : null}
-              {selected ? (
-                <div className="rounded-2xl border border-white/10 bg-black/40 p-2.5 text-[10px]">
-                  <p className="font-black uppercase tracking-wide text-sky-200/80">Aperçu social</p>
-                  <dl className="mt-1.5 space-y-1 text-sky-100/90">
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-sky-200/75">Réactions 7j</dt>
-                      <dd className="font-black text-white">1,2K</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-sky-200/75">Citations</dt>
-                      <dd className="font-black text-white">86</dd>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-sky-200/75">Débats</dt>
-                      <dd className="font-black text-white">14</dd>
-                    </div>
-                  </dl>
-                </div>
-              ) : null}
-              {data.hotPlayerId === selected?.id ? (
-                <p className="flex items-center gap-1.5 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1.5 text-[9px] font-black uppercase text-amber-200 [text-shadow:none]">
-                  <span aria-hidden>🔥</span> Joueur le + débattu
-                </p>
               ) : null}
             </div>
           </div>
@@ -937,21 +980,6 @@ export function ClubPageGrid({
           onPreview={setShopPreview}
           previewId={shopPreview}
           wallet={data.shopWallet}
-        />
-        <ClubSeasonSnapshotBlock
-          data={data}
-          team={team}
-          matchMode={matchMode}
-          scheduleHint={clubScheduleHint}
-          clubLastMatch={clubLastMatch}
-          recentResults={clubRecentResults}
-          calendarFixtures={clubCalendarFixtures}
-          standingsRows={clubStandingsRows}
-          standingsLeagueId={clubStandingsLeagueId}
-          standingsLoading={clubStandingsLoading}
-          standingsHint={clubStandingsHint}
-          seasonStatsRows={clubSeasonStats}
-          seasonStatsHint={clubSeasonStatsHint}
         />
       </div>
 
@@ -1021,55 +1049,69 @@ export function ClubPageGrid({
             <ClubEncartTitle
               kicker="Chiffres clés"
               kickerClass="text-teal-200/90"
-              subtitle="Engagement Talk Foot."
+              subtitle={`Engagement ${team.shortName} sur Talk Foot.`}
             >
               Stats communauté
             </ClubEncartTitle>
-            <div className="mt-3 grid grid-cols-2 gap-2.5">
-              {data.stats.map((s, i) => (
-                <div
-                  key={s.label}
-                  className={cn('rounded-2xl border p-2.5 pl-3 text-balance', statTileClass(i))}
-                >
-                  <p className="text-[8px] font-black uppercase leading-tight tracking-wider text-sky-200/80">{s.label}</p>
-                  <p className="mt-0.5 text-lg font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.4)] sm:text-xl">
-                    {s.value}
-                  </p>
-                  {s.sub ? <p className="mt-1 text-[9px] font-bold text-sky-200/75">{s.sub}</p> : null}
-                </div>
-              ))}
-            </div>
+            {data.stats.length === 0 ? (
+              <p className="mt-3 text-xs font-semibold text-sky-100/75">
+                Pas encore d’activité mesurée — ouvre une tribune pour lancer le compteur.
+              </p>
+            ) : (
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                {data.stats.map((s, i) => (
+                  <div
+                    key={`${s.label}-${i}`}
+                    className={cn('rounded-2xl border p-2.5 pl-3 text-balance', statTileClass(i))}
+                  >
+                    <p className="text-[8px] font-black uppercase leading-tight tracking-wider text-sky-200/80">
+                      {s.label}
+                    </p>
+                    <p className="mt-0.5 text-lg font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.4)] sm:text-xl">
+                      {s.value}
+                    </p>
+                    {s.sub ? <p className="mt-1 text-[9px] font-bold text-sky-200/75">{s.sub}</p> : null}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
 
         <Card className={cn('p-0 shadow-tf-elev-2', encartClass('podium'))}>
           <div className="p-3 sm:p-4">
             <ClubEncartTitle
-              kicker="Podium hebdo"
+              kicker="Podium tribunes"
               kickerClass="text-amber-200/90"
               subtitle={data.mvpTitle}
             >
               Top fans
             </ClubEncartTitle>
-            <ul className="mt-3 space-y-2">
-              {data.topFans.map((f) => (
-                <li
-                  key={f.rank}
-                  className="flex items-center justify-between gap-2 rounded-2xl border border-amber-500/20 bg-amber-950/15 px-2.5 py-2.5 ring-1 ring-amber-500/10"
-                >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/25 text-[10px] font-black text-amber-100">
-                      {f.rank}
+            {data.topFans.length === 0 ? (
+              <p className="mt-3 text-xs font-semibold text-sky-100/75">
+                Personne actif sur les tribunes {team.shortName} pour l’instant — sois le premier.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {data.topFans.map((f) => (
+                  <li
+                    key={`${f.rank}-${f.seed}`}
+                    className="flex items-center justify-between gap-2 rounded-2xl border border-amber-500/20 bg-amber-950/15 px-2.5 py-2.5 ring-1 ring-amber-500/10"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/25 text-[10px] font-black text-amber-100">
+                        {f.rank}
+                      </span>
+                      <Avatar seed={f.seed} className="!size-8 ring-1 ring-amber-400/25" />
+                      <span className="truncate text-sm font-bold text-sky-50">{f.name}</span>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-white/[0.08] px-1.5 py-0.5 text-xs font-black text-sky-100/95">
+                      {f.pts}
                     </span>
-                    <Avatar seed={f.seed} className="!size-8 ring-1 ring-amber-400/25" />
-                    <span className="truncate text-sm font-bold text-sky-50">{f.name}</span>
-                  </div>
-                  <span className="shrink-0 rounded-md bg-white/[0.08] px-1.5 py-0.5 text-xs font-black text-sky-100/95">
-                    {f.pts}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </Card>
 
@@ -1078,24 +1120,30 @@ export function ClubPageGrid({
             <ClubEncartTitle
               kicker="Activité 24h"
               kickerClass="text-rose-200/90"
-              subtitle={`Focal ${team.shortName}.`}
+              subtitle={`Pulse ${team.shortName} · tribunes.`}
             >
               Pulse hub
             </ClubEncartTitle>
-            <ul className="mt-3 space-y-2">
-              {data.hubPulse.map((h) => (
-                <li
-                  key={h.label}
-                  className="flex items-baseline justify-between gap-2 rounded-2xl border border-tf-cta/25 bg-red-950/20 px-2.5 py-2.5 ring-1 ring-tf-cta/15"
-                >
-                  <span className="min-w-0 text-[10px] font-black uppercase text-sky-200/80">{h.label}</span>
-                  <span className="shrink-0 text-right">
-                    <span className="text-sm font-black text-sky-50">{h.value}</span>
-                    {h.sub ? <span className="ml-1.5 text-[10px] font-bold text-rose-200/90">{h.sub}</span> : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {data.hubPulse.length === 0 ? (
+              <p className="mt-3 text-xs font-semibold text-sky-100/75">Pulse en attente de messages.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {data.hubPulse.map((h) => (
+                  <li
+                    key={h.label}
+                    className="flex items-baseline justify-between gap-2 rounded-2xl border border-tf-cta/25 bg-red-950/20 px-2.5 py-2.5 ring-1 ring-tf-cta/15"
+                  >
+                    <span className="min-w-0 text-[10px] font-black uppercase text-sky-200/80">{h.label}</span>
+                    <span className="shrink-0 text-right">
+                      <span className="text-sm font-black text-sky-50">{h.value}</span>
+                      {h.sub ? (
+                        <span className="ml-1.5 text-[10px] font-bold text-rose-200/90">{h.sub}</span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </Card>
 

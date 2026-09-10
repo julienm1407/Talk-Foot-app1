@@ -77,7 +77,7 @@ export function ClubDataBar({
 
           <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto] gap-2 sm:grid-cols-2 sm:gap-3 lg:max-w-md">
             <div className="col-span-2 rounded-2xl border border-amber-400/15 bg-amber-500/[0.08] px-3 py-2.5 sm:col-span-1">
-              <p className="text-[9px] font-black uppercase tracking-wider text-amber-200/80">Rang global</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-amber-200/80">Classement</p>
               <p className="mt-0.5 text-sm font-black text-amber-50">{data.globalRank}</p>
             </div>
             <div className="col-span-2 flex min-h-[4.5rem] items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 sm:col-span-1 sm:min-h-0">
