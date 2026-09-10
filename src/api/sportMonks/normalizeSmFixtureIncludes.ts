@@ -1,4 +1,4 @@
-import type { SmFixture } from './types'
+import type { SmFixture, SmParticipant } from './types'
 
 /** SportMonks v3 renvoie souvent `{ data: [...] }` pour les includes — on normalise en tableaux plats. */
 export function smIncludeRows<T>(raw: unknown): T[] {
@@ -21,7 +21,7 @@ export function normalizeSmFixtureIncludes(fixture: SmFixture | null | undefined
     scores?: unknown
     participants?: unknown
   }
-  const participants = smIncludeRows(f.participants)
+  const participants = smIncludeRows<SmParticipant>(f.participants)
   return {
     ...f,
     periods: smIncludeRows(f.periods),

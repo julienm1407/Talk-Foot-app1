@@ -205,6 +205,8 @@ export type SmPlayer = {
 /** Ligne de compos (`include` lineups.* sur une fixture). */
 export type SmLineupRow = {
   team_id?: number | string | null
+  /** Alias SM fréquent de `team_id` sur certaines réponses lineups. */
+  participant_id?: number | string | null
   player_id?: number
   player?: {
     id?: number
