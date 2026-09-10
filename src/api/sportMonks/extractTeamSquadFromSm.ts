@@ -9,6 +9,8 @@ export type SmSquadPlayerRow = {
   label: string
   number: string
   position?: string
+  /** Photo SportMonks (`player.image_path`) si dispo. */
+  photoUrl?: string
 }
 
 function playerDisplayName(p: Record<string, unknown>): string {
@@ -27,6 +29,13 @@ function positionLabel(p: Record<string, unknown>): string | undefined {
   if (!pos || typeof pos !== 'object') return undefined
   const o = pos as { name?: string; developer_name?: string }
   return String(o.name ?? o.developer_name ?? '').trim() || undefined
+}
+
+function playerPhotoUrl(player: Record<string, unknown>): string | undefined {
+  const raw = player.image_path
+  if (typeof raw !== 'string') return undefined
+  const u = raw.trim()
+  return u || undefined
 }
 
 function jerseyFromRow(row: Record<string, unknown>, player: Record<string, unknown>): string {
@@ -127,6 +136,7 @@ export function extractSquadPlayersFromSmEnvelope(envelope: { data?: unknown }):
       label,
       number: jerseyFromRow(row, p),
       position: positionLabel(p),
+      photoUrl: playerPhotoUrl(p),
     })
   }
 

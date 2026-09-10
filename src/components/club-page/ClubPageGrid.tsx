@@ -5,7 +5,7 @@ import { Avatar } from '../ui/Avatar'
 import { cn } from '../../utils/cn'
 import type { Team } from '../../types/match'
 import type { SupporterGroup } from '../../types/group'
-import type { ClubDebateItem, ClubPageMock, ClubSquadNode, ClubShopItem } from '../../data/clubPageMock'
+import type { ClubDebateItem, ClubPageMock, ClubShopItem } from '../../data/clubPageMock'
 import type { ClubScheduleListItem, SmSquadPlayerRow, TeamSeasonStatRow } from '../../api/sportMonks'
 import type { LeagueStandingRow } from '../../data/leagueStandings'
 import { Card } from '../ui/Card'
@@ -14,14 +14,6 @@ import { ClubCrest } from '../brand/ClubCrest'
 import { LeagueStandingsTable } from '../rankings/LeagueStandingsTable'
 import { UltraAvatarFrame } from '../subscription/UltraAvatarFrame'
 import { formatKickoff } from '../../utils/time'
-
-/** Nom court lisible sur le terrain (nom de famille en priorité). */
-function pitchShortLabel(full: string): string {
-  const parts = full.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '—'
-  if (parts.length === 1) return parts[0]!.slice(0, 10)
-  return parts[parts.length - 1]!.slice(0, 10)
-}
 
 type ClubReadingLink = {
   id: string
@@ -93,6 +85,72 @@ function ClubEncartTitle({
   )
 }
 
+/** Pastille joueur : tête nette ; numéro en pastille lisible (hors visage). */
+function SquadPlayerThumb({
+  number,
+  photoUrl,
+  primary,
+  secondary,
+  active,
+  size = 'sm',
+}: {
+  number: string
+  photoUrl?: string
+  primary: string
+  secondary: string
+  active?: boolean
+  size?: 'sm' | 'lg'
+}) {
+  const dim = size === 'lg' ? 'size-16 sm:size-20' : 'size-10'
+  const numClass = size === 'lg' ? 'text-[11px] sm:text-xs' : 'text-[10px]'
+  return (
+    <span className="relative flex shrink-0 flex-col items-center gap-0.5">
+      <span
+        className={cn(
+          'relative flex items-center justify-center overflow-hidden rounded-full border-2 text-white',
+          dim,
+          active
+            ? 'border-amber-300/95 shadow-[0_0_14px_rgba(251,191,36,0.5)]'
+            : 'border-white/20',
+        )}
+        style={
+          photoUrl
+            ? undefined
+            : { background: `linear-gradient(135deg, ${primary}, ${secondary})` }
+        }
+        aria-hidden
+      >
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt=""
+            className="absolute inset-0 size-full object-cover object-[50%_18%]"
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span className={cn('relative z-[1] font-black tabular-nums', size === 'lg' ? 'text-lg' : 'text-xs')}>
+            #{number}
+          </span>
+        )}
+        {active ? <UltraAvatarFrame size={size === 'lg' ? 'salon' : 'compact'} /> : null}
+      </span>
+      {photoUrl ? (
+        <span
+          className={cn(
+            'rounded-md bg-black/85 px-1.5 py-0.5 font-black tabular-nums leading-none text-amber-50 ring-1 ring-amber-300/40',
+            numClass,
+            active && 'bg-amber-500/90 text-amber-950 ring-amber-200/70',
+          )}
+        >
+          #{number}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 function statTileClass(i: number) {
   const t = [
     'border-tf-pitch/40 bg-gradient-to-br from-teal-500/22 to-black/40 ring-1 ring-teal-500/20',
@@ -108,66 +166,6 @@ const debateFilters = [
   { id: 'recent' as const, label: 'Récent' },
   { id: 'live' as const, label: 'Live' },
 ]
-
-function PitchNode({
-  p,
-  selected,
-  onSelect,
-  hot,
-  primary,
-  secondary,
-}: {
-  p: ClubSquadNode
-  selected: boolean
-  onSelect: () => void
-  hot: boolean
-  primary: string
-  secondary: string
-}) {
-  const short = pitchShortLabel(p.label)
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      aria-label={`#${p.number} ${p.label}`}
-      className={cn(
-        'tf-interactive-press absolute z-[1] -translate-x-1/2 -translate-y-1/2',
-        'flex flex-col items-center gap-0.5',
-        selected && 'z-[2]',
-      )}
-      style={{
-        left: `${p.x}%`,
-        top: `${p.y}%`,
-      }}
-    >
-      <span
-        className={cn(
-          'relative flex size-11 items-center justify-center rounded-full border-2 text-white shadow-lg sm:size-12',
-          selected
-            ? 'border-amber-300/95 shadow-[0_0_12px_rgba(251,191,36,0.75)]'
-            : hot
-              ? 'border-amber-400/70'
-              : 'border-white/25',
-        )}
-        style={{
-          background: `linear-gradient(135deg, ${primary}, ${secondary})`,
-        }}
-      >
-        {selected ? <UltraAvatarFrame size="salon" /> : null}
-        <span className="relative z-[1] text-[11px] font-black tabular-nums sm:text-xs">#{p.number}</span>
-      </span>
-      <span
-        className={cn(
-          'max-w-[4.6rem] truncate rounded-md px-1 py-px text-center text-[9px] font-black leading-tight [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] sm:max-w-[5.2rem] sm:text-[10px]',
-          selected ? 'bg-amber-500/25 text-amber-50 ring-1 ring-amber-300/50' : 'text-white/95',
-        )}
-      >
-        {short}
-      </span>
-    </button>
-  )
-}
 
 function ClubDebatesBlock({
   debates,
@@ -750,7 +748,7 @@ export function ClubPageGrid({
   clubStandingsLeagueId = 'ligue-1',
   clubStandingsLoading = false,
   clubStandingsHint = null,
-  squadFromSportMonks: _squadFromSportMonks,
+  squadFromSportMonks = false,
   smSquadPlayers = null,
   clubSeasonStats,
   clubSeasonStatsHint,
@@ -797,9 +795,7 @@ export function ClubPageGrid({
   clubSeasonStatsHint?: string | null
   clubReadingLinks: ClubReadingLink[]
 }) {
-  const [selId, setSelId] = useState(data.hotPlayerId || data.squad[0]?.id || '')
   const [shopPreview, setShopPreview] = useState<string | null>(null)
-  const selected = data.squad.find((p) => p.id === selId) ?? data.squad[0]
 
   const squadByRole = useMemo(() => {
     const players = smSquadPlayers?.length ? smSquadPlayers : []
@@ -830,10 +826,23 @@ export function ClubPageGrid({
       .filter((g) => g.players.length > 0)
   }, [smSquadPlayers])
 
+  const flatSquad = useMemo(
+    () => squadByRole.flatMap((g) => g.players.map((p) => ({ ...p, role: g.label }))),
+    [squadByRole],
+  )
+  const [selPlayerId, setSelPlayerId] = useState<number | null>(null)
+  const selectedPlayer =
+    flatSquad.find((p) => p.playerSmId === selPlayerId) ?? flatSquad[0] ?? null
+
   useEffect(() => {
-    const next = data.hotPlayerId || data.squad[0]?.id || ''
-    if (next && !data.squad.some((p) => p.id === selId)) setSelId(next)
-  }, [data.hotPlayerId, data.squad, selId])
+    if (!flatSquad.length) {
+      setSelPlayerId(null)
+      return
+    }
+    if (selPlayerId == null || !flatSquad.some((p) => p.playerSmId === selPlayerId)) {
+      setSelPlayerId(flatSquad[0]!.playerSmId)
+    }
+  }, [flatSquad, selPlayerId])
 
   return (
     <div
@@ -868,108 +877,100 @@ export function ClubPageGrid({
         >
           <div className="border-b border-emerald-500/20 bg-black/20 p-3 sm:p-4">
             <ClubEncartTitle
-              kicker="Onze type"
+              kicker="Effectif SportMonks"
               kickerClass="text-emerald-200/90"
-              subtitle="Schéma 4-3-3 illustratif (pas la compo du prochain match) — tape un joueur pour l’agrandir."
+              subtitle={
+                squadFromSportMonks
+                  ? `Tous les joueurs du club, classés par poste — pas une compo de match. Tape un joueur pour l’agrandir.`
+                  : `Effectif indisponible pour le moment.`
+              }
             >
-              Effectif
+              Effectif {team.shortName}
             </ClubEncartTitle>
           </div>
-          <div className="flex flex-col gap-3 p-3 sm:flex-row sm:gap-4 sm:p-4">
-            <div
-              className="relative min-h-[220px] flex-1 overflow-hidden rounded-2xl sm:min-h-[280px] lg:min-h-[320px]"
-              style={{
-                background: `
-                radial-gradient(ellipse 80% 100% at 50% 100%, color-mix(in srgb, ${team.colors.primary} 18%, #064e1a) 0%, #052e1a 55%),
-                linear-gradient(180deg, #0d4a2c 0%, #052a18 100%)
-              `,
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
-              }}
-            >
-              <div
-                className="pointer-events-none absolute left-[8%] right-[8%] top-[8%] bottom-[8%] opacity-30"
-                style={{
-                  background:
-                    'repeating-linear-gradient(0deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 1px, transparent 1px, transparent 14%)',
-                }}
-                aria-hidden
-              />
-              <p className="sr-only">
-                Onze type en 4-3-3 : positions illustratives à partir de l’effectif, pas la composition officielle du match.
-              </p>
-              {data.squad.map((p) => (
-                <PitchNode
-                  key={p.id}
-                  p={p}
-                  selected={selId === p.id}
-                  onSelect={() => setSelId(p.id)}
-                  hot={p.id === data.hotPlayerId}
+
+          {selectedPlayer ? (
+            <div className="border-b border-amber-400/20 bg-gradient-to-r from-amber-500/10 via-transparent to-transparent px-3 py-3 sm:px-4">
+              <div className="flex items-center gap-3">
+                <SquadPlayerThumb
+                  number={selectedPlayer.number}
+                  photoUrl={selectedPlayer.photoUrl}
                   primary={team.colors.primary}
                   secondary={team.colors.secondary}
+                  active
+                  size="lg"
                 />
-              ))}
-            </div>
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-[14rem] sm:shrink-0">
-              {selected ? (
-                <div className="rounded-2xl border-2 border-amber-400/55 bg-gradient-to-b from-amber-500/20 to-slate-950/70 p-3.5 shadow-[0_0_24px_rgba(251,191,36,0.18)] ring-1 ring-amber-300/25">
-                  <div className="flex flex-col items-center gap-3">
-                    <div
-                      className="relative flex size-24 items-center justify-center rounded-full border-2 border-amber-300/90 text-white shadow-[0_0_16px_rgba(251,191,36,0.55)] sm:size-28"
-                      style={{
-                        background: `linear-gradient(135deg, ${team.colors.primary}, ${team.colors.secondary})`,
-                      }}
-                      aria-hidden
-                    >
-                      <UltraAvatarFrame size="salon" />
-                      <span className="relative z-[1] text-2xl font-black tabular-nums sm:text-3xl">
-                        #{selected.number}
-                      </span>
-                    </div>
-                    <div className="min-w-0 text-center">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">
-                        Joueur sélectionné
-                      </p>
-                      <p className="mt-1 text-base font-black leading-snug text-white sm:text-lg">
-                        {selected.label}
-                      </p>
-                    </div>
-                  </div>
-                  {data.hotPlayerId === selected.id ? (
-                    <p className="mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/15 px-2 py-1.5 text-[9px] font-black uppercase text-amber-100">
-                      <span aria-hidden>🔥</span> Joueur le + débattu
-                    </p>
-                  ) : null}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">
+                    {selectedPlayer.role}
+                    {selectedPlayer.position ? ` · ${selectedPlayer.position}` : ''}
+                  </p>
+                  <p className="truncate text-lg font-black text-white sm:text-xl">{selectedPlayer.label}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-sky-100/75">
+                    N°{selectedPlayer.number} · sélectionné
+                  </p>
                 </div>
-              ) : null}
-            </div>
-          </div>
-          {squadByRole.length > 0 ? (
-            <div className="border-t border-emerald-500/15 bg-black/20 p-3 sm:p-4">
-              <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200/90">
-                Effectif complet
-              </p>
-              <div className="mt-2 max-h-[min(360px,50vh)] space-y-3 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
-                {squadByRole.map((group) => (
-                  <div key={group.label}>
-                    <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">{group.label}</p>
-                    <ul className="mt-1.5 space-y-1">
-                      {group.players.map((p) => (
-                        <li
-                          key={p.playerSmId}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-white/8 bg-black/30 px-2.5 py-1.5 text-[11px]"
-                        >
-                          <span className="min-w-0 truncate font-semibold text-sky-50">{p.label}</span>
-                          <span className="shrink-0 font-black tabular-nums text-emerald-200/95">#{p.number}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
               </div>
             </div>
+          ) : null}
+
+          {squadByRole.length > 0 ? (
+            <div className="max-h-[min(520px,62vh)] space-y-4 overflow-y-auto overscroll-contain p-3 [scrollbar-width:thin] sm:p-4">
+              {squadByRole.map((group) => (
+                <div key={group.label}>
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-emerald-200/90">
+                      {group.label}
+                    </p>
+                    <p className="text-[10px] font-bold tabular-nums text-sky-200/70">
+                      {group.players.length}
+                    </p>
+                  </div>
+                  <ul className="grid grid-cols-1 gap-1.5 min-[420px]:grid-cols-2">
+                    {group.players.map((p) => {
+                      const active = selectedPlayer?.playerSmId === p.playerSmId
+                      return (
+                        <li key={p.playerSmId}>
+                          <button
+                            type="button"
+                            onClick={() => setSelPlayerId(p.playerSmId)}
+                            aria-pressed={active}
+                            className={cn(
+                              'tf-interactive-press flex w-full min-h-tf-touch items-center gap-2.5 rounded-xl border px-2.5 py-2 text-left transition',
+                              active
+                                ? 'border-amber-400/60 bg-amber-500/15 shadow-[0_0_16px_rgba(251,191,36,0.18)] ring-1 ring-amber-300/35'
+                                : 'border-white/10 bg-black/30 hover:border-emerald-400/30 hover:bg-white/[0.05]',
+                              TF_FOCUS_VISIBLE,
+                            )}
+                          >
+                            <SquadPlayerThumb
+                              number={p.number}
+                              photoUrl={p.photoUrl}
+                              primary={team.colors.primary}
+                              secondary={team.colors.secondary}
+                              active={active}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-bold text-sky-50">{p.label}</span>
+                              {p.position ? (
+                                <span className="block truncate text-[10px] font-semibold text-sky-200/70">
+                                  {p.position}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
           ) : (
-            <div className="border-t border-emerald-500/15 bg-black/20 px-3 py-2.5 sm:px-4">
-              <p className="text-xs font-semibold text-sky-100/75">Effectif complet indisponible pour le moment.</p>
+            <div className="px-3 py-6 sm:px-4">
+              <p className="text-sm font-semibold text-sky-100/75">
+                Effectif indisponible — les compos officielles de match restent sur la page live du match.
+              </p>
             </div>
           )}
         </Card>
