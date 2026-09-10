@@ -129,7 +129,7 @@ export function HomePage() {
 
   const supporterFocusUi = Boolean(supporterTintActive && team && favoriteClubIds.length > 0)
 
-  /** Prochains matchs : club de cœur d’abord, puis le reste du même soir. */
+  /** Prochains matchs : créneau le plus proche d’abord, club de cœur prioritaire dans ce créneau. */
   const upcomingSortedForHome = useMemo(
     () => sortUpcomingMatchesFavoriteFirst(displayMatchesFull, favoriteClubIds),
     [displayMatchesFull, favoriteClubIds],
