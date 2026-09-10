@@ -5,6 +5,7 @@ import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider, isClerkAuthConfigured } from './contexts/AuthContext'
 import { AppearanceProvider } from './contexts/AppearanceContext'
+import { LocaleProvider } from './contexts/LocaleContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import App from './App'
 import { CookieConsentBanner } from './components/legal/CookieConsentBanner'
@@ -28,11 +29,13 @@ const appTree = (
   <ErrorBoundary>
     <BrowserRouter basename={routerBasename()}>
       <AppearanceProvider>
+        <LocaleProvider>
         <AuthProvider>
           <RouteSeo />
           <App />
           <CookieConsentBanner />
         </AuthProvider>
+        </LocaleProvider>
       </AppearanceProvider>
     </BrowserRouter>
   </ErrorBoundary>

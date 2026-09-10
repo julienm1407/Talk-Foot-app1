@@ -12,6 +12,9 @@ import {
 } from '../theme/appSectionThemes'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
+import { LanguageFlagToggle } from '../components/ui/LanguageFlagToggle'
+import { useSectionLabel } from '../hooks/useSectionLabel'
+import { useT } from '../contexts/LocaleContext'
 import { InboxPanel } from '../components/inbox/InboxPanel'
 import { PrivateMessagesPanel } from '../components/messages/PrivateMessagesPanel'
 import { coachDirectThread } from '../data/directMessagesMock'
@@ -36,8 +39,11 @@ export function TopBar() {
   const { user: authUser } = useAuth()
   const { profile } = useProfile()
   const { appearance } = useAppearance()
+  const t = useT()
   const location = useLocation()
   const L = appearance === 'light'
+  const profileLabel = useSectionLabel('profile')
+  const stripeLabel = useSectionLabel(getAppSectionFromPath(location.pathname))
   const navPillBase = cn(
     'tf-nav-pill inline-flex h-8 shrink-0 items-center justify-center rounded-[16px] px-2 text-center text-[10px] font-black leading-none outline-none transition active:scale-[0.97]',
     'min-[900px]:px-2.5 min-[900px]:text-[11px] xl:px-3 xl:text-[12px] min-[1400px]:text-[13px]',
@@ -175,11 +181,12 @@ export function TopBar() {
                 : 'focus-visible:ring-sky-400/50 focus-visible:ring-offset-tf-dark',
             )}
             aria-label={
-              belowXl && isHomePath ? 'Talk Foot — ouvrir Mon espace' : 'Talk Foot — Accueil'
+              belowXl && isHomePath ? t('chrome.monEspaceAria') : t('chrome.homeAria')
             }
           />
 
           <ThemeAppearanceToggle variant="headerIcon" className="hidden shrink-0 lg:grid" />
+          <LanguageFlagToggle variant="compact" className="hidden shrink-0 lg:inline-flex" />
 
           {isCdm ? (
             profileActive ? (
@@ -253,7 +260,7 @@ export function TopBar() {
                         aria-current={active ? 'page' : undefined}
                         className={pillClass}
                       >
-                        {th.label}
+                        <NavSectionLabel section={section} />
                       </button>
                     )
                   }
@@ -265,7 +272,7 @@ export function TopBar() {
                       aria-current={active ? 'page' : undefined}
                       className={pillClass}
                     >
-                      {th.label}
+                      <NavSectionLabel section={section} />
                     </NavLink>
                   )
                 })}
@@ -395,6 +402,7 @@ export function TopBar() {
             )
           ) : null}
           <ThemeAppearanceToggle variant="headerIcon" className="shrink-0 lg:hidden" />
+          <LanguageFlagToggle variant="compact" className="shrink-0 lg:hidden" />
           <NavLink
             to="/profile"
             className={cn(
@@ -430,7 +438,7 @@ export function TopBar() {
               Niv. {profile.level}
             </span>
             <span className="hidden max-w-[3.5rem] truncate min-[1280px]:inline-block md:max-w-[7rem] lg:max-w-none">
-              {profileTheme.label}
+              {profileLabel}
             </span>
           </NavLink>
           </div>
@@ -450,7 +458,7 @@ export function TopBar() {
             : undefined
         }
         aria-hidden
-        title={isCdm ? 'Coupe du Monde 2026' : stripeTheme.label}
+        title={isCdm ? 'Coupe du Monde 2026' : stripeLabel}
       />
     </header>
   )
@@ -465,4 +473,8 @@ export function TopBar() {
   }
 
   return header
+}
+
+function NavSectionLabel({ section }: { section: (typeof TOP_NAV_ROUTES)[number]['section'] }) {
+  return <>{useSectionLabel(section)}</>
 }
