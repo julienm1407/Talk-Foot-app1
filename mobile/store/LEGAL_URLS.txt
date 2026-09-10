@@ -6,6 +6,10 @@ https://talk-foot.com/privacy
 
 https://talk-foot.com/terms
 
+# Suppression de compte (Google Play — URL de suppression de compte)
+
+https://talk-foot.com/delete-account
+
 # Contact éditeur
 
 app.talkfoot@gmail.com

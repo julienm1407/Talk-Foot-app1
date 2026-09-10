@@ -10,6 +10,7 @@ import { ResetPasswordPage } from './pages/ResetPassword'
 import { PrivacyPage } from './pages/PrivacyPage'
 import { TermsPage } from './pages/TermsPage'
 import { AboutPage } from './pages/AboutPage'
+import { DeleteAccountPage } from './pages/DeleteAccountPage'
 import { SubscriptionPlansPage } from './pages/SubscriptionPlansPage'
 import { HomePage } from './pages/Home'
 import {
@@ -117,6 +118,7 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/delete-account" element={<DeleteAccountPage />} />
         <Route
           path="/article/:slug"
           element={

@@ -24,7 +24,7 @@ function ProfilePrivacyActionsInner({ clerkSessionId }: { clerkSessionId: string
   const handleDelete = async () => {
     if (
       !window.confirm(
-        'Toutes les données Talk Foot (navigateur et compte cloud si connecté) seront effacées : profil, paris, préférences, tribunes liées, etc. Cette action est irréversible. Continuer ?',
+        'Supprimer définitivement ton compte Talk Foot et toutes les données associées (profil, paris, préférences, tribunes liées, etc.) ? Action irréversible.',
       )
     ) {
       return
@@ -78,7 +78,7 @@ function ProfilePrivacyActionsInner({ clerkSessionId }: { clerkSessionId: string
           'inline-flex min-h-tf-touch items-center justify-center rounded-xl border-2 border-rose-600 bg-rose-600 px-5 py-3 text-sm font-black font-display text-white shadow-sm transition hover:bg-rose-500 disabled:opacity-60 sm:min-w-0',
         )}
       >
-        {deleting ? 'Suppression…' : 'Supprimer toutes mes données'}
+        {deleting ? 'Suppression…' : 'Supprimer mon compte et mes données'}
       </button>
     </div>
   )
@@ -114,9 +114,13 @@ export function ProfilePrivacySection() {
           L ? 'text-tf-app-muted' : 'text-sky-200/90',
         )}
       >
-        Export ou suppression des données locales et du compte cloud Talk Foot.{' '}
+        Export ou suppression de ton compte et des données associées.{' '}
+        <Link to="/delete-account" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+          Page suppression de compte
+        </Link>
+        {' · '}
         <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
-          Politique de confidentialité
+          Confidentialité
         </Link>
         .
       </p>

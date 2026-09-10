@@ -11,7 +11,7 @@ export const LEGAL_CONTACT_EMAIL =
     import.meta.env.VITE_LEGAL_CONTACT_EMAIL.trim()) ||
   'app.talkfoot@gmail.com'
 
-export const LEGAL_LAST_UPDATED_LABEL = '22 mai 2026'
+export const LEGAL_LAST_UPDATED_LABEL = '10 septembre 2026'
 
 export function legalContactMailto(subject?: string, body?: string): string {
   const params = new URLSearchParams()

@@ -48,6 +48,9 @@ export function SiteLegalFooter({
           <Link to="/terms" className={linkClass}>
             CGU
           </Link>
+          <Link to="/delete-account" className={linkClass}>
+            Supprimer mon compte
+          </Link>
           <a href={legalContactMailto('Contact Talk Foot')} className={linkClass}>
             Contact
           </a>

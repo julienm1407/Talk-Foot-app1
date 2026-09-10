@@ -3,7 +3,8 @@
 Identifiant : **`com.talkfoot.app`**  
 Site web : **https://talk-foot.com**  
 Politique de confidentialité : **https://talk-foot.com/privacy**  
-CGU : **https://talk-foot.com/terms**
+CGU : **https://talk-foot.com/terms**  
+Suppression de compte : **https://talk-foot.com/delete-account**
 
 ## Prérequis
 

@@ -35,6 +35,12 @@ const ABOUT: RouteSeoConfig = {
     'Présentation de Talk Foot : réseau social football, contenus éditoriaux, modération communautaire et contact éditeur.',
 }
 
+const DELETE_ACCOUNT: RouteSeoConfig = {
+  title: `Supprimer mon compte — ${SITE_NAME}`,
+  description:
+    'Demande ou effectue la suppression de ton compte Talk Foot et des données associées (exigence Google Play / RGPD).',
+}
+
 const LOGIN: RouteSeoConfig = {
   title: `Connexion — ${SITE_NAME}`,
   description: `Connecte-toi à ${SITE_NAME} pour accéder au live, aux tribunes supporters et à ton profil.`,
@@ -145,6 +151,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/privacy') return PRIVACY
   if (pathname === '/terms') return TERMS
   if (pathname === '/about') return ABOUT
+  if (pathname === '/delete-account') return DELETE_ACCOUNT
   if (pathname === '/login' || pathname === '/login/reset-password') {
     return pathname === '/login/reset-password' ? RESET_PASSWORD : LOGIN
   }

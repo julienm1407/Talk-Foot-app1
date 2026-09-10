@@ -75,8 +75,12 @@ export function PrivacyPage() {
         <h2 className={h2}>6. Durée de conservation</h2>
         <p className={p}>
           Tant que ton compte est actif, puis suppression ou anonymisation selon les besoins légitimes. Tu peux
-          exporter ou supprimer les données stockées localement depuis la page Profil. Pour les données côté serveur,
-          contacte-nous.
+          exporter tes données et{' '}
+          <strong>supprimer ton compte</strong> depuis la page Profil, ou via la page publique{' '}
+          <Link to="/delete-account" className="font-bold text-tf-cta underline-offset-2 hover:underline">
+            Supprimer mon compte
+          </Link>{' '}
+          (demande par e-mail traitée sous 30 jours).
         </p>
       </section>
 
