@@ -13,7 +13,7 @@ import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
 import { ClubCrest } from '../brand/ClubCrest'
 import { LeagueStandingsTable } from '../rankings/LeagueStandingsTable'
 import { UltraAvatarFrame } from '../subscription/UltraAvatarFrame'
-import { formatKickoff } from '../../utils/time'
+import { formatKickoffLabel } from '../../utils/time'
 
 type ClubReadingLink = {
   id: string
@@ -559,7 +559,7 @@ function ClubSeasonSnapshotBlock({
               {recentResults.map((item) => (
                 <li key={`res-${item.matchId}-${item.kickoffIso}`}>
                   <p className="mb-0.5 text-[10px] font-semibold text-sky-200/75">
-                    {item.league} · {item.matchday} · {formatKickoff(item.kickoffIso)}
+                    {item.league} · {item.matchday} · {formatKickoffLabel(item.kickoffIso)}
                   </p>
                   <ClubScheduleMatchRow item={item} />
                 </li>
@@ -639,7 +639,7 @@ function ClubSeasonSnapshotBlock({
               {calendarFixtures.map((item) => (
                 <li key={`cal-${item.matchId}-${item.kickoffIso}`}>
                   <p className="mb-0.5 text-[10px] font-semibold text-sky-200/75">
-                    {item.league} · {item.matchday} · {formatKickoff(item.kickoffIso)} ·{' '}
+                    {item.league} · {item.matchday} · {formatKickoffLabel(item.kickoffIso)} ·{' '}
                     {item.venue === 'dom' ? 'Domicile' : 'Extérieur'}
                   </p>
                   <ClubScheduleMatchRow item={item} />

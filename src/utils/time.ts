@@ -83,6 +83,20 @@ export function formatKickoff(iso: string) {
   }).format(d)
 }
 
+/**
+ * Heure seule si c’est aujourd’hui ; sinon jour + heure (ex. « sam. 14 mars · 20:45 »).
+ * Utile pour calendrier / coup d’envoi lointain (pas seulement « J5 » ou « 20:45 »).
+ */
+export function formatKickoffLabel(iso: string, opts?: { alwaysDate?: boolean }) {
+  const time = formatKickoff(iso)
+  const day = formatHubDayLabel(iso)
+  if (opts?.alwaysDate) return `${day} · ${time}`
+  const kMatch = matchCalendarDayKeyParis(iso)
+  const kToday = matchCalendarDayKeyParis(new Date())
+  if (kMatch === kToday) return time
+  return `${day} · ${time}`
+}
+
 /** Libellé court type hub : Aujourd’hui / Demain / jeu. 24 avr. (fuseau Paris). */
 export function formatHubDayLabel(iso: string) {
   const kMatch = matchCalendarDayKeyParis(iso)

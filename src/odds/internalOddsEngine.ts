@@ -142,28 +142,30 @@ export function probabilitiesToDecimalOdds(
   )
 }
 
-/** Plafonds doux pour éviter des outsiders/nuls irréalistes (ex. 16,50 systématique en club). */
+/** Plafonds doux : outsiders plus longs qu’avant, sans jackpots irréalistes type 25+. */
 function softCapPrematch1x2Odds(odds: SmBookOdds1x2, generousOutsider = false): SmBookOdds1x2 {
   const fav = Math.min(odds.home, odds.away)
   const maxDog = generousOutsider
     ? fav <= 1.15
-      ? 16
+      ? 18
       : fav <= 1.28
-        ? 12
+        ? 14
         : fav <= 1.45
-          ? 9.5
+          ? 11
           : fav <= 1.75
-            ? 7.5
-            : 6
-    : fav <= 1.32
-      ? 8.5
-      : fav <= 1.5
-        ? 7
-        : fav <= 1.75
-          ? 6
-          : fav <= 2.05
-            ? 5.5
-            : 5
+            ? 8.5
+            : 7
+    : fav <= 1.25
+      ? 12
+      : fav <= 1.4
+        ? 10
+        : fav <= 1.6
+          ? 8.5
+          : fav <= 1.85
+            ? 7.2
+            : fav <= 2.15
+              ? 6.2
+              : 5.5
   const maxDraw = generousOutsider
     ? fav <= 1.15
       ? 7.5
@@ -173,12 +175,12 @@ function softCapPrematch1x2Odds(odds: SmBookOdds1x2, generousOutsider = false): 
           ? 5.5
           : 4.8
     : fav <= 1.32
-      ? 5.5
+      ? 5.8
       : fav <= 1.5
-        ? 4.9
+        ? 5.2
         : fav <= 1.75
-          ? 4.5
-          : 4.2
+          ? 4.7
+          : 4.3
 
   const capDog = (v: number) => round2(clamp(v, 1.02, maxDog))
   const capDraw = (v: number) => round2(clamp(v, 1.02, maxDraw))
@@ -342,7 +344,8 @@ function isUpsetLead(
 
 /**
  * Ajustements live : modèle score + temps (Poisson), puis cartons rouges et tirs cadrés.
- * Le poids live reste partiel si le score contredit le favori pré-match (ex. cup upset).
+ * Un but doit raccourcir la cote de l’équipe qui marque (vs 0-0 à la même minute).
+ * Catch-up favori : léger et surtout en fin de match — pas d’inversion après un but outsider.
  */
 export function adjustProbabilities1x2ForLive(
   base: Probabilities1x2,
@@ -359,20 +362,32 @@ export function adjustProbabilities1x2ForLive(
     ((favHome && awayGoals > homeGoals) || (!favHome && homeGoals > awayGoals))
 
   let homeShare = clamp(base.pHome / Math.max(0.08, base.pHome + base.pAway), 0.28, 0.72)
-  if (upsetLead) {
-    if (homeGoals > awayGoals && !favHome) {
-      homeShare = clamp(homeShare * 0.78, 0.24, 0.42)
-    } else if (awayGoals > homeGoals && favHome) {
-      homeShare = clamp(homeShare * 1.28, 0.58, 0.76)
+  // Momentum léger pour le meneur (y compris outsider) — ne plus écraser sa part d’attaque.
+  if (absDiff >= 1) {
+    const mom = 0.035 * Math.min(absDiff, 3)
+    if (homeGoals > awayGoals) homeShare = clamp(homeShare + mom, 0.24, 0.78)
+    else homeShare = clamp(homeShare - mom, 0.22, 0.76)
+  }
+  // Favori mené d’un but : un peu plus de buts restants, sans nier le score.
+  if (upsetLead && absDiff === 1) {
+    if (awayGoals > homeGoals && favHome) {
+      homeShare = clamp(homeShare + 0.04, 0.34, 0.72)
+    } else if (homeGoals > awayGoals && !favHome) {
+      homeShare = clamp(homeShare - 0.04, 0.28, 0.66)
     }
   }
 
   const fromScore = liveOutcomeProbsFromScore(homeGoals, awayGoals, minute, homeShare)
   let liveWeight = clamp(
-    ((minute + 5) / 90) * (1 + Math.min(absDiff, 5) * 0.15),
+    ((minute + 5) / 90) * (1 + Math.min(absDiff, 5) * 0.18),
     0,
-    0.82,
+    0.86,
   )
+  if (absDiff >= 1) {
+    // But tôt = marché qui bouge fort (évite outsider qui allonge après avoir marqué).
+    const earlyScoreBoost = clamp(0.38 - minute * 0.0038, 0.12, 0.38)
+    liveWeight = clamp(liveWeight + earlyScoreBoost + Math.min(absDiff, 3) * 0.05, 0.28, 0.88)
+  }
   if (minute >= 88 && homeGoals === awayGoals) {
     liveWeight = Math.max(liveWeight, 0.9)
   }
@@ -383,20 +398,42 @@ export function adjustProbabilities1x2ForLive(
   }
   let probs = blendProbabilities(base, fromScore, liveWeight)
 
-  if (upsetLead && absDiff >= 1) {
-    const trailBoost = clamp(prematchSkew * 0.72, 0.08, 0.26)
-    if (homeGoals > awayGoals) {
-      probs = normalize3(
-        probs.pHome * (1 - trailBoost * 0.28),
-        probs.pDraw + trailBoost * 0.18,
-        probs.pAway + trailBoost * 0.78,
-      )
-    } else {
-      probs = normalize3(
-        probs.pHome + trailBoost * 0.78,
-        probs.pDraw + trailBoost * 0.18,
-        probs.pAway * (1 - trailBoost * 0.28),
-      )
+  // Catch-up favori : faible, et quasi nul en 1re période.
+  if (upsetLead && absDiff === 1) {
+    const lateFactor = clamp((minute - 40) / 50, 0, 1)
+    const trailBoost = clamp(prematchSkew * 0.2 * lateFactor, 0, 0.09)
+    if (trailBoost > 0.012) {
+      if (homeGoals > awayGoals) {
+        probs = normalize3(
+          probs.pHome * (1 - trailBoost * 0.2),
+          probs.pDraw + trailBoost * 0.22,
+          probs.pAway + trailBoost * 0.55,
+        )
+      } else {
+        probs = normalize3(
+          probs.pHome + trailBoost * 0.55,
+          probs.pDraw + trailBoost * 0.22,
+          probs.pAway * (1 - trailBoost * 0.2),
+        )
+      }
+    }
+  } else if (upsetLead && absDiff >= 2) {
+    const lateFactor = clamp((minute - 25) / 60, 0, 1)
+    const trailBoost = clamp(prematchSkew * 0.28 * lateFactor, 0, 0.12)
+    if (trailBoost > 0.015) {
+      if (homeGoals > awayGoals) {
+        probs = normalize3(
+          probs.pHome * (1 - trailBoost * 0.22),
+          probs.pDraw + trailBoost * 0.2,
+          probs.pAway + trailBoost * 0.65,
+        )
+      } else {
+        probs = normalize3(
+          probs.pHome + trailBoost * 0.65,
+          probs.pDraw + trailBoost * 0.2,
+          probs.pAway * (1 - trailBoost * 0.22),
+        )
+      }
     }
   }
 
@@ -462,6 +499,17 @@ export function capLive1x2Odds(
     awayHi = 18
   }
 
+  if (absDiff === 1 && minute >= 30 && upset) {
+    // Favori mené d’un but : allonger le favori / raccourcir l’outsider meneur.
+    if (diff > 0) {
+      homeHi = Math.min(homeHi, minute >= 55 ? 2.35 : 3.1)
+      awayLo = Math.max(awayLo, minute >= 55 ? 2.45 : 1.95)
+    } else {
+      awayHi = Math.min(awayHi, minute >= 55 ? 2.35 : 3.1)
+      homeLo = Math.max(homeLo, minute >= 55 ? 2.45 : 1.95)
+    }
+  }
+
   if (absDiff === 1 && minute >= 75) {
     if (diff > 0) {
       homeLo = 1.05
@@ -523,6 +571,57 @@ export function capLive1x2Odds(
   }
 }
 
+/**
+ * Garde-fou : l’équipe qui mène doit avoir une cote plus courte qu’à 0-0 (même minute).
+ * Corrige les cas early-game où le catch-up favori faisait allonger l’outsider après son but.
+ */
+function enforceLeaderShorterThanLevel(
+  odds: SmBookOdds1x2,
+  levelOdds: SmBookOdds1x2,
+  homeGoals: number,
+  awayGoals: number,
+): SmBookOdds1x2 {
+  const lead = homeGoals - awayGoals
+  if (lead === 0) return odds
+
+  const leadMargin = 0.06 + 0.03 * Math.min(Math.abs(lead), 3)
+  let home = odds.home
+  let draw = odds.draw
+  let away = odds.away
+
+  if (lead > 0) {
+    const maxHome = round2(Math.max(1.08, levelOdds.home * (1 - leadMargin) - 0.03))
+    if (home > maxHome) {
+      const freed = home - maxHome
+      home = maxHome
+      away = round2(away + freed * 0.62)
+      draw = round2(draw + freed * 0.38)
+    }
+  } else {
+    const maxAway = round2(Math.max(1.08, levelOdds.away * (1 - leadMargin) - 0.03))
+    if (away > maxAway) {
+      const freed = away - maxAway
+      away = maxAway
+      home = round2(home + freed * 0.62)
+      draw = round2(draw + freed * 0.38)
+    }
+  }
+
+  return { home, draw, away }
+}
+
+function oddsFromProbsLive(
+  probs: Probabilities1x2,
+  marginPct: number,
+): SmBookOdds1x2 {
+  const liveMargin = marginPct * 0.92
+  return {
+    home: probabilityToDecimalOdd(probs.pHome, liveMargin, 1.01),
+    draw: probabilityToDecimalOdd(probs.pDraw, liveMargin, 1.01),
+    away: probabilityToDecimalOdd(probs.pAway, liveMargin, 1.01),
+  }
+}
+
 export function adjust1x2OddsForLiveInternal(
   prematch: SmBookOdds1x2,
   live: LiveOddsContext,
@@ -530,12 +629,23 @@ export function adjust1x2OddsForLiveInternal(
 ): SmBookOdds1x2 {
   const base = impliedProbsFromDecimalOdds(prematch)
   const adjusted = adjustProbabilities1x2ForLive(base, live)
-  const liveMargin = marginPct * 0.92
-  const odds: SmBookOdds1x2 = {
-    home: probabilityToDecimalOdd(adjusted.pHome, liveMargin, 1.01),
-    draw: probabilityToDecimalOdd(adjusted.pDraw, liveMargin, 1.01),
-    away: probabilityToDecimalOdd(adjusted.pAway, liveMargin, 1.01),
+  let odds = oddsFromProbsLive(adjusted, marginPct)
+
+  if (live.homeGoals !== live.awayGoals) {
+    const levelProbs = adjustProbabilities1x2ForLive(base, {
+      ...live,
+      homeGoals: 0,
+      awayGoals: 0,
+    })
+    const levelOdds = oddsFromProbsLive(levelProbs, marginPct)
+    odds = enforceLeaderShorterThanLevel(
+      odds,
+      levelOdds,
+      live.homeGoals,
+      live.awayGoals,
+    )
   }
+
   return capLive1x2Odds(odds, live.homeGoals, live.awayGoals, live.minute, prematch)
 }
 

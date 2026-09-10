@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Match } from '../../types/match'
-import { formatKickoff } from '../../utils/time'
+import { formatKickoff, formatKickoffLabel } from '../../utils/time'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { cn } from '../../utils/cn'
 import { useSportMonksFixtureLineups } from '../../hooks/useSportMonksFixtureLineups'
@@ -189,11 +189,7 @@ export function MatchPreview({
             {formatKickoff(match.kickoffAt)}
           </span>
           <span className="text-sm font-semibold text-slate-600">
-            {new Date(match.kickoffAt).toLocaleDateString('fr-FR', {
-              weekday: 'long',
-              day: 'numeric',
-              month: 'long',
-            })}
+            {formatKickoffLabel(match.kickoffAt, { alwaysDate: true }).replace(/\s·\s\d{2}:\d{2}$/, '')}
           </span>
         </div>
         {countdown.totalMs > 0 && (

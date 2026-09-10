@@ -3,7 +3,7 @@ import type { Match } from '../../types/match'
 import type { LiveMirrorForCard } from '../../types/liveSimulation'
 import { useLinearDisplayedLiveMinute } from '../../hooks/useLinearDisplayedLiveMinute'
 import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
-import { formatKickoff, formatLiveMatchClock } from '../../utils/time'
+import { formatHubDayLabel, formatKickoff, formatLiveMatchClock } from '../../utils/time'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
 import { cn } from '../../utils/cn'
@@ -138,11 +138,7 @@ export function MatchCard({
   const compTheme = themeForCompetition(match.competition.id)
   const timeTone = isLive ? 'live' : 'upcoming'
   const kickoffTime = formatKickoff(match.kickoffAt)
-  const kickoffDay = new Intl.DateTimeFormat('fr-FR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-  }).format(new Date(match.kickoffAt))
+  const kickoffDay = formatHubDayLabel(match.kickoffAt)
 
   const fixedSize = !isLive
   const channelTo = `/channel/${match.id}`

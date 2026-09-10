@@ -71,6 +71,7 @@ import { useLiveMatchForClock } from '../hooks/useLiveMatchForClock'
 import { useEffectiveMatchStatus } from '../hooks/useEffectiveMatchStatus'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { useAutoScroll } from '../hooks/useAutoScroll'
+import { formatKickoffLabel } from '../utils/time'
 import { formatGoalEventMinute } from '../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
@@ -2439,7 +2440,7 @@ export function ChannelPage() {
   )
 
   const kickoffLabel = match?.kickoffAt
-    ? new Date(match.kickoffAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    ? formatKickoffLabel(match.kickoffAt)
     : '21:00'
   const homeLineupNames = useMemo(() => {
     const home = starters?.home?.slice(0, 11) ?? []

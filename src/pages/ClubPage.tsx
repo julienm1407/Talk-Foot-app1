@@ -48,7 +48,7 @@ import { ClubInfoDrawer } from '../components/club-page/ClubInfoDrawer'
 import { ClubPageGrid } from '../components/club-page/ClubPageGrid'
 import { ClubPageHero } from '../components/club-page/ClubPageHero'
 import { getSportMonksToken } from '../utils/apiTokens'
-import { formatKickoff } from '../utils/time'
+import { formatKickoffLabel } from '../utils/time'
 import { AdSlot } from '../components/ui/AdSlot'
 import { EditorialProse } from '../components/ads/EditorialProse'
 
@@ -325,7 +325,7 @@ export function ClubPage() {
                 league: next.league,
                 matchday: next.matchday,
                 opponent: next.opponent,
-                kickoff: formatKickoff(next.kickoffIso),
+                kickoff: formatKickoffLabel(next.kickoffIso),
                 venue: next.venue,
                 matchId: next.matchId,
               homeName: next.homeName,
@@ -341,7 +341,7 @@ export function ClubPage() {
             ? {
                 opponent: lastFinished.opponent,
                 league: lastFinished.league,
-                kickoff: formatKickoff(lastFinished.kickoffIso),
+                kickoff: formatKickoffLabel(lastFinished.kickoffIso),
                 venue: lastFinished.venue,
                 scoreLine: lastFinished.scoreLine,
                 homeName: lastFinished.homeName,

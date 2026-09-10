@@ -144,9 +144,38 @@ test('live : outsider mène 2-0 (favori pré-match mené) — cotes plus réalis
     homeGoals: 2,
     awayGoals: 0,
   })
-  assert.ok(live.home >= 1.25 && live.home <= 1.85, `home=${live.home}`)
-  assert.ok(live.draw >= 3.5 && live.draw <= 8.5, `draw=${live.draw}`)
-  assert.ok(live.away >= 5 && live.away <= 16, `away=${live.away}`)
+  assert.ok(live.home >= 1.12 && live.home <= 1.85, `home=${live.home}`)
+  assert.ok(live.draw >= 3.2 && live.draw <= 9, `draw=${live.draw}`)
+  assert.ok(live.away >= 4.5 && live.away <= 18, `away=${live.away}`)
+})
+
+test('live : but outsider tôt raccourcit sa cote (pas 4,80 → 5)', () => {
+  const prematch = { home: 4.8, draw: 3.9, away: 1.72 }
+  const level = adjust1x2OddsForLiveInternal(prematch, {
+    minute: 12,
+    homeGoals: 0,
+    awayGoals: 0,
+  })
+  const after = adjust1x2OddsForLiveInternal(prematch, {
+    minute: 12,
+    homeGoals: 1,
+    awayGoals: 0,
+  })
+  assert.ok(after.home < level.home, `home après but ${after.home} vs 0-0 ${level.home}`)
+  assert.ok(after.home < prematch.home, `home après but doit baisser vs pré-match (${after.home})`)
+  assert.ok(after.away > level.away, `favori allongé après encaisser (${after.away} vs ${level.away})`)
+})
+
+test('live : gros favori mené 0-1 — allonge le favori, respecte le score', () => {
+  const prematch = { home: 1.22, draw: 6.2, away: 11 }
+  const live = adjust1x2OddsForLiveInternal(prematch, {
+    minute: 55,
+    homeGoals: 0,
+    awayGoals: 1,
+  })
+  assert.ok(live.home >= 2.4, `favori mené trop court: ${live.home}`)
+  assert.ok(live.away <= 3.2, `outsider meneur trop long: ${live.away}`)
+  assert.ok(live.away < live.home, `meneur doit être plus court que le favori mené`)
 })
 
 test('écart de puissance cohérent CHE > QAT', () => {
@@ -319,6 +348,6 @@ test('Elversberg vs Leverkusen (coupe) — Leverkusen favori', () => {
 test('calibration plafonne les outsiders extrêmes', () => {
   const raw = { home: 1.12, draw: 6.4, away: 24 }
   const calibrated = calibrate1x2OddsForMarket(raw)
-  assert.ok(calibrated.away <= 10.5, `away=${calibrated.away}`)
+  assert.ok(calibrated.away <= 13, `away=${calibrated.away}`)
   assert.ok(calibrated.draw <= 5.8, `draw=${calibrated.draw}`)
 })

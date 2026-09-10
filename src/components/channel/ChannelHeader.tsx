@@ -1,6 +1,6 @@
 import type { Match } from '../../types/match'
 import { useLiveMatchClockLabel } from '../../hooks/useLiveMatchClockLabel'
-import { formatKickoff } from '../../utils/time'
+import { formatKickoffLabel } from '../../utils/time'
 import { ClubCrest } from '../brand/ClubCrest'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { cn } from '../../utils/cn'
@@ -58,7 +58,7 @@ export function ChannelHeader({ match }: { match: Match }) {
                 aria-hidden
               />
             )}
-            {isLive ? liveStatusLine : formatKickoff(match.kickoffAt)}
+            {isLive ? liveStatusLine : formatKickoffLabel(match.kickoffAt)}
           </div>
         </div>
         <div className="flex min-w-0 items-center justify-end gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 sm:px-3 sm:py-2">
@@ -78,7 +78,7 @@ export function ChannelHeader({ match }: { match: Match }) {
       </div>
       {!isLive ? (
         <p className="mt-2 text-center text-xs font-semibold text-sky-100/80">
-          Coup d&apos;envoi {formatKickoff(match.kickoffAt)}
+          Coup d&apos;envoi {formatKickoffLabel(match.kickoffAt)}
         </p>
       ) : null}
     </header>
