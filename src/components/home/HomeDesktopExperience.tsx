@@ -142,7 +142,8 @@ export function HomeDesktopExperience({
     const { scrollTop, scrollHeight, clientHeight } = el
     const canScroll = scrollHeight > clientHeight + 1
     const atBottom = scrollTop + clientHeight >= scrollHeight - 12
-    setCenterScrollFadeBottom(canScroll && !atBottom)
+    const next = canScroll && !atBottom
+    setCenterScrollFadeBottom((prev) => (prev === next ? prev : next))
   }, [])
 
   useEffect(() => {
@@ -156,7 +157,8 @@ export function HomeDesktopExperience({
       ro.disconnect()
       window.removeEventListener('resize', syncCenterScrollFade)
     }
-  }, [syncCenterScrollFade, hasLive, showMixedHeader, centerContinuation, tribunes.length])
+    // Pas de `centerContinuation` en dep : nouveau ReactNode à chaque render Home → boucle.
+  }, [syncCenterScrollFade, hasLive, showMixedHeader, tribunes.length])
 
   return (
     <div

@@ -118,7 +118,6 @@ import {
   cardColorFromHighlightText,
   cardEventIdentityKey,
   cardsAreSameCardEvent,
-  compactScorerDisplayName,
   formatGoalScorerLabel,
   formatCardPlayerDisplayName,
   groupGoalRowsForHeader,
@@ -127,6 +126,7 @@ import {
   parseLiveCardRowsFromHighlights,
   resolveCardPlayerNameFromHighlight,
   slugScorer,
+  toAnytimeScorerSettleEvent,
   type LiveGoalTeamHints,
 } from '../utils/liveFootballOdds'
 import {
@@ -2485,16 +2485,26 @@ export function ChannelPage() {
     liveBundleFixture,
   ])
 
-  /** Buteurs réels (alignés sur le score) — évite de fermer un pari buteur sur un faux but commentaire SM. */
-  const scoredButeurSlugs = useMemo(
-    () =>
-      liveGoalDisplayRows.map((r) => ({
-        side: r.side,
-        slug: slugScorer(compactScorerDisplayName(r.name)),
-        name: compactScorerDisplayName(r.name),
-      })),
-    [liveGoalDisplayRows],
-  )
+  /** Buteurs réels (alignés sur le score) — slug complet + résolution via compo (Dembélé → ousmane-dembele). */
+  const scoredButeurSlugs = useMemo(() => {
+    const slugsFor = (side: 'home' | 'away') => {
+      const players = side === 'home' ? [...(starters?.home ?? []), ...(bench?.home ?? [])] : [...(starters?.away ?? []), ...(bench?.away ?? [])]
+      return players.map((p) => slugScorer(p.label)).filter(Boolean)
+    }
+    const homeSlugs = slugsFor('home')
+    const awaySlugs = slugsFor('away')
+    const out: { side: 'home' | 'away'; slug: string; name: string }[] = []
+    const seen = new Set<string>()
+    for (const row of liveGoalDisplayRows) {
+      const ev = toAnytimeScorerSettleEvent(row, row.side === 'home' ? homeSlugs : awaySlugs)
+      if (!ev) continue
+      const key = `${ev.side}:${ev.slug}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push(ev)
+    }
+    return out
+  }, [liveGoalDisplayRows, starters, bench])
   const headerHomeScorers = useMemo(
     () =>
       groupGoalRowsForHeader(
@@ -2548,6 +2558,12 @@ export function ChannelPage() {
     [liveCardDisplayRows],
   )
 
+  /** Empreinte stable pour les effets de règlement (évite re-settle à chaque nouveau tableau). */
+  const scoredButeurKey = useMemo(
+    () => scoredButeurSlugs.map((s) => `${s.side}:${s.slug}`).sort().join('|'),
+    [scoredButeurSlugs],
+  )
+
   const settledFinishedMatchRef = useRef<string | null>(null)
   useEffect(() => {
     if (status !== 'finished' || !match) return
@@ -2576,7 +2592,7 @@ export function ChannelPage() {
     match?.score?.away,
     headerDisplayScore.home,
     headerDisplayScore.away,
-    scoredButeurSlugs,
+    scoredButeurKey,
     betting.settleMatchResult,
   ])
 
@@ -2584,14 +2600,7 @@ export function ChannelPage() {
   useEffect(() => {
     if (status !== 'live' || !match || scoredButeurSlugs.length === 0) return
     const mid = match.id
-    const scorerEvents = liveGoalDisplayRows
-      .filter((r) => !r.ownGoal)
-      .map((r) => ({
-        side: r.side,
-        slug: slugScorer(compactScorerDisplayName(r.name)),
-        name: compactScorerDisplayName(r.name),
-      }))
-    if (!scorerEvents.length) return
+    const scorerEvents = scoredButeurSlugs
     const t = window.setTimeout(() => {
       betting.settleWinningAnytimeScorers(scorerEvents, { forMatchId: mid })
     }, 2_500)
@@ -2599,8 +2608,7 @@ export function ChannelPage() {
   }, [
     status,
     match?.id,
-    scoredButeurSlugs,
-    liveGoalDisplayRows,
+    scoredButeurKey,
     betting.settleWinningAnytimeScorers,
   ])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')

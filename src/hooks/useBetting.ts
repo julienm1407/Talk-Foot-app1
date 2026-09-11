@@ -244,6 +244,19 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
             { scorerEvents: opts?.scorerEvents },
           )
           wonIds = won
+          const unchanged =
+            next.length === prev.bets.length &&
+            next.every((b, i) => {
+              const p = prev.bets[i]
+              return (
+                p != null &&
+                b.id === p.id &&
+                b.status === p.status &&
+                b.payout === p.payout &&
+                Boolean(b.tokenCreditApplied) === Boolean(p.tokenCreditApplied)
+              )
+            })
+          if (unchanged && !tokenDelta && !won.length) return prev
           const w = normalizeWallet(prev.wallet)
           return {
             ...prev,
@@ -262,6 +275,19 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
           betMult,
           { scorerEvents: opts?.scorerEvents },
         )
+        const unchanged =
+          next.length === prev.length &&
+          next.every((b, i) => {
+            const p = prev[i]
+            return (
+              p != null &&
+              b.id === p.id &&
+              b.status === p.status &&
+              b.payout === p.payout &&
+              Boolean(b.tokenCreditApplied) === Boolean(p.tokenCreditApplied)
+            )
+          })
+        if (unchanged && !tokenDelta && !wonIds.length) return prev
         if (tokenDelta) patchWallet((w) => ({ ...w, tokens: w.tokens + tokenDelta }))
         if (wonIds.length) grantBetWon(wonIds)
         return next

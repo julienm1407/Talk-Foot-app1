@@ -89,17 +89,31 @@ export function settleOpenBetsForMatch(
     if (b.market === 'anytime_scorer' && typeof b.selection === 'string' && b.selection.startsWith('scor:')) {
       const rest = b.selection.slice('scor:'.length)
       const idx = rest.indexOf(':')
-      if (idx === -1) return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+      if (idx === -1) {
+        if (b.status !== 'open') return b
+        return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
+      }
       const side = rest.slice(0, idx) as 'home' | 'away'
       const slug = rest.slice(idx + 1)
       const won = scorerEvents.some(
         (e) => e.side === side && scorerLineupMatchesScoredGoal(slug, e),
       )
       if (won) {
+        // Inclut la reprise lost→won (bug matching ancien : Dembélé / Ferran, etc.).
+        if (b.status === 'won' && b.tokenCreditApplied) return b
         const payout = Math.round(b.stake * b.odds)
-        tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
-        return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
+        if (!b.tokenCreditApplied) {
+          tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
+        }
+        return {
+          ...b,
+          status: 'won' as const,
+          settledAt: b.settledAt ?? now,
+          payout,
+          tokenCreditApplied: true,
+        }
       }
+      if (b.status !== 'open') return b
       return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
     }
 
@@ -130,8 +144,8 @@ export function settleWinningAnytimeScorersOnly(
 
   const next = bets.map((b) => {
     if (b.matchId !== targetMatchId) return b
-    if (b.status !== 'open') return b
     if (b.market !== 'anytime_scorer') return b
+    if (b.status !== 'open' && b.status !== 'lost') return b
     if (typeof b.selection !== 'string' || !b.selection.startsWith('scor:')) return b
 
     const rest = b.selection.slice('scor:'.length)
@@ -143,10 +157,19 @@ export function settleWinningAnytimeScorersOnly(
       (e) => e.side === side && scorerLineupMatchesScoredGoal(slug, e),
     )
     if (!won) return b
+    if (b.status === 'won' && b.tokenCreditApplied) return b
 
     const payout = Math.round(b.stake * b.odds)
-    tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
-    return { ...b, status: 'won' as const, settledAt: now, payout, tokenCreditApplied: true }
+    if (!b.tokenCreditApplied) {
+      tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
+    }
+    return {
+      ...b,
+      status: 'won' as const,
+      settledAt: b.settledAt ?? now,
+      payout,
+      tokenCreditApplied: true,
+    }
   })
 
   return { bets: next, tokenDelta, newlyWonBetIds: newlyWonBetIds(bets, next) }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { groupGoalRowsForHeader, scorerLineupMatchesScoredGoal } from './liveFootballOdds'
+import {
+  groupGoalRowsForHeader,
+  resolveUniqueLineupSlugForGoal,
+  scorerLineupMatchesScoredGoal,
+  toAnytimeScorerSettleEvent,
+} from './liveFootballOdds'
 
 describe('scorerLineupMatchesScoredGoal', () => {
   it('matche le bon Neves après un but de João', () => {
@@ -19,6 +24,49 @@ describe('scorerLineupMatchesScoredGoal', () => {
     expect(scorerLineupMatchesScoredGoal('joao-neves', goal)).toBe(false)
     expect(scorerLineupMatchesScoredGoal('ruben-neves', goal)).toBe(false)
     expect(scorerLineupMatchesScoredGoal('neves', goal)).toBe(true)
+  })
+
+  it('matche Dembélé / Ferran Torres (nom complet vs slug compo)', () => {
+    expect(
+      scorerLineupMatchesScoredGoal('ousmane-dembele', {
+        slug: 'ousmane-dembele',
+        name: 'Ousmane Dembélé',
+      }),
+    ).toBe(true)
+    expect(
+      scorerLineupMatchesScoredGoal('ferran-torres', {
+        slug: 'ferran-torres',
+        name: 'Ferran Torres',
+      }),
+    ).toBe(true)
+  })
+})
+
+describe('resolveUniqueLineupSlugForGoal / toAnytimeScorerSettleEvent', () => {
+  it('résout dembele → ousmane-dembele quand unique dans la compo', () => {
+    const lineup = ['gianluigi-donnarumma', 'ousmane-dembele', 'vitinha']
+    expect(resolveUniqueLineupSlugForGoal({ slug: 'dembele', name: 'Dembélé' }, lineup)).toBe(
+      'ousmane-dembele',
+    )
+    const ev = toAnytimeScorerSettleEvent(
+      { side: 'home', name: 'Dembélé', fullName: 'Ousmane Dembélé' },
+      lineup,
+    )
+    expect(ev?.slug).toBe('ousmane-dembele')
+  })
+
+  it('ne résout pas Neves si deux homonymes', () => {
+    const lineup = ['joao-neves', 'ruben-neves', 'marquinhos']
+    expect(resolveUniqueLineupSlugForGoal({ slug: 'neves', name: 'Neves' }, lineup)).toBeNull()
+  })
+
+  it('ignore les CSC pour le règlement buteur', () => {
+    expect(
+      toAnytimeScorerSettleEvent(
+        { side: 'home', name: 'Silva', fullName: 'Thiago Silva', ownGoal: true },
+        ['thiago-silva'],
+      ),
+    ).toBeNull()
   })
 })
 

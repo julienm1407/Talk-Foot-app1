@@ -18,8 +18,14 @@ function matchHasOpenBets(matchId: string, bets: Bet[]): boolean {
   return bets.some((b) => b.matchId === matchId && b.status === 'open')
 }
 
-function markSettledWhenDone(matchId: string, bets: Bet[], settled: Set<string>) {
-  if (!matchHasOpenBets(matchId, bets)) settled.add(matchId)
+function matchHasReclaimableLostScorers(matchId: string, bets: Bet[]): boolean {
+  return bets.some(
+    (b) =>
+      b.matchId === matchId &&
+      b.status === 'lost' &&
+      b.market === 'anytime_scorer' &&
+      !b.tokenCreditApplied,
+  )
 }
 
 /** Règle les paris ouverts quand un match passe « terminé » (même hors page Channel). */
@@ -31,6 +37,8 @@ export function useGlobalBetSettlement() {
   const { betTokenMultiplier } = useSubscription()
   const { grantBetWon } = useXpGrant()
   const settledMatchIdsRef = useRef<Set<string>>(new Set())
+  /** Une seule tentative de reprise lost→won par match (évite boucle si le buteur reste perdu). */
+  const scorerReclaimAttemptedRef = useRef<Set<string>>(new Set())
   const fetchingMatchIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -40,7 +48,10 @@ export function useGlobalBetSettlement() {
       if (m.status !== 'finished') return false
       if (m.score?.home == null || m.score?.away == null) return false
       if (settledMatchIdsRef.current.has(m.id)) return false
-      return matchHasOpenBets(m.id, bets)
+      const open = matchHasOpenBets(m.id, bets)
+      const reclaim =
+        matchHasReclaimableLostScorers(m.id, bets) && !scorerReclaimAttemptedRef.current.has(m.id)
+      return open || reclaim
     })
 
     if (!candidates.length) return
@@ -48,8 +59,12 @@ export function useGlobalBetSettlement() {
     let cancelled = false
 
     const settleMatch = async (match: Match, currentBets: Bet[]) => {
-      const openOnMatch = currentBets.filter((b) => b.matchId === match.id && b.status === 'open')
-      if (!openOnMatch.length) return { bets: currentBets, tokenDelta: 0, wonBetIds: [] as string[] }
+      const actionable = currentBets.filter(
+        (b) =>
+          b.matchId === match.id &&
+          (b.status === 'open' || (b.status === 'lost' && b.market === 'anytime_scorer')),
+      )
+      if (!actionable.length) return { bets: currentBets, tokenDelta: 0, wonBetIds: [] as string[] }
 
       const home = match.score!.home!
       const away = match.score!.away!
@@ -58,7 +73,7 @@ export function useGlobalBetSettlement() {
       let tokenDelta = 0
       const wonBetIds: string[] = []
 
-      const hasNonScorer = openOnMatch.some((b) => NON_SCORER_MARKETS.includes(b.market))
+      const hasNonScorer = actionable.some((b) => b.status === 'open' && NON_SCORER_MARKETS.includes(b.market))
       if (hasNonScorer) {
         const result = settleOpenBetsForMatch(
           nextBets,
@@ -73,9 +88,15 @@ export function useGlobalBetSettlement() {
       }
 
       const needsScorer = nextBets.some(
-        (b) => b.matchId === match.id && b.status === 'open' && b.market === 'anytime_scorer',
+        (b) =>
+          b.matchId === match.id &&
+          b.market === 'anytime_scorer' &&
+          (b.status === 'open' || (b.status === 'lost' && !b.tokenCreditApplied)),
       )
-      if (!needsScorer) return { bets: nextBets, tokenDelta, wonBetIds }
+      if (!needsScorer) {
+        if (!matchHasOpenBets(match.id, nextBets)) settledMatchIdsRef.current.add(match.id)
+        return { bets: nextBets, tokenDelta, wonBetIds }
+      }
 
       if (fetchingMatchIdsRef.current.has(match.id)) {
         return { bets: nextBets, tokenDelta, wonBetIds }
@@ -90,6 +111,9 @@ export function useGlobalBetSettlement() {
         fetchingMatchIdsRef.current.delete(match.id)
       }
 
+      // Marquer la tentative de reprise même si SM ne renvoie aucun buteur.
+      scorerReclaimAttemptedRef.current.add(match.id)
+
       if (totalGoals > 0 && scorerEvents.length === 0 && match.sportMonksFixtureId) {
         return { bets: nextBets, tokenDelta, wonBetIds }
       }
@@ -102,6 +126,9 @@ export function useGlobalBetSettlement() {
         { markets: ['anytime_scorer'], scorerEvents },
       )
       wonBetIds.push(...scorerResult.newlyWonBetIds)
+      if (!matchHasOpenBets(match.id, scorerResult.bets)) {
+        settledMatchIdsRef.current.add(match.id)
+      }
       return {
         bets: scorerResult.bets,
         tokenDelta: tokenDelta + scorerResult.tokenDelta,
@@ -117,14 +144,14 @@ export function useGlobalBetSettlement() {
         const allWonBetIds: string[] = []
         for (const match of candidates) {
           if (cancelled) return
-          const openBefore = workingBets.filter((b) => b.matchId === match.id && b.status === 'open').length
           const result = await settleMatch(match, workingBets)
           workingBets = result.bets
           totalDelta += result.tokenDelta
           allWonBetIds.push(...result.wonBetIds)
-          const openAfter = workingBets.filter((b) => b.matchId === match.id && b.status === 'open').length
-          if (result.tokenDelta !== 0 || openBefore !== openAfter) changed = true
-          markSettledWhenDone(match.id, workingBets, settledMatchIdsRef.current)
+          if (result.tokenDelta !== 0 || result.wonBetIds.length > 0) changed = true
+          if (!matchHasOpenBets(match.id, workingBets)) {
+            settledMatchIdsRef.current.add(match.id)
+          }
         }
         if (cancelled || !changed) return
         if (allWonBetIds.length) grantBetWon(allWonBetIds)
@@ -148,14 +175,14 @@ export function useGlobalBetSettlement() {
       const allWonBetIds: string[] = []
       for (const match of candidates) {
         if (cancelled) return
-        const openBefore = nextBets.filter((b) => b.matchId === match.id && b.status === 'open').length
         const result = await settleMatch(match, nextBets)
         nextBets = result.bets
         tokenDelta += result.tokenDelta
         allWonBetIds.push(...result.wonBetIds)
-        const openAfter = nextBets.filter((b) => b.matchId === match.id && b.status === 'open').length
-        if (result.tokenDelta !== 0 || openBefore !== openAfter) changed = true
-        markSettledWhenDone(match.id, nextBets, settledMatchIdsRef.current)
+        if (result.tokenDelta !== 0 || result.wonBetIds.length > 0) changed = true
+        if (!matchHasOpenBets(match.id, nextBets)) {
+          settledMatchIdsRef.current.add(match.id)
+        }
       }
 
       if (cancelled || !changed) return

@@ -369,14 +369,17 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
     return [...lives, ...rest]
   }, [matches, tick, cdmSeasonActive])
 
-  const value: MatchesContextValue = {
-    matches,
-    carouselMatches,
-    sportMonksTeamIdByClubId,
-    loading,
-    error,
-    refetch: fetchMatches,
-  }
+  const value = useMemo<MatchesContextValue>(
+    () => ({
+      matches,
+      carouselMatches,
+      sportMonksTeamIdByClubId,
+      loading,
+      error,
+      refetch: fetchMatches,
+    }),
+    [matches, carouselMatches, sportMonksTeamIdByClubId, loading, error, fetchMatches],
+  )
 
   return (
     <MatchesContext.Provider value={value}>{children}</MatchesContext.Provider>

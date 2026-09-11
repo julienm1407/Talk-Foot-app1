@@ -72,10 +72,14 @@ export function bumpLiveXpUsage(
   return { ...usage, xpLiveHourKey: hourKey, xpLiveGrantedThisHour: granted }
 }
 
-/** Paris passés de `open` à `won` lors d’un règlement. */
+/** Paris passés à `won` lors d’un règlement (depuis `open` ou reprise `lost` → `won`). */
 export function newlyWonBetIds(before: { id: string; status: string }[], after: { id: string; status: string }[]): string[] {
-  const wasOpen = new Set(before.filter((b) => b.status === 'open').map((b) => b.id))
+  const beforeById = new Map(before.map((b) => [b.id, b.status]))
   return after
-    .filter((b) => b.status === 'won' && wasOpen.has(b.id))
+    .filter((b) => {
+      if (b.status !== 'won') return false
+      const prev = beforeById.get(b.id)
+      return prev === 'open' || prev === 'lost'
+    })
     .map((b) => b.id)
 }

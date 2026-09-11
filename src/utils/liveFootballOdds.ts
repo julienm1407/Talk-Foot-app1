@@ -54,7 +54,8 @@ export function slugScorer(name: string): string {
 
 /**
  * Titulaire (slug depuis la compo) vs but déjà déduit des moments forts (slug souvent plus court).
- * Ne matche pas deux joueurs du même camp qui partagent le nom de famille (ex. João vs Ruben Neves).
+ * Ne matche pas deux joueurs du même camp qui partagent le nom de famille (ex. João vs Ruben Neves)
+ * tant que le but n’a pas de prénom / slug unique.
  */
 export function scorerLineupMatchesScoredGoal(
   lineupSlug: string,
@@ -86,12 +87,12 @@ export function scorerLineupMatchesScoredGoal(
     if (fromFullName === lineupSlug) return true
     const nameSlugParts = fromFullName.split('-').filter(Boolean)
     if (nameSlugParts.length >= 2) {
-      return samePersonFromSlugParts(nameSlugParts)
+      if (samePersonFromSlugParts(nameSlugParts)) return true
     }
   }
 
   if (goalSlugParts.length >= 2) {
-    return samePersonFromSlugParts(goalSlugParts)
+    if (samePersonFromSlugParts(goalSlugParts)) return true
   }
 
   // Slug buteur incomplet (souvent nom de famille seul côté SM).
@@ -110,6 +111,50 @@ export function scorerLineupMatchesScoredGoal(
   }
 
   return false
+}
+
+/**
+ * Si le but n’a qu’un nom de famille, rattache le slug compo unique du même camp
+ * (ex. dembele → ousmane-dembele). Ambigu (2 Neves) → null.
+ */
+export function resolveUniqueLineupSlugForGoal(
+  goal: { slug: string; name?: string },
+  lineupSlugsOnSide: string[],
+): string | null {
+  const candidates = lineupSlugsOnSide.filter((s) => scorerLineupMatchesScoredGoal(s, goal))
+  if (candidates.length === 1) return candidates[0]!
+
+  const surname =
+    goal.slug.split('-').filter(Boolean).at(-1) ||
+    (goal.name ? slugScorer(compactScorerDisplayName(goal.name)) : '')
+  if (!surname) return null
+
+  const bySurname = lineupSlugsOnSide.filter((s) => {
+    const parts = s.split('-').filter(Boolean)
+    return parts.length > 0 && parts[parts.length - 1] === surname
+  })
+  if (bySurname.length === 1) return bySurname[0]!
+  return null
+}
+
+/** Événement règlement / verrou buteur à partir d’une ligne de but (+ compo pour désambiguïser). */
+export function toAnytimeScorerSettleEvent(
+  row: {
+    side: 'home' | 'away'
+    name: string
+    fullName?: string
+    ownGoal?: boolean
+  },
+  lineupSlugsOnSide: string[] = [],
+): { side: 'home' | 'away'; slug: string; name: string } | null {
+  if (row.ownGoal) return null
+  const rawName = (row.fullName ?? row.name).trim()
+  if (!rawName) return null
+  let slug = slugScorer(rawName)
+  if (!slug) return null
+  const resolved = resolveUniqueLineupSlugForGoal({ slug, name: rawName }, lineupSlugsOnSide)
+  if (resolved) slug = resolved
+  return { side: row.side, slug, name: rawName }
 }
 
 /** Nom court affiché sous le score (nom de famille si possible). */
@@ -296,7 +341,10 @@ function guessSideFromTeams(
 /** Buts affichables (tribune live : nom + minute sous le bon camp). */
 export type LiveGoalDisplayRow = {
   side: 'home' | 'away'
+  /** Affichage court (souvent nom de famille). */
   name: string
+  /** Nom complet SM pour matching paris buteur (ex. « Ousmane Dembélé »). */
+  fullName?: string
   minute: number
   inSecondHalf?: boolean
   inExtraTime?: boolean
@@ -346,19 +394,34 @@ export function parseLiveGoalRowsFromHighlights(
       parseGoalScorerName(String(h.title ?? ''))
     if (!name || !isPlausibleGoalScorerName(name)) continue
     const displayName = compactScorerDisplayName(name)
-    if (isMatchTeamLabel(displayName, home, away)) continue
+    if (isMatchTeamLabel(displayName, home, away) || isMatchTeamLabel(name, home, away)) continue
     const minute = typeof h.minute === 'number' && Number.isFinite(h.minute) ? h.minute : 0
-    const slug = slugScorer(displayName)
-    if (!slug) continue
+    const matchSlug = slugScorer(name) || slugScorer(displayName)
+    if (!matchSlug) continue
     const side = h.side ?? guessSideFromTeams(raw, home, away)
     if (!side) {
-      pendingNoSide.push({ name: displayName, minute })
+      pendingNoSide.push({
+        name: displayName,
+        fullName: name !== displayName ? name : undefined,
+        minute,
+        inSecondHalf: h.inSecondHalf,
+        inExtraTime: h.inExtraTime,
+        ownGoal: h.ownGoal,
+      })
       continue
     }
-    const key = `${side}:${slug}:${minute}`
+    const key = `${side}:${matchSlug}:${minute}`
     if (seen.has(key)) continue
     seen.add(key)
-    out.push({ side, name: displayName, minute, inSecondHalf: h.inSecondHalf, inExtraTime: h.inExtraTime, ownGoal: h.ownGoal })
+    out.push({
+      side,
+      name: displayName,
+      ...(name !== displayName ? { fullName: name } : {}),
+      minute,
+      inSecondHalf: h.inSecondHalf,
+      inExtraTime: h.inExtraTime,
+      ownGoal: h.ownGoal,
+    })
   }
 
   if (pendingNoSide.length && scoreHint) {
@@ -374,10 +437,10 @@ export function parseLiveGoalRowsFromHighlights(
         side = awayMissing >= homeMissing ? 'away' : 'home'
       }
       if (!side) continue
-      const key = `${side}:${slugScorer(row.name)}:${row.minute}`
+      const key = `${side}:${slugScorer(row.fullName ?? row.name)}:${row.minute}`
       if (seen.has(key)) continue
       seen.add(key)
-      out.push({ side, name: row.name, minute: row.minute })
+      out.push({ side, name: row.name, fullName: row.fullName, minute: row.minute, inSecondHalf: row.inSecondHalf, inExtraTime: row.inExtraTime, ownGoal: row.ownGoal })
     }
   }
 
@@ -689,6 +752,7 @@ export function extractScorerEventsFromHighlights(
   const seen = new Set<string>()
   for (const h of highlights) {
     if (h.type !== 'But') continue
+    if (h.ownGoal) continue
     const raw = `${h.title ?? ''} ${h.detail ?? ''}`
     const name =
       h.scorerName?.trim() ||

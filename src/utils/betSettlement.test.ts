@@ -39,11 +39,32 @@ describe('settleWinningAnytimeScorersOnly', () => {
     expect(tokenDelta).toBeGreaterThan(0)
   })
 
-  it('ne change rien sans événements buteur', () => {
-    const bets = [openScorer({ id: 'a', selection: 'scor:home:ferran-torres' })]
-    const res = settleWinningAnytimeScorersOnly(bets, 'm1', [], 1)
-    expect(res.bets).toBe(bets)
-    expect(res.tokenDelta).toBe(0)
+  it('reprend un buteur perdu à tort (matching corrigé)', () => {
+    const bets: Bet[] = [
+      {
+        id: 'a',
+        matchId: 'm1',
+        market: 'anytime_scorer',
+        selection: 'scor:home:ousmane-dembele',
+        stake: 10,
+        odds: 3,
+        status: 'lost',
+        placedAt: '2026-01-01T00:00:00.000Z',
+        settledAt: '2026-01-01T02:00:00.000Z',
+        payout: 0,
+      },
+    ]
+    const { bets: next, tokenDelta, newlyWonBetIds } = settleWinningAnytimeScorersOnly(
+      bets,
+      'm1',
+      [{ side: 'home', slug: 'ousmane-dembele', name: 'Ousmane Dembélé' }],
+      1,
+      { now: '2026-01-01T03:00:00.000Z' },
+    )
+    expect(next[0]?.status).toBe('won')
+    expect(next[0]?.payout).toBe(30)
+    expect(tokenDelta).toBeGreaterThan(0)
+    expect(newlyWonBetIds).toEqual(['a'])
   })
 })
 
@@ -65,5 +86,20 @@ describe('settleOpenBetsForMatch anytime_scorer', () => {
     )
     expect(next.find((b) => b.id === 'a')?.status).toBe('won')
     expect(next.find((b) => b.id === 'b')?.status).toBe('lost')
+  })
+
+  it('gagne Dembélé même si l’événement but était au nom de famille seul (résolu)', () => {
+    const bets = [openScorer({ id: 'a', selection: 'scor:home:ousmane-dembele' })]
+    const { bets: next } = settleOpenBetsForMatch(
+      bets,
+      'm1',
+      { home: 1, away: 0 },
+      1,
+      {
+        scorerEvents: [{ side: 'home', slug: 'ousmane-dembele', name: 'Ousmane Dembélé' }],
+        now: '2026-01-01T02:00:00.000Z',
+      },
+    )
+    expect(next.find((b) => b.id === 'a')?.status).toBe('won')
   })
 })
