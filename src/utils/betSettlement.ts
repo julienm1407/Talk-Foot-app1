@@ -47,10 +47,13 @@ export function settleOpenBetsForMatch(
 
   const next = bets.map((b) => {
     if (b.matchId !== targetMatchId) return b
-    if (b.status !== 'open') return b
+    const reclaimLostScorer =
+      b.status === 'lost' && b.market === 'anytime_scorer' && !b.tokenCreditApplied
+    if (b.status !== 'open' && !reclaimLostScorer) return b
     if (allowedMarkets && !allowedMarkets.has(b.market)) return b
 
     if (b.market === 'result_1x2') {
+      if (b.status !== 'open') return b
       const won =
         (b.selection === 'home' && homeWins) ||
         (b.selection === 'draw' && isDraw) ||
@@ -64,6 +67,7 @@ export function settleOpenBetsForMatch(
     }
 
     if (b.market === 'over25') {
+      if (b.status !== 'open') return b
       const won =
         (b.selection === 'over' && totalGoals > 2) ||
         (b.selection === 'under' && totalGoals <= 2)
@@ -76,6 +80,7 @@ export function settleOpenBetsForMatch(
     }
 
     if (b.market === 'exact_score') {
+      if (b.status !== 'open') return b
       const exp = resolvedScore(b.selection)
       const won = Boolean(exp && exp[0] === home && exp[1] === away)
       if (won) {
@@ -100,7 +105,6 @@ export function settleOpenBetsForMatch(
       )
       if (won) {
         // Inclut la reprise lost→won (bug matching ancien : Dembélé / Ferran, etc.).
-        if (b.status === 'won' && b.tokenCreditApplied) return b
         const payout = Math.round(b.stake * b.odds)
         if (!b.tokenCreditApplied) {
           tokenDelta += betWinTokenCredit(payout, b.stake, tokenMultiplier)
@@ -157,7 +161,7 @@ export function settleWinningAnytimeScorersOnly(
       (e) => e.side === side && scorerLineupMatchesScoredGoal(slug, e),
     )
     if (!won) return b
-    if (b.status === 'won' && b.tokenCreditApplied) return b
+    if (b.tokenCreditApplied) return b
 
     const payout = Math.round(b.stake * b.odds)
     if (!b.tokenCreditApplied) {
