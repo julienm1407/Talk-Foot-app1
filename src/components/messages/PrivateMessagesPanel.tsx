@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useDirectMessagesContext, useDirectMessagesOptional } from '../../contexts/DirectMessagesContext'
@@ -8,6 +8,27 @@ import { type DirectMessageLine } from '../../data/directMessagesMock'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
 import { moderateChatText } from '../../utils/bannedWords'
+import { formatDmDayHeading, matchCalendarDayKeyParis } from '../../utils/time'
+
+const MD_LINK_RE = /\[([^\]]+)\]\((\/[^)\s]+)\)/g
+
+function renderDmBody(body: string, linkClass: string): ReactNode {
+  const nodes: ReactNode[] = []
+  let last = 0
+  let match: RegExpExecArray | null
+  const re = new RegExp(MD_LINK_RE.source, 'g')
+  while ((match = re.exec(body)) !== null) {
+    if (match.index > last) nodes.push(body.slice(last, match.index))
+    nodes.push(
+      <Link key={`${match.index}-${match[2]}`} to={match[2]!} className={linkClass} onClick={(e) => e.stopPropagation()}>
+        {match[1]}
+      </Link>,
+    )
+    last = match.index + match[0].length
+  }
+  if (last < body.length) nodes.push(body.slice(last))
+  return nodes.length ? nodes : body
+}
 
 export function PrivateMessagesPanel({
   onClose,
@@ -251,6 +272,23 @@ function ThreadView({
   const lines = messages
   const endRef = useRef<HTMLDivElement>(null)
 
+  const timeline = useMemo(() => {
+    const out: Array<
+      | { kind: 'day'; key: string; label: string }
+      | { kind: 'msg'; message: DirectMessageLine }
+    > = []
+    let lastDay: string | null = null
+    for (const m of lines) {
+      const dayKey = m.at ? matchCalendarDayKeyParis(m.at) : null
+      if (dayKey && dayKey !== lastDay) {
+        out.push({ kind: 'day', key: dayKey, label: formatDmDayHeading(m.at!) })
+        lastDay = dayKey
+      }
+      out.push({ kind: 'msg', message: m })
+    }
+    return out
+  }, [lines])
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [lines.length])
@@ -272,6 +310,10 @@ function ThreadView({
     setDraft('')
   }
 
+  const linkClass = L
+    ? 'font-black text-sky-800 underline underline-offset-2 hover:text-sky-950'
+    : 'font-black text-sky-200 underline underline-offset-2 hover:text-white'
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-y-contain px-3 py-3 [-webkit-overflow-scrolling:touch]">
@@ -280,24 +322,41 @@ function ThreadView({
             Aucun message encore — envoie le premier.
           </p>
         ) : (
-          lines.map((m) => (
-            <div
-              key={m.id}
-              className={cn(
-                'max-w-[92%] rounded-2xl px-3 py-2 text-sm font-medium',
-                m.fromMe
-                  ? L
-                    ? 'ml-auto bg-sky-600 text-white'
-                    : 'ml-auto bg-sky-500/90 text-white'
-                  : L
-                    ? 'bg-tf-grey-pastel/50 text-tf-dark'
-                    : 'bg-white/[0.08] text-sky-50',
-              )}
-            >
-              {m.body}
-              <div className={cn('mt-1 text-[9px] font-bold opacity-70')}>{m.atLabel}</div>
-            </div>
-          ))
+          timeline.map((row) =>
+            row.kind === 'day' ? (
+              <p
+                key={`day-${row.key}`}
+                className={cn(
+                  'py-1 text-center text-[10px] font-black uppercase tracking-[0.14em]',
+                  L ? 'text-tf-dark/45' : 'text-white/40',
+                )}
+              >
+                {row.label}
+              </p>
+            ) : (
+              <div
+                key={row.message.id}
+                className={cn(
+                  'max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm font-medium',
+                  row.message.fromMe
+                    ? L
+                      ? 'ml-auto bg-sky-600 text-white'
+                      : 'ml-auto bg-sky-500/90 text-white'
+                    : L
+                      ? 'bg-tf-grey-pastel/50 text-tf-dark'
+                      : 'bg-white/[0.08] text-sky-50',
+                )}
+              >
+                {renderDmBody(
+                  row.message.body,
+                  row.message.fromMe
+                    ? 'font-black text-white underline underline-offset-2 hover:text-sky-100'
+                    : linkClass,
+                )}
+                <div className={cn('mt-1 text-[9px] font-bold opacity-70')}>{row.message.atLabel}</div>
+              </div>
+            ),
+          )
         )}
         <div ref={endRef} aria-hidden className="h-px shrink-0" />
       </div>

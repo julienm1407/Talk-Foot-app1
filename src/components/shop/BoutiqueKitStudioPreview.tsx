@@ -51,10 +51,11 @@ function catalogThumbSrc(item: AvatarItem): string | null {
 function CatalogThumbPlaceholder({ item }: { item: AvatarItem }) {
   const show = resolveBoutiqueGarmentShow(item)
   const src = catalogThumbSrc(item)
+  const [broken, setBroken] = useState(false)
   const objectPos =
     show === 'shoes' ? 'object-[center_72%]' : show === 'shorts' ? 'object-[center_58%]' : 'object-center'
 
-  if (!src) {
+  if (!src || broken) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
         <span className="text-5xl" aria-hidden>
@@ -71,6 +72,7 @@ function CatalogThumbPlaceholder({ item }: { item: AvatarItem }) {
       draggable={false}
       loading="lazy"
       decoding="async"
+      onError={() => setBroken(true)}
       className={cn(
         'pointer-events-none max-h-full w-full max-w-full select-none object-contain',
         objectPos,
@@ -189,16 +191,18 @@ export function BoutiqueKitStudioPreview({
     )
   }
 
+  // Grille boutique : PNG catalogue (fiable). Le canvas 3D/modulaire reste pour le modal d'achat.
+  const preferStaticThumb = Boolean(catalogThumbSrc(item))
   return (
     <div ref={rootRef} className={cn('flex w-full max-w-full items-end justify-center', className)}>
       <div className={STUDIO_FRAME}>
         <div className={VIEWPORT}>
-          {active ? (
-            <VisibleKitStudio item={item} garmentsShow={garmentsShow} />
-          ) : (
+          {preferStaticThumb || !active ? (
             <div className="flex h-full w-full items-center justify-center overflow-hidden">
               <CatalogThumbPlaceholder item={item} />
             </div>
+          ) : (
+            <VisibleKitStudio item={item} garmentsShow={garmentsShow} />
           )}
         </div>
       </div>

@@ -58,14 +58,14 @@ export function BoutiquePage() {
   const [catalogFilter, setCatalogFilter] = useState<CatalogFilter>(() => tabFromUrl ?? 'packs')
   const [catalogSort, setCatalogSort] = useState<CatalogSort>('name_asc')
   const [catalogSearch, setCatalogSearch] = useState('')
-  const [catalogVisibleCount, setCatalogVisibleCount] = useState(24)
+  const [catalogVisibleCount, setCatalogVisibleCount] = useState(96)
 
   useEffect(() => {
     const next = parseCatalogTab(searchParams.get('tab'))
     if (next) setCatalogFilter(next)
   }, [searchParams])
   useEffect(() => {
-    setCatalogVisibleCount(24)
+    setCatalogVisibleCount(96)
   }, [catalogFilter, catalogSearch, catalogSort])
   const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
   const [purchaseFlow, setPurchaseFlow] = useState<{
@@ -83,10 +83,17 @@ export function BoutiquePage() {
     if (searchParams.get('deal') !== 'jour' || !dailyDeal) return
     const tab = catalogTabForShopItem(dailyDeal.item)
     setCatalogFilter(tab)
+    const itemId = searchParams.get('item') || dailyDeal.itemId
+    if (deepLinkedItemRef.current === itemId) return
+    const item = findBoutiqueCatalogItem(itemId) ?? dailyDeal.item
+    deepLinkedItemRef.current = item.id
+    setConfirmingPurchase(false)
+    setPurchaseFlow({ item, step: 'preview' })
   }, [searchParams, dailyDeal])
 
   /** Deep-link studio → `/boutique?tab=jerseys&item=cdm2026-eng` : ouvre l’aperçu achat. */
   useEffect(() => {
+    if (searchParams.get('deal') === 'jour') return
     const itemId = searchParams.get('item')
     if (!itemId || deepLinkedItemRef.current === itemId) return
     const item = findBoutiqueCatalogItem(itemId)

@@ -99,8 +99,12 @@ export function getEffectiveTokenCost(
 }
 
 export function boutiqueTabHrefForItem(item: AvatarItem): string {
-  if (item.bundleIncludes?.length) return '/boutique?tab=packs'
-  if (item.slot === 'pants') return '/boutique?tab=shorts'
-  if (item.slot === 'shoes') return '/boutique?tab=shoes'
-  return '/boutique?tab=jerseys'
+  const tab = item.bundleIncludes?.length
+    ? 'packs'
+    : item.slot === 'pants'
+      ? 'shorts'
+      : item.slot === 'shoes'
+        ? 'shoes'
+        : 'jerseys'
+  return `/boutique?tab=${tab}&item=${encodeURIComponent(item.id)}`
 }

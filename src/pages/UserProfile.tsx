@@ -301,7 +301,11 @@ export function UserProfilePage() {
           </div>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-            {canMessage ? (
+            {peer.isTalkFootBot ? (
+              <Button type="button" variant="primary" className="min-w-[12rem] font-black" onClick={openPrivateChat}>
+                Parler à l’assistant
+              </Button>
+            ) : canMessage ? (
               <Button type="button" variant="primary" className="min-w-[12rem] font-black" onClick={openPrivateChat}>
                 Message privé
               </Button>
@@ -384,6 +388,7 @@ export function UserProfilePage() {
               </Button>
             ) : null}
 
+            {peer.isTalkFootBot ? null : (
             <Link
               to="/match"
               className={cn(
@@ -395,6 +400,7 @@ export function UserProfilePage() {
             >
               Voir les matchs
             </Link>
+            )}
           </div>
 
           {peer && !peer.isTalkFootBot && authUser?.id && !authUser.isAnonymous ? (

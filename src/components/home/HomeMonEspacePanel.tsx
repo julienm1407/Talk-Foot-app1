@@ -5,8 +5,9 @@ import { currentUser } from '../../data/users'
 import { useProfile } from '../../hooks/useProfile'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
-import { useMatches } from '../../contexts/MatchesContext'
+import { usePrivateMessagesUi } from '../../contexts/PrivateMessagesUiContext'
 import { useCloudFriends } from '../../hooks/useCloudFriends'
+import { TALKFOOT_BOT_DM_THREAD_ID } from '../../data/directMessageConstants'
 import { hubGlassPanel, hubPillLink } from '../../utils/hubSurface'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { teams } from '../../data/teams'
@@ -57,17 +58,13 @@ export function HomeMonEspacePanel({
   onNavigate?: () => void
 }) {
   const { favoriteClubIds } = useFanPreferences()
-  const { matches } = useMatches()
   const { user: authUser } = useAuth()
   const { profile } = useProfile()
   const displayLabel = authUser?.displayName ?? currentUser.username
   const { appearance } = useAppearance()
+  const pm = usePrivateMessagesUi()
   const { acceptedPeers } = useCloudFriends()
   const friendAvatars = useMemo(() => acceptedPeers.slice(0, 4), [acceptedPeers])
-  const firstLiveMatch = useMemo(
-    () => matches.find((m) => m.status === 'live') ?? null,
-    [matches],
-  )
   const L = appearance === 'light'
   const slim = density === 'hubSlim'
   const [inviteHint, setInviteHint] = useState(false)
@@ -267,9 +264,12 @@ export function HomeMonEspacePanel({
                   </Link>
                 ))}
               </div>
-              <Link
-                to={firstLiveMatch ? `/channel/${firstLiveMatch.id}` : '/match'}
-                onClick={navClick}
+              <button
+                type="button"
+                onClick={() => {
+                  navClick?.()
+                  pm.open({ threadId: TALKFOOT_BOT_DM_THREAD_ID })
+                }}
                 className={cn(
                   'min-w-0 flex-1 rounded-lg py-0.5 text-left outline-none transition',
                   TF_FOCUS_VISIBLE,
@@ -277,20 +277,9 @@ export function HomeMonEspacePanel({
                 )}
               >
                 <p className={cn('text-xs font-black leading-tight', L ? 'text-tf-dark' : 'text-white')}>
-                  Écris à <span className="font-black">Coach Talk Foot</span> depuis les messages — présent aussi sur le live
-                  {firstLiveMatch ? (
-                    <>
-                      {' '}
-                      sur{' '}
-                      <span className="whitespace-nowrap">
-                        {firstLiveMatch.home.shortName} – {firstLiveMatch.away.shortName}
-                      </span>
-                    </>
-                  ) : (
-                    <> · voir les matchs</>
-                  )}
+                  Ouvre le chat avec <span className="font-black">Coach Talk Foot</span> — ton assistant pour t'orienter dans l'app.
                 </p>
-              </Link>
+              </button>
             </div>
           </div>
         ) : null}

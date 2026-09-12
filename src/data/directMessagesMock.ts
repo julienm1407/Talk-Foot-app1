@@ -39,6 +39,8 @@ export type DirectMessageLine = {
   fromMe: boolean
   body: string
   atLabel: string
+  /** ISO timestamp — pour date / séparateurs de jour */
+  at?: string
 }
 
 export const mockDirectMessagesByThread: Record<string, DirectMessageLine[]> = {

@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../components/ui/Card'
 import { medalPacks } from '../data/shop'
 import { useWallet } from '../hooks/useWallet'
 import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
-import { MedalPaymentModal } from '../components/shop/MedalPaymentModal'
 import { isStripePublishableConfigured } from '../config/stripe'
 import { isRevenueCatConfigured } from '../config/revenueCatCatalog'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
@@ -18,14 +17,13 @@ import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
 import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiquePurchaseFlow'
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
-import type { MedalPack } from '../types/profile'
 import { usesStoreBilling } from '../utils/nativePlatform'
 
 export function BoutiqueMedalPacksPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
-  const { wallet, addMedals } = useWallet()
+  const { wallet } = useWallet()
   const { status: checkoutStatus, message: checkoutMessage, canRetry, retryFulfill } =
     useStripeCheckoutReturn()
   const {
@@ -36,18 +34,13 @@ export function BoutiqueMedalPacksPage() {
   } = useTalkFootPurchase()
   const [stripeLoadingPackId, setStripeLoadingPackId] = useState<string | null>(null)
   const { ownsItem, purchaseCosmetic } = useBoutiquePurchase()
-  const [selectedPackId, setSelectedPackId] = useState<string | null>(null)
   const [pendingAutoBuy, setPendingAutoBuy] = useState(false)
+  const [paymentsBlockedHint, setPaymentsBlockedHint] = useState<string | null>(null)
   const autoPurchaseStarted = useRef(false)
 
   const needMedals = Number.parseInt(searchParams.get('need') ?? '', 10)
   const pendingItemId = searchParams.get('item')
   const pendingItem = pendingItemId ? findBoutiqueCatalogItem(pendingItemId) : undefined
-
-  const selectedPack = useMemo(
-    () => medalPacks.find((p) => p.id === selectedPackId) ?? null,
-    [selectedPackId],
-  )
 
   const pendingMedalCost = pendingItem ? getEffectiveMedalCost(pendingItem) : 0
 
@@ -104,19 +97,18 @@ export function BoutiqueMedalPacksPage() {
     })
   }, [pendingAutoBuy, pendingItem, shortfall, tryCompletePendingPurchase])
 
-  const handlePackPaid = (pack: MedalPack) => {
-    addMedals(pack.medals + (pack.bonus ?? 0))
-    setSelectedPackId(null)
-    if (pendingItem) setPendingAutoBuy(true)
-  }
-
   const paymentsReady = storeBilling
     ? isRevenueCatConfigured()
     : isStripePublishableConfigured()
 
   const handleSelectPack = async (packId: string) => {
+    setPaymentsBlockedHint(null)
     if (!paymentsReady) {
-      setSelectedPackId(packId)
+      setPaymentsBlockedHint(
+        storeBilling
+          ? 'Achats Google Play pas encore activés (RevenueCat / monétisation Play). Les packs seront dispo dès que Play Billing sera branché — pas de crédit simulé.'
+          : 'Paiement Stripe non configuré sur cet environnement. Les packs ne peuvent pas être crédités sans vrai checkout.',
+      )
       return
     }
     if (!user?.id) {
@@ -162,6 +154,14 @@ export function BoutiqueMedalPacksPage() {
         ) : null}
         <StripeRefundRequestPanel className="mt-4" purchaseKind="medal_pack" />
         {purchaseError ? <p className="mt-2 text-sm font-bold text-rose-200">{purchaseError}</p> : null}
+        {paymentsBlockedHint ? (
+          <p className="mt-2 text-sm font-bold text-amber-200">{paymentsBlockedHint}</p>
+        ) : null}
+        {!paymentsReady ? (
+          <p className="mt-2 text-sm font-medium text-amber-100/85">
+            Recharge momentanément indisponible pour les testeurs (évite les médailles gratuites).
+          </p>
+        ) : null}
         <div className="mt-4 inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
           <span className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Solde actuel</span>
           <span className="ml-3 font-display text-2xl font-black text-white">
@@ -204,15 +204,6 @@ export function BoutiqueMedalPacksPage() {
           Retour au catalogue
         </Link>
       </p>
-
-      {selectedPack && !paymentsReady ? (
-        <MedalPaymentModal
-          pack={selectedPack}
-          creatorCode=""
-          onConfirm={() => handlePackPaid(selectedPack)}
-          onCancel={() => setSelectedPackId(null)}
-        />
-      ) : null}
     </div>
   )
 }

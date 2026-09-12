@@ -19,7 +19,6 @@ import { HomeMonEspacePanel } from './HomeMonEspacePanel'
 import { DebateOfTheDayCard } from './DebateOfTheDayCard'
 import { TribuneShowcaseCard } from '../tribune/TribuneShowcaseCard'
 import { HomeSiteSearch, type HomeSiteSearchHandle } from '../search/HomeSiteSearch'
-import { SearchTrends12h } from '../search/SearchTrends12h'
 import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { CdmHomeReminder } from '../cdm/CdmHomeReminder'
 import { FavoriteNationsHomeSection } from '../cdm/FavoriteNationsHomeSection'
@@ -204,10 +203,6 @@ export function HomeDesktopExperience({
               className="min-w-0 w-full"
               inputId="home-desktop-search"
               variant="hub"
-            />
-            <SearchTrends12h
-              className="w-full min-w-0"
-              onSelect={(term) => homeSearchRef.current?.applyQuery(term)}
             />
           </div>
         </div>

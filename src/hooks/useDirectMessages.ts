@@ -3,6 +3,7 @@ import { TALKFOOT_BOT_DM_THREAD_ID } from '../data/directMessageConstants'
 import { mockDirectMessagesByThread } from '../data/directMessagesMock'
 import type { DirectMessageLine } from '../data/directMessagesMock'
 import { pickTalkFootBotReply } from '../lib/talkFootBotReplies'
+import { formatDmAtLabel } from '../utils/time'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { ensureSupabaseChatSession } from '../lib/supabase/ensureSession'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
@@ -42,13 +43,17 @@ function isLastReadStore(x: unknown): x is Record<string, string> {
 const EMPTY_THREAD_READ = '__empty__'
 
 function rowToDmLine(row: { id: string; sender_id: string; body: string; created_at: string }, myAuthId: string): DirectMessageLine {
-  const t = new Date(row.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   return {
     id: row.id,
     fromMe: row.sender_id === myAuthId,
     body: row.body,
-    atLabel: t,
+    atLabel: formatDmAtLabel(row.created_at),
+    at: row.created_at,
   }
+}
+
+function localCoachBucketKey(authUserId: string | undefined): string {
+  return authUserId ? `${TALKFOOT_BOT_DM_THREAD_ID}::${authUserId}` : TALKFOOT_BOT_DM_THREAD_ID
 }
 
 export function useDirectMessages(
@@ -236,11 +241,14 @@ export function useDirectMessages(
   const mergedFor = useCallback(
     (threadId: string) => {
       const seed = mockDirectMessagesByThread[threadId] ?? []
-      const local = userByThread[threadId] ?? []
+      const localKey =
+        threadId === TALKFOOT_BOT_DM_THREAD_ID ? localCoachBucketKey(myAuthId) : threadId
+      const local = userByThread[localKey] ?? []
       const ck = cloudPrivateThreadKey(threadId, myAuthId)
       if (ck) {
         const cloud = cloudByKey[ck] ?? []
         if (threadId === TALKFOOT_BOT_DM_THREAD_ID) {
+          // Reponses coach locales : bucket par compte (pas partage entre comptes du meme appareil)
           const botLocal = local.filter((m) => !m.fromMe)
           return [...seed, ...cloud, ...botLocal]
         }
@@ -258,6 +266,8 @@ export function useDirectMessages(
       if (!moderateChatText(trimmed).ok) return false
 
       const ck = cloudPrivateThreadKey(threadId, myAuthId)
+      const localBucket =
+        threadId === TALKFOOT_BOT_DM_THREAD_ID ? localCoachBucketKey(myAuthId) : threadId
       const pushBotReply = () => {
         if (threadId !== TALKFOOT_BOT_DM_THREAD_ID) return
         const delayMs = 650 + Math.floor(Math.random() * 450)
@@ -266,11 +276,12 @@ export function useDirectMessages(
             id: `bot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             fromMe: false,
             body: pickTalkFootBotReply(trimmed),
-            atLabel: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+            atLabel: formatDmAtLabel(),
+            at: new Date().toISOString(),
           }
           setUserByThread((prev) => ({
             ...prev,
-            [threadId]: [...(prev[threadId] ?? []), reply],
+            [localBucket]: [...(prev[localBucket] ?? []), reply],
           }))
         }, delayMs)
       }
@@ -296,11 +307,12 @@ export function useDirectMessages(
               id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
               fromMe: true,
               body: trimmed,
-              atLabel: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+              atLabel: formatDmAtLabel(),
+            at: new Date().toISOString(),
             }
             setUserByThread((prev) => ({
               ...prev,
-              [threadId]: [...(prev[threadId] ?? []), line],
+              [localBucket]: [...(prev[localBucket] ?? []), line],
             }))
             pushBotReply()
             return
@@ -320,11 +332,12 @@ export function useDirectMessages(
         id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         fromMe: true,
         body: trimmed,
-        atLabel: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        atLabel: formatDmAtLabel(),
+            at: new Date().toISOString(),
       }
       setUserByThread((prev) => ({
         ...prev,
-        [threadId]: [...(prev[threadId] ?? []), line],
+        [localBucket]: [...(prev[localBucket] ?? []), line],
       }))
       pushBotReply()
       return true

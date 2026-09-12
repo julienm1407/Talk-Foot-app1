@@ -90,7 +90,7 @@ export function runSiteSearch(
   },
   limit = 14,
 ): SiteSearchResult[] {
-  const q = rawQuery.trim()
+  const q = rawQuery.trim().replace(/^#+/, '').trim()
   if (q.length < 2) return []
 
   const queryNorm = normalize(q)
@@ -127,16 +127,24 @@ export function runSiteSearch(
   }
 
   for (const c of ALL_CLUBS_CATALOG) {
-    const blob = normalize([c.name, c.shortName, c.id, c.leagueName, 'club hub tribune supporters historique palmares page club calendrier prochains matchs'].join(' '))
+    const blob = normalize(
+      [c.name, c.shortName, c.id, c.leagueName, `#${c.shortName}`, `#${c.id}`, 'club hub tribune supporters historique palmares page club calendrier prochains matchs'].join(' '),
+    )
     const sc = scoreBlob(blob, queryNorm, words)
     if (sc > 0) {
+      const short = normalize(c.shortName)
+      const idNorm = normalize(c.id)
+      const name = normalize(c.name)
+      let score = sc + 1
+      if (queryNorm === short || queryNorm === idNorm) score += 48
+      if (queryNorm === name) score += 44
       out.push({
         kind: 'club',
         id: c.id,
         title: c.name,
         subtitle: `${c.shortName} · ${c.leagueName} · historique & prochains matchs`,
         href: clubPathForId(c.id),
-        score: sc + 1,
+        score,
       })
     }
   }

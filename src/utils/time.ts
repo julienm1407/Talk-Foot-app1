@@ -123,7 +123,7 @@ export function formatRelativeMinute(minute?: number, opts?: LiveClockFormatOpti
   return formatFlashscoreMatchMinute(minute, opts)
 }
 
-/** Minute live ou « Mi-temps » quand l’horloge API est en pause. */
+/** Minute live ou Mi-temps quand l'horloge API est en pause. */
 export function formatLiveMatchClock(
   minute?: number,
   paused?: boolean,
@@ -132,4 +132,48 @@ export function formatLiveMatchClock(
   if (paused) return 'Mi-temps'
   if (minute == null || minute <= 0) return '—'
   return formatFlashscoreMatchMinute(minute, { inSecondHalf }) || '—'
+}
+
+/** Libelle MP : heure seule si aujourd'hui, sinon date + heure (Paris). */
+export function formatDmAtLabel(isoOrDate: string | Date = new Date()): string {
+  const d = new Date(isoOrDate)
+  if (Number.isNaN(d.getTime())) {
+    return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+  }
+  const time = d.toLocaleTimeString('fr-FR', {
+    timeZone: MATCH_DISPLAY_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const kMsg = matchCalendarDayKeyParis(d)
+  const kToday = matchCalendarDayKeyParis(new Date())
+  if (kMsg === kToday) return time
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (kMsg === matchCalendarDayKeyParis(yesterday)) return `Hier · ${time}`
+  const day = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: MATCH_DISPLAY_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d)
+  return `${day} · ${time}`
+}
+
+/** En-tete de jour pour separer les messages prives. */
+export function formatDmDayHeading(isoOrDate: string | Date): string {
+  const d = new Date(isoOrDate)
+  const kMsg = matchCalendarDayKeyParis(d)
+  const kToday = matchCalendarDayKeyParis(new Date())
+  if (kMsg === kToday) return "Aujourd'hui"
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (kMsg === matchCalendarDayKeyParis(yesterday)) return 'Hier'
+  return new Intl.DateTimeFormat('fr-FR', {
+    timeZone: MATCH_DISPLAY_TIME_ZONE,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(d)
 }

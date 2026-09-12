@@ -26,7 +26,6 @@ import { CdmTodayMatches } from '../cdm/CdmTodayMatches'
 import { CdmNationsRail } from '../cdm/CdmNationsRail'
 import { FavoritesEncart } from '../fan/FavoritesEncart'
 import { HomeSiteSearch, type HomeSiteSearchHandle } from '../search/HomeSiteSearch'
-import { SearchTrends12h } from '../search/SearchTrends12h'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { MobileCollapsibleSection } from './MobileCollapsibleSection'
 import { MobileQuickActionsBar } from './MobileQuickActionsBar'
@@ -209,11 +208,6 @@ export function HomeMobileExperience({
           ref={mobileSearchRef}
           inputId="home-mobile-search-v2"
           className="w-full [&_input]:min-h-tf-touch [&_input]:text-base"
-        />
-        <SearchTrends12h
-          className="mt-2 w-full min-w-0"
-          maxTerms={3}
-          onSelect={(term) => mobileSearchRef.current?.applyQuery(term)}
         />
       </div>
 
