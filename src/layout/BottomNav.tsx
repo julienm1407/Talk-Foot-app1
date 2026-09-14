@@ -17,6 +17,7 @@ import { hardNavigateTo, isProfilePath } from '../utils/hardNavigate'
 function navActiveRing(section: (typeof BOTTOM_NAV_PRIMARY_ROUTES)[number]['section'], L: boolean) {
   if (section === 'matches') return L ? 'ring-tf-nav-match/50' : 'ring-tf-nav-match/55'
   if (section === 'groups') return L ? 'ring-tf-nav-groups/50' : 'ring-tf-nav-groups/55'
+  if (section === 'boutique') return L ? 'ring-amber-400/50' : 'ring-amber-300/45'
   return L ? 'ring-tf-dark/22' : 'ring-white/20'
 }
 
@@ -79,7 +80,7 @@ export function BottomNav() {
         )}
         aria-label="Bottom navigation"
       >
-        <div className="mx-auto grid w-full max-w-tf-content grid-cols-4 gap-1 px-2 py-2">
+        <div className="mx-auto grid w-full max-w-tf-content grid-cols-5 gap-0.5 px-1.5 py-2 sm:gap-1 sm:px-2">
           {BOTTOM_NAV_PRIMARY_ROUTES.map(({ to, section, icon }) => {
             const th = getAppSectionTheme(section)
             const active = isRouteActiveForSection(section, location.pathname, location.hash)
@@ -116,7 +117,7 @@ export function BottomNav() {
             type="button"
             aria-expanded={moreOpen}
             aria-haspopup="dialog"
-            aria-label="Plus — pronostic, classements, boutique"
+            aria-label="Plus — formules supporters, pronostic, classements"
             onClick={() => setMoreOpen((v) => !v)}
             className={cn(
               TF_FOCUS_VISIBLE,

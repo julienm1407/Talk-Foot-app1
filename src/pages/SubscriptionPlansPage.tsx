@@ -103,6 +103,16 @@ export function SubscriptionPlansPage() {
             <span className={TF_TEXT_FG}>{SUBSCRIPTION_PLANS[tier].name}</span>
           </p>
         )}
+        <p className="pt-1">
+          <Link
+            to="/boutique/medailles"
+            className={cn(
+              'inline-flex min-h-11 items-center justify-center rounded-2xl bg-amber-400 px-5 py-2.5 text-sm font-black text-amber-950 shadow-md transition hover:bg-amber-300',
+            )}
+          >
+            Acheter des médailles 🏅
+          </Link>
+        </p>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-3">

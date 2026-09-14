@@ -44,10 +44,10 @@ export const SM_INCLUDE_FIXTURE_EVENTS_TIMELINE =
 
 /** Détail match : xG, events, compos. */
 export const SM_INCLUDE_FIXTURE_XG =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;xGFixture.type;lineups.player;lineups.xGlineup.type;lineups.details.type' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;xGFixture.type;lineups.player.position;lineups.xGlineup.type;lineups.details.type' as const
 
 export const SM_INCLUDE_FIXTURE_EVENTS =
-  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport;lineups.player;lineups.type' as const
+  'participants;league;venue;state;scores;events.type;events.period;events.player;events.relatedPlayer;statistics.type;sidelined.sideline.player;sidelined.sideline.type;weatherReport;lineups.player.position;lineups.type' as const
 
 /** Même base que `SM_INCLUDE_FIXTURE_EVENTS` + textes commentaire live (include `comments` sur la fixture). */
 export const SM_INCLUDE_FIXTURE_EVENTS_COMMENTS =
@@ -65,7 +65,7 @@ export const SM_INCLUDE_FIXTURE_TRENDS =
  * `trends` : même chaîne que `SM_INCLUDE_FIXTURE_TRENDS` (évite un 2ᵉ appel pour l’avant-match).
  */
 export const SM_INCLUDE_FIXTURE_LINEUPS =
-  'participants;league;venue;state;scores;lineups.player;lineups.type;lineups.details.type;metadata.type;coaches;formations;trends.type;trends.participant' as const
+  'participants;league;venue;state;scores;lineups.player.position;lineups.type;lineups.details.type;lineups.xGlineup.type;metadata.type;coaches;formations;trends.type;trends.participant' as const
 
 export const SM_INCLUDE_TEAM_FORM =
   'latest.statistics.type;latest.xgfixture.type;latest.participants;latest.scores.type' as const

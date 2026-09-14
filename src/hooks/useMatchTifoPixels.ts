@@ -42,16 +42,43 @@ function loadInitialStore(): TifoStore {
   return { boards: {}, quota: {} }
 }
 
-type Action = {
-  type: 'place'
-  scopeKey: string
-  x: number
-  y: number
-  color: string
-  day: string
-}
+type Action =
+  | {
+      type: 'place'
+      scopeKey: string
+      x: number
+      y: number
+      color: string
+      day: string
+    }
+  | {
+      type: 'erase'
+      scopeKey: string
+      x: number
+      y: number
+      day: string
+    }
 
 function tifoReducer(state: TifoStore, action: Action): TifoStore {
+  if (action.type === 'erase') {
+    const { scopeKey, x, y, day } = action
+    const k = tifoPixelKey(x, y)
+    const curBoard = state.boards[scopeKey]
+    if (!curBoard?.pixels[k]) return state
+    const nextPixels = { ...curBoard.pixels }
+    delete nextPixels[k]
+    const curQ = state.quota[day]?.[scopeKey] ?? 0
+    return {
+      boards: {
+        ...state.boards,
+        [scopeKey]: { ...curBoard, pixels: nextPixels },
+      },
+      quota: {
+        ...state.quota,
+        [day]: { ...(state.quota[day] ?? {}), [scopeKey]: Math.max(0, curQ - 1) },
+      },
+    }
+  }
   if (action.type !== 'place') return state
   const { scopeKey, x, y, color, day } = action
   if (x < 0 || x >= TIFO_BOARD_W || y < 0 || y >= TIFO_BOARD_H) return state
@@ -121,11 +148,27 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
     [scopeKey],
   )
 
+  const erasePixel = useCallback(
+    (x: number, y: number) => {
+      if (!scopeKey) return false
+      setNotice(null)
+      const k = tifoPixelKey(x, y)
+      if (!storeRef.current.boards[scopeKey]?.pixels[k]) {
+        setNotice('Clique un pixel coloré pour l’effacer.')
+        return false
+      }
+      dispatch({ type: 'erase', scopeKey, x, y, day: tifoTodayKeyUtc() })
+      return true
+    },
+    [scopeKey],
+  )
+
   const deletePixelAsAdmin = useCallback(() => false, [])
 
   return {
     pixels,
     placePixel,
+    erasePixel,
     deletePixelAsAdmin,
     remaining,
     dailyLimit: TIFO_MAX_PER_USER_DAY,
@@ -141,6 +184,7 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
     isShared: false,
     isGroupAdmin: false,
     unlimitedPixels: false,
+    painterCount: Object.keys(pixels).length > 0 ? 1 : 0,
   }
 }
 

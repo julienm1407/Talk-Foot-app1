@@ -7,6 +7,7 @@ import {
   impliedProbsFromDecimalOdds,
 } from '../odds/internalOddsEngine'
 import type { LiveOddsContext } from '../odds/types'
+import { isAnytimeScorerEligible, resolveScorerPositionTier } from '../odds/scorerPosition'
 
 /** Probabilités « dé-vig » simples (partage proportionnel des implied). */
 export function impliedProbs1x2(o: SmBookOdds1x2): { pH: number; pD: number; pA: number } {
@@ -819,26 +820,30 @@ export type ScorerLineupMeta = {
   formationField?: string
   /** Titulaire annoncé ; remplaçants / banc → false (cote plus haute). */
   isStarter?: boolean
+  positionLabel?: string
+  expectedGoals?: number
 }
+
+export { resolveScorerPositionTier, isAnytimeScorerEligible }
 
 /**
  * Poste SM (`formation_position`) : 1 = gardien, 2–5 défense, 6–8 milieu, 9–11 attaque.
- * Sans info → milieu (neutre).
+ * Sans info → milieu (neutre), sauf banc → défense.
  */
-export function scorerPositionTier(formationPosition?: number): 'gk' | 'def' | 'mid' | 'fwd' {
-  if (formationPosition == null || !Number.isFinite(formationPosition)) return 'mid'
-  const p = Math.round(formationPosition)
-  if (p === 1) return 'gk'
-  if (p >= 2 && p <= 5) return 'def'
-  if (p >= 6 && p <= 8) return 'mid'
-  if (p >= 9 && p <= 11) return 'fwd'
-  return 'mid'
+export function scorerPositionTier(
+  formationPosition?: number,
+  extra?: { positionLabel?: string; isStarter?: boolean },
+): 'gk' | 'def' | 'mid' | 'fwd' {
+  return resolveScorerPositionTier({
+    formationPosition,
+    positionLabel: extra?.positionLabel,
+    isStarter: extra?.isStarter,
+  })
 }
 
-/** Plus le facteur est bas, plus la cote décimale est basse (attaquant favori). */
 /**
- * Cote buteur « anytime » : poste (attaquant < milieu < défenseur ; **gardien = 100**),
- * difficulté du match (favori vs outsider), micro-étalement sur le nom.
+ * Cote buteur « anytime » : poste (attaquant < milieu < défenseur ; gardien exclu côté UI),
+ * xG si dispo, titulaire vs banc, générosité jetons.
  */
 export function anytimeScorerOdds(
   name: string,
@@ -861,6 +866,8 @@ export function anytimeScorerOdds(
       side,
       isStarter: meta?.isStarter !== false,
       formationPosition: meta?.formationPosition,
+      positionLabel: meta?.positionLabel,
+      expectedGoals: meta?.expectedGoals,
     },
     attack,
     alreadyScored,

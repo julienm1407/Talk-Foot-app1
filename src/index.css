@@ -2568,6 +2568,18 @@ body::before {
   filter: none !important;
 }
 
+.tf-tifo-swatch--erase {
+  color: #0a223a;
+  background-color: #f1f5f9;
+  background-image:
+    linear-gradient(45deg, #cbd5e1 25%, transparent 25%),
+    linear-gradient(-45deg, #cbd5e1 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #cbd5e1 75%),
+    linear-gradient(-45deg, transparent 75%, #cbd5e1 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+}
+
 @keyframes tf-firework {
   0% {
     transform: translate3d(-50%, -50%, 0) scale(0.6);
@@ -3179,7 +3191,8 @@ body::before {
   padding-top: max(0.5rem, calc(env(safe-area-inset-top, 0px) + 0.35rem));
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem);
   pointer-events: auto !important;
-  touch-action: manipulation;
+  /* pan-y : le doigt peut scroller même au milieu (cotes, mise), pas seulement sur les bords. */
+  touch-action: pan-y;
 }
 
 .tf-channel-mobile-sheet-panel--paris {
@@ -3220,6 +3233,33 @@ body::before {
 .tf-channel-mobile-paris {
   flex: 1 1 auto;
   min-height: 0;
+  overflow: visible;
+  touch-action: pan-y;
+}
+
+/* Un seul scroll : celui du panneau Channel. Sinon les boutons 1N2 / score exact
+   « avalent » le geste et il faut viser le bord de l’écran. */
+.tf-channel-mobile-sheet-panel--paris .tf-bet-sheet-embedded,
+.tf-channel-mobile-sheet-panel--paris .tf-bet-sheet,
+.tf-channel-mobile-sheet-panel--paris .tf-bet-sheet--dense {
+  overflow: visible;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+}
+
+.tf-channel-mobile-sheet-panel--paris .tf-bet-sheet-scroll {
+  overflow: visible !important;
+  flex: none;
+  overscroll-behavior: auto;
+  touch-action: pan-y;
+}
+
+.tf-channel-mobile-sheet-panel--paris button,
+.tf-channel-mobile-sheet-panel--paris a,
+.tf-channel-mobile-sheet-panel--paris label,
+.tf-channel-mobile-sheet-panel--paris input {
+  touch-action: pan-y;
 }
 
 .tf-bet-sheet-embedded {
@@ -3229,7 +3269,7 @@ body::before {
 
 .tf-bet-sheet-embedded .tf-bet-sheet--dense {
   height: auto;
-  min-height: min(58dvh, 420px);
+  min-height: 0;
   max-height: none;
 }
 

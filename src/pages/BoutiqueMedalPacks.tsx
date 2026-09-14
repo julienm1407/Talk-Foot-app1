@@ -162,11 +162,22 @@ export function BoutiqueMedalPacksPage() {
             Recharge momentanément indisponible pour les testeurs (évite les médailles gratuites).
           </p>
         ) : null}
-        <div className="mt-4 inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
-          <span className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Solde actuel</span>
-          <span className="ml-3 font-display text-2xl font-black text-white">
-            {wallet.medals} <span aria-hidden>🏅</span>
-          </span>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-2xl border border-white/15 bg-black/35 px-4 py-3">
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Solde actuel</span>
+            <span className="ml-3 font-display text-2xl font-black text-white">
+              {wallet.medals} <span aria-hidden>🏅</span>
+            </span>
+          </div>
+          <Link
+            to="/formules"
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'inline-flex min-h-11 items-center justify-center rounded-2xl bg-violet-500 px-5 py-2.5 text-sm font-black text-white shadow-md transition hover:bg-violet-400',
+            )}
+          >
+            Formules supporters
+          </Link>
         </div>
       </div>
 

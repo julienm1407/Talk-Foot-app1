@@ -15,7 +15,9 @@ import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../../api/sportMonks'
 import {
   adjust1x2OddsForLive,
   anytimeScorerOdds,
+  isAnytimeScorerEligible,
   scorerLineupMatchesScoredGoal,
+  scorerPositionTier,
   slugScorer,
   type ScorerLineupMeta,
 } from '../../utils/liveFootballOdds'
@@ -92,6 +94,8 @@ export function BetWidget({
     name: string
     formationPosition?: number
     formationField?: string
+    positionLabel?: string
+    expectedGoals?: number
     isStarter?: boolean
     substitutedOff?: boolean
   }[]
@@ -254,6 +258,18 @@ export function BetWidget({
         formationPosition: p.formationPosition,
         formationField: p.formationField,
         isStarter: p.isStarter !== false,
+        positionLabel: p.positionLabel,
+        expectedGoals: p.expectedGoals,
+      }
+      if (
+        !isAnytimeScorerEligible(
+          scorerPositionTier(p.formationPosition, {
+            positionLabel: p.positionLabel,
+            isStarter: p.isStarter !== false,
+          }),
+        )
+      ) {
+        continue
       }
       const row: ScorerPickRow = {
         id: `scor:${p.side}:${slug}`,
@@ -833,7 +849,7 @@ export function BetWidget({
         <div
           className={cn(
             sheetEmbedded
-              ? 'tf-bet-sheet-embedded flex min-h-0 flex-1 flex-col overflow-hidden'
+              ? 'tf-bet-sheet-embedded flex min-h-0 flex-1 flex-col overflow-visible'
               : cn(
                   'fixed inset-0 flex flex-col justify-end sm:justify-center sm:p-4',
                   sheetDense ? 'z-[2147482505]' : 'z-[88]',
@@ -856,10 +872,10 @@ export function BetWidget({
           ) : null}
           <div
             className={cn(
-              'relative z-10 mx-auto flex w-full flex-col overflow-hidden border shadow-2xl tf-bet-sheet',
+              'relative z-10 mx-auto flex w-full flex-col border shadow-2xl tf-bet-sheet',
               sheetEmbedded
-                ? 'min-h-0 flex-1 rounded-xl tf-bet-sheet--dense'
-                : 'rounded-t-3xl sm:rounded-3xl',
+                ? 'min-h-0 flex-1 overflow-visible rounded-xl tf-bet-sheet--dense'
+                : 'overflow-hidden rounded-t-3xl sm:rounded-3xl',
               sheetDense && !sheetEmbedded && 'tf-bet-sheet--dense max-w-lg',
               sheetLight
                 ? 'border-slate-200/80 bg-white'
@@ -958,7 +974,10 @@ export function BetWidget({
             <div
               ref={sheetScrollRef}
               className={cn(
-                'tf-bet-sheet-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain',
+                'tf-bet-sheet-scroll min-h-0 touch-pan-y',
+                sheetEmbedded
+                  ? 'overflow-visible overscroll-auto'
+                  : 'flex-1 overflow-y-auto overscroll-contain',
                 sheetDense ? 'px-3 py-2.5' : 'px-4 py-4 sm:px-5',
               )}
             >
@@ -1309,10 +1328,15 @@ export function BetWidget({
                       >
                         <div
                           className={cn(
-                            'overflow-y-auto overscroll-contain pr-0.5',
-                            sheetDense
-                              ? 'max-h-[min(52dvh,20rem)] sm:max-h-60'
-                              : 'max-h-[min(60vh,28rem)] sm:max-h-72',
+                            'pr-0.5',
+                            sheetEmbedded
+                              ? 'overflow-visible'
+                              : cn(
+                                  'overflow-y-auto overscroll-contain',
+                                  sheetDense
+                                    ? 'max-h-[min(52dvh,20rem)] sm:max-h-60'
+                                    : 'max-h-[min(60vh,28rem)] sm:max-h-72',
+                                ),
                           )}
                         >
                           <BetSheetScorerList

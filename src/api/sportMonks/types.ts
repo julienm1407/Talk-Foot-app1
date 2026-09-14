@@ -215,6 +215,7 @@ export type SmLineupRow = {
     firstname?: string
     lastname?: string
     image_path?: string | null
+    position?: { name?: string; developer_name?: string; code?: string } | null
   }
   type_id?: number
   type?: { id?: number; developer_name?: string; name?: string }
@@ -226,5 +227,11 @@ export type SmLineupRow = {
     type_id?: number
     type?: { developer_name?: string; name?: string }
     value?: string | number | null
+  }>
+  /** xG joueur sur ce match (include `lineups.xGlineup.type`). */
+  xGlineup?: Array<{
+    type?: { developer_name?: string; name?: string }
+    data?: { value?: number | string | null }
+    value?: number | string | null
   }>
 }

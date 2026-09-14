@@ -91,6 +91,9 @@ function tifoPlacementErrorMessage(error: { message?: string; code?: string }): 
   if (msg.includes('cell_occupied')) {
     return 'Cette case est déjà prise — choisis une autre ou repasse sur ton propre pixel.'
   }
+  if (msg.includes('tribune_busy')) {
+    return 'Tribune trop remplie : la gomme est désactivée.'
+  }
   if (msg.includes('daily_limit')) {
     return 'daily_limit'
   }
@@ -466,6 +469,80 @@ export function useMatchTifoPixelsCloud(options: {
     [scope, remaining, dailyLimit, unlimitedPixels, pixels, pixelOwners, refreshBoard, refreshUsage],
   )
 
+  const erasePixel = useCallback(
+    async (x: number, y: number) => {
+      if (!scope) return false
+      setNotice(null)
+      const key = tifoPixelKey(x, y)
+      if (!pixels[key]) {
+        setNotice('Clique un pixel coloré pour l’effacer.')
+        return false
+      }
+
+      const sb = getSupabaseBrowserClient()
+      if (!sb || !isSupabaseConfigured()) return false
+
+      const session = await ensureTalkFootSupabaseSession(sb)
+      if (!session) {
+        setNotice('Session indisponible — réessaie dans un instant.')
+        return false
+      }
+      await syncRealtimeAuth(sb)
+
+      const previousColor = pixels[key]
+      const previousOwner = pixelOwners[key]
+      const ownPixel = previousOwner === session.user.id
+      clearPixel(x, y)
+      if (ownPixel && !unlimitedPixels) setRemaining((r) => r + 1)
+
+      const { error } = await sb.rpc('erase_match_tifo_pixel', {
+        p_group_id: scope.groupId,
+        p_match_id: scope.matchId,
+        p_x: x,
+        p_y: y,
+      })
+
+      if (error) {
+        if (previousColor) {
+          setPixels((prev) => ({ ...prev, [key]: previousColor }))
+          if (previousOwner) {
+            setPixelOwners((prev) => ({ ...prev, [key]: previousOwner }))
+          }
+        }
+        if (ownPixel && !unlimitedPixels) setRemaining((r) => Math.max(0, r - 1))
+        const msg = error.message ?? ''
+        const mapped = tifoPlacementErrorMessage(error)
+        if (mapped) setNotice(mapped)
+        else if (msg.includes('could not find the function') || error.code === 'PGRST202') {
+          setNotice('Gomme indisponible : migration Supabase manquante.')
+        } else {
+          setNotice('Impossible d’effacer ce pixel pour le moment.')
+          if (import.meta.env.DEV) console.warn('[Talk Foot] erase_match_tifo_pixel:', msg)
+        }
+        return false
+      }
+
+      const ch = channelRef.current
+      if (ch) {
+        void ch.send({
+          type: 'broadcast',
+          event: TIFO_PIXEL_DELETE_BROADCAST,
+          payload: {
+            group_id: scope.groupId,
+            match_id: scope.matchId,
+            x,
+            y,
+          },
+        })
+      }
+
+      void refreshBoard(sb)
+      void refreshUsage(sb, session.user.id)
+      return true
+    },
+    [scope, pixels, pixelOwners, clearPixel, refreshBoard, refreshUsage, unlimitedPixels],
+  )
+
   const deletePixelAsAdmin = useCallback(
     async (x: number, y: number) => {
       if (!scope || !isGroupAdmin) return false
@@ -523,9 +600,15 @@ export function useMatchTifoPixelsCloud(options: {
     [scope, isGroupAdmin, pixels, clearPixel, refreshBoard],
   )
 
+  const painterCount = useMemo(
+    () => new Set(Object.values(pixelOwners).filter(Boolean)).size,
+    [pixelOwners],
+  )
+
   return {
     pixels,
     placePixel,
+    erasePixel,
     deletePixelAsAdmin,
     remaining,
     dailyLimit,
@@ -541,5 +624,6 @@ export function useMatchTifoPixelsCloud(options: {
     isShared: true,
     isGroupAdmin,
     unlimitedPixels,
+    painterCount,
   }
 }

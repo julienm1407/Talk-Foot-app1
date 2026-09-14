@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import { cn } from '../../utils/cn'
 import { useMatchTifoPixels } from '../../hooks/useMatchTifoPixels'
-import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES, TIFO_EMPTY_FILL_DARK, TIFO_EMPTY_FILL_LIGHT, TIFO_WHITE_SVG_BG, isTifoBlackColor, isTifoWhiteColor } from '../../constants/tifoPixelBoard'
+import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUSES, TIFO_EMPTY_FILL_DARK, TIFO_EMPTY_FILL_LIGHT, TIFO_WHITE_SVG_BG, TIFO_ERASE_SWATCH, TIFO_ERASE_MAX_PAINTERS, isTifoBlackColor, isTifoWhiteColor, tifoEraseAllowed } from '../../constants/tifoPixelBoard'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
@@ -22,6 +23,8 @@ export function GroupTifoPanel({
   isGroupAdmin,
   /** Dans un panneau repliable mobile : marges réduites, grille scrollable. */
   embedded = false,
+  /** Personnes actuellement dans la tribune (optionnel) — masque la gomme si trop de monde. */
+  tribunePeopleCount = null,
 }: {
   groupId: string
   matches: Match[]
@@ -34,9 +37,12 @@ export function GroupTifoPanel({
   fixedMatchId?: string | null
   isGroupAdmin: boolean
   embedded?: boolean
+  tribunePeopleCount?: number | null
 }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+  const [searchParams] = useSearchParams()
+  const forceErase = searchParams.get('tifoGomme') === '1'
   const candidates = useMemo(() => {
     let scoped = matches
     if (groupNationIso) {
@@ -81,6 +87,7 @@ export function GroupTifoPanel({
   const {
     pixels,
     placePixel,
+    erasePixel,
     deletePixelAsAdmin,
     remaining,
     dailyLimit,
@@ -95,6 +102,7 @@ export function GroupTifoPanel({
     loading,
     isShared,
     unlimitedPixels,
+    painterCount,
   } = useMatchTifoPixels({
     groupId,
     matchId: activeId,
@@ -108,6 +116,12 @@ export function GroupTifoPanel({
   }, [engagementNotice, clearEngagementNotice])
 
   const [color, setColor] = useState(palette[2]!)
+  const eraseAllowed = forceErase || tifoEraseAllowed(painterCount, tribunePeopleCount)
+  const eraseSelected = color === TIFO_ERASE_SWATCH
+
+  useEffect(() => {
+    if (!eraseAllowed && color === TIFO_ERASE_SWATCH) setColor(palette[2]!)
+  }, [eraseAllowed, color, palette])
 
   const placedPixelCount = useMemo(() => Object.keys(pixels).length, [pixels])
   const placedPixelsLabel = useMemo(() => {
@@ -294,7 +308,34 @@ export function GroupTifoPanel({
               aria-label={`Couleur ${c === '#000000' ? 'noir' : c === '#ffffff' ? 'blanc' : c}`}
             />
           ))}
+          {eraseAllowed ? (
+            <button
+              type="button"
+              title="Gomme — retirer un pixel"
+              className={cn(
+                'tf-tifo-swatch tf-tifo-swatch--erase size-7 rounded-lg border-2 text-[11px] font-black leading-none transition',
+                eraseSelected
+                  ? 'border-tf-dark ring-2 ring-rose-400/70'
+                  : 'border-white ring-1 ring-black/15',
+              )}
+              onClick={() => setColor(TIFO_ERASE_SWATCH)}
+              aria-label="Gomme, retirer un pixel"
+              aria-pressed={eraseSelected}
+            >
+              ⌫
+            </button>
+          ) : null}
         </div>
+      ) : null}
+
+      {eraseAllowed && !moderationMode ? (
+        <p className={cn('mt-1.5 text-[10px] font-semibold leading-snug', L ? 'text-tf-grey/80' : 'text-sky-200/70')}>
+          {eraseSelected
+            ? 'Gomme : clique un pixel coloré pour le retirer.'
+            : forceErase
+              ? 'Mode test : pose un pixel, puis clique ⌫ et re-clique ce pixel pour le retirer.'
+              : `Gomme dispo (tribune calme, ≤ ${TIFO_ERASE_MAX_PAINTERS} personnes).`}
+        </p>
       ) : null}
 
       {notice ? (
@@ -373,6 +414,10 @@ export function GroupTifoPanel({
                     if (isPainted) void deletePixelAsAdmin(x, y)
                     return
                   }
+                  if (eraseSelected) {
+                    if (isPainted) void erasePixel(x, y)
+                    return
+                  }
                   void placePixel(x, y, color)
                 }}
                 aria-label={
@@ -380,7 +425,11 @@ export function GroupTifoPanel({
                     ? isPainted
                       ? `Supprimer le pixel ${x + 1} ${y + 1}`
                       : `Pixel vide ${x + 1} ${y + 1}`
-                    : `Pixel ${x + 1} ${y + 1}`
+                    : eraseSelected
+                      ? isPainted
+                        ? `Effacer le pixel ${x + 1} ${y + 1}`
+                        : `Pixel vide ${x + 1} ${y + 1}`
+                      : `Pixel ${x + 1} ${y + 1}`
                 }
               >
                 <span

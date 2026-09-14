@@ -10,6 +10,10 @@ export type SmStartingXiPlayer = {
   formationPosition?: number
   /** Photo joueur SportMonks (`player.image_path`) quand disponible. */
   photoUrl?: string
+  /** Poste SM (`player.position.name`). */
+  positionLabel?: string
+  /** xG du match si `lineups.xGlineup` est fourni. */
+  expectedGoals?: number
 }
 
 export type SmStartingXIs = { home: SmStartingXiPlayer[]; away: SmStartingXiPlayer[] }
@@ -138,6 +142,50 @@ function formationSortKey(row: SmLineupRow): number {
   return 999
 }
 
+function playerPositionLabel(row: SmLineupRow): string | undefined {
+  const pos = row.player?.position
+  if (!pos || typeof pos !== 'object') return undefined
+  const label = String(pos.name ?? pos.developer_name ?? pos.code ?? '').trim()
+  return label || undefined
+}
+
+function lineupExpectedGoals(row: SmLineupRow): number | undefined {
+  const list = row.xGlineup
+  if (!Array.isArray(list)) return undefined
+  let best: number | undefined
+  for (const item of list) {
+    const blob = `${item.type?.developer_name ?? ''} ${item.type?.name ?? ''}`.toUpperCase()
+    const raw = item.data?.value ?? item.value
+    const n = typeof raw === 'number' ? raw : Number(raw)
+    if (!Number.isFinite(n) || n < 0) continue
+    if (!blob || /XG|EXPECTED.?GOAL|BUT.?ATTENDU/.test(blob)) {
+      if (best == null || n > best) best = n
+    }
+  }
+  return best
+}
+
+function toXiPlayer(row: SmLineupRow, extra: { formationField?: string; formationPosition?: number }): SmStartingXiPlayer | null {
+  const label = playerLabel(row)
+  if (!label) return null
+  const j = jerseyNumber(row)
+  const playerId =
+    typeof row.player_id === 'number'
+      ? row.player_id
+      : typeof row.player?.id === 'number'
+        ? row.player.id
+        : undefined
+  return {
+    label,
+    number: j < 100 ? String(j) : undefined,
+    playerId,
+    photoUrl: playerPhotoUrl(row),
+    positionLabel: playerPositionLabel(row),
+    expectedGoals: lineupExpectedGoals(row),
+    ...extra,
+  }
+}
+
 function playerPhotoUrl(row: SmLineupRow): string | undefined {
   const p = row.player
   const raw = p && typeof p === 'object' ? (p as { image_path?: string | null }).image_path : undefined
@@ -147,75 +195,33 @@ function playerPhotoUrl(row: SmLineupRow): string | undefined {
 
 function takeBenchFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
   const pool = rows.filter((r) => isBenchRow(r))
-  const items: Array<{
-    label: string
-    j: number
-    playerId?: number
-    photoUrl?: string
-  }> = []
+  const items: Array<{ player: SmStartingXiPlayer; j: number }> = []
   for (const r of pool) {
-    const label = playerLabel(r)
-    if (!label) continue
-    const j = jerseyNumber(r)
-    const playerId =
-      typeof r.player_id === 'number'
-        ? r.player_id
-        : typeof r.player?.id === 'number'
-          ? r.player.id
-          : undefined
-    const photoUrl = playerPhotoUrl(r)
-    items.push({ label, j, playerId, photoUrl })
+    const player = toXiPlayer(r, {})
+    if (!player) continue
+    items.push({ player, j: jerseyNumber(r) })
   }
   items.sort((a, b) => a.j - b.j)
-  return items.map(({ label, j, playerId, photoUrl }) => ({
-    label,
-    number: j < 100 ? String(j) : undefined,
-    playerId,
-    photoUrl,
-  }))
+  return items.map((x) => x.player)
 }
 
 function takeXiFromRows(rows: SmLineupRow[]): SmStartingXiPlayer[] {
   const nonBench = rows.filter((r) => !isBenchRow(r))
   const pool = nonBench.length ? nonBench : rows
-  const items: Array<{
-    label: string
-    j: number
-    fk: number
-    playerId?: number
-    formationField?: string
-    formationPosition?: number
-    photoUrl?: string
-  }> = []
+  const items: Array<{ player: SmStartingXiPlayer; fk: number; j: number }> = []
   for (const r of pool) {
-    const label = playerLabel(r)
-    if (!label) continue
-    const j = jerseyNumber(r)
-    const fk = formationSortKey(r)
-    const playerId =
-      typeof r.player_id === 'number'
-        ? r.player_id
-        : typeof r.player?.id === 'number'
-          ? r.player.id
-          : undefined
     const formationField =
       typeof r.formation_field === 'string' && r.formation_field.trim() ? r.formation_field.trim() : undefined
     const formationPosition =
       typeof r.formation_position === 'number' && Number.isFinite(r.formation_position)
         ? r.formation_position
         : undefined
-    const photoUrl = playerPhotoUrl(r)
-    items.push({ label, j, fk, playerId, formationField, formationPosition, photoUrl })
+    const player = toXiPlayer(r, { formationField, formationPosition })
+    if (!player) continue
+    items.push({ player, fk: formationSortKey(r), j: jerseyNumber(r) })
   }
   items.sort((a, b) => (a.fk !== b.fk ? a.fk - b.fk : a.j - b.j))
-  return items.slice(0, 11).map(({ label, j, playerId, formationField, formationPosition, photoUrl }) => ({
-    label,
-    number: j < 100 ? String(j) : undefined,
-    playerId,
-    formationField,
-    formationPosition,
-    photoUrl,
-  }))
+  return items.slice(0, 11).map((x) => x.player)
 }
 
 /** Choisit le meilleur sous-ensemble de lignes lineup pour un côté (officiel terrain > probable > reste). */

@@ -55,6 +55,12 @@ export function HomeLandingHub({
             <Link to="/profile" className={hubPillLink(appearance, 'sm')}>
               Profil
             </Link>
+            <Link to="/boutique/medailles" className={hubPillLink(appearance, 'sm')}>
+              Médailles
+            </Link>
+            <Link to="/formules" className={hubPillLink(appearance, 'sm')}>
+              Supporters
+            </Link>
             <Link to="/boutique" className={hubPillLink(appearance, 'sm')}>
               Boutique
             </Link>
@@ -249,6 +255,20 @@ export function HomeLandingHub({
             >
               ➕ Créer une tribune
             </Button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Link
+                to="/boutique/medailles"
+                className={cn(hubPillLink(appearance, 'sm'), 'w-full justify-center text-center')}
+              >
+                🏅 Médailles
+              </Link>
+              <Link
+                to="/formules"
+                className={cn(hubPillLink(appearance, 'sm'), 'w-full justify-center text-center')}
+              >
+                ⭐ Supporters
+              </Link>
+            </div>
           </div>
         </nav>
       </div>

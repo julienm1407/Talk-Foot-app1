@@ -167,13 +167,13 @@ export function ProfilePage() {
             to="/formules"
             className={cn(
               TF_FOCUS_VISIBLE,
-              'inline-flex items-center justify-center rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition',
+              'inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-wide shadow-md transition',
               L
-                ? 'border-violet-300/70 bg-violet-50 text-violet-950 hover:bg-violet-100'
-                : 'border-violet-400/35 bg-violet-950/40 text-violet-100 hover:bg-violet-900/50',
+                ? 'border-violet-400 bg-violet-600 text-white hover:bg-violet-500'
+                : 'border-violet-300/50 bg-violet-500 text-white hover:bg-violet-400',
             )}
           >
-            Formules
+            Formules supporters
           </HardNavLink>
           {mayEditArticles ? (
             <HardNavLink
@@ -454,13 +454,16 @@ export function ProfilePage() {
                   </span>
                 </div>
               </div>
-              <div
+              <HardNavLink
+                to="/boutique/medailles"
                 className={cn(
                   'flex min-w-0 flex-1 items-center gap-2 rounded-2xl border px-4 py-2 sm:min-w-[10rem] sm:flex-initial',
+                  TF_FOCUS_VISIBLE,
                   L
-                    ? 'border-amber-200/60 bg-amber-50/80'
-                    : 'border-amber-500/30 bg-amber-950/40',
+                    ? 'border-amber-400 bg-amber-100 shadow-sm hover:bg-amber-50'
+                    : 'border-amber-400/60 bg-amber-500/25 hover:bg-amber-500/35',
                 )}
+                title="Acheter des médailles"
               >
                 <span className="text-lg" aria-hidden>
                   🏅
@@ -477,8 +480,11 @@ export function ProfilePage() {
                   <span className="font-display text-lg font-black text-tf-app-fg">
                     {wallet.medals} médailles
                   </span>
+                  <span className={cn('block text-[10px] font-black', L ? 'text-amber-800' : 'text-amber-100')}>
+                    Acheter →
+                  </span>
                 </div>
-              </div>
+              </HardNavLink>
             </div>
             {monthlyTokenAllowance > 0 ? (
               <p className="mt-2 w-full text-xs font-semibold text-tf-app-muted">

@@ -6,6 +6,7 @@ import { TopBar } from './TopBar'
 import { SkipLink } from './SkipLink'
 import { useSwipeNavigate } from '../hooks/useSwipeNavigate'
 import { FanOnboardingModal } from '../components/fan/FanOnboardingModal'
+import { FirstVisitGuideModal } from '../components/onboarding/FirstVisitGuideModal'
 import { OAuthProfileSetupModal } from '../components/auth/OAuthProfileSetupModal'
 import { ActivityRouteLogger } from '../components/sync/ActivityRouteLogger'
 import { FanSetupBanner } from '../components/fan/FanSetupBanner'
@@ -61,6 +62,7 @@ export function AppShell() {
       <BetSettlementRunner />
       <OAuthProfileSetupModal />
       <FanOnboardingModal />
+      <FirstVisitGuideModal />
       <TopBar />
       <FanSetupBanner />
 

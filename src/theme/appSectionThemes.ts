@@ -19,6 +19,7 @@ export type AppSectionId =
   | 'channel'
   | 'stade'
   | 'boutique'
+  | 'formules'
   | 'videos'
   | 'default'
 
@@ -278,6 +279,18 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
     },
     nav: NAV_HOME,
   },
+  formules: {
+    id: 'formules',
+    label: 'Supporters',
+    hint: 'Formules Ultra & Ambassadeur',
+    shellStripe: stripeGroups,
+    encart: ENCART_GROUPS,
+    page: {
+      eyebrowClass: 'text-violet-800',
+      borderBottomClass: 'border-violet-300/50',
+    },
+    nav: NAV_GROUPS,
+  },
   videos: {
     id: 'videos',
     label: 'Vidéos',
@@ -342,6 +355,7 @@ export function isRouteActiveForSection(
   }
   if (section === 'rankings') return p.startsWith('/rankings')
   if (section === 'boutique') return p.startsWith('/boutique')
+  if (section === 'formules') return p.startsWith('/formules') || p.startsWith('/abonnement')
   return false
 }
 
@@ -361,12 +375,13 @@ export function getAppSectionFromPath(pathname: string): AppSectionId {
   if (p.startsWith('/channel/') && /\/stade\/?$/.test(p)) return 'stade'
   if (p.startsWith('/channel/')) return 'pronostic'
   if (p.startsWith('/boutique')) return 'boutique'
+  if (p.startsWith('/formules') || p.startsWith('/abonnement')) return 'formules'
   if (p.startsWith('/videos')) return 'videos'
   if (p.startsWith('/article/')) return 'default'
   return 'default'
 }
 
-/** Barre du haut desktop : 6 entrées (le reste via sous-pages). */
+/** Barre du haut desktop : navigation principale (le reste via sous-pages). */
 export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId }[] = [
   { to: '/', end: true, section: 'home' },
   { to: '/match', end: true, section: 'matches' },
@@ -374,6 +389,7 @@ export const TOP_NAV_ROUTES: { to: string; end?: boolean; section: AppSectionId 
   { to: '/groups', section: 'groups' },
   { to: '/rankings', section: 'rankings' },
   { to: '/boutique', section: 'boutique' },
+  { to: '/formules', section: 'formules' },
 ]
 
 export type BottomNavRoute = { to: string; end?: boolean; section: AppSectionId; icon: string }
@@ -383,6 +399,7 @@ export const BOTTOM_NAV_PRIMARY_ROUTES: BottomNavRoute[] = [
   { to: '/', end: true, section: 'home', icon: '🏟️' },
   { to: '/match', end: true, section: 'matches', icon: '⚽' },
   { to: '/groups', section: 'groups', icon: '👥' },
+  { to: '/boutique', section: 'boutique', icon: '🛍️' },
 ]
 
 /** Entrées du sous-menu « Plus » (sheet au-dessus de la barre). */
@@ -392,9 +409,9 @@ export const BOTTOM_NAV_MORE_ROUTES: {
   icon: string
   hint: string
 }[] = [
+  { to: '/formules', section: 'formules', icon: '⭐', hint: 'Ultra & Ambassadeur' },
   { to: '/pronostic', section: 'pronostic', icon: '🎯', hint: 'Paris & gains' },
   { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Ligues & podium' },
-  { to: '/boutique', section: 'boutique', icon: '🛍️', hint: 'Tokens & médailles' },
 ]
 
 export const BOTTOM_NAV_ROUTES: BottomNavRoute[] = [
@@ -413,6 +430,8 @@ export const OVERLAY_NAV_ROUTES: {
   { to: '/match', end: true, section: 'matches', icon: '⚽', hint: 'Matchs & lives' },
   { to: '/groups', section: 'groups', icon: '👥', hint: 'Tribunes & débats' },
   { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Paris & ligues' },
+  { to: '/boutique', section: 'boutique', icon: '🛍️', hint: 'Maillots & médailles' },
+  { to: '/formules', section: 'formules', icon: '⭐', hint: 'Ultra & Ambassadeur' },
 ]
 
 /** Clé encart page article → section thème (même palette que l’app). */

@@ -1,4 +1,5 @@
-import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from './types'
+import type { ScorerPositionTier } from './scorerPosition'
+import { resolveScorerPositionTier } from './scorerPosition'
 import type {
   InternalOddsResult,
   LiveOddsContext,
@@ -6,6 +7,8 @@ import type {
   MatchOddsContext,
   Probabilities1x2,
   ScorerOddsContext,
+  SmBookOdds1x2,
+  SmBookOddsOverUnder25,
   TeamPowerFactors,
 } from './types'
 
@@ -702,17 +705,16 @@ export function adjustOverUnder25ForLiveInternal(
   }
 }
 
-function scorerPositionTier(formationPosition?: number): 'gk' | 'def' | 'mid' | 'fwd' {
-  if (formationPosition == null || !Number.isFinite(formationPosition)) return 'mid'
-  const p = Math.round(formationPosition)
-  if (p === 1) return 'gk'
-  if (p >= 2 && p <= 5) return 'def'
-  if (p >= 6 && p <= 8) return 'mid'
-  if (p >= 9 && p <= 11) return 'fwd'
-  return 'mid'
+function scorerPositionTier(ctx: ScorerOddsContext): ScorerPositionTier {
+  return resolveScorerPositionTier({
+    formationPosition: ctx.formationPosition,
+    positionLabel: ctx.positionLabel,
+    positionRole: ctx.positionRole,
+    isStarter: ctx.isStarter,
+  })
 }
 
-function estimateGoalsPerMatch(tier: 'gk' | 'def' | 'mid' | 'fwd', teamAttackIndex: number): number {
+function estimateGoalsPerMatch(tier: ScorerPositionTier, teamAttackIndex: number): number {
   const base = teamAttackIndex / 100
   switch (tier) {
     case 'fwd':
@@ -726,7 +728,7 @@ function estimateGoalsPerMatch(tier: 'gk' | 'def' | 'mid' | 'fwd', teamAttackInd
   }
 }
 
-function estimateRecentGoalsLast5(tier: 'gk' | 'def' | 'mid' | 'fwd', gpg: number): number {
+function estimateRecentGoalsLast5(tier: ScorerPositionTier, gpg: number): number {
   switch (tier) {
     case 'fwd':
       return clamp(gpg * 4.2, 0, 5)
@@ -759,7 +761,7 @@ const PENALTY_NAME_HINTS = [
   'lukaku',
 ]
 
-function guessPenaltyTaker(name: string, tier: ReturnType<typeof scorerPositionTier>): boolean {
+function guessPenaltyTaker(name: string, tier: ScorerPositionTier): boolean {
   if (tier !== 'fwd' && tier !== 'mid') return false
   const slug = name
     .normalize('NFD')
@@ -770,11 +772,15 @@ function guessPenaltyTaker(name: string, tier: ReturnType<typeof scorerPositionT
 
 /**
  * Probabilité buteur anytime (0–1), puis conversion en cote.
- * 40 % forme · 30 % buts/match · 20 % titulaire · 10 % penalty.
+ * Priorité : xG match (Poisson) si présent, sinon poste + forme estimée.
  */
 export function scorerProbabilityScore(ctx: ScorerOddsContext, teamAttackIndex: number): number {
-  const tier = scorerPositionTier(ctx.formationPosition)
-  if (tier === 'gk') return 0.008
+  const tier = scorerPositionTier(ctx)
+  if (tier === 'gk') return 0.004
+
+  const xg = ctx.expectedGoals
+  const poissonFromXg =
+    xg != null && Number.isFinite(xg) && xg > 0 ? 1 - Math.exp(-Math.min(xg, 2.8)) : null
 
   const gpg =
     ctx.goalsPerMatch ??
@@ -784,14 +790,13 @@ export function scorerProbabilityScore(ctx: ScorerOddsContext, teamAttackIndex: 
 
   const formPart = clamp((recent / 5) * 100, 0, 100)
   const gpgPart = clamp(gpg * 45, 0, 100)
-  // Banc : moins pénaliser les attaquants/ailiers (évite des cotes jackpot type 16).
   const starterPart = ctx.isStarter
     ? 100
     : tier === 'fwd'
-      ? 68
+      ? 62
       : tier === 'mid'
-        ? 48
-        : 22
+        ? 38
+        : 16
   const penPart =
     ctx.isPenaltyTaker ?? guessPenaltyTaker(ctx.name, tier) ? 100 : tier === 'fwd' ? 25 : 8
 
@@ -801,8 +806,14 @@ export function scorerProbabilityScore(ctx: ScorerOddsContext, teamAttackIndex: 
     starterPart * SCORER_WEIGHTS.starter +
     penPart * SCORER_WEIGHTS.penalty
 
-  const tierCap = tier === 'fwd' ? 78 : tier === 'mid' ? 42 : 18
-  return clamp((raw / 100) * tierCap * 0.01, 0.008, tier === 'fwd' ? 0.55 : tier === 'mid' ? 0.26 : 0.09)
+  const tierCap = tier === 'fwd' ? 82 : tier === 'mid' ? 38 : 14
+  const modelP = clamp((raw / 100) * tierCap * 0.01, 0.012, tier === 'fwd' ? 0.58 : tier === 'mid' ? 0.22 : 0.08)
+
+  if (poissonFromXg != null) {
+    const blended = poissonFromXg * 0.72 + modelP * 0.28
+    return clamp(blended, 0.02, 0.62)
+  }
+  return modelP
 }
 
 export function anytimeScorerOddsFromEngine(
@@ -812,22 +823,25 @@ export function anytimeScorerOddsFromEngine(
   opts?: { liveMinute?: number },
 ): number {
   if (alreadyScored) return 1.01
+  const tier = scorerPositionTier(ctx)
+  if (tier === 'gk') return 51
   let p = scorerProbabilityScore(ctx, teamAttackIndex)
   const minLive = opts?.liveMinute
   if (minLive != null && minLive > 55) {
     const late = clamp((minLive - 55) / 35, 0, 1)
     p *= 1 - late * 0.35
   }
-  const tier = scorerPositionTier(ctx.formationPosition)
-  const min = tier === 'gk' ? 80 : tier === 'def' ? 7 : tier === 'mid' ? 3.2 : 1.95
-  let max = tier === 'gk' ? 100 : tier === 'def' ? 24 : tier === 'mid' ? 14 : 11
-  if (!ctx.isStarter) {
-    // Banc : plafonner le jackpot (Kvara @16 trop risqué s’il rentre).
-    if (tier === 'fwd') max = Math.min(max, 7.5)
-    else if (tier === 'mid') max = Math.min(max, 9.5)
-    else if (tier === 'def') max = Math.min(max, 16)
-  }
-  return round2(clamp(probabilityToDecimalOdd(p, DEFAULT_BOOK_MARGIN * 0.85), min, max))
+  // Plus généreux que Betclic (jetons), mais bornes par poste — pas de gardien @9.
+  const bands: Record<Exclude<ScorerPositionTier, 'gk'>, { min: number; max: number; benchMax: number; benchMin: number }> =
+    {
+      fwd: { min: 1.65, max: 5.8, benchMin: 2.6, benchMax: 8.2 },
+      mid: { min: 3.6, max: 9.5, benchMin: 5.8, benchMax: 13.5 },
+      def: { min: 8.5, max: 22, benchMin: 14, benchMax: 32 },
+    }
+  const band = bands[tier]
+  const min = ctx.isStarter ? band.min : band.benchMin
+  const max = ctx.isStarter ? band.max : band.benchMax
+  return round2(clamp(probabilityToDecimalOdd(p, DEFAULT_BOOK_MARGIN * 0.72), min, max))
 }
 
 /** Fallback stable si pas de classement. */

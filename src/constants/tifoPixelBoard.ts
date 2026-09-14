@@ -19,6 +19,21 @@ export const TIFO_MAX_ENGAGEMENT_BONUS =
   TIFO_ENGAGEMENT_BONUSES.match_bet +
   TIFO_ENGAGEMENT_BONUSES.chat_active_10
 
+/** Pastille « gomme » (pas une couleur serveur). */
+export const TIFO_ERASE_SWATCH = 'erase'
+
+/**
+ * Gomme visible tant que peu de supporters ont posé un pixel
+ * (tribune calme = on peut corriger ; tribune pleine = on ne casse pas le dessin).
+ */
+export const TIFO_ERASE_MAX_PAINTERS = 8
+
+export function tifoEraseAllowed(painterCount: number, tribunePeopleCount?: number | null): boolean {
+  if (painterCount > TIFO_ERASE_MAX_PAINTERS) return false
+  if (tribunePeopleCount != null && tribunePeopleCount > TIFO_ERASE_MAX_PAINTERS) return false
+  return true
+}
+
 /** Palette tifo : hex courts (≤7 car.) — compatible limite serveur place_match_tifo_pixel. */
 export const TIFO_DEFAULT_PALETTE = [
   '#0000ff', // bleu

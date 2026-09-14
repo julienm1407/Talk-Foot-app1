@@ -56,6 +56,8 @@ export function TopBar() {
       return L ? 'hover:bg-tf-cta/[0.1]' : 'hover:bg-tf-cta/18'
     if (section === 'boutique')
       return L ? 'hover:bg-amber-500/[0.1]' : 'hover:bg-amber-400/18'
+    if (section === 'formules')
+      return L ? 'hover:bg-violet-500/[0.12]' : 'hover:bg-violet-400/20'
     return L ? 'hover:bg-sky-500/[0.08]' : 'hover:bg-sky-400/14'
   }
 
@@ -71,6 +73,7 @@ export function TopBar() {
       section === 'rankings' && (L ? 'ring-tf-nav-rankings/50' : 'ring-tf-nav-rankings/60'),
       section === 'pronostic' && (L ? 'ring-tf-cta/45' : 'ring-tf-cta/55'),
       section === 'boutique' && (L ? 'ring-amber-400/45' : 'ring-amber-300/40'),
+      section === 'formules' && (L ? 'ring-violet-500/50' : 'ring-violet-300/45'),
       section === 'home' && (L ? 'ring-tf-dark/28' : 'ring-sky-300/35'),
     )
   }

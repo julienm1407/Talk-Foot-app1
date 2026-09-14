@@ -109,10 +109,14 @@ export function NavWalletBalances({
 
   const medalsControl = (
     <Link
-      to="/profile#monnaie"
-      className="inline-flex items-center gap-1 whitespace-nowrap"
-      title={`${wallet.medals} médailles`}
-      aria-label={`${wallet.medals} médailles`}
+      to="/boutique/medailles"
+      className={cn(
+        TF_FOCUS_VISIBLE,
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-0.5 -my-0.5',
+        L ? 'bg-amber-100/80 ring-1 ring-amber-400/70' : 'bg-amber-400/20 ring-1 ring-amber-300/50',
+      )}
+      title="Acheter des médailles"
+      aria-label={`${wallet.medals} médailles — acheter`}
     >
       <span className={cn('leading-none', dense ? 'text-xs sm:text-sm' : 'text-sm')} aria-hidden>
         🏅
@@ -220,9 +224,14 @@ export function NavWalletBalances({
         )}
         <span className={cn(divider, 'h-7 sm:h-8')} aria-hidden />
         <Link
-          to="/profile#monnaie"
-          className="inline-flex items-center gap-1 whitespace-nowrap"
-          title={`${wallet.medals} médailles`}
+          to="/boutique/medailles"
+          className={cn(
+            TF_FOCUS_VISIBLE,
+            'inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-1 py-0.5',
+            L ? 'bg-amber-100/90 ring-1 ring-amber-400/70' : 'bg-amber-400/20 ring-1 ring-amber-300/50',
+          )}
+          title="Acheter des médailles"
+          aria-label={`${wallet.medals} médailles — acheter`}
         >
           <span className="text-sm leading-none sm:text-base" aria-hidden>
             🏅

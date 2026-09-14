@@ -127,11 +127,17 @@ export function BottomNavMoreSheet({
                           (L ? 'ring-tf-nav-rankings/50' : 'ring-tf-nav-rankings/55'),
                         section === 'pronostic' &&
                           (L ? 'ring-tf-cta/50' : 'ring-tf-cta/55'),
-                        section === 'boutique' &&
-                          (L ? 'ring-amber-400/45' : 'ring-amber-300/40'),
+                        section === 'formules' &&
+                          (L ? 'ring-violet-500/45' : 'ring-violet-300/40'),
                       )
                     : cn(
-                        L ? 'text-tf-app-muted hover:bg-tf-dark/[0.05] hover:text-tf-app-fg' : 'text-sky-200/92 hover:bg-white/10 hover:text-white',
+                        section === 'formules'
+                          ? L
+                            ? 'bg-violet-50 text-violet-950 ring-1 ring-violet-300/70 hover:bg-violet-100'
+                            : 'bg-violet-500/20 text-white ring-1 ring-violet-300/40 hover:bg-violet-500/30'
+                          : L
+                            ? 'text-tf-app-muted hover:bg-tf-dark/[0.05] hover:text-tf-app-fg'
+                            : 'text-sky-200/92 hover:bg-white/10 hover:text-white',
                       ),
                 )}
               >

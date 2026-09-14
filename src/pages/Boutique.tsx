@@ -258,12 +258,19 @@ export function BoutiquePage() {
           </header>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:max-w-2xl">
-            <div className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-md">
-              <div className="text-[10px] font-black uppercase tracking-wider text-amber-200/90">Médailles</div>
+            <Link
+              to="/boutique/medailles"
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'rounded-2xl border border-amber-300/70 bg-amber-400/20 px-4 py-3 backdrop-blur-md transition hover:bg-amber-400/30',
+              )}
+              title="Acheter des médailles"
+            >
+              <div className="text-[10px] font-black uppercase tracking-wider text-amber-100">Médailles · acheter</div>
               <div className="mt-1 font-display text-2xl font-black text-white">
                 {wallet.medals} <span className="text-lg">🏅</span>
               </div>
-            </div>
+            </Link>
             <div className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-md">
               <div className="text-[10px] font-black uppercase tracking-wider text-emerald-200/90">Jetons</div>
               <div className="mt-1 flex items-center gap-1.5 font-display text-2xl font-black text-white">
@@ -278,10 +285,19 @@ export function BoutiquePage() {
               to="/boutique/medailles"
               className={cn(
                 TF_FOCUS_VISIBLE,
-                'inline-flex min-h-tf-touch items-center justify-center rounded-2xl border border-amber-300/50 bg-amber-500/25 px-5 py-3 text-sm font-black text-amber-50 shadow-md transition hover:bg-amber-500/35',
+                'inline-flex min-h-12 items-center justify-center rounded-2xl bg-amber-400 px-6 py-3.5 text-base font-black text-amber-950 shadow-[0_10px_28px_rgba(251,191,36,0.45)] ring-2 ring-amber-200/80 transition hover:bg-amber-300 hover:shadow-[0_14px_32px_rgba(251,191,36,0.55)]',
               )}
             >
-              Acheter des médailles
+              Acheter des médailles 🏅
+            </Link>
+            <Link
+              to="/formules"
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'inline-flex min-h-12 items-center justify-center rounded-2xl border border-violet-300/60 bg-violet-500/30 px-5 py-3.5 text-sm font-black text-violet-50 shadow-md transition hover:bg-violet-500/45',
+              )}
+            >
+              Formules supporters
             </Link>
             <Link
               to="/profile#avatar-modulaire"

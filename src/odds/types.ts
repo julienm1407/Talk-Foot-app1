@@ -34,11 +34,16 @@ export type ScorerOddsContext = {
   side: 'home' | 'away'
   isStarter: boolean
   formationPosition?: number
+  /** Libellé SportMonks (`player.position.name`) — prioritaire sur formation_position. */
+  positionLabel?: string
+  positionRole?: 'gk' | 'def' | 'mid' | 'fwd'
   isPenaltyTaker?: boolean
   /** Buts sur les 5 derniers matchs (équipe ou joueur estimé). */
   recentGoalsLast5?: number
   /** Moyenne buts / match (saison ou estimée). */
   goalsPerMatch?: number
+  /** xG du match (SportMonks lineups.xGlineup) si dispo. */
+  expectedGoals?: number
 }
 
 export type LiveOddsContext = {

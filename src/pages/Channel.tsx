@@ -2690,6 +2690,8 @@ export function ChannelPage() {
       name: string
       formationPosition?: number
       formationField?: string
+      positionLabel?: string
+      expectedGoals?: number
       isStarter: boolean
       substitutedOff?: boolean
     }[] = []
@@ -2701,7 +2703,13 @@ export function ChannelPage() {
 
     const pushPlayer = (
       side: 'home' | 'away',
-      p: { label: string; formationPosition?: number; formationField?: string },
+      p: {
+        label: string
+        formationPosition?: number
+        formationField?: string
+        positionLabel?: string
+        expectedGoals?: number
+      },
       isStarter: boolean,
     ) => {
       const slug = p.label
@@ -2719,6 +2727,8 @@ export function ChannelPage() {
         name: p.label,
         formationPosition: p.formationPosition,
         formationField: p.formationField,
+        positionLabel: p.positionLabel,
+        expectedGoals: p.expectedGoals,
         isStarter,
         substitutedOff: subbedOffKeys.has(key),
       })
@@ -4543,6 +4553,7 @@ export function ChannelPage() {
                   matches={matches}
                   fixedMatchId={match.id}
                   isGroupAdmin={false}
+                  tribunePeopleCount={liveSalonStats?.participantsCount ?? 0}
                 />
               </Card>
             </div>
@@ -4682,7 +4693,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]">
+            <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]">
             {mobilePanel === 'match' && mobileMatchTab === 'stats' ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-white/10 bg-[#0a1f35]/70 px-2.5 py-2 text-center">
@@ -4809,7 +4820,7 @@ export function ChannelPage() {
               </div>
             ) : null}
             {mobilePanel === 'paris' ? (
-              <div className="tf-channel-mobile-paris flex min-h-[min(70dvh,480px)] flex-1 flex-col overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
+              <div className="tf-channel-mobile-paris flex min-h-0 flex-1 flex-col">
                 {isFinished ? (
                   <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
                 ) : match ? (
@@ -4876,6 +4887,7 @@ export function ChannelPage() {
                       matches={matches}
                       fixedMatchId={match.id}
                       isGroupAdmin={false}
+                      tribunePeopleCount={liveSalonStats?.participantsCount ?? 0}
                     />
                   </div>
                 ) : (

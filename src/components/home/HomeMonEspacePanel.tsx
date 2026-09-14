@@ -413,13 +413,20 @@ export function HomeMonEspacePanel({
           <HomeBoutiqueEncart layout="narrow" onNavigate={onNavigate} />
         </div>
       ) : (
-        <div className={cn('border-t px-4 pb-4', L ? 'border-tf-dark/10' : 'border-white/10')}>
+        <div className={cn('flex flex-col gap-2 border-t px-4 pb-4', L ? 'border-tf-dark/10' : 'border-white/10')}>
           <Link
-            to="/boutique"
+            to="/boutique/medailles"
             onClick={navClick}
             className={cn(hubPillLink(appearance, 'sm'), 'w-full justify-center text-center')}
           >
-            Boutique
+            Acheter des médailles
+          </Link>
+          <Link
+            to="/formules"
+            onClick={navClick}
+            className={cn(hubPillLink(appearance, 'sm'), 'w-full justify-center text-center')}
+          >
+            Formules supporters
           </Link>
         </div>
       )}
