@@ -115,7 +115,7 @@ export function GroupTifoPanel({
     return () => window.clearTimeout(t)
   }, [engagementNotice, clearEngagementNotice])
 
-  const [color, setColor] = useState(palette[2]!)
+  const [color, setColor] = useState<string>(palette[2]!)
   const eraseAllowed = forceErase || tifoEraseAllowed(painterCount, tribunePeopleCount)
   const eraseSelected = color === TIFO_ERASE_SWATCH
 
