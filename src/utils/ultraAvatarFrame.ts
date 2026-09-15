@@ -3,9 +3,9 @@ import type { User } from '../types/chat'
 
 const ULTRA_FRAME_TEST_NAMES = new Set(['dev talkfoot 1'])
 
-/** Formule Ultra (4,99 €/mois) — cadre doré autour de la PP en chat / groupe. */
+/** Formule Ultra / Ambassadeur — cadre doré autour de la PP. */
 export function tierHasUltraAvatarFrame(tier: SubscriptionTierId | null | undefined): boolean {
-  return tier === 'supporter_plus'
+  return tier === 'supporter_plus' || tier === 'ambassador'
 }
 
 export function isUltraAvatarFrameTestAccount(user?: Pick<User, 'username'> | null): boolean {

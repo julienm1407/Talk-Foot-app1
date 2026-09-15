@@ -275,7 +275,7 @@ export function MessageList({
               </div>
               <div
                 className={cn(
-                  'relative mt-1 max-w-full break-words rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed',
+                  'tf-chat-text relative mt-1 max-w-full rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed',
                   onToggleLike && 'pr-12',
                   bubbleClass(kind, dark),
                   (m.gifUrl || m.emoteId || m.groupScarf) && 'p-2',

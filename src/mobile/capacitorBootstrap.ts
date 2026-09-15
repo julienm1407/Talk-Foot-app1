@@ -5,6 +5,7 @@ import { Keyboard } from '@capacitor/keyboard'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { configureRevenueCat } from '../lib/payments/revenueCat'
+import { initializeAdMob } from '../lib/ads/admobNative'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 
 async function applyNativeOAuthUrl(raw: string): Promise<void> {
@@ -73,6 +74,7 @@ export async function initCapacitorShell(): Promise<void> {
   if (!rc.ok && import.meta.env.DEV) {
     console.warn('[Talk Foot] RevenueCat non initialisé:', rc.error)
   }
+  void initializeAdMob()
 
   if (Capacitor.getPlatform() === 'android') {
     void CapApp.addListener('backButton', ({ canGoBack }) => {

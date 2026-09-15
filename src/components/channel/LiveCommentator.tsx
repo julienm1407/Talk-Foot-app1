@@ -11,6 +11,7 @@ import type { User } from '../../types/chat'
 import { useProfile } from '../../hooks/useProfile'
 import { useSubscription } from '../../hooks/useSubscription'
 import { moderateChatText } from '../../utils/bannedWords'
+import { applyFrenchLiveCorrection, correctFrenchText, FR_SPELLCHECK_ATTRS } from '../../utils/frAutoCorrect'
 
 const SPEAK_DURATION_MS = 8000
 
@@ -52,7 +53,7 @@ export function LiveCommentator({
   }, [])
 
   const sendCommentary = useCallback(() => {
-    const trimmed = commentText.trim()
+    const trimmed = correctFrenchText(commentText).trim()
     if (!trimmed) return
     const check = moderateChatText(trimmed)
     if (!check.ok) {
@@ -372,13 +373,15 @@ export function LiveCommentator({
                   <input
                     type="text"
                     value={commentText}
+                    {...FR_SPELLCHECK_ATTRS}
                     onChange={(e) => {
-                      setCommentText(e.target.value)
+                      applyFrenchLiveCorrection(e.currentTarget, e.nativeEvent)
+                      setCommentText(e.currentTarget.value)
                       setModerationError(null)
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && sendCommentary()}
                     placeholder="Commentaire…"
-                    className="flex-1 rounded-lg border border-tf-grey-pastel/50 bg-white px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rose-400/50"
+                    className="tf-chat-field flex-1 rounded-lg border border-tf-grey-pastel/50 bg-white px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-rose-400/50"
                   />
                   <button
                     type="button"
@@ -464,13 +467,15 @@ export function LiveCommentator({
                 <input
                   type="text"
                   value={commentText}
+                  {...FR_SPELLCHECK_ATTRS}
                   onChange={(e) => {
-                    setCommentText(e.target.value)
+                    applyFrenchLiveCorrection(e.currentTarget, e.nativeEvent)
+                    setCommentText(e.currentTarget.value)
                     setModerationError(null)
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && sendCommentary()}
                   placeholder="Ton commentaire en direct…"
-                  className="flex-1 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-400/50"
+                  className="tf-chat-field flex-1 rounded-xl border border-slate-200/80 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-400/50"
                 />
                 <button
                   type="button"

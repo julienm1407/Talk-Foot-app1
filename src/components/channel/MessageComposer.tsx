@@ -6,6 +6,7 @@ import { GifPicker } from '../chat/GifPicker'
 import { EmotePicker } from '../chat/EmotePicker'
 import { cn } from '../../utils/cn'
 import { moderateChatText, validateOutgoingChatPayload } from '../../utils/bannedWords'
+import { correctFrenchText } from '../../utils/frAutoCorrect'
 
 export type ScarfSendPayload = NonNullable<Message['groupScarf']>
 
@@ -170,7 +171,7 @@ export function MessageComposer({
         onSubmit={(e) => {
           e.preventDefault()
           if (!canSend || sendingRef.current) return
-          const trimmed = text.trim()
+          const trimmed = correctFrenchText(text).trim()
           const check = moderateChatText(trimmed)
           if (!check.ok) {
             setModerationHint(check.message)
@@ -238,13 +239,14 @@ export function MessageComposer({
         <Input
           id="message"
           value={text}
+          correctFrench
           onChange={(e) => {
             setText(e.target.value)
             if (moderationHint) setModerationHint(null)
           }}
           placeholder={placeholder}
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-lg border-slate-200/80 bg-white/90 py-2 text-base sm:rounded-xl sm:py-2.5"
+          className="tf-chat-field min-w-0 flex-1 rounded-lg border-slate-200/80 bg-white/90 py-2 text-base sm:rounded-xl sm:py-2.5"
           aria-label="Nouveau message"
         />
         <Button

@@ -174,7 +174,7 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
             {message.time}
           </p>
         </div>
-        <p className={cn('mt-0.5 text-xs leading-tight', light ? 'text-tf-app-fg' : 'text-tf-app-fg')}>
+        <p className={cn('tf-chat-text mt-0.5 text-xs', light ? 'text-tf-app-fg' : 'text-tf-app-fg')}>
           {message.text}
         </p>
       </div>

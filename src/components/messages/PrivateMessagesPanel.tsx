@@ -8,6 +8,7 @@ import { type DirectMessageLine } from '../../data/directMessagesMock'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { Avatar } from '../ui/Avatar'
 import { moderateChatText } from '../../utils/bannedWords'
+import { applyFrenchLiveCorrection, correctFrenchText, FR_SPELLCHECK_ATTRS } from '../../utils/frAutoCorrect'
 import { formatDmDayHeading, matchCalendarDayKeyParis } from '../../utils/time'
 
 const MD_LINK_RE = /\[([^\]]+)\]\((\/[^)\s]+)\)/g
@@ -294,7 +295,7 @@ function ThreadView({
   }, [lines.length])
 
   const submit = () => {
-    const t = draft.trim()
+    const t = correctFrenchText(draft).trim()
     if (!t) return
     const check = moderateChatText(t)
     if (!check.ok) {
@@ -337,7 +338,7 @@ function ThreadView({
               <div
                 key={row.message.id}
                 className={cn(
-                  'max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm font-medium',
+                  'tf-chat-text max-w-[92%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm font-medium',
                   row.message.fromMe
                     ? L
                       ? 'ml-auto bg-sky-600 text-white'
@@ -368,8 +369,10 @@ function ThreadView({
           <input
             type="text"
             value={draft}
+            {...FR_SPELLCHECK_ATTRS}
             onChange={(e) => {
-              setDraft(e.target.value)
+              applyFrenchLiveCorrection(e.currentTarget, e.nativeEvent)
+              setDraft(e.currentTarget.value)
               setModerationHint(null)
             }}
             onKeyDown={(e) => {
@@ -380,7 +383,7 @@ function ThreadView({
             }}
             placeholder="Écrire un message…"
             className={cn(
-              'min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium outline-none',
+              'tf-chat-field min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm font-medium outline-none',
               TF_FOCUS_VISIBLE,
               L
                 ? 'border-tf-dark/15 bg-tf-grey-pastel/20 text-tf-dark placeholder:text-tf-dark/40'

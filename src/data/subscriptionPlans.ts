@@ -159,8 +159,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
     },
     features: [
       { id: 'badge', label: 'Badge vérifié sur ton profil', included: true },
+      { id: 'gold-frame', label: 'Contour doré autour de ta photo', included: true },
       { id: 'groups-create', label: 'Crée jusqu’à 10 groupes', included: true },
       { id: 'groups-join', label: 'Rejoins autant de groupes que tu veux', included: true },
+      { id: 'no-ads', label: 'Sans publicités', included: true },
       { id: 'vip', label: 'Salons privés VIP', included: true },
       { id: 'tokens-m', label: '250 jetons offerts chaque mois', included: true },
       { id: 'bet-x2', label: 'Double récompense sur les pronostics', included: true },
@@ -213,7 +215,9 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
     },
     features: [
       { id: 'ambassador', label: 'Statut Ambassadeur exclusif', included: true },
+      { id: 'gold-frame', label: 'Contour doré autour de ta photo', included: true },
       { id: 'groups-inf', label: 'Groupes illimités', included: true },
+      { id: 'no-ads', label: 'Sans publicités', included: true },
       { id: 'debate-d', label: '1 débat créé chaque jour', included: true },
       { id: 'voice', label: 'Salons vocaux pour tes groupes', included: true },
       { id: 'salon-inf', label: 'Salons publics sans limite', included: true },

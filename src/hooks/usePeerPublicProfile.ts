@@ -11,6 +11,7 @@ import {
   shouldFetchCloudChatAvatar,
 } from '../utils/chatAuthorModularAvatar'
 import { peekChatAuthorAvatarCache } from './useChatAuthorModularAvatars'
+import type { SubscriptionTierId } from '../types/subscription'
 
 const PEER_PROFILE_REFRESH_MS = 12_000
 /** Au-delà, on lève le skeleton même si le RPC trainaille. */
@@ -41,6 +42,7 @@ function profileFromPeerAndCache(
 export function usePeerPublicProfile(peer: User | undefined, selfUserId: string | undefined) {
   const [cloudProfile, setCloudProfile] = useState<UserProfile | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTierId | null>(null)
   const [loading, setLoading] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const peerRef = useRef(peer)
@@ -67,12 +69,14 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
     if (!peerId || !currentPeer || peerIsBot || !isSupabaseConfigured()) {
       setCloudProfile(null)
       setDisplayName(null)
+      setSubscriptionTier(null)
       setLoading(false)
       return
     }
     if (!shouldFetchCloudChatAvatar(peerId, selfUserId ?? '')) {
       setCloudProfile(null)
       setDisplayName(null)
+      setSubscriptionTier(null)
       setLoading(false)
       return
     }
@@ -116,6 +120,7 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
           ...(profilePhotoDataUrl ? { profilePhotoDataUrl } : {}),
         })
         setDisplayName(cloudName)
+        setSubscriptionTier(row.subscriptionTier)
         setCloudProfile({
           ...base,
           ...(modular ? { modularAvatar: modular } : {}),
@@ -137,5 +142,5 @@ export function usePeerPublicProfile(peer: User | undefined, selfUserId: string 
     }
   }, [peerId, peerIsBot, selfUserId, refreshTick])
 
-  return { cloudProfile, displayName, loading }
+  return { cloudProfile, displayName, loading, subscriptionTier }
 }

@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { AdsenseScriptLoader } from './components/ads/AdsenseScriptLoader'
+import { InterstitialAdsHost } from './components/ads/InterstitialAdsHost'
 import { PageLoader } from './components/ui/PageLoader'
 import { AppShell } from './layout/AppShell'
 import { LoginPage } from './pages/Login'
@@ -51,6 +52,7 @@ import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
 import { SeasonModeProvider } from './contexts/SeasonModeContext'
 import { Cdm2026DataProvider } from './contexts/Cdm2026DataContext'
 import { AppShellProviders } from './providers/AppShellProviders'
+import { FrenchSpellcheckRoot } from './components/FrenchSpellcheckRoot'
 
 function RouteSuspense({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
@@ -110,6 +112,8 @@ export default function App() {
   return (
     <>
       <RevenueCatIdentityBridge />
+      <FrenchSpellcheckRoot />
+      <InterstitialAdsHost />
       <AdsenseScriptLoader />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

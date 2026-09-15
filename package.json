@@ -30,6 +30,7 @@
     "android:debug": "npm run build:mobile && cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.1.0",
     "@capacitor/android": "^8.4.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8.0.3",

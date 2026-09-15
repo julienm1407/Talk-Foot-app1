@@ -25,6 +25,9 @@ import {
   MODULAR_PP_NAV_FRAMING,
   ProfileCharacterThumb,
 } from '../components/profile/ProfileCharacterThumb'
+import { UltraAvatarFrame } from '../components/subscription/UltraAvatarFrame'
+import { useSubscription } from '../hooks/useSubscription'
+import { tierHasUltraAvatarFrame } from '../utils/ultraAvatarFrame'
 import { NavWalletBalances } from './NavWalletBalances'
 import { useOptionalSeasonMode } from '../contexts/SeasonModeContext'
 import { TopBarBackButton } from './TopBarBackButton'
@@ -35,6 +38,7 @@ import { hardNavigateTo, isProfilePath } from '../utils/hardNavigate'
 export function TopBar() {
   const { user: authUser } = useAuth()
   const { profile } = useProfile()
+  const { tier } = useSubscription()
   const { appearance } = useAppearance()
   const location = useLocation()
   const L = appearance === 'light'
@@ -418,14 +422,17 @@ export function TopBar() {
             )}
             aria-label={`Profil — niveau ${profile.level}`}
           >
-            <ProfileCharacterThumb
-              profile={profile}
-              size="sm"
-              shellPx={28}
-              {...MODULAR_PP_NAV_FRAMING}
-              className="!h-6 !w-6 !min-h-6 !min-w-6 shrink-0 rounded-full border-0 p-0 ring-2 ring-white/25 min-[420px]:!h-7 min-[420px]:!w-7 min-[420px]:!min-h-7 min-[420px]:!min-w-7 sm:!h-8 sm:!w-8 sm:!min-h-8 sm:!min-w-8"
-              aria-label="Mon avatar in-app"
-            />
+            <span className="relative inline-flex shrink-0">
+              <ProfileCharacterThumb
+                profile={profile}
+                size="sm"
+                shellPx={28}
+                {...MODULAR_PP_NAV_FRAMING}
+                className="!h-6 !w-6 !min-h-6 !min-w-6 shrink-0 rounded-full border-0 p-0 ring-2 ring-white/25 min-[420px]:!h-7 min-[420px]:!w-7 min-[420px]:!min-h-7 min-[420px]:!min-w-7 sm:!h-8 sm:!w-8 sm:!min-h-8 sm:!min-w-8"
+                aria-label="Mon avatar in-app"
+              />
+              {tierHasUltraAvatarFrame(tier) ? <UltraAvatarFrame size="compact" /> : null}
+            </span>
             <span
               className="hidden shrink-0 rounded-lg bg-tf-cta px-1 py-0.5 text-[9px] font-black tabular-nums text-white shadow-tf-cta min-[1280px]:inline-flex min-[1280px]:px-1.5 min-[1280px]:text-[10px]"
               title={`Niveau ${profile.level}`}

@@ -7,6 +7,8 @@ import { resolveProfileModularAvatarForDisplay } from '../../utils/chatAuthorMod
 import { ModularAvatarPortrait } from './ModularAvatarCanvas'
 import { DressableCharacter } from './DressableCharacter'
 import { SalonBotHeadThumb } from '../channel/SalonBotHeadThumb'
+import { tierHasUltraAvatarFrame } from '../../utils/ultraAvatarFrame'
+import type { SubscriptionTierId } from '../../types/subscription'
 
 const AVATAR_SHELL =
   'relative mx-auto shrink-0 overflow-hidden rounded-2xl shadow-lg ring-4 ring-white/40 ' +
@@ -18,6 +20,7 @@ export function UserProfileAvatar({
   cloudProfile,
   profileLoading = false,
   displayName,
+  subscriptionTier,
   className,
 }: {
   peer: User
@@ -25,13 +28,20 @@ export function UserProfileAvatar({
   /** Chargement cloud — on n’affiche plus un bloc noir : contenu provisoire puis upgrade. */
   profileLoading?: boolean
   displayName?: string
+  subscriptionTier?: SubscriptionTierId | null
   className?: string
 }) {
   const [photoFailed, setPhotoFailed] = useState(false)
   const profile = cloudProfile ?? buildChatPeerProfile(peer)
   const photoUrl = profile.profilePhotoDataUrl?.trim()
   const hasModular = Boolean(profile.modularAvatar?.data)
-  const shellClass = cn(AVATAR_SHELL, className)
+  const showGold = tierHasUltraAvatarFrame(subscriptionTier ?? peer.subscriptionTier)
+  const shellClass = cn(
+    AVATAR_SHELL,
+    showGold &&
+      '!ring-amber-400 shadow-[0_0_22px_rgba(251,191,36,0.55)]',
+    className,
+  )
   const labelName = displayName?.trim() || peer.username
 
   // Skeleton seulement si vraiment rien à montrer (pas de cloud, pas de photo, pas de modular).

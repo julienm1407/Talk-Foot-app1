@@ -10,7 +10,9 @@ import {
   liveMatchTokenGrantAllowed,
   liveTokensEarnedThisHour,
   monthlyTokenGrantEligible,
+  monthlyTokenAllowance,
   normalizeSubscription,
+  shouldShowAdsForTier,
   toLocalHourKey,
   toLocalMonthKey,
 } from './subscriptionEntitlements'
@@ -78,12 +80,27 @@ describe('subscriptionEntitlements', () => {
     expect(liveTokensEarnedThisHour({ liveTokensHourKey: hour, liveTokensThisHour: 12 })).toBe(12)
   })
 
-  it('monthlyTokenGrantEligible une fois par mois', () => {
+  it('Ultra crée jusqu’à 10 groupes et rejoint sans plafond', () => {
+    expect(canCreateGroup('supporter_plus', 9).ok).toBe(true)
+    expect(canCreateGroup('supporter_plus', 10).ok).toBe(false)
+    expect(canCreateGroup('supporter_plus', 10).limit).toBe(10)
+    expect(canJoinGroup('supporter_plus', 500).ok).toBe(true)
+    expect(canJoinGroup('supporter_plus', 500).limit).toBe(null)
+  })
+
+  it('Ambassadeur : groupes créés illimités, 1000 jetons / mois', () => {
+    expect(canCreateGroup('ambassador', 10_000).ok).toBe(true)
+    expect(monthlyTokenAllowance('ambassador')).toBe(1000)
+    expect(monthlyTokenAllowance('supporter_plus')).toBe(250)
+    expect(monthlyTokenGrantEligible('ambassador', {})).toBe(true)
     const month = toLocalMonthKey()
-    expect(monthlyTokenGrantEligible('supporter_plus', {})).toBe(true)
+    expect(monthlyTokenGrantEligible('supporter_plus', { monthlyTokensMonthKey: month })).toBe(false)
     expect(monthlyTokenGrantEligible('freemium', {})).toBe(false)
-    expect(
-      monthlyTokenGrantEligible('supporter_plus', { monthlyTokensMonthKey: month }),
-    ).toBe(false)
+  })
+
+  it('pubs seulement en Supporter', () => {
+    expect(shouldShowAdsForTier('freemium')).toBe(true)
+    expect(shouldShowAdsForTier('supporter_plus')).toBe(false)
+    expect(shouldShowAdsForTier('ambassador')).toBe(false)
   })
 })

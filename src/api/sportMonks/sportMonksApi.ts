@@ -9,6 +9,7 @@ import {
   SM_INCLUDE_FIXTURE_EVENTS_TIMELINE,
   SM_INCLUDE_FIXTURE_TRENDS,
   SM_INCLUDE_FIXTURE_LINEUPS,
+  SM_INCLUDE_FIXTURE_LINEUPS_MIN,
   SM_INCLUDE_FIXTURE_LIST,
   SM_INCLUDE_FIXTURE_XG,
   SM_INCLUDE_INPLAY,
@@ -242,19 +243,34 @@ export async function fetchSportMonksFixtureTrends(
 }
 
 /**
- * Compos officielles + staff — même `include` que l’API fixture :
- * `…lineups…;metadata.type;coaches;formations;trends.type;trends.participant` (forme + compos en un appel)
+ * Compos officielles + staff — même `include` que l’API fixture.
+ * Si SM refuse un include (400), on retente une version minimale pour ne pas
+ * perdre tout le onze.
  */
 export async function fetchSportMonksFixtureLineups(
   token: string,
   fixtureId: number,
 ): Promise<SmFixture | null> {
-  const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(
-    `/fixtures/${fixtureId}`,
-    token,
-    { include: SM_INCLUDE_FIXTURE_LINEUPS },
-  )
-  return envelopeDataAsFixture(json.data)
+  try {
+    const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(
+      `/fixtures/${fixtureId}`,
+      token,
+      { include: SM_INCLUDE_FIXTURE_LINEUPS },
+    )
+    return envelopeDataAsFixture(json.data)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (!/SportMonks (400|403)/.test(msg) && !/include/i.test(msg)) throw err
+    if (import.meta.env.DEV) {
+      console.warn('[Talk Foot] lineups include refusé, repli minimal:', msg)
+    }
+    const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(
+      `/fixtures/${fixtureId}`,
+      token,
+      { include: SM_INCLUDE_FIXTURE_LINEUPS_MIN },
+    )
+    return envelopeDataAsFixture(json.data)
+  }
 }
 
 /**

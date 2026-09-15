@@ -111,6 +111,7 @@ import type { LineupSubstituteWithOverlay } from '../components/channel/MatchLin
 import { attachLineupOverlaysToLayout, computeLineupPitchLayout } from '../utils/lineupPitchPositions'
 import { getSportMonksToken } from '../utils/apiTokens'
 import { MODERATION_REFUSED_MESSAGE_FR, moderateChatText } from '../utils/bannedWords'
+import { applyFrenchLiveCorrection, correctFrenchText, FR_SPELLCHECK_ATTRS } from '../utils/frAutoCorrect'
 import { resolveTeamLogoUrl } from '../utils/catalogLogos'
 import {
   clampLiveGoalRowsToScore,
@@ -1809,7 +1810,7 @@ export function ChannelPage() {
     if (chatLocked) return
     if (!match?.id) return
     if (chatSendingRef.current) return
-    const text = chatDraftRef.current.trim()
+    const text = correctFrenchText(chatDraftRef.current).trim()
     if (!text) return
     chatSendingRef.current = true
     setChatSending(true)
@@ -4216,8 +4217,10 @@ export function ChannelPage() {
               <input
                 ref={chatInputRef}
                 defaultValue=""
+                {...FR_SPELLCHECK_ATTRS}
                 onChange={(e) => {
-                  chatDraftRef.current = e.target.value
+                  applyFrenchLiveCorrection(e.currentTarget, e.nativeEvent)
+                  chatDraftRef.current = e.currentTarget.value
                 }}
                 placeholder={
                   chatLocked
@@ -4227,7 +4230,7 @@ export function ChannelPage() {
                       : 'Écrire un message…'
                 }
                 disabled={chatLocked || !isCloudChatConfigured || chatSending}
-                className={`min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-base text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
+                className={`tf-chat-field min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-base text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
                   L
                     ? 'placeholder:text-[#4a6682] disabled:placeholder:text-[#3d5670]'
                     : 'placeholder:text-slate-400 disabled:placeholder:text-slate-500'

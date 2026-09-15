@@ -31,8 +31,9 @@ export function AdSlot({
   className?: string
 }) {
   const { pathname } = useLocation()
-  const { tier } = useSubscription()
+  const { tier, showAds } = useSubscription()
   const placementKey = imageSeed
+  if (!showAds) return null
   const liveUnit = getLiveAdsenseUnit(placementKey, pathname)
   const live =
     liveUnit && shouldServeLiveAdsense(pathname, { contentReady, subscriptionTier: tier })

@@ -26,6 +26,7 @@ import {
 } from '../utils/boutiqueCatalog'
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
+import { RewardedTokenAdButton } from '../components/ads/RewardedTokenAdButton'
 import { catalogTabForShopItem, boutiqueMedalPacksHref } from '../utils/boutiquePurchaseFlow'
 
 /** Canvas studio lourd : chargé seulement à l’ouverture d’un article. */
@@ -277,6 +278,7 @@ export function BoutiquePage() {
                 {wallet.tokens}
                 <TokenGlyph variant="onDark" className="size-7" />
               </div>
+              <RewardedTokenAdButton className="mt-3" />
             </div>
           </div>
 

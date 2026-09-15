@@ -73,7 +73,10 @@ export function useSportMonksFixtureLineups(
         setBundle(extractMatchLineupBundleFromFixture(fx))
         setRecentForm(extractSmRecentFormFromFixture(fx))
       })
-      .catch(() => {
+      .catch((err) => {
+        if (import.meta.env.DEV) {
+          console.warn('[Talk Foot] fetch lineups:', err)
+        }
         if (!cancelled) {
           setBundle(null)
           setRecentForm(null)

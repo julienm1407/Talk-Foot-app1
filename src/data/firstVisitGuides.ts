@@ -64,7 +64,7 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     eyebrow: 'Supporters',
     title: 'Trois formules',
     body: 'Supporter est gratuit. Ultra et Ambassadeur débloquent plus de tribunes, de jetons et d’options live.',
-    bullets: ['Ultra : 4,99 € / mois', 'Ambassadeur : 14,99 € / mois', 'Tu peux rester gratuit'],
+    bullets: ['Ultra : 4,99 € / mois', 'Ambassadeur : 14,99 € / mois', 'Le gratuit a des pubs plein écran sur l’app'],
   },
   pronostic: {
     id: 'pronostic',

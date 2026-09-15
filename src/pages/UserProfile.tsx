@@ -62,10 +62,8 @@ export function UserProfilePage() {
     }
   }, [authUser?.id, userId, navigate])
 
-  const { cloudProfile, displayName: cloudDisplayName, loading: profileLoading } = usePeerPublicProfile(
-    peer ?? undefined,
-    authUser?.id,
-  )
+  const { cloudProfile, displayName: cloudDisplayName, loading: profileLoading, subscriptionTier: peerTier } =
+    usePeerPublicProfile(peer ?? undefined, authUser?.id)
 
   const useCloudFriends = isSupabaseConfigured() && Boolean(authUser?.id)
   const isFriend = Boolean(
@@ -249,6 +247,7 @@ export function UserProfilePage() {
               cloudProfile={cloudProfile}
               profileLoading={profileLoading}
               displayName={displayUsername}
+              subscriptionTier={peerTier}
             />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
