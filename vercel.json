@@ -28,7 +28,7 @@
   "crons": [
     {
       "path": "/api/push-kickoff",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }

@@ -1,0 +1,13 @@
+android
+ios
+node_modules
+dist
+.npm-project-cache
+.mcp-global
+.npm-cache-global
+_import_club_kits
+_import_club_kits_v2
+*.aab
+*.apk
+*.keystore
+*.jks
