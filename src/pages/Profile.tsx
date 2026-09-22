@@ -133,8 +133,11 @@ export function ProfilePage() {
   }, [])
 
   const handleLogout = () => {
-    logout()
-    hardNavigateTo('/login')
+    void Promise.resolve(logout()).finally(() => {
+      if (!window.location.pathname.startsWith('/login')) {
+        hardNavigateTo('/login')
+      }
+    })
   }
 
   const pr = getAppSectionTheme('profile')
@@ -234,10 +237,10 @@ export function ProfilePage() {
               L ? 'text-sky-700' : 'text-sky-300',
             )}
           >
-            NOTIFICATIONS
+            NOTIFICATIONS MATCH
           </p>
           <h2 className="font-display mt-1 text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
-            Activer les notifications
+            {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer les notifications'}
           </h2>
           <p className="mt-1 text-sm font-semibold text-tf-app-muted">
             15 min avant le match de tes clubs favoris. Sur l’app Android, ça ouvre le message

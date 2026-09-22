@@ -52,7 +52,7 @@ function ProfilePrivacyActionsInner({ clerkSessionId }: { clerkSessionId: string
     }
 
     purgeAllTalkFootBrowserStorage()
-    logout()
+    await Promise.resolve(logout())
     navigate('/login', { replace: true })
 
     if (cloudError) {

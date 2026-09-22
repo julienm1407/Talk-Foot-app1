@@ -12,6 +12,7 @@ import { isAdminEmail } from '../config/adminAccess'
 import { hashPasswordForStorage, verifyPasswordAgainstStored } from '../utils/passwordHash'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
+import { invalidateSupabaseChatSessionCache } from '../lib/supabase/ensureSession'
 import { getSupabaseOAuthRedirectTo, getSupabasePasswordResetRedirectTo, getClerkOAuthRedirectUrl, getClerkOAuthCompleteUrl } from '../lib/supabase/oauthRedirect'
 import { openExternalUrl } from '../mobile/openExternalUrl'
 import { Capacitor } from '@capacitor/core'
@@ -84,7 +85,7 @@ export type AuthContextValue = AuthState & {
   /** Demande de réinitialisation (email ou pseudo). */
   requestPasswordReset: (identifier: string) => Promise<PasswordResetRequestResult>
   loginWithOAuthProvider: (provider: TalkFootOauthProviderId) => Promise<boolean>
-  logout: () => void
+  logout: () => void | Promise<void>
   updateProfile: (displayName: string) => void
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>
   /** Cloud : inscription sans session immédiate (confirmation email). */
@@ -303,6 +304,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     saveStored(null)
     setState((s) => ({ ...s, user: null }))
+    window.location.assign('/login')
   }, [])
 
   const updateProfile = useCallback((displayName: string) => {
@@ -585,8 +587,12 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    invalidateSupabaseChatSessionCache()
+    setState((s) => ({ ...s, user: null }))
     const sb = getSupabaseBrowserClient()
-    await sb?.auth.signOut()
+    await sb?.auth.signOut({ scope: 'local' }).catch(() => undefined)
+    await sb?.auth.signOut().catch(() => undefined)
+    window.location.assign('/login')
   }, [])
 
   const updateProfile = useCallback((displayName: string) => {
@@ -665,10 +671,15 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const { isLoaded: signInLoaded, signIn, setActive: setSignInActive } = useSignIn()
   const { isLoaded: signUpLoaded, signUp, setActive: setSignUpActive } = useSignUp()
   const [authNotice, setAuthNotice] = useState<string | null>(null)
+  const [forceSignedOut, setForceSignedOut] = useState(false)
   const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
   const stableUserRef = useRef<AuthUser | null>(null)
   const clerkSessionIdRef = useRef<string | null>(session?.id ?? null)
   const isLoaded = clerkAuthLoaded && userLoaded && signInLoaded && signUpLoaded
+
+  useEffect(() => {
+    if (isSignedIn && userId) setForceSignedOut(false)
+  }, [isSignedIn, userId])
 
   if (session?.id) {
     clerkSessionIdRef.current = session.id
@@ -679,21 +690,13 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   const clerkSessionId = session?.id ?? (userId ? clerkSessionIdRef.current : null)
 
   const mappedUser: AuthUser | null = useMemo(() => {
-    if (!userId) {
-      if (isLoaded && stableUserRef.current && (session?.id || clerkSessionIdRef.current)) {
-        return stableUserRef.current
-      }
-      if (isLoaded) {
-        stableUserRef.current = null
-      }
+    if (forceSignedOut || (isLoaded && !isSignedIn)) {
+      stableUserRef.current = null
       return null
     }
 
-    if (!isSignedIn) {
-      if (stableUserRef.current?.id === userId) {
-        return stableUserRef.current
-      }
-      stableUserRef.current = null
+    if (!userId) {
+      if (isLoaded) stableUserRef.current = null
       return null
     }
 
@@ -727,7 +730,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     })
     stableUserRef.current = fallback
     return fallback
-  }, [user, isSignedIn, userId, isLoaded, session?.id])
+  }, [user, isSignedIn, userId, isLoaded, session?.id, forceSignedOut])
 
   const login = useCallback((_user: AuthUser) => {
     /* géré par Clerk */
@@ -847,7 +850,22 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
-    await clerk.signOut()
+    setForceSignedOut(true)
+    stableUserRef.current = null
+    clerkSessionIdRef.current = null
+    invalidateSupabaseChatSessionCache()
+    const sb = getSupabaseBrowserClient()
+    await sb?.auth.signOut({ scope: 'local' }).catch(() => undefined)
+    await sb?.auth.signOut().catch(() => undefined)
+    saveStored(null)
+    try {
+      await clerk.signOut({ redirectUrl: '/login' })
+    } catch {
+      await clerk.signOut()
+    }
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login')
+    }
   }, [clerk])
 
   const updateProfile = useCallback(
