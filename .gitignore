@@ -47,3 +47,5 @@ DerivedData/
 # Import temporaire maillots (zip décompressé)
 _import_club_kits/
 _import_club_kits_v2/
+
+.vercel

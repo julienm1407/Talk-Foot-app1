@@ -125,6 +125,11 @@ export function ProfilePage() {
       const root = document.getElementById(id)
       if (root?.childElementCount) root.replaceChildren()
     }
+    if (window.location.hash === '#notifications') {
+      window.setTimeout(() => {
+        document.getElementById('notifications')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 80)
+    }
   }, [])
 
   const handleLogout = () => {
@@ -207,6 +212,92 @@ export function ProfilePage() {
           </Button>
         </div>
       </header>
+
+      <Card
+        id="notifications"
+        className={cn(
+          'scroll-mt-4 overflow-hidden p-0',
+          kickoffAlertsEnabled
+            ? L
+              ? 'border-2 border-sky-500/55 bg-gradient-to-br from-sky-50 via-white to-cyan-50/80'
+              : 'border-2 border-sky-400/45 bg-gradient-to-br from-sky-950/50 via-slate-900/40 to-cyan-950/30'
+            : L
+              ? 'border-sky-300/50 bg-gradient-to-br from-white to-sky-50/90'
+              : 'border-sky-400/25 bg-gradient-to-br from-slate-900/50 to-sky-950/25',
+        )}
+        elevation="soft"
+      >
+        <div className="px-5 py-5 sm:px-6 sm:py-6">
+          <p
+            className={cn(
+              'text-[11px] font-black tracking-[0.22em]',
+              L ? 'text-sky-700' : 'text-sky-300',
+            )}
+          >
+            NOTIFICATIONS
+          </p>
+          <h2 className="font-display mt-1 text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
+            Activer les notifications
+          </h2>
+          <p className="mt-1 text-sm font-semibold text-tf-app-muted">
+            15 min avant le match de tes clubs favoris. Sur l’app Android, ça ouvre le message
+            « Autoriser les notifications ».
+          </p>
+          {favoriteClubIds.length === 0 ? (
+            <p
+              className={cn(
+                'mt-3 rounded-xl border px-3 py-2 text-xs font-bold',
+                L
+                  ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
+                  : 'border-amber-400/35 bg-amber-950/50 text-amber-100',
+              )}
+            >
+              Choisis d’abord un club favori plus bas, sinon il n’y a aucun match à rappeler.
+            </p>
+          ) : (
+            <p className="mt-2 text-xs font-bold text-tf-app-muted">Clubs suivis : {clubsLabel}</p>
+          )}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={kickoffAlertsEnabled}
+            aria-label={
+              kickoffAlertsEnabled
+                ? 'Désactiver les notifications coup d’envoi'
+                : 'Activer les notifications coup d’envoi'
+            }
+            onClick={() => setKickoffAlertsEnabled(!kickoffAlertsEnabled)}
+            className={cn(
+              'mt-4 relative h-16 w-full max-w-[280px] rounded-2xl border-2 px-2 transition',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50',
+              kickoffAlertsEnabled
+                ? L
+                  ? 'border-sky-600 bg-sky-600 text-white shadow-lg'
+                  : 'border-sky-400 bg-sky-500/90 text-white shadow-lg'
+                : L
+                  ? 'border-tf-dark/15 bg-white text-tf-app-fg shadow-sm'
+                  : 'border-white/15 bg-white/10 text-sky-100 shadow-sm',
+            )}
+          >
+            <span
+              className={cn(
+                'pointer-events-none absolute top-1.5 size-[3.25rem] rounded-xl shadow-md transition-all duration-300 ease-out',
+                L ? 'bg-white' : 'bg-slate-900/90',
+                kickoffAlertsEnabled ? 'left-[calc(100%-3.65rem)]' : 'left-1.5',
+              )}
+              aria-hidden
+            />
+            <span
+              className={cn(
+                'relative z-[1] flex h-full w-full items-center text-sm font-black',
+                kickoffAlertsEnabled ? 'justify-end pr-3' : 'justify-start pl-[3.5rem]',
+              )}
+            >
+              {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer les notifications'}
+            </span>
+          </button>
+        </div>
+      </Card>
 
       <div id="compte" className="scroll-mt-4 space-y-3 sm:space-y-4">
         {mayEditArticles ? (
@@ -358,92 +449,6 @@ export function ProfilePage() {
               </p>
             </div>
           </div>
-        </div>
-      </Card>
-
-      <Card
-        id="notifications"
-        className={cn(
-          'scroll-mt-4 overflow-hidden p-0',
-          kickoffAlertsEnabled
-            ? L
-              ? 'border-2 border-sky-500/55 bg-gradient-to-br from-sky-50 via-white to-cyan-50/80'
-              : 'border-2 border-sky-400/45 bg-gradient-to-br from-sky-950/50 via-slate-900/40 to-cyan-950/30'
-            : L
-              ? 'border-sky-300/50 bg-gradient-to-br from-white to-sky-50/90'
-              : 'border-sky-400/25 bg-gradient-to-br from-slate-900/50 to-sky-950/25',
-        )}
-        elevation="soft"
-      >
-        <div className="px-5 py-5 sm:px-6 sm:py-6">
-          <p
-            className={cn(
-              'text-[11px] font-black tracking-[0.22em]',
-              L ? 'text-sky-700' : 'text-sky-300',
-            )}
-          >
-            NOTIFICATIONS MATCH
-          </p>
-          <h2 className="font-display mt-1 text-xl font-black tracking-tight text-tf-app-fg sm:text-2xl">
-            Pop-up coup d’envoi
-          </h2>
-          <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-            15 min avant le match de tes clubs favoris. Sur l’app Android, ça ouvre le message
-            « Autoriser les notifications ».
-          </p>
-          {favoriteClubIds.length === 0 ? (
-            <p
-              className={cn(
-                'mt-3 rounded-xl border px-3 py-2 text-xs font-bold',
-                L
-                  ? 'border-amber-200/80 bg-amber-50/90 text-amber-950'
-                  : 'border-amber-400/35 bg-amber-950/50 text-amber-100',
-              )}
-            >
-              Choisis d’abord un club favori plus bas, sinon il n’y a aucun match à rappeler.
-            </p>
-          ) : (
-            <p className="mt-2 text-xs font-bold text-tf-app-muted">Clubs suivis : {clubsLabel}</p>
-          )}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={kickoffAlertsEnabled}
-            aria-label={
-              kickoffAlertsEnabled
-                ? 'Désactiver les notifications coup d’envoi'
-                : 'Activer les notifications coup d’envoi'
-            }
-            onClick={() => setKickoffAlertsEnabled(!kickoffAlertsEnabled)}
-            className={cn(
-              'mt-4 relative h-16 w-full max-w-[220px] rounded-2xl border-2 px-2 transition',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50',
-              kickoffAlertsEnabled
-                ? L
-                  ? 'border-sky-600 bg-sky-600 text-white shadow-lg'
-                  : 'border-sky-400 bg-sky-500/90 text-white shadow-lg'
-                : L
-                  ? 'border-tf-dark/15 bg-white text-tf-app-fg shadow-sm'
-                  : 'border-white/15 bg-white/10 text-sky-100 shadow-sm',
-            )}
-          >
-            <span
-              className={cn(
-                'pointer-events-none absolute top-1.5 size-[3.25rem] rounded-xl shadow-md transition-all duration-300 ease-out',
-                L ? 'bg-white' : 'bg-slate-900/90',
-                kickoffAlertsEnabled ? 'left-[calc(100%-3.65rem)]' : 'left-1.5',
-              )}
-              aria-hidden
-            />
-            <span
-              className={cn(
-                'relative z-[1] flex h-full w-full items-center text-sm font-black',
-                kickoffAlertsEnabled ? 'justify-end pr-3' : 'justify-start pl-[3.5rem]',
-              )}
-            >
-              {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer'}
-            </span>
-          </button>
         </div>
       </Card>
 

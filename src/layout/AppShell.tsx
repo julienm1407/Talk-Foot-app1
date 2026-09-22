@@ -10,6 +10,7 @@ import { FirstVisitGuideModal } from '../components/onboarding/FirstVisitGuideMo
 import { OAuthProfileSetupModal } from '../components/auth/OAuthProfileSetupModal'
 import { ActivityRouteLogger } from '../components/sync/ActivityRouteLogger'
 import { FanSetupBanner } from '../components/fan/FanSetupBanner'
+import { KickoffAlertsBanner } from '../components/fan/KickoffAlertsBanner'
 import { PageAdRails } from './PageAdRails'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
@@ -65,6 +66,7 @@ export function AppShell() {
       <FirstVisitGuideModal />
       <TopBar />
       <FanSetupBanner />
+      <KickoffAlertsBanner />
 
       <main
         id="main-content"

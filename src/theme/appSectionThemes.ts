@@ -412,6 +412,7 @@ export const BOTTOM_NAV_MORE_ROUTES: {
   { to: '/formules', section: 'formules', icon: '⭐', hint: 'Ultra & Ambassadeur' },
   { to: '/pronostic', section: 'pronostic', icon: '🎯', hint: 'Paris & gains' },
   { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Ligues & podium' },
+  { to: '/profile#notifications', section: 'profile', icon: '🔔', hint: 'Activer les notifications match' },
 ]
 
 export const BOTTOM_NAV_ROUTES: BottomNavRoute[] = [
