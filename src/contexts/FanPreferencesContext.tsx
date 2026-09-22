@@ -55,6 +55,7 @@ export type FanPreferencesState = {
   preferencesComplete: boolean
   hideRivalSalons: boolean
   virageMode: boolean
+  kickoffAlertsEnabled: boolean
 }
 
 type FanPreferencesContextValue = FanPreferencesState & {
@@ -67,6 +68,7 @@ type FanPreferencesContextValue = FanPreferencesState & {
   maxFavoriteNations: number
   setHideRivalSalons: (v: boolean) => void
   setVirageMode: (v: boolean) => void
+  setKickoffAlertsEnabled: (v: boolean) => void
   completeOnboarding: (leagueId: string, clubIds: string[]) => void
   resetPreferences: () => void
   openOnboarding: () => void
@@ -100,6 +102,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       preferencesComplete: stored.preferencesComplete ?? false,
       hideRivalSalons: stored.hideRivalSalons ?? false,
       virageMode: stored.virageMode ?? false,
+      kickoffAlertsEnabled: stored.kickoffAlertsEnabled ?? false,
     }
   }, [stored])
 
@@ -197,6 +200,10 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     [patch],
   )
   const setVirageMode = useCallback((v: boolean) => patch({ virageMode: v }), [patch])
+  const setKickoffAlertsEnabled = useCallback(
+    (v: boolean) => patch({ kickoffAlertsEnabled: v }),
+    [patch],
+  )
 
   const completeOnboarding = useCallback(
     (leagueId: string, clubIds: string[]) => {
@@ -239,6 +246,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       maxFavoriteNations: MAX_FAVORITE_NATIONS,
       setHideRivalSalons,
       setVirageMode,
+      setKickoffAlertsEnabled,
       completeOnboarding,
       resetPreferences,
       openOnboarding,
@@ -255,6 +263,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       isNationFavorite,
       setHideRivalSalons,
       setVirageMode,
+      setKickoffAlertsEnabled,
       completeOnboarding,
       resetPreferences,
       openOnboarding,

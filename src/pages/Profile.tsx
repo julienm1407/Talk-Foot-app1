@@ -70,6 +70,8 @@ export function ProfilePage() {
     setVirageMode,
     hideRivalSalons,
     setHideRivalSalons,
+    kickoffAlertsEnabled,
+    setKickoffAlertsEnabled,
     openOnboarding,
     preferencesComplete,
   } = useFanPreferences()
@@ -573,6 +575,29 @@ export function ProfilePage() {
             Masquer tribunes rivales
           </label>
         </div>
+        <label
+          className={cn(
+            'mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-3',
+            profileIncard(appearance),
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={kickoffAlertsEnabled}
+            onChange={(e) => setKickoffAlertsEnabled(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0 rounded border-[color:var(--tf-c30-border)]"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-tf-app-fg">
+              Pop-up coup d’envoi (clubs favoris)
+            </span>
+            <span className="mt-0.5 block text-xs font-semibold text-tf-app-muted">
+              15 min avant le match de tes clubs, une notification Android s’affiche même si l’app
+              est fermée. Active-le dans l’app Play, et autorise les notifications.
+              {favoriteClubIds.length === 0 ? ' Ajoute d’abord un club favori.' : ''}
+            </span>
+          </span>
+        </label>
       </Card>
 
       {/* Classement parieur */}

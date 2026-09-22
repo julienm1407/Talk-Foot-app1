@@ -7,6 +7,10 @@ import { cn } from '../../utils/cn'
 export const MOBILE_CHAT_COMPOSER_DOCK_HEIGHT =
   'calc(11rem + env(safe-area-inset-bottom, 0px))'
 
+/** Live match : saisie + barre Match / Compo / Paris / Stade. */
+export const CHANNEL_MOBILE_COMPOSER_STACK_HEIGHT =
+  'calc(8.75rem + env(safe-area-inset-bottom, 0px))'
+
 /**
  * Sur mobile tactile : barre de saisie fixée au-dessus de la BottomNav (portail body).
  * Sur desktop : rendu inline classique.
@@ -16,25 +20,36 @@ export function MobileChatComposerDock({
   className,
   gridRowClassName,
   ariaLabel = 'Écrire un message',
+  variant = 'nav',
 }: {
   children: ReactNode
   className?: string
   gridRowClassName?: string
   ariaLabel?: string
+  /** `channel` : au-dessus des onglets Match / Compo / Paris / Stade (pas de BottomNav). */
+  variant?: 'nav' | 'channel'
 }) {
   const mobileTouch = useIsMobileTouchViewport()
+  const spacerHeight =
+    variant === 'channel' ? CHANNEL_MOBILE_COMPOSER_STACK_HEIGHT : MOBILE_CHAT_COMPOSER_DOCK_HEIGHT
 
   if (mobileTouch && typeof document !== 'undefined') {
     return (
       <>
-        <div
-          className={cn('shrink-0 lg:hidden', gridRowClassName)}
-          style={{ height: MOBILE_CHAT_COMPOSER_DOCK_HEIGHT }}
-          aria-hidden
-        />
+        {variant === 'channel' ? null : (
+          <div
+            className={cn('shrink-0 lg:hidden', gridRowClassName)}
+            style={{ height: spacerHeight }}
+            aria-hidden
+          />
+        )}
         {createPortal(
           <div
-            className="tf-chat-compose-mobile-shell pointer-events-auto touch-manipulation"
+            className={cn(
+              'tf-chat-compose-mobile-shell pointer-events-auto touch-manipulation',
+              variant === 'channel' && 'tf-chat-compose-mobile-shell--channel',
+            )}
+            data-tf-chat-compose={variant}
             role="region"
             aria-label={ariaLabel}
           >
@@ -44,6 +59,10 @@ export function MobileChatComposerDock({
         )}
       </>
     )
+  }
+
+  if (variant === 'channel') {
+    return <>{children}</>
   }
 
   return (

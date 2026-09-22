@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "REMPLACE_MOI",
+    "project_id": "talk-foot-REMPLACE_MOI",
+    "storage_bucket": "talk-foot-REMPLACE_MOI.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:REMPLACE_MOI:android:REMPLACE_MOI",
+        "android_client_info": {
+          "package_name": "com.talkfoot.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REMPLACE_MOI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

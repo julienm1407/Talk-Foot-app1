@@ -10,4 +10,6 @@ export type FanPreferencesStoredShape = {
   preferencesComplete?: boolean
   hideRivalSalons?: boolean
   virageMode?: boolean
+  /** Pop-up Android : rappel T−15 min des matchs des clubs favoris. */
+  kickoffAlertsEnabled?: boolean
 }

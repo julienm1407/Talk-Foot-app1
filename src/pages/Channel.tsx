@@ -45,6 +45,7 @@ import {
   ChannelSubscriptionExtras,
 } from '../components/channel/ChannelSubscriptionExtras'
 import { ChatPanelErrorBoundary } from '../components/channel/ChatPanelErrorBoundary'
+import { MobileChatComposerDock } from '../components/channel/MobileChatComposerDock'
 import {
   LiveMatchChatMessage,
   type LiveMatchChatMessageItem,
@@ -4005,9 +4006,18 @@ export function ChannelPage() {
                 {animationNotice}
               </div>
             ) : null}
+            <MobileChatComposerDock
+              variant="channel"
+              className={cn(
+                L
+                  ? 'border-slate-200/90 bg-white/95 shadow-[0_-8px_24px_rgba(15,40,70,0.08)]'
+                  : 'border-[#3a6690]/80 bg-[#0b2440]/96 shadow-[0_-10px_28px_rgba(2,12,28,0.45)]',
+                'backdrop-blur-sm',
+              )}
+            >
             <form
               onSubmit={onSend}
-              className="tf-channel-chat-form relative z-[20] mt-2 flex min-w-0 items-center gap-1.5 md:gap-2"
+              className="tf-channel-chat-form relative z-[20] mt-2 flex min-w-0 items-center gap-1.5 max-md:mt-0 md:gap-2"
             >
               {livePanelOpen ? (
                 <div className="absolute bottom-[calc(100%+8px)] left-0 z-20 w-[240px] rounded-lg bg-[#102945] p-1.5 shadow-xl">
@@ -4244,6 +4254,7 @@ export function ChannelPage() {
                 {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : chatSending ? 'Envoi…' : 'Envoyer'}
               </button>
             </form>
+            </MobileChatComposerDock>
             </ChatPanelErrorBoundary>
             </ChannelPrivateSalonGate>
             </div>

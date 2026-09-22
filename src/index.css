@@ -3054,6 +3054,24 @@ body::before {
   overflow: visible;
 }
 
+/* Live : au-dessus de Match / Compo / Paris / Stade (BottomNav absente). */
+.tf-chat-compose-mobile-shell--channel {
+  /* min-h-11 + padding dock + 12px + petit écart */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.85rem) !important;
+  z-index: 2147482510 !important;
+}
+
+body:has(.tf-chat-compose-mobile-shell--channel:focus-within) .tf-channel-mobile-dock-shell {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none !important;
+  transform: translateX(-50%) translateY(120%) translateZ(0);
+}
+
+body:has(.tf-chat-compose-mobile-shell--channel:focus-within) .tf-chat-compose-mobile-shell--channel {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.4rem) !important;
+}
+
 .tf-chat-compose-mobile-shell input,
 .tf-chat-compose-mobile-shell textarea {
   font-size: 16px;
@@ -3092,6 +3110,11 @@ body::before {
   transform: translateX(-50%) translateZ(0);
   -webkit-transform: translateX(-50%) translateZ(0);
   isolation: isolate;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms ease;
+}
+
+body:has([data-tf-channel-dock='true']) .tf-channel-shell {
+  padding-bottom: calc(8.25rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* FX tribune plein écran — au-dessus du dock mobile et hors overflow channel */

@@ -59,6 +59,7 @@ export function mergeFanPreferencesKeepFilled(
     preferencesComplete,
     hideRivalSalons: left.hideRivalSalons ?? right.hideRivalSalons ?? false,
     virageMode: left.virageMode ?? right.virageMode ?? false,
+    kickoffAlertsEnabled: left.kickoffAlertsEnabled ?? right.kickoffAlertsEnabled,
   }
 }
 

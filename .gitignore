@@ -24,6 +24,7 @@ dist-ssr
 *.jks
 android/keystore.properties
 android/local.properties
+android/app/google-services.json
 ios/App/App/private/
 *.p12
 *.mobileprovision
