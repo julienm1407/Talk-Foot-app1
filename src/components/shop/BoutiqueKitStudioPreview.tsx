@@ -16,36 +16,61 @@ const GARMENTS_ZOOM = {
 } as const
 
 const STUDIO_FRAME =
-  'mx-auto w-full max-w-[220px] overflow-hidden rounded-xl border border-white/15 bg-black/20 p-2 shadow-[0_16px_50px_rgba(2,8,23,0.55)] backdrop-blur-sm'
+  'mx-auto w-full max-w-[220px] overflow-hidden rounded-xl bg-transparent p-1'
 
 const VIEWPORT = 'relative aspect-[11/14] w-full'
 
 function catalogThumbSrc(item: AvatarItem): string | null {
   const show = resolveBoutiqueGarmentShow(item)
   if (show === 'shoes') return resolveBoutiqueShoeSrc(item)
-  if (show === 'both') {
-    return (
-      item.packVisual?.imageUrl?.trim() ||
-      item.jerseyVisual?.boutiqueImageUrl?.trim() ||
-      item.jerseyVisual?.imageUrl?.trim() ||
-      null
-    )
-  }
   if (show === 'jersey') {
-    return (
-      item.jerseyVisual?.boutiqueImageUrl?.trim() ||
-      item.jerseyVisual?.imageUrl?.trim() ||
-      null
-    )
+    return item.jerseyVisual?.imageUrl?.trim() || item.jerseyVisual?.boutiqueImageUrl?.trim() || null
   }
   if (show === 'shorts') {
-    return (
-      item.pantsVisual?.boutiqueImageUrl?.trim() ||
-      item.pantsVisual?.imageUrl?.trim() ||
-      null
-    )
+    return item.pantsVisual?.imageUrl?.trim() || item.pantsVisual?.boutiqueImageUrl?.trim() || null
   }
   return null
+}
+
+/** Pack complet : maillot + short en calques (pas le PNG pack fond blanc). */
+function PackKitLayeredPreview({ item }: { item: AvatarItem }) {
+  const jersey = item.jerseyVisual?.imageUrl?.trim() || item.jerseyVisual?.boutiqueImageUrl?.trim() || null
+  const shorts = item.pantsVisual?.imageUrl?.trim() || item.pantsVisual?.boutiqueImageUrl?.trim() || null
+  const [jerseyBroken, setJerseyBroken] = useState(false)
+  const [shortsBroken, setShortsBroken] = useState(false)
+  const showJersey = Boolean(jersey) && !jerseyBroken
+  const showShorts = Boolean(shorts) && !shortsBroken
+
+  if (!showJersey && !showShorts) {
+    return <CatalogThumbPlaceholder item={item} />
+  }
+
+  return (
+    <div className="relative h-full w-full">
+      {showJersey ? (
+        <img
+          src={jersey!}
+          alt=""
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          onError={() => setJerseyBroken(true)}
+          className="pointer-events-none absolute left-1/2 top-[2%] z-[1] h-[54%] w-[92%] max-w-none -translate-x-1/2 select-none object-contain object-bottom"
+        />
+      ) : null}
+      {showShorts ? (
+        <img
+          src={shorts!}
+          alt=""
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+          onError={() => setShortsBroken(true)}
+          className="pointer-events-none absolute bottom-[2%] left-1/2 z-[2] h-[50%] w-[84%] max-w-none -translate-x-1/2 select-none object-contain object-top"
+        />
+      ) : null}
+    </div>
+  )
 }
 
 function CatalogThumbPlaceholder({ item }: { item: AvatarItem }) {
@@ -191,7 +216,18 @@ export function BoutiqueKitStudioPreview({
     )
   }
 
-  // Grille boutique : PNG catalogue (fiable). Le canvas 3D/modulaire reste pour le modal d'achat.
+  if (garmentsShow === 'both') {
+    return (
+      <div ref={rootRef} className={cn('flex w-full max-w-full items-end justify-center', className)}>
+        <div className={STUDIO_FRAME}>
+          <div className={VIEWPORT}>
+            <PackKitLayeredPreview item={item} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const preferStaticThumb = Boolean(catalogThumbSrc(item))
   return (
     <div ref={rootRef} className={cn('flex w-full max-w-full items-end justify-center', className)}>

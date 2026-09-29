@@ -3061,14 +3061,14 @@ body::before {
   z-index: 2147482510 !important;
 }
 
-body:has(.tf-chat-compose-mobile-shell--channel:focus-within) .tf-channel-mobile-dock-shell {
+body:has(.tf-chat-compose-mobile-shell--channel .tf-chat-field:focus) .tf-channel-mobile-dock-shell {
   opacity: 0;
   visibility: hidden;
   pointer-events: none !important;
   transform: translateX(-50%) translateY(120%) translateZ(0);
 }
 
-body:has(.tf-chat-compose-mobile-shell--channel:focus-within) .tf-chat-compose-mobile-shell--channel {
+body:has(.tf-chat-compose-mobile-shell--channel .tf-chat-field:focus) .tf-chat-compose-mobile-shell--channel {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.4rem) !important;
 }
 

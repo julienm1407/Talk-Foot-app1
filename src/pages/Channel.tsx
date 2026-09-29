@@ -1508,6 +1508,7 @@ export function ChannelPage() {
   )
   const chatOpenAtMs = kickoffMs != null ? kickoffMs - MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS : null
   const chatLocked = status === 'upcoming' && chatOpenAtMs != null && nowMs < chatOpenAtMs
+  const chatComposerLocked = chatLocked || isFinished
   const chatCountdownText = useMemo(() => {
     if (!chatLocked || chatOpenAtMs == null) return null
     const remainingMs = Math.max(0, chatOpenAtMs - nowMs)
@@ -1536,6 +1537,9 @@ export function ChannelPage() {
   const betCardRef = useRef<HTMLDivElement | null>(null)
   const [animationsOpen, setAnimationsOpen] = useState(false)
   const [animationNotice, setAnimationNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (isFinished) setAnimationsOpen(false)
+  }, [isFinished])
   const [paidFxLayers, setPaidFxLayers] = useState<PaidFxLayer[]>([])
   const [stadiumFxTotal, setStadiumFxTotal] = useState(0)
   const seenReactionIdsRef = useRef(new Set<string>())
@@ -1809,6 +1813,7 @@ export function ChannelPage() {
     e.preventDefault()
     if (chatClosedAfterMatch) return
     if (chatLocked) return
+    if (isFinished) return
     if (!match?.id) return
     if (chatSendingRef.current) return
     const text = correctFrenchText(chatDraftRef.current).trim()
@@ -2986,6 +2991,7 @@ export function ChannelPage() {
     anim: PaidAnimation,
     opts?: { tifoSide?: 'home' | 'away'; flareColor?: FlareColor },
   ) => {
+    if (isFinished) return
     setAnimationsOpen(false)
     setLivePanelOpen(false)
     lastLocalFxAtRef.current = Date.now()
@@ -4018,6 +4024,7 @@ export function ChannelPage() {
             <form
               onSubmit={onSend}
               className="tf-channel-chat-form relative z-[20] mt-2 flex min-w-0 items-center gap-1.5 max-md:mt-0 md:gap-2"
+              data-tf-chat-fx={animationsOpen ? 'open' : undefined}
             >
               {livePanelOpen ? (
                 <div className="absolute bottom-[calc(100%+8px)] left-0 z-20 w-[240px] rounded-lg bg-[#102945] p-1.5 shadow-xl">
@@ -4091,7 +4098,7 @@ export function ChannelPage() {
               ) : null}
               {animationsOpen ? (
                 <div
-                  className={`z-[100] flex max-h-[min(70dvh,30rem)] flex-col overflow-y-auto overflow-x-hidden overscroll-contain p-2 shadow-2xl max-md:fixed max-md:inset-x-3 max-md:bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] max-md:max-h-[min(72dvh,32rem)] max-md:rounded-xl md:absolute md:bottom-[calc(100%+8px)] md:left-1/2 md:max-h-[min(calc(100dvh-8rem),34rem)] md:w-[min(22rem,calc(100vw-1rem))] md:-translate-x-1/2 ${chFxPanelShell}`}
+                  className={`z-[100] flex max-h-[min(70dvh,30rem)] flex-col overflow-y-auto overflow-x-hidden overscroll-contain p-2 shadow-2xl max-md:absolute max-md:inset-x-0 max-md:bottom-full max-md:mb-2 max-md:max-h-[min(60dvh,28rem)] max-md:rounded-xl md:absolute md:bottom-[calc(100%+8px)] md:left-1/2 md:max-h-[min(calc(100dvh-8rem),34rem)] md:w-[min(22rem,calc(100vw-1rem))] md:-translate-x-1/2 ${chFxPanelShell}`}
                 >
                   <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2 px-0.5">
                     <p className={`text-[10px] font-bold uppercase tracking-wide ${chFxTitle}`}>Animations</p>
@@ -4212,6 +4219,7 @@ export function ChannelPage() {
                   </button>
                 </div>
               ) : null}
+              {isFinished ? null : (
               <button
                 type="button"
                 onClick={() => setAnimationsOpen((v) => !v)}
@@ -4224,6 +4232,7 @@ export function ChannelPage() {
               >
                 FX
               </button>
+              )}
               <input
                 ref={chatInputRef}
                 defaultValue=""
@@ -4233,13 +4242,15 @@ export function ChannelPage() {
                   chatDraftRef.current = e.currentTarget.value
                 }}
                 placeholder={
-                  chatLocked
+                  isFinished
+                    ? 'Match terminé — tchat fermé'
+                    : chatLocked
                     ? 'Tchat ouvert 1 h avant le match'
                     : !isCloudChatConfigured
                       ? 'Chat cloud indisponible'
                       : 'Écrire un message…'
                 }
-                disabled={chatLocked || !isCloudChatConfigured || chatSending}
+                disabled={chatComposerLocked || !isCloudChatConfigured || chatSending}
                 className={`tf-chat-field min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-base text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
                   L
                     ? 'placeholder:text-[#4a6682] disabled:placeholder:text-[#3d5670]'
@@ -4248,10 +4259,18 @@ export function ChannelPage() {
               />
               <button
                 type="submit"
-                disabled={chatLocked || !isCloudChatConfigured || chatSending}
+                disabled={chatComposerLocked || !isCloudChatConfigured || chatSending}
                 className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:text-sm"
               >
-                {chatLocked ? 'Bientôt' : !isCloudChatConfigured ? 'Cloud off' : chatSending ? 'Envoi…' : 'Envoyer'}
+                {isFinished
+                  ? 'Terminé'
+                  : chatLocked
+                    ? 'Bientôt'
+                    : !isCloudChatConfigured
+                      ? 'Cloud off'
+                      : chatSending
+                        ? 'Envoi…'
+                        : 'Envoyer'}
               </button>
             </form>
             </MobileChatComposerDock>

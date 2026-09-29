@@ -9,6 +9,7 @@ import type { Match } from '../types/match'
 export function useLinearDisplayedLiveMinute(match: Match | null | undefined): number {
   const isLive = match?.status === 'live'
   const paused = Boolean(match?.liveClockPaused)
+  const ticking = match?.livePeriodTicking !== false
   const official = Math.min(99, Math.max(0, Math.round(Number(match?.minute) || 0)))
   const [tick, setTick] = useState(0)
 
@@ -18,7 +19,7 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
   }))
 
   useLayoutEffect(() => {
-    if (!match || match.status !== 'live' || paused) return
+    if (!match || match.status !== 'live' || paused || !ticking) return
     const seed = official > 0 ? official : 1
     setAnchor((prev) => {
       // SM encore à 0 : ne pas reset un chrono déjà avancé localement.
@@ -28,23 +29,23 @@ export function useLinearDisplayedLiveMinute(match: Match | null | undefined): n
       if (seed === prev.m) return prev
       return { m: seed, atMs: Date.now() }
     })
-  }, [match?.id, match?.status, official, paused, match?.liveInSecondHalf])
+  }, [match?.id, match?.status, official, paused, ticking, match?.liveInSecondHalf])
 
   useEffect(() => {
-    if (!isLive || paused) return
+    if (!isLive || paused || !ticking) return
     const id = window.setInterval(() => setTick((n) => n + 1), 1000)
     return () => window.clearInterval(id)
-  }, [isLive, paused, match?.id])
+  }, [isLive, paused, ticking, match?.id])
 
   return useMemo(() => {
     if (!match || match.status !== 'live') return Math.max(0, Math.round(Number(match?.minute) || 0))
-    if (paused) return official > 0 ? official : Math.max(1, anchor.m)
+    if (paused || !ticking) return official > 0 ? official : Math.max(1, anchor.m)
+    if (official >= 90) return official
     const seed = official > 0 ? official : Math.max(1, anchor.m)
     const drift = Math.floor((Date.now() - anchor.atMs) / 60_000)
     const linear = anchor.m + drift
-    const catchUp = Math.max(1, Math.min(12, drift + 1))
+    const catchUp = Math.max(1, Math.min(8, drift + 1))
     const cap = seed + catchUp
-    // Toujours laisser le mur avancer (même si SM omet ticking / minute 0).
-    return Math.min(99, Math.max(seed, official, Math.min(linear, cap)))
-  }, [match, anchor, tick, paused, official])
+    return Math.min(90, Math.max(seed, official, Math.min(linear, cap)))
+  }, [match, anchor, tick, paused, ticking, official])
 }

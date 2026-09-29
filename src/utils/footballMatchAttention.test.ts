@@ -36,6 +36,26 @@ describe('footballMatchAttention', () => {
     ).toBe('upcoming')
   })
 
+  it('ne reste pas live 3 h après un KO si SportMonks n’a jamais basculé', () => {
+    const ko = Date.parse(KO)
+    expect(
+      resolveEffectiveMatchStatus(
+        { status: 'upcoming', kickoffAt: KO },
+        ko + 3 * 60 * 60_000,
+      ),
+    ).toBe('finished')
+  })
+
+  it('clôt un live collé après 125 min de jeu réglementaire', () => {
+    const ko = Date.parse(KO)
+    expect(
+      resolveEffectiveMatchStatus(
+        { status: 'live', kickoffAt: KO, minute: 90 },
+        ko + 130 * 60_000,
+      ),
+    ).toBe('finished')
+  })
+
   it('demande l’attention live pendant la fenêtre même si statut pas encore live', () => {
     const ko = Date.parse(KO)
     expect(

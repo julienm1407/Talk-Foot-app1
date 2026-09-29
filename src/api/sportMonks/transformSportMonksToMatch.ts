@@ -9,6 +9,7 @@ import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventM
 import { extractRegulationGoalsFromScores, extractPenaltyShootoutFromScores } from '../../utils/matchRegulationScore'
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
+import { coerceElapsedLiveStatus } from '../../utils/footballMatchAttention'
 
 const LIVE_STATE_IDS = new Set([2, 3, 4, 6, 9, 21, 22, 25])
 const FINISHED_STATE_IDS = new Set([5, 7, 8, 10, 12, 14, 15, 17])
@@ -121,11 +122,14 @@ export function livePeriodTickingFromSmFixture(f: SmFixture): boolean {
   if (periods.some((p) => Boolean(p?.ticking))) return true
   const nowMs = Date.now()
   return periods.some((p) => {
-    if (!p) return false
+    if (!p || p.ticking === false) return false
     const started = p.started
     if (typeof started !== 'number' || started <= 0) return false
     const elapsedSec = nowMs / 1000 - started
-    return Number.isFinite(elapsedSec) && elapsedSec >= 0 && elapsedSec < 60 * 55
+    if (!(Number.isFinite(elapsedSec) && elapsedSec >= 0 && elapsedSec < 48 * 60)) return false
+    const mins = typeof p.minutes === 'number' ? p.minutes : 0
+    if (mins >= 45) return false
+    return true
   })
 }
 
@@ -542,7 +546,29 @@ export function smFixtureToMatch(f: SmFixture): Match {
   const hasFutureKickoff = Number.isFinite(kickoffMs) && kickoffMs > nowMs + 60_000
   // Garde-fou: certaines fixtures SM peuvent exposer un état "finished" alors que
   // la date de coup d'envoi est encore future; on évite d'afficher un faux "Terminé".
-  const status = hasFutureKickoff && statusFromProvider === 'finished' ? 'upcoming' : statusFromProvider
+  let status = hasFutureKickoff && statusFromProvider === 'finished' ? 'upcoming' : statusFromProvider
+  const sid = stateIdOf(fx)
+  const stateBlob = `${fx.state?.developer_name ?? ''} ${fx.state?.state ?? ''}`.toUpperCase()
+  const extraTime =
+    sid === 6 ||
+    sid === 9 ||
+    sid === 21 ||
+    stateBlob.includes('ET') ||
+    stateBlob.includes('EXTRA') ||
+    stateBlob.includes('PEN')
+  const coerced = coerceElapsedLiveStatus(
+    {
+      status,
+      kickoffAt,
+      extraTime,
+      periodTicking: livePeriodTickingFromSmFixture(fx),
+      minute: minuteFromFixture(fx),
+    },
+    nowMs,
+  )
+  if (coerced === 'finished' && (status === 'live' || (status === 'upcoming' && !hasFutureKickoff))) {
+    status = 'finished'
+  }
   const score = goalsFromScores(fx.scores)
   const penaltyScore = extractPenaltyShootoutScoreFromSmFixture(fx)
 
