@@ -20,6 +20,9 @@ export function normalizeSmFixtureIncludes(fixture: SmFixture | null | undefined
     statistics?: unknown
     scores?: unknown
     participants?: unknown
+    formations?: unknown
+    sidelined?: unknown
+    coaches?: unknown
   }
   const participants = smIncludeRows<SmParticipant>(f.participants)
   return {
@@ -30,6 +33,9 @@ export function normalizeSmFixtureIncludes(fixture: SmFixture | null | undefined
     lineups: smIncludeRows(f.lineups),
     statistics: smIncludeRows(f.statistics),
     scores: smIncludeRows(f.scores),
+    formations: smIncludeRows(f.formations),
+    sidelined: smIncludeRows(f.sidelined),
+    coaches: smIncludeRows(f.coaches),
     ...(participants.length ? { participants } : {}),
   }
 }

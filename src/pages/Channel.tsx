@@ -17,14 +17,18 @@ import {
 import { buildOddsStandingsPool } from '../odds/buildTeamOddsInput'
 import { useSportMonksRound1x2Odds } from '../hooks/useSportMonksRound1x2Odds'
 import { useSportMonksTeamLatestFormPair } from '../hooks/useSportMonksTeamLatestFormPair'
-import { extractSidelinedCountsFromSmFixture } from '../api/sportMonks/extractSidelinedFromSm'
+import {
+  extractSidelinedCountsFromSmFixture,
+  extractSidelinedPlayersFromSmFixture,
+} from '../api/sportMonks/extractSidelinedFromSm'
+import { extractCoachesFromSmFixture } from '../api/sportMonks/extractCoachesFromSmFixture'
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
 import { BetWidget } from '../components/bet/BetWidget'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { LivePitchActionBanner } from '../components/channel/LivePitchActionBanner'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
-import { MatchLineupSubstitutes } from '../components/channel/MatchLineupSubstitutes'
+import { MatchLineupBelowPitch } from '../components/channel/MatchLineupBelowPitch'
 import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandings'
@@ -2825,6 +2829,19 @@ export function ChannelPage() {
       away: mapSide(lineupSubstitutes.away),
     }
   }, [lineupSubstitutes, lineupOverlays])
+  const lineupAbsences = useMemo(
+    () => extractSidelinedPlayersFromSmFixture(fixtureForLineupSubs ?? liveBundleFixture),
+    [fixtureForLineupSubs, liveBundleFixture],
+  )
+  const lineupCoaches = useMemo(
+    () => extractCoachesFromSmFixture(fixtureForLineupSubs ?? liveBundleFixture),
+    [fixtureForLineupSubs, liveBundleFixture],
+  )
+  const displayedBench = lineupSide === 'home' ? (bench?.home ?? []) : (bench?.away ?? [])
+  const displayedAbsences = lineupSide === 'home' ? lineupAbsences.home : lineupAbsences.away
+  const displayedCoach = lineupSide === 'home' ? lineupCoaches.home : lineupCoaches.away
+  const displayedInGameSubs =
+    lineupSide === 'home' ? lineupSubstitutesWithOverlays.home : lineupSubstitutesWithOverlays.away
   const displayedLineupLayout = useMemo(() => {
     const formation = lineupSide === 'home' ? formations.home : formations.away
     const layout = computeLineupPitchLayout(displayedLineupPlayers, formation)
@@ -4516,11 +4533,13 @@ export function ChannelPage() {
               light={L}
               compact
             />
-            <MatchLineupSubstitutes
-              home={lineupSubstitutesWithOverlays.home}
-              away={lineupSubstitutesWithOverlays.away}
-              showBothTeams
-              showWhenEmpty={status === 'live' || status === 'finished'}
+            <MatchLineupBelowPitch
+              coach={displayedCoach}
+              bench={displayedBench}
+              absences={displayedAbsences}
+              substitutes={displayedInGameSubs}
+              showSubstitutes={status === 'live' || status === 'finished'}
+              hasStarters={displayedLineupLayout.roster.length > 0}
               light={L}
             />
             {displayedLineupLayout.roster.length === 0 ? (
@@ -4838,11 +4857,13 @@ export function ChannelPage() {
                   compact
                   className="w-full min-w-0"
                 />
-                <MatchLineupSubstitutes
-                  home={lineupSubstitutesWithOverlays.home}
-                  away={lineupSubstitutesWithOverlays.away}
-                  showBothTeams
-                  showWhenEmpty={status === 'live' || status === 'finished'}
+                <MatchLineupBelowPitch
+                  coach={displayedCoach}
+                  bench={displayedBench}
+                  absences={displayedAbsences}
+                  substitutes={displayedInGameSubs}
+                  showSubstitutes={status === 'live' || status === 'finished'}
+                  hasStarters={displayedLineupLayout.roster.length > 0}
                   light={L}
                 />
                 {displayedLineupLayout.roster.length === 0 ? (

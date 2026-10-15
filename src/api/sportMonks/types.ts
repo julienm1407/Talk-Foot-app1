@@ -174,6 +174,10 @@ export type SmFixture = {
   trends?: SmFixtureTrend[]
   /** Include `predictions.type`. */
   predictions?: SmFixturePrediction[]
+  /** Include `sidelined.sideline.player` + `sidelined.sideline.type`. */
+  sidelined?: unknown[]
+  /** Include `coaches` (staff sur la feuille de match). */
+  coaches?: unknown[]
 }
 
 /** Ligne `formations` sur une fixture (`include=formations`). */

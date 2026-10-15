@@ -107,6 +107,13 @@ export {
   type SmLeagueSeasonPick,
 } from './pickStandingSeasonIdFromSmLeague'
 export {
+  extractSidelinedCountsFromSmFixture,
+  extractSidelinedPlayersFromSmFixture,
+  type SidelinedPlayer,
+  type SidelinedPlayersBySide,
+} from './extractSidelinedFromSm'
+export { extractCoachesFromSmFixture, type LineupCoach, type LineupCoachesBySide } from './extractCoachesFromSmFixture'
+export {
   extractStartingXisFromFixture,
   extractMatchLineupBundleFromFixture,
   type SmStartingXiPlayer,

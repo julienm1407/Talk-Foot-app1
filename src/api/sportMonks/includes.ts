@@ -66,7 +66,7 @@ export const SM_INCLUDE_FIXTURE_TRENDS =
  * **toute** la compos disparaît (probable + officielle).
  */
 export const SM_INCLUDE_FIXTURE_LINEUPS =
-  'participants;league;venue;state;scores;lineups.player;lineups.type;lineups.details.type;metadata.type;coaches;formations;trends.type;trends.participant' as const
+  'participants;league;venue;state;scores;lineups.player;lineups.type;lineups.details.type;metadata.type;coaches;formations;sidelined.sideline.player;sidelined.sideline.type;trends.type;trends.participant' as const
 
 /** Repli si un include optionnel casse l’appel (plan / relation indisponible). */
 export const SM_INCLUDE_FIXTURE_LINEUPS_MIN =
