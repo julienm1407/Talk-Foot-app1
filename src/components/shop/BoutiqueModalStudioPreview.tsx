@@ -24,7 +24,7 @@ export function BoutiqueModalStudioPreview({
   const shoeFallbackSrc = isShoes ? (resolveBoutiqueShoeSrc(item) ?? undefined) : undefined
 
   return (
-    <div className="relative mx-auto w-full max-w-[min(280px,100%)]">
+    <div className="tf-kit-preview-lock relative mx-auto w-full max-w-[min(280px,100%)]">
       <div
         className={
           isShoes

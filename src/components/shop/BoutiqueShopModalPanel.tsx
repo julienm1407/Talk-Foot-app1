@@ -113,7 +113,7 @@ export function BoutiqueShopModalPanel({
           >
             {previewBadge}
           </span>
-          <div className="relative w-full max-w-[min(280px,100%)]">
+          <div className="tf-kit-preview-lock relative w-full max-w-[min(280px,100%)]">
             <div
               className={cn(
                 'pointer-events-none absolute inset-0 rounded-3xl',

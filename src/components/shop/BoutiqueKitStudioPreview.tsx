@@ -16,7 +16,7 @@ const GARMENTS_ZOOM = {
 } as const
 
 const STUDIO_FRAME =
-  'mx-auto w-full max-w-[220px] overflow-hidden rounded-xl bg-transparent p-1'
+  'tf-kit-preview-lock mx-auto w-full max-w-[220px] overflow-hidden rounded-xl bg-transparent p-1'
 
 const VIEWPORT = 'relative aspect-[11/14] w-full'
 

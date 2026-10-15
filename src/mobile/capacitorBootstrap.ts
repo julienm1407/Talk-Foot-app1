@@ -55,6 +55,12 @@ export async function initCapacitorShell(): Promise<void> {
 
   document.documentElement.classList.add('tf-native-shell')
 
+  const blockNativePinch = (e: Event) => {
+    e.preventDefault()
+  }
+  document.addEventListener('gesturestart', blockNativePinch, { passive: false })
+  document.addEventListener('gesturechange', blockNativePinch, { passive: false })
+
   try {
     await StatusBar.setStyle({ style: Style.Dark })
     if (Capacitor.getPlatform() === 'android') {

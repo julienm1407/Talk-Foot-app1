@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { getShopModalRoot } from '../../lib/shopModalRoot'
+import { attachPinchZoomLock } from '../../utils/lockPinchZoom'
 
 const BACKDROP_GUARD_MS = 380
 
@@ -28,8 +29,10 @@ export function ShopModalPortal({
     backdropReadyAt.current = Date.now() + BACKDROP_GUARD_MS
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    const unlockPinch = attachPinchZoomLock(portalTarget)
     return () => {
       document.body.style.overflow = prev
+      unlockPinch()
     }
   }, [portalTarget])
 

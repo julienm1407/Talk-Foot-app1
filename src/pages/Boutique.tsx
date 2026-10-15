@@ -28,6 +28,7 @@ import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGri
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
 import { RewardedTokenAdButton } from '../components/ads/RewardedTokenAdButton'
 import { catalogTabForShopItem, boutiqueMedalPacksHref } from '../utils/boutiquePurchaseFlow'
+import { attachPinchZoomLock } from '../utils/lockPinchZoom'
 
 /** Canvas studio lourd : chargé seulement à l’ouverture d’un article. */
 const BoutiqueItemPurchaseModal = lazy(() =>
@@ -79,6 +80,8 @@ export function BoutiquePage() {
 
   const shop = getAppSectionTheme('boutique')
   const dailyDeal = useMemo(() => getBoutiqueDailyDeal(), [])
+
+  useEffect(() => attachPinchZoomLock(document), [])
 
   useEffect(() => {
     if (searchParams.get('deal') !== 'jour' || !dailyDeal) return
