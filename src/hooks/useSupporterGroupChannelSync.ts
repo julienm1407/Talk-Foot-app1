@@ -174,6 +174,33 @@ export function useSupporterGroupChannelSync(options: {
     const mountId = Date.now()
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
+    const fetchHistory = async () => {
+      const session = await ensureCloudSession()
+      if (!session || cancelled) return
+      const { data: rows, error: fetchErr } = await sb
+        .from('supporter_group_channel_messages')
+        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
+        .eq('group_id', groupId)
+        .eq('channel_id', channelId)
+        .order('created_at', { ascending: false })
+        .limit(GROUP_CLOUD_HISTORY_INITIAL)
+
+      if (cancelled) return
+
+      if (fetchErr) {
+        console.warn('[Talk Foot] Fetch messages groupe:', fetchErr.message)
+        return
+      }
+
+      const chronological = (rows ?? []).slice().reverse()
+      const scoped = chronological.filter((row) => rowMatchesDebateScope(row as GroupMsgRow))
+      onRemoteMessagesRef.current(
+        scoped.map((row) => rowToMessage(row as GroupMsgRow)),
+        'history',
+        { hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_INITIAL },
+      )
+    }
+
     const run = async () => {
       const session = await ensureCloudSession()
       if (!session || cancelled) return
@@ -195,30 +222,7 @@ export function useSupporterGroupChannelSync(options: {
       }
       if (cancelled) return
 
-      const { data: rows, error: fetchErr } = await sb
-        .from('supporter_group_channel_messages')
-        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
-        .eq('group_id', groupId)
-        .eq('channel_id', channelId)
-        .order('created_at', { ascending: false })
-        .limit(GROUP_CLOUD_HISTORY_INITIAL)
-
-      if (cancelled) return
-
-      if (fetchErr) {
-        console.warn('[Talk Foot] Fetch messages groupe:', fetchErr.message)
-      }
-
-      if (!fetchErr) {
-        const chronological = (rows ?? []).slice().reverse()
-        const scoped = chronological.filter((row) => rowMatchesDebateScope(row as GroupMsgRow))
-        onRemoteMessagesRef.current(
-          scoped.map((row) => rowToMessage(row as GroupMsgRow)),
-          'history',
-          { hasMoreOlder: chronological.length >= GROUP_CLOUD_HISTORY_INITIAL },
-        )
-      }
-
+      await fetchHistory()
       if (cancelled) return
 
       const groupFilter = postgresChangesEqFilter('group_id', groupId)
@@ -256,8 +260,21 @@ export function useSupporterGroupChannelSync(options: {
 
     void run()
 
+    const pollId = window.setInterval(() => {
+      void fetchHistory()
+    }, 5_000)
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void fetchHistory()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+
     return () => {
       cancelled = true
+      window.clearInterval(pollId)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
       if (channelRef.current) {
         void sb.removeChannel(channelRef.current)
         channelRef.current = null

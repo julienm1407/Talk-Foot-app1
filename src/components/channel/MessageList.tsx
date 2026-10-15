@@ -13,12 +13,9 @@ import { cn } from '../../utils/cn'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { tribuneById } from '../../data/tribunes'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+import { formatChatAtLabel } from '../../utils/time'
 
 export type MessageListTone = 'light' | 'dark'
-
-function clamp01(v: number) {
-  return Math.max(0, Math.min(1, v))
-}
 
 function importance(u?: User, userId?: string, selfUserId = 'me') {
   if (!userId) return 'normal' as const
@@ -100,18 +97,10 @@ export function MessageList({
     <ul className="space-y-3" role="list">
       {messages.map((m, i) => {
         const idxFromEnd = messages.length - 1 - i
-        const fadeStart = 20
-        const fadeSpan = 30
-        const t = clamp01((idxFromEnd - fadeStart) / fadeSpan)
-        const opacity = 1 - t * 0.9
-        const translate = -t * 10
 
         const u = usersById[m.userId]
         const kind = importance(u, m.userId, selfUserId)
-        const time = new Date(m.createdAt).toLocaleTimeString('fr-FR', {
-          hour: '2-digit',
-          minute: '2-digit',
-        })
+        const time = formatChatAtLabel(m.createdAt)
         const peer = resolveChatMessagePeerUi({
           userId: m.userId,
           authorDisplayName: m.authorDisplayName,
@@ -135,11 +124,6 @@ export function MessageList({
               'flex items-start gap-2.5 sm:gap-3',
               idxFromEnd <= 8 && 'tf-chat-in',
             )}
-            style={{
-              opacity,
-              transform: `translate3d(0, ${translate}px, 0)`,
-              filter: t > 0.7 ? `blur(${(t - 0.7) * 2}px)` : undefined,
-            }}
           >
             <ChatCharacterThumb
               to={peer.profileTo}
@@ -221,7 +205,7 @@ export function MessageList({
                 ) : null}
                 <span
                   className={cn(
-                    'shrink-0 text-[11px] font-medium',
+                    'shrink-0 text-[10px] font-medium tabular-nums sm:text-[11px]',
                     dark ? 'text-tf-app-muted' : 'text-slate-500',
                   )}
                 >

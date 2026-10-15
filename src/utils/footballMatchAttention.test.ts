@@ -56,6 +56,26 @@ describe('footballMatchAttention', () => {
     ).toBe('finished')
   })
 
+  it('clôt un live figé (minute collée) même si ticking', () => {
+    const ko = Date.parse(KO)
+    expect(
+      resolveEffectiveMatchStatus(
+        { status: 'live', kickoffAt: KO, minute: 64, periodTicking: true },
+        ko + 120 * 60_000,
+      ),
+    ).toBe('finished')
+  })
+
+  it('reste live si l’horloge affichée et le mur sont cohérents', () => {
+    const ko = Date.parse(KO)
+    expect(
+      resolveEffectiveMatchStatus(
+        { status: 'live', kickoffAt: KO, minute: 70, periodTicking: true },
+        ko + 85 * 60_000,
+      ),
+    ).toBe('live')
+  })
+
   it('demande l’attention live pendant la fenêtre même si statut pas encore live', () => {
     const ko = Date.parse(KO)
     expect(

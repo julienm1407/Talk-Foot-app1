@@ -134,6 +134,26 @@ export function formatLiveMatchClock(
   return formatFlashscoreMatchMinute(minute, { inSecondHalf }) || '—'
 }
 
+/** Date + heure toujours (fil débats / tchat match), fuseau Paris. */
+export function formatChatAtLabel(isoOrDate: string | Date | number = new Date()): string {
+  const d = new Date(isoOrDate)
+  if (Number.isNaN(d.getTime())) {
+    return formatChatAtLabel(Date.now())
+  }
+  const time = d.toLocaleTimeString('fr-FR', {
+    timeZone: MATCH_DISPLAY_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const date = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: MATCH_DISPLAY_TIME_ZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d)
+  return `${date} · ${time}`
+}
+
 /** Libelle MP : heure seule si aujourd'hui, sinon date + heure (Paris). */
 export function formatDmAtLabel(isoOrDate: string | Date = new Date()): string {
   const d = new Date(isoOrDate)

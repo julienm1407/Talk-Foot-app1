@@ -99,14 +99,19 @@ export function useLiveMatchChatSync(options: {
   matchId: string
   enabled: boolean
   onRemoteMessages: (msgs: Message[]) => void
+  onReset?: () => void
   getChatSession?: (sb: SupabaseClient) => Promise<Session | null>
 }) {
-  const { matchId, enabled, onRemoteMessages, getChatSession } = options
+  const { matchId, enabled, onRemoteMessages, onReset, getChatSession } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
+  const onResetRef = useRef(onReset)
   const lastHistorySigRef = useRef('')
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
+  useLayoutEffect(() => {
+    onResetRef.current = onReset
+  }, [onReset])
 
   const resolveChatSession = useCallback(
     async (sb: SupabaseClient) => {
@@ -188,11 +193,16 @@ export function useLiveMatchChatSync(options: {
         .eq('match_id', matchId)
         .order('created_at', { ascending: true })
         .limit(200)
-      if (cancelled || fetchErr || !rows?.length) return
-      const typed = rows as LiveMsgRow[]
+      if (cancelled) return
+      if (fetchErr) {
+        if (import.meta.env.DEV) console.warn('[Talk Foot] live_match_messages fetch:', fetchErr.message)
+        return
+      }
+      const typed = (rows ?? []) as LiveMsgRow[]
       const sig = messageIdsSignature(typed)
       if (sig === lastHistorySigRef.current) return
       lastHistorySigRef.current = sig
+      if (!typed.length) return
       onRemoteMessagesRef.current(typed.map(rowToMessage))
     }
 
@@ -231,21 +241,28 @@ export function useLiveMatchChatSync(options: {
     }
 
     lastHistorySigRef.current = ''
+    onResetRef.current?.()
     void run()
 
     const pollId = window.setInterval(() => {
       void fetchRecent()
-    }, 30_000)
+    }, 4_000)
+    const retryIds = [400, 1200, 2800].map((ms) => window.setTimeout(() => void fetchRecent(), ms))
 
     const onVisible = () => {
       if (document.visibilityState === 'visible') void fetchRecent()
     }
     document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    window.addEventListener('pageshow', onVisible)
 
     return () => {
       cancelled = true
       window.clearInterval(pollId)
+      for (const id of retryIds) window.clearTimeout(id)
       document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+      window.removeEventListener('pageshow', onVisible)
       if (channelRef.current) {
         void sb.removeChannel(channelRef.current)
         channelRef.current = null

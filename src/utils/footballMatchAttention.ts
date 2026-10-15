@@ -48,10 +48,10 @@ export function coerceElapsedLiveStatus(
   if (sm === 'live') {
     if (ko != null && elapsed > staleLimit) return 'finished'
     const minute = Math.round(Number(match.minute) || 0)
-    if (!extra && match.periodTicking === false) {
-      if (minute >= 90 && elapsed > 110 * 60_000) return 'finished'
-      const expectedMs = (Math.max(minute, 1) + 20) * 60_000
-      if (elapsed > expectedMs + 12 * 60_000) return 'finished'
+    if (!extra && minute >= 90 && elapsed > 105 * 60_000) return 'finished'
+    if (ko != null) {
+      const slackMin = extra ? 45 : minute < 8 ? 50 : 30
+      if (elapsed > minute * 60_000 + slackMin * 60_000) return 'finished'
     }
     return 'live'
   }
@@ -74,6 +74,19 @@ export function resolveEffectiveMatchStatus(
 ): MatchAttentionStatus {
   if (!match) return 'upcoming'
   return coerceElapsedLiveStatus(match, nowMs)
+}
+
+/** Copie d’un match avec statut mur-horloge (pronos, cartes) si SportMonks reste collé en live. */
+export function withDisplayMatchStatus<T extends {
+  status: string
+  kickoffAt: string
+  minute?: number
+  extraTime?: boolean
+  periodTicking?: boolean
+}>(match: T, nowMs: number = Date.now()): T {
+  const status = coerceElapsedLiveStatus(match, nowMs)
+  if (status === match.status) return match
+  return { ...match, status }
 }
 
 export function matchNeedsLiveAttention(

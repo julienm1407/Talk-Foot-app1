@@ -72,7 +72,7 @@ import { useLiveMatchForClock } from '../hooks/useLiveMatchForClock'
 import { useEffectiveMatchStatus } from '../hooks/useEffectiveMatchStatus'
 import { useLinearDisplayedLiveMinute } from '../hooks/useLinearDisplayedLiveMinute'
 import { useAutoScroll } from '../hooks/useAutoScroll'
-import { formatKickoffLabel } from '../utils/time'
+import { formatChatAtLabel, formatKickoffLabel } from '../utils/time'
 import { formatGoalEventMinute } from '../utils/matchEventMinute'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
 import { useLiveMatchChatSync } from '../hooks/useLiveMatchChatSync'
@@ -734,9 +734,7 @@ function LiveHeaderTeamEvents({
 
 function cloudMessageToUi(m: Message): ChatMessageItem {
   const created = new Date(m.createdAt)
-  const time = Number.isFinite(created.getTime())
-    ? created.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    : '--:--'
+  const time = Number.isFinite(created.getTime()) ? formatChatAtLabel(created) : '--:--'
   return {
     id: m.id,
     userId: m.userId,
@@ -1577,6 +1575,7 @@ export function ChannelPage() {
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
     getChatSession: ensureCloudSession,
+    onReset: () => setChatMessages([]),
     onRemoteMessages: (msgs) => {
       setChatMessages((prev) => {
         const byId = new Map(prev.map((m) => [m.id, m]))
@@ -1805,7 +1804,6 @@ export function ChannelPage() {
     pageScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
   }, [match?.id, status])
   useEffect(() => {
-    setChatMessages([])
     seenReactionIdsRef.current = new Set()
     setStadiumFxTotal(0)
   }, [match?.id])
@@ -3932,7 +3930,7 @@ export function ChannelPage() {
                 'tf-chat-scroll space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
                 isUpcoming
                   ? 'h-[min(28dvh,190px)] sm:h-[min(32dvh,210px)] md:min-h-0 md:flex-1 md:h-auto md:max-h-none'
-                  : 'h-[200px] sm:h-[240px] md:h-[min(52vh,480px)]',
+                  : 'min-h-[240px] h-[min(48dvh,420px)] sm:h-[min(50dvh,460px)] md:h-[min(58vh,560px)]',
               )}
             >
               {chatLocked ? (

@@ -58,6 +58,7 @@ export function isEditorialAdsRoute(pathname: string): boolean {
 export function isAdsenseBlockedRoute(pathname: string): boolean {
   const p = normalizePath(pathname)
   if (p.startsWith('/channel')) return true
+  if (p.startsWith('/debate/')) return true
   if (p.startsWith('/group/')) return true
   if (p.startsWith('/login')) return true
   if (
@@ -110,7 +111,7 @@ export function shouldShowLiveAdPlacement(
   if (kind === 'article') {
     return placementKey === 'article-inline' || placementKey === 'article-mid'
   }
-  if (kind === 'debate') return placementKey === 'debate-inline'
+  if (kind === 'debate') return false
   if (kind === 'club') return placementKey === 'club-inline'
   return false
 }

@@ -6,6 +6,7 @@ import {
 import type { Bet, BetMatchLabel } from '../types/bet'
 import type { Match } from '../types/match'
 import { getSportMonksToken } from './apiTokens'
+import { withDisplayMatchStatus } from './footballMatchAttention'
 
 const BET_MATCH_CACHE_KEY = 'talkfoot.bet-match-cache.v1'
 
@@ -104,8 +105,8 @@ export function syntheticMatchFromBetLabel(bet: Bet): Match | null {
 }
 
 export function resolveBetMatch(bet: Bet, live: Match | null | undefined): Match | null {
-  if (live) return live
-  return syntheticMatchFromBetLabel(bet)
+  const raw = live ?? syntheticMatchFromBetLabel(bet)
+  return raw ? withDisplayMatchStatus(raw) : null
 }
 
 export async function fetchMatchByTalkFootId(matchId: string): Promise<Match | null> {

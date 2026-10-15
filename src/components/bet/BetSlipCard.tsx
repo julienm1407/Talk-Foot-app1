@@ -14,6 +14,7 @@ import {
   matchScoreLine,
 } from '../../utils/betDisplay'
 import { cn } from '../../utils/cn'
+import { resolveEffectiveMatchStatus } from '../../utils/footballMatchAttention'
 
 function betStatusLabel(bet: Bet): string {
   if (bet.status === 'won') return 'Gagné'
@@ -59,7 +60,7 @@ export function BetSlipCard({
   const isWon = bet.status === 'won'
   const isLost = bet.status === 'lost'
   const isSettled = isWon || isLost
-  const matchLive = match?.status === 'live'
+  const matchLive = score.live
 
   const statusBadgeClass =
     statusTone === 'open'
@@ -91,7 +92,7 @@ export function BetSlipCard({
     ? 'Récupération…'
     : matchLive
       ? 'En cours'
-      : match?.status === 'finished'
+      : match && resolveEffectiveMatchStatus(match) === 'finished'
         ? 'Terminé'
         : 'Match à venir'
 

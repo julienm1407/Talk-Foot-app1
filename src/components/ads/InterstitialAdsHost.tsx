@@ -8,6 +8,14 @@ function isLiveMatchPath(path: string): boolean {
   return path.startsWith('/channel/')
 }
 
+function isNoAutoInterstitialPath(path: string): boolean {
+  return (
+    isLiveMatchPath(path) ||
+    path.startsWith('/debate/') ||
+    path.startsWith('/login')
+  )
+}
+
 /** Interstitiel AdMob uniquement hors match, pour les comptes avec pubs (Supporter). */
 export function InterstitialAdsHost() {
   const { pathname } = useLocation()
@@ -27,9 +35,8 @@ export function InterstitialAdsHost() {
     if (!nativeAdsAvailable() || !showAds) return
     if (Date.now() - sessionStart.current < INTERSTITIAL_SESSION_GRACE_MS) return
     if (Date.now() - lastShown.current < INTERSTITIAL_MIN_GAP_MS) return
-    const leftMatch = isLiveMatchPath(prev) && !isLiveMatchPath(pathname)
-    const leftLogin = prev.startsWith('/login')
-    if (!leftMatch || leftLogin) return
+    if (isNoAutoInterstitialPath(prev) || isNoAutoInterstitialPath(pathname)) return
+    if (prev === pathname) return
     lastShown.current = Date.now()
     void showInterstitialAd()
   }, [pathname, showAds])

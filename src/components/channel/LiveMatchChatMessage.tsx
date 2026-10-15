@@ -170,7 +170,7 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
               </span>
             ) : null}
           </div>
-          <p className={cn('shrink-0 text-[10px]', light ? 'text-tf-app-muted' : 'text-tf-app-muted')}>
+          <p className={cn('shrink-0 text-[10px] tabular-nums', light ? 'text-tf-app-muted' : 'text-tf-app-muted')}>
             {message.time}
           </p>
         </div>

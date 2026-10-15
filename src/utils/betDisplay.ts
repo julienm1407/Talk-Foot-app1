@@ -1,5 +1,6 @@
 import type { Bet, BetMarket, BetStatus } from '../types/bet'
 import type { Match } from '../types/match'
+import { resolveEffectiveMatchStatus } from './footballMatchAttention'
 
 export type BetFilterTab = 'all' | 'open' | 'won' | 'lost'
 
@@ -122,11 +123,12 @@ export function matchScoreLine(match: Match | null): {
   }
   const h = match.score?.home ?? 0
   const a = match.score?.away ?? 0
+  const live = resolveEffectiveMatchStatus(match) === 'live'
   return {
     home: String(h),
     away: String(a),
-    live: match.status === 'live',
-    minute: match.minute,
+    live,
+    minute: live ? match.minute : undefined,
   }
 }
 
