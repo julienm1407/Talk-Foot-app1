@@ -47,19 +47,23 @@ function LineupPlayerToken({
   fullName,
   number,
   photoUrl,
+  playerId,
   leftPct,
   overlay,
   light,
   compact,
+  onSelect,
 }: {
   name: string
   fullName: string
   number?: string
   photoUrl?: string
+  playerId?: number
   leftPct: number
   overlay?: LineupPlayerMatchOverlay
   light?: boolean
   compact?: boolean
+  onSelect?: (player: { playerId: number; name: string; photoUrl?: string; number?: string }) => void
 }) {
   const [photoFailed, setPhotoFailed] = useState(false)
   const bubbleSize = compact ? 'h-9 w-9' : 'h-10 w-10'
@@ -72,12 +76,21 @@ function LineupPlayerToken({
   const rating = overlay?.rating
   const showPhoto = photoUrl && !photoFailed
 
+  const clickable = Boolean(playerId && onSelect)
   return (
     <div
-      className="absolute top-1/2 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2 tf-lineup-player-token"
+      className="absolute top-1/2 z-10 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2 tf-lineup-player-token relative"
       style={{ left: `${leftPct}%` }}
       title={number ? `#${number} ${fullName}` : fullName}
     >
+      {clickable ? (
+        <button
+          type="button"
+          className="absolute inset-0 z-30 cursor-pointer rounded-md bg-transparent"
+          aria-label={`Fiche de ${fullName}`}
+          onClick={() => onSelect?.({ playerId: playerId!, name: fullName, photoUrl, number })}
+        />
+      ) : null}
       <div className={cn('relative mx-auto w-fit', subbedOff && 'opacity-55')}>
         <div className="relative mx-auto w-fit">
           {rating != null ? (
@@ -181,6 +194,7 @@ export function MatchLineupPitch({
   light,
   compact,
   className,
+  onSelectPlayer,
 }: {
   layout: LineupPitchLayout
   homeToneColor: string
@@ -189,6 +203,7 @@ export function MatchLineupPitch({
   light?: boolean
   compact?: boolean
   className?: string
+  onSelectPlayer?: (player: { playerId: number; name: string; photoUrl?: string; number?: string }) => void
 }) {
   const { rows } = layout
   const pitchLine = light ? 'border-white/38' : 'border-white/20'
@@ -246,10 +261,12 @@ export function MatchLineupPitch({
                 fullName={p.fullName}
                 number={p.number}
                 photoUrl={p.photoUrl}
+                playerId={p.playerId}
                 leftPct={p.leftPct}
                 overlay={p.overlay}
                 light={light}
                 compact={compact}
+                onSelect={onSelectPlayer}
               />
             ))}
           </div>

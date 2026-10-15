@@ -29,6 +29,10 @@ import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { LivePitchActionBanner } from '../components/channel/LivePitchActionBanner'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
 import { MatchLineupBelowPitch } from '../components/channel/MatchLineupBelowPitch'
+import {
+  MatchLineupPlayerSheet,
+  type LineupPlayerPick,
+} from '../components/channel/MatchLineupPlayerSheet'
 import { LiveMatchStandingsPanel } from '../components/channel/LiveMatchStandingsPanel'
 import { WcGroupCard } from '../components/cdm/WcGroupCard'
 import { BIG_FIVE_LEAGUE_IDS, type BigFiveLeagueId } from '../data/leagueStandings'
@@ -2621,6 +2625,7 @@ export function ChannelPage() {
     betting.settleWinningAnytimeScorers,
   ])
   const [lineupSide, setLineupSide] = useState<'home' | 'away'>('home')
+  const [lineupPlayerPick, setLineupPlayerPick] = useState<LineupPlayerPick | null>(null)
   const [lineupSubsFallbackFixture, setLineupSubsFallbackFixture] = useState<SmFixture | null>(null)
 
   useEffect(() => {
@@ -4532,6 +4537,7 @@ export function ChannelPage() {
               isUpcoming={isUpcoming}
               light={L}
               compact
+              onSelectPlayer={setLineupPlayerPick}
             />
             <MatchLineupBelowPitch
               coach={displayedCoach}
@@ -4541,6 +4547,7 @@ export function ChannelPage() {
               showSubstitutes={status === 'live' || status === 'finished'}
               hasStarters={displayedLineupLayout.roster.length > 0}
               light={L}
+              onSelectPlayer={setLineupPlayerPick}
             />
             {displayedLineupLayout.roster.length === 0 ? (
               <p
@@ -4856,6 +4863,7 @@ export function ChannelPage() {
                   light={L}
                   compact
                   className="w-full min-w-0"
+                  onSelectPlayer={setLineupPlayerPick}
                 />
                 <MatchLineupBelowPitch
                   coach={displayedCoach}
@@ -4865,6 +4873,7 @@ export function ChannelPage() {
                   showSubstitutes={status === 'live' || status === 'finished'}
                   hasStarters={displayedLineupLayout.roster.length > 0}
                   light={L}
+                  onSelectPlayer={setLineupPlayerPick}
                 />
                 {displayedLineupLayout.roster.length === 0 ? (
                   <p className="text-center text-[11px] font-semibold text-sky-200/75">Composition non disponible.</p>
@@ -5382,6 +5391,14 @@ export function ChannelPage() {
             </div>
           </div>
         </div>
+      ) : null}
+      {lineupPlayerPick ? (
+        <MatchLineupPlayerSheet
+          player={lineupPlayerPick}
+          excludeFixtureId={match?.sportMonksFixtureId}
+          light={L}
+          onClose={() => setLineupPlayerPick(null)}
+        />
       ) : null}
     </div>
   )

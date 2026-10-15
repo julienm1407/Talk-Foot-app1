@@ -96,3 +96,7 @@ export const SM_INCLUDE_TEAM_SQUAD =
 /** Classements : équipe, détail par type, forme récente. */
 export const SM_INCLUDE_STANDINGS =
   'participant;rule.type;details.type;form;stage;league;group' as const
+
+/** GET `/players/{id}` — derniers matchs (minutes, buts, score). */
+export const SM_INCLUDE_PLAYER_LATEST =
+  'latest.fixture.participants;latest.fixture.scores;latest.fixture.state;latest.details.type' as const

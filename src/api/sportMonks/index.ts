@@ -20,6 +20,7 @@ export {
   fetchSportMonksTeamActiveSeasons,
   fetchSportMonksTeamStatisticsForSeason,
   fetchSportMonksPlayer,
+  fetchSportMonksPlayerLatest,
   fetchSportMonksTeamSquad,
   fetchSportMonksLeaguesByDate,
   fetchSportMonksLeagueById,
@@ -113,6 +114,11 @@ export {
   type SidelinedPlayersBySide,
 } from './extractSidelinedFromSm'
 export { extractCoachesFromSmFixture, type LineupCoach, type LineupCoachesBySide } from './extractCoachesFromSmFixture'
+export {
+  extractPlayerRecentMatchesFromSmPlayerPayload,
+  minutesPlayedLabel,
+  type PlayerRecentMatch,
+} from './extractPlayerRecentMatchesFromSm'
 export {
   extractStartingXisFromFixture,
   extractMatchLineupBundleFromFixture,

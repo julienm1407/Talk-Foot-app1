@@ -86,16 +86,20 @@ function PlayerLine({
   number,
   meta,
   photoUrl,
+  playerId,
   light,
+  onSelect,
 }: {
   name: string
   number?: string
   meta?: string
   photoUrl?: string
+  playerId?: number
   light?: boolean
+  onSelect?: (player: { playerId: number; name: string; photoUrl?: string; number?: string }) => void
 }) {
-  return (
-    <div className="flex min-w-0 items-center gap-1.5">
+  const inner = (
+    <>
       <MiniFace photoUrl={photoUrl} name={name} light={light} />
       <div className="min-w-0 flex-1">
         <p className={cn('truncate text-[10px] font-bold', light ? 'text-[#023458]' : 'text-sky-50')}>
@@ -108,8 +112,20 @@ function PlayerLine({
           </p>
         ) : null}
       </div>
-    </div>
+    </>
   )
+  if (playerId && onSelect) {
+    return (
+      <button
+        type="button"
+        className="flex w-full min-w-0 items-center gap-1.5 rounded-md text-left"
+        onClick={() => onSelect({ playerId, name, photoUrl, number })}
+      >
+        {inner}
+      </button>
+    )
+  }
+  return <div className="flex min-w-0 items-center gap-1.5">{inner}</div>
 }
 
 export function MatchLineupBelowPitch({
@@ -120,6 +136,7 @@ export function MatchLineupBelowPitch({
   showSubstitutes,
   hasStarters,
   light,
+  onSelectPlayer,
 }: {
   coach: LineupCoach | null
   bench: SmStartingXiPlayer[]
@@ -128,6 +145,7 @@ export function MatchLineupBelowPitch({
   showSubstitutes?: boolean
   hasStarters: boolean
   light?: boolean
+  onSelectPlayer?: (player: { playerId: number; name: string; photoUrl?: string; number?: string }) => void
 }) {
   const showBench = hasStarters
   if (!coach && !showBench && !absences.length && !showSubstitutes) return null
@@ -153,7 +171,9 @@ export function MatchLineupBelowPitch({
                   number={p.number}
                   meta={positionFr(p.positionLabel)}
                   photoUrl={p.photoUrl}
+                  playerId={p.playerId}
                   light={light}
+                  onSelect={onSelectPlayer}
                 />
               ))}
             </div>
@@ -185,7 +205,9 @@ export function MatchLineupBelowPitch({
                 name={p.name}
                 meta={p.reason}
                 photoUrl={p.photoUrl}
+                playerId={p.playerId}
                 light={light}
+                onSelect={onSelectPlayer}
               />
             ))}
           </div>

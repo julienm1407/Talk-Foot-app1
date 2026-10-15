@@ -23,6 +23,7 @@ import {
   SM_INCLUDE_TEAM_SQUAD,
   SM_INCLUDE_STANDINGS,
   SM_INCLUDE_TEAM_UPCOMING_AND_LATEST,
+  SM_INCLUDE_PLAYER_LATEST,
 } from './includes'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import type { SmFixture, SmPlayer, SmRoundWithOdds } from './types'
@@ -372,6 +373,13 @@ export async function fetchSportMonksTeamStatisticsForSeason(
   return sportMonksFetchJson<{ data: unknown }>(`/teams/${teamId}`, token, {
     include: SM_INCLUDE_TEAM_SEASON_STATS,
     filters: `teamstatisticSeasons:${seasonId}`,
+  })
+}
+
+/** Derniers matchs d’un joueur (fiche compos). */
+export async function fetchSportMonksPlayerLatest(token: string, playerId: number) {
+  return sportMonksFetchJson<SportMonksListEnvelope<unknown>>(`/players/${playerId}`, token, {
+    include: SM_INCLUDE_PLAYER_LATEST,
   })
 }
 
