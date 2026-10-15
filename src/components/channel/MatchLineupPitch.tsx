@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { cn } from '../../utils/cn'
 import type { LineupPitchLayout } from '../../utils/lineupPitchPositions'
 import { formatLineupRating, lineupRatingBackground } from '../../utils/lineupPlayerRatingColor'
+import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
 function playerInitials(name: string): string {
   const parts = name.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean)
@@ -77,20 +78,10 @@ function LineupPlayerToken({
   const showPhoto = photoUrl && !photoFailed
 
   const clickable = Boolean(playerId && onSelect)
-  return (
-    <div
-      className="absolute top-1/2 z-10 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2 tf-lineup-player-token relative"
-      style={{ left: `${leftPct}%` }}
-      title={number ? `#${number} ${fullName}` : fullName}
-    >
-      {clickable ? (
-        <button
-          type="button"
-          className="absolute inset-0 z-30 cursor-pointer rounded-md bg-transparent"
-          aria-label={`Fiche de ${fullName}`}
-          onClick={() => onSelect?.({ playerId: playerId!, name: fullName, photoUrl, number })}
-        />
-      ) : null}
+  const tokenClass =
+    'absolute top-1/2 z-10 w-[3.25rem] max-w-[15vw] -translate-x-1/2 -translate-y-1/2 tf-lineup-player-token'
+  const tokenStyle = { left: `${leftPct}%` }
+  const inner = (
       <div className={cn('relative mx-auto w-fit', subbedOff && 'opacity-55')}>
         <div className="relative mx-auto w-fit">
           {rating != null ? (
@@ -182,6 +173,26 @@ function LineupPlayerToken({
           {name}
         </p>
       </div>
+  )
+
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        className={cn(tokenClass, TF_FOCUS_VISIBLE, 'appearance-none border-0 bg-transparent p-0')}
+        style={tokenStyle}
+        title={number ? `#${number} ${fullName}` : fullName}
+        aria-label={`Fiche de ${fullName}`}
+        onClick={() => onSelect?.({ playerId: playerId!, name: fullName, photoUrl, number })}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return (
+    <div className={tokenClass} style={tokenStyle} title={number ? `#${number} ${fullName}` : fullName}>
+      {inner}
     </div>
   )
 }
