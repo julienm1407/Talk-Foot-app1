@@ -243,8 +243,8 @@ export function ProfilePage() {
             {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer les notifications'}
           </h2>
           <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-            15 min avant le match de tes clubs favoris. Sur l’app Android, ça ouvre le message
-            « Autoriser les notifications ».
+            15 min avant le coup d’envoi : clubs favoris, matchs étoilés, ou joueurs suivis.
+            Sur l’app Android, ça ouvre le message « Autoriser les notifications ».
           </p>
           {favoriteClubIds.length === 0 ? (
             <p
@@ -255,7 +255,7 @@ export function ProfilePage() {
                   : 'border-amber-400/35 bg-amber-950/50 text-amber-100',
               )}
             >
-              Choisis d’abord un club favori plus bas, sinon il n’y a aucun match à rappeler.
+              Choisis un club favori plus bas, ou étoile un match (★) pour le suivre.
             </p>
           ) : (
             <p className="mt-2 text-xs font-bold text-tf-app-muted">Clubs suivis : {clubsLabel}</p>

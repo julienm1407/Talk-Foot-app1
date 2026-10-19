@@ -7,6 +7,7 @@ import { cn } from '../../utils/cn'
 import { formatKickoff } from '../../utils/time'
 import { HubRailRowLive, HubRailRowUpcoming, formatHubDayLabel } from '../match/HubMatchEncart'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { MatchFavoriteButton } from '../fan/MatchFavoriteButton'
 
 function sortPool(matches: Match[], clubFocusIds: string[] | null) {
   if (clubFocusIds != null && clubFocusIds.length > 0) {
@@ -49,11 +50,14 @@ function RailMatchChip({ match, light }: { match: Match; light: boolean }) {
         >
           {isLive ? '● Live' : 'À venir'}
         </span>
-        <span
-          className={cn('truncate text-[10px] font-bold', light ? 'text-tf-grey' : 'text-tf-app-muted')}
-        >
-          {match.competition.shortName}
-        </span>
+        <div className="flex min-w-0 items-center gap-1">
+          <span
+            className={cn('truncate text-[10px] font-bold', light ? 'text-tf-grey' : 'text-tf-app-muted')}
+          >
+            {match.competition.shortName}
+          </span>
+          <MatchFavoriteButton matchId={match.id} compact light={light} />
+        </div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">

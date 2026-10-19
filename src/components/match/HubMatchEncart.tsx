@@ -18,6 +18,7 @@ import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { SalonAudienceFooter } from './SalonAudienceFooter'
 import { MatchResultScore } from './MatchResultScore'
 import { MatchClubHit } from './MatchClubHit'
+import { MatchFavoriteButton } from '../fan/MatchFavoriteButton'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
@@ -177,8 +178,11 @@ export function HubStripLive({
           <span className="size-1.5 animate-pulse rounded-full bg-white" />
           LIVE
         </span>
+        <div className="absolute right-3 top-3 z-20">
+          <MatchFavoriteButton matchId={match.id} compact />
+        </div>
         {sim?.burst?.kind === 'goal' ? (
-          <span className="absolute right-3 top-3 rounded-md bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase text-amber-950 shadow">
+          <span className="absolute right-3 top-12 rounded-md bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase text-amber-950 shadow">
             But !
           </span>
         ) : null}
@@ -629,6 +633,9 @@ export function HubStripUpcoming({
       }
       aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
     >
+      <div className="absolute right-2 top-2 z-20">
+        <MatchFavoriteButton matchId={match.id} compact />
+      </div>
       <div
         className={cn(
           'relative shrink-0 overflow-hidden rounded-t-2xl',

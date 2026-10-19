@@ -48,7 +48,7 @@ export async function registerNativePush(onToken: (token: string) => void): Prom
     await PushNotifications.createChannel({
       id: MATCH_CHANNEL_ID,
       name: 'Matchs favoris',
-      description: 'Rappel coup d’envoi des clubs suivis',
+      description: 'Rappel coup d’envoi des clubs, matchs et joueurs suivis',
       importance: 5,
       visibility: 1,
       vibration: true,

@@ -12,7 +12,7 @@ import {
   DEMO_FAN_ONBOARDING_EVERY_LOGIN,
   PENDING_FAN_ONBOARDING_KEY,
 } from '../constants/fanSession'
-import type { FanPreferencesStoredShape } from '../types/fanPreferences'
+import type { FanPreferencesStoredShape, FavoritePlayerFollow } from '../types/fanPreferences'
 import { useOptionalCloudUserState } from './CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 
@@ -21,6 +21,8 @@ export type { FanPreferencesStoredShape }
 const STORAGE_KEY = 'talkfoot.fanPreferences.v1'
 const MAX_FAVORITE_CLUBS = 3
 const MAX_FAVORITE_NATIONS = 5
+const MAX_FAVORITE_MATCHES = 24
+const MAX_FAVORITE_PLAYERS = 12
 
 type StoredShape = FanPreferencesStoredShape
 
@@ -51,6 +53,8 @@ export type FanPreferencesState = {
   favoriteClubIds: string[]
   /** Sélections nationales suivies (ISO-3) */
   favoriteNationIsos: string[]
+  favoriteMatchIds: string[]
+  favoritePlayers: FavoritePlayerFollow[]
   /** Onboarding terminé dès qu’une ligue favorite est choisie (clubs optionnels) */
   preferencesComplete: boolean
   hideRivalSalons: boolean
@@ -66,6 +70,12 @@ type FanPreferencesContextValue = FanPreferencesState & {
   toggleFavoriteNation: (iso: string) => void
   isNationFavorite: (iso: string) => boolean
   maxFavoriteNations: number
+  toggleFavoriteMatch: (matchId: string) => void
+  isMatchFavorite: (matchId: string) => boolean
+  toggleFavoritePlayer: (player: FavoritePlayerFollow, currentMatchId?: string) => void
+  isPlayerFavorite: (playerId: number) => boolean
+  maxFavoriteMatches: number
+  maxFavoritePlayers: number
   setHideRivalSalons: (v: boolean) => void
   setVirageMode: (v: boolean) => void
   setKickoffAlertsEnabled: (v: boolean) => void
@@ -99,6 +109,22 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       favoriteClubId,
       favoriteClubIds,
       favoriteNationIsos: normalizeNationIsos(stored),
+      favoriteMatchIds: Array.isArray(stored.favoriteMatchIds)
+        ? [...new Set(stored.favoriteMatchIds.filter(Boolean))].slice(0, MAX_FAVORITE_MATCHES)
+        : [],
+      favoritePlayers: Array.isArray(stored.favoritePlayers)
+        ? stored.favoritePlayers
+            .filter(
+              (p): p is FavoritePlayerFollow =>
+                Boolean(p) &&
+                typeof p.playerId === 'number' &&
+                p.playerId > 0 &&
+                typeof p.name === 'string' &&
+                typeof p.teamId === 'string' &&
+                p.teamId.length > 0,
+            )
+            .slice(0, MAX_FAVORITE_PLAYERS)
+        : [],
       preferencesComplete: stored.preferencesComplete ?? false,
       hideRivalSalons: stored.hideRivalSalons ?? false,
       virageMode: stored.virageMode ?? false,
@@ -145,6 +171,23 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
                 .map((v) => v.toUpperCase()),
             ),
           ].slice(0, MAX_FAVORITE_NATIONS)
+        }
+        if (next.favoriteMatchIds !== undefined) {
+          next.favoriteMatchIds = [...new Set((next.favoriteMatchIds ?? []).filter(Boolean))].slice(
+            0,
+            MAX_FAVORITE_MATCHES,
+          )
+        }
+        if (next.favoritePlayers !== undefined) {
+          const seen = new Set<number>()
+          const players: FavoritePlayerFollow[] = []
+          for (const p of next.favoritePlayers ?? []) {
+            if (!p || seen.has(p.playerId)) continue
+            seen.add(p.playerId)
+            players.push(p)
+            if (players.length >= MAX_FAVORITE_PLAYERS) break
+          }
+          next.favoritePlayers = players
         }
         return next
       }
@@ -195,6 +238,47 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     (iso: string) => state.favoriteNationIsos.includes(iso.toUpperCase()),
     [state.favoriteNationIsos],
   )
+  const toggleFavoriteMatch = useCallback(
+    (matchId: string) => {
+      const id = matchId.trim()
+      if (!id) return
+      const current = state.favoriteMatchIds
+      const exists = current.includes(id)
+      const favoriteMatchIds = exists ? current.filter((x) => x !== id) : [id, ...current]
+      patch({
+        favoriteMatchIds,
+        kickoffAlertsEnabled: exists ? state.kickoffAlertsEnabled : true,
+      })
+    },
+    [patch, state.favoriteMatchIds, state.kickoffAlertsEnabled],
+  )
+  const isMatchFavorite = useCallback(
+    (matchId: string) => state.favoriteMatchIds.includes(matchId),
+    [state.favoriteMatchIds],
+  )
+  const toggleFavoritePlayer = useCallback(
+    (player: FavoritePlayerFollow, currentMatchId?: string) => {
+      const current = state.favoritePlayers
+      const exists = current.some((p) => p.playerId === player.playerId)
+      const favoritePlayers = exists
+        ? current.filter((p) => p.playerId !== player.playerId)
+        : [player, ...current]
+      const favoriteMatchIds =
+        !exists && currentMatchId && !state.favoriteMatchIds.includes(currentMatchId)
+          ? [currentMatchId, ...state.favoriteMatchIds]
+          : state.favoriteMatchIds
+      patch({
+        favoritePlayers,
+        favoriteMatchIds,
+        kickoffAlertsEnabled: exists ? state.kickoffAlertsEnabled : true,
+      })
+    },
+    [patch, state.favoritePlayers, state.favoriteMatchIds, state.kickoffAlertsEnabled],
+  )
+  const isPlayerFavorite = useCallback(
+    (playerId: number) => state.favoritePlayers.some((p) => p.playerId === playerId),
+    [state.favoritePlayers],
+  )
   const setHideRivalSalons = useCallback(
     (v: boolean) => patch({ hideRivalSalons: v }),
     [patch],
@@ -244,6 +328,12 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       toggleFavoriteNation,
       isNationFavorite,
       maxFavoriteNations: MAX_FAVORITE_NATIONS,
+      toggleFavoriteMatch,
+      isMatchFavorite,
+      toggleFavoritePlayer,
+      isPlayerFavorite,
+      maxFavoriteMatches: MAX_FAVORITE_MATCHES,
+      maxFavoritePlayers: MAX_FAVORITE_PLAYERS,
       setHideRivalSalons,
       setVirageMode,
       setKickoffAlertsEnabled,
@@ -261,6 +351,10 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       setFavoriteNationIsos,
       toggleFavoriteNation,
       isNationFavorite,
+      toggleFavoriteMatch,
+      isMatchFavorite,
+      toggleFavoritePlayer,
+      isPlayerFavorite,
       setHideRivalSalons,
       setVirageMode,
       setKickoffAlertsEnabled,

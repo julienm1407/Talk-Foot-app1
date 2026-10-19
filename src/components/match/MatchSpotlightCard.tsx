@@ -18,6 +18,7 @@ import { MatchTeamBackdrop, patternFor } from './MatchTeamBackdrop'
 import { MatchResultScore } from './MatchResultScore'
 import { SalonAudienceFooter } from './SalonAudienceFooter'
 import { MatchClubHit } from './MatchClubHit'
+import { MatchFavoriteButton } from '../fan/MatchFavoriteButton'
 
 function fixtureMetaLine(match: Match): string | null {
   const bits = [match.stageName, match.roundName, match.venueName].filter(Boolean)
@@ -251,6 +252,9 @@ export function MatchSpotlightCard({
       )}
       aria-label={`${homeLabel} contre ${awayLabel}, à venir`}
     >
+      <div className="absolute right-2 top-2 z-20">
+        <MatchFavoriteButton matchId={match.id} compact />
+      </div>
       <div
         className={cn(
           'relative flex-1 overflow-hidden',

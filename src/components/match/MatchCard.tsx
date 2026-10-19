@@ -10,6 +10,7 @@ import { cn } from '../../utils/cn'
 import { themeForCompetition } from '../../data/competitionThemes'
 import { MatchTeamCrest } from '../brand/MatchTeamCrest'
 import { ShareButton } from '../ui/ShareButton'
+import { MatchFavoriteButton } from '../fan/MatchFavoriteButton'
 import { MatchResultScore } from './MatchResultScore'
 
 function patternFor(seed: string): 0 | 1 | 2 | 3 {
@@ -416,13 +417,16 @@ export function MatchCard({
                   : 'Tribune match'}
             </Link>
             {(isLive || match.status === 'upcoming') && (
-              <ShareButton
-                compact
-                className="shrink-0"
-                path={channelTo}
-                title={`${match.home.shortName} – ${match.away.shortName}`}
-                text={`Tribune Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
-              />
+              <>
+                <MatchFavoriteButton matchId={match.id} compact light className="self-center" />
+                <ShareButton
+                  compact
+                  className="shrink-0"
+                  path={channelTo}
+                  title={`${match.home.shortName} – ${match.away.shortName}`}
+                  text={`Tribune Talk Foot : ${match.home.shortName} – ${match.away.shortName}`}
+                />
+              </>
             )}
           </div>
           </div>

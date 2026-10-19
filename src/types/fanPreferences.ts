@@ -12,4 +12,14 @@ export type FanPreferencesStoredShape = {
   virageMode?: boolean
   /** Pop-up Android : rappel T−15 min des matchs des clubs favoris. */
   kickoffAlertsEnabled?: boolean
+  /** Matchs suivis unitairement (étoile) — alertes même hors clubs favoris. */
+  favoriteMatchIds?: string[]
+  /** Joueurs suivis : alertes des matchs de leur club. */
+  favoritePlayers?: FavoritePlayerFollow[]
+}
+
+export type FavoritePlayerFollow = {
+  playerId: number
+  name: string
+  teamId: string
 }

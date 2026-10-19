@@ -92,7 +92,7 @@ export function FavoritesEncart({ className }: { className?: string }) {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
   const { matches, loading } = useMatches()
-  const { favoriteClubIds, favoriteLeagueId, hideRivalSalons } = useFanPreferences()
+  const { favoriteClubIds, favoriteMatchIds, favoriteLeagueId, hideRivalSalons } = useFanPreferences()
   const { groups, isJoined } = useSupporterGroups()
 
   const accessPrefs = useMemo(
@@ -107,18 +107,19 @@ export function FavoritesEncart({ className }: { className?: string }) {
   const favoriteIdSet = useMemo(() => new Set(favoriteClubIds), [favoriteClubIds])
 
   const clubMatches = useMemo(() => {
-    if (favoriteClubIds.length === 0) return []
+    const matchFav = new Set(favoriteMatchIds)
+    if (favoriteClubIds.length === 0 && matchFav.size === 0) return []
     const set = favoriteIdSet
     return matches
       .filter((m) => m.status === 'live' || m.status === 'upcoming')
-      .filter((m) => set.has(m.home.id) || set.has(m.away.id))
+      .filter((m) => set.has(m.home.id) || set.has(m.away.id) || matchFav.has(m.id))
       .sort((a, b) => {
         if (a.status === 'live' && b.status !== 'live') return -1
         if (b.status === 'live' && a.status !== 'live') return 1
         return new Date(a.kickoffAt).getTime() - new Date(b.kickoffAt).getTime()
       })
-      .slice(0, 6)
-  }, [matches, favoriteClubIds, favoriteIdSet])
+      .slice(0, 8)
+  }, [matches, favoriteClubIds, favoriteMatchIds, favoriteIdSet])
 
   const favoriteTribunes = useMemo(() => {
     const joined = groups.filter((g) => isJoined(g.id) || g.createdBy === 'me')
@@ -127,7 +128,7 @@ export function FavoritesEncart({ className }: { className?: string }) {
       .slice(0, 5)
   }, [groups, isJoined, accessPrefs])
 
-  const showMatchesBlock = favoriteClubIds.length > 0
+  const showMatchesBlock = favoriteClubIds.length > 0 || favoriteMatchIds.length > 0
   const showTribunesBlock = favoriteTribunes.length > 0
   if (!showMatchesBlock && !showTribunesBlock) return null
 

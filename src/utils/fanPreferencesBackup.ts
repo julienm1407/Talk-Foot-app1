@@ -1,7 +1,9 @@
-import type { FanPreferencesStoredShape } from '../types/fanPreferences'
+import type { FanPreferencesStoredShape, FavoritePlayerFollow } from '../types/fanPreferences'
 
 const MAX_FAVORITE_CLUBS = 3
 const MAX_FAVORITE_NATIONS = 5
+const MAX_FAVORITE_MATCHES = 24
+const MAX_FAVORITE_PLAYERS = 12
 
 function storageKey(userId: string): string {
   return `talkfoot.fanPreferences.backup.v1.${userId.trim()}`
@@ -28,6 +30,34 @@ function normalizeNationIsos(stored: FanPreferencesStoredShape): string[] {
   ].slice(0, MAX_FAVORITE_NATIONS)
 }
 
+export function normalizeFavoriteMatchIds(stored: FanPreferencesStoredShape): string[] {
+  const raw = stored.favoriteMatchIds
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter((v): v is string => typeof v === 'string' && v.length > 0))].slice(
+    0,
+    MAX_FAVORITE_MATCHES,
+  )
+}
+
+export function normalizeFavoritePlayers(stored: FanPreferencesStoredShape): FavoritePlayerFollow[] {
+  const raw = stored.favoritePlayers
+  if (!Array.isArray(raw)) return []
+  const out: FavoritePlayerFollow[] = []
+  const seen = new Set<number>()
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue
+    const playerId = Number(row.playerId)
+    const name = String(row.name ?? '').trim()
+    const teamId = String(row.teamId ?? '').trim()
+    if (!Number.isFinite(playerId) || playerId <= 0 || !name || !teamId) continue
+    if (seen.has(playerId)) continue
+    seen.add(playerId)
+    out.push({ playerId, name, teamId })
+    if (out.length >= MAX_FAVORITE_PLAYERS) break
+  }
+  return out
+}
+
 /**
  * Ne jamais remplacer une sélection clubs/ligue remplie par un blob cloud vide
  * (cause classique : F5 / soft-resync après nos flushes inventaire).
@@ -44,6 +74,14 @@ export function mergeFanPreferencesKeepFilled(
   const nations = [
     ...new Set([...normalizeNationIsos(left), ...normalizeNationIsos(right)]),
   ].slice(0, MAX_FAVORITE_NATIONS)
+  const matchIds = [
+    ...new Set([...normalizeFavoriteMatchIds(left), ...normalizeFavoriteMatchIds(right)]),
+  ].slice(0, MAX_FAVORITE_MATCHES)
+  const playersById = new Map<number, FavoritePlayerFollow>()
+  for (const p of [...normalizeFavoritePlayers(right), ...normalizeFavoritePlayers(left)]) {
+    playersById.set(p.playerId, p)
+  }
+  const favoritePlayers = [...playersById.values()].slice(0, MAX_FAVORITE_PLAYERS)
   const league = left.favoriteLeagueId || right.favoriteLeagueId || null
   const preferencesComplete = Boolean(
     left.preferencesComplete ||
@@ -56,6 +94,8 @@ export function mergeFanPreferencesKeepFilled(
     favoriteClubIds: clubs,
     favoriteClubId: clubs[0] ?? null,
     favoriteNationIsos: nations,
+    favoriteMatchIds: matchIds,
+    favoritePlayers,
     preferencesComplete,
     hideRivalSalons: left.hideRivalSalons ?? right.hideRivalSalons ?? false,
     virageMode: left.virageMode ?? right.virageMode ?? false,

@@ -25,6 +25,7 @@ import { extractCoachesFromSmFixture } from '../api/sportMonks/extractCoachesFro
 import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLiveStats'
 import { BetWidget } from '../components/bet/BetWidget'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
+import { MatchFavoriteButton } from '../components/fan/MatchFavoriteButton'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { LivePitchActionBanner } from '../components/channel/LivePitchActionBanner'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
@@ -2702,6 +2703,20 @@ export function ChannelPage() {
     return extractSubstitutesFromSmFixture(fixtureForLineupSubs)
   }, [fixtureForLineupSubs, status])
 
+  const onSelectLineupPlayer = useCallback(
+    (p: LineupPlayerPick) => {
+      const homeIds = new Set(
+        [...(starters?.home ?? []), ...(bench?.home ?? []), ...(lineupSubstitutes.home ?? [])]
+          .map((x) => ('playerId' in x ? x.playerId : undefined))
+          .filter((id): id is number => typeof id === 'number'),
+      )
+      const teamId =
+        typeof p.playerId === 'number' && homeIds.has(p.playerId) ? match?.home.id : match?.away.id
+      setLineupPlayerPick(teamId ? { ...p, teamId } : p)
+    },
+    [starters, bench, lineupSubstitutes.home, match?.home.id, match?.away.id],
+  )
+
   const lineupScorerPicks = useMemo(() => {
     const out: {
       side: 'home' | 'away'
@@ -3222,6 +3237,11 @@ export function ChannelPage() {
       >
         {status === 'live' ? (
           <div className="pointer-events-none absolute inset-0 rounded-xl border border-rose-400/80 animate-pulse" />
+        ) : null}
+        {status !== 'finished' ? (
+          <div className="absolute right-2 top-2 z-20">
+            <MatchFavoriteButton matchId={match.id} compact light={L} />
+          </div>
         ) : null}
         {status === 'live' ? (
           <div
@@ -4541,7 +4561,7 @@ export function ChannelPage() {
               isUpcoming={isUpcoming}
               light={L}
               compact
-              onSelectPlayer={setLineupPlayerPick}
+              onSelectPlayer={onSelectLineupPlayer}
             />
             <MatchLineupBelowPitch
               coach={displayedCoach}
@@ -4551,7 +4571,7 @@ export function ChannelPage() {
               showSubstitutes={status === 'live' || status === 'finished'}
               hasStarters={displayedLineupLayout.roster.length > 0}
               light={L}
-              onSelectPlayer={setLineupPlayerPick}
+              onSelectPlayer={onSelectLineupPlayer}
             />
             {displayedLineupLayout.roster.length === 0 ? (
               <p
@@ -4867,7 +4887,7 @@ export function ChannelPage() {
                   light={L}
                   compact
                   className="w-full min-w-0"
-                  onSelectPlayer={setLineupPlayerPick}
+                  onSelectPlayer={onSelectLineupPlayer}
                 />
                 <MatchLineupBelowPitch
                   coach={displayedCoach}
@@ -4877,7 +4897,7 @@ export function ChannelPage() {
                   showSubstitutes={status === 'live' || status === 'finished'}
                   hasStarters={displayedLineupLayout.roster.length > 0}
                   light={L}
-                  onSelectPlayer={setLineupPlayerPick}
+                  onSelectPlayer={onSelectLineupPlayer}
                 />
                 {displayedLineupLayout.roster.length === 0 ? (
                   <p className="text-center text-[11px] font-semibold text-sky-200/75">Composition non disponible.</p>
@@ -5399,6 +5419,7 @@ export function ChannelPage() {
       {lineupPlayerPick ? (
         <MatchLineupPlayerSheet
           player={lineupPlayerPick}
+          matchId={match?.id}
           excludeFixtureId={match?.sportMonksFixtureId}
           light={L}
           onClose={() => setLineupPlayerPick(null)}

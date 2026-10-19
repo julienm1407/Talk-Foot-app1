@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSportMonksPlayerRecentMatches } from '../../hooks/useSportMonksPlayerRecentMatches'
+import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import {
   minutesPlayedLabel,
   type PlayerRecentMatch,
@@ -14,6 +15,7 @@ export type LineupPlayerPick = {
   name: string
   photoUrl?: string
   number?: string
+  teamId?: string
 }
 
 function resultTone(r: PlayerRecentMatch['result']): string {
@@ -91,16 +93,22 @@ function MatchRow({ m, light }: { m: PlayerRecentMatch; light?: boolean }) {
 
 export function MatchLineupPlayerSheet({
   player,
+  matchId,
   excludeFixtureId,
   light,
   onClose,
 }: {
   player: LineupPlayerPick
+  matchId?: string
   excludeFixtureId?: number | null
   light?: boolean
   onClose: () => void
 }) {
   const { matches, loading, error } = useSportMonksPlayerRecentMatches(player.playerId, excludeFixtureId)
+  const { isPlayerFavorite, toggleFavoritePlayer, favoritePlayers, maxFavoritePlayers } =
+    useFanPreferences()
+  const following = isPlayerFavorite(player.playerId)
+  const playerFollowFull = !following && favoritePlayers.length >= maxFavoritePlayers
   const [photoFailed, setPhotoFailed] = useState(false)
 
   useEffect(() => {
@@ -164,6 +172,39 @@ export function MatchLineupPlayerSheet({
               {player.name}
             </h2>
           </div>
+          {player.teamId ? (
+            <button
+              type="button"
+              disabled={playerFollowFull}
+              aria-pressed={following}
+              title={
+                following
+                  ? 'Ne plus suivre ce joueur'
+                  : 'Suivre ce joueur — notif 15 min avant ses matchs'
+              }
+              onClick={() => {
+                if (!player.teamId || playerFollowFull) return
+                toggleFavoritePlayer(
+                  { playerId: player.playerId, name: player.name, teamId: player.teamId },
+                  matchId,
+                )
+              }}
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'rounded-full border px-3 py-1.5 text-[11px] font-black',
+                following
+                  ? light
+                    ? 'border-amber-400 bg-amber-100 text-amber-800'
+                    : 'border-amber-300/60 bg-amber-400/20 text-amber-100'
+                  : light
+                    ? 'border-slate-300 bg-white text-slate-800'
+                    : 'border-white/20 bg-white/10 text-white',
+                playerFollowFull && 'opacity-45',
+              )}
+            >
+              {following ? '★ Suivi' : '☆ Suivre'}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onClose}

@@ -10,7 +10,7 @@ import {
   replaceKickoffWatches,
   upsertPushDeviceToken,
 } from '../supabase/pushKickoff'
-import { favoriteClubKickoffWatches } from '../../utils/favoriteKickoffWatches'
+import { buildKickoffWatches } from '../../utils/favoriteKickoffWatches'
 import {
   ensureMatchNotificationPermission,
   isNativePushRuntime,
@@ -25,12 +25,13 @@ function pathFromOpenEvent(ev: Event): string | null {
 }
 
 /**
- * App Play : permission + jeton FCM + rappels locaux T−15 min des clubs favoris.
+ * App Play : permission + jeton FCM + rappels locaux T−15 min (clubs, matchs, joueurs).
  */
 export function KickoffAlertsHost() {
   const navigate = useNavigate()
   const { matches } = useMatches()
-  const { favoriteClubIds, kickoffAlertsEnabled } = useFanPreferences()
+  const { favoriteClubIds, favoriteMatchIds, favoritePlayers, kickoffAlertsEnabled } =
+    useFanPreferences()
   const { ensureCloudSession } = useTalkFootCloudSession()
   const tokenRef = useRef<string | null>(null)
 
@@ -74,8 +75,12 @@ export function KickoffAlertsHost() {
     const t = window.setTimeout(() => {
       void (async () => {
         const watches =
-          kickoffAlertsEnabled && favoriteClubIds.length > 0
-            ? favoriteClubKickoffWatches(matches, favoriteClubIds)
+          kickoffAlertsEnabled
+            ? buildKickoffWatches(matches, {
+                favoriteClubIds,
+                favoriteMatchIds,
+                favoritePlayerTeamIds: favoritePlayers.map((p) => p.teamId),
+              })
             : []
 
         if (isNativePushRuntime()) {
@@ -94,7 +99,14 @@ export function KickoffAlertsHost() {
       })()
     }, 700)
     return () => window.clearTimeout(t)
-  }, [matches, favoriteClubIds, kickoffAlertsEnabled, ensureCloudSession])
+  }, [
+    matches,
+    favoriteClubIds,
+    favoriteMatchIds,
+    favoritePlayers,
+    kickoffAlertsEnabled,
+    ensureCloudSession,
+  ])
 
   return null
 }

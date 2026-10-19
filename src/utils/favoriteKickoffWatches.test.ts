@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { Match } from '../types/match'
-import { favoriteClubKickoffWatches } from './favoriteKickoffWatches'
+import { buildKickoffWatches, favoriteClubKickoffWatches } from './favoriteKickoffWatches'
 
 function m(partial: Partial<Match> & Pick<Match, 'id' | 'kickoffAt'>): Match {
   return {
@@ -48,5 +48,39 @@ describe('favoriteClubKickoffWatches', () => {
     assert.equal(watches[0]?.matchId, 'a')
     assert.equal(watches[0]?.href, '/channel/a')
     assert.equal(watches[0]?.fireAtMs, Date.parse('2026-09-22T19:45:00.000Z'))
+  })
+
+  it('inclut un match étoilé même sans club favori', () => {
+    const now = Date.parse('2026-09-22T12:00:00.000Z')
+    const watches = buildKickoffWatches(
+      [
+        m({
+          id: 'ol-om',
+          kickoffAt: '2026-09-22T21:00:00.000Z',
+          home: {
+            id: 'ol',
+            name: 'Lyon',
+            shortName: 'OL',
+            colors: { primary: '#a00', secondary: '#fff' },
+          },
+        }),
+      ],
+      { favoriteMatchIds: ['ol-om'] },
+      now,
+    )
+    assert.equal(watches.length, 1)
+    assert.equal(watches[0]?.matchId, 'ol-om')
+    assert.match(watches[0]?.body ?? '', /suivi/)
+  })
+
+  it('inclut les matchs du club d’un joueur suivi', () => {
+    const now = Date.parse('2026-09-22T12:00:00.000Z')
+    const watches = buildKickoffWatches(
+      [m({ id: 'a', kickoffAt: '2026-09-22T20:00:00.000Z' })],
+      { favoritePlayerTeamIds: ['psg'] },
+      now,
+    )
+    assert.equal(watches.length, 1)
+    assert.equal(watches[0]?.matchId, 'a')
   })
 })

@@ -21,35 +21,63 @@ export function localNotificationIdForMatch(matchId: string): number {
   return n === 0 ? 1 : n
 }
 
+function watchFromMatch(match: Match, nowMs: number, body: string): KickoffWatch | null {
+  if (match.status === 'finished') return null
+  const kickoffMs = Date.parse(match.kickoffAt)
+  if (!Number.isFinite(kickoffMs)) return null
+  if (kickoffMs <= nowMs + 90_000) return null
+  if (kickoffMs > nowMs + WATCH_HORIZON_MS) return null
+  const home = match.home.shortName || match.home.name
+  const away = match.away.shortName || match.away.name
+  return {
+    matchId: match.id,
+    kickoffAt: match.kickoffAt,
+    title: `${home} – ${away}`,
+    body,
+    href: `/channel/${encodeURIComponent(match.id)}`,
+    fireAtMs: Math.max(nowMs + 5_000, kickoffMs - MATCH_KICKOFF_ALERT_LEAD_MS),
+  }
+}
+
 export function favoriteClubKickoffWatches(
   matches: Match[],
   favoriteClubIds: string[],
   nowMs = Date.now(),
 ): KickoffWatch[] {
-  const clubs = new Set(favoriteClubIds.filter(Boolean))
-  if (clubs.size === 0) return []
+  return buildKickoffWatches(matches, { favoriteClubIds }, nowMs)
+}
 
-  const horizon = nowMs + WATCH_HORIZON_MS
+export function buildKickoffWatches(
+  matches: Match[],
+  opts: {
+    favoriteClubIds?: string[]
+    favoriteMatchIds?: string[]
+    favoritePlayerTeamIds?: string[]
+  },
+  nowMs = Date.now(),
+): KickoffWatch[] {
+  const clubs = new Set((opts.favoriteClubIds ?? []).filter(Boolean))
+  const matchIds = new Set((opts.favoriteMatchIds ?? []).filter(Boolean))
+  const playerTeams = new Set((opts.favoritePlayerTeamIds ?? []).filter(Boolean))
+  if (clubs.size === 0 && matchIds.size === 0 && playerTeams.size === 0) return []
+
   const out: KickoffWatch[] = []
+  const seen = new Set<string>()
 
   for (const match of matches) {
-    if (match.status === 'finished') continue
-    if (!clubs.has(match.home.id) && !clubs.has(match.away.id)) continue
-    const kickoffMs = Date.parse(match.kickoffAt)
-    if (!Number.isFinite(kickoffMs)) continue
-    if (kickoffMs <= nowMs + 90_000) continue
-    if (kickoffMs > horizon) continue
-
-    const home = match.home.shortName || match.home.name
-    const away = match.away.shortName || match.away.name
-    out.push({
-      matchId: match.id,
-      kickoffAt: match.kickoffAt,
-      title: `${home} – ${away}`,
-      body: 'Coup d’envoi dans 15 min — ouvre la tribune Talk Foot.',
-      href: `/channel/${encodeURIComponent(match.id)}`,
-      fireAtMs: Math.max(nowMs + 5_000, kickoffMs - MATCH_KICKOFF_ALERT_LEAD_MS),
-    })
+    const viaClub = clubs.has(match.home.id) || clubs.has(match.away.id)
+    const viaMatch = matchIds.has(match.id)
+    const viaPlayer = playerTeams.has(match.home.id) || playerTeams.has(match.away.id)
+    if (!viaClub && !viaMatch && !viaPlayer) continue
+    const body = viaMatch
+      ? 'Match suivi — coup d’envoi dans 15 min.'
+      : viaPlayer
+        ? 'Joueur suivi — coup d’envoi dans 15 min.'
+        : 'Coup d’envoi dans 15 min — ouvre la tribune Talk Foot.'
+    const watch = watchFromMatch(match, nowMs, body)
+    if (!watch || seen.has(watch.matchId)) continue
+    seen.add(watch.matchId)
+    out.push(watch)
   }
 
   return out.sort((a, b) => a.fireAtMs - b.fireAtMs)
