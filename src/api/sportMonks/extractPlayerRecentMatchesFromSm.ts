@@ -36,9 +36,18 @@ function teamShort(p: SmParticipant | undefined): string {
   return parts.length <= 2 ? n : (parts[parts.length - 1] ?? n)
 }
 
-function detailBlob(d: Record<string, unknown>): string {
+function typeDevName(d: Record<string, unknown>): string {
   const t = rec(d.type)
-  return `${t?.developer_name ?? ''} ${t?.name ?? ''} ${d.type_id ?? ''}`.toUpperCase()
+  return String(t?.developer_name ?? '').trim().toUpperCase()
+}
+
+function typeDisplayName(d: Record<string, unknown>): string {
+  const t = rec(d.type)
+  return String(t?.name ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
 }
 
 function detailValue(d: Record<string, unknown>): number | null {
@@ -46,23 +55,25 @@ function detailValue(d: Record<string, unknown>): number | null {
   return num(d.value ?? data?.value ?? data?.total ?? d.data)
 }
 
-function pickStat(details: Record<string, unknown>[], keys: string[], exclude: string[] = []): number {
+/** Uniquement le code SM exact — `GOAL` dans `GOAL_KICKS` / `SHOTS_ON_GOAL` n’est pas un but. */
+function pickExactStat(details: Record<string, unknown>[], names: string[]): number {
+  const want = new Set(names.map((n) => n.toUpperCase()))
   for (const d of details) {
-    const blob = detailBlob(d)
-    if (exclude.some((k) => blob.includes(k))) continue
-    if (keys.some((k) => blob.includes(k))) {
-      const v = detailValue(d)
-      if (v != null) return v
-    }
+    if (!want.has(typeDevName(d))) continue
+    const v = detailValue(d)
+    if (v != null && v >= 0) return v
   }
   return 0
 }
 
 function pickMinutes(details: Record<string, unknown>[]): number | null {
+  const exact = pickExactStat(details, ['MINUTES_PLAYED'])
+  if (exact > 0) return exact
   for (const d of details) {
-    const blob = detailBlob(d)
-    if (!blob.includes('MINUTE')) continue
-    if (blob.includes('EXTRA') && !blob.includes('PLAYED')) continue
+    const dev = typeDevName(d)
+    const label = typeDisplayName(d)
+    if (!dev.includes('MINUTE') && !label.includes('MINUTE')) continue
+    if ((dev.includes('EXTRA') || label.includes('EXTRA')) && !dev.includes('PLAYED')) continue
     const v = detailValue(d)
     if (v != null && v >= 0) return v
   }
@@ -125,16 +136,16 @@ export function extractPlayerRecentMatchesFromSmPlayerPayload(
 
     const details = smIncludeRows<Record<string, unknown>>(row.details)
     const minutes = pickMinutes(details)
-    const goals = pickStat(details, ['GOAL'], ['CONCEDED', 'EXPECTED', 'XG', 'OWN', 'KEEPER', 'AGAINST'])
-    const assists = pickStat(details, ['ASSIST'])
-    const yellow = pickStat(details, ['YELLOW'])
-    const red = pickStat(details, ['RED'])
+    const goals = pickExactStat(details, ['GOALS'])
+    const assists = pickExactStat(details, ['ASSISTS'])
+    const yellow = pickExactStat(details, ['YELLOWCARDS', 'YELLOW_CARDS', 'YELLOWCARD'])
+    const red = pickExactStat(details, ['REDCARDS', 'RED_CARDS', 'REDCARD'])
     const cameOn = details.some((d) => {
-      const b = detailBlob(d)
+      const b = `${typeDevName(d)} ${typeDisplayName(d)}`
       return b.includes('SUBSTITUTE IN') || b.includes('SUB IN') || (b.includes('SUBSTITUT') && b.includes('IN'))
     })
     const wentOff = details.some((d) => {
-      const b = detailBlob(d)
+      const b = `${typeDevName(d)} ${typeDisplayName(d)}`
       return b.includes('SUBSTITUTE OUT') || b.includes('SUB OUT') || (b.includes('SUBSTITUT') && b.includes('OUT'))
     })
 
