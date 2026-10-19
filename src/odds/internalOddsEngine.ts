@@ -711,6 +711,8 @@ function scorerPositionTier(ctx: ScorerOddsContext): ScorerPositionTier {
     positionLabel: ctx.positionLabel,
     positionRole: ctx.positionRole,
     isStarter: ctx.isStarter,
+    playerName: ctx.name,
+    expectedGoals: ctx.expectedGoals,
   })
 }
 
@@ -793,10 +795,10 @@ export function scorerProbabilityScore(ctx: ScorerOddsContext, teamAttackIndex: 
   const starterPart = ctx.isStarter
     ? 100
     : tier === 'fwd'
-      ? 62
+      ? 78
       : tier === 'mid'
-        ? 38
-        : 16
+        ? 52
+        : 28
   const penPart =
     ctx.isPenaltyTaker ?? guessPenaltyTaker(ctx.name, tier) ? 100 : tier === 'fwd' ? 25 : 8
 
@@ -831,12 +833,12 @@ export function anytimeScorerOddsFromEngine(
     const late = clamp((minLive - 55) / 35, 0, 1)
     p *= 1 - late * 0.35
   }
-  // Plus généreux que Betclic (jetons), mais bornes par poste — pas de gardien @9.
+  // Banc : un cran au-dessus du titulaire, jamais 32 (Dembélé / Doué / Vitinha).
   const bands: Record<Exclude<ScorerPositionTier, 'gk'>, { min: number; max: number; benchMax: number; benchMin: number }> =
     {
-      fwd: { min: 1.65, max: 5.8, benchMin: 2.6, benchMax: 8.2 },
-      mid: { min: 3.6, max: 9.5, benchMin: 5.8, benchMax: 13.5 },
-      def: { min: 8.5, max: 22, benchMin: 14, benchMax: 32 },
+      fwd: { min: 1.65, max: 5.8, benchMin: 2.35, benchMax: 6.4 },
+      mid: { min: 3.6, max: 9.5, benchMin: 4.6, benchMax: 10.5 },
+      def: { min: 8.5, max: 16.5, benchMin: 10.5, benchMax: 19 },
     }
   const band = bands[tier]
   const min = ctx.isStarter ? band.min : band.benchMin

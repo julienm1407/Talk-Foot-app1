@@ -74,17 +74,60 @@ test('remplaçant attaquant n’est pas calé à 9 comme un milieu/def', () => {
     false,
   )
   assert.ok(fwdBench < defBench, `banc att ${fwdBench} vs def ${defBench}`)
-  assert.ok(fwdBench <= 8.2)
-  assert.ok(defBench >= 14)
+  assert.ok(fwdBench <= 6.4)
+  assert.ok(defBench >= 10.5)
+  assert.ok(defBench <= 19)
 })
 
-test('banc sans poste n’est pas traité comme un milieu à 9', () => {
+test('Dembélé banc n’est pas à 32 (poste inconnu SM)', () => {
+  const tier = resolveScorerPositionTier({ isStarter: false, playerName: 'Ousmane Dembélé' })
+  assert.equal(tier, 'fwd')
+  const odds = anytimeScorerOddsFromEngine(
+    { name: 'Ousmane Dembélé', side: 'home', isStarter: false },
+    78,
+    false,
+  )
+  assert.ok(odds <= 6.4, `Dembélé banc trop long: ${odds}`)
+})
+
+test('Vitinha banc n’est pas calé défenseur à 32', () => {
+  const tier = resolveScorerPositionTier({ isStarter: false, playerName: 'Vitinha' })
+  assert.equal(tier, 'mid')
+  const odds = anytimeScorerOddsFromEngine(
+    { name: 'Vitinha', side: 'home', isStarter: false },
+    72,
+    false,
+  )
+  assert.ok(odds <= 10.5, `Vitinha banc trop long: ${odds}`)
+})
+
+test('banc sans poste est un milieu neutre, pas un défenseur à 32', () => {
   const tier = resolveScorerPositionTier({ isStarter: false })
-  assert.equal(tier, 'def')
+  assert.equal(tier, 'mid')
   const odds = anytimeScorerOddsFromEngine(
     { name: 'Inconnu Banc', side: 'away', isStarter: false },
     55,
     false,
   )
-  assert.ok(odds >= 14, `banc inconnu trop court: ${odds}`)
+  assert.ok(odds <= 10.5, `banc inconnu trop long: ${odds}`)
+})
+
+test('Nuno Mendes n’a pas la cote d’un gardien', () => {
+  const mendes = anytimeScorerOddsFromEngine(
+    { name: 'Nuno Mendes', side: 'home', isStarter: true, positionLabel: 'Defender' },
+    70,
+    false,
+  )
+  const chevalier = anytimeScorerOddsFromEngine(
+    {
+      name: 'Lucas Chevalier',
+      side: 'home',
+      isStarter: false,
+      positionLabel: 'Goalkeeper',
+    },
+    70,
+    false,
+  )
+  assert.ok(mendes < chevalier, `Mendes ${mendes} vs Chevalier ${chevalier}`)
+  assert.ok(mendes <= 16.5)
 })

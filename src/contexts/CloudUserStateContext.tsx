@@ -67,6 +67,8 @@ import {
 import { reconcileBetTokenCredits } from '../utils/betTokenReconcile'
 import { betTokenMultiplier, normalizeSubscription } from '../utils/subscriptionEntitlements'
 import { useAuth } from './AuthContext'
+import { levelFromXp } from '../data/shop'
+import { mergeXpHighwater, readXpHighwater, writeXpHighwater } from '../utils/xpHighwater'
 
 function withReconciledBetTokens(app: UserAppStateV1): {
   app: UserAppStateV1
@@ -75,6 +77,16 @@ function withReconciledBetTokens(app: UserAppStateV1): {
 } {
   const tier = normalizeSubscription(app.subscription).tier
   return reconcileBetTokenCredits(app, betTokenMultiplier(tier))
+}
+
+function withXpHighwaterFloor(app: UserAppStateV1, userId: string, sessionXp: number): UserAppStateV1 {
+  const xp = mergeXpHighwater(app.profile.xp, sessionXp, readXpHighwater(userId))
+  writeXpHighwater(userId, xp)
+  if (xp === app.profile.xp && app.profile.level === levelFromXp(xp)) return app
+  return {
+    ...app,
+    profile: { ...app.profile, xp, level: levelFromXp(xp) },
+  }
 }
 
 function rawProfileHadCdmBeta(appState: unknown): boolean {
@@ -294,6 +306,7 @@ function CloudUserStateLoader({
           resolveModularAvatarState(payload.profile.modularAvatar),
         )
         writeWalletBackup(user.id, payload.wallet)
+        writeXpHighwater(user.id, payload.profile.xp)
         writeBetsBackup(user.id, payload.bets)
         writeOwnedItemsBackup(user.id, payload.profile.ownedItemIds ?? [])
         writeFanPreferencesBackup(user.id, payload.fanPreferences)
@@ -459,6 +472,11 @@ function CloudUserStateLoader({
           next = keptAvatar.app
           const keptFan = mergeFanPreferencesBackupIntoApp(user.id, next)
           next = keptFan.app
+          next = withXpHighwaterFloor(
+            next,
+            user.id,
+            Math.max(appRef.current.profile.xp, cloudMerged.profile.xp),
+          )
           const ownedChanged =
             ownedUnion.length !== (appRef.current.profile.ownedItemIds ?? []).length ||
             ownedUnion.some((id) => !(appRef.current.profile.ownedItemIds ?? []).includes(id))
@@ -521,6 +539,7 @@ function CloudUserStateLoader({
         merged = ownedRestored.app
         const fanRestored = mergeFanPreferencesBackupIntoApp(user.id, merged)
         merged = fanRestored.app
+        merged = withXpHighwaterFloor(merged, user.id, appRef.current.profile.xp)
         const betTokensReconciled = withReconciledBetTokens(merged)
         merged = betTokensReconciled.app
         if (betTokensReconciled.tokenDelta > 0 || betTokensReconciled.reconciledBetIds.length > 0) {

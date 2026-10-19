@@ -32,6 +32,7 @@ import {
   writeModularAvatarBackup,
 } from '../utils/modularAvatarBackup'
 import { XP_REWARDS } from '../data/xpRewards'
+import { writeXpHighwater } from '../utils/xpHighwater'
 import { isXpEventCredited, markXpEventCredited, xpDedupeKey } from '../utils/xpGrant'
 import { withCdmBetaParticipant } from '../utils/cdmBetaParticipant'
 
@@ -267,6 +268,11 @@ export function useProfile() {
   }, [profile.ownedItemIds, setProfileStore, cloud?.syncReady])
 
   const computedLevel = useMemo(() => levelFromXp(profile.xp), [profile.xp])
+
+  useEffect(() => {
+    if (!authUser?.id) return
+    writeXpHighwater(authUser.id, profile.xp)
+  }, [authUser?.id, profile.xp])
   const tier = useMemo(() => getLevelTier(computedLevel), [computedLevel])
   const xpForCurrentLevel = useMemo(() => {
     let total = 0
@@ -282,7 +288,10 @@ export function useProfile() {
 
   const addXp = useCallback(
     (amount: number) => {
-      setProfileStore((p) => ({ ...p, xp: p.xp + amount }))
+      setProfileStore((p) => {
+        const xp = p.xp + amount
+        return { ...p, xp, level: levelFromXp(xp) }
+      })
     },
     [setProfileStore],
   )
@@ -449,7 +458,8 @@ export function useProfile() {
           xpGain += XP_REWARDS.betWon
         }
         if (xpGain <= 0) return p
-        return { ...next, xp: next.xp + xpGain }
+        const xp = next.xp + xpGain
+        return { ...next, xp, level: levelFromXp(xp) }
       })
     },
     [setProfileStore],

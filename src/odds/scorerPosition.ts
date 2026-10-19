@@ -24,11 +24,117 @@ export function scorerTierFromPositionLabel(label?: string | null): ScorerPositi
   return null
 }
 
+function normPlayerKey(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+/** SM n’envoie pas `lineups.player.position` (include 400) — repli nom pour stars / postes connus. */
+const FWD_NAME_HINTS = [
+  'dembele',
+  'doue',
+  'douwe',
+  'barcola',
+  'mbappe',
+  'mbappé',
+  'ferran',
+  'haaland',
+  'lewandowski',
+  'kane',
+  'vinicius',
+  'rodrygo',
+  'yamal',
+  'raphinha',
+  'salah',
+  'saka',
+  'son heung',
+  'osihmen',
+  'osimhen',
+  'gyokeres',
+  'isak',
+  'watkins',
+  'havertz',
+  'nkunku',
+  'kolo muani',
+  'gonzalez',
+]
+const MID_NAME_HINTS = [
+  'vitinha',
+  'neves',
+  'pedri',
+  'gavi',
+  'rodri',
+  'valverde',
+  'bellingham',
+  'modric',
+  'de bruyne',
+  'odegaard',
+  'rice',
+  'wirtz',
+  'musiala',
+  'kimmich',
+  'tchouameni',
+  'fabian ruiz',
+  'zaire-emery',
+  'zaire emery',
+]
+const DEF_NAME_HINTS = [
+  'nuno mendes',
+  'hakimi',
+  'marquinhos',
+  'kounde',
+  'cubarsi',
+  'araujo',
+  'balde',
+  'digne',
+  'hernandez',
+  'upamecano',
+  'saliba',
+  'gabriel magalhaes',
+  'van dijk',
+  'walker',
+]
+const GK_NAME_HINTS = [
+  'chevalier',
+  'donnarumma',
+  'ter stegen',
+  'courtois',
+  'allison',
+  'alisson',
+  'ederson',
+  'maignan',
+  'szczesny',
+  'raya',
+  'mamardashvili',
+]
+
+export function scorerTierFromPlayerName(name?: string | null): ScorerPositionTier | null {
+  if (!name) return null
+  const s = normPlayerKey(name)
+  if (!s) return null
+  if (GK_NAME_HINTS.some((h) => s.includes(h))) return 'gk'
+  if (FWD_NAME_HINTS.some((h) => s.includes(h.trim()))) return 'fwd'
+  if (MID_NAME_HINTS.some((h) => s.includes(h))) return 'mid'
+  if (DEF_NAME_HINTS.some((h) => s.includes(h))) return 'def'
+  return null
+}
+
+export function scorerTierFromExpectedGoals(expectedGoals?: number): ScorerPositionTier | null {
+  if (expectedGoals == null || !Number.isFinite(expectedGoals)) return null
+  if (expectedGoals >= 0.28) return 'fwd'
+  if (expectedGoals >= 0.1) return 'mid'
+  return null
+}
+
 export function resolveScorerPositionTier(input: {
   formationPosition?: number
   positionLabel?: string | null
   positionRole?: ScorerPositionTier | null
-  /** Banc sans poste connu → défense (évite une cote milieu ~9 par défaut). */
+  playerName?: string | null
+  expectedGoals?: number
+  /** Banc sans poste : milieu neutre, jamais défenseur @32. */
   isStarter?: boolean
 }): ScorerPositionTier {
   if (input.positionRole) return input.positionRole
@@ -36,7 +142,10 @@ export function resolveScorerPositionTier(input: {
   if (fromLabel) return fromLabel
   const fromForm = scorerTierFromFormationPosition(input.formationPosition)
   if (fromForm) return fromForm
-  if (input.isStarter === false) return 'def'
+  const fromName = scorerTierFromPlayerName(input.playerName)
+  if (fromName) return fromName
+  const fromXg = scorerTierFromExpectedGoals(input.expectedGoals)
+  if (fromXg) return fromXg
   return 'mid'
 }
 

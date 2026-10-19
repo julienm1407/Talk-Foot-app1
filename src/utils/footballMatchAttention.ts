@@ -46,13 +46,9 @@ export function coerceElapsedLiveStatus(
   const staleLimit = extra ? STALE_LIVE_EXTRA_MS : STALE_LIVE_REGULATION_MS
 
   if (sm === 'live') {
+    // Tant que SM dit live, on ne clôt pas sur l’horloge murale vs minute
+    // (retard KO + mi-temps → faux « terminé » au reconnect, Ferran/Neves encore sur le terrain).
     if (ko != null && elapsed > staleLimit) return 'finished'
-    const minute = Math.round(Number(match.minute) || 0)
-    if (!extra && minute >= 90 && elapsed > 105 * 60_000) return 'finished'
-    if (ko != null) {
-      const slackMin = extra ? 45 : minute < 8 ? 50 : 30
-      if (elapsed > minute * 60_000 + slackMin * 60_000) return 'finished'
-    }
     return 'live'
   }
 

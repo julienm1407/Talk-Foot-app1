@@ -118,6 +118,8 @@ export function settleOpenBetsForMatch(
         }
       }
       if (b.status !== 'open') return b
+      // Buts au tableau, mais liste buteurs pas encore chargée → ne pas marquer perdu.
+      if (totalGoals > 0 && scorerEvents.length === 0) return b
       return { ...b, status: 'lost' as const, settledAt: now, payout: 0 }
     }
 

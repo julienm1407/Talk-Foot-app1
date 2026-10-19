@@ -111,12 +111,11 @@ export function useGlobalBetSettlement() {
         fetchingMatchIdsRef.current.delete(match.id)
       }
 
-      // Marquer la tentative de reprise même si SM ne renvoie aucun buteur.
-      scorerReclaimAttemptedRef.current.add(match.id)
-
       if (totalGoals > 0 && scorerEvents.length === 0 && match.sportMonksFixtureId) {
         return { bets: nextBets, tokenDelta, wonBetIds }
       }
+
+      scorerReclaimAttemptedRef.current.add(match.id)
 
       const scorerResult = settleOpenBetsForMatch(
         nextBets,

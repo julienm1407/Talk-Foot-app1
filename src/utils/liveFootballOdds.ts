@@ -818,7 +818,7 @@ export function groupGoalRowsForHeader(
 export type ScorerLineupMeta = {
   formationPosition?: number
   formationField?: string
-  /** Titulaire annoncé ; remplaçants / banc → false (cote plus haute). */
+  /** Titulaire annoncé ; remplaçants / banc → false (cote un cran plus haute). */
   isStarter?: boolean
   positionLabel?: string
   expectedGoals?: number
@@ -828,16 +828,18 @@ export { resolveScorerPositionTier, isAnytimeScorerEligible }
 
 /**
  * Poste SM (`formation_position`) : 1 = gardien, 2–5 défense, 6–8 milieu, 9–11 attaque.
- * Sans info → milieu (neutre), sauf banc → défense.
+ * Sans info → milieu (neutre). Le banc n’est plus calé défenseur.
  */
 export function scorerPositionTier(
   formationPosition?: number,
-  extra?: { positionLabel?: string; isStarter?: boolean },
+  extra?: { positionLabel?: string; isStarter?: boolean; playerName?: string; expectedGoals?: number },
 ): 'gk' | 'def' | 'mid' | 'fwd' {
   return resolveScorerPositionTier({
     formationPosition,
     positionLabel: extra?.positionLabel,
     isStarter: extra?.isStarter,
+    playerName: extra?.playerName,
+    expectedGoals: extra?.expectedGoals,
   })
 }
 

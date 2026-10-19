@@ -2577,26 +2577,29 @@ export function ChannelPage() {
     [scoredButeurSlugs],
   )
 
-  const settledFinishedMatchRef = useRef<string | null>(null)
+  const settledFinishedKeyRef = useRef<string | null>(null)
   useEffect(() => {
     if (status !== 'finished' || !match) return
     const mid = match.id
-    if (settledFinishedMatchRef.current === mid) return
     const fh = match.score?.home ?? homeScore
     const fa = match.score?.away ?? awayScore
-    const runSettle = () => {
-      if (settledFinishedMatchRef.current === mid) return
-      settledFinishedMatchRef.current = mid
-      const scorerEvents = scoredButeurSlugs.map(({ side, slug, name }) => ({ side, slug, name }))
+    const fingerprint = `${mid}|${fh}|${fa}|${scoredButeurKey}`
+    if (settledFinishedKeyRef.current === fingerprint) return
+    const hasGoals = fh + fa > 0
+    const scorersReady = scoredButeurSlugs.length > 0 || !hasGoals
+    const t = window.setTimeout(() => {
+      if (hasGoals && !scorersReady) return
+      settledFinishedKeyRef.current = fingerprint
       betting.settleMatchResult(
         { home: fh, away: fa },
-        { scorerEvents, forMatchId: mid },
+        {
+          scorerEvents: scoredButeurSlugs.map(({ side, slug, name }) => ({ side, slug, name })),
+          forMatchId: mid,
+        },
       )
-    }
-    const t = window.setTimeout(runSettle, 2000)
+    }, 2_800)
     return () => {
       window.clearTimeout(t)
-      runSettle()
     }
   }, [
     status,
@@ -2606,17 +2609,18 @@ export function ChannelPage() {
     headerDisplayScore.home,
     headerDisplayScore.away,
     scoredButeurKey,
+    scoredButeurSlugs,
     betting.settleMatchResult,
   ])
 
-  /** Valide les paris buteur gagnants dès qu’un but SM est confirmé (sans attendre la fin). */
+  /** Valide les paris buteur gagnants dès qu’un but SM est confirmé (live ou FT, sans marquer les autres perdus). */
   useEffect(() => {
-    if (status !== 'live' || !match || scoredButeurSlugs.length === 0) return
+    if ((status !== 'live' && status !== 'finished') || !match || scoredButeurSlugs.length === 0) return
     const mid = match.id
     const scorerEvents = scoredButeurSlugs
     const t = window.setTimeout(() => {
       betting.settleWinningAnytimeScorers(scorerEvents, { forMatchId: mid })
-    }, 2_500)
+    }, 1_200)
     return () => window.clearTimeout(t)
   }, [
     status,

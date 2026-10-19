@@ -266,6 +266,8 @@ export function BetWidget({
           scorerPositionTier(p.formationPosition, {
             positionLabel: p.positionLabel,
             isStarter: p.isStarter !== false,
+            playerName: p.name,
+            expectedGoals: p.expectedGoals,
           }),
         )
       ) {

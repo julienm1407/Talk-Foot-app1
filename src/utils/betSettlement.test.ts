@@ -88,6 +88,19 @@ describe('settleOpenBetsForMatch anytime_scorer', () => {
     expect(next.find((b) => b.id === 'b')?.status).toBe('lost')
   })
 
+  it('ne perd pas les buteurs si le score a des buts mais aucun événement buteur', () => {
+    const bets = [
+      openScorer({ id: 'a', selection: 'scor:home:ousmane-dembele' }),
+      openScorer({ id: 'b', selection: 'scor:home:ferran-torres' }),
+    ]
+    const { bets: next } = settleOpenBetsForMatch(bets, 'm1', { home: 2, away: 0 }, 1, {
+      scorerEvents: [],
+      now: '2026-01-01T02:00:00.000Z',
+    })
+    expect(next.find((b) => b.id === 'a')?.status).toBe('open')
+    expect(next.find((b) => b.id === 'b')?.status).toBe('open')
+  })
+
   it('gagne Dembélé même si l’événement but était au nom de famille seul (résolu)', () => {
     const bets = [openScorer({ id: 'a', selection: 'scor:home:ousmane-dembele' })]
     const { bets: next } = settleOpenBetsForMatch(
