@@ -74,14 +74,14 @@ export function mergeFanPreferencesKeepFilled(
   const nations = [
     ...new Set([...normalizeNationIsos(left), ...normalizeNationIsos(right)]),
   ].slice(0, MAX_FAVORITE_NATIONS)
-  const matchIds = [
-    ...new Set([...normalizeFavoriteMatchIds(left), ...normalizeFavoriteMatchIds(right)]),
-  ].slice(0, MAX_FAVORITE_MATCHES)
-  const playersById = new Map<number, FavoritePlayerFollow>()
-  for (const p of [...normalizeFavoritePlayers(right), ...normalizeFavoritePlayers(left)]) {
-    playersById.set(p.playerId, p)
-  }
-  const favoritePlayers = [...playersById.values()].slice(0, MAX_FAVORITE_PLAYERS)
+  // Matchs / joueurs : un retrait (étoile) doit rester un retrait.
+  // Unionner avec le backup recollerait le favori à chaque reclic (bug Android).
+  const matchIds = Array.isArray(left.favoriteMatchIds)
+    ? normalizeFavoriteMatchIds(left)
+    : normalizeFavoriteMatchIds(right)
+  const favoritePlayers = Array.isArray(left.favoritePlayers)
+    ? normalizeFavoritePlayers(left)
+    : normalizeFavoritePlayers(right)
   const league = left.favoriteLeagueId || right.favoriteLeagueId || null
   const preferencesComplete = Boolean(
     left.preferencesComplete ||
