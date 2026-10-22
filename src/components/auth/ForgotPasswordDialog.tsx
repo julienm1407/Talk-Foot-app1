@@ -9,27 +9,42 @@ import { cn } from '../../utils/cn'
 type ForgotPasswordDialogProps = {
   open: boolean
   initialIdentifier?: string
+  /** Clerk envoie un code à 6 chiffres, pas un lien Talk Foot. */
+  usesEmailCode?: boolean
   onClose: () => void
   onSubmit: (identifier: string) => Promise<{ status: 'sent' } | { status: 'error'; message: string }>
+  onCompleteReset?: (
+    identifier: string,
+    code: string,
+    newPassword: string,
+  ) => Promise<{ status: 'success' } | { status: 'error'; message: string }>
 }
 
 export function ForgotPasswordDialog({
   open,
   initialIdentifier = '',
+  usesEmailCode = false,
   onClose,
   onSubmit,
+  onCompleteReset,
 }: ForgotPasswordDialogProps) {
   const { shouldIgnoreBackdropClose, backdropPointerEvents } = useModalBackdropGuard(open)
   const [identifier, setIdentifier] = useState(initialIdentifier)
+  const [code, setCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sent, setSent] = useState(false)
+  const [step, setStep] = useState<'ask' | 'sent' | 'done'>('ask')
 
   useEffect(() => {
     if (!open) return
     setIdentifier(initialIdentifier)
+    setCode('')
+    setNewPassword('')
+    setConfirmPassword('')
     setError(null)
-    setSent(false)
+    setStep('ask')
     setSubmitting(false)
   }, [open, initialIdentifier])
 
@@ -52,7 +67,7 @@ export function ForgotPasswordDialog({
   const portalTarget = getModalPortalRoot()
   if (!portalTarget) return null
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAskSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     const trimmed = identifier.trim()
@@ -64,7 +79,7 @@ export function ForgotPasswordDialog({
     try {
       const result = await onSubmit(trimmed)
       if (result.status === 'sent') {
-        setSent(true)
+        setStep('sent')
         return
       }
       setError(result.message)
@@ -72,6 +87,33 @@ export function ForgotPasswordDialog({
       setSubmitting(false)
     }
   }
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    if (!onCompleteReset) return
+    if (newPassword.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const result = await onCompleteReset(identifier.trim(), code.trim(), newPassword)
+      if (result.status === 'success') {
+        setStep('done')
+        return
+      }
+      setError(result.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const showCodeForm = usesEmailCode && step === 'sent' && onCompleteReset
 
   return createPortal(
     <div
@@ -95,7 +137,110 @@ export function ForgotPasswordDialog({
         }}
       />
       <div className="relative z-[1] w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xl sm:p-6">
-        {sent ? (
+        {step === 'done' ? (
+          <>
+            <div
+              className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl"
+              aria-hidden
+            >
+              ✓
+            </div>
+            <h2 id="forgot-password-dialog-title" className="mt-4 text-center font-display text-xl font-black text-tf-dark">
+              Mot de passe enregistré
+            </h2>
+            <p className="mt-2 text-center text-sm font-semibold leading-relaxed text-tf-grey">
+              Tu es connecté. Si l’écran ne change pas, ferme cette fenêtre.
+            </p>
+            <Button type="button" variant="primary" className="mt-5 w-full rounded-xl py-3 font-bold" onClick={onClose}>
+              Continuer
+            </Button>
+          </>
+        ) : showCodeForm ? (
+          <>
+            <h2 id="forgot-password-dialog-title" className="text-center font-display text-xl font-black text-tf-dark">
+              Code reçu par mail
+            </h2>
+            <p className="mt-2 text-center text-sm font-semibold leading-relaxed text-tf-grey">
+              Entre le code à 6 chiffres du mail Talk Foot, puis choisis un nouveau mot de passe. Un lien Clerk hors de
+              l’app ne suffit pas toujours.
+            </p>
+            <form onSubmit={(e) => void handleCodeSubmit(e)} className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="forgot-code" className="mb-1 block text-xs font-bold text-tf-grey">
+                  Code
+                </label>
+                <Input
+                  id="forgot-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value)
+                    setError(null)
+                  }}
+                  placeholder="123456"
+                  required
+                  className="w-full rounded-xl border-tf-grey-pastel/50"
+                />
+              </div>
+              <div>
+                <label htmlFor="forgot-new-password" className="mb-1 block text-xs font-bold text-tf-grey">
+                  Nouveau mot de passe
+                </label>
+                <Input
+                  id="forgot-new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value)
+                    setError(null)
+                  }}
+                  placeholder="8 caractères minimum"
+                  required
+                  minLength={8}
+                  className="w-full rounded-xl border-tf-grey-pastel/50"
+                />
+              </div>
+              <div>
+                <label htmlFor="forgot-confirm-password" className="mb-1 block text-xs font-bold text-tf-grey">
+                  Confirmer
+                </label>
+                <Input
+                  id="forgot-confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value)
+                    setError(null)
+                  }}
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                  className="w-full rounded-xl border-tf-grey-pastel/50"
+                />
+              </div>
+              {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
+              <Button
+                type="submit"
+                variant="primary"
+                className="w-full rounded-xl py-3 font-bold"
+                disabled={submitting}
+              >
+                {submitting ? 'Enregistrement…' : 'Enregistrer et se connecter'}
+              </Button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full text-center text-xs font-bold text-tf-grey hover:text-tf-dark"
+              >
+                Annuler
+              </button>
+            </form>
+          </>
+        ) : step === 'sent' ? (
           <>
             <div
               className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl"
@@ -120,9 +265,11 @@ export function ForgotPasswordDialog({
               Mot de passe oublié ?
             </h2>
             <p className="mt-2 text-center text-sm font-semibold leading-relaxed text-tf-grey">
-              Indique l’email ou le pseudo de ton compte. Nous t’enverrons un lien pour choisir un nouveau mot de passe.
+              {usesEmailCode
+                ? 'Indique l’email ou le pseudo du compte. Tu recevras un code à 6 chiffres pour choisir un nouveau mot de passe.'
+                : 'Indique l’email ou le pseudo de ton compte. Nous t’enverrons un lien pour choisir un nouveau mot de passe.'}
             </p>
-            <form onSubmit={(e) => void handleSubmit(e)} className="mt-4 space-y-4">
+            <form onSubmit={(e) => void handleAskSubmit(e)} className="mt-4 space-y-4">
               <div>
                 <label htmlFor="forgot-identifier" className="mb-1 block text-xs font-bold text-tf-grey">
                   Email ou pseudo
@@ -148,7 +295,7 @@ export function ForgotPasswordDialog({
                 className="w-full rounded-xl py-3 font-bold"
                 disabled={submitting}
               >
-                {submitting ? 'Envoi…' : 'Envoyer le lien'}
+                {submitting ? 'Envoi…' : usesEmailCode ? 'Envoyer le code' : 'Envoyer le lien'}
               </Button>
               <button
                 type="button"

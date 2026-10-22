@@ -75,6 +75,10 @@ export type PasswordResetRequestResult =
   | { status: 'sent' }
   | { status: 'error'; message: string }
 
+export type PasswordResetCompleteResult =
+  | { status: 'success' }
+  | { status: 'error'; message: string }
+
 export type AuthContextValue = AuthState & {
   /** Session Clerk active (stable pendant refresh token). Null hors mode Clerk. */
   clerkSessionId: string | null
@@ -84,6 +88,12 @@ export type AuthContextValue = AuthState & {
   signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<SignUpEmailResult>
   /** Demande de réinitialisation (email ou pseudo). */
   requestPasswordReset: (identifier: string) => Promise<PasswordResetRequestResult>
+  /** Clerk : code reçu par email + nouveau mot de passe. */
+  completePasswordReset: (
+    identifier: string,
+    code: string,
+    newPassword: string,
+  ) => Promise<PasswordResetCompleteResult>
   loginWithOAuthProvider: (provider: TalkFootOauthProviderId) => Promise<boolean>
   logout: () => void | Promise<void>
   updateProfile: (displayName: string) => void
@@ -264,6 +274,10 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const completePasswordReset = useCallback(async (): Promise<PasswordResetCompleteResult> => {
+    return { status: 'error', message: 'Réinitialisation indisponible en mode local.' }
+  }, [])
+
   const signUpWithEmail = useCallback(
     async (email: string, password: string, displayName?: string): Promise<SignUpEmailResult> => {
       if (!email.trim() || !password) {
@@ -361,6 +375,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
     loginWithEmail,
     signUpWithEmail,
     requestPasswordReset,
+    completePasswordReset,
     loginWithOAuthProvider,
     logout,
     updateProfile,
@@ -500,6 +515,13 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     return { status: 'sent' }
   }, [])
 
+  const completePasswordReset = useCallback(async (): Promise<PasswordResetCompleteResult> => {
+    return {
+      status: 'error',
+      message: 'Utilise le lien reçu par email pour choisir un nouveau mot de passe.',
+    }
+  }, [])
+
   const signUpWithEmail = useCallback(
     async (email: string, password: string, displayName?: string): Promise<SignUpEmailResult> => {
       const sb = getSupabaseBrowserClient()
@@ -630,6 +652,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     loginWithEmail,
     signUpWithEmail,
     requestPasswordReset,
+    completePasswordReset,
     loginWithOAuthProvider,
     logout,
     updateProfile,
@@ -753,8 +776,15 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
         if (isEmailNotVerifiedMessage(null, message)) {
           return { status: 'email_not_verified', email: trimmed }
         }
-        setAuthNotice(message)
-        return { status: 'failure', message }
+        const lowered = message.toLowerCase()
+        const hint =
+          /password|mot de passe|incorrect|invalid/i.test(lowered) && /oauth|google|external|strategy/i.test(lowered)
+            ? message
+            : /couldn't find|not found|couldn't find your account/i.test(lowered)
+              ? message
+              : 'Email, pseudo ou mot de passe incorrect. Si tu viens de réinitialiser : utilise le code du mail dans « mot de passe oublié », pas seulement un nouveau mot de passe sur une autre page. Compte Google : connecte-toi avec Google.'
+        setAuthNotice(hint)
+        return { status: 'failure', message: hint }
       }
     },
     [signIn, setSignInActive],
@@ -779,6 +809,41 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
       }
     },
     [signIn],
+  )
+
+  const completePasswordReset = useCallback(
+    async (identifier: string, code: string, newPassword: string): Promise<PasswordResetCompleteResult> => {
+      if (!signIn) return { status: 'error', message: 'Réinitialisation indisponible.' }
+      const trimmedCode = code.trim()
+      if (!identifier.trim()) return { status: 'error', message: 'Indique ton email ou ton pseudo.' }
+      if (!trimmedCode) return { status: 'error', message: 'Indique le code reçu par email.' }
+      if (newPassword.length < 8) {
+        return { status: 'error', message: 'Le mot de passe doit contenir au moins 8 caractères.' }
+      }
+      try {
+        if (signIn.status !== 'needs_new_password') {
+          await signIn.attemptFirstFactor({
+            strategy: 'reset_password_email_code',
+            code: trimmedCode,
+          })
+        }
+        const result = await signIn.resetPassword({ password: newPassword })
+        if (result.status === 'complete' && result.createdSessionId) {
+          await setSignInActive({ session: result.createdSessionId })
+          return { status: 'success' }
+        }
+        return {
+          status: 'error',
+          message: 'Impossible d’enregistrer le mot de passe. Vérifie le code et réessaie.',
+        }
+      } catch (err) {
+        return {
+          status: 'error',
+          message: clerkAuthProviderErrorMessage(err, 'Code invalide ou mot de passe refusé.'),
+        }
+      }
+    },
+    [signIn, setSignInActive],
   )
 
   const signUpWithEmail = useCallback(
@@ -896,6 +961,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
     loginWithEmail,
     signUpWithEmail,
     requestPasswordReset,
+    completePasswordReset,
     loginWithOAuthProvider,
     logout,
     updateProfile,

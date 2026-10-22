@@ -46,6 +46,7 @@ export function LoginPage() {
     loginWithEmail,
     signUpWithEmail,
     requestPasswordReset,
+    completePasswordReset,
     loginWithOAuthProvider,
     authNotice,
     clearAuthNotice,
@@ -521,8 +522,10 @@ export function LoginPage() {
       <ForgotPasswordDialog
         open={forgotPasswordOpen}
         initialIdentifier={email}
+        usesEmailCode={clerkEnabled}
         onClose={() => setForgotPasswordOpen(false)}
         onSubmit={requestPasswordReset}
+        onCompleteReset={clerkEnabled ? completePasswordReset : undefined}
       />
     </div>
   )
