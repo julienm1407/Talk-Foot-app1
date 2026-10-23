@@ -194,6 +194,12 @@ export function BoutiqueMedalPacksPage() {
         <p className="text-center text-sm font-bold text-tf-grey">Finalisation de ton achat…</p>
       ) : null}
 
+      {(purchaseError || paymentsBlockedHint) ? (
+        <p className="rounded-xl border border-rose-400/40 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800">
+          {purchaseError || paymentsBlockedHint}
+        </p>
+      ) : null}
+
       <Card className="p-4 sm:p-6" elevation="soft">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {medalPacks.map((pack) => (

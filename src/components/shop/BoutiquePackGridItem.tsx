@@ -42,7 +42,7 @@ export function BoutiquePackGridItem({
         disabled={disabled}
         onClick={() => onSelect(pack.id)}
       >
-        Acheter le pack
+        {disabled ? 'Ouverture Google Play…' : 'Acheter le pack'}
       </Button>
     </div>
   )
