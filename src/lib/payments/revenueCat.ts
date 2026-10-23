@@ -119,6 +119,25 @@ async function purchaseByProductId(productId: string): Promise<void> {
   throw err
 }
 
+function storeErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.name === 'product_not_in_offering') return 'product_not_in_offering'
+  if (typeof err === 'string' && err.trim()) return err.trim()
+  if (err && typeof err === 'object') {
+    const o = err as {
+      message?: string
+      code?: string | number
+      underlyingErrorMessage?: string
+      readableErrorCode?: string
+    }
+    const parts = [o.message, o.underlyingErrorMessage, o.readableErrorCode]
+      .map((p) => (typeof p === 'string' ? p.trim() : ''))
+      .filter(Boolean)
+    if (o.code !== undefined && o.code !== '') parts.push(`code ${String(o.code)}`)
+    if (parts.length) return parts.join(' — ')
+  }
+  return err instanceof Error ? err.message : 'purchase_failed'
+}
+
 function isUserCancelled(err: unknown): boolean {
   const code =
     err && typeof err === 'object' && 'code' in err
@@ -154,8 +173,7 @@ export async function purchaseSubscriptionWithStore(
     return { ok: true, kind: 'subscription', tier: fromEntitlements ?? tier }
   } catch (err) {
     if (isUserCancelled(err)) return { ok: false, error: 'cancelled', cancelled: true }
-    const message = err instanceof Error ? err.message : String(err)
-    return { ok: false, error: message || 'purchase_failed' }
+    return { ok: false, error: storeErrorMessage(err) }
   }
 }
 
@@ -171,8 +189,7 @@ export async function purchaseMedalPackWithStore(packId: string): Promise<StoreP
     return { ok: true, kind: 'medal_pack', packId, medals }
   } catch (err) {
     if (isUserCancelled(err)) return { ok: false, error: 'cancelled', cancelled: true }
-    const message = err instanceof Error ? err.message : String(err)
-    return { ok: false, error: message || 'purchase_failed' }
+    return { ok: false, error: storeErrorMessage(err) }
   }
 }
 

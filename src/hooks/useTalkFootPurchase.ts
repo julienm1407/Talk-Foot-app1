@@ -28,8 +28,16 @@ function errorMessageFr(code: string | undefined, cancelled?: boolean): string {
     case 'unknown_product':
     case 'unknown_pack':
       return 'Produit inconnu.'
-    default:
+    default: {
+      const raw = (code ?? '').trim()
+      if (/offering|product_not|couldn'?t find|not found|no products/i.test(raw)) {
+        return 'Produit Play introuvable. Dans RevenueCat, importe talkfoot_medals_20 (etc.) et mets-les dans l’offering Current.'
+      }
+      if (raw && raw !== 'purchase_failed') {
+        return `Paiement Google Play : ${raw}`
+      }
       return 'Impossible de finaliser le paiement. Réessaie dans un instant.'
+    }
   }
 }
 
