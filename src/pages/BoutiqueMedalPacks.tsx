@@ -6,7 +6,6 @@ import { useWallet } from '../hooks/useWallet'
 import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import { BoutiquePackGridItem } from '../components/shop/BoutiquePackGridItem'
 import { isStripePublishableConfigured } from '../config/stripe'
-import { isRevenueCatConfigured } from '../config/revenueCatCatalog'
 import { useStripeCheckoutReturn } from '../hooks/useStripeCheckoutReturn'
 import { useTalkFootPurchase } from '../hooks/useTalkFootPurchase'
 import { useAuth } from '../contexts/AuthContext'
@@ -97,16 +96,14 @@ export function BoutiqueMedalPacksPage() {
     })
   }, [pendingAutoBuy, pendingItem, shortfall, tryCompletePendingPurchase])
 
-  const paymentsReady = storeBilling
-    ? isRevenueCatConfigured()
-    : isStripePublishableConfigured()
+  const paymentsReady = storeBilling ? true : isStripePublishableConfigured()
 
   const handleSelectPack = async (packId: string) => {
     setPaymentsBlockedHint(null)
     if (!paymentsReady) {
       setPaymentsBlockedHint(
         storeBilling
-          ? 'Achats Google Play pas encore activés (RevenueCat / monétisation Play). Les packs seront dispo dès que Play Billing sera branché — pas de crédit simulé.'
+          ? 'Achats Google Play : il manque la clé RevenueCat goog_… sur Vercel (VITE_REVENUECAT_ANDROID_API_KEY).'
           : 'Paiement Stripe non configuré sur cet environnement. Les packs ne peuvent pas être crédités sans vrai checkout.',
       )
       return

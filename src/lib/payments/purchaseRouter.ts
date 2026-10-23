@@ -3,9 +3,7 @@ import { openExternalUrl } from '../../mobile/openExternalUrl'
 import { usesStoreBilling } from '../../utils/nativePlatform'
 import { isStripePublishableConfigured } from '../../config/stripe'
 import { isPaidSubscriptionTier } from '../../config/stripeCatalog'
-import { isRevenueCatConfigured } from '../../config/revenueCatCatalog'
 import {
-  isRevenueCatReady,
   purchaseMedalPackWithStore,
   purchaseSubscriptionWithStore,
 } from './revenueCat'
@@ -43,9 +41,6 @@ export async function purchaseTalkFootProduct(opts: {
   if (!opts.userId) return { ok: false, error: 'not_authenticated' }
 
   if (usesStoreBilling()) {
-    if (!isRevenueCatConfigured() || !isRevenueCatReady()) {
-      return { ok: false, error: 'revenuecat_not_configured' }
-    }
     if (opts.kind === 'subscription') {
       if (!isPaidSubscriptionTier(opts.productId as SubscriptionTierId)) {
         return { ok: false, error: 'unknown_product' }

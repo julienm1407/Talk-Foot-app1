@@ -21,9 +21,10 @@ function errorMessageFr(code: string | undefined, cancelled?: boolean): string {
       return 'Paiement Stripe non configuré sur cet environnement.'
     case 'revenuecat_not_configured':
     case 'revenuecat_not_ready':
-      return 'Paiements store non configurés (clés RevenueCat manquantes au build).'
+    case 'revenuecat_key_missing':
+      return 'La fiche Google Play s’ouvre seulement avec RevenueCat. Ajoute la clé publique Android goog_… (RevenueCat → API keys) sur Vercel : VITE_REVENUECAT_ANDROID_API_KEY, puis Redeploy.'
     case 'product_not_in_offering':
-      return 'Produit introuvable dans l’offre store. Vérifie RevenueCat / Play Console.'
+      return 'Produit Play introuvable. Dans RevenueCat, importe les IDs talkfoot_ultra_monthly / talkfoot_medals_… et mets-les dans l’offering Current.'
     case 'unknown_product':
     case 'unknown_pack':
       return 'Produit inconnu.'
