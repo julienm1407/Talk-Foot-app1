@@ -34,7 +34,10 @@ export function SubscriptionPlansPage() {
 
   async function handleSubscribe(tierId: SubscriptionTierId) {
     if (!isPaidSubscriptionTier(tierId)) return
-    if (!user?.id) return
+    if (!user?.id) {
+      window.location.assign('/login?next=/formules')
+      return
+    }
     setPayingTier(tierId)
     await purchaseSubscription(tierId)
     setPayingTier(null)
@@ -186,32 +189,37 @@ export function SubscriptionPlansPage() {
                   L ? 'border-tf-grey-pastel/55' : 'border-white/10',
                 )}
               >
-                {setTier && id !== tier ? (
-                  <Button
-                    type="button"
-                    variant="soft"
-                    className="w-full text-xs"
-                    onClick={() => setTier(id as SubscriptionTierId)}
-                  >
-                    Tester {plan.name} (admin)
-                  </Button>
-                ) : id === 'freemium' ? (
+                {id === 'freemium' ? (
                   <p className={cn('text-center text-xs', TF_TEXT_MUTED)}>Inclus à l’inscription</p>
                 ) : storeBilling || isStripePublishableConfigured() ? (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    disabled={busy || payingTier === id || !user}
-                    onClick={() => void handleSubscribe(id)}
-                  >
-                    {!user
-                      ? 'Connecte-toi pour t’abonner'
-                      : payingTier === id
-                        ? storeBilling
-                          ? 'Achat store…'
-                          : 'Redirection Stripe…'
-                        : `S’abonner — ${plan.priceLabel}`}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      className="w-full"
+                      disabled={busy || payingTier === id || !user}
+                      onClick={() => void handleSubscribe(id)}
+                    >
+                      {!user
+                        ? 'Connecte-toi pour t’abonner'
+                        : payingTier === id
+                          ? storeBilling
+                            ? 'Achat store…'
+                            : 'Redirection Stripe…'
+                          : `S’abonner — ${plan.priceLabel}`}
+                    </Button>
+                    {setTier && id !== tier ? (
+                      <button
+                        type="button"
+                        className={cn(
+                          'w-full text-center text-[11px] font-bold underline-offset-2 hover:underline',
+                          TF_TEXT_MUTED,
+                        )}
+                        onClick={() => setTier(id as SubscriptionTierId)}
+                      >
+                        Tester {plan.name} sans payer (admin)
+                      </button>
+                    ) : null}
+                  </div>
                 ) : user ? (
                   <Button type="button" className="w-full" disabled>
                     {storeBilling ? 'Store non configuré' : 'Stripe non configuré'}

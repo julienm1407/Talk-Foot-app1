@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getSubscriptionPlan, SUBSCRIPTION_TIER_ORDER } from '../data/subscriptionPlans'
 import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { useAuth } from '../contexts/AuthContext'
-import { isGooglePlayReviewEmail } from '../config/adminAccess'
+import { isStoreReviewEmail } from '../config/adminAccess'
 import type { SubscriptionState, SubscriptionTierId } from '../types/subscription'
 import { DEFAULT_SUBSCRIPTION } from '../types/subscription'
 import {
@@ -40,7 +40,7 @@ function withGoogleReviewEntitlements(
   sub: SubscriptionState,
   email: string | undefined | null,
 ): SubscriptionState {
-  if (!isGooglePlayReviewEmail(email)) return sub
+  if (!isStoreReviewEmail(email)) return sub
   return {
     ...sub,
     tier: GOOGLE_REVIEW_TIER,
@@ -69,7 +69,7 @@ export function useSubscription() {
 
   const tier = useMemo(() => effectiveTier(subscription), [subscription])
   const plan = useMemo(() => getSubscriptionPlan(tier), [tier])
-  const unlockAll = Boolean(user?.isAdmin) || isGooglePlayReviewEmail(user?.email)
+  const unlockAll = Boolean(user?.isAdmin) || isStoreReviewEmail(user?.email)
 
   const patchSubscription = useCallback(
     (fn: (prev: SubscriptionState) => SubscriptionState) => {
@@ -113,7 +113,7 @@ export function useSubscription() {
 
   /** Persiste Ambassadeur pour le compte Google Review dès la connexion. */
   useEffect(() => {
-    if (!isGooglePlayReviewEmail(user?.email)) return
+    if (!isStoreReviewEmail(user?.email)) return
     if (
       subscription.tier === GOOGLE_REVIEW_TIER &&
       subscription.activeUntil === GOOGLE_REVIEW_ACTIVE_UNTIL

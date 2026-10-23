@@ -1,13 +1,16 @@
 /**
  * Accès admin Talk Foot.
  * - `VITE_ADMIN_EMAILS` (build) : liste séparée par virgules
- * - Comptes revue Google / QA hardcodés : toujours admin, même sans env
+ * - Comptes revue stores / QA hardcodés : toujours admin, même sans env
  */
 
 /** Compte prêté à Google pour la review Play Store — accès total. */
 export const GOOGLE_PLAY_REVIEW_EMAIL = 'talkfoottest@gmail.com'
 
-const BUILTIN_ADMIN_EMAILS = [GOOGLE_PLAY_REVIEW_EMAIL] as const
+/** Compte prêté à Apple pour la review App Store — accès total. */
+export const APPLE_APP_REVIEW_EMAIL = 'testtalkfootapple@gmail.com'
+
+const BUILTIN_ADMIN_EMAILS = [GOOGLE_PLAY_REVIEW_EMAIL, APPLE_APP_REVIEW_EMAIL] as const
 
 function adminEmailSet(): Set<string> {
   const raw = String(import.meta.env.VITE_ADMIN_EMAILS ?? '')
@@ -26,6 +29,14 @@ export function normalizeAccessEmail(email: string | undefined | null): string {
 
 export function isGooglePlayReviewEmail(email: string | undefined | null): boolean {
   return normalizeAccessEmail(email) === GOOGLE_PLAY_REVIEW_EMAIL
+}
+
+export function isAppleAppReviewEmail(email: string | undefined | null): boolean {
+  return normalizeAccessEmail(email) === APPLE_APP_REVIEW_EMAIL
+}
+
+export function isStoreReviewEmail(email: string | undefined | null): boolean {
+  return isGooglePlayReviewEmail(email) || isAppleAppReviewEmail(email)
 }
 
 export function isAdminEmail(email: string | undefined | null): boolean {
