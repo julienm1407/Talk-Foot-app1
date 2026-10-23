@@ -16,20 +16,8 @@ export function isRevenueCatReady(): boolean {
   return configured && usesStoreBilling()
 }
 
-async function fetchRuntimeApiKey(platform: 'ios' | 'android'): Promise<string | null> {
-  try {
-    const res = await fetch('/api/store-public-config', { credentials: 'omit' })
-    if (!res.ok) return null
-    const json = (await res.json()) as { android?: string | null; ios?: string | null }
-    const key = platform === 'ios' ? json.ios : json.android
-    return typeof key === 'string' && key.trim() ? key.trim() : null
-  } catch {
-    return null
-  }
-}
-
 async function resolveApiKey(platform: 'ios' | 'android'): Promise<string | null> {
-  return revenueCatApiKeyForPlatform(platform) || (await fetchRuntimeApiKey(platform))
+  return revenueCatApiKeyForPlatform(platform)
 }
 
 /** À appeler une fois au boot natif (voir `initCapacitorShell`). */
