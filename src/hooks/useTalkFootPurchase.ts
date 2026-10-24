@@ -23,8 +23,11 @@ function errorMessageFr(code: string | undefined, cancelled?: boolean): string {
     case 'revenuecat_not_ready':
     case 'revenuecat_key_missing':
       return 'La fiche Google Play s’ouvre seulement avec RevenueCat. Ajoute la clé publique Android goog_… (RevenueCat → API keys) sur Vercel : VITE_REVENUECAT_ANDROID_API_KEY, puis Redeploy.'
+    case 'android_teststore_key':
+      return 'Clé Test Store (test_…) détectée. Sur Vercel il faut la clé Google Play goog_…'
+    case 'play_offering_empty':
     case 'product_not_in_offering':
-      return 'Produit Play introuvable. Dans RevenueCat, importe les IDs talkfoot_ultra_monthly / talkfoot_medals_… et mets-les dans l’offering Current.'
+      return 'Produit Play introuvable. Dans RevenueCat : produits Google Play (pas Test Store) dans l’offering Current, et JSON service account validé (plus de « could not check »).'
     case 'unknown_product':
     case 'unknown_pack':
       return 'Produit inconnu.'
@@ -32,6 +35,9 @@ function errorMessageFr(code: string | undefined, cancelled?: boolean): string {
       const raw = (code ?? '').trim()
       if (/offering|product_not|couldn'?t find|not found|no products/i.test(raw)) {
         return 'Produit Play introuvable. Dans RevenueCat, importe talkfoot_medals_20 (etc.) et mets-les dans l’offering Current.'
+      }
+      if (/\b23\b|configuration/i.test(raw)) {
+        return 'Config Play / RevenueCat (code 23) : les produits doivent être Play Store dans l’offering Current, le JSON revenuecat-play validé, et l’app installée depuis le test interne Play (pas un APK USB).'
       }
       if (raw && raw !== 'purchase_failed') {
         return `Paiement Google Play : ${raw}`

@@ -37,6 +37,9 @@ async function configureRevenueCatOnce(): Promise<{ ok: true } | { ok: false; er
   if (!apiKey) {
     return { ok: false, error: 'revenuecat_key_missing' }
   }
+  if (platform === 'android' && apiKey.startsWith('test_')) {
+    return { ok: false, error: 'android_teststore_key' }
+  }
 
   try {
     if (import.meta.env.DEV) {
@@ -81,13 +84,28 @@ export async function logoutRevenueCatUser(): Promise<void> {
 
 async function findPackageByProductId(productId: string): Promise<PurchasesPackage | null> {
   const offerings = await Purchases.getOfferings()
+  const currentCount = offerings.current?.availablePackages?.length ?? 0
+  const allCount = Object.values(offerings.all ?? {}).reduce(
+    (n, o) => n + (o?.availablePackages?.length ?? 0),
+    0,
+  )
+  if (currentCount === 0 && allCount === 0) {
+    const empty = new Error('play_offering_empty')
+    empty.name = 'play_offering_empty'
+    throw empty
+  }
   const current = offerings.current
   const pools: PurchasesPackage[] = []
   if (current?.availablePackages?.length) pools.push(...current.availablePackages)
   for (const offering of Object.values(offerings.all ?? {})) {
     if (offering?.availablePackages?.length) pools.push(...offering.availablePackages)
   }
-  return pools.find((p) => p.product.identifier === productId) ?? null
+  return (
+    pools.find((p) => {
+      const id = p.product.identifier
+      return id === productId || id.startsWith(`${productId}:`)
+    }) ?? null
+  )
 }
 
 async function purchaseByProductId(productId: string): Promise<void> {
@@ -107,8 +125,12 @@ async function purchaseByProductId(productId: string): Promise<void> {
     }
   ).purchaseStoreProduct
   if (getProducts && purchaseStoreProduct) {
-    const { products } = await getProducts({ productIdentifiers: [productId] })
-    const product = products?.find((p) => p.identifier === productId) ?? products?.[0]
+    const { products } = await getProducts({
+      productIdentifiers: [productId, `${productId}:monthly`],
+    })
+    const product =
+      products?.find((p) => p.identifier === productId || p.identifier.startsWith(`${productId}:`)) ??
+      products?.[0]
     if (product) {
       await purchaseStoreProduct({ product })
       return
@@ -120,7 +142,9 @@ async function purchaseByProductId(productId: string): Promise<void> {
 }
 
 function storeErrorMessage(err: unknown): string {
-  if (err instanceof Error && err.name === 'product_not_in_offering') return 'product_not_in_offering'
+  if (err instanceof Error && (err.name === 'product_not_in_offering' || err.name === 'play_offering_empty')) {
+    return err.name
+  }
   if (typeof err === 'string' && err.trim()) return err.trim()
   if (err && typeof err === 'object') {
     const o = err as {
