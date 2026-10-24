@@ -33,17 +33,18 @@ export function mergeWalletTokens(serverTokens: number, backupTokens: number): n
 }
 
 /**
- * Médailles : une dépense doit rester.
- * - backup < cloud → dépense locale (ou cloud en retard) → garder backup
- * - backup > cloud → cloud a déjà la dépense (ou backup périmé) → garder cloud
- * - backup 0 et cloud > 0 → ne pas effacer le cloud
+ * Médailles : ne jamais jeter un gain local non sync (packs / déco).
+ * - backup 0 et cloud > 0 → garder le cloud
+ * - backup > cloud → gain local (ou flush raté avant logout) → garder backup
+ * - backup < cloud → dépense locale pas encore sync → garder backup
  */
 export function mergeWalletMedals(serverMedals: number, backupMedals: number): number {
   const server = Math.max(0, serverMedals)
   const backup = Math.max(0, backupMedals)
   if (backup === 0 && server > 0) return server
   if (server === 0 && backup > 0) return backup
-  return Math.min(server, backup)
+  if (backup > server) return backup
+  return backup
 }
 
 function mergeWallets(server: Wallet, backup: Wallet): Wallet {

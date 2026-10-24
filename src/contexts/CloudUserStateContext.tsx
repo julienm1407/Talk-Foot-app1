@@ -47,6 +47,7 @@ import {
   mergeWalletBackupIntoApp,
   writeWalletBackup,
 } from '../utils/walletBackup'
+import { setCloudLogoutFlush } from '../utils/cloudLogoutFlush'
 import {
   coalesceAppStateWithBetsBackup,
   mergeBetsBackupIntoApp,
@@ -353,6 +354,11 @@ function CloudUserStateLoader({
 
   const flushSaveRef = useRef(flushSave)
   flushSaveRef.current = flushSave
+
+  useEffect(() => {
+    setCloudLogoutFlush(() => flushSaveRef.current())
+    return () => setCloudLogoutFlush(null)
+  }, [])
 
   const cancelScheduledSave = useCallback(() => {
     if (saveTimerRef.current) {

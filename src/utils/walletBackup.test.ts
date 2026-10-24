@@ -25,8 +25,8 @@ describe('mergeWalletTokens', () => {
 })
 
 describe('mergeWalletMedals', () => {
-  it('conserve une dépense boutique (cloud 2900, backup périmé 3000 → 2900)', () => {
-    assert.equal(mergeWalletMedals(2900, 3000), 2900)
+  it('conserve un gain local non sync (cloud 1194, backup 17000 → 17000)', () => {
+    assert.equal(mergeWalletMedals(1194, 17000), 17000)
   })
 
   it('conserve une dépense locale pas encore sync (cloud 3000, backup 2900 → 2900)', () => {

@@ -27,6 +27,7 @@ import { containsBannedWord } from '../utils/bannedWords'
 import { checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
+import { flushCloudBeforeLogout } from '../utils/cloudLogoutFlush'
 
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
@@ -316,9 +317,11 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
-    saveStored(null)
-    setState((s) => ({ ...s, user: null }))
-    window.location.assign('/login')
+    void flushCloudBeforeLogout().finally(() => {
+      saveStored(null)
+      setState((s) => ({ ...s, user: null }))
+      window.location.assign('/login')
+    })
   }, [])
 
   const updateProfile = useCallback((displayName: string) => {
@@ -609,6 +612,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    await flushCloudBeforeLogout()
     invalidateSupabaseChatSessionCache()
     setState((s) => ({ ...s, user: null }))
     const sb = getSupabaseBrowserClient()
@@ -915,6 +919,7 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
+    await flushCloudBeforeLogout()
     setForceSignedOut(true)
     stableUserRef.current = null
     clerkSessionIdRef.current = null
