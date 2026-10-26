@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    iosScheme: 'https',
+    // https sur iOS = WebView noire. Schéma Capacitor + server.url .com.
+    iosScheme: 'capacitor',
     // Phase test USB : charge le site prod. allowNavigation = OAuth Google/Clerk
     // reste DANS la WebView (sinon Android ouvre Chrome hors de l’app).
     // Note : talk-foot.fr ne résout pas partout (ERR_NAME_NOT_RESOLVED) → .com.
