@@ -1,51 +1,70 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { TribuneId } from '../types/tribune'
+import type { MatchTribuneZone } from '../types/chat'
 
-const KEY = 'talkfoot.matchTribune.v1'
+export const MATCH_TRIBUNE_ZONE_KEY = 'talkfoot.matchTribuneZone.v1'
+const MAX_STORED = 80
 
-type Store = Record<string, TribuneId>
+const ZONES: readonly MatchTribuneZone[] = ['home-ultras', 'away-ultras', 'analystes', 'neutres']
 
-function readAll(): Store {
+export function isMatchTribuneZone(v: unknown): v is MatchTribuneZone {
+  return typeof v === 'string' && (ZONES as readonly string[]).includes(v)
+}
+
+type Store = Record<string, MatchTribuneZone>
+
+export function readMatchTribuneZoneStore(): Store {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(MATCH_TRIBUNE_ZONE_KEY)
     if (!raw) return {}
     const p: unknown = JSON.parse(raw)
     if (p === null || typeof p !== 'object' || Array.isArray(p)) return {}
-    return p as Store
+    const out: Store = {}
+    for (const [k, val] of Object.entries(p as Record<string, unknown>)) {
+      if (k && isMatchTribuneZone(val)) out[k] = val
+    }
+    return out
   } catch {
     return {}
   }
 }
 
-function writeAll(store: Store) {
+function writeStore(store: Store) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(store))
+    localStorage.setItem(MATCH_TRIBUNE_ZONE_KEY, JSON.stringify(store))
   } catch {
-    /* ignore */
+    /* private mode */
   }
 }
 
+export function readMatchTribuneZone(matchId: string | undefined): MatchTribuneZone {
+  if (!matchId) return 'neutres'
+  return readMatchTribuneZoneStore()[matchId] ?? 'neutres'
+}
+
+export function writeMatchTribuneZone(matchId: string, zone: MatchTribuneZone): void {
+  const all = readMatchTribuneZoneStore()
+  delete all[matchId]
+  all[matchId] = zone
+  const keys = Object.keys(all)
+  if (keys.length > MAX_STORED) {
+    for (const k of keys.slice(0, keys.length - MAX_STORED)) delete all[k]
+  }
+  writeStore(all)
+}
+
+/** Tribune live du match : mémorisée (parcage / ultras / neutres) pour y revenir. */
 export function useMatchTribune(matchId: string | undefined) {
-  const [tribune, setTribuneState] = useState<TribuneId>('virage')
+  const [tribune, setTribuneState] = useState<MatchTribuneZone>(() => readMatchTribuneZone(matchId))
 
   useEffect(() => {
-    if (!matchId) return
-    const all = readAll()
-    const saved = all[matchId]
-    if (saved === 'virage' || saved === 'analyse' || saved === 'chill') {
-      setTribuneState(saved)
-    } else {
-      setTribuneState('virage')
-    }
+    setTribuneState(readMatchTribuneZone(matchId))
   }, [matchId])
 
   const setTribune = useCallback(
-    (id: TribuneId) => {
-      if (!matchId) return
+    (id: MatchTribuneZone) => {
+      if (!isMatchTribuneZone(id)) return
       setTribuneState(id)
-      const all = readAll()
-      all[matchId] = id
-      writeAll(all)
+      if (matchId) writeMatchTribuneZone(matchId, id)
     },
     [matchId],
   )

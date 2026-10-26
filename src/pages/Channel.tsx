@@ -47,6 +47,7 @@ import { isWorldCupCompetitionId } from '../utils/seasonMode'
 import { useBetting } from '../hooks/useBetting'
 import { writeBetMatchCacheEntry } from '../utils/betMatchResolve'
 import { useChannelRouteMatch } from '../hooks/useChannelRouteMatch'
+import { useMatchTribune } from '../hooks/useMatchTribune'
 import { useChatSendGuard } from '../hooks/useChatSendGuard'
 import { useSubscription } from '../hooks/useSubscription'
 import {
@@ -1537,7 +1538,9 @@ export function ChannelPage() {
   const chatInputRef = useRef<HTMLInputElement>(null)
   const chatSendingRef = useRef(false)
   const [chatSending, setChatSending] = useState(false)
-  const [selectedTribune, setSelectedTribune] = useState<MatchTribuneZone>('neutres')
+  const { tribune: selectedTribune, setTribune: setSelectedTribune } = useMatchTribune(
+    match?.id ?? matchId,
+  )
   const [tifoCheerSide, setTifoCheerSide] = useState<'home' | 'away'>('home')
   const [flareColor, setFlareColor] = useState<FlareColor>('red')
   const channelDesktopGrid = showMobileChannelChrome ? CHANNEL_TOUCH_GRID : CHANNEL_DESKTOP_GRID
