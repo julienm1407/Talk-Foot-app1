@@ -113,7 +113,6 @@ import {
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
 import {
-  applyLiveFallbackRatings,
   enrichLineupOverlaysFromMatchFeed,
   extractPlayerMatchOverlaysFromSmFixture,
   resolveLineupPlayerOverlay,
@@ -619,7 +618,12 @@ function LiveHeaderScorers({
   align,
   light,
 }: {
-  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]; ownGoal?: boolean }[]
+  goals: {
+    name: string
+    minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]
+    ownGoal?: boolean
+    assistName?: string
+  }[]
   align: 'left' | 'right'
   light: boolean
 }) {
@@ -643,7 +647,7 @@ function LiveHeaderScorers({
           <li
             key={`${g.name}-${g.minutes.map((m) => m.minute).join(',')}-${i}`}
             className={cn(
-              'max-w-[min(100%,14rem)] text-[10px] font-bold leading-snug sm:max-w-[min(100%,17rem)] sm:text-[11px]',
+              'max-w-[min(100%,18rem)] text-[10px] font-bold leading-snug sm:max-w-[min(100%,22rem)] sm:text-[11px]',
               light ? 'text-emerald-800' : 'text-cyan-100',
             )}
           >
@@ -652,7 +656,7 @@ function LiveHeaderScorers({
                 g.ownGoal && (light ? 'text-red-700' : 'text-red-400'),
               )}
             >
-              ⚽ {formatGoalScorerLabel(g.name, null, { ownGoal: g.ownGoal })}
+              ⚽ {formatGoalScorerLabel(g.name, g.assistName, { ownGoal: g.ownGoal })}
             </span>
             {minuteLabels ? (
               <span
@@ -729,7 +733,12 @@ function LiveHeaderTeamEvents({
   align,
   light,
 }: {
-  goals: { name: string; minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]; ownGoal?: boolean }[]
+  goals: {
+    name: string
+    minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]
+    ownGoal?: boolean
+    assistName?: string
+  }[]
   cards: { name: string; minute: number; inSecondHalf?: boolean; color: 'yellow' | 'red' }[]
   align: 'left' | 'right'
   light: boolean
@@ -2528,7 +2537,14 @@ export function ChannelPage() {
       groupGoalRowsForHeader(
         liveGoalDisplayRows
           .filter((r) => r.side === 'home')
-          .map(({ name, minute, inSecondHalf, inExtraTime, ownGoal }) => ({ name, minute, inSecondHalf, inExtraTime, ownGoal })),
+          .map(({ name, minute, inSecondHalf, inExtraTime, ownGoal, assistName }) => ({
+            name,
+            minute,
+            inSecondHalf,
+            inExtraTime,
+            ownGoal,
+            assistName,
+          })),
       ),
     [liveGoalDisplayRows],
   )
@@ -2537,7 +2553,14 @@ export function ChannelPage() {
       groupGoalRowsForHeader(
         liveGoalDisplayRows
           .filter((r) => r.side === 'away')
-          .map(({ name, minute, inSecondHalf, inExtraTime, ownGoal }) => ({ name, minute, inSecondHalf, inExtraTime, ownGoal })),
+          .map(({ name, minute, inSecondHalf, inExtraTime, ownGoal, assistName }) => ({
+            name,
+            minute,
+            inSecondHalf,
+            inExtraTime,
+            ownGoal,
+            assistName,
+          })),
       ),
     [liveGoalDisplayRows],
   )
@@ -2828,12 +2851,11 @@ export function ChannelPage() {
   const lineupOverlays = useMemo(() => {
     const base = extractPlayerMatchOverlaysFromSmFixture(liveBundleFixture)
     if (status !== 'live' && status !== 'finished') return base
-    const withFeed = enrichLineupOverlaysFromMatchFeed(base, {
+    return enrichLineupOverlaysFromMatchFeed(base, {
       cards: liveCardDisplayRows,
       goals: liveGoalDisplayRows,
       players: lineupOverlayRoster,
     })
-    return applyLiveFallbackRatings(withFeed, lineupOverlayRoster)
   }, [
     liveBundleFixture,
     liveCardDisplayRows,

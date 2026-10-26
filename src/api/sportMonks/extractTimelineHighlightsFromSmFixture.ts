@@ -329,13 +329,19 @@ function scorerFromEvent(ev: SmFixtureEventRow): string | undefined {
   return undefined
 }
 
-function assistFromEvent(ev: SmFixtureEventRow): string | undefined {
+function assistFromEvent(ev: SmFixtureEventRow, scorerName?: string): string | undefined {
   const rp = ev.relatedPlayer ?? ev.related_player
   const fromObj = String(rp?.display_name ?? rp?.name ?? '').trim()
-  if (fromObj.length >= 2) return fromObj
   const fromName = String(ev.related_player_name ?? '').trim()
-  if (fromName.length >= 2) return fromName
-  return undefined
+  const raw = fromObj.length >= 2 ? fromObj : fromName.length >= 2 ? fromName : ''
+  if (raw.length < 2) return undefined
+  if (
+    scorerName &&
+    slugScorer(compactScorerDisplayName(raw)) === slugScorer(compactScorerDisplayName(scorerName))
+  ) {
+    return undefined
+  }
+  return raw
 }
 
 function mergeCardHighlights(primary: Highlight, secondary: Highlight): Highlight {
@@ -422,7 +428,7 @@ export function extractTimelineHighlightsFromSmFixture(
       const side = sideFromParticipant(ev.participant_id, homeId, awayId)
       const scorerName = type === 'But' ? scorerFromEvent(ev) : undefined
       const cardPlayer = type === 'Carton' ? cardPlayerFromEvent(ev, dev) : undefined
-      const assistName = type === 'But' ? assistFromEvent(ev) : undefined
+      const assistName = type === 'But' ? assistFromEvent(ev, scorerName) : undefined
       let resolvedType = type
       if (type === 'But' && !scorerName) resolvedType = 'Info'
       if (type === 'Carton' && !cardPlayer) resolvedType = 'Info'
@@ -645,6 +651,7 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
     if (!scorerName) continue
     if (isMatchTeamLabel(scorerName, home, away)) continue
     const ownGoal = eventDevIsOwnGoal(dev)
+    const assistName = ownGoal ? undefined : assistFromEvent(ev, scorerName)
     rows.push({
       id: `sm-event-goal-${ev.id ?? minute}`,
       matchId: 'direct',
@@ -656,6 +663,7 @@ export function extractLiveGoalDisplayRowsFromSmFixture(
       ...(inExtraTime ? { inExtraTime } : {}),
       ...(side ? { side } : {}),
       scorerName,
+      ...(assistName ? { assistName } : {}),
       ...(ownGoal ? { ownGoal: true } : {}),
     })
   }

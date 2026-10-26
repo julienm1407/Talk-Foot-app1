@@ -196,15 +196,14 @@ export function formatGoalScorerLabel(
   opts?: { ownGoal?: boolean },
 ): string {
   const sc = compactScorerDisplayName(scorer)
-  let base = sc
+  if (opts?.ownGoal) return `${sc} (CSC)`
   if (assist?.trim()) {
     const as = compactScorerDisplayName(assist)
     if (as && slugScorer(as) !== slugScorer(sc)) {
-      base = `${sc} (${as})`
+      return `${sc} (${as})`
     }
   }
-  if (opts?.ownGoal) return `${base} (CSC)`
-  return base
+  return sc
 }
 
 /** Extrait « prénom nom » depuis un libellé de but (timeline FR / EN). */
@@ -400,6 +399,13 @@ export function parseLiveGoalRowsFromHighlights(
     const matchSlug = slugScorer(name) || slugScorer(displayName)
     if (!matchSlug) continue
     const side = h.side ?? guessSideFromTeams(raw, home, away)
+    const assistRaw = h.ownGoal
+      ? undefined
+      : h.assistName?.trim() || parseGoalAssistFromText(raw) || undefined
+    const assistName =
+      assistRaw && slugScorer(compactScorerDisplayName(assistRaw)) !== matchSlug
+        ? compactScorerDisplayName(assistRaw)
+        : undefined
     if (!side) {
       pendingNoSide.push({
         name: displayName,
@@ -408,6 +414,7 @@ export function parseLiveGoalRowsFromHighlights(
         inSecondHalf: h.inSecondHalf,
         inExtraTime: h.inExtraTime,
         ownGoal: h.ownGoal,
+        assistName,
       })
       continue
     }
@@ -422,6 +429,7 @@ export function parseLiveGoalRowsFromHighlights(
       inSecondHalf: h.inSecondHalf,
       inExtraTime: h.inExtraTime,
       ownGoal: h.ownGoal,
+      ...(assistName ? { assistName } : {}),
     })
   }
 
@@ -441,7 +449,16 @@ export function parseLiveGoalRowsFromHighlights(
       const key = `${side}:${slugScorer(row.fullName ?? row.name)}:${row.minute}`
       if (seen.has(key)) continue
       seen.add(key)
-      out.push({ side, name: row.name, fullName: row.fullName, minute: row.minute, inSecondHalf: row.inSecondHalf, inExtraTime: row.inExtraTime, ownGoal: row.ownGoal })
+      out.push({
+        side,
+        name: row.name,
+        fullName: row.fullName,
+        minute: row.minute,
+        inSecondHalf: row.inSecondHalf,
+        inExtraTime: row.inExtraTime,
+        ownGoal: row.ownGoal,
+        ...(row.assistName ? { assistName: row.assistName } : {}),
+      })
     }
   }
 
@@ -775,18 +792,34 @@ export function extractScorerEventsFromHighlights(
 
 /** Regroupe les buts d'un même joueur (doublé, triplé…) pour l'affichage sous le score. */
 export function groupGoalRowsForHeader(
-  rows: { name: string; minute: number; inSecondHalf?: boolean; inExtraTime?: boolean; ownGoal?: boolean }[],
-): { name: string; minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]; ownGoal?: boolean }[] {
+  rows: {
+    name: string
+    minute: number
+    inSecondHalf?: boolean
+    inExtraTime?: boolean
+    ownGoal?: boolean
+    assistName?: string
+  }[],
+): {
+  name: string
+  minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]
+  ownGoal?: boolean
+  assistName?: string
+}[] {
   const groups: {
     name: string
     minutes: { minute: number; inSecondHalf?: boolean; inExtraTime?: boolean }[]
     ownGoal?: boolean
+    assistName?: string
   }[] = []
   const indexByKey = new Map<string, number>()
 
   for (const row of rows) {
     const slug = slugScorer(compactScorerDisplayName(row.name))
-    const key = `${slug}|${row.ownGoal ? 'og' : 'g'}`
+    const assistSlug = row.ownGoal
+      ? ''
+      : slugScorer(compactScorerDisplayName(row.assistName ?? ''))
+    const key = `${slug}|${row.ownGoal ? 'og' : 'g'}|${assistSlug}`
     const minuteEntry = { minute: row.minute, inSecondHalf: row.inSecondHalf, inExtraTime: row.inExtraTime }
     const existingIdx = indexByKey.get(key)
     if (existingIdx == null) {
@@ -795,6 +828,7 @@ export function groupGoalRowsForHeader(
         name: row.name,
         minutes: [minuteEntry],
         ownGoal: row.ownGoal,
+        ...(row.assistName && !row.ownGoal ? { assistName: compactScorerDisplayName(row.assistName) } : {}),
       })
       continue
     }

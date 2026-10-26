@@ -137,7 +137,6 @@ export {
 export {
   extractPlayerMatchOverlaysFromSmFixture,
   enrichLineupOverlaysFromMatchFeed,
-  applyLiveFallbackRatings,
   resolveLineupPlayerOverlay,
   type LineupPlayerMatchOverlay,
   type LineupPlayerOverlayIndex,

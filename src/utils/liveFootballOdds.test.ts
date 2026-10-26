@@ -92,4 +92,14 @@ describe('groupGoalRowsForHeader', () => {
     expect(grouped[0]).toMatchObject({ name: 'Silva', ownGoal: true, minutes: [{ minute: 12 }] })
     expect(grouped[1]).toMatchObject({ name: 'Silva', ownGoal: undefined, minutes: [{ minute: 55 }] })
   })
+
+  it('garde le passeur et sépare deux buts avec des passes D différentes', () => {
+    const grouped = groupGoalRowsForHeader([
+      { name: 'Salah', minute: 12, assistName: 'Arnold' },
+      { name: 'Salah', minute: 67, assistName: 'Mané' },
+    ])
+    expect(grouped).toHaveLength(2)
+    expect(grouped[0]).toMatchObject({ name: 'Salah', assistName: 'Arnold' })
+    expect(grouped[1]).toMatchObject({ name: 'Salah', assistName: 'Mané' })
+  })
 })
