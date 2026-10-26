@@ -5,6 +5,7 @@ import {
   type LiveCardDisplayRow,
   type LiveGoalDisplayRow,
 } from '../../utils/liveFootballOdds'
+import { computeLiveMatchPlayerRating } from '../../utils/liveMatchPlayerRating'
 import type { SmFixture, SmFixtureEventRow, SmLineupRow } from './types'
 
 export type LineupPlayerMatchOverlay = {
@@ -13,6 +14,8 @@ export type LineupPlayerMatchOverlay = {
   ownGoals: number
   yellowCards: number
   redCards: number
+  assists?: number
+  shotsOnTarget?: number
   subbedOffMinute?: number
 }
 
@@ -47,14 +50,17 @@ function mergeInto(
     ownGoals: patch.ownGoals ?? cur.ownGoals,
     yellowCards: patch.yellowCards ?? cur.yellowCards,
     redCards: patch.redCards ?? cur.redCards,
+    assists: patch.assists ?? cur.assists,
+    shotsOnTarget: patch.shotsOnTarget ?? cur.shotsOnTarget,
     subbedOffMinute: patch.subbedOffMinute ?? cur.subbedOffMinute,
   })
 }
 
-function detailNumeric(row: SmLineupRow, tokens: string[]): number | undefined {
+function detailExact(row: SmLineupRow, names: string[]): number | undefined {
+  const want = new Set(names.map((n) => n.toUpperCase()))
   for (const d of row.details ?? []) {
-    const dev = `${d.type?.developer_name ?? ''} ${d.type?.name ?? ''}`.toUpperCase()
-    if (!tokens.some((t) => dev.includes(t))) continue
+    const dev = String(d.type?.developer_name ?? '').toUpperCase()
+    if (!want.has(dev)) continue
     const n = Number(d.value)
     if (Number.isFinite(n)) return n
   }
@@ -108,6 +114,8 @@ function mergeSlug(
     ownGoals: patch.ownGoals ?? cur.ownGoals,
     yellowCards: patch.yellowCards ?? cur.yellowCards,
     redCards: patch.redCards ?? cur.redCards,
+    assists: patch.assists ?? cur.assists,
+    shotsOnTarget: patch.shotsOnTarget ?? cur.shotsOnTarget,
     subbedOffMinute: patch.subbedOffMinute ?? cur.subbedOffMinute,
   })
 }
@@ -156,13 +164,18 @@ export function extractPlayerMatchOverlaysFromSmFixture(
   for (const row of fixture.lineups ?? []) {
     const pid = lineupPlayerId(row)
     if (pid == null) continue
-    const rating = detailNumeric(row, ['RATING'])
-    if (rating != null) {
-      mergeInto(byPlayerId, pid, { rating })
-      const label = String(row.player?.display_name ?? row.player?.name ?? '').trim()
-      const slug = slugFromPlayerName(label)
-      if (slug) mergeSlug(bySlug, slug, { rating })
-    }
+    const rating = detailExact(row, ['RATING'])
+    const assists = detailExact(row, ['ASSISTS'])
+    const shotsOnTarget = detailExact(row, ['SHOTS_ON_TARGET', 'SHOTSONTARGET', 'SHOTS_ON_GOAL'])
+    if (rating == null && assists == null && shotsOnTarget == null) continue
+    const patch: Partial<LineupPlayerMatchOverlay> = {}
+    if (rating != null && rating > 0) patch.rating = rating
+    if (assists != null) patch.assists = assists
+    if (shotsOnTarget != null) patch.shotsOnTarget = shotsOnTarget
+    mergeInto(byPlayerId, pid, patch)
+    const label = String(row.player?.display_name ?? row.player?.name ?? '').trim()
+    const slug = slugFromPlayerName(label)
+    if (slug) mergeSlug(bySlug, slug, patch)
   }
 
   for (const ev of fixture.events ?? []) {
@@ -286,6 +299,51 @@ export function enrichLineupOverlaysFromMatchFeed(
     const redCards = redCounts.get(key) ?? 0
     if (goals === 0 && yellowCards === 0 && redCards === 0) continue
     writeOverlayOnRosterPlayer(byPlayerId, bySlug, player, { goals, yellowCards, redCards })
+  }
+
+  return { byPlayerId, bySlug }
+}
+
+/** Titulaires + entrants : note SM si dispo, sinon note maison. */
+export function applyLiveFallbackRatings(
+  index: LineupPlayerOverlayIndex,
+  playing: LineupOverlayRosterPlayer[],
+): LineupPlayerOverlayIndex {
+  const byPlayerId = new Map<number, LineupPlayerMatchOverlay>()
+  const bySlug = new Map<string, LineupPlayerMatchOverlay>()
+  for (const [pid, overlay] of index.byPlayerId) {
+    byPlayerId.set(pid, cloneOverlay(overlay))
+  }
+  for (const [slug, overlay] of index.bySlug) {
+    bySlug.set(slug, cloneOverlay(overlay))
+  }
+
+  const seen = new Set<string>()
+  for (const player of playing) {
+    const key =
+      player.playerId != null
+        ? `id:${player.playerId}`
+        : `slug:${slugFromPlayerName(player.label) ?? player.label}`
+    if (seen.has(key)) continue
+    seen.add(key)
+
+    let cur: LineupPlayerMatchOverlay | undefined
+    if (player.playerId != null) cur = byPlayerId.get(player.playerId)
+    if (!cur) {
+      const slug = slugFromPlayerName(player.label)
+      if (slug) cur = bySlug.get(slug)
+    }
+    cur = cur ?? emptyOverlay()
+    const rating = computeLiveMatchPlayerRating({
+      smRating: cur.rating,
+      goals: cur.goals,
+      ownGoals: cur.ownGoals,
+      assists: cur.assists,
+      shotsOnTarget: cur.shotsOnTarget,
+      yellowCards: cur.yellowCards,
+      redCards: cur.redCards,
+    })
+    writeOverlayOnRosterPlayer(byPlayerId, bySlug, player, { rating })
   }
 
   return { byPlayerId, bySlug }

@@ -113,6 +113,7 @@ import {
 import { useTalkFootLiveBundle } from '../hooks/useTalkFootLiveBundle'
 import { cn } from '../utils/cn'
 import {
+  applyLiveFallbackRatings,
   enrichLineupOverlaysFromMatchFeed,
   extractPlayerMatchOverlaysFromSmFixture,
   resolveLineupPlayerOverlay,
@@ -2827,11 +2828,12 @@ export function ChannelPage() {
   const lineupOverlays = useMemo(() => {
     const base = extractPlayerMatchOverlaysFromSmFixture(liveBundleFixture)
     if (status !== 'live' && status !== 'finished') return base
-    return enrichLineupOverlaysFromMatchFeed(base, {
+    const withFeed = enrichLineupOverlaysFromMatchFeed(base, {
       cards: liveCardDisplayRows,
       goals: liveGoalDisplayRows,
       players: lineupOverlayRoster,
     })
+    return applyLiveFallbackRatings(withFeed, lineupOverlayRoster)
   }, [
     liveBundleFixture,
     liveCardDisplayRows,
