@@ -1,21 +1,40 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# R8 / Play Console : obfuscation + shrinking (seuil 25 %).
+# Capacitor charge les plugins par réflexion — les garder.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+-keepattributes *Annotation*
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+-keepattributes Signature
+-keepattributes Exceptions
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-keep class com.getcapacitor.** { *; }
+-keep class com.getcapacitor.plugin.** { *; }
+-keep public class * extends com.getcapacitor.Plugin
+-keepclassmembers class * extends com.getcapacitor.Plugin { public *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keepclassmembers class * {
+    @com.getcapacitor.annotation.PluginMethod <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+-keep class org.apache.cordova.** { *; }
+-dontwarn com.getcapacitor.**
+-dontwarn org.apache.cordova.**
+
+-keep class com.talkfoot.app.** { *; }
+
+# RevenueCat (Play Billing)
+-keep class com.revenuecat.purchases.** { *; }
+-dontwarn com.revenuecat.purchases.**
+
+# AdMob / Play services
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+
+# FCM
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.iid.** { *; }
+
+# WebView / JS bridge
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
