@@ -631,7 +631,7 @@ function LiveHeaderScorers({
   return (
     <ul
       className={cn(
-        'mt-1 flex w-full flex-col gap-0.5',
+        'mt-1 flex w-full min-w-0 flex-col gap-0.5',
         align === 'right' ? 'items-end text-right' : 'items-start text-left',
       )}
       aria-label={align === 'right' ? 'Buteurs extérieur' : 'Buteurs domicile'}
@@ -647,12 +647,13 @@ function LiveHeaderScorers({
           <li
             key={`${g.name}-${g.minutes.map((m) => m.minute).join(',')}-${i}`}
             className={cn(
-              'max-w-[min(100%,18rem)] text-[10px] font-bold leading-snug sm:max-w-[min(100%,22rem)] sm:text-[11px]',
+              'flex max-w-full min-w-0 flex-nowrap items-baseline gap-1 text-[10px] font-bold leading-none sm:text-[11px]',
               light ? 'text-emerald-800' : 'text-cyan-100',
             )}
           >
             <span
               className={cn(
+                'min-w-0 truncate whitespace-nowrap',
                 g.ownGoal && (light ? 'text-red-700' : 'text-red-400'),
               )}
             >
@@ -661,7 +662,7 @@ function LiveHeaderScorers({
             {minuteLabels ? (
               <span
                 className={cn(
-                  'ml-1 tabular-nums opacity-90',
+                  'shrink-0 whitespace-nowrap tabular-nums opacity-90',
                   light ? 'text-emerald-900/80' : 'text-cyan-200/85',
                 )}
               >
@@ -745,7 +746,7 @@ function LiveHeaderTeamEvents({
 }) {
   if (!goals.length && !cards.length) return null
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       <LiveHeaderScorers goals={goals} align={align} light={light} />
       <LiveHeaderCards cards={cards} align={align} light={light} />
     </div>
