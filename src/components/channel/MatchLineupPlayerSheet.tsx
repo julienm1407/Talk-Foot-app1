@@ -180,7 +180,7 @@ export function MatchLineupPlayerSheet({
               title={
                 following
                   ? 'Ne plus suivre ce joueur'
-                  : 'Suivre ce joueur — notif 15 min avant ses matchs'
+                  : 'Suivre ce joueur — notif 1 h avant, au coup d’envoi, buts et cartons'
               }
               onClick={() => {
                 if (!player.teamId || playerFollowFull) return

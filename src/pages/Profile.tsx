@@ -243,8 +243,8 @@ export function ProfilePage() {
             {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer les notifications'}
           </h2>
           <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-            15 min avant le coup d’envoi : clubs favoris, matchs étoilés, ou joueurs suivis.
-            Sur l’app Android, ça ouvre le message « Autoriser les notifications ».
+            1 h avant le coup d’envoi, au coup d’envoi, puis buts et cartons : clubs favoris,
+            matchs étoilés, ou joueurs suivis. Sur l’app, ça ouvre « Autoriser les notifications ».
           </p>
           {favoriteClubIds.length === 0 ? (
             <p

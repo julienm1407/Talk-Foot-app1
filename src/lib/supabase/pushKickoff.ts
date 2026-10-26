@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { KickoffWatch } from '../../utils/favoriteKickoffWatches'
+import { uniqueKickoffWatchesForCloud, type KickoffWatch } from '../../utils/favoriteKickoffWatches'
 
 export async function upsertPushDeviceToken(
   sb: SupabaseClient,
@@ -34,9 +34,10 @@ export async function replaceKickoffWatches(
 ): Promise<void> {
   const { error: delError } = await sb.from('match_kickoff_watches').delete().eq('user_id', userId)
   if (delError) throw delError
-  if (watches.length === 0) return
+  const unique = uniqueKickoffWatchesForCloud(watches)
+  if (unique.length === 0) return
   const { error } = await sb.from('match_kickoff_watches').insert(
-    watches.map((w) => ({
+    unique.map((w) => ({
       user_id: userId,
       match_id: w.matchId,
       kickoff_at: w.kickoffAt,

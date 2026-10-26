@@ -25,7 +25,7 @@ function pathFromOpenEvent(ev: Event): string | null {
 }
 
 /**
- * App Play : permission + jeton FCM + rappels locaux T−15 min (clubs, matchs, joueurs).
+ * App native : permission + jeton FCM + rappels locaux 1 h avant et au coup d’envoi.
  */
 export function KickoffAlertsHost() {
   const navigate = useNavigate()

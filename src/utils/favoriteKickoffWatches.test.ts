@@ -24,7 +24,7 @@ function m(partial: Partial<Match> & Pick<Match, 'id' | 'kickoffAt'>): Match {
 }
 
 describe('favoriteClubKickoffWatches', () => {
-  it('ne retient que les matchs des clubs favoris encore à venir', () => {
+  it('ne retient que les matchs des clubs favoris encore à venir (1 h + coup d’envoi)', () => {
     const now = Date.parse('2026-09-22T12:00:00.000Z')
     const watches = favoriteClubKickoffWatches(
       [
@@ -44,10 +44,24 @@ describe('favoriteClubKickoffWatches', () => {
       ['psg'],
       now,
     )
-    assert.equal(watches.length, 1)
+    assert.equal(watches.length, 2)
     assert.equal(watches[0]?.matchId, 'a')
+    assert.equal(watches[0]?.kind, 't60')
     assert.equal(watches[0]?.href, '/channel/a')
-    assert.equal(watches[0]?.fireAtMs, Date.parse('2026-09-22T19:45:00.000Z'))
+    assert.equal(watches[0]?.fireAtMs, Date.parse('2026-09-22T19:00:00.000Z'))
+    assert.equal(watches[1]?.kind, 'kickoff')
+    assert.equal(watches[1]?.fireAtMs, Date.parse('2026-09-22T20:00:00.000Z'))
+  })
+
+  it('n’envoie plus le rappel 1 h si le coup d’envoi est trop proche', () => {
+    const now = Date.parse('2026-09-22T19:30:00.000Z')
+    const watches = favoriteClubKickoffWatches(
+      [m({ id: 'a', kickoffAt: '2026-09-22T20:00:00.000Z' })],
+      ['psg'],
+      now,
+    )
+    assert.equal(watches.length, 1)
+    assert.equal(watches[0]?.kind, 'kickoff')
   })
 
   it('inclut un match étoilé même sans club favori', () => {
@@ -68,9 +82,8 @@ describe('favoriteClubKickoffWatches', () => {
       { favoriteMatchIds: ['ol-om'] },
       now,
     )
-    assert.equal(watches.length, 1)
-    assert.equal(watches[0]?.matchId, 'ol-om')
-    assert.match(watches[0]?.body ?? '', /suivi/)
+    assert.equal(watches.filter((w) => w.kind === 't60').length, 1)
+    assert.match(watches.find((w) => w.kind === 't60')?.body ?? '', /suivi/)
   })
 
   it('inclut les matchs du club d’un joueur suivi', () => {
@@ -80,7 +93,7 @@ describe('favoriteClubKickoffWatches', () => {
       { favoritePlayerTeamIds: ['psg'] },
       now,
     )
-    assert.equal(watches.length, 1)
+    assert.equal(watches.length, 2)
     assert.equal(watches[0]?.matchId, 'a')
   })
 })

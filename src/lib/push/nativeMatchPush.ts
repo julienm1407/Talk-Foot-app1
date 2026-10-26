@@ -48,7 +48,7 @@ export async function registerNativePush(onToken: (token: string) => void): Prom
     await PushNotifications.createChannel({
       id: MATCH_CHANNEL_ID,
       name: 'Matchs favoris',
-      description: 'Rappel coup d’envoi des clubs, matchs et joueurs suivis',
+      description: '1 h avant, coup d’envoi, buts et cartons des matchs suivis',
       importance: 5,
       visibility: 1,
       vibration: true,
@@ -79,7 +79,7 @@ export async function syncLocalKickoffNotifications(watches: KickoffWatch[]): Pr
     .filter((w) => w.fireAtMs > now + 8_000)
     .slice(0, 48)
     .map((w) => ({
-      id: localNotificationIdForMatch(w.matchId),
+      id: localNotificationIdForMatch(w.matchId, w.kind),
       title: w.title,
       body: w.body,
       schedule: { at: new Date(w.fireAtMs), allowWhileIdle: true },

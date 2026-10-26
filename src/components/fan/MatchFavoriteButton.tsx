@@ -29,7 +29,7 @@ export function MatchFavoriteButton({
     ? 'Ne plus suivre ce match'
     : full
       ? `Limite atteinte (${maxFavoriteMatches} matchs suivis)`
-      : 'Suivre ce match — notification 15 min avant le coup d’envoi'
+      : 'Suivre ce match — notif 1 h avant, au coup d’envoi, buts et cartons'
 
   const activate = () => {
     if (full) return
