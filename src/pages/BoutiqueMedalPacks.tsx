@@ -16,7 +16,7 @@ import { findBoutiqueCatalogItem } from '../utils/boutiqueCatalog'
 import { modularAssetIdForPurchase, profileStudioHref } from '../utils/boutiquePurchaseFlow'
 import { cn } from '../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
-import { usesStoreBilling } from '../utils/nativePlatform'
+import { nativePlatform, usesStoreBilling } from '../utils/nativePlatform'
 
 export function BoutiqueMedalPacksPage() {
   const navigate = useNavigate()
@@ -103,7 +103,9 @@ export function BoutiqueMedalPacksPage() {
     if (!paymentsReady) {
       setPaymentsBlockedHint(
         storeBilling
-          ? 'Achats Google Play : il manque la clé RevenueCat goog_… sur Vercel (VITE_REVENUECAT_ANDROID_API_KEY).'
+          ? nativePlatform() === 'ios'
+            ? 'Achats App Store : il manque la clé RevenueCat iOS appl_… sur Vercel (VITE_REVENUECAT_IOS_API_KEY).'
+            : 'Achats Google Play : il manque la clé RevenueCat goog_… sur Vercel (VITE_REVENUECAT_ANDROID_API_KEY).'
           : 'Paiement Stripe non configuré sur cet environnement. Les packs ne peuvent pas être crédités sans vrai checkout.',
       )
       return
@@ -129,7 +131,11 @@ export function BoutiqueMedalPacksPage() {
         <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Packs de médailles</h1>
         <p className="mt-2 max-w-xl text-sm font-medium text-amber-100/90">
           {usesStoreBilling()
-            ? 'Achète des médailles via Google Play / App Store pour débloquer maillots, shorts et packs CDM.'
+            ? nativePlatform() === 'ios'
+              ? 'Achète des médailles via l’App Store pour débloquer maillots, shorts et packs CDM.'
+              : nativePlatform() === 'android'
+                ? 'Achète des médailles via Google Play pour débloquer maillots, shorts et packs CDM.'
+                : 'Achète des médailles via Google Play / App Store pour débloquer maillots, shorts et packs CDM.'
             : 'Achète des médailles en euros (Stripe) pour débloquer maillots, shorts et packs CDM.'}
         </p>
         {checkoutMessage ? (

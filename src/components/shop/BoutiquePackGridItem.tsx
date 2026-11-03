@@ -1,6 +1,14 @@
 import { Button } from '../ui/Button'
 import type { MedalPack } from '../../types/profile'
 import { cn } from '../../utils/cn'
+import { nativePlatform } from '../../utils/nativePlatform'
+
+function buyingLabel(): string {
+  const p = nativePlatform()
+  if (p === 'ios') return 'Ouverture App Store…'
+  if (p === 'android') return 'Ouverture Google Play…'
+  return 'Ouverture du paiement…'
+}
 
 export function BoutiquePackGridItem({
   pack,
@@ -42,7 +50,7 @@ export function BoutiquePackGridItem({
         disabled={disabled}
         onClick={() => onSelect(pack.id)}
       >
-        {disabled ? 'Ouverture Google Play…' : 'Acheter le pack'}
+        {disabled ? buyingLabel() : 'Acheter le pack'}
       </Button>
     </div>
   )
