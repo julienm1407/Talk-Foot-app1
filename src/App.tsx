@@ -54,6 +54,7 @@ import { Cdm2026DataProvider } from './contexts/Cdm2026DataContext'
 import { AppShellProviders } from './providers/AppShellProviders'
 import { FrenchSpellcheckRoot } from './components/FrenchSpellcheckRoot'
 import { KickoffAlertsHost } from './lib/push/KickoffAlertsHost'
+import { LiveMatchAlertsHost } from './lib/push/LiveMatchAlertsHost'
 
 function RouteSuspense({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
@@ -149,6 +150,7 @@ export default function App() {
                       <AppShellProviders>
                         <MonEspaceDrawerProvider>
                           <KickoffAlertsHost />
+                          <LiveMatchAlertsHost />
                           <AppShell />
                         </MonEspaceDrawerProvider>
                       </AppShellProviders>

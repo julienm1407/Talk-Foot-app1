@@ -7,6 +7,16 @@ import {
 } from '../../utils/favoriteKickoffWatches'
 
 const MATCH_CHANNEL_ID = 'talkfoot-match'
+let lastKickoffNotifIds: number[] = []
+
+function hashNotifId(seed: string, salt: number): number {
+  let h = 0
+  for (let i = 0; i < seed.length; i += 1) {
+    h = (Math.imul(h, 31) + seed.charCodeAt(i)) | 0
+  }
+  const n = Math.abs(h + salt) % 2_000_000_000
+  return n === 0 ? 1 : n
+}
 
 export function isNativePushRuntime(): boolean {
   return Capacitor.isNativePlatform()
@@ -62,17 +72,6 @@ export async function registerNativePush(onToken: (token: string) => void): Prom
 
 export async function syncLocalKickoffNotifications(watches: KickoffWatch[]): Promise<void> {
   if (!isNativePushRuntime()) return
-  try {
-    const pending = await LocalNotifications.getPending()
-    const ids = (pending.notifications ?? [])
-      .map((n) => n.id)
-      .filter((id) => typeof id === 'number')
-    if (ids.length > 0) {
-      await LocalNotifications.cancel({ notifications: ids.map((id) => ({ id })) })
-    }
-  } catch {
-    /* ignore */
-  }
 
   const now = Date.now()
   const notifications = watches
@@ -87,8 +86,39 @@ export async function syncLocalKickoffNotifications(watches: KickoffWatch[]): Pr
       channelId: MATCH_CHANNEL_ID,
     }))
 
+  const nextIds = notifications.map((n) => n.id)
+  const toCancel = [...new Set([...lastKickoffNotifIds, ...nextIds])]
+  if (toCancel.length > 0) {
+    try {
+      await LocalNotifications.cancel({ notifications: toCancel.map((id) => ({ id })) })
+    } catch {
+      /* ignore */
+    }
+  }
+  lastKickoffNotifIds = nextIds
   if (notifications.length === 0) return
   await LocalNotifications.schedule({ notifications })
+}
+
+export async function fireImmediateMatchNotification(opts: {
+  idKey: string
+  title: string
+  body: string
+  href: string
+}): Promise<void> {
+  if (!isNativePushRuntime()) return
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: hashNotifId(opts.idKey, 7_000_019),
+        title: opts.title,
+        body: opts.body,
+        schedule: { at: new Date(Date.now() + 400), allowWhileIdle: true },
+        extra: { href: opts.href },
+        channelId: MATCH_CHANNEL_ID,
+      },
+    ],
+  })
 }
 
 export async function listenLocalNotificationTaps(): Promise<void> {

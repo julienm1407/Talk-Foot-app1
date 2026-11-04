@@ -132,11 +132,18 @@ function eventPlayerName(ev) {
   return String(row?.display_name ?? row?.name ?? ev?.player_name ?? '').trim()
 }
 
+function eventTypeId(ev) {
+  const nested = ev?.type && typeof ev.type === 'object' ? ev.type.id : undefined
+  const n = Number(ev?.type_id ?? nested)
+  return Number.isFinite(n) ? n : 0
+}
+
 function classifyLiveEvent(ev) {
   const type = ev?.type && typeof ev.type === 'object' ? ev.type : {}
   const typeName = typeof ev?.type === 'string' ? ev.type : ''
   const dev = String(type.developer_name ?? type.name ?? typeName ?? ev?.info ?? '').toUpperCase()
-  if (!dev) return null
+  const typeId = eventTypeId(ev)
+  if (!dev && typeId <= 0) return null
   if (dev.includes('SUBSTITUTION') || dev.includes('SUBS')) return null
   if (dev.includes('GOALKICK') || dev.includes('GOAL KICK') || dev.includes('GOALKEEPER')) return null
   if (
@@ -147,11 +154,16 @@ function classifyLiveEvent(ev) {
   ) {
     return null
   }
-  const own = /OWN.?GOAL/.test(dev) || /OWNGOAL/.test(dev)
+  const own = /OWN.?GOAL/.test(dev) || /OWNGOAL/.test(dev) || typeId === 15
   const isGoal =
     own ||
+    typeId === 14 ||
+    typeId === 16 ||
     ((/\bGOAL\b/.test(dev) || /\bGOL\b/.test(dev)) && !dev.includes('CARD') && !dev.includes('KICK'))
   const isCard =
+    typeId === 19 ||
+    typeId === 20 ||
+    typeId === 21 ||
     /YELLOW/.test(dev) ||
     /REDCARD/.test(dev) ||
     /RED_CARD/.test(dev) ||
@@ -161,7 +173,8 @@ function classifyLiveEvent(ev) {
   const minute = typeof ev.minute === 'number' ? ev.minute : 0
   const extra = typeof ev.extra_minute === 'number' ? ev.extra_minute : 0
   const minLabel = extra > 0 ? `${minute}+${extra}` : String(minute || '')
-  const eventId = typeof ev.id === 'number' && ev.id > 0 ? String(ev.id) : `${dev}:${minute}:${player}`
+  const eventId =
+    typeof ev.id === 'number' && ev.id > 0 ? String(ev.id) : `${dev || typeId}:${minute}:${player}`
   if (isGoal) {
     return {
       kind: `g:${eventId}`.slice(0, 80),
@@ -170,8 +183,8 @@ function classifyLiveEvent(ev) {
         : `${minLabel ? `${minLabel}’ · ` : ''}BUT${player ? ` — ${player}` : ''}`,
     }
   }
-  const red = /RED/.test(dev) && !/YELLOW/.test(dev)
-  const second = /SECOND/.test(dev)
+  const red = typeId === 20 || typeId === 21 || (/RED/.test(dev) && !/YELLOW/.test(dev))
+  const second = typeId === 21 || /SECOND/.test(dev)
   return {
     kind: `c:${eventId}`.slice(0, 80),
     body: `${minLabel ? `${minLabel}’ · ` : ''}${second || red ? 'Carton rouge' : 'Carton jaune'}${
@@ -392,15 +405,25 @@ const NUDGE_GAP_MS = 15_000
 let lastLiveNudgeAt = 0
 let liveNudgeInflight = null
 
+async function keepAlive(p) {
+  if (!p || typeof p.then !== 'function') return
+  try {
+    const mod = await import('@vercel/functions')
+    if (typeof mod.waitUntil === 'function') mod.waitUntil(p)
+  } catch {
+    /* hors Vercel */
+  }
+}
+
 /**
  * Relance les FCM buts/cartons quand un visiteur charge le live (sans attendre le cron quotidien).
  */
 export function scheduleLivePushNudge(fixtures, opts = {}) {
   const list = Array.isArray(fixtures) ? fixtures.filter(Boolean) : []
-  if (list.length === 0) return
+  if (list.length === 0) return null
   const now = Date.now()
-  if (!opts.force && liveNudgeInflight) return
-  if (!opts.force && now - lastLiveNudgeAt < NUDGE_GAP_MS) return
+  if (!opts.force && liveNudgeInflight) return liveNudgeInflight
+  if (!opts.force && now - lastLiveNudgeAt < NUDGE_GAP_MS) return liveNudgeInflight
   lastLiveNudgeAt = now
   liveNudgeInflight = (async () => {
     const sb = getSupabaseAdmin()
@@ -417,6 +440,8 @@ export function scheduleLivePushNudge(fixtures, opts = {}) {
     .finally(() => {
       liveNudgeInflight = null
     })
+  void keepAlive(liveNudgeInflight)
+  return liveNudgeInflight
 }
 
 /**
