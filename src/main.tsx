@@ -72,8 +72,7 @@ function showFatalBootError(title: string, detail: string) {
   d.textContent = detail
   const hint = document.createElement('p')
   hint.style.cssText = 'font-size:0.78rem;opacity:0.8;margin:0'
-  hint.textContent =
-    'Vérifie l’URL (sur GitHub Pages : …/Talk-Foot-app1/), le réseau, puis F12 → onglet Réseau si un fichier .js est en erreur 404.'
+  hint.textContent = 'Réessaie dans un instant. Si ça continue, ferme l’app et rouvre-la.'
   box.append(h, d, hint)
   wrap.append(box)
   el.append(wrap)
