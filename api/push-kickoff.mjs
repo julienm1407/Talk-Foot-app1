@@ -85,6 +85,15 @@ async function sendFcm(sa, accessToken, token, title, body, href) {
               notification_count: 1,
             },
           },
+          apns: {
+            headers: { 'apns-priority': '10' },
+            payload: {
+              aps: {
+                alert: { title, body },
+                sound: 'default',
+              },
+            },
+          },
         },
       }),
     },
@@ -110,9 +119,23 @@ function sportMonksToken() {
   return String(process.env.SPORTMONKS_TOKEN || process.env.VITE_SPORTMONKS_TOKEN || '').trim()
 }
 
+function listEvents(fx) {
+  const e = fx?.events
+  if (Array.isArray(e)) return e
+  if (Array.isArray(e?.data)) return e.data
+  return []
+}
+
+function eventPlayerName(ev) {
+  const p = ev?.player
+  const row = Array.isArray(p) ? p[0] : p?.data && !Array.isArray(p.data) ? p.data : p
+  return String(row?.display_name ?? row?.name ?? ev?.player_name ?? '').trim()
+}
+
 function classifyLiveEvent(ev) {
   const type = ev?.type && typeof ev.type === 'object' ? ev.type : {}
-  const dev = String(type.developer_name ?? type.name ?? ev?.info ?? '').toUpperCase()
+  const typeName = typeof ev?.type === 'string' ? ev.type : ''
+  const dev = String(type.developer_name ?? type.name ?? typeName ?? ev?.info ?? '').toUpperCase()
   if (!dev) return null
   if (dev.includes('SUBSTITUTION') || dev.includes('SUBS')) return null
   if (dev.includes('GOALKICK') || dev.includes('GOAL KICK') || dev.includes('GOALKEEPER')) return null
@@ -134,7 +157,7 @@ function classifyLiveEvent(ev) {
     /RED_CARD/.test(dev) ||
     (dev.includes('RED') && dev.includes('CARD'))
   if (!isGoal && !isCard) return null
-  const player = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
+  const player = eventPlayerName(ev)
   const minute = typeof ev.minute === 'number' ? ev.minute : 0
   const extra = typeof ev.extra_minute === 'number' ? ev.extra_minute : 0
   const minLabel = extra > 0 ? `${minute}+${extra}` : String(minute || '')
@@ -157,13 +180,17 @@ function classifyLiveEvent(ev) {
   }
 }
 
+function participantNotifName(p) {
+  const full = String(p?.name ?? '').trim()
+  if (full) return full
+  return String(p?.short_code ?? '').trim() || 'Équipe'
+}
+
 function fixtureTitle(fx) {
   const parts = Array.isArray(fx.participants) ? fx.participants : []
   const home = parts.find((p) => p?.meta?.location === 'home') ?? parts[0]
   const away = parts.find((p) => p?.meta?.location === 'away') ?? parts[1]
-  const hn = String(home?.short_code ?? home?.name ?? 'Domicile').trim()
-  const an = String(away?.short_code ?? away?.name ?? 'Extérieur').trim()
-  return `${hn} – ${an}`
+  return `${participantNotifName(home)} – ${participantNotifName(away)}`
 }
 
 function currentScoreLabel(fx) {
@@ -266,14 +293,11 @@ async function sendKickoffWindow(sb, sa, accessToken, stale, now, kind, fromIso,
   return { sent, skipped }
 }
 
-async function sendLiveEvents(sb, sa, accessToken, stale, now) {
-  const smToken = sportMonksToken()
-  if (!smToken) return { sent: 0, skipped: 0, reason: 'no_sm_token' }
-
+async function sendLiveEventsFromFixtures(sb, sa, accessToken, stale, now, fixtures) {
   const { data: watches } = await sb
     .from('match_kickoff_watches')
     .select('user_id, match_id, title, href, kickoff_at')
-    .gte('kickoff_at', new Date(now - 3.5 * 60 * 60 * 1000).toISOString())
+    .gte('kickoff_at', new Date(now - 4 * 60 * 60 * 1000).toISOString())
     .lte('kickoff_at', new Date(now + 8 * 60 * 1000).toISOString())
 
   const rows = watches ?? []
@@ -286,25 +310,15 @@ async function sendLiveEvents(sb, sa, accessToken, stale, now) {
     wanted.set(w.match_id, list)
   }
 
-  const upstream = new URL('https://api.sportmonks.com/v3/football/livescores/inplay')
-  upstream.searchParams.set('include', 'participants;scores;events.player;events.type;state')
-  upstream.searchParams.set('timezone', 'Europe/Paris')
-
-  const smRes = await fetch(upstream.toString(), {
-    headers: { Authorization: smToken },
-    cache: 'no-store',
-  })
-  if (!smRes.ok) return { sent: 0, skipped: 0, reason: `sm_${smRes.status}` }
-  const payload = await smRes.json()
-  const fixtures = Array.isArray(payload?.data) ? payload.data : []
-
   const jobs = []
   for (const fx of fixtures) {
-    if (typeof fx?.id !== 'number') continue
-    const matchId = `m-sm-${fx.id}`
+    const rawId = fx?.id
+    const n = typeof rawId === 'number' ? rawId : Number(rawId)
+    if (!Number.isFinite(n) || n <= 0) continue
+    const matchId = `m-sm-${n}`
     const watchers = wanted.get(matchId)
     if (!watchers?.length) continue
-    const events = Array.isArray(fx.events) ? fx.events : []
+    const events = listEvents(fx)
     const title = fixtureTitle(fx)
     const score = currentScoreLabel(fx)
     for (const ev of events) {
@@ -354,6 +368,55 @@ async function sendLiveEvents(sb, sa, accessToken, stale, now) {
     else skipped += 1
   }
   return { sent, skipped }
+}
+
+async function sendLiveEvents(sb, sa, accessToken, stale, now) {
+  const smToken = sportMonksToken()
+  if (!smToken) return { sent: 0, skipped: 0, reason: 'no_sm_token' }
+
+  const upstream = new URL('https://api.sportmonks.com/v3/football/livescores/inplay')
+  upstream.searchParams.set('include', 'participants;scores;events.player;events.type;state')
+  upstream.searchParams.set('timezone', 'Europe/Paris')
+
+  const smRes = await fetch(upstream.toString(), {
+    headers: { Authorization: smToken },
+    cache: 'no-store',
+  })
+  if (!smRes.ok) return { sent: 0, skipped: 0, reason: `sm_${smRes.status}` }
+  const payload = await smRes.json()
+  const fixtures = Array.isArray(payload?.data) ? payload.data : []
+  return sendLiveEventsFromFixtures(sb, sa, accessToken, stale, now, fixtures)
+}
+
+const NUDGE_GAP_MS = 15_000
+let lastLiveNudgeAt = 0
+let liveNudgeInflight = null
+
+/**
+ * Relance les FCM buts/cartons quand un visiteur charge le live (sans attendre le cron quotidien).
+ */
+export function scheduleLivePushNudge(fixtures, opts = {}) {
+  const list = Array.isArray(fixtures) ? fixtures.filter(Boolean) : []
+  if (list.length === 0) return
+  const now = Date.now()
+  if (!opts.force && liveNudgeInflight) return
+  if (!opts.force && now - lastLiveNudgeAt < NUDGE_GAP_MS) return
+  lastLiveNudgeAt = now
+  liveNudgeInflight = (async () => {
+    const sb = getSupabaseAdmin()
+    const sa = parseServiceAccount()
+    if (!sb || !sa?.project_id || !sa?.private_key || !sa?.client_email) return
+    const accessToken = await googleAccessToken(sa)
+    const stale = []
+    await sendLiveEventsFromFixtures(sb, sa, accessToken, stale, Date.now(), list)
+    if (stale.length > 0) {
+      await sb.from('push_device_tokens').delete().in('token', stale)
+    }
+  })()
+    .catch(() => undefined)
+    .finally(() => {
+      liveNudgeInflight = null
+    })
 }
 
 /**

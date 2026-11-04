@@ -10,7 +10,10 @@ import {
   replaceKickoffWatches,
   upsertPushDeviceToken,
 } from '../supabase/pushKickoff'
-import { buildKickoffWatches } from '../../utils/favoriteKickoffWatches'
+import {
+  buildCloudFavoriteMatchWatches,
+  buildKickoffWatches,
+} from '../../utils/favoriteKickoffWatches'
 import {
   ensureMatchNotificationPermission,
   isNativePushRuntime,
@@ -25,7 +28,8 @@ function pathFromOpenEvent(ev: Event): string | null {
 }
 
 /**
- * App native : permission + jeton FCM + rappels locaux 1 h avant et au coup d’envoi.
+ * App native : permission + jeton FCM + rappels locaux 1 h / coup d’envoi.
+ * Les buts et cartons partent en FCM tant que le match suivi reste en base.
  */
 export function KickoffAlertsHost() {
   const navigate = useNavigate()
@@ -74,24 +78,25 @@ export function KickoffAlertsHost() {
   useEffect(() => {
     const t = window.setTimeout(() => {
       void (async () => {
-        const watches =
-          kickoffAlertsEnabled
-            ? buildKickoffWatches(matches, {
-                favoriteClubIds,
-                favoriteMatchIds,
-                favoritePlayerTeamIds: favoritePlayers.map((p) => p.teamId),
-              })
-            : []
+        const followOpts = {
+          favoriteClubIds,
+          favoriteMatchIds,
+          favoritePlayerTeamIds: favoritePlayers.map((p) => p.teamId),
+        }
+        const localWatches = kickoffAlertsEnabled ? buildKickoffWatches(matches, followOpts) : []
+        const cloudWatches = kickoffAlertsEnabled
+          ? buildCloudFavoriteMatchWatches(matches, followOpts)
+          : []
 
         if (isNativePushRuntime()) {
-          await syncLocalKickoffNotifications(watches).catch(() => undefined)
+          await syncLocalKickoffNotifications(localWatches).catch(() => undefined)
         }
 
         const session = await ensureCloudSession()
         const sb = getSupabaseBrowserClient()
         const uid = session?.user?.id
         if (!sb || !uid) return
-        await replaceKickoffWatches(sb, uid, watches).catch(() => undefined)
+        await replaceKickoffWatches(sb, uid, cloudWatches).catch(() => undefined)
 
         if (!kickoffAlertsEnabled && tokenRef.current) {
           await deletePushDeviceToken(sb, tokenRef.current).catch(() => undefined)

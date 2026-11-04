@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { Match } from '../types/match'
-import { buildKickoffWatches, favoriteClubKickoffWatches } from './favoriteKickoffWatches'
+import {
+  buildCloudFavoriteMatchWatches,
+  buildKickoffWatches,
+  favoriteClubKickoffWatches,
+} from './favoriteKickoffWatches'
 
 function m(partial: Partial<Match> & Pick<Match, 'id' | 'kickoffAt'>): Match {
   return {
@@ -47,6 +51,7 @@ describe('favoriteClubKickoffWatches', () => {
     assert.equal(watches.length, 2)
     assert.equal(watches[0]?.matchId, 'a')
     assert.equal(watches[0]?.kind, 't60')
+    assert.equal(watches[0]?.title, 'Paris SG – Marseille')
     assert.equal(watches[0]?.href, '/channel/a')
     assert.equal(watches[0]?.fireAtMs, Date.parse('2026-09-22T19:00:00.000Z'))
     assert.equal(watches[1]?.kind, 'kickoff')
@@ -95,5 +100,18 @@ describe('favoriteClubKickoffWatches', () => {
     )
     assert.equal(watches.length, 2)
     assert.equal(watches[0]?.matchId, 'a')
+  })
+
+  it('garde un match live étoilé pour les FCM buts (les notifs locales, elles, s’arrêtent)', () => {
+    const now = Date.parse('2026-09-22T20:30:00.000Z')
+    const live = m({
+      id: 'm-sm-99',
+      kickoffAt: '2026-09-22T20:00:00.000Z',
+      status: 'live',
+    })
+    assert.equal(buildKickoffWatches([live], { favoriteMatchIds: ['m-sm-99'] }, now).length, 0)
+    const cloud = buildCloudFavoriteMatchWatches([live], { favoriteMatchIds: ['m-sm-99'] }, now)
+    assert.equal(cloud.length, 1)
+    assert.equal(cloud[0]?.matchId, 'm-sm-99')
   })
 })

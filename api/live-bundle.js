@@ -9,6 +9,7 @@
  */
 
 import { handleCapacitorCors } from './corsCapacitor.js'
+import { scheduleLivePushNudge } from './push-kickoff.mjs'
 
 const INFLIGHT = new Map()
 const MEM_CACHE = new Map()
@@ -179,6 +180,7 @@ export default async function handler(req, res) {
 
   try {
     const payload = await p
+    if (payload?.fixture) scheduleLivePushNudge([payload.fixture], { force: true })
     const ttl = Math.max(2, Number(payload?.meta?.ttlSec) || 6)
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json; charset=utf-8')

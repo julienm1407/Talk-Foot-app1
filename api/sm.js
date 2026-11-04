@@ -4,6 +4,7 @@
  * La clé API est lue ici : SPORTMONKS_TOKEN ou VITE_SPORTMONKS_TOKEN (Project → Environment Variables).
  */
 import { handleCapacitorCors } from './corsCapacitor.js'
+import { scheduleLivePushNudge } from './push-kickoff.mjs'
 
 export default async function handler(req, res) {
   if (handleCapacitorCors(req, res)) return
@@ -71,6 +72,15 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', ct)
     if (smRes.status >= 200 && smRes.status < 300) {
       res.setHeader('Cache-Control', cachePolicyForPath(smPath))
+      if (smPath.includes('livescores/inplay') || smPath.includes('fixtures/inplay')) {
+        try {
+          const payload = JSON.parse(text)
+          const fixtures = Array.isArray(payload?.data) ? payload.data : []
+          scheduleLivePushNudge(fixtures)
+        } catch {
+          /* ignore */
+        }
+      }
     } else {
       res.setHeader('Cache-Control', 'no-store')
     }
