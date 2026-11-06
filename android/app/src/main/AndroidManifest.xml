@@ -60,10 +60,10 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
-        <!-- AdMob Talk Foot (ca-app-pub-3053581713947053~6824472724) -->
+        <!-- AdMob Talk Foot (ca-app-pub-3053581713947053~6380726341) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3053581713947053~6824472724" />
+            android:value="ca-app-pub-3053581713947053~6380726341" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="talkfoot-match" />

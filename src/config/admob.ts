@@ -6,11 +6,11 @@
 const GOOGLE_TEST_PUB = '3940256099942544'
 
 /** Application AdMob « Talk Foot ». */
-const LIVE_APP = 'ca-app-pub-3053581713947053~6824472724'
+const LIVE_APP = 'ca-app-pub-3053581713947053~6380726341'
 /** Bloc « Talk Foot — Interstitiel match ». */
-const LIVE_INTERSTITIAL = 'ca-app-pub-3053581713947053/2560784920'
+const LIVE_INTERSTITIAL = 'ca-app-pub-3053581713947053/4984930370'
 /** Bloc « Talk Foot — Recompense match » (+10 jetons). */
-const LIVE_REWARDED = 'ca-app-pub-3053581713947053/8658842304'
+const LIVE_REWARDED = 'ca-app-pub-3053581713947053/9275529170'
 
 function envId(name: string): string | undefined {
   const v = (import.meta.env as Record<string, unknown>)[name]
