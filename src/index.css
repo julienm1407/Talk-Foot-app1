@@ -193,6 +193,13 @@ html {
   touch-action: manipulation;
 }
 
+/* App native : ne pas hériter de la grosse police Android (sinon tout explose). */
+html.tf-native-shell {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+}
+
 /* Popups but / carton / VAR : pas de blur (iOS) + texte clair (mode jour force sinon du navy). */
 .tf-live-fullscreen-fx .tf-live-fullscreen-popup {
   -webkit-backdrop-filter: none;
