@@ -42,6 +42,33 @@ describe('extractMatchLineupBundleFromFixture', () => {
     expect(bundle?.starters?.home?.[0]?.label).toBe('Home0')
   })
 
+  it('marque EXPECTED / PROBABLE même avec un formation_field', () => {
+    const fx = {
+      participants: [
+        { id: 1, meta: { location: 'home' } },
+        { id: 2, meta: { location: 'away' } },
+      ],
+      lineups: [
+        ...Array.from({ length: 11 }, (_, i) => ({
+          participant_id: 1,
+          player: { display_name: `H${i}` },
+          formation_field: `1:${i + 1}`,
+          type: { developer_name: 'EXPECTED_LINEUP' },
+        })),
+        ...Array.from({ length: 11 }, (_, i) => ({
+          participant_id: 2,
+          player: { display_name: `A${i}` },
+          formation_field: `1:${i + 1}`,
+          type: { name: 'Probable lineup' },
+        })),
+      ],
+    } as unknown as SmFixture
+
+    const bundle = extractMatchLineupBundleFromFixture(fx)
+    expect(bundle?.source).toBe('probable')
+    expect(bundle?.starters?.home?.length).toBe(11)
+  })
+
   it('déplie participants/lineups imbriqués dans data', () => {
     const fx = {
       participants: {

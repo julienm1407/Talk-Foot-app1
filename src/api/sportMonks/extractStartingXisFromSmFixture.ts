@@ -230,18 +230,21 @@ function pickSidePool(side: SmLineupRow[]): { rows: SmLineupRow[]; source: SmLin
   if (!nonBench.length) return { rows: [], source: 'unknown' }
 
   const onField = nonBench.filter((r) => hasFormationField(r))
-  if (onField.length >= 7) {
-    return { rows: onField, source: 'confirmed' }
-  }
-
   const probable = nonBench.filter((r) => lineupTypeBucket(r) === 'probable')
+  const confirmedType = nonBench.filter((r) => lineupTypeBucket(r) === 'confirmed')
+
   if (probable.length >= 7) {
     return { rows: probable, source: 'probable' }
   }
-
-  const confirmedType = nonBench.filter((r) => lineupTypeBucket(r) === 'confirmed')
   if (confirmedType.length >= 7) {
     return { rows: confirmedType, source: 'confirmed' }
+  }
+  if (onField.length >= 7) {
+    const probableOnField = onField.filter((r) => lineupTypeBucket(r) === 'probable')
+    if (probableOnField.length > onField.length / 2) {
+      return { rows: onField, source: 'probable' }
+    }
+    return { rows: onField, source: 'confirmed' }
   }
 
   if (probable.length > 0) {

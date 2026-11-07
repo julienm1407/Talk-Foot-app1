@@ -30,6 +30,7 @@ import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { LivePitchActionBanner } from '../components/channel/LivePitchActionBanner'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
 import { MatchLineupBelowPitch } from '../components/channel/MatchLineupBelowPitch'
+import { MatchLineupStatusNote } from '../components/channel/MatchLineupStatusNote'
 import {
   MatchLineupPlayerSheet,
   type LineupPlayerPick,
@@ -147,6 +148,7 @@ import {
   resolveMatchFinishedAtMs,
 } from '../utils/matchDebriefWindow'
 import { MatchResultScore } from '../components/match/MatchResultScore'
+import { resolveDisplayedLineupKind } from '../utils/lineupStatus'
 
 /** Ouverture du tchat tribune avant coup d'envoi. */
 const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
@@ -1205,7 +1207,10 @@ export function ChannelPage() {
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
   const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'actions' | 'classement'>('actions')
-  const { starters, bench, formations } = useSportMonksFixtureLineups(match?.sportMonksFixtureId, status)
+  const { starters, bench, formations, lineupSource } = useSportMonksFixtureLineups(
+    match?.sportMonksFixtureId,
+    status,
+  )
   const betting = useBetting(match?.id ?? '', match ?? null)
   const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
@@ -1469,6 +1474,13 @@ export function ChannelPage() {
     [match, homeNation?.iso, awayNation?.iso, oddsStandingsPool],
   )
   const hasAnyLineup = (starters?.home?.length ?? 0) > 0 || (starters?.away?.length ?? 0) > 0
+  const lineupKind = resolveDisplayedLineupKind({
+    hasLineup: hasAnyLineup,
+    source: lineupSource,
+    status,
+    kickoffAt: match?.kickoffAt,
+    nowMs,
+  })
   const oddsReady = Boolean(
     odds1x2 && odds1x2.home >= 1.01 && odds1x2.draw >= 1.01 && odds1x2.away >= 1.01,
   )
@@ -3654,7 +3666,11 @@ export function ChannelPage() {
                   <SideInfoCell label="Coup d’envoi">{kickoffLabel}</SideInfoCell>
                   <SideInfoCell label="Statut">À venir</SideInfoCell>
                   <SideInfoCell label="Composition">
-                    {hasAnyLineup ? 'Publiée' : '—'}
+                    {!hasAnyLineup
+                      ? '—'
+                      : lineupKind === 'official'
+                        ? 'Officielle'
+                        : 'Probable'}
                   </SideInfoCell>
             </div>
               </Card>
@@ -4581,6 +4597,7 @@ export function ChannelPage() {
                 </button>
               </div>
             </div>
+            <MatchLineupStatusNote kind={lineupKind} light={L} showOfficialBadge={isUpcoming} />
             <MatchLineupPitch
               className="mt-2"
               layout={displayedLineupLayout}
@@ -4907,6 +4924,7 @@ export function ChannelPage() {
                     {match?.away.shortName ?? teamShortChip(awayName)} · {awayName}
                   </button>
                   </div>
+                <MatchLineupStatusNote kind={lineupKind} light={L} showOfficialBadge={isUpcoming} />
                 <MatchLineupPitch
                   layout={displayedLineupLayout}
                   homeToneColor={homeToneColor}

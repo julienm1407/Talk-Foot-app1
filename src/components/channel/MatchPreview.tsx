@@ -5,8 +5,8 @@ import { themeForCompetition } from '../../data/competitionThemes'
 import { cn } from '../../utils/cn'
 import { useSportMonksFixtureLineups } from '../../hooks/useSportMonksFixtureLineups'
 import { useSportMonksTeamLatestFormPair } from '../../hooks/useSportMonksTeamLatestFormPair'
-import type { SmLineupSource } from '../../api/sportMonks'
 import type { FormResult } from '../../types/standings'
+import { OFFICIAL_LINEUP_HINT_FR, resolveDisplayedLineupKind } from '../../utils/lineupStatus'
 
 function useCountdown(kickoffAt: string) {
   const [diff, setDiff] = useState(() => {
@@ -66,17 +66,11 @@ const STADIUMS: Record<string, string> = {
   rennes: 'Roazhon Park',
 }
 
-function lineupSourceLabel(source: SmLineupSource): string {
-  switch (source) {
-    case 'confirmed':
-      return 'Compos officielles'
-    case 'probable':
-      return 'Compos probables'
-    case 'estimated':
-      return 'Projection (données partielles)'
-    default:
-      return 'Composition'
-  }
+function lineupKindTitle(kind: ReturnType<typeof resolveDisplayedLineupKind>, useSmApi: boolean): string {
+  if (!useSmApi) return 'Compositions probables'
+  if (kind === 'official') return 'Compositions officielles'
+  if (kind === 'probable') return 'Compositions probables'
+  return 'Compositions'
 }
 
 export function MatchPreview({
@@ -160,6 +154,13 @@ export function MatchPreview({
 
   const hasLineups = Boolean(homeLineup?.length || awayLineup?.length)
   const hasFormations = Boolean(formations.home || formations.away)
+  const lineupKind = resolveDisplayedLineupKind({
+    hasLineup: hasLineups,
+    source: lineupSource,
+    status: match.status,
+    kickoffAt: match.kickoffAt,
+    nowMs: new Date(match.kickoffAt).getTime() - countdown.totalMs,
+  })
 
   const homeFallbackNames = lineupFor(match.home.id ?? match.home.shortName)
   const awayFallbackNames = lineupFor(match.away.id ?? match.away.shortName)
@@ -327,7 +328,7 @@ export function MatchPreview({
       <section className="rounded-xl border border-slate-200/60 bg-white/80 p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
-            {useSmApi ? lineupSourceLabel(lineupSource) : 'Compos probables'}
+            {lineupKindTitle(lineupKind, useSmApi)}
           </h3>
           {lineupsLoading ? (
             <span className="text-[10px] font-semibold text-slate-400">Chargement…</span>
@@ -335,10 +336,11 @@ export function MatchPreview({
             <span className="text-[10px] font-bold text-emerald-600">SportMonks</span>
           ) : null}
         </div>
-        {useSmApi && !lineupsLoading && !hasLineups ? (
+        {useSmApi && !lineupsLoading && lineupKind !== 'official' ? (
           <p className="mt-2 text-xs font-medium leading-relaxed text-slate-500">
-            Aucune ligne de compos publiée pour ce match pour l’instant (officiel ~1 h avant le coup d’envoi, ou
-            option « expected lineups » selon ton plan SportMonks).
+            {lineupKind === 'probable'
+              ? `Composition probable. ${OFFICIAL_LINEUP_HINT_FR}`
+              : OFFICIAL_LINEUP_HINT_FR}
           </p>
         ) : null}
         {homeDisplay.length > 0 || awayDisplay.length > 0 ? (
