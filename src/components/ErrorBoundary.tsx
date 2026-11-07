@@ -36,16 +36,19 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               className="rounded-xl border-2 border-slate-600 bg-white px-4 py-2 text-sm font-bold text-slate-800 hover:bg-slate-50"
-              onClick={() => this.setState({ error: null })}
+              onClick={() => {
+                this.setState({ error: null })
+                window.location.assign('/')
+              }}
             >
-              Réessayer sans fermer l&apos;onglet
+              Retour à l’accueil
             </button>
             <button
               type="button"
               className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700"
-              onClick={() => window.location.reload()}
+              onClick={() => window.location.assign('/')}
             >
-              Recharger la page
+              Recharger l’app
             </button>
           </div>
         </div>

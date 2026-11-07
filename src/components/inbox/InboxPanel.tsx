@@ -94,8 +94,6 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
       remove(f.id)
       void refresh()
       void dm.refreshFriends()
-      onClose()
-      navigate(f.href)
     } finally {
       setAcceptingFriendId(null)
     }
@@ -203,14 +201,22 @@ export function InboxPanel({ onClose, inbox }: { onClose: () => void; inbox: Use
                             <button
                               type="button"
                               disabled={Boolean(acceptingFriendId)}
-                              onClick={() => void onAcceptFriend(f)}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                void onAcceptFriend(f)
+                              }}
                               className="min-h-11 w-full rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white shadow-sm hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-60 md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]"
                             >
                               {acceptingFriendId === f.requesterId ? 'Acceptation…' : 'Accepter'}
                             </button>
                             <button
                               type="button"
-                              onClick={() => void onDeclineFriend(f)}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                void onDeclineFriend(f)
+                              }}
                               className={cn(
                                 'min-h-11 w-full rounded-xl border px-3 py-2 text-xs font-black md:min-h-0 md:w-auto md:rounded-lg md:px-2.5 md:py-1 md:text-[11px]',
                                 L ? 'border-tf-dark/15 text-tf-dark' : 'border-white/20 text-white',

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useDirectMessagesOptional } from '../contexts/DirectMessagesContext'
 import { buildInboxSeed } from '../data/inboxSeed'
 import { useArticles } from '../contexts/ArticlesContext'
 import { useCloudFriends } from './useCloudFriends'
@@ -40,6 +41,7 @@ function pendingFriendInboxItems(
 
 export function useInbox() {
   const { user: authUser } = useAuth()
+  const dm = useDirectMessagesOptional()
   const cloudFriends = useCloudFriends()
   const [removedIds, setRemovedIds] = useLocalStorageState<string[]>(REMOVED_KEY, [], isStringArray)
   const [readIds, setReadIds] = useLocalStorageState<string[]>(READ_KEY, [], isStringArray)
@@ -68,9 +70,13 @@ export function useInbox() {
     void refreshCloudNotifs()
   }, [refreshCloudNotifs])
 
+  const incomingPendingFrom = dm?.incomingFriendRequests ?? cloudFriends.incomingPendingFrom
+  const acceptedFriendIds = dm?.acceptedFriendIds ?? cloudFriends.acceptedPeers.map((p) => p.id)
+  const friendsLoading = dm?.friendsLoading ?? cloudFriends.loading
+
   useEffect(() => {
     void refreshCloudNotifs()
-  }, [cloudFriends.incomingPendingFrom, refreshCloudNotifs])
+  }, [incomingPendingFrom, refreshCloudNotifs])
 
   useEffect(() => {
     if (!isSupabaseConfigured() || !authUser?.id || authUser.isAnonymous) return
@@ -153,13 +159,17 @@ export function useInbox() {
   }, [authUser?.id, authUser?.isAnonymous, refreshCloudNotifs])
 
   const all = useMemo(() => {
-    const fromCloud = cloudNotifs
+    const acceptedIds = new Set(acceptedFriendIds)
+    const pendingIds = new Set(incomingPendingFrom.map((r) => r.requesterId))
+    const fromCloud = cloudNotifs.filter((i) => {
+      if (i.kind !== 'friend') return true
+      if (acceptedIds.has(i.requesterId)) return false
+      if (!friendsLoading && !pendingIds.has(i.requesterId)) return false
+      return true
+    })
     const friendFromInbox = fromCloud.filter((i): i is InboxFriendItem => i.kind === 'friend')
     const inboxRequesterIds = new Set(friendFromInbox.map((f) => f.requesterId))
-    const pendingFriends = pendingFriendInboxItems(
-      cloudFriends.incomingPendingFrom,
-      inboxRequesterIds,
-    )
+    const pendingFriends = pendingFriendInboxItems(incomingPendingFrom, inboxRequesterIds)
     const merged: InboxItem[] = [...fromCloud, ...pendingFriends, ...seed]
     return merged.sort((a, b) => {
       // Demandes d'amis toujours au-dessus des likes / actus.
@@ -173,7 +183,13 @@ export function useInbox() {
       if (ta !== tb) return tb - ta
       return 0
     })
-  }, [cloudNotifs, cloudFriends.incomingPendingFrom, seed])
+  }, [
+    cloudNotifs,
+    incomingPendingFrom,
+    acceptedFriendIds,
+    friendsLoading,
+    seed,
+  ])
 
   const items = useMemo(
     () => all.filter((i) => !removedIds.includes(i.id)),

@@ -61,7 +61,10 @@ function rowToFriendItem(row: InboxRow): InboxFriendItem | null {
 }
 
 function rowToInboxItem(row: InboxRow): InboxItem | null {
-  if (row.kind === 'friend_request') return rowToFriendItem(row)
+  if (row.kind === 'friend_request') {
+    if (row.read_at) return null
+    return rowToFriendItem(row)
+  }
   if (row.kind === 'message_like') return rowToLikeItem(row)
   return null
 }
@@ -94,20 +97,26 @@ export async function markInboxNotificationRead(sb: SupabaseClient, id: string):
     .eq('id', id)
 }
 
-/** Après acceptation d'une demande d'ami — retire les notifs en attente. */
+/** Après acceptation / refus — retire les notifs demande d’ami (les deux sens). */
 export async function dismissFriendRequestInboxNotifications(
   sb: SupabaseClient,
   recipientSupabaseId: string,
   requesterSupabaseId: string,
 ): Promise<void> {
   const now = new Date().toISOString()
+  const { error: delError } = await sb
+    .from('inbox_notifications')
+    .delete()
+    .eq('kind', 'friend_request')
+    .eq('recipient_supabase_id', recipientSupabaseId)
+    .eq('requester_supabase_id', requesterSupabaseId)
+  if (!delError) return
   await sb
     .from('inbox_notifications')
     .update({ read_at: now })
-    .eq('recipient_supabase_id', recipientSupabaseId)
     .eq('kind', 'friend_request')
+    .eq('recipient_supabase_id', recipientSupabaseId)
     .eq('requester_supabase_id', requesterSupabaseId)
-    .is('read_at', null)
 }
 
 export async function createMessageLikeInboxNotification(

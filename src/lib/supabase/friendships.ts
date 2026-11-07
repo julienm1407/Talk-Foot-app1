@@ -91,6 +91,7 @@ export async function declineFriendRequest(
     .eq('status', 'pending')
     .eq('requested_by', requesterId)
   if (error) return { ok: false, error: error.message }
+  await dismissFriendRequestInboxNotifications(sb, myId, requesterId)
   return { ok: true }
 }
 
@@ -106,7 +107,19 @@ export async function acceptFriendRequest(sb: SupabaseClient, myId: string, requ
     .select('user_low')
     .maybeSingle()
   if (error) return { ok: false, error: error.message }
-  if (!data) return { ok: false, error: 'not_found' }
+  if (!data) {
+    const { data: existing } = await sb
+      .from('friendships')
+      .select('status')
+      .eq('user_low', user_low)
+      .eq('user_high', user_high)
+      .maybeSingle()
+    if (existing && (existing as { status?: string }).status === 'accepted') {
+      await dismissFriendRequestInboxNotifications(sb, myId, requesterId)
+      return { ok: true }
+    }
+    return { ok: false, error: 'not_found' }
+  }
   await dismissFriendRequestInboxNotifications(sb, myId, requesterId)
   return { ok: true }
 }

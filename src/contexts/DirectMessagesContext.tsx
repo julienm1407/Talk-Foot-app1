@@ -41,6 +41,7 @@ type DirectMessagesApi = ReturnType<typeof useDirectMessages> & {
   hasIncomingFriendRequestFrom: (peerId: string) => boolean
   /** Demandes reçues (pending, l’autre a initié). */
   incomingFriendRequests: { requesterId: string; displayName: string }[]
+  acceptedFriendIds: string[]
   /** Prépare le fil MP cloud (ami ou non) avant ouverture du panneau. */
   registerPeerForPrivateChat: (peer: RegisterPeerForPrivateChatInput) => void
   sendFriendRequest: (peerId: string) => Promise<{ ok: boolean; error?: string }>
@@ -230,6 +231,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       hasOutgoingFriendRequestTo,
       hasIncomingFriendRequestFrom,
       incomingFriendRequests: cf.incomingPendingFrom,
+      acceptedFriendIds: cf.acceptedPeers.map((p) => p.id),
       registerPeerForPrivateChat,
       sendFriendRequest,
       acceptFriendRequest,
@@ -241,6 +243,7 @@ export function DirectMessagesProvider({ children }: { children: ReactNode }) {
       directThreadsEnriched,
       cf.loading,
       cf.incomingPendingFrom,
+      cf.acceptedPeers,
       refreshFriends,
       isCloudFriend,
       hasOutgoingFriendRequestTo,

@@ -401,6 +401,9 @@ function CloudUserStateLoader({
       loadUserIdRef.current = user.id
       hasLocalEditsRef.current = false
       cloudHydratedRef.current = false
+      const fresh = defaultUserAppState()
+      appRef.current = fresh
+      setApp(fresh)
       setReady(false)
     }
     let cancelled = false

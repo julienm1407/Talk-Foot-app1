@@ -90,6 +90,22 @@ function RequireAuthRoute({ children }: { children: React.ReactNode }) {
   return <RouteSuspense>{children}</RouteSuspense>
 }
 
+function MainAppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <CloudUserStateGate>
+      <SeasonModeProvider>
+        <Cdm2026DataProvider>
+          <FanPreferencesProvider>
+            <MatchesProvider>
+              <AppShellProviders>{children}</AppShellProviders>
+            </MatchesProvider>
+          </FanPreferencesProvider>
+        </Cdm2026DataProvider>
+      </SeasonModeProvider>
+    </CloudUserStateGate>
+  )
+}
+
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isReady } = useAuth()
   const { plan } = useSubscription()
@@ -130,35 +146,23 @@ export default function App() {
         <Route
           path="/article/:slug"
           element={
-            <MatchesProvider>
-              <AppShellProviders>
-                <RouteSuspense>
-                  <ArticlePage />
-                </RouteSuspense>
-              </AppShellProviders>
-            </MatchesProvider>
+            <MainAppProviders>
+              <RouteSuspense>
+                <ArticlePage />
+              </RouteSuspense>
+            </MainAppProviders>
           }
         />
         <Route
           path="/"
           element={
-            <CloudUserStateGate>
-              <SeasonModeProvider>
-                <Cdm2026DataProvider>
-                  <FanPreferencesProvider>
-                    <MatchesProvider>
-                      <AppShellProviders>
-                        <MonEspaceDrawerProvider>
-                          <KickoffAlertsHost />
-                          <LiveMatchAlertsHost />
-                          <AppShell />
-                        </MonEspaceDrawerProvider>
-                      </AppShellProviders>
-                    </MatchesProvider>
-                  </FanPreferencesProvider>
-                </Cdm2026DataProvider>
-              </SeasonModeProvider>
-            </CloudUserStateGate>
+            <MainAppProviders>
+              <MonEspaceDrawerProvider>
+                <KickoffAlertsHost />
+                <LiveMatchAlertsHost />
+                <AppShell />
+              </MonEspaceDrawerProvider>
+            </MainAppProviders>
           }
         >
           <Route index element={<HomePage />} />

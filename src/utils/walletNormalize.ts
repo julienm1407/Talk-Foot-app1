@@ -2,6 +2,7 @@ import type { Wallet } from '../types/bet'
 
 export const WALLET_STORAGE_KEY = 'talkfoot.wallet.v1'
 
+/** Nouveau compte : 100 jetons de bienvenue, zéro médaille (les médailles s’achètent). */
 export const DEFAULT_WALLET: Wallet = {
   tokens: 100,
   medals: 0,
