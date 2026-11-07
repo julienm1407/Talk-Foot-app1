@@ -15,8 +15,8 @@
   "copyright": "2026 Talk Foot",
   "contactEmail": "app.talkfoot@gmail.com",
   "bundleId": "com.talkfoot.app",
-  "version": "1.0.0",
-  "build": "1",
+  "version": "1.0.19",
+  "build": "20",
   "ageRating": "12+",
   "reviewNotes": "Compte démo fourni. Paris = tokens fictifs (boutique intégrée Stripe pour abonnements/médailles, pas de paris réels). Chat modéré automatiquement. Micro/caméra utilisés uniquement pour le live salon optionnel.",
   "demoAccount": {
