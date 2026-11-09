@@ -10,6 +10,7 @@ import {
 import type { Match } from '../types/match'
 import {
   fetchSportMonksFixturesBetween,
+  fetchSportMonksFriendlyFixturesBetween,
   fetchSportMonksFixturesForSeason,
   fetchSportMonksInplay,
   fetchSportMonksLeaguesByDate,
@@ -59,11 +60,15 @@ function buildMatchListFromSmFixtures(
   inplay: SmFixture[],
   fromWcSeason: SmFixture[],
   fromLeaguesDate: SmFixture[],
+  fromFriendlies: SmFixture[],
   cdmExtended: boolean,
 ): Match[] {
   const mergedSm = new Map<number, SmFixture>()
   for (const f of mergeSportMonksFixtureLists(between, inplay)) mergedSm.set(f.id, f)
   for (const f of fromWcSeason) mergedSm.set(f.id, f)
+  for (const f of fromFriendlies) {
+    if (!mergedSm.has(f.id)) mergedSm.set(f.id, f)
+  }
   for (const f of fromLeaguesDate) {
     if (!mergedSm.has(f.id)) mergedSm.set(f.id, f)
   }
@@ -111,6 +116,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
   const [tokenRev, setTokenRev] = useState(0)
   const matchesLenRef = useRef(matches.length)
   matchesLenRef.current = matches.length
+  const friendliesFixturesRef = useRef<SmFixture[]>([])
 
   // Rafraîchir encarts et calendrier chaque minute pour garder les plages à jour
   useEffect(() => {
@@ -137,14 +143,22 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         const range = getFootballCalendarWindow(new Date(), { cdmExtended: cdmSeasonActive })
         const cdmExtended = range.cdmExtended
         const todayParis = matchCalendarDayKeyParis(new Date())
-        const [inplaySettled, betweenSettled] = await Promise.allSettled([
+        const [inplaySettled, betweenSettled, friendliesSettled] = await Promise.allSettled([
           fetchSportMonksInplay(sportmonksToken),
           fetchSportMonksFixturesBetween(sportmonksToken, range.from, range.to),
+          silent
+            ? Promise.resolve(friendliesFixturesRef.current)
+            : fetchSportMonksFriendlyFixturesBetween(sportmonksToken, range.from, range.to),
         ])
         const inplay =
           inplaySettled.status === 'fulfilled' ? inplaySettled.value : ([] as SmFixture[])
         const between =
           betweenSettled.status === 'fulfilled' ? betweenSettled.value : ([] as SmFixture[])
+        const fromFriendlies =
+          friendliesSettled.status === 'fulfilled' ? friendliesSettled.value : friendliesFixturesRef.current
+        if (!silent && friendliesSettled.status === 'fulfilled') {
+          friendliesFixturesRef.current = fromFriendlies
+        }
         const primaryFetchFailures: string[] = []
         if (inplaySettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(inplaySettled))
         if (betweenSettled.status === 'rejected') primaryFetchFailures.push(reasonFromSettled(betweenSettled))
@@ -203,7 +217,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
                     ? `Échec des appels SportMonks : ${primaryFetchFailures.join(' — ')}. Si tu es sur Vercel avec le relais /api/sm, vérifie que la route n’est pas renvoyée vers index.html (onglet Réseau) et que SPORTMONKS_TOKEN est bien défini.`
                     : cdmExtended
                       ? 'SportMonks n’a renvoyé aucun match Coupe du monde pour cette période (jusqu’au 31 juillet 2026, fuseau Paris). Vérifie ton abonnement CDM et la clé API.'
-                      : 'SportMonks n’a renvoyé aucun match pour cette période (~7 jours passés + ~10 jours à venir, fuseau Paris). Vérifie ton plan SportMonks (ligues / pays inclus) ou un créneau sans matchs du Big 5.',
+                      : 'SportMonks n’a renvoyé aucun match pour cette période (~7 jours passés + ~10 jours à venir, fuseau Paris). Vérifie ton plan SportMonks (ligues extra / amicaux inclus) ou un créneau sans matchs.',
                 ),
               )
               return []
@@ -212,7 +226,14 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (!silent && !cdmExtended) {
-          const primaryList = buildMatchListFromSmFixtures(between, inplay, fromWcSeason, [], cdmExtended)
+          const primaryList = buildMatchListFromSmFixtures(
+            between,
+            inplay,
+            fromWcSeason,
+            [],
+            fromFriendlies,
+            cdmExtended,
+          )
           applyMatchList(primaryList)
           if (!silent) setLoading(false)
 
@@ -227,6 +248,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
               inplay,
               fromWcSeason,
               fromLeaguesDate,
+              fromFriendlies,
               cdmExtended,
             )
             if (enrichedList.length > 0) applyMatchList(enrichedList)
@@ -241,6 +263,7 @@ export function MatchesProvider({ children }: { children: React.ReactNode }) {
           inplay,
           fromWcSeason,
           fromLeaguesDate,
+          fromFriendlies,
           cdmExtended,
         )
         applyMatchList(baseList)

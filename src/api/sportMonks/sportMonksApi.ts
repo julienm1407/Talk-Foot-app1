@@ -29,6 +29,8 @@ import {
 } from './includes'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import type { SmFixture, SmPlayer, SmRoundWithOdds } from './types'
+import { SM_FRIENDLY_LEAGUE_IDS } from '../footballApi'
+import { pickStandingSeasonFromSmLeaguePayload } from './pickStandingSeasonIdFromSmLeague'
 
 const PER_PAGE = 50
 const MAX_PAGES = 30
@@ -135,6 +137,7 @@ export async function fetchSportMonksFixturesBetween(
   fromDate: string,
   toDate: string,
   include: string = SM_INCLUDE_FIXTURE_LIST,
+  filters?: string,
 ): Promise<SmFixture[]> {
   const out: SmFixture[] = []
   let page = 1
@@ -142,7 +145,7 @@ export async function fetchSportMonksFixturesBetween(
     const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(
       `/fixtures/between/${fromDate}/${toDate}`,
       token,
-      { include, per_page: PER_PAGE, page },
+      { include, per_page: PER_PAGE, page, ...(filters ? { filters } : {}) },
     )
     const chunk = asFixtureArray(json.data)
     out.push(...chunk)
@@ -150,6 +153,70 @@ export async function fetchSportMonksFixturesBetween(
     page += 1
   }
   return out
+}
+
+function fixtureStartingYmd(fx: SmFixture): string {
+  const raw = fx.starting_at
+  if (typeof raw === 'string' && raw.length >= 10) return raw.slice(0, 10)
+  return ''
+}
+
+function fixtureInYmdRange(fx: SmFixture, fromDate: string, toDate: string): boolean {
+  const d = fixtureStartingYmd(fx)
+  if (!d) return true
+  return d >= fromDate && d <= toDate
+}
+
+const FRIENDLY_SEASON_FALLBACK_LEAGUE_IDS = [1325, 1082, 1101] as const
+
+/**
+ * Extra ligue SportMonks « matchs amicaux » : `fixtures/between` sans filtre
+ * ignore parfois les friendlies hors Big 5. Repli saison courante si besoin.
+ */
+export async function fetchSportMonksFriendlyFixturesBetween(
+  token: string,
+  fromDate: string,
+  toDate: string,
+): Promise<SmFixture[]> {
+  const leagueFilter = `fixtureLeagues:${SM_FRIENDLY_LEAGUE_IDS.join(',')}`
+  try {
+    const filtered = await fetchSportMonksFixturesBetween(
+      token,
+      fromDate,
+      toDate,
+      SM_INCLUDE_FIXTURE_LIST,
+      leagueFilter,
+    )
+    if (filtered.length) return filtered
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[TalkFoot] fixtures/between amicaux:', err)
+    }
+  }
+
+  const acc: SmFixture[] = []
+  const seen = new Set<number>()
+  await Promise.all(
+    FRIENDLY_SEASON_FALLBACK_LEAGUE_IDS.map(async (lid) => {
+      try {
+        const leagueJson = await fetchSportMonksLeagueById(token, lid)
+        const pick = pickStandingSeasonFromSmLeaguePayload(leagueJson)
+        if (!pick?.seasonId) return
+        const seasonFx = await fetchSportMonksFixturesForSeason(token, pick.seasonId)
+        for (const fx of seasonFx) {
+          if (!fixtureInYmdRange(fx, fromDate, toDate)) continue
+          if (seen.has(fx.id)) continue
+          seen.add(fx.id)
+          acc.push(fx)
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.warn(`[TalkFoot] saison amicaux ligue ${lid}:`, err)
+        }
+      }
+    }),
+  )
+  return acc
 }
 
 /** Matchs d’un jour civil précis `YYYY-MM-DD` (complète souvent `fixtures/between` selon les plans SM). */

@@ -358,6 +358,9 @@ export function HomeDesktopExperience({
                 Matchs
               </h2>
               <p className="text-sm font-semibold text-tf-app-fg">Aucun live pour l’instant.</p>
+              <p className={cn('mt-1 text-xs font-semibold', hubSecondary)}>
+                Les prochains matchs (dont les amicaux) s’affichent dès qu’ils arrivent dans le calendrier.
+              </p>
               <Link to="/match" className={cn(hubPillLink(appearance, 'md'), 'mt-2 inline-flex')}>
                 Voir les matchs
               </Link>

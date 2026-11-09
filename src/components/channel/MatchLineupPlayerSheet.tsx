@@ -6,7 +6,6 @@ import { type PlayerRecentMatch } from '../../api/sportMonks/extractPlayerRecent
 import {
   careerSpellLabel,
   type PlayerPitchSlot,
-  type PlayerProfile,
   type PlayerTrophyRow,
 } from '../../api/sportMonks/extractPlayerProfileFromSm'
 import { formatHubDayLabel } from '../../utils/time'

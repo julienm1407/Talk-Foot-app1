@@ -51,6 +51,11 @@ export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
   2452: 'amicaux',
 }
 
+/** Ligues SM « extra » matchs amicaux — fetch dédié (trêve : `fixtures/between` est souvent vide). */
+export const SM_FRIENDLY_LEAGUE_IDS: readonly number[] = [
+  1082, 1325, 1101, 1326, 2450, 2451, 2452,
+]
+
 /** Ids ligue SportMonks pour `standings/live/leagues/{id}` (inverse de `SM_LEAGUE_ID_TO_COMP` Big 5). */
 export const SM_LEAGUE_ID_BY_TALKFOOT_COMP: Record<string, number> = {
   'ligue-1': 301,
