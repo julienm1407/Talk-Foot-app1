@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
+import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import {
   fetchFriendshipsForUser,
   fetchProfilesByIds,
@@ -54,6 +56,80 @@ export function useCloudFriends() {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (!myId || !isSupabaseConfigured()) return
+    const sb = getSupabaseBrowserClient()
+    if (!sb) return
+
+    let cancelled = false
+    const mountId = Date.now()
+
+    const run = async () => {
+      await ensureTalkFootSupabaseSession(sb)
+      if (cancelled) return
+      await syncRealtimeAuth(sb)
+      if (cancelled) return
+
+      const channel = sb
+        .channel(`friendships:${myId}:${mountId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'friendships' },
+          (payload) => {
+            const row = (payload.new ?? payload.old) as {
+              user_low?: string
+              user_high?: string
+            } | null
+            if (!row) {
+              void refresh()
+              return
+            }
+            if (row.user_low === myId || row.user_high === myId) void refresh()
+          },
+        )
+        .subscribe((status) => {
+          if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
+            console.warn('[Talk Foot] friendships realtime:', status)
+          }
+          if (status === 'SUBSCRIBED') void refresh()
+        })
+
+      if (cancelled) {
+        void sb.removeChannel(channel)
+        return
+      }
+      return channel
+    }
+
+    let channel: ReturnType<typeof sb.channel> | undefined
+    void run().then((ch) => {
+      channel = ch
+    })
+
+    return () => {
+      cancelled = true
+      if (channel) void sb.removeChannel(channel)
+    }
+  }, [myId, refresh])
+
+  useEffect(() => {
+    if (!myId || !isSupabaseConfigured()) return
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    const onFocus = () => void refresh()
+    document.addEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', onFocus)
+    const pollId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh()
+    }, 8_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', onFocus)
+      window.clearInterval(pollId)
+    }
+  }, [myId, refresh])
 
   const acceptedPeers = useMemo((): CloudFriendPeer[] => {
     if (!myId) return []

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createFriendRequestInboxNotification, dismissFriendRequestInboxNotifications } from './inboxNotifications'
 import { p2pThreadKey } from '../../utils/cloudDmThread'
+import { reconcileExistingFriendship } from './friendshipReconcile'
 
 export type FriendshipRow = {
   user_low: string
@@ -33,6 +34,22 @@ export async function fetchFriendshipsForUser(
   return (data ?? []) as FriendshipRow[]
 }
 
+export async function fetchFriendshipPair(
+  sb: SupabaseClient,
+  a: string,
+  b: string,
+): Promise<FriendshipRow | null> {
+  const { user_low, user_high } = canonicalFriendshipPair(a, b)
+  const { data, error } = await sb
+    .from('friendships')
+    .select('user_low, user_high, status, requested_by, created_at, accepted_at')
+    .eq('user_low', user_low)
+    .eq('user_high', user_high)
+    .maybeSingle()
+  if (error) return null
+  return (data as FriendshipRow | null) ?? null
+}
+
 export async function fetchProfilesByIds(
   sb: SupabaseClient,
   ids: string[],
@@ -55,7 +72,7 @@ export async function sendFriendRequest(
   myId: string,
   peerId: string,
   opts?: { requesterDisplayName?: string },
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; relation?: 'pending' | 'accepted' }> {
   if (myId === peerId) return { ok: false, error: 'invalid' }
   const { user_low, user_high } = canonicalFriendshipPair(myId, peerId)
   const { error } = await sb.from('friendships').insert({
@@ -65,7 +82,18 @@ export async function sendFriendRequest(
     requested_by: myId,
   })
   if (error) {
-    if (error.code === '23505') return { ok: false, error: 'already_exists' }
+    if (error.code === '23505') {
+      const existing = await fetchFriendshipPair(sb, myId, peerId)
+      const action = reconcileExistingFriendship(existing, myId)
+      if (action === 'already_friends') return { ok: true, relation: 'accepted' }
+      if (action === 'already_pending') return { ok: true, relation: 'pending' }
+      if (action === 'accept' && existing) {
+        const accepted = await acceptFriendRequest(sb, myId, existing.requested_by)
+        return accepted.ok ? { ok: true, relation: 'accepted' } : accepted
+      }
+      if (action === 'blocked') return { ok: false, error: 'blocked' }
+      return { ok: false, error: 'already_exists' }
+    }
     return { ok: false, error: error.message }
   }
   const requesterDisplayName = opts?.requesterDisplayName?.trim() || 'Supporteur'
@@ -74,7 +102,7 @@ export async function sendFriendRequest(
     requesterSupabaseId: myId,
     requesterDisplayName,
   })
-  return { ok: true }
+  return { ok: true, relation: 'pending' }
 }
 
 export async function declineFriendRequest(
@@ -108,14 +136,24 @@ export async function acceptFriendRequest(sb: SupabaseClient, myId: string, requ
     .maybeSingle()
   if (error) return { ok: false, error: error.message }
   if (!data) {
-    const { data: existing } = await sb
-      .from('friendships')
-      .select('status')
-      .eq('user_low', user_low)
-      .eq('user_high', user_high)
-      .maybeSingle()
-    if (existing && (existing as { status?: string }).status === 'accepted') {
+    const existing = await fetchFriendshipPair(sb, myId, requesterId)
+    if (existing?.status === 'accepted') {
       await dismissFriendRequestInboxNotifications(sb, myId, requesterId)
+      return { ok: true }
+    }
+    if (existing?.status === 'pending' && existing.requested_by !== myId) {
+      const retry = await sb
+        .from('friendships')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('user_low', user_low)
+        .eq('user_high', user_high)
+        .eq('status', 'pending')
+        .eq('requested_by', existing.requested_by)
+        .select('user_low')
+        .maybeSingle()
+      if (retry.error) return { ok: false, error: retry.error.message }
+      if (!retry.data) return { ok: false, error: 'not_found' }
+      await dismissFriendRequestInboxNotifications(sb, myId, existing.requested_by)
       return { ok: true }
     }
     return { ok: false, error: 'not_found' }

@@ -179,8 +179,11 @@ export function UserProfilePage() {
     setFriendBusy(true)
     const out = await dm.sendFriendRequest(peer.id)
     setFriendBusy(false)
-    if (out.ok) setFriendActionHint('Demande envoyée — l’autre joueur doit accepter.')
-    else if (out.error === 'already_exists') setFriendActionHint('Une demande existe déjà.')
+    if (out.ok && out.relation === 'accepted') {
+      setFriendActionHint('Vous êtes maintenant amis — la demande est acceptée des deux côtés.')
+    } else if (out.ok) {
+      setFriendActionHint('Demande envoyée — l’autre joueur doit accepter.')
+    } else if (out.error === 'already_exists') setFriendActionHint('Une demande existe déjà.')
     else setFriendActionHint(out.error ?? 'Impossible d’envoyer la demande.')
   }
 

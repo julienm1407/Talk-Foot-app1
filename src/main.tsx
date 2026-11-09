@@ -10,6 +10,7 @@ import App from './App'
 import { CookieConsentBanner } from './components/legal/CookieConsentBanner'
 import { RouteSeo } from './components/seo/RouteSeo'
 import { initCapacitorShell } from './mobile/capacitorBootstrap'
+import { initKeyboardInset } from './mobile/keyboardInset'
 
 function routerBasename(): string | undefined {
   const base = import.meta.env.BASE_URL ?? '/'
@@ -82,7 +83,7 @@ const mountEl = document.getElementById('root')
 if (!mountEl) {
   document.body.textContent = 'Élément #root introuvable dans index.html.'
 } else {
-  void initCapacitorShell().finally(() => {
+  void Promise.all([initCapacitorShell(), initKeyboardInset()]).finally(() => {
     try {
       createRoot(mountEl).render(root)
       document.getElementById('tf-boot-fallback')?.remove()

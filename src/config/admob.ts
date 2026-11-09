@@ -1,11 +1,14 @@
 /**
- * Google AdMob — pubs natives Play Store (pas AdSense du site).
- * @see https://developers.google.com/admob/android/test-ads
+ * Google AdMob — pubs natives (pas AdSense du site).
+ * iOS : IDs dédiés si tu crées une app iOS dans AdMob (`VITE_ADMOB_IOS_*`).
+ * @see https://developers.google.com/admob/ios/quick-start
  */
+
+import { Capacitor } from '@capacitor/core'
 
 const GOOGLE_TEST_PUB = '3940256099942544'
 
-/** Application AdMob « Talk Foot ». */
+/** Application AdMob « Talk Foot » (Android). */
 const LIVE_APP = 'ca-app-pub-3053581713947053~6380726341'
 /** Bloc « Talk Foot — Interstitiel match ». */
 const LIVE_INTERSTITIAL = 'ca-app-pub-3053581713947053/4984930370'
@@ -19,9 +22,24 @@ function envId(name: string): string | undefined {
   return t.startsWith('ca-app-pub-') ? t : undefined
 }
 
-export const ADMOB_APP_ID = envId('VITE_ADMOB_APP_ID') ?? LIVE_APP
-export const ADMOB_INTERSTITIAL_UNIT = envId('VITE_ADMOB_INTERSTITIAL_UNIT') ?? LIVE_INTERSTITIAL
-export const ADMOB_REWARDED_UNIT = envId('VITE_ADMOB_REWARDED_UNIT') ?? LIVE_REWARDED
+function pickId(iosEnv: string, androidEnv: string, fallback: string): string {
+  if (Capacitor.getPlatform() === 'ios') {
+    return envId(iosEnv) ?? envId(androidEnv) ?? fallback
+  }
+  return envId(androidEnv) ?? fallback
+}
+
+export const ADMOB_APP_ID = pickId('VITE_ADMOB_IOS_APP_ID', 'VITE_ADMOB_APP_ID', LIVE_APP)
+export const ADMOB_INTERSTITIAL_UNIT = pickId(
+  'VITE_ADMOB_IOS_INTERSTITIAL_UNIT',
+  'VITE_ADMOB_INTERSTITIAL_UNIT',
+  LIVE_INTERSTITIAL,
+)
+export const ADMOB_REWARDED_UNIT = pickId(
+  'VITE_ADMOB_IOS_REWARDED_UNIT',
+  'VITE_ADMOB_REWARDED_UNIT',
+  LIVE_REWARDED,
+)
 
 export function isAdMobTestUnit(adUnitId: string): boolean {
   return adUnitId.includes(GOOGLE_TEST_PUB)

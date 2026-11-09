@@ -72,7 +72,8 @@ export function ChatPeerQuickMenu({
     setBusy(true)
     const out = await dm.sendFriendRequest(peer.id)
     setBusy(false)
-    if (out.ok) setHint('Demande envoyée — enregistrée sur ton compte.')
+    if (out.ok && out.relation === 'accepted') setHint('Vous êtes maintenant amis.')
+    else if (out.ok) setHint('Demande envoyée — l’autre joueur doit accepter.')
     else if (out.error === 'already_exists') setHint('Une demande existe déjà entre vous.')
     else setHint(out.error ?? 'Impossible d’envoyer la demande.')
   }

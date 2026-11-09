@@ -44,7 +44,7 @@ type DirectMessagesApi = ReturnType<typeof useDirectMessages> & {
   acceptedFriendIds: string[]
   /** Prépare le fil MP cloud (ami ou non) avant ouverture du panneau. */
   registerPeerForPrivateChat: (peer: RegisterPeerForPrivateChatInput) => void
-  sendFriendRequest: (peerId: string) => Promise<{ ok: boolean; error?: string }>
+  sendFriendRequest: (peerId: string) => Promise<{ ok: boolean; error?: string; relation?: 'pending' | 'accepted' }>
   acceptFriendRequest: (requesterId: string) => Promise<{ ok: boolean; error?: string }>
   declineFriendRequest: (requesterId: string) => Promise<{ ok: boolean; error?: string }>
   /** Retire un ami accepté, ou annule / refuse une demande en attente. */

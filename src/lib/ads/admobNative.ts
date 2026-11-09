@@ -25,6 +25,27 @@ export function nativeAdsAvailable(): boolean {
   return Capacitor.isNativePlatform()
 }
 
+async function prepareIosTrackingAndConsent(mod: AdMobModule): Promise<void> {
+  if (Capacitor.getPlatform() !== 'ios') return
+  const { AdMob } = mod
+  try {
+    const tracking = await AdMob.trackingAuthorizationStatus()
+    if (tracking.status === 'notDetermined') {
+      await AdMob.requestTrackingAuthorization()
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('[Talk Foot] AdMob ATT', err)
+  }
+  try {
+    let consent = await AdMob.requestConsentInfo()
+    if (!consent.canRequestAds) {
+      consent = await AdMob.showConsentForm()
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('[Talk Foot] AdMob UMP', err)
+  }
+}
+
 export async function initializeAdMob(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false
   if (!initPromise) {
@@ -35,6 +56,7 @@ export async function initializeAdMob(): Promise<boolean> {
         await mod.AdMob.initialize({
           initializeForTesting: false,
         })
+        await prepareIosTrackingAndConsent(mod)
         return true
       } catch (err) {
         if (import.meta.env.DEV) console.warn('[Talk Foot] AdMob init', err)

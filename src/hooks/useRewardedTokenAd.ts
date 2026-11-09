@@ -25,7 +25,7 @@ export function useRewardedTokenAd() {
       return
     }
     if (!nativeAdsAvailable()) {
-      setHint('Les pubs récompensées sont dans l’app Android (Play Store).')
+      setHint('Les pubs récompensées sont dans l’app (App Store / Play Store).')
       return
     }
     setBusy(true)

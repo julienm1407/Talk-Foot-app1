@@ -191,6 +191,7 @@ html {
   overflow-x: clip;
   /* Limite double-tap zoom rapide sans bloquer le zoom accessibilité iPad. */
   touch-action: manipulation;
+  --tf-keyboard-offset: 0px;
 }
 
 /* App native : ne pas hériter de la grosse police Android (sinon tout explose). */
@@ -3082,15 +3083,25 @@ body::before {
   z-index: 2147482510 !important;
 }
 
-body:has(.tf-chat-compose-mobile-shell--channel .tf-chat-field:focus) .tf-channel-mobile-dock-shell {
+body:has(.tf-chat-compose-mobile-shell--channel .tf-chat-field:focus) .tf-channel-mobile-dock-shell,
+html.tf-keyboard-open .tf-channel-mobile-dock-shell {
   opacity: 0;
   visibility: hidden;
   pointer-events: none !important;
   transform: translateX(-50%) translateY(120%) translateZ(0);
 }
 
-body:has(.tf-chat-compose-mobile-shell--channel .tf-chat-field:focus) .tf-chat-compose-mobile-shell--channel {
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.4rem) !important;
+html.tf-keyboard-open .tf-app-bottomnav-mobile-shell {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+/* iOS : le clavier recouvre le WebView — coller la saisie au-dessus. */
+html.tf-keyboard-open .tf-chat-compose-mobile-shell,
+html.tf-keyboard-open .tf-chat-compose-mobile-shell--channel,
+html.tf-keyboard-open .tf-group-join-mobile-shell {
+  bottom: var(--tf-keyboard-offset, 0px) !important;
 }
 
 .tf-chat-compose-mobile-shell input,
