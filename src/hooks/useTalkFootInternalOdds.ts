@@ -13,12 +13,11 @@ import {
   adjustOverUnder25ForLiveInternal,
   computePrematch1x2FromContext,
   prematchOverUnder25From1x2,
-  impliedProbsFromDecimalOdds,
+  generousOverUnderFromBook,
   DEFAULT_BOOK_MARGIN,
 } from '../odds/internalOddsEngine'
 import {
-  align1x2OddsToInternalFavorite,
-  isCredibleExternal1x2Odds,
+  mixBookmakerWithInternal1x2,
 } from '../odds/prematchOddsValidation'
 import type { SmBookOdds1x2, SmBookOddsOverUnder25 } from '../odds/types'
 import type { Match } from '../types/match'
@@ -113,17 +112,19 @@ export function useTalkFootInternalOdds(opts: {
     }
 
     if (externalPrematch?.odds1x2 && internal) {
-      const aligned = align1x2OddsToInternalFavorite(externalPrematch.odds1x2, internal.odds1x2)
-      if (isCredibleExternal1x2Odds(aligned, internal.odds1x2)) {
-        const probs = impliedProbsFromDecimalOdds(aligned)
-        return {
-          odds1x2: aligned,
-          oddsOverUnder25:
-            externalPrematch.oddsOverUnder25 ?? prematchOverUnder25From1x2(probs),
-          probs1x2: probs,
-          source: 'bookmaker' as const,
-          marginPct: DEFAULT_BOOK_MARGIN,
-        }
+      const mixed = mixBookmakerWithInternal1x2(
+        externalPrematch.odds1x2,
+        internal.odds1x2,
+        internal.probs1x2,
+      )
+      return {
+        odds1x2: mixed.odds1x2,
+        oddsOverUnder25: externalPrematch.oddsOverUnder25
+          ? generousOverUnderFromBook(externalPrematch.oddsOverUnder25)
+          : prematchOverUnder25From1x2(mixed.probs1x2),
+        probs1x2: mixed.probs1x2,
+        source: mixed.source,
+        marginPct: DEFAULT_BOOK_MARGIN,
       }
     }
 
@@ -174,7 +175,7 @@ export function useTalkFootInternalOdds(opts: {
   const meta: TalkFootOddsMeta = useMemo(
     () => ({
       source: prematch?.source ?? 'talkfoot',
-      marginPct: prematch?.marginPct ?? 0.075,
+      marginPct: prematch?.marginPct ?? DEFAULT_BOOK_MARGIN,
     }),
     [prematch],
   )

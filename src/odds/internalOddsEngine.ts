@@ -21,8 +21,11 @@ export const TEAM_POWER_WEIGHTS = {
   ranking: 0.29,
 } as const
 
-/** Marge bookmaker allégée (jetons gratuits → cotes plus généreuses). */
-export const DEFAULT_BOOK_MARGIN = 0.038
+/** Marge affichée / historique — le payout réel passe par `TALKFOOT_PAYOUT_BOOST`. */
+export const DEFAULT_BOOK_MARGIN = 0.02
+
+/** Cotes plus longues que le fair (paris en jetons, pas d’enjeu cash). */
+export const TALKFOOT_PAYOUT_BOOST = 1.1
 
 export const SCORER_WEIGHTS = {
   recentForm: 0.4,
@@ -92,20 +95,18 @@ export function probabilities1x2FromPower(
 
 export function applyBookmakerMargin(
   probs: Probabilities1x2,
-  marginPct = DEFAULT_BOOK_MARGIN,
+  _marginPct = DEFAULT_BOOK_MARGIN,
 ): Probabilities1x2 {
-  const m = clamp(marginPct, 0.05, 0.1)
-  const over = 1 + m
-  const sum = (probs.pHome + probs.pDraw + probs.pAway) * over
-  if (!Number.isFinite(sum) || sum <= 0) return probs
-  return {
-    pHome: (probs.pHome * over) / sum,
-    pDraw: (probs.pDraw * over) / sum,
-    pAway: (probs.pAway * over) / sum,
-  }
+  return normalize3(probs.pHome, probs.pDraw, probs.pAway)
 }
 
-/** Cote décimale = 1 / probabilité implicite (avec marge déjà dans les probas si souhaité). */
+function payoutBoostFromMargin(marginPct: number): number {
+  if (!Number.isFinite(marginPct)) return TALKFOOT_PAYOUT_BOOST
+  if (marginPct <= 0) return TALKFOOT_PAYOUT_BOOST
+  return TALKFOOT_PAYOUT_BOOST
+}
+
+/** Cote décimale = fair × boost Talk Foot (plus généreux qu’un book). */
 export function probabilityToDecimalOdd(
   p: number,
   marginPct = DEFAULT_BOOK_MARGIN,
@@ -113,8 +114,8 @@ export function probabilityToDecimalOdd(
   maxOdd = 80,
   impliedFloor = 0.018,
 ): number {
-  const implied = clamp(p * (1 + clamp(marginPct, 0.05, 0.1)), impliedFloor, 0.98)
-  return round2(clamp(1 / implied, minOdd, maxOdd))
+  const fair = 1 / clamp(p, impliedFloor, 0.96)
+  return round2(clamp(fair * payoutBoostFromMargin(marginPct), minOdd, maxOdd))
 }
 
 /** Cotes score exact : plancher plus bas pour différencier les probabilités faibles. */
@@ -132,17 +133,37 @@ export function probabilitiesToDecimalOdds(
   marginPct = DEFAULT_BOOK_MARGIN,
   maxPowerDiff = 14,
 ): SmBookOdds1x2 {
-  const withMargin = applyBookmakerMargin(probs, marginPct)
+  const fair = applyBookmakerMargin(probs, marginPct)
+  const boost = payoutBoostFromMargin(marginPct)
   const toOdd = (p: number, maxOdd: number) =>
-    round2(clamp(1 / clamp(p, 0.028, 0.92), 1.02, maxOdd))
+    round2(clamp((1 / clamp(p, 0.026, 0.93)) * boost, 1.04, maxOdd))
   return softCapPrematch1x2Odds(
     {
-      home: toOdd(withMargin.pHome, maxPowerDiff >= 20 ? 18 : 14),
-      draw: toOdd(withMargin.pDraw, 6.5),
-      away: toOdd(withMargin.pAway, maxPowerDiff >= 20 ? 18 : 14),
+      home: toOdd(fair.pHome, maxPowerDiff >= 20 ? 20 : 16),
+      draw: toOdd(fair.pDraw, 7.2),
+      away: toOdd(fair.pAway, maxPowerDiff >= 20 ? 20 : 16),
     },
     maxPowerDiff >= 20,
   )
+}
+
+export function blend1x2Probabilities(
+  a: Probabilities1x2,
+  b: Probabilities1x2,
+  weightOnA: number,
+): Probabilities1x2 {
+  return blendProbabilities(a, b, weightOnA)
+}
+
+export function generousOverUnderFromBook(ou: SmBookOddsOverUnder25): SmBookOddsOverUnder25 {
+  const io = 1 / Math.max(1.01, ou.over)
+  const iu = 1 / Math.max(1.01, ou.under)
+  const s = io + iu
+  if (!Number.isFinite(s) || s <= 0) return ou
+  return {
+    over: probabilityToDecimalOdd(io / s, DEFAULT_BOOK_MARGIN, 1.2, 9),
+    under: probabilityToDecimalOdd(iu / s, DEFAULT_BOOK_MARGIN, 1.2, 9),
+  }
 }
 
 /** Plafonds doux : outsiders plus longs qu’avant, sans jackpots irréalistes type 25+. */
@@ -159,31 +180,31 @@ function softCapPrematch1x2Odds(odds: SmBookOdds1x2, generousOutsider = false): 
             ? 8.5
             : 7
     : fav <= 1.25
-      ? 12
+      ? 13.5
       : fav <= 1.4
-        ? 10
+        ? 11
         : fav <= 1.6
-          ? 8.5
+          ? 9.2
           : fav <= 1.85
-            ? 7.2
+            ? 7.8
             : fav <= 2.15
-              ? 6.2
-              : 5.5
+              ? 6.8
+              : 6
   const maxDraw = generousOutsider
     ? fav <= 1.15
-      ? 7.5
+      ? 8
       : fav <= 1.28
-        ? 6.5
+        ? 7
         : fav <= 1.45
-          ? 5.5
-          : 4.8
+          ? 6
+          : 5.2
     : fav <= 1.32
-      ? 5.8
+      ? 6.4
       : fav <= 1.5
-        ? 5.2
+        ? 5.7
         : fav <= 1.75
-          ? 4.7
-          : 4.3
+          ? 5.1
+          : 4.7
 
   const capDog = (v: number) => round2(clamp(v, 1.02, maxDog))
   const capDraw = (v: number) => round2(clamp(v, 1.02, maxDraw))

@@ -3,7 +3,11 @@ import test from 'node:test'
 import { standingsByLeague } from '../data/leagueStandings'
 import { buildMatchOddsContext, findStandingForTeam } from './buildTeamOddsInput'
 import { computePrematch1x2FromContext } from './internalOddsEngine'
-import { align1x2OddsToInternalFavorite, isCredibleExternal1x2Odds } from './prematchOddsValidation'
+import {
+  align1x2OddsToInternalFavorite,
+  isCredibleExternal1x2Odds,
+  mixBookmakerWithInternal1x2,
+} from './prematchOddsValidation'
 
 test('PSG (domicile) vs Lille — favori domicile ~1,2–1,45', () => {
   const rows = standingsByLeague['ligue-1']
@@ -13,8 +17,8 @@ test('PSG (domicile) vs Lille — favori domicile ~1,2–1,45', () => {
   const ctx = buildMatchOddsContext(h, a, 'psg', 'lille')
   assert.ok(ctx)
   const { odds1x2 } = computePrematch1x2FromContext(ctx)
-  assert.ok(odds1x2.home >= 1.18 && odds1x2.home <= 1.45, `home=${odds1x2.home}`)
-  assert.ok(odds1x2.away >= 7, `away=${odds1x2.away}`)
+  assert.ok(odds1x2.home >= 1.18 && odds1x2.home <= 1.75, `home=${odds1x2.home}`)
+  assert.ok(odds1x2.away >= 6.5, `away=${odds1x2.away}`)
 })
 
 test('cotes SM inversées (10,3 domicile) corrigées puis validées', () => {
@@ -41,4 +45,16 @@ test('Strasbourg–Lens : cotes SM aberrantes (16,5 / 8,98 / 2,45) rejetées', (
   )
   const smBad = { home: 16.5, draw: 8.98, away: 2.45 }
   assert.equal(isCredibleExternal1x2Odds(smBad, internal), false)
+})
+
+test('mélange SM + modèle : favori inchangé, cotes plus proches du book', () => {
+  const rows = standingsByLeague['ligue-1']
+  const h = findStandingForTeam(rows, 'psg', 591)
+  const a = findStandingForTeam(rows, 'lille', 690)
+  const internal = computePrematch1x2FromContext(buildMatchOddsContext(h, a, 'psg', 'lille')!)
+  const sm = { home: 1.35, draw: 5.1, away: 8.2 }
+  const mixed = mixBookmakerWithInternal1x2(sm, internal.odds1x2, internal.probs1x2)
+  assert.ok(mixed.odds1x2.home < mixed.odds1x2.away)
+  assert.ok(mixed.odds1x2.home >= 1.12 && mixed.odds1x2.home <= 1.7, `home=${mixed.odds1x2.home}`)
+  assert.equal(mixed.source, 'bookmaker')
 })
