@@ -55,14 +55,7 @@ export function isWorldCupCompetitionId(id?: string | null): boolean {
   return id === WC_2026_COMP_ID
 }
 
-/** Matchs amicaux (internationaux / clubs) — extra ligue SportMonks. */
-export const FRIENDLIES_COMP_ID = 'amicaux'
-
-export function isFriendliesCompetitionId(id?: string | null): boolean {
-  return id === FRIENDLIES_COMP_ID
-}
-
-/** Sélections nationales (CDM ou amicaux internationaux). */
+/** Sélections nationales (Coupe du Monde). */
 export function isNationalSideCompetitionId(id?: string | null): boolean {
-  return isWorldCupCompetitionId(id) || isFriendliesCompetitionId(id)
+  return isWorldCupCompetitionId(id)
 }

@@ -21,7 +21,7 @@ export const COMP_NAMES: Record<string, { name: string; shortName: string }> = {
   uel: { name: 'Ligue Europa', shortName: 'EL' },
   uecl: { name: 'Ligue Europa Conf.', shortName: 'ECL' },
   'wc-2026': { name: 'Coupe du Monde 2026', shortName: 'CDM' },
-  amicaux: { name: 'Matchs amicaux', shortName: 'AM' },
+  cdf: { name: 'Coupe de France', shortName: 'CDF' },
 }
 
 /**
@@ -40,21 +40,9 @@ export const SM_LEAGUE_ID_TO_COMP: Record<number, string> = {
   271: 'uecl',
   /** Coupe du Monde 2026 — ne pas mapper l’ancien id SM `5` (qualifs européennes chez SM). */
   732: 'wc-2026',
-  /** Friendly International / International Friendlies (coverage SM). */
-  1082: 'amicaux',
-  1325: 'amicaux',
-  /** Club Friendlies 1–4 (72 = Eredivisie, ne pas mapper). */
-  1101: 'amicaux',
-  1326: 'amicaux',
-  2450: 'amicaux',
-  2451: 'amicaux',
-  2452: 'amicaux',
+  /** Coupe de France (coverage SM). */
+  307: 'cdf',
 }
-
-/** Ligues SM « extra » matchs amicaux — fetch dédié (trêve : `fixtures/between` est souvent vide). */
-export const SM_FRIENDLY_LEAGUE_IDS: readonly number[] = [
-  1082, 1325, 1101, 1326, 2450, 2451, 2452,
-]
 
 /** Ids ligue SportMonks pour `standings/live/leagues/{id}` (inverse de `SM_LEAGUE_ID_TO_COMP` Big 5). */
 export const SM_LEAGUE_ID_BY_TALKFOOT_COMP: Record<string, number> = {
@@ -67,7 +55,7 @@ export const SM_LEAGUE_ID_BY_TALKFOOT_COMP: Record<string, number> = {
   uel: 2286,
   uecl: 1371,
   'wc-2026': 732,
-  amicaux: 1325,
+  cdf: 307,
 }
 
 const LEAGUE_NAME_TO_COMP: [RegExp, string][] = [
@@ -79,8 +67,8 @@ const LEAGUE_NAME_TO_COMP: [RegExp, string][] = [
   [/champions\s*league|uefa\s*champions|ligue\s*des\s*champions/i, 'ucl'],
   [/europa\s*league|ligue\s*europa(?!\s*conf)/i, 'uel'],
   [/conference\s*league|europa\s*conf/i, 'uecl'],
+  [/coupe\s*de\s*france|\bcdf\b/i, 'cdf'],
   [/world\s*cup|coupe\s*du\s*monde|mundial|fifa\s*wc/i, 'wc-2026'],
-  [/international\s+friendl|club\s+friendl|friendlies|matchs?\s+amicaux|\bamicaux\b|\bfriendly\b/i, 'amicaux'],
 ]
 
 /** Mappe la ligue SportMonks → id compétition Talk Foot (thèmes, filtres calendrier). */
@@ -92,9 +80,6 @@ export function inferTalkFootCompIdFromSmLeague(
     const byId = SM_LEAGUE_ID_TO_COMP[lid]
     if (byId) return byId
   }
-
-  const sub = (league?.sub_type ?? '').toLowerCase().replace(/-/g, '_')
-  if (sub === 'friendly') return 'amicaux'
 
   const blob = `${league?.name ?? ''} ${league?.short_code ?? ''}`
   for (const [re, id] of LEAGUE_NAME_TO_COMP) {

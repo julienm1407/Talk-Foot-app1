@@ -188,9 +188,6 @@ export function HomeMobileExperience({
   ) : (
     <Card className="border-dashed border-tf-grey-pastel/60 p-5 text-center" elevation="soft">
       <p className="text-sm font-bold text-tf-grey">Aucun match en direct pour l&apos;instant.</p>
-      <p className="mt-1 text-xs font-semibold text-tf-app-muted">
-        Les prochains matchs (dont les amicaux) s’affichent ici dès qu’ils sont dans le calendrier.
-      </p>
       <Link to="/match" className={cn(TF_FOCUS_VISIBLE, 'mt-3 inline-block text-sm font-black text-tf-electric-deep underline')}>
         Voir le calendrier
       </Link>

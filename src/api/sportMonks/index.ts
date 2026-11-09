@@ -4,7 +4,6 @@ export {
   fetchSportMonksFixturePrematchOdds,
   fetchSportMonksFixturePredictionsOnly,
   fetchSportMonksFixturesBetween,
-  fetchSportMonksFriendlyFixturesBetween,
   fetchSportMonksFixturesForSeason,
   fetchSportMonksSeasonSchedule,
   fetchSportMonksFixturesByDate,

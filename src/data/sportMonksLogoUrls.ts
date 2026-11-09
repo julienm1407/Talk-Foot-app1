@@ -102,9 +102,7 @@ export const SPORTMONKS_CDN_FOLDER_BY_LEAGUE_ID: Readonly<Record<number, number>
   384: 0,
   564: 20,
   848: 16,
-  1082: 26,
-  1101: 13,
-  1325: 13,
+  307: 19,
   1371: 27,
   2286: 14,
 }

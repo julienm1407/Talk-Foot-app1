@@ -27,7 +27,6 @@ export type SmLeague = {
   id?: number
   name?: string
   short_code?: string
-  /** `friendly` pour amicaux internationaux / clubs. */
   sub_type?: string
   country?: { name?: string; image_path?: string }
 }
