@@ -100,3 +100,8 @@ export const SM_INCLUDE_STANDINGS =
 /** GET `/players/{id}` — derniers matchs (minutes, buts, score). */
 export const SM_INCLUDE_PLAYER_LATEST =
   'latest.fixture.participants;latest.fixture.scores;latest.fixture.state;latest.details.type' as const
+
+/** GET `/topscorers/seasons/{id}` — meilleurs buteurs. Type 208 = buts (saison). */
+export const SM_INCLUDE_SEASON_TOPSCORERS =
+  'player.nationality;player.position;participant;type;season.league' as const
+export const SM_TOPSCORER_TYPE_GOALS = 208 as const

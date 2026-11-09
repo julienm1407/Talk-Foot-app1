@@ -18,6 +18,8 @@ export type PlayerRecentMatch = {
   red: number
   cameOn: boolean
   wentOff: boolean
+  /** Note SportMonks du match (souvent /10). */
+  rating?: number
 }
 
 function rec(v: unknown): Record<string, unknown> | null {
@@ -64,6 +66,16 @@ function pickExactStat(details: Record<string, unknown>[], names: string[]): num
     if (v != null && v >= 0) return v
   }
   return 0
+}
+
+function pickOptionalStat(details: Record<string, unknown>[], names: string[]): number | null {
+  const want = new Set(names.map((n) => n.toUpperCase()))
+  for (const d of details) {
+    if (!want.has(typeDevName(d))) continue
+    const v = detailValue(d)
+    if (v != null && v > 0) return v
+  }
+  return null
 }
 
 function pickMinutes(details: Record<string, unknown>[]): number | null {
@@ -140,6 +152,8 @@ export function extractPlayerRecentMatchesFromSmPlayerPayload(
     const assists = pickExactStat(details, ['ASSISTS'])
     const yellow = pickExactStat(details, ['YELLOWCARDS', 'YELLOW_CARDS', 'YELLOWCARD'])
     const red = pickExactStat(details, ['REDCARDS', 'RED_CARDS', 'REDCARD'])
+    const ratingRaw = pickOptionalStat(details, ['RATING', 'PLAYER_RATING'])
+    const rating = ratingRaw != null && ratingRaw <= 10 ? Math.round(ratingRaw * 10) / 10 : undefined
     const cameOn = details.some((d) => {
       const b = `${typeDevName(d)} ${typeDisplayName(d)}`
       return b.includes('SUBSTITUTE IN') || b.includes('SUB IN') || (b.includes('SUBSTITUT') && b.includes('IN'))
@@ -166,6 +180,7 @@ export function extractPlayerRecentMatchesFromSmPlayerPayload(
       red,
       cameOn,
       wentOff,
+      rating,
     })
   }
 

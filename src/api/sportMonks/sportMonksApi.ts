@@ -24,6 +24,8 @@ import {
   SM_INCLUDE_STANDINGS,
   SM_INCLUDE_TEAM_UPCOMING_AND_LATEST,
   SM_INCLUDE_PLAYER_LATEST,
+  SM_INCLUDE_SEASON_TOPSCORERS,
+  SM_TOPSCORER_TYPE_GOALS,
 } from './includes'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import type { SmFixture, SmPlayer, SmRoundWithOdds } from './types'
@@ -461,6 +463,14 @@ export async function fetchSportMonksStandingsBySeason(token: string, seasonId: 
     token,
     { include: SM_INCLUDE_STANDINGS },
   )
+}
+
+/** Meilleurs buteurs d’une saison (`topscorers/seasons/{seasonId}`, type 208 = buts). */
+export async function fetchSportMonksSeasonTopscorers(token: string, seasonId: number) {
+  return sportMonksFetchJson<SportMonksListEnvelope<unknown>>(`/topscorers/seasons/${seasonId}`, token, {
+    include: SM_INCLUDE_SEASON_TOPSCORERS,
+    filters: `seasontopscorerTypes:${SM_TOPSCORER_TYPE_GOALS}`,
+  })
 }
 
 export type { SmFixture, SmPlayer }

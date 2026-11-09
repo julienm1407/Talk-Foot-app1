@@ -28,6 +28,7 @@ describe('extractPlayerRecentMatchesFromSmPlayerPayload', () => {
               { type: { developer_name: 'MINUTES_PLAYED' }, value: 90 },
               { type: { developer_name: 'GOALS' }, data: { value: 1 } },
               { type: { developer_name: 'ASSISTS' }, value: 1 },
+              { type: { developer_name: 'RATING' }, value: 7.4 },
             ],
           },
         ],
@@ -38,6 +39,7 @@ describe('extractPlayerRecentMatchesFromSmPlayerPayload', () => {
     expect(rows[0]?.result).toBe('W')
     expect(rows[0]?.goals).toBe(1)
     expect(rows[0]?.assists).toBe(1)
+    expect(rows[0]?.rating).toBe(7.4)
     expect(minutesPlayedLabel(rows[0]!)).toContain('tout le match')
   })
 

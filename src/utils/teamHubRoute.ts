@@ -1,12 +1,12 @@
 import type { Team } from '../types/match'
 import { clubPathForId, findTeamById, resolveClubIdFromSlug } from './clubRoute'
 import { resolveNationForTeam } from './resolveMatchNation'
-import { isWorldCupCompetitionId } from './seasonMode'
+import { isNationalSideCompetitionId } from './seasonMode'
 
 /** URL hub équipe : fiche nation en CDM, page club sinon (catalogue ou provisoire SM). */
 export function teamHubPathForMatch(team: Team, competitionId?: string | null): string | null {
   if (!team.id?.trim()) return null
-  if (isWorldCupCompetitionId(competitionId)) {
+  if (isNationalSideCompetitionId(competitionId)) {
     const nation = resolveNationForTeam(team, competitionId)
     if (nation) return `/nation/${nation.iso.toLowerCase()}`
   }

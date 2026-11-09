@@ -4852,25 +4852,6 @@ export function ChannelPage() {
                     Stats indisponibles pour ce match (tirs, possession, etc.).
                   </p>
                 ) : null}
-                {smTimelineHighlights.length > 0 ? (
-                  <div className="space-y-1.5 pt-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-sky-200/80">
-                      Fil du match
-                    </p>
-                    <div className="max-h-[38vh] overflow-y-auto pr-0.5">
-                      <MatchHighlights
-                        items={smTimelineHighlights}
-                        activeId={latestHighlight?.id}
-                        variant="channel"
-                        teamLabels={highlightTeamLabels}
-                      />
-                    </div>
-                  </div>
-                ) : !isUpcoming && !liveStatsLoading && mobileStatRows.length === 0 ? (
-                  <p className="text-center text-[11px] font-semibold text-sky-200/70">
-                    Les actions (buts, cartons, remplacements) apparaissent dans l’onglet Actions.
-                  </p>
-                ) : null}
               </div>
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'infos' ? (

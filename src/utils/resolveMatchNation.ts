@@ -1,7 +1,7 @@
 import { findNationByName, getNationByIso, type Nation } from '../data/nations'
 import type { Match, Team } from '../types/match'
 import type { WcMatchTeam } from '../types/wc2026'
-import { isWorldCupCompetitionId } from './seasonMode'
+import { isNationalSideCompetitionId, isWorldCupCompetitionId } from './seasonMode'
 
 const UPCOMING_KICKOFF_GRACE_MS = 60_000
 
@@ -65,7 +65,7 @@ export function resolveNationForWcSlot(slot: Pick<WcMatchTeam, 'iso' | 'label'>)
 
 /** Résout une nation pour une équipe d'un match Talk Foot (fixtures SM). */
 export function resolveNationForTeam(team: Team, competitionId?: string | null): Nation | null {
-  if (!isWorldCupCompetitionId(competitionId)) return null
+  if (!isNationalSideCompetitionId(competitionId)) return null
   const byIso = team.shortName?.length === 3 ? getNationByIso(team.shortName) : null
   return byIso ?? findNationByName(team.name) ?? findNationByName(team.shortName)
 }

@@ -27,6 +27,7 @@ export {
   fetchSportMonksStandingsLiveByLeague,
   fetchSportMonksStandingsBySeason,
   fetchSportMonksTeamsBySeason,
+  fetchSportMonksSeasonTopscorers,
 } from './sportMonksApi'
 export * from './includes'
 export {
@@ -120,6 +121,16 @@ export {
   type PlayerRecentMatch,
 } from './extractPlayerRecentMatchesFromSm'
 export {
+  extractPlayerProfileFromSmPayload,
+  careerSpellLabel,
+  type PlayerProfile,
+  type PlayerCareerSpell,
+  type PlayerSeasonStat,
+  type PlayerTrophyRow,
+  type PlayerTrophyGroup,
+  type PlayerPitchSlot,
+} from './extractPlayerProfileFromSm'
+export {
   extractStartingXisFromFixture,
   extractMatchLineupBundleFromFixture,
   type SmStartingXiPlayer,
@@ -147,3 +158,7 @@ export {
   overlayClubSquadWithSmPlayers,
   type SmSquadPlayerRow,
 } from './extractTeamSquadFromSm'
+export {
+  extractSeasonTopscorersFromSmPayload,
+  type SeasonTopscorerRow,
+} from './extractSeasonTopscorersFromSm'

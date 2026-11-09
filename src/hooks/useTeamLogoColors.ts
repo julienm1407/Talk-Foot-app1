@@ -5,7 +5,7 @@ import { sportMonksTeamLogoUrl } from '../data/sportMonksLogoUrls'
 import { extractLogoSideColors } from '../utils/extractLogoColors'
 import type { SideColors } from '../utils/matchSideColors'
 import { isWcNationTeam } from '../utils/matchSideColors'
-import { isWorldCupCompetitionId } from '../utils/seasonMode'
+import { isNationalSideCompetitionId } from '../utils/seasonMode'
 
 function logoCandidatesForTeam(team: Team): string[] {
   const out: string[] = []
@@ -63,9 +63,9 @@ export function useMatchSpotlightLogoColors(
   fallback: { home: SideColors; away: SideColors },
   competitionId?: string | null,
 ): { home: SideColors; away: SideColors; fromLogos: boolean } {
-  const isWc = isWorldCupCompetitionId(competitionId)
-  const homeLogo = useTeamLogoColors(isWc && isWcNationTeam(home) ? null : home)
-  const awayLogo = useTeamLogoColors(isWc && isWcNationTeam(away) ? null : away)
+  const isNationComp = isNationalSideCompetitionId(competitionId)
+  const homeLogo = useTeamLogoColors(isNationComp && isWcNationTeam(home) ? null : home)
+  const awayLogo = useTeamLogoColors(isNationComp && isWcNationTeam(away) ? null : away)
   return {
     home: homeLogo ?? fallback.home,
     away: awayLogo ?? fallback.away,

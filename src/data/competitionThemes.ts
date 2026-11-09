@@ -100,6 +100,15 @@ export const competitionThemes: Record<string, CompetitionTheme> = {
     labelBg: 'bg-amber-100',
     labelText: 'text-blue-950',
   },
+  amicaux: {
+    id: 'amicaux',
+    name: 'Matchs amicaux',
+    shortName: 'AM',
+    accent: '#14532d',
+    accent2: '#4ade80',
+    labelBg: 'bg-emerald-100',
+    labelText: 'text-emerald-950',
+  },
 }
 
 export function themeForCompetition(id: string | undefined) {

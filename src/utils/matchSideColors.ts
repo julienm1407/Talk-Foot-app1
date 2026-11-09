@@ -1,6 +1,6 @@
 import type { Match, Team } from '../types/match'
 import { findNationByName, getNationByIso } from '../data/nations'
-import { isWorldCupCompetitionId } from './seasonMode'
+import { isNationalSideCompetitionId, isWorldCupCompetitionId } from './seasonMode'
 
 export type SideColors = { primary: string; secondary: string }
 
@@ -65,7 +65,7 @@ export function isWcNationTeam(team: Team): boolean {
 
 /** Libellé affiché : nom FR pour les sélections CDM quand connues. */
 export function resolveTeamDisplayName(team: Team, competitionId?: string | null): string {
-  if (isWorldCupCompetitionId(competitionId)) {
+  if (isNationalSideCompetitionId(competitionId)) {
     const nation = nationForTeam(team)
     if (nation) return nation.nameFr
   }
@@ -85,7 +85,7 @@ export function localizeWcTeam(team: Team): Team {
 }
 
 export function localizeMatchTeams(match: Match): Match {
-  if (!isWorldCupCompetitionId(match.competition.id)) return match
+  if (!isNationalSideCompetitionId(match.competition.id)) return match
   return {
     ...match,
     home: localizeWcTeam(match.home),
@@ -95,7 +95,7 @@ export function localizeMatchTeams(match: Match): Match {
 
 /** Couleurs affichage : nations CDM si compétition Coupe du Monde, sinon palette club. */
 export function resolveTeamColors(team: Team, competitionId?: string | null): SideColors {
-  if (isWorldCupCompetitionId(competitionId)) {
+  if (isNationalSideCompetitionId(competitionId)) {
     const nation = nationForTeam(team)
     if (nation) return { primary: nation.primary, secondary: nation.secondary }
   }
@@ -109,7 +109,7 @@ export function resolveSpotlightTeamColors(
   pairOffset = 0,
 ): SideColors {
   const base = resolveTeamColors(team, competitionId)
-  if (isWorldCupCompetitionId(competitionId) && isWcNationTeam(team)) return base
+  if (isNationalSideCompetitionId(competitionId) && isWcNationTeam(team)) return base
   if (!isBlandClubColors(base)) return base
   return paletteForClubSeed(teamColorSeed(team), pairOffset)
 }

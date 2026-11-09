@@ -21,6 +21,38 @@ export function stripSportMonksCommentPrefix(raw: string): string {
 
 const SENTENCE_RULES: Array<{ re: RegExp; fr: string }> = [
   {
+    re: /^First Half begins\.?$/i,
+    fr: 'Début de la première mi-temps.',
+  },
+  {
+    re: /^Second Half begins\.?$/i,
+    fr: 'Début de la deuxième mi-temps.',
+  },
+  {
+    re: /^First Half ends\.?$/i,
+    fr: 'Fin de la première mi-temps.',
+  },
+  {
+    re: /^Second Half ends\.?$/i,
+    fr: 'Fin de la deuxième mi-temps.',
+  },
+  {
+    re: /^Delay in match because of injury to (.+?)\.?$/i,
+    fr: 'Interruption : blessure de $1.',
+  },
+  {
+    re: /^Delay over\. They are ready to continue\.?$/i,
+    fr: 'Reprise du jeu.',
+  },
+  {
+    re: /^Substitution,?\s*(.+?)\.\s*(.+?)\s+replaces\s+(.+?)\.?$/i,
+    fr: 'Changement pour $1 : $3 remplacé par $2.',
+  },
+  {
+    re: /^Corner,?\s*(.+?)\.\s*Conceded by (.+?)\.?$/i,
+    fr: 'Corner pour $1, concédé par $2.',
+  },
+  {
     re: /^The second half ends with (.+?) leading (.+?) (\d+-\d+)\.?$/i,
     fr: 'Fin de la deuxième mi-temps : $1 mène $3 face à $2.',
   },
@@ -271,6 +303,19 @@ const INLINE_PHRASES: Array<[RegExp, string]> = [
   [/ is caught offside/gi, ' est hors-jeu'],
   [/offside/gi, 'hors-jeu'],
   [/underway/gi, 'lancé'],
+  [/Assisted by /gi, 'Passe de '],
+  [/right footed shot/gi, 'tir du droit'],
+  [/left footed shot/gi, 'tir du gauche'],
+  [/headed shot/gi, 'tête'],
+  [/from the centre of the box/gi, 'depuis l’entrée de surface'],
+  [/from the center of the box/gi, 'depuis l’entrée de surface'],
+  [/from outside the box/gi, 'depuis l’extérieur de la surface'],
+  [/from the right side of the box/gi, 'depuis la droite de la surface'],
+  [/from the left side of the box/gi, 'depuis la gauche de la surface'],
+  [/is blocked/gi, 'est contré'],
+  [/is saved/gi, 'est arrêté'],
+  [/Conceded by /gi, 'concédé par '],
+  [/replaces /gi, 'remplace '],
   [/saved\.?/gi, 'arrêté.'],
   [/missed\.?/gi, 'raté.'],
   [/blocked\.?/gi, 'contré.'],
@@ -348,7 +393,7 @@ export function translateSportMonksLiveTextToFr(raw: string): string {
   if (fromRules !== stripped) return finalizeLiveTextFr(fromRules)
 
   const looksEn =
-    /\b(the|and|after|before|awarded|corner|kick|foul|card|substitution|referee|goal|goals?|offside|penalty|attempt|saved|missed|blocked|concession|injury|stoppage|leading|ends|won|wins|defense|attack|underway|save|against|with|half|match|shown|beat|beating)\b/i.test(
+    /\b(the|and|after|before|awarded|corner|kick|foul|card|substitution|referee|goal|goals?|offside|penalty|attempt|saved|missed|blocked|concession|injury|stoppage|leading|ends|won|wins|defense|attack|underway|save|against|with|half|match|shown|beat|beating|begins|replaces|conceded|footed|assisted|header)\b/i.test(
       stripped,
     )
 

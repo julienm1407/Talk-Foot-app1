@@ -3,7 +3,7 @@ import { COMP_NAMES, inferTalkFootCompIdFromSmLeague, resolveTalkFootClubId } fr
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { findNationByName } from '../../data/nations'
 import { teams, teamColors } from '../../data/teams'
-import { isWorldCupCompetitionId } from '../../utils/seasonMode'
+import { isNationalSideCompetitionId } from '../../utils/seasonMode'
 import { localizeMatchTeams, resolveSpotlightTeamColors } from '../../utils/matchSideColors'
 import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventMinute'
 import { extractRegulationGoalsFromScores, extractPenaltyShootoutFromScores } from '../../utils/matchRegulationScore'
@@ -486,7 +486,7 @@ function getTeam(
     ...(sportMonksTeamId != null ? { sportMonksTeamId } : {}),
     ...(resolvedLogo ? { logoUrl: resolvedLogo } : {}),
   }
-  const nation = isWorldCupCompetitionId(compId) ? findNationByName(apiName) : null
+  const nation = isNationalSideCompetitionId(compId) ? findNationByName(apiName) : null
   if (nation) {
     return {
       id: ourId,

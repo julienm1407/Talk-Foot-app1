@@ -12,6 +12,7 @@ import {
   type RankingsLeagueId,
 } from '../../data/leagueStandings'
 import { LeagueStandingsTable } from './LeagueStandingsTable'
+import { LeagueTopscorersTable } from './LeagueTopscorersTable'
 import { StandingsInsightsStrip } from './StandingsInsightsStrip'
 import { RankingsScatterQuadrant } from './RankingsScatterQuadrant'
 import { PointsVsRecentFormChart } from './PointsVsRecentFormChart'
@@ -19,10 +20,13 @@ import { RankingsCrossMatrix } from './RankingsCrossMatrix'
 import { cn } from '../../utils/cn'
 import { SectionIntro } from '../ui/SectionIntro'
 import { useSportMonksLeagueStandings } from '../../hooks/useSportMonksLeagueStandings'
+import { useSportMonksSeasonTopscorers } from '../../hooks/useSportMonksSeasonTopscorers'
 import { getSportMonksToken } from '../../utils/apiTokens'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { MatchLineupPlayerSheet, type LineupPlayerPick } from '../channel/MatchLineupPlayerSheet'
 
 type MainTab = 'ligues' | 'forme'
+type LeagueBoardTab = 'table' | 'scorers'
 
 /** Libellés courts pour les pastilles (les noms complets restent dans le thème / carte). */
 const RANKINGS_PILL_LABEL: Partial<Record<RankingsLeagueId, string>> = {
@@ -38,6 +42,8 @@ export function RankingsLeaguesView() {
   const L = appearance === 'light'
   const [mainTab, setMainTab] = useState<MainTab>('ligues')
   const [leagueId, setLeagueId] = useState<RankingsLeagueId>('ligue-1')
+  const [boardTab, setBoardTab] = useState<LeagueBoardTab>('table')
+  const [playerPick, setPlayerPick] = useState<LineupPlayerPick | null>(null)
   const reducedMotion = useReducedMotion()
 
   const leagueFromUrl = searchParams.get('league')?.trim() ?? ''
@@ -56,6 +62,10 @@ export function RankingsLeaguesView() {
 
   const mockStandings = useMemo(() => getStandingsForLeague(leagueId), [leagueId])
   const hasToken = Boolean(getSportMonksToken())
+  const { topscorers, topscorersLoading, topscorersError } = useSportMonksSeasonTopscorers(
+    leagueId,
+    hasToken && boardTab === 'scorers',
+  )
   const isUefaCup = (UEFA_CUP_LEAGUE_IDS as readonly string[]).includes(leagueId)
   const standings = hasToken ? standingsRows : isUefaCup ? standingsRows : mockStandings
   const seasonStartLabel = standingsSeasonMeta?.seasonStartsAt
@@ -203,15 +213,79 @@ export function RankingsLeaguesView() {
               transition={{ duration: 0.22, delay: 0.04 }}
             >
               <Card className="overflow-hidden p-4 sm:p-5" elevation="soft" tone="solid">
-                <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <h2 className="font-display text-lg font-black text-tf-app-fg sm:text-xl">
                       {theme?.name ?? leagueId}
                     </h2>
-                    <p className="text-xs font-semibold text-tf-app-muted">{dataSourceLabel}</p>
+                    <p className="text-xs font-semibold text-tf-app-muted">
+                      {boardTab === 'scorers' ? 'Meilleurs buteurs · saison en cours' : dataSourceLabel}
+                    </p>
+                  </div>
+                  <div
+                    className="flex rounded-2xl border border-[color:var(--tf-c30-border)] bg-[color:rgb(var(--tf-app-fg-rgb)/0.04)] p-1"
+                    role="tablist"
+                    aria-label="Classement ou buteurs"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={boardTab === 'table'}
+                      onClick={() => setBoardTab('table')}
+                      className={cn(
+                        'rounded-xl px-3 py-1.5 text-[11px] font-black sm:text-xs',
+                        boardTab === 'table'
+                          ? 'bg-tf-dark text-white shadow-sm'
+                          : 'text-tf-app-muted hover:text-tf-app-fg',
+                      )}
+                    >
+                      Classement
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={boardTab === 'scorers'}
+                      onClick={() => setBoardTab('scorers')}
+                      className={cn(
+                        'rounded-xl px-3 py-1.5 text-[11px] font-black sm:text-xs',
+                        boardTab === 'scorers'
+                          ? 'bg-tf-dark text-white shadow-sm'
+                          : 'text-tf-app-muted hover:text-tf-app-fg',
+                      )}
+                    >
+                      Meilleur buteur
+                    </button>
                   </div>
                 </div>
-                <LeagueStandingsTable leagueId={leagueId} rows={standings} dataSourceLabel={dataSourceLabel} />
+                {boardTab === 'scorers' ? (
+                  <>
+                    {topscorersLoading ? (
+                      <p className="text-sm font-semibold text-tf-grey">Chargement des buteurs…</p>
+                    ) : null}
+                    {topscorersError && !topscorers.length ? (
+                      <p className="rounded-2xl border border-amber-400/50 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-950">
+                        Buteurs temporairement indisponibles.
+                      </p>
+                    ) : null}
+                    {topscorers.length ? (
+                      <LeagueTopscorersTable
+                        leagueId={leagueId}
+                        rows={topscorers}
+                        onPlayerClick={(row) =>
+                          setPlayerPick({
+                            playerId: row.playerId,
+                            name: row.name,
+                            photoUrl: row.photoUrl,
+                          })
+                        }
+                      />
+                    ) : !topscorersLoading && !topscorersError ? (
+                      <p className="text-sm font-semibold text-tf-grey">Aucun buteur pour cette compétition.</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <LeagueStandingsTable leagueId={leagueId} rows={standings} dataSourceLabel={dataSourceLabel} />
+                )}
               </Card>
             </motion.div>
           </motion.div>
@@ -264,6 +338,10 @@ export function RankingsLeaguesView() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+
+      {playerPick ? (
+        <MatchLineupPlayerSheet player={playerPick} light={L} onClose={() => setPlayerPick(null)} />
+      ) : null}
     </div>
   )
 }

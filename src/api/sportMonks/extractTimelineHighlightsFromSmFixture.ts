@@ -30,7 +30,7 @@ import {
 import type { SmFixture, SmFixtureEventRow } from './types'
 import { smFixtureHomeAwayParticipantIds } from './smFixtureParticipantSides'
 
-const MAX_ROWS = 150
+const MAX_ROWS = 400
 
 /** SM n’alimente pas toujours `is_goal` — patterns explicites uniquement (évite les faux « BUT » ambiance). */
 function commentLooksLikeGoal(text: string): boolean {
@@ -99,6 +99,48 @@ function commentLooksLikeCorner(text: string): boolean {
 
 function commentMentionsVar(text: string): boolean {
   return /\bVAR\b/i.test(text)
+}
+
+function eventPlayerLabel(ev: SmFixtureEventRow, related = false): string | undefined {
+  if (related) {
+    const obj = ev.relatedPlayer ?? ev.related_player
+    const n = String(obj?.display_name ?? obj?.name ?? ev.related_player_name ?? '').trim()
+    return n || undefined
+  }
+  const n = String(ev.player?.display_name ?? ev.player?.name ?? ev.player_name ?? '').trim()
+  return n || undefined
+}
+
+function frenchEventSentence(
+  ev: SmFixtureEventRow,
+  type: Highlight['type'],
+  minuteLabel: string,
+  scorerName?: string,
+  assistName?: string,
+  cardPlayer?: string,
+): string {
+  const dev = String(ev.type?.developer_name ?? ev.type?.name ?? '').trim()
+  const u = dev.toUpperCase()
+  if (u.includes('SUBSTITUT') || u === 'SUB' || u.includes('SUBSTITUTION')) {
+    const outName = eventPlayerLabel(ev)
+    const inName = eventPlayerLabel(ev, true)
+    if (outName && inName) return `Changement : ${outName} remplacé par ${inName}.`
+    if (inName) return `Entrée de ${inName}.`
+    if (outName) return `Sortie de ${outName}.`
+    return 'Changement.'
+  }
+  if (type === 'But' && scorerName) {
+    const og = eventDevIsOwnGoal(u) ? ' contre son camp' : ''
+    const assist = assistName ? ` Passe de ${assistName}.` : ''
+    return `But de ${scorerName}${og}.${assist}`
+  }
+  if (type === 'Carton' && cardPlayer) {
+    const color = cardColorFromEventDev(dev) === 'red' ? 'Carton rouge' : 'Carton jaune'
+    return `${color} pour ${cardPlayer}.`
+  }
+  const info = String(ev.info ?? ev.addition ?? '').trim()
+  const blob = [dev, scorerName, eventPlayerLabel(ev), info].filter(Boolean).join(' · ')
+  return translateSportMonksLiveTextToFr(blob || minuteLabel)
 }
 
 function highlightTypeFromEventDev(dev: string, ev?: SmFixtureEventRow): Highlight['type'] {
@@ -433,20 +475,14 @@ export function extractTimelineHighlightsFromSmFixture(
       if (type === 'But' && !scorerName) resolvedType = 'Info'
       if (type === 'Carton' && !cardPlayer) resolvedType = 'Info'
       const ownGoal = resolvedType === 'But' && eventDevIsOwnGoal(dev)
+      const sentence = frenchEventSentence(ev, resolvedType, minuteLabel, scorerName, assistName, cardPlayer)
       const title =
         resolvedType === 'But' && scorerName
           ? scorerName
           : resolvedType === 'Carton' && cardPlayer
             ? cardPlayer
-            : translateSportMonksLiveTextToFr(
-                scorerName ? `${dev} · ${scorerName}`.trim() : (dev || 'Événement').trim(),
-              )
-      const detail =
-        resolvedType === 'But' && scorerName
-          ? `${minuteLabel} · ${scorerName}`
-          : resolvedType === 'Carton' && cardPlayer
-            ? `${minuteLabel} · ${cardColorFromEventDev(dev) === 'red' ? 'Carton rouge' : 'Carton jaune'} · ${cardPlayer}`
-            : translateSportMonksLiveTextToFr((dev || 'Événement').trim())
+            : sentence
+      const detail = sentence
       out.push({
         id: `sm-event-${ev.id ?? `${minute}-${dev}`}`,
         matchId,

@@ -161,6 +161,7 @@ function showHighlightHeadline(h: Highlight): boolean {
 
 function highlightIcon(h: Highlight): string {
   if (h.type === 'Carton') return cardColorForHighlight(h) === 'red' ? '🟥' : '🟨'
+  if (/changement|remplac/i.test(`${h.title} ${h.detail}`)) return '🔄'
   return icon[h.type]
 }
 
@@ -192,7 +193,7 @@ export function MatchHighlights({
         )}
       >
         <p className={cn('text-sm font-semibold', channel ? 'text-sky-200/80' : 'text-slate-600')}>
-          Aucune action enregistrée pour l&apos;instant.
+          Les commentaires live (buts, cartons, tirs, changements) apparaîtront ici.
         </p>
       </div>
     )

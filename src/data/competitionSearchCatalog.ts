@@ -54,6 +54,12 @@ export const COMPETITION_SEARCH_ENTRIES: readonly CompetitionSearchEntry[] = [
     '/cdm',
     'Poules, arbre & classements CDM',
   ),
+  entry(
+    'amicaux',
+    'matchs amicaux friendly friendlies international club',
+    '/match?comp=amicaux',
+    'Matchs amicaux · calendrier',
+  ),
 ] as const
 
 /** Alias exacts (requête normalisée) → id compétition pour boost de pertinence. */
@@ -73,6 +79,9 @@ export const COMPETITION_SEARCH_ALIAS_TO_ID: Readonly<Record<string, string>> = 
   ecl: 'uecl',
   cdm: 'wc-2026',
   wc: 'wc-2026',
+  amicaux: 'amicaux',
+  amical: 'amicaux',
+  friendly: 'amicaux',
 }
 
 export function competitionHref(compId: string): string {
