@@ -1,6 +1,6 @@
 /**
  * Google AdMob — pubs natives (pas AdSense du site).
- * iOS : IDs dédiés si tu crées une app iOS dans AdMob (`VITE_ADMOB_IOS_*`).
+ * Android et iOS ont chacun une app AdMob + des blocs dédiés.
  * @see https://developers.google.com/admob/ios/quick-start
  */
 
@@ -9,11 +9,17 @@ import { Capacitor } from '@capacitor/core'
 const GOOGLE_TEST_PUB = '3940256099942544'
 
 /** Application AdMob « Talk Foot » (Android). */
-const LIVE_APP = 'ca-app-pub-3053581713947053~6380726341'
-/** Bloc « Talk Foot — Interstitiel match ». */
-const LIVE_INTERSTITIAL = 'ca-app-pub-3053581713947053/4984930370'
-/** Bloc « Talk Foot — Recompense match » (+10 jetons). */
-const LIVE_REWARDED = 'ca-app-pub-3053581713947053/9275529170'
+const LIVE_ANDROID_APP = 'ca-app-pub-3053581713947053~6380726341'
+/** Application AdMob « Talk Foot » (iOS). */
+const LIVE_IOS_APP = 'ca-app-pub-3053581713947053~2580619111'
+/** Bloc Android « Talk Foot — Interstitiel match ». */
+const LIVE_ANDROID_INTERSTITIAL = 'ca-app-pub-3053581713947053/4984930370'
+/** Bloc iOS « Talk Foot — Interstitiel match ». */
+const LIVE_IOS_INTERSTITIAL = 'ca-app-pub-3053581713947053/6985613035'
+/** Bloc Android « Talk Foot — Recompense match » (+10 jetons). */
+const LIVE_ANDROID_REWARDED = 'ca-app-pub-3053581713947053/9275529170'
+/** Bloc iOS « Talk Foot — Recompense match » (+10 jetons). */
+const LIVE_IOS_REWARDED = 'ca-app-pub-3053581713947053/3906143221'
 
 function envId(name: string): string | undefined {
   const v = (import.meta.env as Record<string, unknown>)[name]
@@ -22,23 +28,35 @@ function envId(name: string): string | undefined {
   return t.startsWith('ca-app-pub-') ? t : undefined
 }
 
-function pickId(iosEnv: string, androidEnv: string, fallback: string): string {
+function pickId(
+  iosEnv: string,
+  androidEnv: string,
+  iosFallback: string,
+  androidFallback: string,
+): string {
   if (Capacitor.getPlatform() === 'ios') {
-    return envId(iosEnv) ?? envId(androidEnv) ?? fallback
+    return envId(iosEnv) ?? iosFallback
   }
-  return envId(androidEnv) ?? fallback
+  return envId(androidEnv) ?? androidFallback
 }
 
-export const ADMOB_APP_ID = pickId('VITE_ADMOB_IOS_APP_ID', 'VITE_ADMOB_APP_ID', LIVE_APP)
+export const ADMOB_APP_ID = pickId(
+  'VITE_ADMOB_IOS_APP_ID',
+  'VITE_ADMOB_APP_ID',
+  LIVE_IOS_APP,
+  LIVE_ANDROID_APP,
+)
 export const ADMOB_INTERSTITIAL_UNIT = pickId(
   'VITE_ADMOB_IOS_INTERSTITIAL_UNIT',
   'VITE_ADMOB_INTERSTITIAL_UNIT',
-  LIVE_INTERSTITIAL,
+  LIVE_IOS_INTERSTITIAL,
+  LIVE_ANDROID_INTERSTITIAL,
 )
 export const ADMOB_REWARDED_UNIT = pickId(
   'VITE_ADMOB_IOS_REWARDED_UNIT',
   'VITE_ADMOB_REWARDED_UNIT',
-  LIVE_REWARDED,
+  LIVE_IOS_REWARDED,
+  LIVE_ANDROID_REWARDED,
 )
 
 export function isAdMobTestUnit(adUnitId: string): boolean {
