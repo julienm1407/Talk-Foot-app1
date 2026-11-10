@@ -2116,7 +2116,8 @@ body::before {
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.45;
-  padding-inline-end: 0.22em;
+  padding-inline-end: 0.35em;
+  hyphens: auto;
 }
 
 .tf-channel-chat-form input,

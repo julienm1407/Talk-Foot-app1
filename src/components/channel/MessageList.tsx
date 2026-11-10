@@ -140,7 +140,7 @@ export function MessageList({
                     : `Profil ${peer.displayName}`
               }
             />
-            <div className="min-w-0 flex-1 pt-px">
+            <div className="min-w-0 w-0 flex-1 pt-px">
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                 {peer.peerSocial ? (
                   <button
@@ -259,7 +259,7 @@ export function MessageList({
               </div>
               <div
                 className={cn(
-                  'tf-chat-text relative mt-1 w-full max-w-full whitespace-pre-wrap rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed [overflow-wrap:anywhere]',
+                  'tf-chat-text relative mt-1 box-border w-full max-w-full overflow-hidden whitespace-pre-wrap break-words rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed [overflow-wrap:anywhere]',
                   onToggleLike && 'pr-12',
                   bubbleClass(kind, dark),
                   (m.gifUrl || m.emoteId || m.groupScarf) && 'p-2',

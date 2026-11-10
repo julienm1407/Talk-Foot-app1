@@ -1018,7 +1018,7 @@ export function GroupPage() {
     <>
       <div
         className={cn(
-          'flex min-w-0 max-w-full flex-col overflow-x-clip',
+          'flex min-w-0 max-w-full flex-col overflow-x-hidden',
           'max-lg:h-full max-lg:min-h-0 max-lg:flex-1 max-lg:gap-1 max-lg:overflow-hidden',
           'lg:gap-7',
         )}
@@ -1353,7 +1353,7 @@ export function GroupPage() {
         </div>
       </Card>
 
-      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-0 overflow-x-clip max-lg:min-h-0 max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(92dvh,calc(100dvh-5.5rem))] lg:max-h-[min(92dvh,calc(100dvh-5.5rem))] lg:flex-none lg:grid-cols-[320px_1fr] lg:items-stretch">
+      <div className="order-3 flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-0 overflow-x-hidden max-lg:min-h-0 max-lg:overflow-hidden sm:gap-3 lg:order-2 lg:grid lg:h-[min(92dvh,calc(100dvh-5.5rem))] lg:max-h-[min(92dvh,calc(100dvh-5.5rem))] lg:flex-none lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-stretch">
         <div className="mb-0 grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 max-lg:py-0.5 lg:hidden">
           <div className="flex min-w-0 items-center gap-1">
             <Link
