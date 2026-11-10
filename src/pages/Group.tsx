@@ -2028,7 +2028,7 @@ export function GroupPage() {
           <div
             ref={feedRef}
             className={cn(
-              'min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
+              'tf-chat-scroll min-h-0 min-w-0 flex-1 touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-1.5 [-webkit-overflow-scrolling:touch] sm:px-5 sm:py-4',
               'max-lg:relative max-lg:z-0 max-lg:row-start-2 max-lg:mt-0 max-lg:min-h-0',
               'lg:mt-4 lg:flex-1 lg:scroll-pb-3',
               'lg:overscroll-y-contain',

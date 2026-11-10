@@ -94,7 +94,7 @@ export function MessageList({
   const safeGetLikes = getLikes ?? (() => 0)
   const safeHasLiked = hasLiked ?? (() => false)
   return (
-    <ul className="space-y-3" role="list">
+    <ul className="min-w-0 max-w-full space-y-3" role="list">
       {messages.map((m, i) => {
         const idxFromEnd = messages.length - 1 - i
 
@@ -121,7 +121,7 @@ export function MessageList({
           <li
             key={m.id}
             className={cn(
-              'flex items-start gap-2.5 sm:gap-3',
+              'flex min-w-0 max-w-full items-start gap-2.5 sm:gap-3',
               idxFromEnd <= 8 && 'tf-chat-in',
             )}
           >
@@ -131,7 +131,7 @@ export function MessageList({
               user={u}
               selfProfile={profile}
               isSelf={peer.isSelfMessage}
-              className={TF_FOCUS_VISIBLE}
+              className={cn('shrink-0', TF_FOCUS_VISIBLE)}
               aria-label={
                 peer.peerSocial
                   ? `Contacter ${peer.displayName}`
@@ -259,7 +259,7 @@ export function MessageList({
               </div>
               <div
                 className={cn(
-                  'tf-chat-text relative mt-1 max-w-full rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed',
+                  'tf-chat-text relative mt-1 w-full max-w-full whitespace-pre-wrap rounded-2xl border px-3 py-2 text-sm font-medium leading-relaxed [overflow-wrap:anywhere]',
                   onToggleLike && 'pr-12',
                   bubbleClass(kind, dark),
                   (m.gifUrl || m.emoteId || m.groupScarf) && 'p-2',

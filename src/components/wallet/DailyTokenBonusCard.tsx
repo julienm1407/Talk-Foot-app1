@@ -11,29 +11,32 @@ import { cn } from '../../utils/cn'
 type Props = {
   /** Bandeau compact (rail étroit) ou carte plus lisible (mobile / drawer). */
   variant?: 'compact' | 'prominent'
+  /** `light` : texte foncé (ex. carte blanche en boutique, même en thème sombre). */
+  surface?: 'auto' | 'light'
   className?: string
 }
 
 /** Récompense jetons quotidienne (10h Paris) — solde toujours visible, bouton seulement si récupérable. */
-export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
+export function DailyTokenBonusCard({ variant = 'compact', surface = 'auto', className }: Props) {
   const { user } = useAuth()
   const { appearance } = useAppearance()
   const { wallet, claimDailyTokenBonus, dailyBonus } = useWallet()
   const rewardsEnabled = canUseWalletRewards(user)
   const [dailyClaimHint, setDailyClaimHint] = useState<string | null>(null)
   const [claiming, setClaiming] = useState(false)
-  const L = appearance === 'light'
+  const L = surface === 'light' ? true : appearance === 'light'
   const prominent = variant === 'prominent'
 
-  const hubCaps = L ? 'text-tf-dark/82' : 'text-sky-100'
-  const hubSecondary = L ? 'text-tf-dark/72' : 'text-sky-200/95'
+  const hubCaps = L ? 'text-slate-800' : 'text-sky-100'
+  const hubSecondary = L ? 'text-slate-700' : 'text-sky-200/95'
 
   return (
     <section className={cn(className)} aria-labelledby="daily-token-bonus-title">
       <p
         id="daily-token-bonus-title"
         className={cn(
-          'font-black uppercase tracking-[0.16em] text-tf-app-fg',
+          'font-black uppercase tracking-[0.16em]',
+          L ? 'text-slate-900' : 'text-sky-100',
           prominent ? 'text-[11px] tracking-[0.18em]' : 'px-1 text-[9px]',
           hubCaps,
         )}
@@ -52,7 +55,7 @@ export function DailyTokenBonusCard({ variant = 'compact', className }: Props) {
         <div className="flex items-start gap-2">
           <TokenGlyph className={cn('shrink-0', prominent ? 'mt-0.5 size-5' : 'mt-0.5 size-4')} />
           <div className="min-w-0 flex-1">
-            <p className={cn('font-black tabular-nums text-tf-app-fg', prominent ? 'text-lg' : 'text-sm')}>
+            <p className={cn('font-black tabular-nums', prominent ? 'text-lg' : 'text-sm', L ? 'text-slate-950' : 'text-white')}>
               {wallet.tokens.toLocaleString('fr-FR')} jetons
             </p>
             <p className={cn('mt-0.5 font-semibold', prominent ? 'text-xs' : 'text-[9px]', hubSecondary)}>

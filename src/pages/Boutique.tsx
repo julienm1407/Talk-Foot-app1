@@ -291,8 +291,8 @@ export function BoutiquePage() {
               <p className="mt-1 text-[11px] font-semibold text-white/70">
                 Bonus quotidien (10h) ou pub récompensée ci-dessous — pas besoin d’acheter des médailles.
               </p>
-              <div className="mt-3 rounded-xl border border-white/10 bg-white/95 p-2 text-tf-dark">
-                <DailyTokenBonusCard variant="compact" />
+              <div className="mt-3 rounded-xl border border-white/10 bg-white p-2">
+                <DailyTokenBonusCard variant="compact" surface="light" />
               </div>
               <RewardedTokenAdButton className="mt-3" />
             </div>
@@ -308,15 +308,6 @@ export function BoutiquePage() {
             >
               Acheter des médailles 🏅
             </Link>
-            <a
-              href="#jetons-extra"
-              className={cn(
-                TF_FOCUS_VISIBLE,
-                'inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-300/60 bg-emerald-500/30 px-5 py-3.5 text-sm font-black text-emerald-50 shadow-md transition hover:bg-emerald-500/45',
-              )}
-            >
-              Gagner des jetons
-            </a>
             <Link
               to="/formules"
               className={cn(
