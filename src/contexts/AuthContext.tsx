@@ -28,6 +28,7 @@ import { checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
 import { flushCloudBeforeLogout } from '../utils/cloudLogoutFlush'
+import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
 
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
@@ -124,20 +125,23 @@ function readOAuthProvider(u: SupabaseUser): AuthUser['provider'] {
 function mapSupabaseUser(u: SupabaseUser): AuthUser {
   const meta = u.user_metadata as Record<string, unknown> | undefined
   const provider = readOAuthProvider(u)
-  const dn = pickHumanDisplayName(
-    typeof meta?.display_name === 'string' ? meta.display_name : null,
-    typeof meta?.full_name === 'string' ? meta.full_name : null,
-    typeof meta?.name === 'string' ? meta.name : null,
-    typeof meta?.user_name === 'string' ? meta.user_name : null,
-    typeof meta?.preferred_username === 'string' ? meta.preferred_username : null,
-    u.email?.split('@')[0],
-  )
+  const anonymous = Boolean(u.is_anonymous)
+  const dn = anonymous
+    ? 'Invité'
+    : pickHumanDisplayName(
+        typeof meta?.display_name === 'string' ? meta.display_name : null,
+        typeof meta?.full_name === 'string' ? meta.full_name : null,
+        typeof meta?.name === 'string' ? meta.name : null,
+        typeof meta?.user_name === 'string' ? meta.user_name : null,
+        typeof meta?.preferred_username === 'string' ? meta.preferred_username : null,
+        u.email?.split('@')[0],
+      )
   return withAdminFlag({
     id: u.id,
     email: u.email ?? undefined,
     displayName: dn,
     provider,
-    isAnonymous: Boolean(u.is_anonymous),
+    isAnonymous: anonymous,
     avatarUrl:
       typeof meta?.avatar_url === 'string'
         ? meta.avatar_url
@@ -592,6 +596,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       return false
     }
     setAuthNotice(null)
+    markPendingFanOnboardingAfterLogin()
     const redirectTo = getSupabaseOAuthRedirectTo()
     const { data, error } = await sb.auth.signInWithOAuth({
       provider,

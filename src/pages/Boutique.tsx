@@ -27,6 +27,7 @@ import {
 import { BoutiqueCosmeticGridItem } from '../components/shop/BoutiqueCosmeticGridItem'
 import { BoutiqueDailyDealBanner } from '../components/shop/BoutiqueDailyDealBanner'
 import { RewardedTokenAdButton } from '../components/ads/RewardedTokenAdButton'
+import { DailyTokenBonusCard } from '../components/wallet/DailyTokenBonusCard'
 import { catalogTabForShopItem, boutiqueMedalPacksHref } from '../utils/boutiquePurchaseFlow'
 import { attachPinchZoomLock } from '../utils/lockPinchZoom'
 
@@ -183,7 +184,8 @@ export function BoutiquePage() {
       return
     }
     if (result.code === 'insufficient_tokens') {
-      redirectToMedalPacks(item)
+      showNotice('err', 'Pas assez de jetons — récupère le bonus quotidien ou une pub, ou achète des médailles.')
+      document.getElementById('jetons-extra')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     if (result.code === 'already_owned') {
@@ -275,11 +277,22 @@ export function BoutiquePage() {
                 {wallet.medals} <span className="text-lg">🏅</span>
               </div>
             </Link>
-            <div className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-md">
-              <div className="text-[10px] font-black uppercase tracking-wider text-emerald-200/90">Jetons</div>
+            <div
+              id="jetons-extra"
+              className="rounded-2xl border border-white/15 bg-black/30 px-4 py-3 backdrop-blur-md"
+            >
+              <div className="text-[10px] font-black uppercase tracking-wider text-emerald-200/90">
+                Jetons · gagner plus
+              </div>
               <div className="mt-1 flex items-center gap-1.5 font-display text-2xl font-black text-white">
                 {wallet.tokens}
                 <TokenGlyph variant="onDark" className="size-7" />
+              </div>
+              <p className="mt-1 text-[11px] font-semibold text-white/70">
+                Bonus quotidien (10h) ou pub récompensée ci-dessous — pas besoin d’acheter des médailles.
+              </p>
+              <div className="mt-3 rounded-xl border border-white/10 bg-white/95 p-2 text-tf-dark">
+                <DailyTokenBonusCard variant="compact" />
               </div>
               <RewardedTokenAdButton className="mt-3" />
             </div>
@@ -295,6 +308,15 @@ export function BoutiquePage() {
             >
               Acheter des médailles 🏅
             </Link>
+            <a
+              href="#jetons-extra"
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'inline-flex min-h-12 items-center justify-center rounded-2xl border border-emerald-300/60 bg-emerald-500/30 px-5 py-3.5 text-sm font-black text-emerald-50 shadow-md transition hover:bg-emerald-500/45',
+              )}
+            >
+              Gagner des jetons
+            </a>
             <Link
               to="/formules"
               className={cn(

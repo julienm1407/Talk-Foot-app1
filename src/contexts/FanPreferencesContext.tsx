@@ -132,7 +132,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     }
   }, [stored])
 
-  /** Modal config : uniquement juste après la connexion (flag session), pas à chaque visite */
+  /** Modal config : après connexion, et une fois au premier lancement (compte invité). */
   useEffect(() => {
     if (consumedPostLoginFlag.current) return
     try {
@@ -142,6 +142,11 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
         if (DEMO_FAN_ONBOARDING_EVERY_LOGIN || !state.preferencesComplete) {
           setOnboardingOpen(true)
         }
+        return
+      }
+      if (!state.preferencesComplete && sessionStorage.getItem('tf.fanOnboarding.auto.v1') !== '1') {
+        sessionStorage.setItem('tf.fanOnboarding.auto.v1', '1')
+        setOnboardingOpen(true)
       }
     } catch {
       /* ignore */

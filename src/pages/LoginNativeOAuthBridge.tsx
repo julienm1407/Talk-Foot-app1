@@ -1,32 +1,50 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { NATIVE_APP_OAUTH_SCHEME } from '../lib/supabase/oauthRedirect'
+import {
+  consumeOAuthCallbackInApp,
+  handoffOAuthToNativeApp,
+  hasPkceVerifierInStorage,
+  isExternalMobileBrowser,
+} from '../lib/supabase/oauthCallback'
 
 /**
  * Page HTTPS ouverte dans Custom Tabs après Google.
- * Renvoie immédiatement vers le deep link `talkfoot://app…` pour rouvrir l’app.
+ * Renvoie vers `talkfoot://` / intent Android. Dans la WebView : échange PKCE.
  * À déclarer dans Supabase Redirect URLs : https://talk-foot.com/login/native-oauth
  */
 export function LoginNativeOAuthBridgePage() {
+  const [hint, setHint] = useState('Retour vers Talk Foot…')
+
   useEffect(() => {
-    const { search, hash } = window.location
-    const target = `${NATIVE_APP_OAUTH_SCHEME}/${search}${hash}`
-
-    // Natif : le bridge tourne dans Custom Tabs → deep link ramène l’app.
-    // Web (erreur de config) : rester sur le site sans boucle.
-    if (Capacitor.isNativePlatform() || /Android|iPhone|iPad/i.test(navigator.userAgent)) {
-      window.location.replace(target)
-      return
+    let cancelled = false
+    void (async () => {
+      if (Capacitor.isNativePlatform()) {
+        const ok = await consumeOAuthCallbackInApp()
+        if (cancelled) return
+        window.location.replace(ok ? '/' : '/login?oauth=retry')
+        return
+      }
+      if (isExternalMobileBrowser() && !hasPkceVerifierInStorage()) {
+        handoffOAuthToNativeApp()
+        return
+      }
+      const ok = await consumeOAuthCallbackInApp()
+      if (cancelled) return
+      if (ok) {
+        window.location.replace('/')
+        return
+      }
+      setHint('Connexion incomplète — réessaie depuis l’app Talk Foot.')
+      window.setTimeout(() => window.location.replace('/login?oauth=retry'), 1600)
+    })()
+    return () => {
+      cancelled = true
     }
-
-    window.location.replace(`/${search}${hash}`)
   }, [])
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center bg-[#061222] px-6">
-      <p className="relative text-center text-sm font-semibold text-white/80">
-        Retour vers Talk Foot…
-      </p>
+      <p className="relative text-center text-sm font-semibold text-white/80">{hint}</p>
     </div>
   )
 }

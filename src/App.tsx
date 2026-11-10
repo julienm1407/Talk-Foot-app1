@@ -55,6 +55,7 @@ import { AppShellProviders } from './providers/AppShellProviders'
 import { FrenchSpellcheckRoot } from './components/FrenchSpellcheckRoot'
 import { KickoffAlertsHost } from './lib/push/KickoffAlertsHost'
 import { LiveMatchAlertsHost } from './lib/push/LiveMatchAlertsHost'
+import { OAuthCallbackCatch } from './components/auth/OAuthCallbackCatch'
 
 function RouteSuspense({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>
@@ -129,6 +130,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <>
+      <OAuthCallbackCatch />
       <RevenueCatIdentityBridge />
       <FrenchSpellcheckRoot />
       <InterstitialAdsHost />

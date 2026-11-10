@@ -1,4 +1,5 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
+import { hasAuthCallbackInLocation } from './oauthCallbackLocation'
 
 function isAnonymousUser(user: User | null | undefined): boolean {
   return user?.is_anonymous === true
@@ -94,6 +95,9 @@ async function resolveSupabaseChatSession(sb: SupabaseClient): Promise<Session |
     const refreshed = await refreshSessionThrottled(sb)
     if (refreshed?.user) return refreshed
   }
+
+  // Ne pas créer un invité pendant le retour Google : ça écrase le PKCE.
+  if (typeof window !== 'undefined' && hasAuthCallbackInLocation()) return null
 
   return signInAnonymouslyOnce(sb)
 }

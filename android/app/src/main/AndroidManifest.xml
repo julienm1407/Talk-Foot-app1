@@ -32,7 +32,7 @@
                 <data android:scheme="com.talkfoot.app" android:host="oauth" />
             </intent-filter>
 
-            <!-- Si OAuth ouvre Chrome : revenir dans l’app depuis le site -->
+            <!-- Si OAuth ouvre Chrome : revenir dans l’app depuis le site (y compris /?code=) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -41,6 +41,8 @@
                 <data android:scheme="https" android:host="www.talk-foot.fr" android:pathPrefix="/login" />
                 <data android:scheme="https" android:host="talk-foot.com" android:pathPrefix="/login" />
                 <data android:scheme="https" android:host="www.talk-foot.com" android:pathPrefix="/login" />
+                <data android:scheme="https" android:host="talk-foot.com" android:path="/" />
+                <data android:scheme="https" android:host="www.talk-foot.com" android:path="/" />
             </intent-filter>
 
             <!-- Bridge OAuth natif (Custom Tabs → app) -->

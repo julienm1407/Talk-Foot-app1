@@ -99,11 +99,21 @@ export async function showRewardedAd(): Promise<{ ok: boolean; reason?: string }
   ])
 
   try {
-    await AdMob.prepareRewardVideoAd({
-      adId: ADMOB_REWARDED_UNIT,
-      isTesting: isAdMobTestUnit(ADMOB_REWARDED_UNIT),
-    })
-    await AdMob.showRewardVideoAd()
+    const timed = <T,>(p: Promise<T>, ms: number) =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) => {
+          window.setTimeout(() => reject(new Error('timeout')), ms)
+        }),
+      ])
+    await timed(
+      AdMob.prepareRewardVideoAd({
+        adId: ADMOB_REWARDED_UNIT,
+        isTesting: isAdMobTestUnit(ADMOB_REWARDED_UNIT),
+      }),
+      12_000,
+    )
+    await timed(AdMob.showRewardVideoAd(), 18_000)
     await new Promise((r) => window.setTimeout(r, 400))
     return rewarded ? { ok: true } : { ok: false, reason: 'skipped' }
   } catch (err) {

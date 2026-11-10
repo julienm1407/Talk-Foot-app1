@@ -84,7 +84,7 @@ export function LoginPage() {
       </div>
     )
   }
-  if (user) {
+  if (user && !user.isAnonymous) {
     return <Navigate to={nextPath ?? '/'} replace />
   }
 
@@ -248,6 +248,16 @@ export function LoginPage() {
               Créer un compte
             </button>
           </div>
+
+          {searchParams.get('oauth') === 'retry' && (
+            <div
+              role="status"
+              className="mt-6 rounded-xl border border-rose-200/80 bg-rose-50/95 p-3 text-xs font-semibold text-rose-950"
+            >
+              La connexion Google n’a pas abouti (navigateur externe). Réessaie ici, dans l’app Talk Foot — pas dans
+              Snap ni Chrome à part.
+            </div>
+          )}
 
           {cameFromSharedSpace && (
             <div

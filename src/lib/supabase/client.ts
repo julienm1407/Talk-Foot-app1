@@ -15,7 +15,8 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true,
+          // Custom Tabs / Snap n’ont pas le code_verifier : un auto-échange brûlerait le code.
+          detectSessionInUrl: false,
           flowType: 'pkce',
         },
       },
@@ -23,7 +24,7 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
     if (!authCacheListenerAttached) {
       authCacheListenerAttached = true
       browserClient.auth.onAuthStateChange((event) => {
-        if (event === 'SIGNED_OUT') invalidateSupabaseChatSessionCache()
+        if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') invalidateSupabaseChatSessionCache()
       })
     }
   }

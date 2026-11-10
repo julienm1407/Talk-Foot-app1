@@ -6,6 +6,7 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { configureRevenueCat } from '../lib/payments/revenueCat'
 import { initializeAdMob } from '../lib/ads/admobNative'
+import { consumeOAuthCallbackInApp } from '../lib/supabase/oauthCallback'
 import { getSupabaseBrowserClient } from '../lib/supabase/client'
 
 async function applyNativeOAuthUrl(raw: string): Promise<void> {
@@ -34,9 +35,12 @@ async function applyNativeOAuthUrl(raw: string): Promise<void> {
       try {
         await sb.auth.exchangeCodeForSession(code)
       } catch {
-        /* detectSessionInUrl / hash tokens en secours */
+        /* ignore : consumeOAuthCallbackInApp en secours */
       }
     }
+    window.history.replaceState(null, '', '/')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    return
   }
 
   if (path.includes('#')) {
@@ -95,6 +99,8 @@ export async function initCapacitorShell(): Promise<void> {
   void CapApp.addListener('appUrlOpen', (event) => {
     void applyNativeOAuthUrl(event.url).catch(() => undefined)
   })
+
+  void consumeOAuthCallbackInApp().catch(() => undefined)
 
   if (Capacitor.getPlatform() === 'ios') {
     try {

@@ -23,12 +23,13 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
   home: {
     id: 'home',
     eyebrow: 'Accueil',
-    title: 'Ton hub supporter',
-    body: 'Ici tu suis le live, les actus et tes clubs. C’est le point de départ de Talk Foot.',
+    title: 'Bienvenue sur Talk Foot',
+    body: 'Tu es en mode invité tant que tu ne te connectes pas. Voici ce que tu peux faire tout de suite.',
     bullets: [
-      'Ouvre un match pour la tribune live',
-      'Boutique & formules sont à un tap',
-      'Mon espace garde tes clubs et tes offres',
+      'Matchs : score live, pronos et tribune',
+      'Boutique : médailles (vrai achat) et jetons (jeu)',
+      'Google : un tap pour garder ton compte sur tous tes appareils',
+      'Jetons extra : bonus quotidien + pub récompensée dans la boutique',
     ],
   },
   match: {

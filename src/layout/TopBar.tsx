@@ -288,6 +288,19 @@ export function TopBar() {
           )}
         >
           <NavWalletBalances className="relative z-[1]" compact dense={mobileDenseHeader} />
+          {!authUser || authUser.isAnonymous ? (
+            <NavLink
+              to="/login"
+              className={cn(
+                'tf-nav-pill inline-flex min-h-9 shrink-0 items-center justify-center rounded-2xl border px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide outline-none sm:px-3 sm:text-[12px]',
+                L
+                  ? 'border-sky-500/40 bg-sky-50 text-sky-950 hover:bg-sky-100'
+                  : 'border-sky-300/40 bg-sky-500/20 text-white hover:bg-sky-500/30',
+              )}
+            >
+              Connexion
+            </NavLink>
+          ) : null}
           <div className="relative z-[1] flex items-center gap-1 sm:gap-1.5">
           <div ref={dmWrapRef} className="relative shrink-0">
             <button

@@ -10,6 +10,7 @@ import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 import { hasSeenFirstVisitGuide, markFirstVisitGuideSeen } from '../../utils/firstVisitGuidesStorage'
+import { useAuth } from '../../contexts/AuthContext'
 
 const FORCE_QUERY = 'tuto'
 
@@ -18,8 +19,10 @@ export function FirstVisitGuideModal() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { onboardingOpen } = useFanPreferences()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const guideId = firstVisitGuideIdFromPath(location.pathname)
+  const showLoginCta = guideId === 'home' && (!user || user.isAnonymous)
   const force = params.get(FORCE_QUERY) === '1'
   const guide = guideId ? FIRST_VISIT_GUIDES[guideId] : null
 
@@ -98,6 +101,21 @@ export function FirstVisitGuideModal() {
           </ul>
           <p className="pt-1 text-[11px] font-semibold text-tf-grey">Une seule fois sur cet écran.</p>
           <div className="flex flex-col gap-2 pt-2">
+            {showLoginCta ? (
+              <button
+                type="button"
+                className={cn(
+                  TF_FOCUS_VISIBLE,
+                  'inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-sky-600 px-4 text-sm font-black text-white shadow-md transition hover:bg-sky-500',
+                )}
+                onClick={() => {
+                  dismiss(true)
+                  navigate('/login')
+                }}
+              >
+                Créer / connecter mon compte
+              </button>
+            ) : null}
             <button
               type="button"
               className={cn(

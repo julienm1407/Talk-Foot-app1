@@ -30,6 +30,39 @@
     <!-- AdSense : script injecté par l’app uniquement sur accueil / articles (voir AdsenseScriptLoader). -->
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          var search = location.search || ''
+          var hash = location.hash || ''
+          if (!/[?&]code=/.test(search) && hash.indexOf('access_token=') === -1) return
+          var ua = navigator.userAgent || ''
+          if (/\bwv\b/.test(ua) || /Capacitor/i.test(ua)) return
+          if (!/Android|iPhone|iPad/i.test(ua)) return
+          var hasVerifier = false
+          try {
+            for (var i = 0; i < localStorage.length; i++) {
+              var k = localStorage.key(i)
+              if (k && /code-verifier/i.test(k) && localStorage.getItem(k)) {
+                hasVerifier = true
+                break
+              }
+            }
+          } catch (err) {}
+          if (hasVerifier) return
+          if (/Android/i.test(ua)) {
+            location.replace(
+              'intent://app/' +
+                search +
+                hash +
+                '#Intent;scheme=talkfoot;package=com.talkfoot.app;end',
+            )
+            return
+          }
+          location.replace('talkfoot://app/' + search + hash)
+        } catch (e) {}
+      })()
+    </script>
     <div id="tf-shop-modal-root" aria-hidden="true"></div>
     <div id="tf-app-modal-root" aria-hidden="true"></div>
     <div id="root">

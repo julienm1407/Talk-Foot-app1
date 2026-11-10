@@ -8,7 +8,8 @@ export function FanSetupBanner() {
   const { pathname } = useLocation()
   const { user } = useAuth()
   const { preferencesComplete, onboardingOpen, openOnboarding } = useFanPreferences()
-  if (pathname !== '/' || preferencesComplete || onboardingOpen || user) return null
+  const signedIn = Boolean(user && !user.isAnonymous)
+  if (pathname !== '/' || preferencesComplete || onboardingOpen || signedIn) return null
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-3 pt-3 sm:px-5">
