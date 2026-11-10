@@ -1805,7 +1805,7 @@ export function GroupPage() {
               </div>
             </div>
 
-            <div className="relative z-[2] flex max-sm:min-h-0 flex-nowrap touch-manipulation items-center gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
+            <div className="tf-group-salon-tools relative z-[2] flex max-sm:min-h-0 flex-nowrap touch-manipulation items-center gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
               {channel?.id === 'general' && isSiteAdmin ? (
                 <>
                   <button
@@ -1892,7 +1892,7 @@ export function GroupPage() {
               </button>
             </div>
             {salonToolsPanel === 'search' ? (
-              <div className="mt-1.5 lg:hidden" data-no-swipe="true">
+              <div className="tf-group-salon-extra mt-1.5 lg:hidden" data-no-swipe="true">
                 <Input
                   type="search"
                   value={salonSearchQuery}
@@ -1912,7 +1912,7 @@ export function GroupPage() {
             {salonToolsPanel === 'tifo' ? (
               <div
                 className={cn(
-                  'mt-1.5 max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain rounded-2xl border p-2 lg:hidden',
+                  'tf-group-salon-extra mt-1.5 max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain rounded-2xl border p-2 lg:hidden',
                   L ? 'border-tf-dark/12 bg-white' : 'border-white/12 bg-[#041a2d]',
                 )}
                 data-no-swipe="true"
@@ -2054,7 +2054,6 @@ export function GroupPage() {
                 </Button>
               </div>
             ) : null}
-            <div className="flex min-h-full flex-col justify-end">
             <MessageList
               messages={displayMessages}
               usersById={usersById}
@@ -2079,7 +2078,6 @@ export function GroupPage() {
                   : undefined
               }
             />
-            </div>
             <div className="h-1 shrink-0 max-lg:h-2" aria-hidden />
           </div>
 

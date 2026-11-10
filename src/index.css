@@ -3097,11 +3097,35 @@ html.tf-keyboard-open .tf-app-bottomnav-mobile-shell {
   pointer-events: none !important;
 }
 
-/* iOS : le clavier recouvre le WebView — coller la saisie au-dessus. */
+/* Android : le WebView se rétrécit — coller la saisie au bas, sans offset clavier. */
 html.tf-keyboard-open .tf-chat-compose-mobile-shell,
 html.tf-keyboard-open .tf-chat-compose-mobile-shell--channel,
 html.tf-keyboard-open .tf-group-join-mobile-shell {
+  bottom: 0 !important;
+}
+
+/* iOS overlay : le clavier recouvre le WebView — remonter de la hauteur clavier. */
+html.tf-keyboard-overlay.tf-keyboard-open .tf-chat-compose-mobile-shell,
+html.tf-keyboard-overlay.tf-keyboard-open .tf-chat-compose-mobile-shell--channel,
+html.tf-keyboard-overlay.tf-keyboard-open .tf-group-join-mobile-shell {
   bottom: var(--tf-keyboard-offset, 0px) !important;
+}
+
+html.tf-keyboard-open #main-content {
+  margin-bottom: 0 !important;
+}
+
+html.tf-keyboard-open .tf-chat-compose-spacer {
+  height: 6.75rem !important;
+}
+
+html.tf-keyboard-open:has(.tf-chat-compose-mobile-shell:focus-within) .tf-group-salon-tools,
+html.tf-keyboard-open:has(.tf-chat-compose-mobile-shell:focus-within) .tf-group-salon-extra {
+  display: none !important;
+}
+
+html.tf-keyboard-open:has(.tf-chat-compose-mobile-shell:focus-within) .tf-chat-quick-emotes {
+  display: none !important;
 }
 
 .tf-chat-compose-mobile-shell input,

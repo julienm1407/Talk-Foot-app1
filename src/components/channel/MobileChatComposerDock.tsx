@@ -37,7 +37,7 @@ export function MobileChatComposerDock({
       <>
         {variant === 'channel' ? null : (
           <div
-            className={cn('shrink-0 lg:hidden', gridRowClassName)}
+            className={cn('tf-chat-compose-spacer shrink-0 lg:hidden', gridRowClassName)}
             style={{ height: spacerHeight }}
             aria-hidden
           />

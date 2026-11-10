@@ -87,7 +87,7 @@ export function MessageComposer({
         />
       )}
       {showQuickRow ? (
-        <div className="-mx-0.5 mb-1.5 flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden py-0.5 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:mb-2 sm:flex-wrap sm:gap-1.5 sm:overflow-visible">
+        <div className="tf-chat-quick-emotes -mx-0.5 mb-1.5 flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden py-0.5 [-webkit-overflow-scrolling:touch] sm:mx-0 sm:mb-2 sm:flex-wrap sm:gap-1.5 sm:overflow-visible">
           {quickEmotes?.map((em) => (
             <button
               key={em}

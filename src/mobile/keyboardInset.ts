@@ -3,11 +3,19 @@ import { Keyboard, KeyboardResize } from '@capacitor/keyboard'
 
 const OPEN_PX = 80
 
+function isIosOverlayKeyboard(): boolean {
+  if (Capacitor.isNativePlatform()) return Capacitor.getPlatform() === 'ios'
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+}
+
 function applyKeyboardOffset(px: number) {
-  const v = Math.max(0, Math.round(px))
+  const overlay = isIosOverlayKeyboard()
+  const v = overlay ? Math.max(0, Math.round(px)) : 0
   const root = document.documentElement
   root.style.setProperty('--tf-keyboard-offset', `${v}px`)
-  root.classList.toggle('tf-keyboard-open', v >= OPEN_PX)
+  const open = overlay ? v >= OPEN_PX : px >= OPEN_PX
+  root.classList.toggle('tf-keyboard-open', open)
+  root.classList.toggle('tf-keyboard-overlay', overlay && open)
 }
 
 function visualViewportOverlap(): number {
@@ -18,24 +26,32 @@ function visualViewportOverlap(): number {
 }
 
 function syncFromVisualViewport() {
+  if (!isIosOverlayKeyboard()) return
   applyKeyboardOffset(visualViewportOverlap())
 }
 
-function scrollActiveFieldIntoView() {
-  const el = document.activeElement
-  if (!(el instanceof HTMLElement)) return
-  if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return
-  window.setTimeout(() => {
-    el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
-  }, 50)
+function pinChatComposeFocus() {
+  document.addEventListener(
+    'focusin',
+    (e) => {
+      const t = e.target
+      if (!(t instanceof HTMLElement)) return
+      if (!t.closest('.tf-chat-compose-mobile-shell')) return
+      const x = window.scrollX
+      const y = window.scrollY
+      requestAnimationFrame(() => window.scrollTo(x, y))
+    },
+    true,
+  )
 }
 
 /**
- * Sur iOS le clavier recouvre le WebView (position:fixed reste collé en bas).
- * Android redimensionne déjà le WebView : l’overlap visualViewport est ~0.
+ * iOS : le clavier recouvre le WebView (KeyboardResize.None) → offset.
+ * Android / Chrome : le WebView se rétrécit déjà — ne PAS remonter la barre (ça la met au milieu).
  */
 export async function initKeyboardInset(): Promise<void> {
   applyKeyboardOffset(0)
+  pinChatComposeFocus()
 
   const vv = window.visualViewport
   if (vv) {
@@ -58,11 +74,18 @@ export async function initKeyboardInset(): Promise<void> {
 
   try {
     await Keyboard.addListener('keyboardWillShow', (info) => {
+      if (!isIosOverlayKeyboard()) {
+        applyKeyboardOffset(info.keyboardHeight)
+        return
+      }
       applyKeyboardOffset(Math.max(info.keyboardHeight, visualViewportOverlap()))
     })
     await Keyboard.addListener('keyboardDidShow', (info) => {
+      if (!isIosOverlayKeyboard()) {
+        applyKeyboardOffset(info.keyboardHeight)
+        return
+      }
       applyKeyboardOffset(Math.max(info.keyboardHeight, visualViewportOverlap()))
-      scrollActiveFieldIntoView()
     })
     await Keyboard.addListener('keyboardWillHide', () => applyKeyboardOffset(0))
     await Keyboard.addListener('keyboardDidHide', () => applyKeyboardOffset(0))
