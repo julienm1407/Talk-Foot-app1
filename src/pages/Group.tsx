@@ -303,6 +303,7 @@ export function GroupPage() {
 
   const [messagesByThread, setMessagesByThread] = useState<Record<string, Message[]>>({})
   const [salonSearchQuery, setSalonSearchQuery] = useState('')
+  const [salonToolsPanel, setSalonToolsPanel] = useState<'search' | 'tifo' | null>(null)
   const [hasOlderOnServer, setHasOlderOnServer] = useState(false)
   const [olderLoading, setOlderLoading] = useState(false)
 
@@ -1681,11 +1682,11 @@ export function GroupPage() {
               'max-lg:row-start-1 max-lg:border-b max-lg:p-1.5 max-lg:pb-1',
               L ? 'max-lg:border-tf-grey-pastel/40' : 'max-lg:border-white/10',
               isDebateSalon &&
-                'max-lg:max-h-[min(28dvh,11.5rem)] max-lg:overflow-y-auto max-lg:overscroll-y-contain',
+                'max-lg:overflow-x-hidden max-lg:overflow-y-visible',
             )}
           >
             <div
-              className="mb-1 flex gap-1 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+              className="mb-1.5 flex gap-1.5 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
               role="tablist"
               aria-label="Choisir un salon"
             >
@@ -1698,25 +1699,21 @@ export function GroupPage() {
                     role="tab"
                     aria-selected={active}
                     className={cn(
-                      'shrink-0 rounded-lg border px-2 py-1 text-left text-[10px] font-black transition',
+                      'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl border px-3.5 text-[13px] font-black tracking-tight transition active:scale-[0.98]',
                       active
                         ? L
-                          ? 'border-tf-dark/25 bg-white shadow-sm ring-2 ring-tf-electric/25'
-                          : 'border-sky-400/40 bg-white/[0.12] ring-2 ring-sky-400/30'
+                          ? 'border-tf-dark bg-tf-dark text-white shadow-md'
+                          : 'border-sky-300 bg-sky-400 text-[#041424] shadow-[0_8px_22px_rgba(56,189,248,0.38)]'
                         : L
-                          ? 'border-tf-grey-pastel/60 bg-tf-white/90'
-                          : 'border-[color:var(--tf-c30-border)] bg-[color:var(--tf-c30-surface-soft)]',
+                          ? 'border-tf-dark/15 bg-white text-tf-dark'
+                          : 'border-white/22 bg-white/[0.08] text-white',
                     )}
-                    style={
-                      active && salonSurface
-                        ? { borderColor: salonSurface.boxBorderColor }
-                        : undefined
-                    }
                     onClick={() => setChannelId(c.id)}
                   >
-                    <span className="whitespace-nowrap">
-                      {c.emoji} {c.name}
+                    <span aria-hidden className="text-base leading-none">
+                      {c.emoji}
                     </span>
+                    <span className="whitespace-nowrap">{c.name}</span>
                   </button>
                 )
               })}
@@ -1808,13 +1805,13 @@ export function GroupPage() {
               </div>
             </div>
 
-            <div className="relative z-[2] flex max-sm:min-h-0 flex-nowrap touch-manipulation items-center gap-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
+            <div className="relative z-[2] flex max-sm:min-h-0 flex-nowrap touch-manipulation items-center gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
               {channel?.id === 'general' && isSiteAdmin ? (
                 <>
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex h-7 shrink-0 touch-manipulation items-center justify-center rounded-lg border-2 border-tf-cta-hover/40 px-2 text-[9px] font-black text-white',
+                      'inline-flex h-10 shrink-0 touch-manipulation items-center justify-center rounded-2xl border-2 border-tf-cta-hover/40 px-3 text-xs font-black text-white',
                       'bg-tf-cta shadow-[0_2px_10px_rgba(255,59,59,0.28)] active:scale-[0.98]',
                     )}
                     onClick={(e) => {
@@ -1832,7 +1829,7 @@ export function GroupPage() {
                     <button
                       type="button"
                       className={cn(
-                        'h-7 shrink-0 rounded-lg border px-1.5 py-0.5 text-[9px] font-bold',
+                        'h-10 shrink-0 rounded-2xl border px-3 text-xs font-bold',
                         tfChipSurface(L, 'hover:opacity-95'),
                       )}
                       onClick={() => void handleAdminUnlinkDebate()}
@@ -1847,70 +1844,91 @@ export function GroupPage() {
                   type="button"
                   onClick={() => setVirageMode(!virageMode)}
                   className={cn(
-                    'h-7 shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-black',
+                    'inline-flex h-10 shrink-0 items-center rounded-2xl border px-3 text-xs font-black',
                     virageMode
-                      ? 'border-tf-dark bg-tf-dark text-white'
+                      ? L
+                        ? 'border-tf-dark bg-tf-dark text-white'
+                        : 'border-rose-300/70 bg-rose-500 text-white'
                       : tfChipSurface(L, 'hover:opacity-95'),
                   )}
                   title={LIVE_FIL_EQUIPE_COEUR.title}
                 >
-                  {virageMode ? '✓ Cœur' : 'Cœur'}
+                  {virageMode ? `♥ ${LIVE_FIL_EQUIPE_COEUR.labelOn}` : `♡ ${LIVE_FIL_EQUIPE_COEUR.label}`}
                 </button>
               ) : null}
-              <details
-                className={cn('min-w-[2.25rem] shrink-0', L ? 'text-tf-grey' : 'text-sky-200/90')}
-                data-no-swipe="true"
+              <button
+                type="button"
+                aria-pressed={salonToolsPanel === 'tifo'}
+                aria-label="Tifo pixel"
+                onClick={() => setSalonToolsPanel((p) => (p === 'tifo' ? null : 'tifo'))}
+                className={cn(
+                  'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl border px-3 text-xs font-black',
+                  salonToolsPanel === 'tifo'
+                    ? L
+                      ? 'border-tf-dark bg-tf-dark text-white'
+                      : 'border-amber-300 bg-amber-400 text-[#041424]'
+                    : tfChipSurface(L, 'hover:opacity-95'),
+                )}
               >
-                <summary
-                  className={cn(
-                    'flex h-7 cursor-pointer list-none items-center justify-center rounded-lg border px-1.5 text-[10px] font-black [&::-webkit-details-marker]:hidden',
-                    tfChipSurface(L),
-                  )}
-                >
-                  🎌
-                </summary>
-                <div className="absolute left-0 right-0 z-20 mt-1 max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain rounded-xl border bg-white p-2 shadow-lg [-webkit-overflow-scrolling:touch] dark:border-white/10 dark:bg-[#041a2d]">
-                  <GroupTifoPanel
-                    embedded
-                    groupId={group.id}
-                    matches={matches}
-                    groupClubId={groupMainClubId}
-                    groupClubLabel={groupMainClubLabel ?? undefined}
-                    groupNationIso={groupNationIso}
-                    groupNationLabel={groupNationLabel ?? undefined}
-                    isGroupAdmin={group.createdBy === 'me'}
-                  />
-                </div>
-              </details>
-              <details
-                className={cn('min-w-[2.25rem] shrink-0', L ? 'text-tf-grey' : 'text-sky-200/90')}
-                data-no-swipe="true"
+                <span aria-hidden>🎌</span>
+                Tifo
+              </button>
+              <button
+                type="button"
+                aria-pressed={salonToolsPanel === 'search'}
+                aria-label="Rechercher dans les messages"
+                onClick={() => setSalonToolsPanel((p) => (p === 'search' ? null : 'search'))}
+                className={cn(
+                  'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-2xl border px-3 text-xs font-black',
+                  salonToolsPanel === 'search'
+                    ? L
+                      ? 'border-tf-dark bg-tf-dark text-white'
+                      : 'border-sky-300 bg-sky-400 text-[#041424]'
+                    : tfChipSurface(L, 'hover:opacity-95'),
+                )}
               >
-                <summary
-                  className={cn(
-                    'flex h-7 cursor-pointer list-none items-center justify-center rounded-lg border px-1.5 text-[10px] font-black [&::-webkit-details-marker]:hidden',
-                    tfChipSurface(L),
-                  )}
-                >
-                  🔍
-                </summary>
-                <div className="mt-1.5 w-full min-w-[10rem]">
-                  <Input
-                    type="search"
-                    value={salonSearchQuery}
-                    onChange={(e) => setSalonSearchQuery(e.target.value)}
-                    placeholder="Rechercher…"
-                    className="h-9 w-full rounded-xl text-sm font-semibold"
-                    aria-label="Rechercher dans les messages"
-                  />
-                  {salonSearchQuery.trim() ? (
-                    <p className="mt-1 text-[10px] font-bold text-tf-grey">
-                      {displayMessages.length} résultat{displayMessages.length !== 1 ? 's' : ''}
-                    </p>
-                  ) : null}
-                </div>
-              </details>
+                <span aria-hidden>🔍</span>
+                Chercher
+              </button>
             </div>
+            {salonToolsPanel === 'search' ? (
+              <div className="mt-1.5 lg:hidden" data-no-swipe="true">
+                <Input
+                  type="search"
+                  value={salonSearchQuery}
+                  onChange={(e) => setSalonSearchQuery(e.target.value)}
+                  placeholder="Rechercher dans cette tribune…"
+                  className="h-11 w-full rounded-2xl text-sm font-semibold"
+                  aria-label="Rechercher dans les messages"
+                  autoFocus
+                />
+                {salonSearchQuery.trim() ? (
+                  <p className={cn('mt-1 text-[11px] font-bold', TF_TEXT_MUTED)}>
+                    {displayMessages.length} résultat{displayMessages.length !== 1 ? 's' : ''}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {salonToolsPanel === 'tifo' ? (
+              <div
+                className={cn(
+                  'mt-1.5 max-h-[min(42dvh,16rem)] overflow-y-auto overscroll-y-contain rounded-2xl border p-2 lg:hidden',
+                  L ? 'border-tf-dark/12 bg-white' : 'border-white/12 bg-[#041a2d]',
+                )}
+                data-no-swipe="true"
+              >
+                <GroupTifoPanel
+                  embedded
+                  groupId={group.id}
+                  matches={matches}
+                  groupClubId={groupMainClubId}
+                  groupClubLabel={groupMainClubLabel ?? undefined}
+                  groupNationIso={groupNationIso}
+                  groupNationLabel={groupNationLabel ?? undefined}
+                  isGroupAdmin={group.createdBy === 'me'}
+                />
+              </div>
+            ) : null}
 
             {debate && channel?.id === 'general' ? (
               <>
@@ -2036,6 +2054,7 @@ export function GroupPage() {
                 </Button>
               </div>
             ) : null}
+            <div className="flex min-h-full flex-col justify-end">
             <MessageList
               messages={displayMessages}
               usersById={usersById}
@@ -2060,6 +2079,7 @@ export function GroupPage() {
                   : undefined
               }
             />
+            </div>
             <div className="h-1 shrink-0 max-lg:h-2" aria-hidden />
           </div>
 

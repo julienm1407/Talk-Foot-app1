@@ -88,10 +88,11 @@ export function getBetStatusMeta(status: BetStatus): {
 }
 
 export function filterBetsByTab(bets: Bet[], tab: BetFilterTab): Bet[] {
-  if (tab === 'all') return bets
-  if (tab === 'open') return bets.filter((b) => b.status === 'open')
-  if (tab === 'won') return bets.filter((b) => b.status === 'won')
-  return bets.filter((b) => b.status === 'lost')
+  const visible = bets.filter((b) => b.status !== 'cancelled')
+  if (tab === 'all') return visible
+  if (tab === 'open') return visible.filter((b) => b.status === 'open')
+  if (tab === 'won') return visible.filter((b) => b.status === 'won')
+  return visible.filter((b) => b.status === 'lost')
 }
 
 export function sortBetsForSlipList(bets: Bet[]): Bet[] {

@@ -1,4 +1,5 @@
 import type { Bet, BetMarket } from '../types/bet'
+import type { Match } from '../types/match'
 import { parseExactScoreSelection } from '../odds/exactScoreOdds'
 import { scorerLineupMatchesScoredGoal } from './liveFootballOdds'
 import { betWinTokenCredit } from './subscriptionEntitlements'
@@ -179,4 +180,46 @@ export function settleWinningAnytimeScorersOnly(
   })
 
   return { bets: next, tokenDelta, newlyWonBetIds: newlyWonBetIds(bets, next) }
+}
+
+/** Match terminé depuis assez longtemps pour qu’un pari « en cours » soit un reliquat, pas un live. */
+export const STALE_OPEN_BET_AFTER_KICKOFF_MS = 6 * 60 * 60 * 1000
+const STALE_OPEN_BET_WITHOUT_KICKOFF_MS = 36 * 60 * 60 * 1000
+
+export function isStaleOpenBet(bet: Bet, match: Match | undefined, nowMs: number): boolean {
+  if (bet.status !== 'open') return false
+  if (match?.status === 'live' || match?.status === 'upcoming') return false
+  if (match?.status === 'finished') return true
+  if (bet.matchLabel?.status === 'finished') return true
+  const kickoffIso = bet.matchLabel?.kickoffAt ?? match?.kickoffAt
+  const kickoff = kickoffIso ? Date.parse(kickoffIso) : Number.NaN
+  if (Number.isFinite(kickoff)) return nowMs - kickoff >= STALE_OPEN_BET_AFTER_KICKOFF_MS
+  const placed = Date.parse(bet.placedAt)
+  if (!Number.isFinite(placed)) return true
+  return nowMs - placed >= STALE_OPEN_BET_WITHOUT_KICKOFF_MS
+}
+
+/**
+ * Retire les paris restés « en cours » après le match (gris, jamais réglés).
+ * Gagnés / perdus intacts. Rembourse la mise (le match n’a pas été tranché).
+ */
+export function expireStaleOpenBets(
+  bets: Bet[],
+  matches: Match[],
+  nowMs = Date.now(),
+): { bets: Bet[]; refundTokens: number; removedIds: string[] } {
+  const byId = new Map(matches.map((m) => [m.id, m]))
+  const removedIds: string[] = []
+  let refundTokens = 0
+  const next: Bet[] = []
+  for (const bet of bets) {
+    if (!isStaleOpenBet(bet, byId.get(bet.matchId), nowMs)) {
+      next.push(bet)
+      continue
+    }
+    removedIds.push(bet.id)
+    refundTokens += bet.stake
+  }
+  if (!removedIds.length) return { bets, refundTokens: 0, removedIds: [] }
+  return { bets: next, refundTokens, removedIds }
 }

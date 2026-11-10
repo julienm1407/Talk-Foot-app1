@@ -4,7 +4,7 @@ import { useOptionalCloudUserState } from '../contexts/CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import type { Bet, BetMarket } from '../types/bet'
 import type { Match } from '../types/match'
-import { settleOpenBetsForMatch } from '../utils/betSettlement'
+import { expireStaleOpenBets, settleOpenBetsForMatch } from '../utils/betSettlement'
 import { loadScorerEventsForMatch } from '../utils/matchScorerEvents'
 import { normalizeWallet } from '../utils/walletNormalize'
 import { useUserBets } from './useUserBets'
@@ -16,6 +16,10 @@ const NON_SCORER_MARKETS: BetMarket[] = ['result_1x2', 'over25', 'exact_score']
 
 function matchHasOpenBets(matchId: string, bets: Bet[]): boolean {
   return bets.some((b) => b.matchId === matchId && b.status === 'open')
+}
+
+function betsFingerprint(list: Bet[]): string {
+  return list.map((b) => `${b.id}:${b.status}:${b.payout ?? ''}`).join('|')
 }
 
 function matchHasReclaimableLostScorers(matchId: string, bets: Bet[]): boolean {
@@ -53,8 +57,6 @@ export function useGlobalBetSettlement() {
         matchHasReclaimableLostScorers(m.id, bets) && !scorerReclaimAttemptedRef.current.has(m.id)
       return open || reclaim
     })
-
-    if (!candidates.length) return
 
     let cancelled = false
 
@@ -136,24 +138,34 @@ export function useGlobalBetSettlement() {
     }
 
     void (async () => {
-      if (isSupabaseConfigured() && cloud) {
-        let workingBets = bets
-        let totalDelta = 0
-        let changed = false
-        const allWonBetIds: string[] = []
-        for (const match of candidates) {
-          if (cancelled) return
-          const result = await settleMatch(match, workingBets)
-          workingBets = result.bets
-          totalDelta += result.tokenDelta
-          allWonBetIds.push(...result.wonBetIds)
-          if (result.tokenDelta !== 0 || result.wonBetIds.length > 0) changed = true
-          if (!matchHasOpenBets(match.id, workingBets)) {
-            settledMatchIdsRef.current.add(match.id)
-          }
+      let workingBets = bets
+      let totalDelta = 0
+      const allWonBetIds: string[] = []
+      const before = betsFingerprint(bets)
+
+      for (const match of candidates) {
+        if (cancelled) return
+        const result = await settleMatch(match, workingBets)
+        workingBets = result.bets
+        totalDelta += result.tokenDelta
+        allWonBetIds.push(...result.wonBetIds)
+        if (!matchHasOpenBets(match.id, workingBets)) {
+          settledMatchIdsRef.current.add(match.id)
         }
-        if (cancelled || !changed) return
-        if (allWonBetIds.length) grantBetWon(allWonBetIds)
+      }
+
+      if (cancelled) return
+      const expired = expireStaleOpenBets(workingBets, matches)
+      workingBets = expired.bets
+      totalDelta += expired.refundTokens
+
+      if (cancelled) return
+      const changed = betsFingerprint(workingBets) !== before || totalDelta !== 0
+      if (!changed) return
+
+      if (allWonBetIds.length) grantBetWon(allWonBetIds)
+
+      if (isSupabaseConfigured() && cloud) {
         const finalBets = workingBets
         const delta = totalDelta
         cloud.patchApp((prev) => {
@@ -168,26 +180,8 @@ export function useGlobalBetSettlement() {
         return
       }
 
-      let nextBets = bets
-      let tokenDelta = 0
-      let changed = false
-      const allWonBetIds: string[] = []
-      for (const match of candidates) {
-        if (cancelled) return
-        const result = await settleMatch(match, nextBets)
-        nextBets = result.bets
-        tokenDelta += result.tokenDelta
-        allWonBetIds.push(...result.wonBetIds)
-        if (result.tokenDelta !== 0 || result.wonBetIds.length > 0) changed = true
-        if (!matchHasOpenBets(match.id, nextBets)) {
-          settledMatchIdsRef.current.add(match.id)
-        }
-      }
-
-      if (cancelled || !changed) return
-      setBets(nextBets)
-      if (tokenDelta) patchWallet((w) => ({ ...w, tokens: w.tokens + tokenDelta }))
-      if (allWonBetIds.length) grantBetWon(allWonBetIds)
+      setBets(workingBets)
+      if (totalDelta) patchWallet((w) => ({ ...w, tokens: w.tokens + totalDelta }))
     })()
 
     return () => {

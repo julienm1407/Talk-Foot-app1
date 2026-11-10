@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Bet } from '../types/bet'
-import { settleOpenBetsForMatch, settleWinningAnytimeScorersOnly } from './betSettlement'
+import type { Match } from '../types/match'
+import {
+  expireStaleOpenBets,
+  settleOpenBetsForMatch,
+  settleWinningAnytimeScorersOnly,
+} from './betSettlement'
 
 function openScorer(partial: Partial<Bet> & Pick<Bet, 'id' | 'selection'>): Bet {
   return {
@@ -114,5 +119,61 @@ describe('settleOpenBetsForMatch anytime_scorer', () => {
       },
     )
     expect(next.find((b) => b.id === 'a')?.status).toBe('won')
+  })
+})
+
+describe('expireStaleOpenBets', () => {
+  const now = Date.parse('2026-11-10T10:00:00.000Z')
+
+  function bet(partial: Partial<Bet> & Pick<Bet, 'id' | 'status'>): Bet {
+    return {
+      matchId: 'old',
+      market: 'result_1x2',
+      selection: 'home',
+      stake: 10,
+      odds: 2,
+      placedAt: '2026-08-29T18:00:00.000Z',
+      ...partial,
+    }
+  }
+
+  it('retire seulement les ouverts périmés et rembourse, sans toucher gagné/perdu', () => {
+    const bets: Bet[] = [
+      bet({
+        id: 'gray-aug',
+        status: 'open',
+        matchLabel: { homeShort: 'A', awayShort: 'B', kickoffAt: '2026-08-29T19:00:00.000Z' },
+      }),
+      bet({ id: 'won', status: 'won', payout: 20, tokenCreditApplied: true }),
+      bet({ id: 'lost', status: 'lost', payout: 0 }),
+    ]
+    const { bets: next, refundTokens, removedIds } = expireStaleOpenBets(bets, [], now)
+    expect(removedIds).toEqual(['gray-aug'])
+    expect(refundTokens).toBe(10)
+    expect(next.map((b) => b.id)).toEqual(['won', 'lost'])
+  })
+
+  it('ne retire pas un pari encore live', () => {
+    const live: Match = {
+      id: 'live-1',
+      competition: { id: 'l1', name: 'L1', shortName: 'L1' },
+      home: {
+        id: 'h',
+        name: 'H',
+        shortName: 'H',
+        colors: { primary: '#000', secondary: '#fff' },
+      },
+      away: {
+        id: 'a',
+        name: 'A',
+        shortName: 'A',
+        colors: { primary: '#000', secondary: '#fff' },
+      },
+      kickoffAt: '2026-11-10T09:00:00.000Z',
+      status: 'live',
+    }
+    const bets: Bet[] = [bet({ id: 'live', matchId: 'live-1', status: 'open' })]
+    const { removedIds } = expireStaleOpenBets(bets, [live], now)
+    expect(removedIds).toEqual([])
   })
 })

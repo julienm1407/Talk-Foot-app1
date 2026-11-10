@@ -53,7 +53,7 @@ export function PronosticHubPage() {
 
   const counts = useMemo(
     () => ({
-      all: bets.length,
+      all: bets.filter((b) => b.status !== 'cancelled').length,
       open: bets.filter((b) => b.status === 'open').length,
       won: bets.filter((b) => b.status === 'won').length,
       lost: bets.filter((b) => b.status === 'lost').length,

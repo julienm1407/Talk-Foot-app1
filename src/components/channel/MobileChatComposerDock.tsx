@@ -3,9 +3,8 @@ import type { ReactNode } from 'react'
 import { useIsMobileTouchViewport } from '../../hooks/useIsMobileTouchViewport'
 import { cn } from '../../utils/cn'
 
-/** Hauteur réservée dans la grille pour ne pas masquer le fil sous le dock fixe. */
-export const MOBILE_CHAT_COMPOSER_DOCK_HEIGHT =
-  'calc(11rem + env(safe-area-inset-bottom, 0px))'
+/** Hauteur du dock saisie seul — la BottomNav est déjà réservée par le shell (`mb`). */
+export const MOBILE_CHAT_COMPOSER_DOCK_HEIGHT = '7.25rem'
 
 /** Live match : saisie + barre Match / Compo / Paris / Stade. */
 export const CHANNEL_MOBILE_COMPOSER_STACK_HEIGHT =
