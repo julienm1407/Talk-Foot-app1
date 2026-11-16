@@ -138,7 +138,7 @@ export function OAuthProfileSetupModal() {
               </h2>
               <p className="mt-1 text-sm font-semibold text-tf-grey">
                 Connexion {providerLabel} : choisis comment tu apparaîtras sur Talk Foot (pseudo + une ligne sur toi,
-                optionnel). Ensuite, on te demandera ta ligue et tes clubs.
+                optionnel). Tu pourras choisir ligue et clubs plus tard, depuis le profil.
               </p>
             </div>
           </div>

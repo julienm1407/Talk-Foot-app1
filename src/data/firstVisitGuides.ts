@@ -10,6 +10,7 @@ export type FirstVisitGuideId =
   | 'profile'
   | 'channel'
   | 'group'
+  | 'debates'
 
 export type FirstVisitGuide = {
   id: FirstVisitGuideId
@@ -24,26 +25,26 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     id: 'home',
     eyebrow: 'Accueil',
     title: 'Bienvenue sur Talk Foot',
-    body: 'Tu es en mode invité tant que tu ne te connectes pas. Voici ce que tu peux faire tout de suite.',
+    body: 'Barre du bas : Accueil, Matchs, Groupes, Boutique, puis Plus. Tu peux tout parcourir tout de suite.',
     bullets: [
-      'Matchs : score live, pronos et tribune',
-      'Boutique : médailles (vrai achat) et jetons (jeu)',
-      'Google : un tap pour garder ton compte sur tous tes appareils',
-      'Jetons extra : bonus quotidien + pub récompensée dans la boutique',
+      '⚽ Matchs : calendrier, scores live, tape une affiche → tribune',
+      '👥 Groupes : tes tribunes de club',
+      '🛍️ Boutique : maillots, jetons et médailles',
+      'Connexion (haut à droite) si tu veux garder ton compte',
     ],
   },
   match: {
     id: 'match',
     eyebrow: 'Matchs',
     title: 'Le calendrier live',
-    body: 'Tous les matchs du jour et à venir. Tape une affiche pour entrer dans la tribune.',
+    body: 'Onglet Matchs (ballon, barre du bas). Tape une affiche pour ouvrir la tribune du match.',
     bullets: ['Score et minute en direct', 'Pronos avant le coup d’envoi', 'Chat d’ambiance pendant le match'],
   },
   groups: {
     id: 'groups',
     eyebrow: 'Tribunes',
     title: 'Tes groupes de supporters',
-    body: 'Rejoins une tribune de club ou crée la tienne pour débattre entre fans.',
+    body: 'Onglet Groupes (barre du bas). Rejoins une tribune ou crée la tienne.',
     bullets: ['Fil d’actu + tifo pixel', 'Débats et messages', 'Limites selon ta formule'],
   },
   boutique: {
@@ -85,8 +86,15 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     id: 'profile',
     eyebrow: 'Profil',
     title: 'Ton personnage',
-    body: 'Photo, avatar 3D, clubs favoris et formules : tout se règle ici.',
+    body: 'Icône en haut à droite. Photo, avatar, formules : tout se règle ici. Les clubs favoris, seulement avec un compte.',
     bullets: ['Studio maillot / accessoires', 'Formules supporters', 'Achat de médailles'],
+  },
+  debates: {
+    id: 'debates',
+    eyebrow: 'Débats',
+    title: 'Les débats',
+    body: 'Depuis Groupes ou Plus, ouvre un débat pour argumenter avec les autres supporters.',
+    bullets: ['Un sujet = un fil', 'Réponds et vote', 'Reste fair-play'],
   },
   channel: {
     id: 'channel',
@@ -116,6 +124,7 @@ export function firstVisitGuideIdFromPath(pathname: string): FirstVisitGuideId |
   if (p.startsWith('/groups')) return 'groups'
   if (p.startsWith('/pronostic') || p.startsWith('/mes-paris')) return 'pronostic'
   if (p.startsWith('/rankings')) return 'rankings'
+  if (p.startsWith('/debates') || p.startsWith('/debate/')) return 'debates'
   if (p === '/profile' || p.startsWith('/profile/')) return 'profile'
   return null
 }

@@ -8,7 +8,6 @@ import { cn } from '../utils/cn'
 import { LogoEncart } from '../layout/LogoMark'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
-import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
 import { safeInternalNext } from '../utils/safeInternalPath'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { LOGIN_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../config/oauthProviders'
@@ -134,7 +133,6 @@ export function LoginPage() {
           clearAuthNotice()
           return
         }
-        markPendingFanOnboardingAfterLogin()
       } finally {
         setSubmitting(false)
       }
@@ -143,7 +141,6 @@ export function LoginPage() {
       try {
         const result = await loginWithEmail(email, password)
         if (result.status === 'success') {
-          markPendingFanOnboardingAfterLogin()
           return
         }
         if (result.status === 'email_not_verified') {
@@ -165,8 +162,7 @@ export function LoginPage() {
     setError(null)
     setOauthLoading(true)
     try {
-      const ok = await loginWithOAuthProvider('google')
-      if (ok && !isSupabaseConfigured()) markPendingFanOnboardingAfterLogin()
+      await loginWithOAuthProvider('google')
     } finally {
       setOauthLoading(false)
     }

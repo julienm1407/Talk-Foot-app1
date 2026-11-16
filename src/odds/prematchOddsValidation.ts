@@ -62,10 +62,19 @@ export function mixBookmakerWithInternal1x2(
   internalOdds: SmBookOdds1x2,
   internalProbs: Probabilities1x2,
 ): { odds1x2: SmBookOdds1x2; probs1x2: Probabilities1x2; source: 'bookmaker' | 'talkfoot' } {
-  const aligned = align1x2OddsToInternalFavorite(book, internalOdds)
-  const smProbs = impliedProbsFromDecimalOdds(aligned)
-  const credible = isCredibleExternal1x2Odds(aligned, internalOdds)
-  const weightOnBook = credible ? 0.72 : 0.48
+  const bookHomeFav = book.home <= book.away
+  const intHomeFav = internalOdds.home <= internalOdds.away
+  /** Un swap domicile/extérieur n’est sûr que si le book inverse clairement le modèle. */
+  if (bookHomeFav !== intHomeFav) {
+    return {
+      odds1x2: internalOdds,
+      probs1x2: internalProbs,
+      source: 'talkfoot',
+    }
+  }
+  const credible = isCredibleExternal1x2Odds(book, internalOdds)
+  const weightOnBook = credible ? 0.72 : 0.22
+  const smProbs = impliedProbsFromDecimalOdds(book)
   const probs1x2 = blend1x2Probabilities(smProbs, internalProbs, weightOnBook)
   return {
     odds1x2: probabilitiesToDecimalOdds(probs1x2),

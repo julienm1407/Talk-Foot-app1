@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildMatchOddsContext, buildMatchOddsContextFromNations, buildOddsStandingsPool, findStandingForTeam } from './buildTeamOddsInput'
+import { buildMatchOddsContext, buildMatchOddsContextFromNations, buildOddsStandingsPool, computePrematch1x2ForMatch, findStandingForTeam } from './buildTeamOddsInput'
 import type { LeagueStandingRow } from '../data/leagueStandings'
 import {
   adjust1x2OddsForLiveInternal,
@@ -343,6 +343,76 @@ test('Elversberg vs Leverkusen (coupe) — Leverkusen favori', () => {
   )
   assert.ok(odds1x2.away >= 1.35 && odds1x2.away <= 2.2, `Leverkusen away=${odds1x2.away}`)
   assert.ok(odds1x2.home >= 3.5 && odds1x2.home <= 8.5, `Elversberg home=${odds1x2.home}`)
+})
+
+test('Coupe de France : Reims (pro) largement favori contre Tourcoing (amateur)', () => {
+  const result = computePrematch1x2ForMatch(
+    {
+      id: 'm-cdf-tou-rei',
+      competition: { id: 'cdf', name: 'Coupe de France', shortName: 'CdF' },
+      home: { id: 'tourcoin', name: 'Tourcoing', shortName: 'TOU', colors: { primary: '#111827', secondary: '#f9fafb' } },
+      away: { id: 'reims', name: 'Stade de Reims', shortName: 'REI', colors: { primary: '#dc2626', secondary: '#ffffff' } },
+      kickoffAt: new Date().toISOString(),
+      status: 'upcoming',
+    },
+    [],
+  )
+  assert.ok(
+    result.odds1x2.away < result.odds1x2.home,
+    `Reims doit être favori (home=${result.odds1x2.home} away=${result.odds1x2.away})`,
+  )
+  assert.ok(result.odds1x2.away <= 1.85, `Reims trop long: ${result.odds1x2.away}`)
+  assert.ok(result.odds1x2.home >= 4.2, `Tourcoing trop court: ${result.odds1x2.home}`)
+})
+
+test('Coupe de France : Saint-Étienne favori contre Rumilly-Vallière', () => {
+  const result = computePrematch1x2ForMatch(
+    {
+      id: 'm-cdf-rum-asse',
+      competition: { id: 'cdf', name: 'Coupe de France', shortName: 'CdF' },
+      home: {
+        id: 'rumilly',
+        name: 'Rumilly-Vallière',
+        shortName: 'RUM',
+        colors: { primary: '#111827', secondary: '#f9fafb' },
+      },
+      away: {
+        id: 'stetienne',
+        name: 'AS Saint-Étienne',
+        shortName: 'ASS',
+        colors: { primary: '#22c55e', secondary: '#ffffff' },
+      },
+      kickoffAt: new Date().toISOString(),
+      status: 'upcoming',
+    },
+    [],
+  )
+  assert.ok(
+    result.odds1x2.away < result.odds1x2.home,
+    `Saint-Étienne doit être favori (home=${result.odds1x2.home} away=${result.odds1x2.away})`,
+  )
+  assert.ok(result.odds1x2.away <= 2, `Saint-Étienne trop long: ${result.odds1x2.away}`)
+  assert.ok(result.odds1x2.home >= 3.8, `Rumilly trop court: ${result.odds1x2.home}`)
+})
+
+test('Coupe de France : Annecy favori contre Firminy', () => {
+  const result = computePrematch1x2ForMatch(
+    {
+      id: 'm-cdf-ann-fir',
+      competition: { id: 'cdf', name: 'Coupe de France', shortName: 'CdF' },
+      home: { id: 'annecy', name: 'FC Annecy', shortName: 'ANN', colors: { primary: '#dc2626', secondary: '#ffffff' } },
+      away: { id: 'firminy', name: 'Firminy', shortName: 'FIR', colors: { primary: '#111827', secondary: '#f9fafb' } },
+      kickoffAt: new Date().toISOString(),
+      status: 'upcoming',
+    },
+    [],
+  )
+  assert.ok(
+    result.odds1x2.home < result.odds1x2.away,
+    `Annecy doit être favori (home=${result.odds1x2.home} away=${result.odds1x2.away})`,
+  )
+  assert.ok(result.odds1x2.home <= 1.9, `Annecy trop long: ${result.odds1x2.home}`)
+  assert.ok(result.odds1x2.away >= 3.8, `Firminy trop court: ${result.odds1x2.away}`)
 })
 
 test('calibration plafonne les outsiders extrêmes', () => {

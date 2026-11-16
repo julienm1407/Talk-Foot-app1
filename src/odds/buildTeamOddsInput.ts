@@ -24,25 +24,53 @@ const ELITE_CLUB_IDS = new Set([
   'lille', 'monaco', 'lyon', 'lens', 'om', 'rennes',
 ])
 
-/** D2 / petits clubs coupe — prior plus bas qu’un milieu de tableau générique. */
-const LOWER_TIER_CLUB_IDS = new Set([
+/** Clubs pro hors Big 5 (L2, 2. Bundesliga, etc.) — toujours au-dessus d’un amateur de coupe. */
+const SECOND_TIER_PRO_CLUB_IDS = new Set([
   'elversberg', 'paderborn', 'parisfc', 'lemans', 'troyes', 'stetienne',
   'bochum', 'hamburg', 'schalke', 'heidenheim', 'koln',
+  'reims', 'nantes', 'montpellier', 'metz', 'annecy',
 ])
 
-type StrengthBand = 'elite' | 'strong' | 'mid' | 'lower'
+const SECOND_DIVISION_LEAGUE_IDS = new Set(['ligue-2'])
 
-function strengthBandForClub(teamId: string): StrengthBand {
-  if (ELITE_CLUB_IDS.has(teamId)) return 'elite'
-  if (LOWER_TIER_CLUB_IDS.has(teamId)) return 'lower'
-  const club = ALL_CLUBS_BY_ID[teamId]
-  if (club?.leagueId === 'ligue-2') return 'lower'
-  if (club && (BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(club.leagueId)) return 'strong'
-  return 'mid'
+function normalizeClubKey(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
 }
 
-function catalogStrengthSlice(teamId: string): StandingSlice {
-  const band = strengthBandForClub(teamId)
+/** Noms L2 / clubs pro FR souvent absents du catalogue court. */
+const EXTRA_PRO_NAME_KEYS = new Set([
+  'annecy', 'amiens', 'bastia', 'clermont', 'dunkerque', 'grenoble', 'guingamp',
+  'laval', 'pau', 'rodez', 'redstar', 'ajaccio', 'nancy', 'boulogne',
+  'stadebrestois', 'asmonaco', 'asse', 'saintetienne', 'asaintetienne',
+  'stadereims', 'reims', 'fcnantes', 'nantes',
+])
+
+export function isKnownProfessionalClub(teamId: string, name?: string): boolean {
+  if (ELITE_CLUB_IDS.has(teamId) || SECOND_TIER_PRO_CLUB_IDS.has(teamId)) return true
+  if (ALL_CLUBS_BY_ID[teamId]) return true
+  if (SPORTMONKS_TEAM_ID_BY_CLUB_ID[teamId]) return true
+  const keys = [teamId, name].filter((v): v is string => Boolean(v)).map(normalizeClubKey)
+  return keys.some((k) => EXTRA_PRO_NAME_KEYS.has(k) || (k.length >= 5 && EXTRA_PRO_NAME_KEYS.has(k.slice(0, 8))))
+}
+
+type StrengthBand = 'elite' | 'strong' | 'pro' | 'amateur'
+
+function strengthBandForClub(teamId: string, name?: string): StrengthBand {
+  if (ELITE_CLUB_IDS.has(teamId)) return 'elite'
+  const club = ALL_CLUBS_BY_ID[teamId]
+  if (club && (BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(club.leagueId)) return 'strong'
+  if (SECOND_TIER_PRO_CLUB_IDS.has(teamId)) return 'pro'
+  if (club && SECOND_DIVISION_LEAGUE_IDS.has(club.leagueId)) return 'pro'
+  if (isKnownProfessionalClub(teamId, name)) return 'pro'
+  return 'amateur'
+}
+
+function catalogStrengthSlice(teamId: string, name?: string): StandingSlice {
+  const band = strengthBandForClub(teamId, name)
   const presets: Record<
     StrengthBand,
     { rank: number; attack: number; defense: number; momentum: number; form: FormResult[] }
@@ -56,24 +84,24 @@ function catalogStrengthSlice(teamId: string): StandingSlice {
     },
     strong: {
       rank: 7,
-      attack: 70,
-      defense: 58,
+      attack: 72,
+      defense: 60,
       momentum: 58,
       form: ['W', 'D', 'W', 'L', 'W'],
     },
-    mid: {
-      rank: 11,
-      attack: 54,
-      defense: 52,
-      momentum: 48,
-      form: ['D', 'D', 'W', 'L', 'D'],
+    pro: {
+      rank: 9,
+      attack: 58,
+      defense: 54,
+      momentum: 50,
+      form: ['W', 'D', 'L', 'W', 'D'],
     },
-    lower: {
-      rank: 17,
-      attack: 40,
-      defense: 42,
-      momentum: 38,
-      form: ['L', 'D', 'L', 'W', 'L'],
+    amateur: {
+      rank: 20,
+      attack: 22,
+      defense: 26,
+      momentum: 18,
+      form: ['L', 'L', 'D', 'L', 'L'],
     },
   }
   const preset = presets[band]
@@ -253,10 +281,13 @@ function fallbackStandingSlice(
   _leagueSize: number,
   sportMonksTeamId?: number,
   rows: LeagueStandingRow[] = [],
+  name?: string,
 ): StandingSlice {
-  const resolved = findStandingForTeam(rows, { teamId, sportMonksTeamId })
-  if (resolved) return standingRowToSlice(resolved)
-  return catalogStrengthSlice(teamId)
+  const resolved = findStandingForTeam(rows, { teamId, sportMonksTeamId, name })
+  if (resolved && isKnownProfessionalClub(teamId, name ?? resolved.displayName)) {
+    return standingRowToSlice(resolved)
+  }
+  return catalogStrengthSlice(teamId, name)
 }
 
 /** Indice attaque catalogue (fallback buteurs / cotes sans classement SM). */
@@ -298,6 +329,8 @@ export function computePrematch1x2ForMatch(
     homeSportMonksTeamId: match.home.sportMonksTeamId,
     awaySportMonksTeamId: match.away.sportMonksTeamId,
     standingsRows: standingsPool,
+    homeName: match.home.name,
+    awayName: match.away.name,
   })
   if (!ctx) {
     throw new Error(`computePrematch1x2ForMatch: contexte impossible pour ${match.id}`)
@@ -319,21 +352,27 @@ export function buildMatchOddsContext(
     homeSportMonksTeamId?: number
     awaySportMonksTeamId?: number
     standingsRows?: LeagueStandingRow[]
+    homeName?: string
+    awayName?: string
   },
 ): MatchOddsContext | null {
   const leagueSize = opts?.leagueSize ?? Math.max(homeRow?.rank ?? 0, awayRow?.rank ?? 0, 18)
   const allRows = opts?.standingsRows ?? []
+  const homePro = isKnownProfessionalClub(homeTeamId, opts?.homeName)
+  const awayPro = isKnownProfessionalClub(awayTeamId, opts?.awayName)
 
-  const hSlice = homeRow
-    ? standingRowToSlice(homeRow)
-    : fallbackStandingSlice(homeTeamId, leagueSize, opts?.homeSportMonksTeamId, allRows)
-  const aSlice = awayRow
-    ? standingRowToSlice(awayRow)
-    : fallbackStandingSlice(awayTeamId, leagueSize, opts?.awaySportMonksTeamId, allRows)
+  const hSlice =
+    homeRow && homePro
+      ? standingRowToSlice(homeRow)
+      : fallbackStandingSlice(homeTeamId, leagueSize, opts?.homeSportMonksTeamId, allRows, opts?.homeName)
+  const aSlice =
+    awayRow && awayPro
+      ? standingRowToSlice(awayRow)
+      : fallbackStandingSlice(awayTeamId, leagueSize, opts?.awaySportMonksTeamId, allRows, opts?.awayName)
 
   return {
     leagueSize,
-    maxPowerDiff: 14,
+    maxPowerDiff: homePro !== awayPro ? 22 : 14,
     home: buildTeamOddsContext(hSlice, {
       isHomeInMatch: true,
       leagueSize,

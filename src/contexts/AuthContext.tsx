@@ -28,8 +28,6 @@ import { checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
 import { flushCloudBeforeLogout } from '../utils/cloudLogoutFlush'
-import { markPendingFanOnboardingAfterLogin } from '../constants/fanSession'
-
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
 
@@ -444,6 +442,11 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     // Évite la course refresh : getSession() peut répondre null avant que le stockage PKCE soit prêt,
     // alors que onAuthStateChange (INITIAL_SESSION) fournit la session. Filet si l’écouteur tarde.
+    void sb.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || hydratedRef.current) return
+      void applySession(session)
+    })
+
     const fallbackTimer = window.setTimeout(() => {
       if (cancelled || hydratedRef.current) return
       void sb.auth.getSession().then(({ data: { session } }) => {
@@ -596,7 +599,6 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       return false
     }
     setAuthNotice(null)
-    markPendingFanOnboardingAfterLogin()
     const redirectTo = getSupabaseOAuthRedirectTo()
     const { data, error } = await sb.auth.signInWithOAuth({
       provider,

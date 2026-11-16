@@ -36,7 +36,7 @@ export function FirstVisitGuideModal() {
       setOpen(false)
       return
     }
-    const t = window.setTimeout(() => setOpen(true), 450)
+    const t = window.setTimeout(() => setOpen(true), 280)
     return () => window.clearTimeout(t)
   }, [guideId, guide, force, onboardingOpen, location.pathname])
 

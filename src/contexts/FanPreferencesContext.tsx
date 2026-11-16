@@ -15,6 +15,7 @@ import {
 import type { FanPreferencesStoredShape, FavoritePlayerFollow } from '../types/fanPreferences'
 import { useOptionalCloudUserState } from './CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
+import { useAuth } from './AuthContext'
 
 export type { FanPreferencesStoredShape }
 
@@ -90,6 +91,7 @@ const FanPreferencesContext = createContext<FanPreferencesContextValue | null>(n
 
 export function FanPreferencesProvider({ children }: { children: React.ReactNode }) {
   const cloud = useOptionalCloudUserState()
+  const { user, isReady } = useAuth()
   const persistLocal = !isSupabaseConfigured()
   const [localStored, setLocalStored] = useLocalStorageState<StoredShape>(
     STORAGE_KEY,
@@ -99,7 +101,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
   )
   const stored = cloud !== undefined ? cloud.app.fanPreferences : localStored
   const [onboardingOpen, setOnboardingOpen] = useState(false)
-  const consumedPostLoginFlag = useRef(false)
+  const offeredOnboardingForUser = useRef<string | null>(null)
 
   const state: FanPreferencesState = useMemo(() => {
     const favoriteClubIds = normalizeClubIds(stored)
@@ -132,26 +134,41 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     }
   }, [stored])
 
-  /** Modal config : après connexion, et une fois au premier lancement (compte invité). */
+  /**
+   * Invité : jamais de modal ligue/club.
+   * Compte réel : seulement après hydratation cloud, si les préférences sont encore vides.
+   */
   useEffect(() => {
-    if (consumedPostLoginFlag.current) return
+    if (!isReady) return
+    if (!user || user.isAnonymous) {
+      setOnboardingOpen(false)
+      offeredOnboardingForUser.current = null
+      return
+    }
+    if (cloud && !cloud.syncReady) return
+    if (cloud?.oauthNeedsProfile) return
     try {
-      if (sessionStorage.getItem(PENDING_FAN_ONBOARDING_KEY) === '1') {
-        consumedPostLoginFlag.current = true
-        sessionStorage.removeItem(PENDING_FAN_ONBOARDING_KEY)
-        if (DEMO_FAN_ONBOARDING_EVERY_LOGIN || !state.preferencesComplete) {
-          setOnboardingOpen(true)
-        }
-        return
-      }
-      if (!state.preferencesComplete && sessionStorage.getItem('tf.fanOnboarding.auto.v1') !== '1') {
-        sessionStorage.setItem('tf.fanOnboarding.auto.v1', '1')
-        setOnboardingOpen(true)
-      }
+      sessionStorage.removeItem(PENDING_FAN_ONBOARDING_KEY)
     } catch {
       /* ignore */
     }
-  }, [state.preferencesComplete])
+    if (!DEMO_FAN_ONBOARDING_EVERY_LOGIN && state.preferencesComplete) {
+      setOnboardingOpen(false)
+      return
+    }
+    if (offeredOnboardingForUser.current === user.id) return
+    offeredOnboardingForUser.current = user.id
+    setOnboardingOpen(true)
+  }, [
+    isReady,
+    user,
+    user?.id,
+    user?.isAnonymous,
+    cloud,
+    cloud?.syncReady,
+    cloud?.oauthNeedsProfile,
+    state.preferencesComplete,
+  ])
 
   const patch = useCallback(
     (p: Partial<StoredShape>) => {
@@ -321,7 +338,10 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
   const openOnboarding = useCallback(() => setOnboardingOpen(true), [])
   const closeOnboarding = useCallback(() => {
     setOnboardingOpen(false)
-  }, [])
+    if (user && !user.isAnonymous && !state.preferencesComplete) {
+      patch({ preferencesComplete: true })
+    }
+  }, [patch, state.preferencesComplete, user])
 
   const value = useMemo(
     () => ({

@@ -650,9 +650,19 @@ export function ProfilePage() {
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <Button variant="primary" className="w-full rounded-2xl sm:w-auto" onClick={openOnboarding}>
-            Choisir ligue et clubs
-          </Button>
+          {authUser && !authUser.isAnonymous ? (
+            <Button variant="primary" className="w-full rounded-2xl sm:w-auto" onClick={openOnboarding}>
+              Choisir ligue et clubs
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              className="w-full rounded-2xl sm:w-auto"
+              onClick={() => hardNavigateTo('/login')}
+            >
+              Connecte-toi pour enregistrer tes clubs
+            </Button>
+          )}
           <label
             className={cn(
               'flex w-full cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-bold sm:w-auto',
