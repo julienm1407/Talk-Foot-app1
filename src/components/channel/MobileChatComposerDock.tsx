@@ -35,13 +35,11 @@ export function MobileChatComposerDock({
   if (mobileTouch && typeof document !== 'undefined') {
     return (
       <>
-        {variant === 'channel' ? null : (
-          <div
-            className={cn('tf-chat-compose-spacer shrink-0 lg:hidden', gridRowClassName)}
-            style={{ height: spacerHeight }}
-            aria-hidden
-          />
-        )}
+        <div
+          className={cn('tf-chat-compose-spacer shrink-0 lg:hidden', gridRowClassName)}
+          style={{ height: spacerHeight }}
+          aria-hidden
+        />
         {createPortal(
           <div
             className={cn(

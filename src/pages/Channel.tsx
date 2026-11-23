@@ -4045,12 +4045,21 @@ export function ChannelPage() {
             <SectionTitle>Chat live</SectionTitle>
             {europeMultiplex ? <EuropeMultiplexScoreboard multiplex={europeMultiplex} light={L} /> : null}
             {status === 'live' && activePoll ? (
-              <TribuneLivePoll
-                poll={activePoll}
-                canVote={Boolean(pollVoterKey)}
-                onVote={(optionId) => void vote(activePoll.id, optionId)}
-                light={L}
-              />
+              <div className="mt-1 shrink-0">
+                <TribuneLivePoll
+                  poll={activePoll}
+                  canVote={Boolean(pollVoterKey)}
+                  onVote={(optionId) => void vote(activePoll.id, optionId)}
+                  light={L}
+                />
+              </div>
+            ) : null}
+            {status === 'live' && showMobileChannelChrome ? (
+              <p className="mt-1 shrink-0 truncate rounded-md bg-[#122940] px-2 py-1 text-[10px] font-semibold text-sky-100/90">
+                {latestHighlight
+                  ? `${highlightMinuteLabel(latestHighlight)} ${latestHighlightText}`
+                  : 'Live · stats et terrain dans l’onglet Match'}
+              </p>
             ) : null}
             {authUser?.isAdmin && match && status !== 'finished' ? (
               <AdminTribunePollForm
@@ -4581,7 +4590,12 @@ export function ChannelPage() {
           ) : null}
 
           {!isUpcoming ? (
-          <Card className="tf-card-live shrink-0 md:min-h-[140px] md:max-h-[min(260px,34vh)] md:overflow-hidden">
+          <Card
+            className={cn(
+              'tf-card-live shrink-0 md:min-h-[140px] md:max-h-[min(260px,34vh)] md:overflow-hidden',
+              showMobileChannelChrome && 'hidden',
+            )}
+          >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:justify-between md:gap-2">
               <SectionTitle>{status === 'finished' ? 'Résumé' : 'Live'}</SectionTitle>

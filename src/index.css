@@ -3219,7 +3219,7 @@ body:has([data-tf-channel-dock='true']) .tf-channel-shell {
     min-height: 0;
   }
 
-  .tf-channel-live.tf-channel-upcoming .tf-live-col-center {
+  .tf-channel-live .tf-live-col-center {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -3227,7 +3227,7 @@ body:has([data-tf-channel-dock='true']) .tf-channel-shell {
     overflow: hidden;
   }
 
-  .tf-channel-live.tf-channel-upcoming .tf-card-chat {
+  .tf-channel-live .tf-card-chat {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -3235,7 +3235,7 @@ body:has([data-tf-channel-dock='true']) .tf-channel-shell {
     overflow: hidden;
   }
 
-  .tf-channel-live.tf-channel-upcoming .tf-card-chat > .relative.z-10 {
+  .tf-channel-live .tf-card-chat > .relative.z-10 {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -3243,8 +3243,9 @@ body:has([data-tf-channel-dock='true']) .tf-channel-shell {
   }
 
   .tf-channel-live .tf-chat-scroll {
-    /* Saisie + onglets Match/Compo collés en bas : le dernier message reste visible. */
-    padding-bottom: calc(5.75rem + var(--tf-sys-bottom-inset, 0px));
+    flex: 1 1 auto;
+    min-height: 8rem;
+    height: auto !important;
   }
 }
 
