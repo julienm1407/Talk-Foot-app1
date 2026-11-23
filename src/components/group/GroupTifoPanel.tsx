@@ -7,6 +7,7 @@ import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUS
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
+import { tifoChevronMask, tifoMaskProgress } from '../../utils/tifoReadyTemplates'
 
 const CELL_PX_DESKTOP = 11
 /** Grille un peu plus grande dans les panneaux mobile (sheet / embedded). */
@@ -115,6 +116,14 @@ export function GroupTifoPanel({
     return () => window.clearTimeout(t)
   }, [engagementNotice, clearEngagementNotice])
 
+  const [tifoMode, setTifoMode] = useState<'modele' | 'libre'>('modele')
+  const templateMask = useMemo(() => tifoChevronMask(), [])
+  const templateProgress = useMemo(() => tifoMaskProgress(templateMask, pixels), [templateMask, pixels])
+  const activeMatch = useMemo(
+    () => candidates.find((m) => m.id === activeId) ?? fixedMatch,
+    [candidates, activeId, fixedMatch],
+  )
+  const templateColor = activeMatch?.home.colors.primary ?? palette[2]!
   const [color, setColor] = useState<string>(palette[2]!)
   const eraseAllowed = forceErase || tifoEraseAllowed(painterCount, tribunePeopleCount)
   const eraseSelected = color === TIFO_ERASE_SWATCH
@@ -177,7 +186,9 @@ export function GroupTifoPanel({
               L ? 'bg-tf-dark/6 text-tf-grey' : 'bg-slate-800/60 text-sky-100/90',
             )}
           >
-            {placedPixelsLabel}
+            {tifoMode === 'modele'
+              ? `Tifo complété à ${templateProgress.total ? Math.round((templateProgress.filled / templateProgress.total) * 100) : 0} %`
+              : placedPixelsLabel}
           </span>
           <span
             className={cn(
@@ -197,6 +208,32 @@ export function GroupTifoPanel({
           </span>
         </div>
       </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          className={cn(
+            'rounded-full px-2.5 py-1 text-[10px] font-black uppercase',
+            tifoMode === 'modele' ? 'bg-tf-cta text-white' : L ? 'bg-slate-100 text-slate-700' : 'bg-white/10 text-sky-100',
+          )}
+          onClick={() => setTifoMode('modele')}
+        >
+          Modèle
+        </button>
+        <button
+          type="button"
+          className={cn(
+            'rounded-full px-2.5 py-1 text-[10px] font-black uppercase',
+            tifoMode === 'libre' ? 'bg-tf-cta text-white' : L ? 'bg-slate-100 text-slate-700' : 'bg-white/10 text-sky-100',
+          )}
+          onClick={() => setTifoMode('libre')}
+        >
+          Dessin libre
+        </button>
+      </div>
+      {templateProgress.total > 0 && templateProgress.filled >= templateProgress.total ? (
+        <p className={cn('mt-1 text-[11px] font-black', L ? 'text-emerald-700' : 'text-emerald-300')}>Tifo terminé !</p>
+      ) : null}
 
       {engagementNotice ? (
         <p
@@ -416,6 +453,11 @@ export function GroupTifoPanel({
                   }
                   if (eraseSelected) {
                     if (isPainted) void erasePixel(x, y)
+                    return
+                  }
+                  if (tifoMode === 'modele') {
+                    if (!templateMask[i]) return
+                    void placePixel(x, y, templateColor)
                     return
                   }
                   void placePixel(x, y, color)

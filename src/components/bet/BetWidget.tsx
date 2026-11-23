@@ -31,6 +31,7 @@ import {
   BetSheetScorerList,
 } from './BetSheetMarketUi'
 import { exactScorePicksFrom1x2 } from '../../odds/exactScoreOdds'
+import { ShareStoryActions } from '../share/ShareStoryActions'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -143,6 +144,7 @@ export function BetWidget({
   const [notice, setNotice] = useState<null | { tone: 'ok' | 'err'; text: string; href?: string }>(
     null,
   )
+  const [shareBet, setShareBet] = useState<Bet | null>(null)
   const sheetScrollRef = useRef<HTMLDivElement>(null)
   const x12SectionRef = useRef<HTMLDivElement>(null)
   const exactScoreSectionRef = useRef<HTMLDivElement>(null)
@@ -632,10 +634,12 @@ export function BetWidget({
       setNotice({ tone: 'err', text: 'Pas assez de jetons.' })
       return
     }
+    const placed = res && typeof res === 'object' && 'ok' in res && res.ok === true ? res.bet : null
+    if (placed) setShareBet(placed)
     const selectionText = pending.label.replace(/^1N2\s·\s/, '')
     setNotice({
       tone: 'ok',
-      text: `✅ Pari validé : ${selectionText}`,
+      text: `✅ Prono validé : ${selectionText}`,
       href: '/pronostic',
     })
     if (pending.market === 'result_1x2') {
@@ -645,10 +649,6 @@ export function BetWidget({
       }
     }
     setPending(null)
-    window.setTimeout(() => {
-      setNotice(null)
-      setSheetOpen(false)
-    }, 1100)
   }
 
   const potentialReturn = pending ? Math.round(stake * pending.odds * 10) / 10 : 0
@@ -1188,6 +1188,14 @@ export function BetWidget({
                     >
                       Voir mes pronos →
                     </Link>
+                  ) : null}
+                  {notice.tone === 'ok' && shareBet ? (
+                    <ShareStoryActions
+                      match={match}
+                      bet={shareBet}
+                      kind="prono"
+                      tone={sheetLight ? 'light' : 'dark'}
+                    />
                   ) : null}
                 </div>
               ) : null}

@@ -3,8 +3,17 @@ import type { Match } from '../types/match'
 import { useMatches } from '../contexts/MatchesContext'
 import { fetchMatchByTalkFootId, readBetMatchCache } from '../utils/betMatchResolve'
 import { readMatchesSessionCache } from '../utils/matchesSessionCache'
+import {
+  isTalkFootMultiplexId,
+  multiplexSyntheticMatch,
+  resolveTalkFootMultiplex,
+} from '../utils/talkFootMatchOfTheDay'
 
 function matchFromLocalSources(matchId: string, matches: Match[]): Match | null {
+  if (isTalkFootMultiplexId(matchId)) {
+    const mux = resolveTalkFootMultiplex(matches, matchId)
+    if (mux) return multiplexSyntheticMatch(mux)
+  }
   const fromList = matches.find((m) => m.id === matchId)
   if (fromList) return fromList
   const cache = readBetMatchCache()[matchId]
@@ -45,6 +54,12 @@ export function useChannelRouteMatch(matchId: string | undefined) {
       setFetchFailed(false)
       return
     }
+    if (isTalkFootMultiplexId(matchId)) {
+      setFetched(null)
+      setFetching(false)
+      setFetchFailed(!matchesLoading)
+      return
+    }
 
     let cancelled = false
     setFetching(true)
@@ -59,7 +74,7 @@ export function useChannelRouteMatch(matchId: string | undefined) {
     return () => {
       cancelled = true
     }
-  }, [matchId, localMatch])
+  }, [matchId, localMatch, matchesLoading])
 
   const routeMatch = localMatch ?? fetched
   const hasRouteMatchId = Boolean(matchId)

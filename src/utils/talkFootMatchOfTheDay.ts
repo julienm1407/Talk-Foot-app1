@@ -1,126 +1,205 @@
 import type { Match } from '../types/match'
 import { teams } from '../data/teams'
+import {
+  EUROPE_COMPETITION_IDS,
+  EUROPE_MULTIPLEX_TITLES,
+  type EuropeCompetitionId,
+} from '../data/talkFootEditorial'
+import { readTalkFootEditorial, type TalkFootEditorialResolved } from './talkFootEditorialStore'
 import { matchCalendarDayKeyParis } from './time'
 
-/** Poids « affiche » d’un club — les derbys européens comptent, Monza beaucoup moins. */
-const CLUB_PRESTIGE: Record<string, number> = {
-  psg: 100,
-  om: 94,
-  lyon: 80,
-  monaco: 78,
-  lille: 76,
-  marseille: 94,
-  nice: 60,
-  lens: 62,
-  rennes: 58,
-  strasbourg: 52,
-  rma: 100,
-  fcb: 98,
-  atleti: 84,
-  mci: 96,
-  liv: 96,
-  ars: 90,
-  mun: 88,
-  che: 86,
-  tot: 80,
-  new: 70,
-  avl: 66,
-  bayern: 100,
-  bvb: 90,
-  dortmund: 90,
-  leverkusen: 80,
-  leipzig: 68,
-  inter: 92,
-  juve: 90,
-  milan: 88,
-  napoli: 84,
-  roma: 74,
-  lazio: 70,
-  atalanta: 68,
-  fiorentina: 50,
-  monza: 14,
-  lecce: 14,
-  como: 22,
-}
-
-const STAR_FRENCH = new Set(['psg', 'om', 'lyon', 'monaco', 'lille', 'marseille'])
-
-const FRENCH_CLUB_IDS = new Set(
-  [...(teams['ligue-1'] ?? []), ...(teams['ligue-2'] ?? [])].map((t) => t.id),
-)
-
-const COMP_WEIGHT: Record<string, number> = {
-  ucl: 92,
-  uel: 62,
-  uecl: 44,
-  cdf: 52,
-  'ligue-1': 44,
-  'ligue-2': 22,
-  epl: 34,
-  laliga: 34,
-  bund: 32,
-  'serie-a': 32,
-}
+const LIGUE1_IDS = new Set((teams['ligue-1'] ?? []).map((t) => t.id))
+const EUROPE_SET = new Set<string>(EUROPE_COMPETITION_IDS)
 
 function kickoffMs(iso: string): number {
   const n = Date.parse(iso)
   return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY
 }
 
-function prestige(clubId: string): number {
-  return CLUB_PRESTIGE[clubId] ?? 24
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join('|')
 }
 
-function scoreMatch(match: Match, favoriteClubIds: string[], now: Date): number {
-  const home = prestige(match.home.id)
-  const away = prestige(match.away.id)
-  let s = (COMP_WEIGHT[match.competition.id] ?? 8) + home + away
+function hasClub(match: Match, clubId: string): boolean {
+  return match.home.id === clubId || match.away.id === clubId
+}
 
-  const lo = Math.min(home, away)
-  const hi = Math.max(home, away)
-  if (lo >= 78 && hi >= 88) s += 52
+function isLigue1Club(id: string): boolean {
+  return LIGUE1_IDS.has(id)
+}
 
-  const ids = [match.home.id, match.away.id]
-  if (ids.some((id) => STAR_FRENCH.has(id))) s += 110
-  else if (ids.some((id) => FRENCH_CLUB_IDS.has(id))) s += 18
-  if (match.competition.id === 'ucl' && ids.some((id) => STAR_FRENCH.has(id))) s += 24
+function isEuropeComp(id: string): id is EuropeCompetitionId {
+  return EUROPE_SET.has(id)
+}
 
+function isPsgMatch(match: Match): boolean {
+  return hasClub(match, 'psg')
+}
+
+function isLigue1InEurope(match: Match): boolean {
+  if (!isEuropeComp(match.competition.id)) return false
+  return isLigue1Club(match.home.id) || isLigue1Club(match.away.id)
+}
+
+function isLigue1Choc(match: Match, editorial: TalkFootEditorialResolved): boolean {
+  if (match.competition.id !== 'ligue-1') return false
+  const a = match.home.id
+  const b = match.away.id
+  const top = new Set(editorial.top5Ids)
+  if (top.has(a) && top.has(b)) return true
+  const key = pairKey(a, b)
+  return editorial.chocPairs.some(([x, y]) => pairKey(x, y) === key)
+}
+
+function isPriority2(match: Match, editorial: TalkFootEditorialResolved): boolean {
+  return isLigue1InEurope(match) || isLigue1Choc(match, editorial)
+}
+
+function onParisDay(match: Match, dayKey: string): boolean {
+  return matchCalendarDayKeyParis(match.kickoffAt) === dayKey
+}
+
+function rankLiveFirst(a: Match, b: Match): number {
+  const live = Number(b.status === 'live') - Number(a.status === 'live')
+  if (live !== 0) return live
+  return kickoffMs(a.kickoffAt) - kickoffMs(b.kickoffAt)
+}
+
+export type TalkFootMultiplex = {
+  id: string
+  competitionId: EuropeCompetitionId
+  title: string
+  dayKey: string
+  matches: Match[]
+}
+
+export type TalkFootHomeBoard = {
+  featured: Match | null
+  alsoTonight: Match[]
+  multiplex: TalkFootMultiplex | null
+}
+
+export function talkFootMultiplexId(competitionId: EuropeCompetitionId, dayKey: string): string {
+  return `m-mux-${competitionId}-${dayKey}`
+}
+
+export function parseTalkFootMultiplexId(
+  matchId: string,
+): { competitionId: EuropeCompetitionId; dayKey: string } | null {
+  const m = /^m-mux-(ucl|uel|uecl)-(\d{4}-\d{2}-\d{2})$/.exec(matchId)
+  if (!m) return null
+  return { competitionId: m[1] as EuropeCompetitionId, dayKey: m[2] }
+}
+
+export function isTalkFootMultiplexId(matchId: string | undefined): boolean {
+  return Boolean(matchId && parseTalkFootMultiplexId(matchId))
+}
+
+export function buildEuropeMultiplex(
+  dayMatches: Match[],
+  dayKey: string,
+  competitionId: EuropeCompetitionId,
+): TalkFootMultiplex | null {
+  const matches = dayMatches
+    .filter(
+      (m) =>
+        m.competition.id === competitionId && !isLigue1Club(m.home.id) && !isLigue1Club(m.away.id),
+    )
+    .sort(rankLiveFirst)
+  if (!matches.length) return null
+  return {
+    id: talkFootMultiplexId(competitionId, dayKey),
+    competitionId,
+    title: EUROPE_MULTIPLEX_TITLES[competitionId],
+    dayKey,
+    matches,
+  }
+}
+
+function pickEuropeMultiplex(dayMatches: Match[], dayKey: string): TalkFootMultiplex | null {
+  return (
+    buildEuropeMultiplex(dayMatches, dayKey, 'ucl') ??
+    buildEuropeMultiplex(dayMatches, dayKey, 'uel') ??
+    buildEuropeMultiplex(dayMatches, dayKey, 'uecl')
+  )
+}
+
+export function resolveTalkFootMultiplex(matches: Match[], muxId: string): TalkFootMultiplex | null {
+  const parsed = parseTalkFootMultiplexId(muxId)
+  if (!parsed) return null
+  const dayMatches = matches.filter((m) => onParisDay(m, parsed.dayKey))
+  return buildEuropeMultiplex(dayMatches, parsed.dayKey, parsed.competitionId)
+}
+
+export function multiplexSyntheticMatch(mux: TalkFootMultiplex): Match {
+  const live = mux.matches.some((m) => m.status === 'live')
+  const upcoming = mux.matches.some((m) => m.status === 'upcoming')
+  const status: Match['status'] = live ? 'live' : upcoming ? 'upcoming' : 'finished'
+  const kickoffAt = mux.matches[0]?.kickoffAt ?? `${mux.dayKey}T20:00:00+01:00`
+  const label = mux.title.replace('Multiplex ', '')
+  return {
+    id: mux.id,
+    competition: {
+      id: mux.competitionId,
+      name: mux.title,
+      shortName: mux.competitionId === 'ucl' ? 'LDC' : mux.competitionId === 'uel' ? 'EL' : 'UECL',
+    },
+    home: {
+      id: 'mux-home',
+      name: mux.title,
+      shortName: mux.competitionId === 'ucl' ? 'LDC' : 'EUR',
+      colors: { primary: '#1d4ed8', secondary: '#fbbf24' },
+    },
+    away: {
+      id: 'mux-away',
+      name: label,
+      shortName: 'Soirée',
+      colors: { primary: '#0f172a', secondary: '#e2e8f0' },
+    },
+    kickoffAt,
+    status,
+  }
+}
+
+export function pickTalkFootHomeBoard(
+  matches: Match[],
+  now: Date = new Date(),
+  editorial: TalkFootEditorialResolved = readTalkFootEditorial(),
+): TalkFootHomeBoard {
   const today = matchCalendarDayKeyParis(now)
-  const day = matchCalendarDayKeyParis(match.kickoffAt)
-  if (day === today) s += 40
-  else if (day > today) {
-    const days = Math.max(0, Math.round((kickoffMs(match.kickoffAt) - now.getTime()) / 86_400_000))
-    s += Math.max(0, 20 - days)
+  const dayMatches = matches.filter((m) => onParisDay(m, today))
+  const multiplex = pickEuropeMultiplex(dayMatches, today)
+
+  const forcedId = editorial.forceByDay[today]
+  const forced = forcedId ? matches.find((m) => m.id === forcedId) ?? null : null
+
+  const psgToday = dayMatches.filter(isPsgMatch).sort(rankLiveFirst)
+  const prio2Today = dayMatches.filter((m) => isPriority2(m, editorial)).sort(rankLiveFirst)
+
+  let featured: Match | null = forced
+  if (!featured) featured = psgToday[0] ?? null
+  if (!featured) featured = prio2Today[0] ?? null
+
+  if (!featured) {
+    const future = matches
+      .filter((m) => m.status !== 'finished' && matchCalendarDayKeyParis(m.kickoffAt) > today)
+      .filter((m) => isPsgMatch(m) || isPriority2(m, editorial))
+      .sort((a, b) => kickoffMs(a.kickoffAt) - kickoffMs(b.kickoffAt))
+    featured = future[0] ?? null
   }
-  if (match.status === 'live') s += 10
-  if (match.status === 'finished' && day === today) s += 6
-  if (favoriteClubIds.includes(match.home.id) || favoriteClubIds.includes(match.away.id)) {
-    s += 22
-  }
-  return s
+
+  const alsoTonight = prio2Today.filter((m) => m.id !== featured?.id).slice(0, 2)
+
+  return { featured, alsoTonight, multiplex }
 }
 
-/**
- * Un seul match épinglé : LDC et clubs français d’abord, puis les vraies affiches
- * (PL, Serie A, etc.). Un Monza–Florence ne passe pas devant un choc.
- */
+/** Un seul match épinglé (compat accueil / salon). */
 export function pickTalkFootMatchOfTheDay(
   matches: Match[],
-  favoriteClubIds: string[] = [],
+  _favoriteClubIds: string[] = [],
   now: Date = new Date(),
 ): Match | null {
-  const open = matches.filter((m) => m.status === 'live' || m.status === 'upcoming')
-  const pool = open.length ? open : matches
-  if (!pool.length) return null
-
-  const ranked = pool
-    .map((m) => ({ m, s: scoreMatch(m, favoriteClubIds, now) }))
-    .sort((a, b) => {
-      if (b.s !== a.s) return b.s - a.s
-      return kickoffMs(a.m.kickoffAt) - kickoffMs(b.m.kickoffAt)
-    })
-
-  return ranked[0]?.m ?? null
+  return pickTalkFootHomeBoard(matches, now).featured
 }
 
 const FEATURED_MATCH_STORAGE_KEY = 'talkfoot.featuredMatchId.v1'
@@ -151,10 +230,11 @@ export function isTalkFootMatchToday(match: Pick<Match, 'kickoffAt' | 'status'>,
 export function isTalkFootFeaturedMatch(
   matchId: string,
   matches: Match[],
-  favoriteClubIds: string[] = [],
+  _favoriteClubIds: string[] = [],
   now: Date = new Date(),
 ): boolean {
-  const picked = pickTalkFootMatchOfTheDay(matches, favoriteClubIds, now)
-  if (picked?.id === matchId) return true
+  const board = pickTalkFootHomeBoard(matches, now)
+  if (board.featured?.id === matchId) return true
+  if (board.multiplex?.id === matchId) return true
   return readRememberedFeaturedTalkFootMatchId() === matchId
 }

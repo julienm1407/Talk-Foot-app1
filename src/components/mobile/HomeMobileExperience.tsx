@@ -9,13 +9,15 @@ import { cn } from '../../utils/cn'
 import { hubGlassPanel, hubTrendsShell } from '../../utils/hubSurface'
 import { HomeUpcomingHero } from '../home/HomeUpcomingHero'
 import { MatchTalkFootDuJour } from '../home/MatchTalkFootDuJour'
+import { CeSoirAussiStrip } from '../home/CeSoirAussiStrip'
+import { EuropeMultiplexCard } from '../home/EuropeMultiplexCard'
+import type { TalkFootMultiplex } from '../../utils/talkFootMatchOfTheDay'
 import { DebateOfTheDayCard } from '../home/DebateOfTheDayCard'
 import { HomeLeftColumn } from '../home/HomeLeftColumn'
 import { HomeRightColumn } from '../home/HomeRightColumn'
 import { TrendingDebatesSection } from '../home/TrendingDebatesSection'
 import { HomeFeedContinuation } from '../home/HomeFeedContinuation'
 import { HomeEditorialIntro } from '../ads/HomeEditorialIntro'
-import { HubEncartTopAccent } from '../ui/HubEncartTopAccent'
 import { HubStripFinished, HubStripUpcoming } from '../match/HubMatchEncart'
 import { Card } from '../ui/Card'
 import { CdmHomeHero } from '../cdm/CdmHomeHero'
@@ -44,6 +46,8 @@ export type HomeMobileExperienceProps = {
   loading: boolean
   heroLiveMatch: Match | null
   matchOfTheDay?: Match | null
+  alsoTonight?: Match[]
+  europeMultiplex?: TalkFootMultiplex | null
   heroLiveSim: LiveEncartSimulation | null
   hubLiveMatches: Match[]
   heroSlide: number
@@ -77,9 +81,11 @@ export function HomeMobileExperience({
   loading,
   heroLiveMatch,
   matchOfTheDay = null,
+  alsoTonight = [],
+  europeMultiplex = null,
   heroLiveSim,
   upcomingSortedForHome,
-  upcomingUnderLiveStrip,
+  upcomingUnderLiveStrip: _upcomingUnderLiveStrip,
   displayMatchesFull,
   displayMatches,
   debateOfTheDay,
@@ -151,27 +157,11 @@ export function HomeMobileExperience({
 
   const heroBlock = loading ? (
     matchesLoadingShell
-  ) : matchOfTheDay ? (
+  ) : matchOfTheDay || alsoTonight.length || europeMultiplex ? (
     <div className="space-y-2">
-      <MatchTalkFootDuJour match={matchOfTheDay} />
-      {upcomingUnderLiveStrip.filter((m) => m.id !== matchOfTheDay.id).length > 0 ? (
-        <div className={cn('min-w-0 border-t pt-2', L ? 'border-tf-dark/10' : 'border-white/10')}>
-          <HubEncartTopAccent appearance={appearance} preset="upcoming" className="mb-2" />
-          <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
-            <h3 className="text-[11px] font-black uppercase tracking-wider text-tf-app-fg">À venir</h3>
-            <Link to="/match" className={cn(TF_FOCUS_VISIBLE, 'text-[11px] font-black text-sky-400 hover:underline')}>
-              Tout voir
-            </Link>
-          </div>
-          <div className="flex flex-col gap-2">
-            {upcomingUnderLiveStrip
-              .filter((m) => m.id !== matchOfTheDay.id)
-              .map((m) => (
-              <HubStripUpcoming key={m.id} match={m} visualSize="minimal" className="min-w-0" />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {matchOfTheDay ? <MatchTalkFootDuJour match={matchOfTheDay} /> : null}
+      <CeSoirAussiStrip matches={alsoTonight} />
+      <EuropeMultiplexCard multiplex={europeMultiplex} />
     </div>
   ) : upcomingSortedForHome.length > 0 ? (
     <HomeUpcomingHero matches={upcomingSortedForHome} />

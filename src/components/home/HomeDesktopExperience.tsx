@@ -15,6 +15,9 @@ import { HubStripUpcoming } from '../match/HubMatchEncart'
 import { MatchSpotlightCard } from '../match/MatchSpotlightCard'
 import { LiveMatchHero } from './LiveMatchHero'
 import { MatchTalkFootDuJour } from './MatchTalkFootDuJour'
+import { CeSoirAussiStrip } from './CeSoirAussiStrip'
+import { EuropeMultiplexCard } from './EuropeMultiplexCard'
+import type { TalkFootMultiplex } from '../../utils/talkFootMatchOfTheDay'
 import { HomeLandingHub } from './HomeLandingHub'
 import { HomeMonEspacePanel } from './HomeMonEspacePanel'
 import { DebateOfTheDayCard } from './DebateOfTheDayCard'
@@ -57,6 +60,8 @@ function DesktopHubLiveStrip({
 export function HomeDesktopExperience({
   liveMatches,
   matchOfTheDay = null,
+  alsoTonight = [],
+  europeMultiplex = null,
   upcomingMatches,
   tribuneGroups,
   supporterGroupsPool,
@@ -72,6 +77,8 @@ export function HomeDesktopExperience({
 }: {
   liveMatches: Match[]
   matchOfTheDay?: Match | null
+  alsoTonight?: Match[]
+  europeMultiplex?: TalkFootMultiplex | null
   upcomingMatches: Match[]
   tribuneGroups: SupporterGroup[]
   /** Toutes les tribunes visibles (hors rivaux masqués) — pour le rail sans doublon avec la grille tribunes */
@@ -226,8 +233,18 @@ export function HomeDesktopExperience({
         >
           <HubEncartTopAccent appearance={appearance} preset={hasLive ? 'live' : 'upcoming'} />
           <div className="space-y-3 px-4 pt-3 sm:space-y-4 sm:px-5 sm:pt-4">
-          {matchOfTheDay ? <MatchTalkFootDuJour match={matchOfTheDay} /> : null}
-          {matchesLoading && !hasLive && upcomingSorted.length === 0 ? (
+          {matchOfTheDay || alsoTonight.length || europeMultiplex ? (
+            <div className="space-y-3">
+              {matchOfTheDay ? <MatchTalkFootDuJour match={matchOfTheDay} /> : null}
+              <CeSoirAussiStrip matches={alsoTonight} />
+              <EuropeMultiplexCard multiplex={europeMultiplex} />
+              <div className="flex justify-end">
+                <Link to="/match" className={cn(hubPillLink(appearance, 'sm'), 'shrink-0')}>
+                  Tous les matchs
+                </Link>
+              </div>
+            </div>
+          ) : matchesLoading && !hasLive && upcomingSorted.length === 0 ? (
             <div
               className="space-y-3"
               role="status"

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Match } from '../types/match'
-import { isTalkFootMatchToday, pickTalkFootMatchOfTheDay } from './talkFootMatchOfTheDay'
+import {
+  isTalkFootMatchToday,
+  pickTalkFootHomeBoard,
+  pickTalkFootMatchOfTheDay,
+} from './talkFootMatchOfTheDay'
+import type { TalkFootEditorialResolved } from './talkFootEditorialStore'
 
 function match(partial: {
   id: string
@@ -22,58 +27,74 @@ function match(partial: {
   } as Match
 }
 
-describe('pickTalkFootMatchOfTheDay', () => {
-  it('préfère un match Ligue 1 du jour à un live Serie A', () => {
+const editorial: TalkFootEditorialResolved = {
+  chocPairs: [
+    ['psg', 'om'],
+    ['lille', 'lens'],
+  ],
+  top5Ids: ['psg', 'om', 'monaco', 'lille', 'lyon'],
+  forceByDay: {},
+}
+
+describe('pickTalkFootHomeBoard', () => {
+  it('priorité 1 : PSG du jour, choc L1 dans Ce soir aussi', () => {
     const now = new Date('2026-11-23T12:00:00+01:00')
-    const picked = pickTalkFootMatchOfTheDay(
+    const board = pickTalkFootHomeBoard(
       [
         match({
-          id: 'monza',
-          competitionId: 'serie-a',
-          kickoffAt: '2026-11-23T15:00:00.000Z',
-          status: 'live',
+          id: 'om-lyon',
+          competitionId: 'ligue-1',
+          kickoffAt: '2026-11-23T19:00:00.000Z',
+          status: 'upcoming',
+          home: 'om',
+          away: 'lyon',
         }),
         match({
-          id: 'l1',
-          competitionId: 'ligue-1',
+          id: 'psg-roma',
+          competitionId: 'ucl',
           kickoffAt: '2026-11-23T20:00:00.000Z',
           status: 'upcoming',
+          home: 'psg',
+          away: 'roma',
         }),
       ],
-      [],
       now,
+      editorial,
     )
-    expect(picked?.id).toBe('l1')
+    expect(board.featured?.id).toBe('psg-roma')
+    expect(board.alsoTonight.map((m) => m.id)).toEqual(['om-lyon'])
   })
 
-  it('prend une grosse affiche de Premier League plutôt que Monza–Florence', () => {
-    const now = new Date('2026-11-23T16:00:00+01:00')
-    const picked = pickTalkFootMatchOfTheDay(
+  it('priorité 2 : club L1 en Europe si pas de PSG', () => {
+    const now = new Date('2026-11-24T12:00:00+01:00')
+    const board = pickTalkFootHomeBoard(
       [
         match({
-          id: 'monza-fio',
-          competitionId: 'serie-a',
-          kickoffAt: '2026-11-23T15:00:00.000Z',
-          status: 'live',
-          home: 'monza',
-          away: 'fiorentina',
-        }),
-        match({
           id: 'city-liv',
-          competitionId: 'epl',
-          kickoffAt: '2026-11-23T17:30:00.000Z',
+          competitionId: 'ucl',
+          kickoffAt: '2026-11-24T20:00:00.000Z',
           status: 'upcoming',
           home: 'mci',
           away: 'liv',
         }),
+        match({
+          id: 'lyon-bayern',
+          competitionId: 'ucl',
+          kickoffAt: '2026-11-24T20:00:00.000Z',
+          status: 'upcoming',
+          home: 'lyon',
+          away: 'bayern',
+        }),
       ],
-      [],
       now,
+      editorial,
     )
-    expect(picked?.id).toBe('city-liv')
+    expect(board.featured?.id).toBe('lyon-bayern')
+    expect(board.multiplex?.id).toBe('m-mux-ucl-2026-11-24')
+    expect(board.multiplex?.matches.map((m) => m.id)).toEqual(['city-liv'])
   })
 
-  it('prend Inter–Turin plutôt qu’un petit match de Ligue 1', () => {
+  it('ne met pas en avant un filler L1 ni une affiche étrangère', () => {
     const now = new Date('2026-11-23T16:00:00+01:00')
     const picked = pickTalkFootMatchOfTheDay(
       [
@@ -97,53 +118,72 @@ describe('pickTalkFootMatchOfTheDay', () => {
       [],
       now,
     )
-    expect(picked?.id).toBe('inter-juve')
+    expect(picked).toBeNull()
   })
 
-  it('prend une Ligue des champions plutôt qu’un filler italien', () => {
-    const now = new Date('2026-11-25T18:00:00+01:00')
+  it('prend un choc Ligue 1 (top 5) comme Match Talk Foot', () => {
+    const now = new Date('2026-11-23T12:00:00+01:00')
+    const board = pickTalkFootHomeBoard(
+      [
+        match({
+          id: 'monaco-lille',
+          competitionId: 'ligue-1',
+          kickoffAt: '2026-11-23T20:00:00.000Z',
+          status: 'upcoming',
+          home: 'monaco',
+          away: 'lille',
+        }),
+      ],
+      now,
+      editorial,
+    )
+    expect(board.featured?.id).toBe('monaco-lille')
+  })
+
+  it('force manuel du jour', () => {
+    const now = new Date('2026-11-23T12:00:00+01:00')
+    const board = pickTalkFootHomeBoard(
+      [
+        match({
+          id: 'psg-l1',
+          competitionId: 'ligue-1',
+          kickoffAt: '2026-11-23T20:00:00.000Z',
+          status: 'upcoming',
+          home: 'psg',
+          away: 'nantes',
+        }),
+        match({
+          id: 'force-me',
+          competitionId: 'ligue-1',
+          kickoffAt: '2026-11-23T17:00:00.000Z',
+          status: 'upcoming',
+          home: 'auxerre',
+          away: 'troyes',
+        }),
+      ],
+      now,
+      { ...editorial, forceByDay: { '2026-11-23': 'force-me' } },
+    )
+    expect(board.featured?.id).toBe('force-me')
+  })
+
+  it('semaine : prochain PSG si rien aujourd’hui', () => {
+    const now = new Date('2026-11-23T12:00:00+01:00')
     const picked = pickTalkFootMatchOfTheDay(
       [
         match({
-          id: 'sa',
-          competitionId: 'serie-a',
-          kickoffAt: '2026-11-25T18:00:00.000Z',
-          status: 'live',
-        }),
-        match({
-          id: 'ucl',
+          id: 'psg-roma',
           competitionId: 'ucl',
           kickoffAt: '2026-11-25T20:00:00.000Z',
           status: 'upcoming',
+          home: 'psg',
+          away: 'roma',
         }),
       ],
       [],
       now,
     )
-    expect(picked?.id).toBe('ucl')
-  })
-
-  it('distingue le match du jour d’un match plus tard dans la semaine', () => {
-    const now = new Date('2026-11-23T12:00:00+01:00')
-    const wednesday = match({
-      id: 'psg-roma',
-      competitionId: 'ucl',
-      kickoffAt: '2026-11-25T20:00:00.000Z',
-      status: 'upcoming',
-      home: 'psg',
-      away: 'roma',
-    })
-    expect(isTalkFootMatchToday(wednesday, now)).toBe(false)
-    expect(
-      isTalkFootMatchToday(
-        match({
-          id: 'today',
-          competitionId: 'ligue-1',
-          kickoffAt: '2026-11-23T20:00:00.000Z',
-          status: 'upcoming',
-        }),
-        now,
-      ),
-    ).toBe(true)
+    expect(picked?.id).toBe('psg-roma')
+    expect(isTalkFootMatchToday(picked!, now)).toBe(false)
   })
 })

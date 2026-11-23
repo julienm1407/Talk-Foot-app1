@@ -92,10 +92,6 @@ import { deriveBettingSuspension, GOAL_BET_LOCK_MS } from '../utils/bettingSuspe
 import { resolveLiveScoreForBetting } from '../utils/liveBettingScore'
 import { extractMatchShootoutDisplayFromFixture, extractMatchShootoutFromHighlights, extractRegulationGoalsFromScores } from '../utils/matchRegulationScore'
 import { pickLivePitchBannerHighlight } from '../utils/livePitchBanner'
-import {
-  stadiumAmbiancePercentFromFxCount,
-  stadiumAmbianceTierLabel,
-} from '../utils/stadiumAmbianceFromFx'
 import { useLiveMatchMessageLikesSync } from '../hooks/useLiveMatchMessageLikesSync'
 import { useLiveMatchReactionsSync } from '../hooks/useLiveMatchReactionsSync'
 import { useLiveMatchSalonStats } from '../hooks/useLiveMatchSalonStats'
@@ -149,7 +145,17 @@ import {
   postMatchDebriefMinutesLeft,
   resolveMatchFinishedAtMs,
 } from '../utils/matchDebriefWindow'
-import { isTalkFootFeaturedMatch } from '../utils/talkFootMatchOfTheDay'
+import {
+  isTalkFootFeaturedMatch,
+  isTalkFootMultiplexId,
+  resolveTalkFootMultiplex,
+} from '../utils/talkFootMatchOfTheDay'
+import { EuropeMultiplexScoreboard } from '../components/channel/EuropeMultiplexScoreboard'
+import { ShareStoryActions } from '../components/share/ShareStoryActions'
+import { AdminTribunePollForm, TribuneLivePoll } from '../components/channel/TribuneLivePoll'
+import { CreateMatchPrivateSalonButton } from '../components/channel/CreateMatchPrivateSalonButton'
+import { useTribunePolls } from '../hooks/useTribunePolls'
+import { useTribuneAutoPolls, useTribuneOfficialMatchPosts } from '../hooks/useTribuneAutoPolls'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { MatchResultScore } from '../components/match/MatchResultScore'
 import { resolveDisplayedLineupKind } from '../utils/lineupStatus'
@@ -1215,6 +1221,8 @@ export function ChannelPage() {
     status,
   )
   const betting = useBetting(match?.id ?? '', match ?? null)
+  const pollVoterKey = authUser?.id && !authUser.isAnonymous ? authUser.id : null
+  const { polls, activePoll, officialPosts, ensurePoll, vote } = useTribunePolls(match?.id, pollVoterKey)
   const { liveStatRows, liveStatsLoading, smTimelineHighlights } = useSportMonksFixtureLiveStats(
     match?.sportMonksFixtureId,
     status,
@@ -1543,6 +1551,10 @@ export function ChannelPage() {
   const isFeaturedMatch = Boolean(
     match?.id && isTalkFootFeaturedMatch(match.id, matches, favoriteClubIds),
   )
+  const europeMultiplex = useMemo(
+    () => (match?.id && isTalkFootMultiplexId(match.id) ? resolveTalkFootMultiplex(matches, match.id) : null),
+    [match?.id, matches],
+  )
   const chatOpenAtMs = match?.kickoffAt ? matchChatOpensAtMs(match.kickoffAt, isFeaturedMatch) : null
   const chatLocked = status === 'upcoming' && !isFeaturedMatch && chatOpenAtMs != null && nowMs < chatOpenAtMs
   const guestChatWriter = !authUser?.id || Boolean(authUser.isAnonymous)
@@ -1601,8 +1613,11 @@ export function ChannelPage() {
     }, PAID_FX_LAYER_MS)
   }, [])
 
+  const [campFx, setCampFx] = useState({ home: 0, away: 0 })
   const pushPaidFxLayer = useCallback((fx: ActivePaidFx, seed = Date.now()) => {
     setStadiumFxTotal((n) => n + 1)
+    const side = fx.tifoSide === 'away' ? 'away' : 'home'
+    setCampFx((c) => ({ ...c, [side]: c[side] + 1 }))
     paidFxQueueRef.current.push({ fx, seed })
     if (paidFxQueueRef.current.length > MAX_PAID_FX_LAYERS) {
       paidFxQueueRef.current = paidFxQueueRef.current.slice(-MAX_PAID_FX_LAYERS)
@@ -1638,13 +1653,33 @@ export function ChannelPage() {
     actorDisplayName: authUser?.displayName,
     matchLabel: match ? `${homeHeaderLabel} vs ${awayHeaderLabel}` : null,
   })
-  const filteredChatMessages = useMemo(
+  const officialChatMessages = useMemo(
     () =>
-      isFinished
-        ? chatMessages
-        : chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),
-    [chatMessages, selectedTribune, isFinished],
+      officialPosts.map((p) => {
+        const created = new Date(p.createdAt)
+        return {
+          id: `off-${p.id}`,
+          userId: 'talk-foot-official',
+          username: 'Talk Foot',
+          text: p.body,
+          time: Number.isFinite(created.getTime()) ? formatChatAtLabel(created) : '--:--',
+          avatarSeed: 'talk-foot-official',
+          avatarAccent: 'amber' as const,
+          likes: 0,
+          createdAtMs: created.getTime(),
+          isOfficial: true,
+        }
+      }),
+    [officialPosts],
   )
+  const filteredChatMessages = useMemo(() => {
+    const zoneFiltered = isFinished
+      ? chatMessages
+      : chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune))
+    return [...zoneFiltered, ...officialChatMessages].sort(
+      (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
+    )
+  }, [chatMessages, selectedTribune, isFinished, officialChatMessages])
   const bestReplayMessages = useMemo(() => {
     if (!isFinished) return []
     return [...filteredChatMessages]
@@ -1652,6 +1687,19 @@ export function ChannelPage() {
       .sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))
       .slice(0, 8)
   }, [filteredChatMessages, isFinished])
+  const bestOwnLikedMessage = useMemo(() => {
+    const keys = new Set(selfAvatarKeys)
+    const mine = chatMessages.filter(
+      (m) => keys.has(m.userId) || (m.clerkActorKey ? keys.has(m.clerkActorKey) : false),
+    )
+    const top = [...mine].sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))[0]
+    if (!top || (top.likes ?? 0) <= 0) return null
+    return top.text
+  }, [chatMessages, selfAvatarKeys])
+  const tribuneShareBet = useMemo(
+    () => betting.matchBets.find((b) => b.status === 'won') ?? betting.matchBets[0] ?? null,
+    [betting.matchBets],
+  )
 
   const chatAuthorKeys = useMemo(() => {
     const keys = new Set<string>()
@@ -1858,6 +1906,7 @@ export function ChannelPage() {
   useEffect(() => {
     seenReactionIdsRef.current = new Set()
     setStadiumFxTotal(0)
+    setCampFx({ home: 0, away: 0 })
   }, [match?.id])
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
@@ -2514,6 +2563,24 @@ export function ChannelPage() {
     const away = starters?.away?.slice(0, 11) ?? []
     return away.map((p) => (typeof p === 'string' ? p : p.label))
   }, [starters])
+  useTribuneAutoPolls({
+    match,
+    status,
+    minute: liveDisplayedMinute,
+    homeScore: headerDisplayScore.home,
+    awayScore: headerDisplayScore.away,
+    highlights: smTimelineHighlights,
+    homeStarters: homeLineupNames,
+    awayStarters: awayLineupNames,
+    ensurePoll,
+  })
+  useTribuneOfficialMatchPosts({
+    match,
+    status,
+    highlights: smTimelineHighlights,
+    homeName,
+    awayName,
+  })
 
   const liveGoalDisplayRows = useMemo(() => {
     if (!match || !goalTeamHints || (status !== 'live' && status !== 'finished')) return []
@@ -3076,14 +3143,6 @@ export function ChannelPage() {
     [],
   )
   const fxActiveCount = stadiumFxTotal
-  const stadiumAmbiancePct = useMemo(
-    () => stadiumAmbiancePercentFromFxCount(stadiumFxTotal),
-    [stadiumFxTotal],
-  )
-  const stadiumAmbianceLabel = useMemo(
-    () => stadiumAmbianceTierLabel(stadiumAmbiancePct),
-    [stadiumAmbiancePct],
-  )
   const liveSalonStats = useLiveMatchSalonStats(match?.id)
   const viewersDisplay =
     liveSalonStats != null
@@ -3104,7 +3163,7 @@ export function ChannelPage() {
       window.setTimeout(() => setAnimationNotice(null), 2200)
       return
     }
-    const tifoSide = anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
+    const tifoSide = opts?.tifoSide ?? tifoCheerSide
     const flareColorChosen =
       anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
     const fxSeed = Date.now() + Math.random()
@@ -3115,7 +3174,7 @@ export function ChannelPage() {
           anim.id === 'fumigene' && flareColorChosen
             ? `Fumigène ${FLARE_COLOR_LABELS[flareColorChosen]}`
             : anim.label,
-        ...(anim.id === 'tifo-geant' && tifoSide ? { tifoSide } : {}),
+        tifoSide,
         ...(flareColorChosen ? { flareColor: flareColorChosen } : {}),
       },
       fxSeed,
@@ -3125,8 +3184,7 @@ export function ChannelPage() {
 
     if (!match?.id) return
 
-    const tifoSideForSync =
-      anim.id === 'tifo-geant' ? opts?.tifoSide ?? tifoCheerSide : undefined
+    const tifoSideForSync = opts?.tifoSide ?? tifoCheerSide
     const flareColorForSync =
       anim.id === 'fumigene' ? opts?.flareColor ?? flareColor : undefined
     const sent = await publishReaction(
@@ -3307,25 +3365,29 @@ export function ChannelPage() {
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
-        {status === 'live' ? (
-          <div
-            className={`mb-2 h-1.5 overflow-hidden rounded-full ${L ? 'bg-slate-200' : 'bg-[#0a1a2d]'}`}
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={stadiumAmbiancePct}
-            aria-label={`Ambiance stade ${stadiumAmbiancePct}% · ${fxActiveCount} FX tribune · ${stadiumAmbianceLabel}`}
-          >
-            <div
-              className={cn(
-                'h-full transition-[width] duration-700 ease-out',
-                stadiumAmbiancePct >= 65 && 'tf-hype-glow',
-              )}
-              style={{
-                width: `${stadiumAmbiancePct <= 0 ? 0 : Math.max(4, stadiumAmbiancePct)}%`,
-                background: `linear-gradient(90deg, ${homeColor}, ${awayColor})`,
-              }}
-            />
+        {status === 'live' || isFinished ? (
+          <div className="mb-2 space-y-1">
+            {(() => {
+              const total = campFx.home + campFx.away
+              const homePct = total > 0 ? Math.round((campFx.home / total) * 100) : 50
+              const awayPct = 100 - homePct
+              return (
+                <div>
+                  <p className="mb-0.5 text-[10px] font-black uppercase tracking-wide text-sky-100">
+                    Ambiance tribune : {match.home.shortName} {homePct}% – {match.away.shortName} {awayPct}%
+                  </p>
+                  <div className={`flex h-1.5 overflow-hidden rounded-full ${L ? 'bg-slate-200' : 'bg-[#0a1a2d]'}`}>
+                    <div className="h-full transition-[width] duration-500" style={{ width: `${homePct}%`, background: homeColor }} />
+                    <div className="h-full transition-[width] duration-500" style={{ width: `${awayPct}%`, background: awayColor }} />
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        ) : null}
+        {match && !europeMultiplex ? (
+          <div className="mb-2">
+            <CreateMatchPrivateSalonButton match={match} light={L} />
           </div>
         ) : null}
         <div className="flex flex-col gap-1 md:hidden">
@@ -3981,6 +4043,30 @@ export function ChannelPage() {
             <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle>Chat live</SectionTitle>
+            {europeMultiplex ? <EuropeMultiplexScoreboard multiplex={europeMultiplex} light={L} /> : null}
+            {status === 'live' && activePoll ? (
+              <TribuneLivePoll
+                poll={activePoll}
+                canVote={Boolean(pollVoterKey)}
+                onVote={(optionId) => void vote(activePoll.id, optionId)}
+                light={L}
+              />
+            ) : null}
+            {authUser?.isAdmin && match && status !== 'finished' ? (
+              <AdminTribunePollForm
+                light={L}
+                onCreate={(question, options) =>
+                  void ensurePoll({
+                    question,
+                    options,
+                    kind: 'manual',
+                    triggerKey: `manual:${match.id}:${Date.now()}`,
+                    officialBody: `Sondage Talk Foot : ${question}`,
+                    minute: liveDisplayedMinute,
+                  })
+                }
+              />
+            ) : null}
             {chatDebriefOpen ? (
               <p className="mt-1 rounded-lg border border-amber-400/35 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-100">
                 Match terminé — débrief ouvert encore ~{debriefMinutesLeft} min (30 min max).
@@ -4118,8 +4204,29 @@ export function ChannelPage() {
                           ? 'Les meilleurs messages, puis tout le fil.'
                           : 'Le fil reste lisible après le match.'}
                       </p>
+                      {match && (tribuneShareBet || bestOwnLikedMessage) ? (
+                        <ShareStoryActions
+                          match={match}
+                          bet={tribuneShareBet}
+                          kind="tribune"
+                          bestMessage={bestOwnLikedMessage}
+                          tone={L ? 'light' : 'dark'}
+                        />
+                      ) : null}
                     </div>
                   ) : null}
+                  {isFinished
+                    ? polls.map((p) => (
+                        <TribuneLivePoll
+                          key={p.id}
+                          poll={p}
+                          canVote={false}
+                          onVote={() => {}}
+                          light={L}
+                          replay
+                        />
+                      ))
+                    : null}
                   {bestReplayMessages.map((msg) => (
                     <div
                       key={`best-${msg.id}`}
@@ -4762,7 +4869,7 @@ export function ChannelPage() {
                 <div className="rounded-lg border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-3 text-sm font-semibold text-sky-100">
                   Pronos fermés: le match est terminé.
                 </div>
-              ) : match ? (
+              ) : match && !isTalkFootMultiplexId(match.id) ? (
                 <BetWidget
                   match={match}
                   betting={betting}
@@ -5063,7 +5170,7 @@ export function ChannelPage() {
               <div className="tf-channel-mobile-paris flex min-h-0 flex-1 flex-col">
                 {isFinished ? (
                   <div className={chAlertBox}>Pronos fermés: le match est terminé.</div>
-                ) : match ? (
+                ) : match && !isTalkFootMultiplexId(match.id) ? (
                   <BetWidget
                     match={match}
                     betting={betting}

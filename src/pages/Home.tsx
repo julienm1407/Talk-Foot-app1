@@ -12,7 +12,7 @@ import { cn } from '../utils/cn'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { sortGroupsByFanAffinity, filterDiscoverableGroups } from '../utils/groupAccess'
 import { filterNewsForFan } from '../utils/filterNews'
-import { pickTalkFootMatchOfTheDay, rememberFeaturedTalkFootMatchId } from '../utils/talkFootMatchOfTheDay'
+import { pickTalkFootHomeBoard, rememberFeaturedTalkFootMatchId } from '../utils/talkFootMatchOfTheDay'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { FavoritesEncart } from '../components/fan/FavoritesEncart'
@@ -128,10 +128,13 @@ export function HomePage() {
     setHeroSlide(0)
   }, [hubLiveIds])
 
-  const matchOfTheDay = useMemo(
-    () => pickTalkFootMatchOfTheDay(displayMatchesFull, favoriteClubIds),
-    [displayMatchesFull, favoriteClubIds],
+  const talkFootBoard = useMemo(
+    () => pickTalkFootHomeBoard(displayMatchesFull),
+    [displayMatchesFull],
   )
+  const matchOfTheDay = talkFootBoard.featured
+  const alsoTonight = talkFootBoard.alsoTonight
+  const europeMultiplex = talkFootBoard.multiplex
 
   useEffect(() => {
     rememberFeaturedTalkFootMatchId(matchOfTheDay?.id ?? null)
@@ -265,6 +268,8 @@ export function HomePage() {
             <HomeDesktopExperience
             liveMatches={hubLiveMatches}
             matchOfTheDay={matchOfTheDay}
+            alsoTonight={alsoTonight}
+            europeMultiplex={europeMultiplex}
             upcomingMatches={displayMatchesFull}
             tribuneGroups={visibleGroups.slice(0, 4)}
             supporterGroupsPool={visibleGroups}
@@ -288,6 +293,8 @@ export function HomePage() {
           loading={loading}
           heroLiveMatch={heroLiveMatch}
           matchOfTheDay={matchOfTheDay}
+          alsoTonight={alsoTonight}
+          europeMultiplex={europeMultiplex}
           heroLiveSim={heroLiveSim}
           hubLiveMatches={hubLiveMatches}
           heroSlide={heroSlide}

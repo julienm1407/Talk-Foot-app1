@@ -59,6 +59,7 @@ import { TF_TEXT_MUTED } from '../theme/appearanceClasses'
 import { resolveArticleExcerpt } from '../utils/articleExcerpt'
 import { normalizeArticleListHtml } from '../utils/normalizeArticleListHtml'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
+import { TalkFootMatchAdminCard } from '../components/admin/TalkFootMatchAdminCard'
 
 type FormState = {
   id?: string
@@ -1251,6 +1252,7 @@ export function AdminPage() {
           {activeSection === 'editorial' ? (
             <>
               {editorialStatusBanner}
+              <TalkFootMatchAdminCard />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
                 {articleListPanel}
                 {articleEditorPanel}

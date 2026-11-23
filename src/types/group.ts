@@ -84,6 +84,8 @@ export type SupporterGroup = {
   activePresence?: GroupActivePresence[]
   /** public = ouvert, private = sur invitation, club = rattaché tribune */
   groupKind?: 'public' | 'private' | 'club'
+  /** Salon privé lié à un match (score live = tribune publique). */
+  linkedMatchId?: string
   /**
    * Centres d’intérêt (sans #, minuscules). Obligatoires pour une tribune publique
    * afin que d’autres utilisateurs le retrouvent par recherche.

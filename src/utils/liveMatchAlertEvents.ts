@@ -191,6 +191,10 @@ export function liveAlertsFromFixture(fx: { events?: unknown } | null | undefine
     const classified = classifyLiveMatchEvent(ev)
     if (!classified || seen.has(classified.kind)) continue
     seen.add(classified.kind)
+    if (classified.category === 'goal') {
+      const score = scorelineFromFixture(fx as Record<string, unknown>)
+      classified.body = `BUT !${score ? ` ${score}` : ''} — viens réagir dans la tribune`
+    }
     out.push(classified)
   }
   for (const period of periodAlertsFromFixture(fx as Record<string, unknown>)) {

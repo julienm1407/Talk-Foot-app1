@@ -25,6 +25,7 @@ export type LiveMatchChatMessageItem = {
   createdAtMs?: number
   /** Compte Clerk pour charger l'avatar modulaire. */
   clerkActorKey?: string
+  isOfficial?: boolean
 }
 
 export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
@@ -151,6 +152,11 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
               <p className="truncate text-xs font-semibold text-tf-app-fg">{peer.displayName}</p>
             )}
             {showVerifiedBadge ? <VerifiedBadge size="xs" /> : null}
+            {message.isOfficial ? (
+              <span className="shrink-0 rounded border border-amber-300/50 bg-amber-400/20 px-1 py-px text-[8px] font-black uppercase tracking-wide text-amber-100">
+                Officiel
+              </span>
+            ) : null}
             {message.matchTribune ? (
               <span
                 className={cn(

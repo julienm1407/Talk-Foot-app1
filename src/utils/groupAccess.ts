@@ -64,6 +64,7 @@ export function isDiscoverableGroup(
   keepIds: ReadonlySet<string>,
 ): boolean {
   if (getGroupAccess(group, prefs) === 'hidden') return false
+  if (group.groupKind === 'private' && !keepIds.has(group.id) && group.createdBy !== 'me') return false
   if (keepIds.has(group.id) || group.createdBy === 'me') return true
   return (group.members ?? 0) >= DISCOVER_MIN_MEMBERS
 }
