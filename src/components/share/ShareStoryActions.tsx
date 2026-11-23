@@ -47,7 +47,10 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
   }, [preview?.objectUrl])
 
   const openPreview = async () => {
-    if (!bet && kind === 'prono') return
+    if (!bet && kind === 'prono') {
+      setHint('Valide d’abord un prono.')
+      return
+    }
     setBusy(true)
     setHint(null)
     try {
@@ -80,8 +83,8 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
         text: `${headline} — Fais mieux que moi sur Talk Foot`,
         shareUrl: url,
       })
-    } catch {
-      setHint('Impossible de générer la carte.')
+    } catch (err) {
+      setHint(err instanceof Error ? `Impossible de générer la carte (${err.message}).` : 'Impossible de générer la carte.')
     } finally {
       setBusy(false)
     }
@@ -129,7 +132,7 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
         onClick={() => void openPreview()}
         className="rounded-full bg-tf-cta px-3 py-1.5 text-[11px] font-black text-white disabled:opacity-50"
       >
-        {kind === 'prono' ? 'Partager mon prono' : 'Partager « J’étais en tribune »'}
+        {busy && !preview ? 'Préparation de la carte…' : kind === 'prono' ? 'Partager mon prono' : 'Partager « J’étais en tribune »'}
       </button>
       {hint && !preview ? (
         <p className={cn('w-full text-[11px] font-semibold', tone === 'light' ? 'text-emerald-800' : 'text-sky-200/90')}>
@@ -139,7 +142,7 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
       {preview
         ? createPortal(
             <div
-              className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 sm:items-center"
+              className="fixed inset-0 z-[2147483600] flex items-end justify-center bg-black/70 p-3 sm:items-center"
               role="dialog"
               aria-modal="true"
               aria-label="Carte à partager"

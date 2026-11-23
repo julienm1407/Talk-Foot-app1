@@ -6,7 +6,7 @@ import {
   type EuropeCompetitionId,
 } from '../data/talkFootEditorial'
 import { readTalkFootEditorial, type TalkFootEditorialResolved } from './talkFootEditorialStore'
-import { matchCalendarDayKeyParis } from './time'
+import { addParisCalendarDays, matchCalendarDayKeyParis } from './time'
 
 const LIGUE1_IDS = new Set((teams['ligue-1'] ?? []).map((t) => t.id))
 const EUROPE_SET = new Set<string>(EUROPE_COMPETITION_IDS)
@@ -75,6 +75,8 @@ export type TalkFootMultiplex = {
 
 export type TalkFootHomeBoard = {
   featured: Match | null
+  /** PSG (ou à défaut prio 2) dans les 7 prochains jours — salon ouvert même hors jour J. */
+  weekMatch: Match | null
   alsoTonight: Match[]
   multiplex: TalkFootMultiplex | null
 }
@@ -167,6 +169,7 @@ export function pickTalkFootHomeBoard(
   editorial: TalkFootEditorialResolved = readTalkFootEditorial(),
 ): TalkFootHomeBoard {
   const today = matchCalendarDayKeyParis(now)
+  const weekEnd = addParisCalendarDays(today, 6)
   const dayMatches = matches.filter((m) => onParisDay(m, today))
   const multiplex = pickEuropeMultiplex(dayMatches, today)
 
@@ -176,21 +179,24 @@ export function pickTalkFootHomeBoard(
   const psgToday = dayMatches.filter(isPsgMatch).sort(rankLiveFirst)
   const prio2Today = dayMatches.filter((m) => isPriority2(m, editorial)).sort(rankLiveFirst)
 
+  const weekPool = matches
+    .filter((m) => {
+      if (m.status === 'finished') return false
+      const k = matchCalendarDayKeyParis(m.kickoffAt)
+      return k >= today && k <= weekEnd
+    })
+    .sort((a, b) => kickoffMs(a.kickoffAt) - kickoffMs(b.kickoffAt))
+  const weekMatch =
+    weekPool.find(isPsgMatch) ?? weekPool.find((m) => isPriority2(m, editorial)) ?? null
+
   let featured: Match | null = forced
   if (!featured) featured = psgToday[0] ?? null
   if (!featured) featured = prio2Today[0] ?? null
-
-  if (!featured) {
-    const future = matches
-      .filter((m) => m.status !== 'finished' && matchCalendarDayKeyParis(m.kickoffAt) > today)
-      .filter((m) => isPsgMatch(m) || isPriority2(m, editorial))
-      .sort((a, b) => kickoffMs(a.kickoffAt) - kickoffMs(b.kickoffAt))
-    featured = future[0] ?? null
-  }
+  if (!featured) featured = weekMatch
 
   const alsoTonight = prio2Today.filter((m) => m.id !== featured?.id).slice(0, 2)
 
-  return { featured, alsoTonight, multiplex }
+  return { featured, weekMatch, alsoTonight, multiplex }
 }
 
 /** Un seul match épinglé (compat accueil / salon). */
@@ -203,21 +209,51 @@ export function pickTalkFootMatchOfTheDay(
 }
 
 const FEATURED_MATCH_STORAGE_KEY = 'talkfoot.featuredMatchId.v1'
+const FEATURED_MATCH_IDS_KEY = 'talkfoot.featuredMatchIds.v1'
 
-export function rememberFeaturedTalkFootMatchId(id: string | null): void {
+export function rememberTalkFootFeaturedIds(ids: Array<string | null | undefined>): void {
+  const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))]
   try {
-    if (id) sessionStorage.setItem(FEATURED_MATCH_STORAGE_KEY, id)
-    else sessionStorage.removeItem(FEATURED_MATCH_STORAGE_KEY)
+    if (unique.length) {
+      sessionStorage.setItem(FEATURED_MATCH_IDS_KEY, JSON.stringify(unique))
+      sessionStorage.setItem(FEATURED_MATCH_STORAGE_KEY, unique[0]!)
+    } else {
+      sessionStorage.removeItem(FEATURED_MATCH_IDS_KEY)
+      sessionStorage.removeItem(FEATURED_MATCH_STORAGE_KEY)
+    }
   } catch {
     /* private mode */
   }
 }
 
+export function rememberFeaturedTalkFootMatchId(id: string | null): void {
+  rememberTalkFootFeaturedIds(id ? [id] : [])
+}
+
 export function readRememberedFeaturedTalkFootMatchId(): string | null {
   try {
+    const raw = sessionStorage.getItem(FEATURED_MATCH_IDS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed) && typeof parsed[0] === 'string') return parsed[0]
+    }
     return sessionStorage.getItem(FEATURED_MATCH_STORAGE_KEY)
   } catch {
     return null
+  }
+}
+
+function rememberedFeaturedIds(): string[] {
+  try {
+    const raw = sessionStorage.getItem(FEATURED_MATCH_IDS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed)) return parsed.filter((x): x is string => typeof x === 'string')
+    }
+    const one = sessionStorage.getItem(FEATURED_MATCH_STORAGE_KEY)
+    return one ? [one] : []
+  } catch {
+    return []
   }
 }
 
@@ -235,6 +271,7 @@ export function isTalkFootFeaturedMatch(
 ): boolean {
   const board = pickTalkFootHomeBoard(matches, now)
   if (board.featured?.id === matchId) return true
+  if (board.weekMatch?.id === matchId) return true
   if (board.multiplex?.id === matchId) return true
-  return readRememberedFeaturedTalkFootMatchId() === matchId
+  return rememberedFeaturedIds().includes(matchId)
 }

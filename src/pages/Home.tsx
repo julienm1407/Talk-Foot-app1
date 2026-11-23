@@ -12,7 +12,7 @@ import { cn } from '../utils/cn'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { sortGroupsByFanAffinity, filterDiscoverableGroups } from '../utils/groupAccess'
 import { filterNewsForFan } from '../utils/filterNews'
-import { pickTalkFootHomeBoard, rememberFeaturedTalkFootMatchId } from '../utils/talkFootMatchOfTheDay'
+import { pickTalkFootHomeBoard, rememberTalkFootFeaturedIds } from '../utils/talkFootMatchOfTheDay'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { FavoritesEncart } from '../components/fan/FavoritesEncart'
@@ -137,8 +137,12 @@ export function HomePage() {
   const europeMultiplex = talkFootBoard.multiplex
 
   useEffect(() => {
-    rememberFeaturedTalkFootMatchId(matchOfTheDay?.id ?? null)
-  }, [matchOfTheDay?.id])
+    rememberTalkFootFeaturedIds([
+      talkFootBoard.featured?.id,
+      talkFootBoard.weekMatch?.id,
+      talkFootBoard.multiplex?.id,
+    ])
+  }, [talkFootBoard.featured?.id, talkFootBoard.weekMatch?.id, talkFootBoard.multiplex?.id])
 
   const heroLiveMatch = useMemo(() => {
     if (matchOfTheDay?.status === 'live') return matchOfTheDay

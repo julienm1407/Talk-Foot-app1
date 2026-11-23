@@ -159,8 +159,9 @@ export function articleRowToNewsItem(row: ArticleRow): NewsItem {
     authorName: row.author_name ?? undefined,
     updatedAt: row.updated_at,
   }
-  if (body.length > 0) {
-    return { ...base, slug: row.slug, body }
+  const paragraphs = body.length > 0 ? body : row.excerpt?.trim() ? [row.excerpt.trim()] : []
+  if (row.slug && paragraphs.length > 0) {
+    return { ...base, slug: row.slug, body: paragraphs }
   }
   return base
 }

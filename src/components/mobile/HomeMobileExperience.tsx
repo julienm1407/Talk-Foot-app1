@@ -124,7 +124,8 @@ export function HomeMobileExperience({
     return ALL_CLUBS_BY_ID[id]?.shortName ?? id
   }, [favoriteClubIds])
 
-  const explorerPreviewArticle = personalizedNews[0] ?? null
+  const explorerPreviewArticle =
+    personalizedNews.find((n) => newsItemHasArticlePage(n)) ?? personalizedNews[0] ?? null
 
   const matchPreview = (match: Match) =>
     match.status === 'upcoming' ? (
@@ -251,12 +252,12 @@ export function HomeMobileExperience({
 
       <MobileCollapsibleSection
         title="Tribunes & groupes"
-        subtitle="Tes salons supporters"
+        subtitle="Tribunes publiques et tes salons"
         preview={
           groupPreview ? (
             <TribuneShowcaseCard group={groupPreview} variant="rail" dense />
           ) : (
-            emptyPreview('Aucune tribune à afficher — crée la tienne ou rejoins un groupe.')
+            emptyPreview('Aucune tribune publique pour l’instant.')
           )
         }
       >
@@ -322,7 +323,9 @@ export function HomeMobileExperience({
         title="Explorer"
         subtitle="Actus et débats tendances"
         preview={
-          explorerPreviewArticle && newsItemHasArticlePage(explorerPreviewArticle) ? (
+          articlesLoading ? (
+            emptyPreview('Chargement des actus…')
+          ) : explorerPreviewArticle && newsItemHasArticlePage(explorerPreviewArticle) ? (
             <Link
               to={`/article/${explorerPreviewArticle.slug}`}
               className={cn(
@@ -341,6 +344,18 @@ export function HomeMobileExperience({
                 </p>
               ) : null}
             </Link>
+          ) : explorerPreviewArticle ? (
+            <div
+              className={cn(
+                'rounded-xl border px-3 py-2.5',
+                L ? 'border-tf-dark/12 bg-white/90' : 'border-white/12 bg-white/[0.04]',
+              )}
+            >
+              <span className="text-[10px] font-black uppercase tracking-wide text-sky-400">
+                {explorerPreviewArticle.tag}
+              </span>
+              <p className="mt-1 line-clamp-2 text-sm font-black text-tf-app-fg">{explorerPreviewArticle.title}</p>
+            </div>
           ) : (
             emptyPreview('Les actus publiées apparaîtront ici.')
           )

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Match } from '../types/match'
 import {
+  isTalkFootFeaturedMatch,
   isTalkFootMatchToday,
   pickTalkFootHomeBoard,
   pickTalkFootMatchOfTheDay,
@@ -165,6 +166,61 @@ describe('pickTalkFootHomeBoard', () => {
       { ...editorial, forceByDay: { '2026-11-23': 'force-me' } },
     )
     expect(board.featured?.id).toBe('force-me')
+  })
+
+  it('semaine : PSG dans les 7 jours même si un choc L1 Europe est plus tôt', () => {
+    const now = new Date('2026-11-23T12:00:00+01:00')
+    const board = pickTalkFootHomeBoard(
+      [
+        match({
+          id: 'leipzig-lens',
+          competitionId: 'uel',
+          kickoffAt: '2026-11-24T20:00:00.000Z',
+          status: 'upcoming',
+          home: 'leipzig',
+          away: 'lens',
+        }),
+        match({
+          id: 'psg-roma',
+          competitionId: 'ucl',
+          kickoffAt: '2026-11-25T20:00:00.000Z',
+          status: 'upcoming',
+          home: 'psg',
+          away: 'roma',
+        }),
+      ],
+      now,
+      editorial,
+    )
+    expect(board.weekMatch?.id).toBe('psg-roma')
+    expect(board.featured?.id).toBe('psg-roma')
+  })
+
+  it('le jour d’un club L1 en Europe : Match du jour, PSG reste match de la semaine', () => {
+    const now = new Date('2026-11-24T12:00:00+01:00')
+    const matches = [
+      match({
+        id: 'leipzig-lens',
+        competitionId: 'uel',
+        kickoffAt: '2026-11-24T20:00:00.000Z',
+        status: 'upcoming',
+        home: 'leipzig',
+        away: 'lens',
+      }),
+      match({
+        id: 'psg-roma',
+        competitionId: 'ucl',
+        kickoffAt: '2026-11-25T20:00:00.000Z',
+        status: 'upcoming',
+        home: 'psg',
+        away: 'roma',
+      }),
+    ]
+    const board = pickTalkFootHomeBoard(matches, now, editorial)
+    expect(board.featured?.id).toBe('leipzig-lens')
+    expect(board.weekMatch?.id).toBe('psg-roma')
+    expect(isTalkFootFeaturedMatch('psg-roma', matches, [], now)).toBe(true)
+    expect(isTalkFootFeaturedMatch('leipzig-lens', matches, [], now)).toBe(true)
   })
 
   it('semaine : prochain PSG si rien aujourd’hui', () => {

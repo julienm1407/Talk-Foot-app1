@@ -1,5 +1,3 @@
-import { TALKFOOT_LOGO_URL } from '../layout/LogoMark'
-
 export const SHARE_STORY_WIDTH = 1080
 export const SHARE_STORY_HEIGHT = 1920
 
@@ -63,12 +61,25 @@ function roundRect(
   ctx.closePath()
 }
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+function loadImage(src: string, timeoutMs = 400): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image()
+    let done = false
+    const finish = (value: HTMLImageElement | null) => {
+      if (done) return
+      done = true
+      resolve(value)
+    }
+    const t = window.setTimeout(() => finish(null), timeoutMs)
     img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
+    img.onload = () => {
+      window.clearTimeout(t)
+      finish(img)
+    }
+    img.onerror = () => {
+      window.clearTimeout(t)
+      finish(null)
+    }
     img.src = src
   })
 }
@@ -122,18 +133,17 @@ export async function renderShareStoryPng(input: ShareStoryCardInput): Promise<B
   ctx.fillRect(0, 0, SHARE_STORY_WIDTH, 18)
   ctx.fillRect(0, SHARE_STORY_HEIGHT - 18, SHARE_STORY_WIDTH, 18)
 
-  const [logo, avatar] = await Promise.all([
-    loadImage(TALKFOOT_LOGO_URL),
-    input.avatarUrl ? loadImage(input.avatarUrl) : Promise.resolve(null),
-  ])
-
   const logoBox = 168
   ctx.fillStyle = WHITE
   roundRect(ctx, 80, 72, logoBox, logoBox, 28)
   ctx.fill()
-  if (logo) {
-    ctx.drawImage(logo, 92, 84, logoBox - 24, logoBox - 24)
-  }
+  ctx.fillStyle = RED
+  ctx.font = '900 72px system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('TF', 80 + logoBox / 2, 72 + logoBox / 2 + 4)
+
+  void input.avatarUrl
 
   ctx.fillStyle = WHITE
   ctx.font = '900 44px system-ui, sans-serif'
@@ -188,7 +198,7 @@ export async function renderShareStoryPng(input: ShareStoryCardInput): Promise<B
     }
   }
 
-  drawAvatar(ctx, avatar, input.displayName, 160, 1320, 72)
+  drawAvatar(ctx, null, input.displayName, 160, 1320, 72)
   ctx.fillStyle = WHITE
   ctx.font = '800 40px system-ui, sans-serif'
   ctx.textAlign = 'left'

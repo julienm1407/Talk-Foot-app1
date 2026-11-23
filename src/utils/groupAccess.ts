@@ -40,8 +40,6 @@ export function getGroupAccess(
   return 'full'
 }
 
-const DISCOVER_MIN_MEMBERS = 3
-
 function affinityScore(g: SupporterGroup, prefs: FanPrefsForAccess): number {
   const t = g.fanTags
   if (!t) return 0
@@ -57,7 +55,7 @@ function activityScore(g: SupporterGroup): number {
   return (g.messagesToday ?? 0) * 12 + (g.reactionsToday ?? 0) * 2 + (g.members ?? 0)
 }
 
-/** Tribunes vides hors découverte, sauf celles déjà rejointes / créées. */
+/** Tribunes publiques / clubs visibles pour tous (y compris invités) ; privées seulement si rejointes. */
 export function isDiscoverableGroup(
   group: SupporterGroup,
   prefs: FanPrefsForAccess,
@@ -66,7 +64,8 @@ export function isDiscoverableGroup(
   if (getGroupAccess(group, prefs) === 'hidden') return false
   if (group.groupKind === 'private' && !keepIds.has(group.id) && group.createdBy !== 'me') return false
   if (keepIds.has(group.id) || group.createdBy === 'me') return true
-  return (group.members ?? 0) >= DISCOVER_MIN_MEMBERS
+  if (group.groupKind === 'private') return false
+  return true
 }
 
 export function filterDiscoverableGroups(

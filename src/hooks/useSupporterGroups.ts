@@ -286,10 +286,17 @@ export function useSupporterGroups() {
   )
 
   const refreshCloudGroups = useCallback(async (): Promise<string[]> => {
-    if (!isSupabaseConfigured() || !userId) return []
+    if (!isSupabaseConfigured()) return []
     const sb = getSupabaseBrowserClient()
     if (!sb) return []
     const seq = ++cloudRefreshSeq.current
+    if (!userId) {
+      const cloud = await fetchCloudSupporterGroups(sb)
+      if (seq !== cloudRefreshSeq.current) return []
+      setCloudGroups(cloud)
+      setSupabaseActorId(null)
+      return []
+    }
     const session = await ensureTalkFootSupabaseSession(sb)
     if (!session || seq !== cloudRefreshSeq.current) return []
     await syncRealtimeAuth(sb)
@@ -324,9 +331,14 @@ export function useSupporterGroups() {
   }, [refreshCloudGroups])
 
   useEffect(() => {
-    if (!isSupabaseConfigured() || !userId) {
+    if (!isSupabaseConfigured()) {
       setCloudGroups([])
       setSupabaseActorId(null)
+      return
+    }
+    if (!userId) {
+      setSupabaseActorId(null)
+      void refreshCloudGroupsRef.current()
       return
     }
     const sb = getSupabaseBrowserClient()
