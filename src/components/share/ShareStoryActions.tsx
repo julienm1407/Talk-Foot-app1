@@ -4,15 +4,21 @@ import type { Bet } from '../../types/bet'
 import type { Match } from '../../types/match'
 import { useAuth } from '../../contexts/AuthContext'
 import { cn } from '../../utils/cn'
+import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import {
   formatFinalScoreLine,
   formatPronoResultLine,
-  formatPronoShareLine,
-  matchAfficheLabel,
+  formatShareStoryPick,
   matchWhenLabel,
   tribuneShareUrl,
 } from '../../utils/tribuneShareLinks'
-import { nativeShareStory, renderShareStoryPng, saveStoryImage } from '../../utils/shareStoryCard'
+import {
+  nativeShareAvailable,
+  nativeShareStory,
+  openStoryImageTab,
+  renderShareStoryPng,
+  saveStoryImage,
+} from '../../utils/shareStoryCard'
 
 type Props = {
   match: Match
@@ -39,6 +45,7 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
   const displayName = user?.displayName?.trim() || 'Supporteur'
   const src = kind === 'prono' ? 'share_prono' : 'share_tribune'
   const url = tribuneShareUrl(match.id, src)
+  const canNativeShare = nativeShareAvailable()
 
   useEffect(() => {
     return () => {
@@ -54,24 +61,42 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
     setBusy(true)
     setHint(null)
     try {
-      const headline =
-        kind === 'prono'
-          ? formatPronoShareLine(bet!, match)
-          : `J’étais en tribune pour ${match.home.shortName} – ${match.away.shortName}`
+      const pick = bet
+        ? formatShareStoryPick(bet, match)
+        : {
+            marketLabel: 'Tribune',
+            hero: `J’étais là pour ${match.home.shortName} – ${match.away.shortName}`,
+            detail: formatFinalScoreLine(match),
+          }
       const blob = await renderShareStoryPng({
         kind,
-        matchTitle: matchAfficheLabel(match),
+        homeName: match.home.name,
+        awayName: match.away.name,
+        homeShort: match.home.shortName,
+        awayShort: match.away.shortName,
+        homeColor: match.home.colors.primary,
+        awayColor: match.away.colors.primary,
+        homeLogoUrl: resolveTeamLogoUrl(match.home.id, {
+          apiLogoUrl: match.home.logoUrl,
+          sportMonksTeamId: match.home.sportMonksTeamId,
+        }),
+        awayLogoUrl: resolveTeamLogoUrl(match.away.id, {
+          apiLogoUrl: match.away.logoUrl,
+          sportMonksTeamId: match.away.sportMonksTeamId,
+        }),
+        competition: match.competition.name,
         whenLabel: matchWhenLabel(match),
-        headline,
-        subline:
+        marketLabel: pick.marketLabel,
+        hero: pick.hero,
+        detail:
           kind === 'tribune'
             ? [formatFinalScoreLine(match), bet ? formatPronoResultLine(bet, match) : '']
                 .filter(Boolean)
                 .join(' · ')
-            : undefined,
+            : pick.detail,
+        oddsLabel: kind === 'prono' ? pick.oddsLabel : undefined,
         quote: kind === 'tribune' ? bestMessage : null,
         displayName,
-        avatarUrl: user?.avatarUrl,
         shareUrl: url,
         cta: 'Fais mieux que moi sur Talk Foot',
       })
@@ -80,7 +105,7 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
         objectUrl: URL.createObjectURL(blob),
         blob,
         fileName: kind === 'prono' ? 'talk-foot-prono.png' : 'talk-foot-tribune.png',
-        text: `${headline} — Fais mieux que moi sur Talk Foot`,
+        text: `${pick.marketLabel} : ${pick.hero} — Fais mieux que moi sur Talk Foot`,
         shareUrl: url,
       })
     } catch (err) {
@@ -104,14 +129,16 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
     if (result === 'shared') setHint('Feuille de partage ouverte.')
     else if (result === 'aborted') setHint(null)
     else {
-      setHint('Ce navigateur n’a pas de feuille de partage. Enregistre l’image ou copie le lien.')
+      setHint('Pas de feuille Instagram/WhatsApp ici. Enregistre l’image, puis importe-la dans l’app.')
     }
   }
 
-  const saveFromPreview = () => {
+  const saveFromPreview = async () => {
     if (!preview) return
-    saveStoryImage(preview.blob, preview.fileName)
-    setHint('Téléchargement lancé (dossier Téléchargements). Sinon appuie longtemps sur l’aperçu pour l’enregistrer.')
+    const result = await saveStoryImage(preview.blob, preview.fileName)
+    if (result === 'saved') setHint('Image enregistrée. Si tu ne la vois pas, ouvre-la en grand puis clic droit → Enregistrer.')
+    else if (result === 'cancelled') setHint(null)
+    else setHint('Image ouverte dans un onglet : enregistre-la depuis là.')
   }
 
   const copyLink = async () => {
@@ -122,6 +149,12 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
     } catch {
       setHint(preview.shareUrl)
     }
+  }
+
+  const closePreview = () => {
+    if (preview?.objectUrl) URL.revokeObjectURL(preview.objectUrl)
+    setPreview(null)
+    setHint(null)
   }
 
   return (
@@ -142,41 +175,58 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
       {preview
         ? createPortal(
             <div
-              className="fixed inset-0 z-[2147483600] flex items-end justify-center bg-black/70 p-3 sm:items-center"
+              className="fixed inset-0 z-[2147483600] flex items-end justify-center bg-black/75 p-3 sm:items-center"
               role="dialog"
               aria-modal="true"
               aria-label="Carte à partager"
-              onClick={() => {
-                URL.revokeObjectURL(preview.objectUrl)
-                setPreview(null)
-                setHint(null)
-              }}
+              onClick={closePreview}
             >
               <div
-                className="max-h-[92dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-[#061222] p-3 text-white shadow-2xl"
+                className="max-h-[94dvh] w-full max-w-sm overflow-y-auto rounded-2xl bg-[#071525] p-3 text-white shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <p className="text-[10px] font-black uppercase tracking-wide text-sky-200/80">Aperçu story</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-200/80">Aperçu story</p>
                 <img
                   src={preview.objectUrl}
                   alt="Carte Talk Foot à partager"
-                  className="mt-2 w-full rounded-xl"
+                  className="mt-2 w-full rounded-xl bg-[#0b1b2f]"
                 />
                 <div className="mt-3 flex flex-col gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void shareFromPreview()}
-                    className="rounded-full bg-tf-cta px-3 py-2 text-xs font-black text-white"
-                  >
-                    Partager (Instagram, WhatsApp…)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveFromPreview}
-                    className="rounded-full border border-white/25 px-3 py-2 text-xs font-black"
+                  <a
+                    href={preview.objectUrl}
+                    download={preview.fileName}
+                    className="rounded-full bg-tf-cta px-3 py-2 text-center text-xs font-black text-white"
+                    onClick={() => setHint('Téléchargement lancé. Sinon « Ouvrir en grand » puis enregistre l’image.')}
                   >
                     Enregistrer l’image
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void saveFromPreview()}
+                    className="rounded-full border border-white/25 px-3 py-2 text-xs font-black"
+                  >
+                    Enregistrer sous…
+                  </button>
+                  {canNativeShare ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void shareFromPreview()}
+                      className="rounded-full border border-white/25 px-3 py-2 text-xs font-black"
+                    >
+                      Partager (Instagram, WhatsApp…)
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!openStoryImageTab(preview.objectUrl)) {
+                        setHint('Autorise les pop-ups, ou appuie longtemps sur l’aperçu.')
+                      }
+                    }}
+                    className="rounded-full border border-white/15 px-3 py-2 text-xs font-black text-sky-100"
+                  >
+                    Ouvrir l’image en grand
                   </button>
                   <button
                     type="button"
@@ -185,22 +235,15 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
                   >
                     Copier le lien de la tribune
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      URL.revokeObjectURL(preview.objectUrl)
-                      setPreview(null)
-                      setHint(null)
-                    }}
-                    className="text-xs font-semibold text-sky-200/80"
-                  >
+                  <button type="button" onClick={closePreview} className="text-xs font-semibold text-sky-200/80">
                     Fermer
                   </button>
                 </div>
                 {hint ? <p className="mt-2 text-[11px] font-semibold text-sky-100">{hint}</p> : null}
                 <p className="mt-2 text-[10px] font-semibold leading-snug text-sky-200/70">
-                  Sur ordinateur, la feuille Instagram n’existe pas : enregistre l’image (Téléchargements) puis
-                  importe-la dans l’app. Sur téléphone, le 2e tap « Partager » ouvre bien la feuille native.
+                  {canNativeShare
+                    ? 'Sur téléphone, « Partager » ouvre WhatsApp / Instagram. Sinon enregistre le PNG.'
+                    : 'Sur ordinateur il n’y a pas de feuille Instagram : enregistre le PNG, puis importe-le dans l’app.'}
                 </p>
               </div>
             </div>,

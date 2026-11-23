@@ -7,7 +7,7 @@ import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUS
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
-import { hexWithAlpha, TIFO_TEMPLATES, tifoMaskProgress, type TifoTemplateId } from '../../utils/tifoReadyTemplates'
+import { TIFO_TEMPLATES, tifoMaskProgress, type TifoTemplateId } from '../../utils/tifoReadyTemplates'
 
 const CELL_PX_DESKTOP = 11
 /** Grille un peu plus grande dans les panneaux mobile (sheet / embedded). */
@@ -117,17 +117,12 @@ export function GroupTifoPanel({
   }, [engagementNotice, clearEngagementNotice])
 
   const [tifoMode, setTifoMode] = useState<'modele' | 'libre'>('modele')
-  const [templateId, setTemplateId] = useState<TifoTemplateId>('chevron')
+  const [templateId, setTemplateId] = useState<TifoTemplateId>('bandes')
   const templateMask = useMemo(
     () => TIFO_TEMPLATES.find((t) => t.id === templateId)?.mask() ?? TIFO_TEMPLATES[0]!.mask(),
     [templateId],
   )
   const templateProgress = useMemo(() => tifoMaskProgress(templateMask, pixels), [templateMask, pixels])
-  const activeMatch = useMemo(
-    () => candidates.find((m) => m.id === activeId) ?? fixedMatch,
-    [candidates, activeId, fixedMatch],
-  )
-  const templateColor = activeMatch?.home.colors.primary ?? palette[2]!
   const [color, setColor] = useState<string>(palette[2]!)
   const eraseAllowed = forceErase || tifoEraseAllowed(painterCount, tribunePeopleCount)
   const eraseSelected = color === TIFO_ERASE_SWATCH
@@ -258,8 +253,8 @@ export function GroupTifoPanel({
       ) : null}
       {tifoMode === 'modele' ? (
         <p className={cn('mt-1.5 text-[11px] font-semibold leading-snug', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
-          La forme colorée pâle est le modèle. Tape les cases du dessin pour le remplir ({templateProgress.filled}/
-          {templateProgress.total}).
+          {TIFO_TEMPLATES.find((t) => t.id === templateId)?.hint ?? 'Forme du tifo'}. Choisis une couleur, puis tape
+          les cases allumées ({templateProgress.filled}/{templateProgress.total}).
         </p>
       ) : null}
       {templateProgress.total > 0 && templateProgress.filled >= templateProgress.total ? (
@@ -448,9 +443,12 @@ export function GroupTifoPanel({
             const fill = painted
               ? normalizeTifoDisplayColor(painted)
               : inTemplate
-                ? hexWithAlpha(templateColor, L ? 0.45 : 0.55)
+                ? color === TIFO_ERASE_SWATCH
+                  ? palette[2]!
+                  : color
                 : emptyFill
             const isPainted = Boolean(painted)
+            const ghost = inTemplate && !isPainted
             const isBlackPixel = isPainted && isTifoBlackColor(fill)
             const isWhitePixel = isPainted && isTifoWhiteColor(fill)
             const canPlace = !moderationMode
@@ -465,8 +463,7 @@ export function GroupTifoPanel({
                   isBlackPixel && 'tf-tifo-cell--black',
                   isWhitePixel && 'tf-tifo-cell--white',
                   canPlace && !isPainted && !inTemplate && 'tf-tifo-cell--empty',
-                  tifoMode === 'modele' && !inTemplate && !isPainted && 'opacity-25',
-                  inTemplate && !isPainted && 'ring-1 ring-white/50',
+                  ghost && 'outline outline-1 outline-white/70',
                   canPlace && 'cursor-pointer',
                   moderationMode && isPainted && 'tf-tifo-cell--moderate cursor-pointer',
                   moderationMode && !isPainted && 'tf-tifo-cell--empty cursor-default opacity-50',
@@ -493,11 +490,7 @@ export function GroupTifoPanel({
                     if (isPainted) void erasePixel(x, y)
                     return
                   }
-                  if (tifoMode === 'modele') {
-                    if (!templateMask[i]) return
-                    void placePixel(x, y, templateColor)
-                    return
-                  }
+                  if (tifoMode === 'modele' && !templateMask[i]) return
                   void placePixel(x, y, color)
                 }}
                 aria-label={
@@ -519,18 +512,25 @@ export function GroupTifoPanel({
                     isBlackPixel && 'tf-tifo-cell-fill--black',
                     isWhitePixel && 'tf-tifo-cell-fill--white',
                     !isPainted && !inTemplate && 'tf-tifo-cell-fill--empty',
+                    ghost && isTifoBlackColor(fill) && 'tf-tifo-cell-fill--black',
+                    ghost && isTifoWhiteColor(fill) && 'tf-tifo-cell-fill--white',
                   )}
                   style={
-                    isBlackPixel
-                      ? undefined
-                      : isWhitePixel
+                    isBlackPixel || (ghost && isTifoBlackColor(fill))
+                      ? { opacity: ghost ? 0.55 : 1 }
+                      : isWhitePixel || (ghost && isTifoWhiteColor(fill))
                         ? {
                             backgroundColor: '#ffffff',
                             backgroundImage: TIFO_WHITE_SVG_BG,
                             backgroundSize: '100% 100%',
                             colorScheme: 'light',
+                            opacity: ghost ? 0.7 : 1,
                           }
-                        : { backgroundColor: fill }
+                        : {
+                            backgroundColor: fill,
+                            opacity: ghost ? 0.72 : 1,
+                            colorScheme: 'light',
+                          }
                   }
                 />
               </div>
