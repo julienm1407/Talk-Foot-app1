@@ -8,7 +8,7 @@
  *   GET /api/live-bundle?fixtureId=12345
  */
 
-import { handleCapacitorCors } from './corsCapacitor.js'
+import { handleCapacitorCors } from './_lib/corsCapacitor.js'
 import { scheduleLivePushNudge } from './push-kickoff.mjs'
 
 const INFLIGHT = new Map()

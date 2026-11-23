@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
-import { handleCapacitorCors } from './corsCapacitor.js'
+import { handleCapacitorCors } from './_lib/corsCapacitor.js'
 
 const T60_LEAD_MS = 60 * 60 * 1000
 const WINDOW_MS = 12 * 60 * 1000

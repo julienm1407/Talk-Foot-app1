@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { handleCapacitorCors } from './corsCapacitor.js'
+import { handleCapacitorCors } from './_lib/corsCapacitor.js'
 
 function json(res, status, body) {
   res.statusCode = status
