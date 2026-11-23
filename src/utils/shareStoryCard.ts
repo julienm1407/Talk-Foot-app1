@@ -61,29 +61,6 @@ function roundRect(
   ctx.closePath()
 }
 
-function loadImage(src: string, timeoutMs = 400): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    let done = false
-    const finish = (value: HTMLImageElement | null) => {
-      if (done) return
-      done = true
-      resolve(value)
-    }
-    const t = window.setTimeout(() => finish(null), timeoutMs)
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      window.clearTimeout(t)
-      finish(img)
-    }
-    img.onerror = () => {
-      window.clearTimeout(t)
-      finish(null)
-    }
-    img.src = src
-  })
-}
-
 function drawAvatar(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement | null,
@@ -142,8 +119,6 @@ export async function renderShareStoryPng(input: ShareStoryCardInput): Promise<B
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   ctx.fillText('TF', 80 + logoBox / 2, 72 + logoBox / 2 + 4)
-
-  void input.avatarUrl
 
   ctx.fillStyle = WHITE
   ctx.font = '900 44px system-ui, sans-serif'
