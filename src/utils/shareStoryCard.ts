@@ -217,47 +217,60 @@ export async function renderShareStoryPng(input: ShareStoryCardInput): Promise<B
   return blob
 }
 
+function shareNavigator(): Navigator & {
+  canShare?: (data: ShareData) => boolean
+  share?: (data: ShareData) => Promise<void>
+} {
+  return navigator
+}
+
+function hasShare(): boolean {
+  return typeof (navigator as Navigator & { share?: unknown }).share === 'function'
+}
+
+export function canShareStoryFiles(file: File): boolean {
+  const nav = shareNavigator()
+  try {
+    return Boolean(hasShare() && typeof nav.canShare === 'function' && nav.canShare({ files: [file] }))
+  } catch {
+    return false
+  }
+}
+
+/** À appeler sur un tap (geste utilisateur encore valide). */
 export async function nativeShareStory(opts: {
   blob: Blob
   title: string
   text: string
   url: string
   fileName: string
-}): Promise<'shared' | 'copied' | 'saved'> {
+}): Promise<'shared' | 'aborted' | 'unavailable'> {
   const file = new File([opts.blob], opts.fileName, { type: 'image/png' })
-  const nav = navigator as Navigator & {
-    canShare?: (data: ShareData) => boolean
-    share?: (data: ShareData) => Promise<void>
-  }
-  const withFiles = { files: [file], title: opts.title, text: opts.text, url: opts.url }
+  const nav = shareNavigator()
+  if (!hasShare() || !nav.share) return 'unavailable'
   try {
-    if (typeof nav.canShare === 'function' && nav.canShare({ files: [file] }) && nav.share) {
-      await nav.share(withFiles)
+    if (canShareStoryFiles(file)) {
+      await nav.share({ files: [file], title: opts.title, text: opts.text, url: opts.url })
       return 'shared'
     }
-    if (nav.share) {
-      await nav.share({ title: opts.title, text: `${opts.text}\n${opts.url}`, url: opts.url })
-      return 'shared'
-    }
+    await nav.share({ title: opts.title, text: `${opts.text}\n${opts.url}`, url: opts.url })
+    return 'shared'
   } catch (err) {
     const name = err instanceof Error ? err.name : ''
-    if (name === 'AbortError') return 'shared'
+    if (name === 'AbortError') return 'aborted'
+    return 'unavailable'
   }
-  await saveStoryImage(opts.blob, opts.fileName)
-  return 'saved'
 }
 
-export function saveStoryImage(blob: Blob, fileName: string): Promise<void> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileName
-    a.rel = 'noopener'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500)
-    resolve()
-  })
+export function saveStoryImage(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  a.rel = 'noopener'
+  a.target = '_blank'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
