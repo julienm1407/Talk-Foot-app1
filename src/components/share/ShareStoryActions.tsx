@@ -1,20 +1,27 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Bet } from '../../types/bet'
 import type { Match } from '../../types/match'
 import { useAuth } from '../../contexts/AuthContext'
-import { useProfile } from '../../hooks/useProfile'
+import { useUserBets } from '../../hooks/useUserBets'
+import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { cn } from '../../utils/cn'
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
-import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import {
   formatFinalScoreLine,
-  formatPronoResultLine,
+  formatPronoShareInvite,
   formatShareStoryPick,
   matchWhenLabel,
+  pronoSharePageUrl,
+  recentFormLine,
   tribuneShareUrl,
 } from '../../utils/tribuneShareLinks'
-import { nativeShareStory, renderShareStoryPng, snapshotAvatarNode } from '../../utils/shareStoryCard'
+import { nativeShareStory } from '../../utils/shareStoryCard'
+import { renderPronoShareCards } from '../../utils/renderPronoShareCard'
+import { fetchMatchPronoTally } from '../../lib/supabase/matchPronoTally'
+import { publishPronoShare } from '../../lib/supabase/pronoShares'
+import type { PronoSharePayload } from '../../utils/pronoSharePayload'
+import { MIN_COMMUNITY_VOTES, randomShareId } from '../../utils/pronoSharePayload'
 
 type Props = {
   match: Match
@@ -33,16 +40,15 @@ type Preview = {
   shareUrl: string
 }
 
-export function ShareStoryActions({ match, bet, kind, bestMessage, className, tone = 'dark' }: Props) {
+export function ShareStoryActions({ match, bet, kind, className, tone = 'dark' }: Props) {
   const { user } = useAuth()
-  const { profile } = useProfile()
-  const avatarRef = useRef<HTMLDivElement | null>(null)
+  const [allBets] = useUserBets()
+  const { myRank } = useLeaderboard()
   const [busy, setBusy] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const displayName = user?.displayName?.trim() || 'Supporteur'
-  const src = kind === 'prono' ? 'share_prono' : 'share_tribune'
-  const url = tribuneShareUrl(match.id, src)
+  const lost = kind === 'prono' && bet?.status === 'lost'
 
   useEffect(() => {
     return () => {
@@ -58,55 +64,89 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
     setBusy(true)
     setHint(null)
     try {
-      await new Promise((r) => window.setTimeout(r, 80))
-      const avatarUrl = await snapshotAvatarNode(avatarRef.current)
       const pick = bet
         ? formatShareStoryPick(bet, match)
         : {
             marketLabel: 'Tribune',
-            hero: `J’étais là pour ${match.home.shortName} – ${match.away.shortName}`,
-            detail: formatFinalScoreLine(match),
+            hero: `J’étais là`,
+            outcome: 'J’ÉTAIS LÀ',
+            team: `${match.home.shortName}–${match.away.shortName}`,
           }
-      const blob = await renderShareStoryPng({
-        kind,
-        homeName: match.home.name,
-        awayName: match.away.name,
+      const vote = await fetchMatchPronoTally(match.id)
+      const form = recentFormLine(allBets)
+      const state = kind === 'tribune' ? 'open' : bet?.status === 'won' ? 'won' : bet?.status === 'lost' ? 'lost' : 'open'
+      const sharerId = user?.id ?? 'anon'
+      const payload: PronoSharePayload = {
+        v: 1,
+        matchId: match.id,
+        home: match.home.name,
+        away: match.away.name,
         homeShort: match.home.shortName,
         awayShort: match.away.shortName,
         homeColor: match.home.colors.primary,
         awayColor: match.away.colors.primary,
-        homeLogoUrl: resolveTeamLogoUrl(match.home.id, {
-          apiLogoUrl: match.home.logoUrl,
-          sportMonksTeamId: match.home.sportMonksTeamId,
-        }),
-        awayLogoUrl: resolveTeamLogoUrl(match.away.id, {
-          apiLogoUrl: match.away.logoUrl,
-          sportMonksTeamId: match.away.sportMonksTeamId,
-        }),
+        homeLogoUrl:
+          resolveTeamLogoUrl(match.home.id, {
+            apiLogoUrl: match.home.logoUrl,
+            sportMonksTeamId: match.home.sportMonksTeamId,
+          }) ?? undefined,
+        awayLogoUrl:
+          resolveTeamLogoUrl(match.away.id, {
+            apiLogoUrl: match.away.logoUrl,
+            sportMonksTeamId: match.away.sportMonksTeamId,
+          }) ?? undefined,
         competition: match.competition.name,
-        whenLabel: matchWhenLabel(match),
-        marketLabel: pick.marketLabel,
-        hero: pick.hero,
-        detail:
-          kind === 'tribune'
-            ? [formatFinalScoreLine(match), bet ? formatPronoResultLine(bet, match) : '']
-                .filter(Boolean)
-                .join(' · ')
-            : pick.detail,
-        oddsLabel: kind === 'prono' ? pick.oddsLabel : undefined,
-        quote: kind === 'tribune' ? bestMessage : null,
+        when: matchWhenLabel(match),
         displayName,
-        avatarUrl,
-        shareUrl: url,
-        cta: 'Fais mieux que moi sur Talk Foot',
-      })
+        outcome: pick.outcome,
+        team: pick.team,
+        odds: pick.oddsLabel,
+        form,
+        state,
+        sharerId,
+        vote: vote && vote.home + vote.draw + vote.away >= MIN_COMMUNITY_VOTES ? vote : undefined,
+        wonScore: state === 'won' ? formatFinalScoreLine(match) : undefined,
+        week:
+          state === 'won'
+            ? {
+                rank: myRank,
+                tokens: Math.max(0, Math.round((bet?.payout ?? 0) - (bet?.stake ?? 0))),
+                pct:
+                  vote && bet?.market === 'result_1x2'
+                    ? Math.round(
+                        (100 *
+                          (bet.selection === 'home' ? vote.home : bet.selection === 'away' ? vote.away : vote.draw)) /
+                          Math.max(1, vote.home + vote.draw + vote.away),
+                      )
+                    : 0,
+              }
+            : undefined,
+        invite: '',
+      }
+      const reservedId = randomShareId()
+      let shareUrl =
+        kind === 'prono'
+          ? pronoSharePageUrl(reservedId, { src: 'share_prono', from: sharerId })
+          : tribuneShareUrl(match.id, 'share_tribune')
+      const inviteDraft = bet
+        ? formatPronoShareInvite(bet, match, shareUrl)
+        : `J’étais en tribune ${match.home.shortName}–${match.away.shortName} 👉 ${shareUrl.replace(/^https?:\/\//, '')}`
+      payload.invite = inviteDraft
+      let { story: finalStory, og } = await renderPronoShareCards(payload, shareUrl)
+      const published = await publishPronoShare({ id: reservedId, payload, story: finalStory, og })
+      if (kind === 'prono' && published.id !== reservedId) {
+        shareUrl = pronoSharePageUrl(published.id, { src: 'share_prono', from: sharerId })
+        payload.invite = bet ? formatPronoShareInvite(bet, match, shareUrl) : inviteDraft
+        const again = await renderPronoShareCards(payload, shareUrl)
+        finalStory = again.story
+      }
       if (preview?.objectUrl) URL.revokeObjectURL(preview.objectUrl)
       setPreview({
-        objectUrl: URL.createObjectURL(blob),
-        blob,
+        objectUrl: URL.createObjectURL(finalStory),
+        blob: finalStory,
         fileName: kind === 'prono' ? 'talk-foot-prono.png' : 'talk-foot-tribune.png',
-        text: `${pick.marketLabel} : ${pick.hero} — Fais mieux que moi sur Talk Foot`,
-        shareUrl: url,
+        text: payload.invite,
+        shareUrl,
       })
     } catch (err) {
       setHint(err instanceof Error ? `Impossible de générer la carte (${err.message}).` : 'Impossible de générer la carte.')
@@ -127,10 +167,8 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
       fileName: preview.fileName,
     })
     setBusy(false)
-    if (result === 'shared') setHint(null)
-    else if (result === 'aborted') setHint(null)
-    else {
-      setHint('Appuie longtemps sur l’image, puis « Partager » vers Instagram ou Snapchat.')
+    if (result === 'unavailable') {
+      setHint('Choisis Instagram, Snapchat ou WhatsApp dans la feuille du téléphone.')
     }
   }
 
@@ -142,20 +180,22 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
 
   return (
     <div className={cn('mt-2 flex flex-wrap items-center gap-2', className)}>
-      <div
-        ref={avatarRef}
-        className="pointer-events-none absolute -left-[9999px] top-0 h-40 w-40 overflow-hidden"
-        aria-hidden
-      >
-        <ProfileCharacterThumb profile={profile} size="lg" shellPx={160} crop="bust" imagePriority />
-      </div>
       <button
         type="button"
         disabled={busy || (kind === 'prono' && !bet)}
         onClick={() => void openPreview()}
-        className="rounded-full bg-tf-cta px-3 py-1.5 text-[11px] font-black text-white disabled:opacity-50"
+        className={cn(
+          'rounded-full px-3 py-1.5 text-[11px] font-black text-white disabled:opacity-50',
+          lost ? 'bg-slate-600' : 'bg-tf-cta',
+        )}
       >
-        {busy && !preview ? 'Préparation de la carte…' : kind === 'prono' ? 'Partager mon prono' : 'Partager « J’étais en tribune »'}
+        {busy && !preview
+          ? 'Préparation de la carte…'
+          : kind === 'tribune'
+            ? 'Partager « J’étais en tribune »'
+            : lost
+              ? 'Revanche ?'
+              : 'Partager mon prono'}
       </button>
       {hint && !preview ? (
         <p className={cn('w-full text-[11px] font-semibold', tone === 'light' ? 'text-emerald-800' : 'text-sky-200/90')}>
@@ -190,13 +230,21 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
                   >
                     {busy ? 'Ouverture…' : 'Partager (Instagram, Snapchat, WhatsApp…)'}
                   </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void shareFromPreview()}
+                    className="rounded-full border border-white/20 px-3 py-2.5 text-xs font-black text-white"
+                  >
+                    Story Instagram
+                  </button>
                   <button type="button" onClick={closePreview} className="py-1 text-xs font-semibold text-sky-200/80">
                     Fermer
                   </button>
                 </div>
                 {hint ? <p className="mt-2 text-[11px] font-semibold text-sky-100">{hint}</p> : null}
                 <p className="mt-2 text-[10px] font-semibold leading-snug text-sky-200/70">
-                  Choisis Instagram ou Snapchat dans la feuille du téléphone. L’image part avec ton prono.
+                  Dans la feuille, choisis Instagram (story) ou Snapchat. Le QR ouvre le lien court.
                 </p>
               </div>
             </div>,

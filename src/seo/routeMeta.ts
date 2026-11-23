@@ -175,6 +175,7 @@ export function seoForRoutePath(pathname: string): RouteSeoConfig | null {
   if (pathname === '/settings/donnees') return DATA_SOURCES
   if (pathname.startsWith('/user/')) return USER_VITRINE
   if (pathname === '/admin') return ADMIN
+  if (pathname.startsWith('/p/')) return FALLBACK_GENERIC
   if (pathname.startsWith('/channel/')) {
     if (pathname.endsWith('/stade')) return STADIUM
     return CHANNEL

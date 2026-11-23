@@ -17,6 +17,7 @@ import { useXpGrant } from './useXpGrant'
 import { writeBetsBackup } from '../utils/betsBackup'
 import { useAuth } from '../contexts/AuthContext'
 import { requestTifoEngagementSyncForMatch } from '../utils/tifoEngagementEvents'
+import { incrementMatchPronoTally } from '../lib/supabase/matchPronoTally'
 
 function clampStake(n: number) {
   if (!Number.isFinite(n)) return 0
@@ -85,6 +86,9 @@ export function useBetting(matchId: string, matchForLabel?: Match | null) {
       }
       grantBetPlaced(id)
       requestTifoEngagementSyncForMatch(matchId)
+      if (market === 'result_1x2' && (selection === 'home' || selection === 'draw' || selection === 'away')) {
+        incrementMatchPronoTally(matchId, selection)
+      }
       return { ok: true as const, bet }
     },
     [matchId, matchForLabel, setBets, patchWallet, wallet.tokens, cloud, grantBetPlaced, user?.id],

@@ -15,6 +15,7 @@ import {
 } from '../../utils/betDisplay'
 import { cn } from '../../utils/cn'
 import { resolveEffectiveMatchStatus } from '../../utils/footballMatchAttention'
+import { ShareStoryActions } from '../share/ShareStoryActions'
 
 function betStatusLabel(bet: Bet): string {
   if (bet.status === 'won') return 'Gagné'
@@ -97,6 +98,7 @@ export function BetSlipCard({
         : 'Match à venir'
 
   return (
+    <div>
     <Link
       to={`/channel/${bet.matchId}`}
       className={cn(
@@ -267,5 +269,7 @@ export function BetSlipCard({
 
       <p className="mt-2 text-[10px] font-semibold text-sky-300/40">{formatBetPlacedAt(bet.placedAt)}</p>
     </Link>
+    {match ? <ShareStoryActions match={match} bet={bet} kind="prono" tone="dark" /> : null}
+    </div>
   )
 }

@@ -15,6 +15,7 @@ import { DeleteAccountPage } from './pages/DeleteAccountPage'
 import { ChildSafetyPage } from './pages/ChildSafetyPage'
 import { SubscriptionPlansPage } from './pages/SubscriptionPlansPage'
 import { HomePage } from './pages/Home'
+import { PronoShareLandingPage } from './pages/PronoShareLanding'
 import {
   AdminPage,
   ArticlePage,
@@ -168,6 +169,7 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/delete-account" element={<DeleteAccountPage />} />
         <Route path="/child-safety" element={<ChildSafetyPage />} />
+        <Route path="/p/:shareId" element={<PronoShareLandingPage />} />
         <Route
           path="/article/:slug"
           element={

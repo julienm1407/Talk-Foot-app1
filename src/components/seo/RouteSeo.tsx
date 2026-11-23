@@ -11,6 +11,7 @@ export function RouteSeo() {
   const config = useMemo(() => {
     if (isArticle) return 'skip' as const
     if (isClub) return 'skip' as const
+    if (pathname.startsWith('/p/')) return 'skip' as const
     return seoForRoutePath(pathname)
   }, [pathname, isArticle, isClub])
   usePageSeo(pathname, config)

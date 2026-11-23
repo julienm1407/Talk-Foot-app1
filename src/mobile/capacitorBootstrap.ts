@@ -100,6 +100,18 @@ export async function initCapacitorShell(): Promise<void> {
   }
 
   void CapApp.addListener('appUrlOpen', (event) => {
+    try {
+      const opened = new URL(event.url)
+      if (opened.pathname.startsWith('/p/') || opened.pathname.startsWith('/channel/')) {
+        const next = `${opened.pathname}${opened.search}`
+        if (`${window.location.pathname}${window.location.search}` !== next) {
+          window.history.pushState({}, '', next)
+          window.dispatchEvent(new PopStateEvent('popstate'))
+        }
+      }
+    } catch {
+      /* ignore */
+    }
     void applyNativeOAuthUrl(event.url).catch(() => undefined)
   })
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Bet } from '../types/bet'
 import type { Match } from '../types/match'
-import { formatPronoShareLine, tribuneShareUrl } from './tribuneShareLinks'
+import { formatPronoShareLine, formatShareStoryPick, pronoSharePageUrl, tribuneShareUrl } from './tribuneShareLinks'
 
 const match = {
   id: 'm-1',
@@ -30,5 +30,28 @@ describe('tribuneShareLinks', () => {
       placedAt: '2026-11-23T10:00:00.000Z',
     } as Bet
     expect(formatPronoShareLine(bet, match)).toBe('Mon prono : PSG 3-1')
+  })
+
+  it('expose un lien court /p/:id avec src=share_prono', () => {
+    const url = pronoSharePageUrl('x7k2', { src: 'share_prono', from: 'u1' })
+    expect(url).toContain('/p/x7k2')
+    expect(url).toContain('src=share_prono')
+    expect(url).toContain('from=u1')
+  })
+
+  it('découpe un 1N2 en VICTOIRE + club', () => {
+    const bet = {
+      id: 'b2',
+      matchId: 'm-1',
+      market: 'result_1x2',
+      selection: 'home',
+      stake: 10,
+      odds: 1.64,
+      status: 'open',
+      placedAt: '2026-11-23T10:00:00.000Z',
+    } as Bet
+    const pick = formatShareStoryPick(bet, match)
+    expect(pick.outcome).toBe('VICTOIRE')
+    expect(pick.team).toBe('PSG')
   })
 })

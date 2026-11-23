@@ -64,6 +64,17 @@
   ],
   "rewrites": [
     {
+      "source": "/p/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i)(facebookexternalhit|facebot|twitterbot|whatsapp|telegrambot|slackbot|discordbot|linkedinbot|pinterest|googlebot|bingbot|skypeuripreview|ia_archiver)"
+        }
+      ],
+      "destination": "/api/prono-share?id=:id"
+    },
+    {
       "source": "/:path+/app-ads.txt",
       "destination": "/app-ads.txt"
     },

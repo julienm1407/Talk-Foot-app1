@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "com.talkfoot.app",
+        "paths": ["/p/*", "/channel/*", "/login/*"]
+      }
+    ]
+  }
+}
