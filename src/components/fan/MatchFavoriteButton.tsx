@@ -36,10 +36,12 @@ export function MatchFavoriteButton({
     setMatchAlertPref,
   } = useFanPreferences()
   const lastToggleAt = useRef(0)
+  const prefLockAt = useRef(0)
   const [prefsOpen, setPrefsOpen] = useState(false)
+  const [draft, setDraft] = useState<Record<MatchAlertKind, boolean> | null>(null)
   const on = isMatchFavorite(matchId)
   const full = !on && favoriteMatchIds.length >= maxFavoriteMatches
-  const prefs = matchAlertPrefs(matchId)
+  const prefs = draft ?? matchAlertPrefs(matchId)
   const label = on
     ? 'Ne plus suivre ce match'
     : full
@@ -57,11 +59,25 @@ export function MatchFavoriteButton({
       return
     }
     toggleFavoriteMatch(matchId)
+    setDraft(matchAlertPrefs(matchId))
     setPrefsOpen(true)
   }
 
+  const togglePref = (key: MatchAlertKind) => {
+    const now = Date.now()
+    if (now - prefLockAt.current < 400) return
+    prefLockAt.current = now
+    const base = draft ?? matchAlertPrefs(matchId)
+    const nextVal = !base[key]
+    setDraft({ ...base, [key]: nextVal })
+    setMatchAlertPref(matchId, key, nextVal)
+  }
+
   useEffect(() => {
-    if (!prefsOpen) return
+    if (!prefsOpen) {
+      setDraft(null)
+      return
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setPrefsOpen(false)
     }
@@ -185,7 +201,15 @@ export function MatchFavoriteButton({
                         <button
                           type="button"
                           aria-pressed={checked}
-                          onClick={() => setMatchAlertPref(matchId, key, !checked)}
+                          onPointerUp={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            togglePref(key)
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }}
                           className={cn(
                             'flex min-h-12 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold',
                             light ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-[#071525]',

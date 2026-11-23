@@ -17,4 +17,18 @@ describe('mergeFanPreferencesKeepFilled', () => {
     )
     expect(merged.favoriteMatchIds).toEqual(['torino-roma'])
   })
+
+  it('conserve les cases notification d’un match suivi', () => {
+    const merged = mergeFanPreferencesKeepFilled(
+      {
+        favoriteMatchIds: ['m-sm-1'],
+        favoriteMatchAlertPrefs: { 'm-sm-1': { goal: false, kickoff: true } },
+      },
+      {
+        favoriteMatchIds: ['m-sm-1'],
+        favoriteMatchAlertPrefs: { 'm-sm-1': { goal: true, kickoff: true } },
+      },
+    )
+    expect(merged.favoriteMatchAlertPrefs?.['m-sm-1']).toEqual({ goal: false, kickoff: true })
+  })
 })

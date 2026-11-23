@@ -289,21 +289,23 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     }),
     [state.favoriteMatchAlertPrefs],
   )
+  const alertPrefsRef = useRef(state.favoriteMatchAlertPrefs)
+  alertPrefsRef.current = state.favoriteMatchAlertPrefs
   const setMatchAlertPref = useCallback(
     (matchId: string, key: MatchAlertKind, value: boolean) => {
-      const current = {
-        ...DEFAULT_MATCH_ALERT_PREFS,
-        ...(state.favoriteMatchAlertPrefs[matchId] ?? {}),
-        [key]: value,
-      }
-      patch({
-        favoriteMatchAlertPrefs: {
-          ...state.favoriteMatchAlertPrefs,
-          [matchId]: current,
+      const prev = alertPrefsRef.current
+      const next = {
+        ...prev,
+        [matchId]: {
+          ...DEFAULT_MATCH_ALERT_PREFS,
+          ...(prev[matchId] ?? {}),
+          [key]: value,
         },
-      })
+      }
+      alertPrefsRef.current = next
+      patch({ favoriteMatchAlertPrefs: next })
     },
-    [patch, state.favoriteMatchAlertPrefs],
+    [patch],
   )
   const toggleFavoritePlayer = useCallback(
     (player: FavoritePlayerFollow, currentMatchId?: string) => {

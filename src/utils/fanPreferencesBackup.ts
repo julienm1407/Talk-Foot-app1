@@ -95,6 +95,10 @@ export function mergeFanPreferencesKeepFilled(
     favoriteClubId: clubs[0] ?? null,
     favoriteNationIsos: nations,
     favoriteMatchIds: matchIds,
+    favoriteMatchAlertPrefs:
+      left.favoriteMatchAlertPrefs !== undefined
+        ? left.favoriteMatchAlertPrefs
+        : right.favoriteMatchAlertPrefs,
     favoritePlayers,
     preferencesComplete,
     hideRivalSalons: left.hideRivalSalons ?? right.hideRivalSalons ?? false,
