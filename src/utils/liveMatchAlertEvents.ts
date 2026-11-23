@@ -129,7 +129,11 @@ function scorelineFromFixture(fx: Record<string, unknown>): string | null {
     }
     const participant = row.score && typeof row.score === 'object' ? (row.score as Record<string, unknown>) : row
     const goals = Number(participant.goals ?? participant.score)
-    const loc = String(row.participant?.location ?? participant.participant ?? '').toLowerCase()
+    const participantMeta =
+      row.participant && typeof row.participant === 'object'
+        ? (row.participant as Record<string, unknown>)
+        : null
+    const loc = String(participantMeta?.location ?? participant.participant ?? '').toLowerCase()
     if (!Number.isFinite(goals)) continue
     if (loc.includes('home') || row.scoring_team === 'home') home = goals
     if (loc.includes('away') || row.scoring_team === 'away') away = goals
