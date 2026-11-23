@@ -1878,7 +1878,7 @@ export function ChannelPage() {
     },
   })
   const chatScrollRef = useAutoScroll<HTMLDivElement>(
-    [filteredChatMessages.length],
+    [filteredChatMessages.length, filteredChatMessages.at(-1)?.id],
     [match?.id, status],
   )
   const pageScrollRef = useRef<HTMLDivElement | null>(null)
@@ -3313,7 +3313,7 @@ export function ChannelPage() {
         'tf-channel-live relative flex min-h-0 w-full flex-1 flex-col bg-[#03172a]',
         L && 'tf-channel-live-light',
         isUpcoming
-          ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(6.5rem+var(--tf-sys-bottom-inset,0px))] md:h-full md:overflow-hidden md:pb-3'
+          ? 'tf-channel-upcoming max-md:min-h-0 max-md:h-full max-md:overflow-hidden p-3 pb-0 md:h-full md:overflow-hidden md:pb-3'
           : 'max-md:min-h-0 max-md:h-full max-md:overflow-hidden p-3 pb-0 md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
       )}
       style={
@@ -4012,7 +4012,7 @@ export function ChannelPage() {
           className={cn(
             'tf-live-col tf-live-col-center min-w-0 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] flex min-h-0 flex-1 flex-col md:h-full',
             isUpcoming
-              ? 'space-y-2 md:overflow-hidden'
+              ? 'space-y-2 max-md:overflow-hidden md:overflow-hidden'
               : 'space-y-2 max-md:overflow-hidden md:overflow-y-auto md:[scrollbar-width:thin]',
           )}
         >
@@ -4022,7 +4022,7 @@ export function ChannelPage() {
               'tf-card-chat relative',
               animationsOpen || livePanelOpen ? '!overflow-visible' : 'overflow-hidden',
               isUpcoming
-                ? 'min-h-0 md:flex md:min-h-0 md:flex-1 md:flex-col'
+                ? 'flex min-h-0 flex-1 flex-col max-md:min-h-0'
                 : 'flex min-h-0 flex-1 flex-col max-md:min-h-0 md:min-h-[360px]',
             )}
             style={
@@ -4130,9 +4130,7 @@ export function ChannelPage() {
               ref={chatScrollRef}
               className={cn(
                 'tf-chat-scroll space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
-                isUpcoming
-                  ? 'h-[min(28dvh,190px)] sm:h-[min(32dvh,210px)] md:min-h-0 md:flex-1 md:h-auto md:max-h-none'
-                  : 'min-h-0 flex-1 h-auto max-md:max-h-none md:min-h-[240px] md:h-[min(58vh,560px)]',
+                'min-h-0 flex-1 h-auto max-md:max-h-none md:min-h-[240px] md:h-[min(58vh,560px)]',
               )}
             >
               {chatLocked ? (
