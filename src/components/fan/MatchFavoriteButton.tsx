@@ -1,4 +1,5 @@
-import { useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import {
   MATCH_ALERT_PREF_LABELS,
@@ -6,6 +7,7 @@ import {
 } from '../../types/fanPreferences'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 
 function stopNav(e: MouseEvent | PointerEvent) {
   e.preventDefault()
@@ -47,13 +49,20 @@ export function MatchFavoriteButton({
 
   const activate = () => {
     if (full) return
-    if (on) {
-      setPrefsOpen((v) => !v)
-      return
-    }
-    toggleFavoriteMatch(matchId)
+    if (!on) toggleFavoriteMatch(matchId)
     setPrefsOpen(true)
   }
+
+  useEffect(() => {
+    if (!prefsOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPrefsOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [prefsOpen])
+
+  const portalTarget = prefsOpen ? getModalPortalRoot() : null
 
   return (
     <span
@@ -64,7 +73,8 @@ export function MatchFavoriteButton({
       <button
         type="button"
         aria-pressed={on}
-        aria-expanded={on ? prefsOpen : undefined}
+        aria-haspopup="dialog"
+        aria-expanded={prefsOpen}
         aria-label={label}
         title={label}
         disabled={full}
@@ -110,52 +120,112 @@ export function MatchFavoriteButton({
           <path d="M12 2.6l2.95 6.13 6.78.99-4.91 4.66 1.17 6.74L12 17.94l-5.99 3.18 1.17-6.74L2.27 9.72l6.78-.99L12 2.6z" />
         </svg>
       </button>
-      {on && prefsOpen ? (
-        <div
-          className={cn(
-            'absolute right-0 top-[calc(100%+0.35rem)] z-50 w-[16.5rem] rounded-xl border p-2.5 shadow-xl',
-            light
-              ? 'border-slate-200 bg-white text-slate-800'
-              : 'border-white/15 bg-[#0b2440] text-sky-50',
-          )}
-          role="dialog"
-          aria-label="Notifications du match"
-        >
-          <p className={cn('mb-1.5 text-[10px] font-black uppercase tracking-wide', light ? 'text-slate-500' : 'text-sky-200/80')}>
-            Notifications
-          </p>
-          <ul className="space-y-1">
-            {PREF_ORDER.map((key) => (
-              <li key={key}>
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg px-1 py-0.5 text-[11px] font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={prefs[key]}
-                    onChange={(e) => setMatchAlertPref(matchId, key, e.target.checked)}
-                    className="size-3.5 accent-amber-400"
-                  />
-                  {MATCH_ALERT_PREF_LABELS[key]}
-                </label>
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            className={cn(
-              'mt-2 w-full rounded-lg border px-2 py-1.5 text-[11px] font-bold',
-              light
-                ? 'border-slate-200 bg-slate-50 text-slate-700'
-                : 'border-white/15 bg-white/5 text-sky-100',
-            )}
-            onClick={() => {
-              toggleFavoriteMatch(matchId)
-              setPrefsOpen(false)
-            }}
-          >
-            Ne plus suivre ce match
-          </button>
-        </div>
-      ) : null}
+      {prefsOpen && portalTarget
+        ? createPortal(
+            <div
+              className={cn(
+                'pointer-events-auto fixed inset-0 z-[2147482955] flex touch-manipulation items-end justify-center overflow-hidden',
+                'h-[100dvh] max-h-[100dvh]',
+                'p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,calc(var(--tf-sys-bottom-inset,0px)+0.75rem))]',
+                'sm:items-center',
+              )}
+              data-no-swipe="true"
+              data-tf-modal="true"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="tf-match-alert-title"
+              onPointerDown={(e) => stopNav(e)}
+              onClick={(e) => stopNav(e)}
+            >
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+                aria-label="Fermer"
+                onClick={() => setPrefsOpen(false)}
+              />
+              <div
+                className={cn(
+                  'relative z-10 flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border shadow-2xl',
+                  light ? 'border-slate-200 bg-white text-slate-900' : 'border-white/15 bg-[#0b2440] text-sky-50',
+                )}
+              >
+                <div className="flex shrink-0 items-start justify-between gap-3 px-4 pb-2 pt-3">
+                  <div className="min-w-0">
+                    <p
+                      id="tf-match-alert-title"
+                      className={cn(
+                        'text-[11px] font-black uppercase tracking-[0.16em]',
+                        light ? 'text-slate-500' : 'text-sky-200/80',
+                      )}
+                    >
+                      Notifications
+                    </p>
+                    <p className="mt-0.5 text-sm font-bold">Choisis ce que tu veux recevoir</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={cn(
+                      TF_FOCUS_VISIBLE,
+                      'inline-flex size-8 shrink-0 items-center justify-center rounded-full border text-lg leading-none',
+                      light ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-white/15 bg-white/5 text-sky-100',
+                    )}
+                    aria-label="Fermer"
+                    onClick={() => setPrefsOpen(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3 pb-2">
+                  {PREF_ORDER.map((key) => (
+                    <li key={key}>
+                      <label
+                        className={cn(
+                          'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold',
+                          light ? 'border-slate-200 bg-slate-50' : 'border-white/10 bg-[#071525]',
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={prefs[key]}
+                          onChange={(e) => setMatchAlertPref(matchId, key, e.target.checked)}
+                          className="size-4 shrink-0 accent-amber-400"
+                        />
+                        {MATCH_ALERT_PREF_LABELS[key]}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div className="shrink-0 space-y-2 border-t px-3 py-3" style={light ? { borderColor: '#e2e8f0' } : { borderColor: 'rgba(255,255,255,0.12)' }}>
+                  <button
+                    type="button"
+                    className="w-full rounded-xl bg-amber-400 px-3 py-2.5 text-sm font-black text-[#3b2500]"
+                    onClick={() => setPrefsOpen(false)}
+                  >
+                    OK
+                  </button>
+                  {on ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        'w-full rounded-xl border px-3 py-2 text-xs font-bold',
+                        light
+                          ? 'border-slate-200 bg-white text-slate-700'
+                          : 'border-white/15 bg-white/5 text-sky-100',
+                      )}
+                      onClick={() => {
+                        toggleFavoriteMatch(matchId)
+                        setPrefsOpen(false)
+                      }}
+                    >
+                      Ne plus suivre ce match
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>,
+            portalTarget,
+          )
+        : null}
     </span>
   )
 }
