@@ -7,7 +7,6 @@ import type { Debate } from '../../data/debates'
 import type { SupporterGroup } from '../../types/group'
 import { cn } from '../../utils/cn'
 import { hubGlassPanel, hubTrendsShell } from '../../utils/hubSurface'
-import { LiveMatchHero } from '../home/LiveMatchHero'
 import { HomeUpcomingHero } from '../home/HomeUpcomingHero'
 import { MatchTalkFootDuJour } from '../home/MatchTalkFootDuJour'
 import { DebateOfTheDayCard } from '../home/DebateOfTheDayCard'
@@ -79,9 +78,6 @@ export function HomeMobileExperience({
   heroLiveMatch,
   matchOfTheDay = null,
   heroLiveSim,
-  hubLiveMatches,
-  heroSlide,
-  setHeroSlide,
   upcomingSortedForHome,
   upcomingUnderLiveStrip,
   displayMatchesFull,
