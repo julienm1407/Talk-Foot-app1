@@ -128,5 +128,12 @@
 	<string>Talk Foot accède à ta photothèque pour personnaliser ton avatar et ta photo de profil.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Talk Foot peut enregistrer des images dans ta photothèque lorsque tu exportes du contenu.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>instagram</string>
+		<string>instagram-stories</string>
+		<string>snapchat</string>
+		<string>whatsapp</string>
+	</array>
 </dict>
 </plist>

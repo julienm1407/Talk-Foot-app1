@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Bet } from '../../types/bet'
 import type { Match } from '../../types/match'
 import { useAuth } from '../../contexts/AuthContext'
+import { useProfile } from '../../hooks/useProfile'
 import { cn } from '../../utils/cn'
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
+import { ProfileCharacterThumb } from '../profile/ProfileCharacterThumb'
 import {
   formatFinalScoreLine,
   formatPronoResultLine,
@@ -12,13 +14,7 @@ import {
   matchWhenLabel,
   tribuneShareUrl,
 } from '../../utils/tribuneShareLinks'
-import {
-  nativeShareAvailable,
-  nativeShareStory,
-  openStoryImageTab,
-  renderShareStoryPng,
-  saveStoryImage,
-} from '../../utils/shareStoryCard'
+import { nativeShareStory, renderShareStoryPng, snapshotAvatarNode } from '../../utils/shareStoryCard'
 
 type Props = {
   match: Match
@@ -39,13 +35,14 @@ type Preview = {
 
 export function ShareStoryActions({ match, bet, kind, bestMessage, className, tone = 'dark' }: Props) {
   const { user } = useAuth()
+  const { profile } = useProfile()
+  const avatarRef = useRef<HTMLDivElement | null>(null)
   const [busy, setBusy] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
   const displayName = user?.displayName?.trim() || 'Supporteur'
   const src = kind === 'prono' ? 'share_prono' : 'share_tribune'
   const url = tribuneShareUrl(match.id, src)
-  const canNativeShare = nativeShareAvailable()
 
   useEffect(() => {
     return () => {
@@ -61,6 +58,8 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
     setBusy(true)
     setHint(null)
     try {
+      await new Promise((r) => window.setTimeout(r, 80))
+      const avatarUrl = await snapshotAvatarNode(avatarRef.current)
       const pick = bet
         ? formatShareStoryPick(bet, match)
         : {
@@ -97,6 +96,7 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
         oddsLabel: kind === 'prono' ? pick.oddsLabel : undefined,
         quote: kind === 'tribune' ? bestMessage : null,
         displayName,
+        avatarUrl,
         shareUrl: url,
         cta: 'Fais mieux que moi sur Talk Foot',
       })
@@ -118,6 +118,7 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
   const shareFromPreview = async () => {
     if (!preview) return
     setBusy(true)
+    setHint(null)
     const result = await nativeShareStory({
       blob: preview.blob,
       title: 'Talk Foot',
@@ -126,28 +127,10 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
       fileName: preview.fileName,
     })
     setBusy(false)
-    if (result === 'shared') setHint('Feuille de partage ouverte.')
+    if (result === 'shared') setHint(null)
     else if (result === 'aborted') setHint(null)
     else {
-      setHint('Pas de feuille Instagram/WhatsApp ici. Enregistre l’image, puis importe-la dans l’app.')
-    }
-  }
-
-  const saveFromPreview = async () => {
-    if (!preview) return
-    const result = await saveStoryImage(preview.blob, preview.fileName)
-    if (result === 'saved') setHint('Image enregistrée. Si tu ne la vois pas, ouvre-la en grand puis clic droit → Enregistrer.')
-    else if (result === 'cancelled') setHint(null)
-    else setHint('Image ouverte dans un onglet : enregistre-la depuis là.')
-  }
-
-  const copyLink = async () => {
-    if (!preview) return
-    try {
-      await navigator.clipboard.writeText(preview.shareUrl)
-      setHint('Lien de la tribune copié.')
-    } catch {
-      setHint(preview.shareUrl)
+      setHint('Appuie longtemps sur l’image, puis « Partager » vers Instagram ou Snapchat.')
     }
   }
 
@@ -159,6 +142,13 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
 
   return (
     <div className={cn('mt-2 flex flex-wrap items-center gap-2', className)}>
+      <div
+        ref={avatarRef}
+        className="pointer-events-none absolute -left-[9999px] top-0 h-40 w-40 overflow-hidden"
+        aria-hidden
+      >
+        <ProfileCharacterThumb profile={profile} size="lg" shellPx={160} crop="bust" imagePriority />
+      </div>
       <button
         type="button"
         disabled={busy || (kind === 'prono' && !bet)}
@@ -192,58 +182,21 @@ export function ShareStoryActions({ match, bet, kind, bestMessage, className, to
                   className="mt-2 w-full rounded-xl bg-[#0b1b2f]"
                 />
                 <div className="mt-3 flex flex-col gap-2">
-                  <a
-                    href={preview.objectUrl}
-                    download={preview.fileName}
-                    className="rounded-full bg-tf-cta px-3 py-2 text-center text-xs font-black text-white"
-                    onClick={() => setHint('Téléchargement lancé. Sinon « Ouvrir en grand » puis enregistre l’image.')}
-                  >
-                    Enregistrer l’image
-                  </a>
                   <button
                     type="button"
-                    onClick={() => void saveFromPreview()}
-                    className="rounded-full border border-white/25 px-3 py-2 text-xs font-black"
+                    disabled={busy}
+                    onClick={() => void shareFromPreview()}
+                    className="rounded-full bg-tf-cta px-3 py-2.5 text-xs font-black text-white"
                   >
-                    Enregistrer sous…
+                    {busy ? 'Ouverture…' : 'Partager (Instagram, Snapchat, WhatsApp…)'}
                   </button>
-                  {canNativeShare ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void shareFromPreview()}
-                      className="rounded-full border border-white/25 px-3 py-2 text-xs font-black"
-                    >
-                      Partager (Instagram, WhatsApp…)
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!openStoryImageTab(preview.objectUrl)) {
-                        setHint('Autorise les pop-ups, ou appuie longtemps sur l’aperçu.')
-                      }
-                    }}
-                    className="rounded-full border border-white/15 px-3 py-2 text-xs font-black text-sky-100"
-                  >
-                    Ouvrir l’image en grand
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void copyLink()}
-                    className="rounded-full border border-white/15 px-3 py-2 text-xs font-black text-sky-100"
-                  >
-                    Copier le lien de la tribune
-                  </button>
-                  <button type="button" onClick={closePreview} className="text-xs font-semibold text-sky-200/80">
+                  <button type="button" onClick={closePreview} className="py-1 text-xs font-semibold text-sky-200/80">
                     Fermer
                   </button>
                 </div>
                 {hint ? <p className="mt-2 text-[11px] font-semibold text-sky-100">{hint}</p> : null}
                 <p className="mt-2 text-[10px] font-semibold leading-snug text-sky-200/70">
-                  {canNativeShare
-                    ? 'Sur téléphone, « Partager » ouvre WhatsApp / Instagram. Sinon enregistre le PNG.'
-                    : 'Sur ordinateur il n’y a pas de feuille Instagram : enregistre le PNG, puis importe-le dans l’app.'}
+                  Choisis Instagram ou Snapchat dans la feuille du téléphone. L’image part avec ton prono.
                 </p>
               </div>
             </div>,

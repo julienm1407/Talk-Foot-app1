@@ -27,6 +27,7 @@ export type ShareStoryCardInput = {
   oddsLabel?: string
   quote?: string | null
   displayName: string
+  avatarUrl?: string | null
   shareUrl: string
   cta: string
 }
@@ -170,11 +171,58 @@ function drawCrest(
   ctx.fillText((label.trim().slice(0, 3) || '?').toUpperCase(), cx, cy + 2)
 }
 
+export async function snapshotAvatarNode(node: HTMLElement | null): Promise<string | null> {
+  if (!node) return null
+  const imgs = Array.from(node.querySelectorAll('img'))
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              img.onload = () => resolve()
+              img.onerror = () => resolve()
+              window.setTimeout(() => resolve(), 1200)
+            }),
+    ),
+  )
+  const rootBox = node.getBoundingClientRect()
+  const w = Math.max(64, Math.round(rootBox.width) || 160)
+  const h = Math.max(64, Math.round(rootBox.height) || 160)
+  const canvas = document.createElement('canvas')
+  canvas.width = w * 2
+  canvas.height = h * 2
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.scale(2, 2)
+  ctx.beginPath()
+  ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+  ctx.fillStyle = '#12253c'
+  ctx.fillRect(0, 0, w, h)
+  for (const img of imgs) {
+    if (!img.naturalWidth) continue
+    const b = img.getBoundingClientRect()
+    try {
+      ctx.drawImage(img, b.left - rootBox.left, b.top - rootBox.top, b.width, b.height)
+    } catch {
+      /* tainted layer */
+    }
+  }
+  try {
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
+
 export async function renderShareStoryPng(input: ShareStoryCardInput): Promise<Blob> {
-  const [brandLogo, homeLogo, awayLogo] = await Promise.all([
+  const [brandLogo, homeLogo, awayLogo, avatarImg] = await Promise.all([
     loadImage(TALKFOOT_LOGO_URL, 1200, false),
     safeLogo(input.homeLogoUrl),
     safeLogo(input.awayLogoUrl),
+    input.avatarUrl ? loadImage(input.avatarUrl, 1200, false) : Promise.resolve(null),
   ])
 
   const canvas = document.createElement('canvas')
@@ -289,14 +337,30 @@ export async function renderShareStoryPng(input: ShareStoryCardInput): Promise<B
   }
 
   ctx.beginPath()
-  ctx.arc(120, 1328, 48, 0, Math.PI * 2)
-  ctx.fillStyle = RED
-  ctx.fill()
+  ctx.arc(120, 1328, 52, 0, Math.PI * 2)
   ctx.fillStyle = WHITE
-  ctx.font = '800 40px system-ui, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText((input.displayName.trim()[0] || 'T').toUpperCase(), 120, 1330)
+  ctx.fill()
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(120, 1328, 48, 0, Math.PI * 2)
+  ctx.clip()
+  if (avatarImg) {
+    drawContainedImage(ctx, avatarImg, 120, 1328, 96)
+  } else {
+    ctx.fillStyle = RED
+    ctx.fillRect(72, 1280, 96, 96)
+    ctx.fillStyle = WHITE
+    ctx.font = '800 40px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText((input.displayName.trim()[0] || 'T').toUpperCase(), 120, 1330)
+  }
+  ctx.restore()
+  ctx.beginPath()
+  ctx.arc(120, 1328, 52, 0, Math.PI * 2)
+  ctx.strokeStyle = RED
+  ctx.lineWidth = 6
+  ctx.stroke()
   ctx.textAlign = 'left'
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = WHITE
@@ -335,20 +399,64 @@ function shareNavigator(): Navigator & {
   return navigator
 }
 
-function hasShare(): boolean {
+function hasWebShare(): boolean {
   return typeof (navigator as Navigator & { share?: unknown }).share === 'function'
 }
 
-export function nativeShareAvailable(): boolean {
-  return hasShare()
-}
-
-export function canShareStoryFiles(file: File): boolean {
+function canShareStoryFiles(file: File): boolean {
   const nav = shareNavigator()
   try {
-    return Boolean(hasShare() && typeof nav.canShare === 'function' && nav.canShare({ files: [file] }))
+    return Boolean(hasWebShare() && typeof nav.canShare === 'function' && nav.canShare({ files: [file] }))
   } catch {
     return false
+  }
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer()
+  const bytes = new Uint8Array(buf)
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
+async function shareViaCapacitor(opts: {
+  blob: Blob
+  title: string
+  text: string
+  url: string
+  fileName: string
+}): Promise<'shared' | 'aborted' | 'unavailable'> {
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    if (!Capacitor.isNativePlatform()) return 'unavailable'
+    if (!Capacitor.isPluginAvailable('Share') || !Capacitor.isPluginAvailable('Filesystem')) {
+      return 'unavailable'
+    }
+    const { Share } = await import('@capacitor/share')
+    const { Directory, Filesystem } = await import('@capacitor/filesystem')
+    const path = opts.fileName.replace(/[^\w.-]+/g, '_')
+    await Filesystem.writeFile({
+      path,
+      data: await blobToBase64(opts.blob),
+      directory: Directory.Cache,
+    })
+    const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache })
+    await Share.share({
+      title: opts.title,
+      text: `${opts.text}\n${opts.url}`,
+      files: [uri],
+      dialogTitle: 'Partager mon prono',
+    })
+    return 'shared'
+  } catch (err) {
+    const name = err instanceof Error ? err.name : ''
+    const message = err instanceof Error ? err.message : ''
+    if (name === 'AbortError' || /cancel/i.test(message)) return 'aborted'
+    return 'unavailable'
   }
 }
 
@@ -359,12 +467,15 @@ export async function nativeShareStory(opts: {
   url: string
   fileName: string
 }): Promise<'shared' | 'aborted' | 'unavailable'> {
+  const cap = await shareViaCapacitor(opts)
+  if (cap !== 'unavailable') return cap
+
   const file = new File([opts.blob], opts.fileName, { type: 'image/png' })
   const nav = shareNavigator()
-  if (!hasShare() || !nav.share) return 'unavailable'
+  if (!hasWebShare() || !nav.share) return 'unavailable'
   try {
     if (canShareStoryFiles(file)) {
-      await nav.share({ files: [file], title: opts.title, text: opts.text, url: opts.url })
+      await nav.share({ files: [file], title: opts.title, text: `${opts.text}\n${opts.url}` })
       return 'shared'
     }
     await nav.share({ title: opts.title, text: `${opts.text}\n${opts.url}`, url: opts.url })
@@ -374,50 +485,4 @@ export async function nativeShareStory(opts: {
     if (name === 'AbortError') return 'aborted'
     return 'unavailable'
   }
-}
-
-type SavePickerWindow = Window & {
-  showSaveFilePicker?: (opts: {
-    suggestedName: string
-    types: Array<{ description: string; accept: Record<string, string[]> }>
-  }) => Promise<{ createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }> }>
-  navigator: Navigator & { msSaveOrOpenBlob?: (blob: Blob, name: string) => void }
-}
-
-export async function saveStoryImage(blob: Blob, fileName: string): Promise<'saved' | 'opened' | 'cancelled'> {
-  const w = window as SavePickerWindow
-  if (typeof w.showSaveFilePicker === 'function') {
-    try {
-      const handle = await w.showSaveFilePicker({
-        suggestedName: fileName,
-        types: [{ description: 'Image PNG', accept: { 'image/png': ['.png'] } }],
-      })
-      const writable = await handle.createWritable()
-      await writable.write(blob)
-      await writable.close()
-      return 'saved'
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return 'cancelled'
-    }
-  }
-  if (typeof w.navigator.msSaveOrOpenBlob === 'function') {
-    w.navigator.msSaveOrOpenBlob(blob, fileName)
-    return 'saved'
-  }
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  a.rel = 'noopener'
-  a.style.display = 'none'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  return 'saved'
-}
-
-export function openStoryImageTab(blobUrl: string): boolean {
-  const opened = window.open(blobUrl, '_blank', 'noopener')
-  return Boolean(opened)
 }
