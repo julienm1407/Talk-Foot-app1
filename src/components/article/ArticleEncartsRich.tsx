@@ -179,7 +179,7 @@ export function BetsRichBody({ slices }: { slices: BetVolumeSlice[] }) {
   return (
     <div className="mt-3 space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900/80">
-        Volume des paris · ce match
+        Volume des pronos · ce match
       </p>
       <div className="flex h-3 overflow-hidden rounded-full bg-amber-100 ring-1 ring-amber-200/80">
         {slices.map((s) => (

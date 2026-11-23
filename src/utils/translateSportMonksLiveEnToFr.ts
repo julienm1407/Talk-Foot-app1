@@ -21,8 +21,16 @@ export function stripSportMonksCommentPrefix(raw: string): string {
 
 const SENTENCE_RULES: Array<{ re: RegExp; fr: string }> = [
   {
-    re: /^(\d{1,3})['′’]?\s*begins\.?$/i,
-    fr: '$1′ : c’est parti.',
+    re: /^(\d{1,3})['′’`]?\s*(?:[·•:\-–]\s*)?begins\.?$/i,
+    fr: 'Coup d’envoi',
+  },
+  {
+    re: /^(?:kick-?off|match|period)\s*(?:[·•:\-–]\s*)?begins\.?$/i,
+    fr: 'Coup d’envoi',
+  },
+  {
+    re: /^begins\.?$/i,
+    fr: 'Coup d’envoi',
   },
   {
     re: /^First Half begins\.?$/i,
@@ -287,7 +295,8 @@ const INLINE_PHRASES: Array<[RegExp, string]> = [
   [/ wins a coup franc /gi, ' obtient un coup franc '],
   [/The referee/gi, "L'arbitre"],
   [/Kick-?off/gi, 'Coup d’envoi'],
-  [/\b(\d{1,3})['′’]?\s*begins\b/gi, '$1′ : c’est parti'],
+  [/\b(\d{1,3})['′’`]?\s*(?:[·•:\-–]\s*)?begins\b/gi, 'Coup d’envoi'],
+  [/\bbegins\b/gi, 'Coup d’envoi'],
   [/second half/gi, 'deuxième mi-temps'],
   [/first half/gi, 'première mi-temps'],
   [/half[\s-]?time/gi, 'mi-temps'],
@@ -331,6 +340,7 @@ const INLINE_PHRASES: Array<[RegExp, string]> = [
 
 /** Premiers jetons type « TYPE · joueur » (events SM). */
 const LEADING_EVENT_TOKEN: Array<[RegExp, string]> = [
+  [/^(KICKOFF|KICK_OFF|WHISTLE|BEGINS)\b/i, 'Coup d’envoi'],
   [/^(VAR[^·]*)/i, 'VAR'],
   [/^(CORNER)\b/i, 'Corner'],
   [/^(GOAL)\b/i, 'But'],
@@ -383,6 +393,7 @@ function finalizeLiveTextFr(s: string): string {
     .replace(/\ben defense\b/gi, 'en défense')
     .replace(/\ben attack\b/gi, 'en attaque')
     .replace(/\bdefense\b/gi, 'défense')
+    .replace(/\bbegins\b/gi, 'Coup d’envoi')
     .replace(/\.\.$/, '.')
     .trim()
 }

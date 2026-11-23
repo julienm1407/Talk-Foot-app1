@@ -195,7 +195,7 @@ export function CharacterLayerStudio() {
           return
         }
         if (result.code === 'insufficient_tokens') {
-          pushNotice('err', 'Pas assez de jetons — gagne des paris ou le bonus quotidien.')
+          pushNotice('err', 'Pas assez de jetons — gagne des pronos ou le bonus quotidien.')
           return
         }
         if (result.code === 'save_failed') {

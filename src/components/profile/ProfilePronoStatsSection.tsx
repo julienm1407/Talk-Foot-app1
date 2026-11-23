@@ -44,7 +44,7 @@ export function ProfilePronoStatsSection({
           <p className="mt-4 text-sm font-semibold text-tf-app-muted">Chargement des stats…</p>
         ) : badges.length === 0 ? (
           <p className="mt-4 rounded-2xl border border-dashed px-4 py-5 text-sm font-semibold text-tf-app-muted">
-            Aucun badge débloqué pour l'instant — les exploits apparaissent ici au fil de tes paris.
+            Aucun badge débloqué pour l'instant — les exploits apparaissent ici au fil de tes pronos.
           </p>
         ) : (
           <div className="mt-4 grid gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-3">

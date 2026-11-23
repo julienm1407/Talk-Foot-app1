@@ -386,7 +386,7 @@ export function UserProfilePage() {
                 className="font-black"
                 onClick={scrollToFriendPronostics}
               >
-                Voir ses paris
+                Voir ses pronos
               </Button>
             ) : null}
 

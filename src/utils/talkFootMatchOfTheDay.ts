@@ -122,3 +122,39 @@ export function pickTalkFootMatchOfTheDay(
 
   return ranked[0]?.m ?? null
 }
+
+const FEATURED_MATCH_STORAGE_KEY = 'talkfoot.featuredMatchId.v1'
+
+export function rememberFeaturedTalkFootMatchId(id: string | null): void {
+  try {
+    if (id) sessionStorage.setItem(FEATURED_MATCH_STORAGE_KEY, id)
+    else sessionStorage.removeItem(FEATURED_MATCH_STORAGE_KEY)
+  } catch {
+    /* private mode */
+  }
+}
+
+export function readRememberedFeaturedTalkFootMatchId(): string | null {
+  try {
+    return sessionStorage.getItem(FEATURED_MATCH_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+/** Live, ou coup d’envoi aujourd’hui (calendrier Paris). */
+export function isTalkFootMatchToday(match: Pick<Match, 'kickoffAt' | 'status'>, now: Date = new Date()): boolean {
+  if (match.status === 'live') return true
+  return matchCalendarDayKeyParis(match.kickoffAt) === matchCalendarDayKeyParis(now)
+}
+
+export function isTalkFootFeaturedMatch(
+  matchId: string,
+  matches: Match[],
+  favoriteClubIds: string[] = [],
+  now: Date = new Date(),
+): boolean {
+  const picked = pickTalkFootMatchOfTheDay(matches, favoriteClubIds, now)
+  if (picked?.id === matchId) return true
+  return readRememberedFeaturedTalkFootMatchId() === matchId
+}

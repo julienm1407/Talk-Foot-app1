@@ -24,7 +24,7 @@ function ProfilePrivacyActionsInner({ clerkSessionId }: { clerkSessionId: string
   const handleDelete = async () => {
     if (
       !window.confirm(
-        'Supprimer définitivement ton compte Talk Foot et toutes les données associées (profil, paris, préférences, tribunes liées, etc.) ? Action irréversible.',
+        'Supprimer définitivement ton compte Talk Foot et toutes les données associées (profil, pronos, préférences, tribunes liées, etc.) ? Action irréversible.',
       )
     ) {
       return

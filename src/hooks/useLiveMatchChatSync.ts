@@ -184,9 +184,9 @@ export function useLiveMatchChatSync(options: {
     const channelRef: { current: ReturnType<typeof sb.channel> | null } = { current: null }
 
     const fetchRecent = async () => {
-      const session = await resolveChatSession(sb)
-      if (!session || cancelled) return
-      await syncRealtimeAuth(sb)
+      const session = await resolveChatSession(sb).catch(() => null)
+      if (cancelled) return
+      if (session) await syncRealtimeAuth(sb)
       const { data: rows, error: fetchErr } = await sb
         .from('live_match_messages')
         .select('id, match_id, user_id, display_name, body, metadata, created_at')

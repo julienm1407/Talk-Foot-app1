@@ -52,7 +52,7 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     eyebrow: 'Boutique',
     title: 'Maillots, packs & perso',
     body: 'Équipe ton avatar avec des médailles (ou des jetons). Même catalogue pour toutes les formules.',
-    bullets: ['Médailles = achat réel', 'Jetons = jeu / paris', 'Le studio applique le look'],
+    bullets: ['Médailles = achat réel', 'Jetons = jeu / pronos', 'Le studio applique le look'],
   },
   medailles: {
     id: 'medailles',
@@ -71,9 +71,9 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
   pronostic: {
     id: 'pronostic',
     eyebrow: 'Pronostic',
-    title: 'Paris entre potes',
+    title: 'Pronos entre potes',
     body: 'Mise tes jetons sur les matchs. Les gains montent au classement — pas d’argent réel ici.',
-    bullets: ['Cotes et scores', 'Suivi de tes paris', 'Jetons offerts chaque jour'],
+    bullets: ['Cotes et scores', 'Suivi de tes pronos', 'Jetons offerts chaque jour'],
   },
   rankings: {
     id: 'rankings',
@@ -100,8 +100,8 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     id: 'channel',
     eyebrow: 'Tribune live',
     title: 'Le match en direct',
-    body: 'Chat, réactions, tifo et paris : tout se passe pendant le match, comme dans un stade.',
-    bullets: ['Onglets Match / Compo / Paris', 'Réactions en un tap', 'Le tifo se dessine à plusieurs'],
+    body: 'Chat, réactions, tifo et pronos : tout se passe pendant le match, comme dans un stade.',
+    bullets: ['Onglets Match / Compo / Pronos', 'Réactions en un tap', 'Le tifo se dessine à plusieurs'],
   },
   group: {
     id: 'group',

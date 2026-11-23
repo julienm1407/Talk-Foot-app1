@@ -165,7 +165,7 @@ export function PronosticHubPage() {
       <div
         className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
-        aria-label="Filtrer mes paris"
+        aria-label="Filtrer mes pronos"
       >
         {TABS.map(({ id, label }) => tabBtn(id, label))}
       </div>
@@ -235,12 +235,12 @@ function EmptyBets({
 }) {
   const msg =
     tab === 'open'
-      ? 'Aucun pari en cours pour le moment.'
+      ? 'Aucun prono en cours pour le moment.'
       : tab === 'won'
-        ? 'Pas encore de pari gagné — continue !'
+        ? 'Pas encore de prono gagné — continue !'
         : tab === 'lost'
-          ? 'Aucun pari perdu dans ce filtre.'
-          : 'Tu n’as pas encore de pari.'
+          ? 'Aucun prono perdu dans ce filtre.'
+          : 'Tu n’as pas encore de prono.'
 
   return (
     <div

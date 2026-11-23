@@ -149,6 +149,8 @@ import {
   postMatchDebriefMinutesLeft,
   resolveMatchFinishedAtMs,
 } from '../utils/matchDebriefWindow'
+import { isTalkFootFeaturedMatch } from '../utils/talkFootMatchOfTheDay'
+import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { MatchResultScore } from '../components/match/MatchResultScore'
 import { resolveDisplayedLineupKind } from '../utils/lineupStatus'
 
@@ -1120,6 +1122,7 @@ export function ChannelPage() {
   const chatPeerMenu = useChatPeerMenu()
   const chatSocialEnabled = isSupabaseConfigured() && Boolean(dm)
   const { matches } = useMatches()
+  const { favoriteClubIds } = useFanPreferences()
   const cdm = useOptionalCdm2026Data()
   const { routeMatch, hasRouteMatchId, waitingRouteResolution, routeNotFound } =
     useChannelRouteMatch(matchId)
@@ -1537,8 +1540,11 @@ export function ChannelPage() {
     () => (match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null),
     [match?.kickoffAt],
   )
-  const chatOpenAtMs = match?.kickoffAt ? matchChatOpensAtMs(match.kickoffAt) : null
-  const chatLocked = status === 'upcoming' && chatOpenAtMs != null && nowMs < chatOpenAtMs
+  const isFeaturedMatch = Boolean(
+    match?.id && isTalkFootFeaturedMatch(match.id, matches, favoriteClubIds),
+  )
+  const chatOpenAtMs = match?.kickoffAt ? matchChatOpensAtMs(match.kickoffAt, isFeaturedMatch) : null
+  const chatLocked = status === 'upcoming' && !isFeaturedMatch && chatOpenAtMs != null && nowMs < chatOpenAtMs
   const guestChatWriter = !authUser?.id || Boolean(authUser.isAnonymous)
   const chatComposerLocked = chatLocked || chatClosedAfterMatch || guestChatWriter
   const chatCountdownText = useMemo(() => {
@@ -1633,8 +1639,11 @@ export function ChannelPage() {
     matchLabel: match ? `${homeHeaderLabel} vs ${awayHeaderLabel}` : null,
   })
   const filteredChatMessages = useMemo(
-    () => chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),
-    [chatMessages, selectedTribune],
+    () =>
+      isFinished
+        ? chatMessages
+        : chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),
+    [chatMessages, selectedTribune, isFinished],
   )
   const bestReplayMessages = useMemo(() => {
     if (!isFinished) return []
@@ -1970,7 +1979,7 @@ export function ChannelPage() {
     [smTimelineHighlights, liveDisplayedMinute],
   )
   const latestHighlightText = useMemo(() => {
-    const raw = latestHighlight?.title || latestHighlight?.detail || ''
+    const raw = [latestHighlight?.detail, latestHighlight?.title].filter(Boolean).join(' — ')
     return translateSportMonksLiveTextToFr(raw)
   }, [latestHighlight])
   const [fullscreenEvent, setFullscreenEvent] = useState<{
@@ -3229,7 +3238,7 @@ export function ChannelPage() {
             ? 'Ce match est introuvable ou plus disponible dans le calendrier.'
             : 'Aucun match disponible pour le moment.'}
           <Link to="/pronostic" className="mt-2 block text-cyan-300 hover:underline">
-            Retour à mes paris
+            Retour à mes pronos
           </Link>
           <Link to="/" className="mt-2 block text-sky-300/80 hover:underline">
             Accueil
@@ -4060,6 +4069,40 @@ export function ChannelPage() {
                 </div>
               ) : (
                 <>
+                  {isFeaturedMatch && isUpcoming ? (
+                    <div className="mb-2 flex flex-wrap justify-center gap-1.5">
+                      {[
+                        'Ton score exact ?',
+                        'Ta compo rêvée ?',
+                        'Qui marque en premier ?',
+                      ].map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          onClick={() => {
+                            if (!match?.id) return
+                            if (!authUser?.id || authUser.isAnonymous) {
+                              navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
+                              return
+                            }
+                            chatDraftRef.current = prompt
+                            if (chatInputRef.current) {
+                              chatInputRef.current.value = prompt
+                              chatInputRef.current.focus()
+                            }
+                          }}
+                          className={cn(
+                            'rounded-full border px-2.5 py-1 text-[11px] font-bold',
+                            L
+                              ? 'border-sky-200 bg-sky-50 text-sky-800'
+                              : 'border-sky-400/35 bg-sky-500/15 text-sky-100',
+                          )}
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   {isFinished ? (
                     <div
                       className={cn(
@@ -4717,7 +4760,7 @@ export function ChannelPage() {
             <div className={isUpcoming ? '' : 'md:flex-1'}>
               {isFinished ? (
                 <div className="rounded-lg border border-[#3a6690]/55 bg-[#0a1f35]/85 px-3 py-3 text-sm font-semibold text-sky-100">
-                  Paris fermés: le match est terminé.
+                  Pronos fermés: le match est terminé.
                 </div>
               ) : match ? (
                 <BetWidget
@@ -4740,7 +4783,7 @@ export function ChannelPage() {
                 />
               ) : (
                 <div className="rounded-lg bg-[#0a1f35]/80 px-3 py-2 text-sm font-semibold text-sky-100">
-                  Match indisponible pour les paris.
+                  Match indisponible pour les pronos.
                 </div>
               )}
             </div>
@@ -4801,7 +4844,7 @@ export function ChannelPage() {
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => setMobilePanel('paris')}
                 >
-          Paris
+          Pronos
         </button>
                 <button
                   type="button"
@@ -4862,7 +4905,7 @@ export function ChannelPage() {
                         ? 'Composition'
                         : 'Match'
                       : mobilePanel === 'paris'
-                        ? 'Paris'
+                        ? 'Pronos'
                         : 'Tribune & tifo'}
                   </p>
                   {mobilePanel === 'tribune' ? (
@@ -5019,7 +5062,7 @@ export function ChannelPage() {
             {mobilePanel === 'paris' ? (
               <div className="tf-channel-mobile-paris flex min-h-0 flex-1 flex-col">
                 {isFinished ? (
-                  <div className={chAlertBox}>Paris fermés: le match est terminé.</div>
+                  <div className={chAlertBox}>Pronos fermés: le match est terminé.</div>
                 ) : match ? (
                   <BetWidget
                     match={match}
@@ -5041,7 +5084,7 @@ export function ChannelPage() {
                     scoredButeurs={scoredButeurSlugs}
                   />
                 ) : (
-                  <div className={chAlertBoxPlain}>Match indisponible pour les paris.</div>
+                  <div className={chAlertBoxPlain}>Match indisponible pour les pronos.</div>
                 )}
               </div>
             ) : null}

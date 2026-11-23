@@ -621,7 +621,7 @@ export function BetWidget({
           (s) => s.side === side && scorerLineupMatchesScoredGoal(pickSlug, s),
         )
         if (blocked) {
-          setNotice({ tone: 'err', text: 'Ce joueur a déjà marqué : pari buteur fermé.' })
+          setNotice({ tone: 'err', text: 'Ce joueur a déjà marqué : prono buteur fermé.' })
           setPending(null)
           return
         }
@@ -1165,7 +1165,7 @@ export function BetWidget({
                       disabled={!canStake}
                       onClick={placePending}
                     >
-                      Valider le pari
+                      Pronostiquer
                     </Button>
                   </div>
                 </div>
@@ -1186,7 +1186,7 @@ export function BetWidget({
                       to={notice.href}
                       className="mt-2 inline-block text-xs font-black text-emerald-700 underline-offset-2 hover:underline"
                     >
-                      Voir mes paris →
+                      Voir mes pronos →
                     </Link>
                   ) : null}
                 </div>

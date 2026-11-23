@@ -222,10 +222,10 @@ export function useLiveMatchMessageLikesSync(options: {
     }
 
     const run = async () => {
-      const session = await ensureSupabaseChatSession(sb)
-      if (!session || cancelled) return
-      userIdRef.current = userIdRef.current ?? session.user.id
-      await syncRealtimeAuth(sb)
+      const session = await ensureSupabaseChatSession(sb).catch(() => null)
+      if (cancelled) return
+      if (session?.user.id) userIdRef.current = userIdRef.current ?? session.user.id
+      if (session) await syncRealtimeAuth(sb)
 
       const { data: rows, error: fetchErr } = await sb
         .from('live_match_message_likes')

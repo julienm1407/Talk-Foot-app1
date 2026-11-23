@@ -5,8 +5,9 @@ import { matchCalendarDayKeyParis, startOfParisCalendarDayMs } from './time'
 /** Fenêtre tchat débrief après le coup de sifflet final (écriture). */
 export const POST_MATCH_DEBRIEF_MS = 3 * 60 * 60 * 1000
 
-/** Ouverture lecture + écriture : minuit Paris du jour de match. */
-export function matchChatOpensAtMs(kickoffIso: string): number {
+/** Ouverture lecture + écriture : minuit Paris du jour de match (sauf match mis en avant). */
+export function matchChatOpensAtMs(kickoffIso: string, featured = false): number {
+  if (featured) return 0
   return startOfParisCalendarDayMs(matchCalendarDayKeyParis(kickoffIso))
 }
 

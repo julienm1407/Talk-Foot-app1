@@ -30,9 +30,9 @@ export function TermsPage() {
       </section>
 
       <section className={section}>
-        <h2 className={h2}>3. Paris & jetons</h2>
+        <h2 className={h2}>3. Pronos & jetons</h2>
         <p className={p}>
-          Les paris, jetons, médailles et récompenses sont une <strong>simulation de jeu</strong> sans valeur
+          Les pronos, jetons, médailles et récompenses sont une <strong>simulation de jeu</strong> sans valeur
           monétaire réelle. Aucun dépôt, retrait ou gain financier n&apos;est possible. Talk Foot n&apos;est pas un
           site de paris sportifs agréé.
         </p>

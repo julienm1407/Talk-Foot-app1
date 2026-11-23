@@ -66,7 +66,7 @@ export function SiteLegalFooter({
           {!compact ? (
             <>
               {' '}
-              · Paris entre supporters (jetons fictifs, sans argent réel). Les tribunes de discussion n&apos;affichent
+              · Pronos entre supporters (jetons fictifs, sans argent réel). Les tribunes de discussion n&apos;affichent
               pas de publicité.
             </>
           ) : null}

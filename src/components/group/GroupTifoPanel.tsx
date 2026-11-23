@@ -212,7 +212,7 @@ export function GroupTifoPanel({
       {isShared && bonusAllowance === 0 ? (
         <p className={cn('mt-2 text-[10px] leading-snug', L ? 'text-tf-grey/75' : 'text-sky-200/65')}>
           Gagne des pixels : message (+{TIFO_ENGAGEMENT_BONUSES.chat_sent}), like (+{TIFO_ENGAGEMENT_BONUSES.message_liked}),
-          débat (+{TIFO_ENGAGEMENT_BONUSES.debate_reply}), pari (+{TIFO_ENGAGEMENT_BONUSES.match_bet}),
+          débat (+{TIFO_ENGAGEMENT_BONUSES.debate_reply}), prono (+{TIFO_ENGAGEMENT_BONUSES.match_bet}),
           10 messages live (+{TIFO_ENGAGEMENT_BONUSES.chat_active_10}) — chaque bonus une fois par jour.
         </p>
       ) : null}

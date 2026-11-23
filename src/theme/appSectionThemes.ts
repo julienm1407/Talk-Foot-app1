@@ -231,7 +231,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   profile: {
     id: 'profile',
     label: 'Profil',
-    hint: 'Compte & paris',
+    hint: 'Compte & pronos',
     shellStripe: stripeRankings,
     encart: ENCART_RANKINGS,
     page: {

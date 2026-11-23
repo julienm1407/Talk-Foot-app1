@@ -57,7 +57,7 @@ export function UserRankCard() {
               {myEntry.score} pts
             </div>
             <div className="text-xs font-medium text-tf-app-muted">
-              {myEntry.wins} victoires / {myEntry.totalBets} paris
+              {myEntry.wins} victoires / {myEntry.totalBets} pronos
             </div>
           </div>
         </div>

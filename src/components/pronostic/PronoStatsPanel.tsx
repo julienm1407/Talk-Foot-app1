@@ -47,11 +47,11 @@ export function PronoStatsPanel({ className }: { className?: string }) {
       </h2>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <Stat label="Paris" value={`${stats.total}`} hint="Au total" />
+        <Stat label="Pronos" value={`${stats.total}`} hint="Au total" />
         <Stat
           label="Précision"
           value={`${stats.accuracy}%`}
-          hint={stats.decided > 0 ? `${stats.won}/${stats.decided} gagnés` : 'Aucun pari validé'}
+          hint={stats.decided > 0 ? `${stats.won}/${stats.decided} gagnés` : 'Aucun prono validé'}
         />
         <Stat label="Série" value={`x${stats.streak}`} hint="Gains d’affilée" />
         <Stat label="Gains nets" value={`${stats.points}`} hint="Jetons gagnés (validés)" />

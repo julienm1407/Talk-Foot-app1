@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Match } from '../types/match'
-import { pickTalkFootMatchOfTheDay } from './talkFootMatchOfTheDay'
+import { isTalkFootMatchToday, pickTalkFootMatchOfTheDay } from './talkFootMatchOfTheDay'
 
 function match(partial: {
   id: string
@@ -121,5 +121,29 @@ describe('pickTalkFootMatchOfTheDay', () => {
       now,
     )
     expect(picked?.id).toBe('ucl')
+  })
+
+  it('distingue le match du jour d’un match plus tard dans la semaine', () => {
+    const now = new Date('2026-11-23T12:00:00+01:00')
+    const wednesday = match({
+      id: 'psg-roma',
+      competitionId: 'ucl',
+      kickoffAt: '2026-11-25T20:00:00.000Z',
+      status: 'upcoming',
+      home: 'psg',
+      away: 'roma',
+    })
+    expect(isTalkFootMatchToday(wednesday, now)).toBe(false)
+    expect(
+      isTalkFootMatchToday(
+        match({
+          id: 'today',
+          competitionId: 'ligue-1',
+          kickoffAt: '2026-11-23T20:00:00.000Z',
+          status: 'upcoming',
+        }),
+        now,
+      ),
+    ).toBe(true)
   })
 })

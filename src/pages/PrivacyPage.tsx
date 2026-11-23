@@ -30,7 +30,7 @@ export function PrivacyPage() {
           </li>
           <li>
             <strong>Activité</strong> : préférences supporter, messages dans les tribunes (lorsque synchronisés),
-            participation aux groupes et débats, paris simulés à jetons, paramètres d&apos;affichage.
+            participation aux groupes et débats, pronos simulés à jetons, paramètres d&apos;affichage.
           </li>
           <li>
             <strong>Technique</strong> : journaux serveur habituels (adresse IP, type de navigateur) pour la sécurité

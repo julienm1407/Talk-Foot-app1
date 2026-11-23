@@ -87,7 +87,7 @@ export function FriendPronosticsPanel({
           Pronostics ami
         </p>
         <h2 className="mt-0.5 font-display text-lg font-black tracking-tight text-tf-app-fg">
-          Paris de {displayName}
+          Pronos de {displayName}
         </h2>
         <p className="mt-1 text-xs font-medium text-tf-app-muted">
           Visible car vous êtes amis — pronos et résultats en lecture seule.
@@ -96,22 +96,22 @@ export function FriendPronosticsPanel({
 
       {loading ? (
         <p className={cn('px-4 py-5 text-sm font-semibold', L ? 'text-tf-grey' : 'text-sky-200/80')}>
-          Chargement des paris…
+          Chargement des pronos…
         </p>
       ) : error === 'not_friends' ? (
         <p className={cn('px-4 py-5 text-sm font-semibold', L ? 'text-tf-grey' : 'text-sky-200/80')}>
-          Les paris de ce joueur sont réservés à ses amis.
+          Les pronos de ce joueur sont réservés à ses amis.
         </p>
       ) : error ? (
         <p className={cn('px-4 py-5 text-sm font-semibold', L ? 'text-amber-800' : 'text-amber-200')}>
-          Impossible de charger les paris pour le moment.
+          Impossible de charger les pronos pour le moment.
         </p>
       ) : (
         <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
           <div
             className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="tablist"
-            aria-label={`Filtrer les paris de ${displayName}`}
+            aria-label={`Filtrer les pronos de ${displayName}`}
           >
             {TABS.map(({ id, label }) => tabBtn(id, label))}
           </div>
@@ -137,12 +137,12 @@ export function FriendPronosticsPanel({
             >
               <p className="text-base font-black text-tf-app-fg">
                 {tab === 'open'
-                  ? `${displayName} n’a aucun pari en cours.`
+                  ? `${displayName} n’a aucun prono en cours.`
                   : tab === 'won'
-                    ? `Pas encore de pari gagné pour ${displayName}.`
+                    ? `Pas encore de prono gagné pour ${displayName}.`
                     : tab === 'lost'
-                      ? `Aucun pari perdu dans ce filtre.`
-                      : `${displayName} n’a pas encore placé de pari.`}
+                      ? `Aucun prono perdu dans ce filtre.`
+                      : `${displayName} n’a pas encore placé de prono.`}
               </p>
             </div>
           )}

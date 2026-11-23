@@ -18,7 +18,7 @@ export function FictionalBettingNotice({ className }: { className?: string }) {
       )}
       role="note"
     >
-      <strong className="font-black">Jeu social sans argent réel.</strong> Les paris sur Talk Foot utilisent des
+      <strong className="font-black">Jeu social sans argent réel.</strong> Les pronos sur Talk Foot utilisent des
       jetons virtuels sans valeur monétaire : aucun dépôt, gain ou retrait en euros. Ce n&apos;est pas un site de
       paris sportifs réglementé.{' '}
       <Link to="/terms" className="font-bold text-tf-cta underline-offset-2 hover:underline">

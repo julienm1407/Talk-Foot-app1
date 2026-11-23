@@ -15,7 +15,7 @@ import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 const DEFAULT_CHANNELS = [
   { id: 'general', name: 'Général', description: 'Débats, ambiance.', emoji: '💬' },
   { id: 'transferts', name: 'Transferts', description: 'Rumeurs, mercato.', emoji: '🧾' },
-  { id: 'pronos', name: 'Pronos', description: 'Paris entre supporters.', emoji: '🎯' },
+  { id: 'pronos', name: 'Pronos', description: 'Pronos entre supporters.', emoji: '🎯' },
 ]
 
 const EMOJI_SUGGESTIONS = [

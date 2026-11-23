@@ -80,7 +80,7 @@ export function buildProfileIdentityLines(input: ProfileIdentityInput): ProfileI
     lines.push({
       id: 'bets-won',
       emoji: '🎯',
-      label: `${input.betsWon.toLocaleString('fr-FR')} pari${input.betsWon > 1 ? 's' : ''} gagné${input.betsWon > 1 ? 's' : ''}${acc}`,
+      label: `${input.betsWon.toLocaleString('fr-FR')} prono${input.betsWon > 1 ? 's' : ''} gagné${input.betsWon > 1 ? 's' : ''}${acc}`,
     })
   }
 

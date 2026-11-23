@@ -49,7 +49,7 @@ export const mockDirectMessagesByThread: Record<string, DirectMessageLine[]> = {
       id: 'bot-welcome',
       fromMe: false,
       body:
-        'Salut ! Je suis ton Coach Talk Foot (assistant intégré). Tu peux m’écrire comme à un ami : paris, live, groupes, profil… Je réponds avec des repères pour explorer l’app. Quand de vrais amis rejoindront Talk Foot, ils apparaîtront ici.',
+        'Salut ! Je suis ton Coach Talk Foot (assistant intégré). Tu peux m’écrire comme à un ami : pronos, live, groupes, profil… Je réponds avec des repères pour explorer l’app. Quand de vrais amis rejoindront Talk Foot, ils apparaîtront ici.',
       atLabel: 'À l’instant',
     },
   ],

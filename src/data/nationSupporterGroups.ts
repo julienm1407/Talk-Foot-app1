@@ -11,7 +11,7 @@ const nationChannels: SupporterChannel[] = [
   {
     id: 'pronos',
     name: 'Pronos',
-    description: 'Paris entre supporters, scores et parcours en poule.',
+    description: 'Pronos entre supporters, scores et parcours en poule.',
     emoji: '🎯',
   },
   {

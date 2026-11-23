@@ -96,7 +96,7 @@ export function JerseyPurchaseModal({
 
   const handlePayTokens = () => {
     if (priceTokens > walletTokens) {
-      onError('Pas assez de jetons — paris gagnés ou bonus quotidien. Les jetons ne s’achètent pas en €.')
+      onError('Pas assez de jetons — pronos gagnés ou bonus quotidien. Les jetons ne s’achètent pas en €.')
       return
     }
     const paid = commitCosmeticPurchase({

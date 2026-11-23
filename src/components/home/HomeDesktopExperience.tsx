@@ -373,19 +373,19 @@ export function HomeDesktopExperience({
           </div>
         </section>
 
-        <HomeLandingHub
-          appearance={appearance}
-          variant="contextRail"
-          className={cn(card)}
-          onCreateGroup={onCreateTribune}
-        />
-
         <section aria-labelledby="desk-debate-day-heading" className="min-w-0">
           <h2 id="desk-debate-day-heading" className="sr-only">
             Débat du jour
           </h2>
           <DebateOfTheDayCard debate={debateOfTheDay} loading={debatesLoading} />
         </section>
+
+        <HomeLandingHub
+          appearance={appearance}
+          variant="contextRail"
+          className={cn(card)}
+          onCreateGroup={onCreateTribune}
+        />
 
         <section aria-labelledby="desk-tribunes-heading" className="min-w-0">
           <h2

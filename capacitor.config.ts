@@ -61,6 +61,7 @@ const config: CapacitorConfig = {
     contentInset: 'automatic',
     scrollEnabled: true,
     allowsLinkPreview: false,
+    // Langue App Store : CFBundleDevelopmentRegion / CFBundleLocalizations dans ios/App/App/Info.plist (fr).
   },
 }
 

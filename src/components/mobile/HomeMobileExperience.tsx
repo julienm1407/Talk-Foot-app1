@@ -224,9 +224,9 @@ export function HomeMobileExperience({
         {heroBlock}
       </section>
 
-      <MobileQuickActionsBar onCreateGroup={onCreateGroup} />
-
       <DebateOfTheDayCard debate={debateOfTheDay} loading={debatesLoading} />
+
+      <MobileQuickActionsBar onCreateGroup={onCreateGroup} />
 
       {isCdm ? (
         <MobileCollapsibleSection

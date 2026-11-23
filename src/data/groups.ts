@@ -27,7 +27,7 @@ const baseChannels = [
   {
     id: 'pronos',
     name: 'Pronos',
-    description: 'Paris entre supporters, scores.',
+    description: 'Pronos entre supporters, scores.',
     emoji: '🎯',
   },
   {

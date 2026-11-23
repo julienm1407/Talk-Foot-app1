@@ -686,7 +686,7 @@ export function ArticlePage() {
                   isLight ? 'text-slate-600' : 'text-sky-100/88',
                 )}
               >
-                Stade, paris et calendrier — accès rapide avant de quitter la page.
+                Stade, pronos et calendrier — accès rapide avant de quitter la page.
               </p>
 
               <ul className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
@@ -739,7 +739,7 @@ export function ArticlePage() {
                           isLight ? 'text-amber-950' : 'text-amber-100',
                         )}
                       >
-                        Classements & paris
+                        Classements & pronos
                       </p>
                       <p className="truncate text-[9px] font-semibold text-tf-app-muted">Volume 1-N-2</p>
                     </div>

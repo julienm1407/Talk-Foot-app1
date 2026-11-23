@@ -21,7 +21,7 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
       `• Tribunes → ${link('Groupes', '/groups')}`,
       `• Ton espace → ${link('Profil', '/profile')}`,
       '',
-      'Dis-moi ce que tu cherches (ex. « ouvrir les paris », « page PSG », « offre du jour »).',
+      'Dis-moi ce que tu cherches (ex. « ouvrir les pronos », « page PSG », « offre du jour »).',
     ].join('\n')
   }
 
@@ -38,7 +38,7 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
 
   if (/pari|mise|jeton|cote|odds|pronostic|1n2|bet/.test(t)) {
     return [
-      'Pour parier :',
+      'Pour pronostiquer :',
       `1. Va dans ${link('Matchs', '/match')} et ouvre un match (idéalement en direct).`,
       '2. Choisis un marché (1N2, buts, buteur…).',
       '3. Règle ta mise en **jetons**.',
@@ -70,7 +70,7 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
   if (/profil|avatar|personnage|pseudo|compte|favori/.test(t)) {
     return [
       `Ton espace perso → ${link('Profil', '/profile')}`,
-      'Tu y gères avatar, favoris, paris et réglages.',
+      'Tu y gères avatar, favoris, pronos et réglages.',
       `Messages privés (dont moi) → icône Messages en haut de l’app.`,
     ].join('\n')
   }
@@ -113,7 +113,7 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
   if (/\?|comment|pourquoi|ou |où |ouvrir|trouver|explique|c est quoi|c'est quoi/.test(t)) {
     return [
       'Je peux t’envoyer au bon endroit. Exemples de questions :',
-      '• « où parier »',
+      '• « où pronostiquer »',
       '• « ouvrir la boutique »',
       '• « page PSG »',
       '• « groupes »',
@@ -129,6 +129,6 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
     `• ${link('Groupes', '/groups')}`,
     `• ${link('Profil', '/profile')}`,
     '',
-    'Reformande par exemple : « ouvrir les paris » ou « offre du jour ».',
+    'Reformande par exemple : « ouvrir les pronos » ou « offre du jour ».',
   ].join('\n')
 }

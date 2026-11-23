@@ -259,7 +259,7 @@ export function BoutiquePage() {
               {monthlyTokens > 0
                 ? ` : +${monthlyTokens.toLocaleString('fr-FR')} jetons / mois`
                 : ''}
-              {betTokenMultiplier > 1 ? ` · jetons paris ×${betTokenMultiplier}` : ''}.
+              {betTokenMultiplier > 1 ? ` · jetons pronos ×${betTokenMultiplier}` : ''}.
             </p>
           </header>
 

@@ -119,7 +119,7 @@ export function resolveProfilePeer(userId: string): User | undefined {
 
 export const currentUser: User = {
   id: 'me',
-  username: 'You',
+  username: 'Invité',
   avatarSeed: 'you',
   accent: 'emerald',
   isAdmin: true,
