@@ -1,18 +1,18 @@
-const STORAGE_KEY = 'tf.whatsNew.seenId'
+const SNOOZE_KEY = 'tf.whatsNew.snoozeId'
 
-export function hasSeenWhatsNew(id: string): boolean {
+export function hasSnoozedWhatsNew(id: string): boolean {
   if (typeof window === 'undefined') return true
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === id
+    return window.sessionStorage.getItem(SNOOZE_KEY) === id
   } catch {
     return true
   }
 }
 
-export function markWhatsNewSeen(id: string): void {
+export function markWhatsNewSnoozed(id: string): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(STORAGE_KEY, id)
+    window.sessionStorage.setItem(SNOOZE_KEY, id)
   } catch {
     /* quota / private mode */
   }

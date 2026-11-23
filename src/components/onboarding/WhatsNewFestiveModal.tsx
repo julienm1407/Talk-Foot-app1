@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
-import { WHATS_NEW_RELEASE, shouldShowWhatsNew } from '../../data/whatsNewRelease'
+import { App } from '@capacitor/app'
+import {
+  WHATS_NEW_RELEASE,
+  nativeBuildIsBehind,
+  shouldShowWhatsNew,
+} from '../../data/whatsNewRelease'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { hasSeenFirstVisitGuide } from '../../utils/firstVisitGuidesStorage'
-import { hasSeenWhatsNew, markWhatsNewSeen } from '../../utils/whatsNewStorage'
+import { hasSnoozedWhatsNew, markWhatsNewSnoozed } from '../../utils/whatsNewStorage'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 import { LogoEncart } from '../../layout/LogoMark'
 import { cn } from '../../utils/cn'
@@ -20,41 +25,70 @@ export function WhatsNewFestiveModal() {
   const { onboardingOpen } = useFanPreferences()
   const { user, isReady } = useAuth()
   const [open, setOpen] = useState(false)
-  const force = params.get('maj') === '1' || params.get('fete') === '1'
+  const force = params.get('maj') === '1'
   const isHome = location.pathname === '/' || location.pathname === ''
   const release = WHATS_NEW_RELEASE
   const native = Capacitor.isNativePlatform()
   const store = preferredStoreUrl()
 
   useEffect(() => {
+    let cancelled = false
     if (!isReady) {
       setOpen(false)
       return
     }
-    const firstVisitHomePending = !user || user.isAnonymous ? !hasSeenFirstVisitGuide('home') : false
-    const should = shouldShowWhatsNew({
-      festive: release.festive,
-      alreadySeen: hasSeenWhatsNew(release.id),
-      onboardingOpen,
-      isHome,
-      force,
-      firstVisitHomePending,
-    })
-    if (!should) {
-      setOpen(false)
-      return
+
+    const run = async () => {
+      let updateNeeded = false
+      if (native) {
+        try {
+          const info = await App.getInfo()
+          const build = Number.parseInt(String(info.build), 10)
+          updateNeeded = Number.isFinite(build)
+            ? nativeBuildIsBehind({
+                platform: Capacitor.getPlatform(),
+                build,
+                requiredAndroidVersionCode: release.requiredAndroidVersionCode,
+                requiredIosBuild: release.requiredIosBuild,
+              })
+            : false
+        } catch {
+          updateNeeded = false
+        }
+      }
+
+      const firstVisitHomePending = !user || user.isAnonymous ? !hasSeenFirstVisitGuide('home') : false
+      const should = shouldShowWhatsNew({
+        force,
+        native,
+        updateNeeded,
+        snoozed: hasSnoozedWhatsNew(release.id),
+        onboardingOpen,
+        isHome,
+        firstVisitHomePending,
+      })
+      if (cancelled) return
+      if (!should) {
+        setOpen(false)
+        return
+      }
+      window.setTimeout(() => {
+        if (!cancelled) setOpen(true)
+      }, force ? 120 : 700)
     }
-    const t = window.setTimeout(() => setOpen(true), force ? 120 : 700)
-    return () => window.clearTimeout(t)
-  }, [isReady, user, onboardingOpen, isHome, force, release.festive, release.id, location.pathname])
+
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [isReady, user, onboardingOpen, isHome, force, native, release.id, location.pathname])
 
   const dismiss = () => {
-    markWhatsNewSeen(release.id)
+    markWhatsNewSnoozed(release.id)
     setOpen(false)
     if (force) {
       const next = new URLSearchParams(params)
       next.delete('maj')
-      next.delete('fete')
       const q = next.toString()
       navigate({ pathname: location.pathname, search: q ? `?${q}` : '', hash: location.hash }, { replace: true })
     }
@@ -112,18 +146,16 @@ export function WhatsNewFestiveModal() {
               </li>
             ))}
           </ul>
-          {native ? (
-            <a
-              href={store.primary.href}
-              className={cn(
-                TF_FOCUS_VISIBLE,
-                'mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-tf-cta px-4 text-sm font-black text-white shadow-md',
-              )}
-              onClick={dismiss}
-            >
-              Mettre à jour l’appli
-            </a>
-          ) : null}
+          <a
+            href={store.primary.href}
+            className={cn(
+              TF_FOCUS_VISIBLE,
+              'mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-tf-cta px-4 text-sm font-black text-white shadow-md',
+            )}
+            onClick={dismiss}
+          >
+            Mettre à jour l’appli
+          </a>
           <button
             type="button"
             className={cn(

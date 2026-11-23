@@ -1,12 +1,14 @@
 /**
- * Pop-up « fais la mise à jour » — une fois par `id`, accueil seulement.
- * Prochaine version notable : bump `id`, `festive: true`, nouveaux highlights.
- * Correctif discret : `festive: false` (aucun pop-up).
+ * Pop-up « fais la mise à jour » — uniquement l’app native, et seulement
+ * si le build installé est plus vieux que le store.
+ * Web / WebView à jour : jamais de pop-up.
+ * Après un nouvel AAB/IPA : augmenter requiredAndroidVersionCode / requiredIosBuild.
  */
 export type WhatsNewRelease = {
   id: string
   versionLabel: string
-  festive: boolean
+  requiredAndroidVersionCode: number
+  requiredIosBuild: number
   eyebrow: string
   title: string
   subtitle: string
@@ -17,29 +19,43 @@ export type WhatsNewRelease = {
 export const WHATS_NEW_RELEASE: WhatsNewRelease = {
   id: '1.0.19-share-tifo-chat',
   versionLabel: '1.0.19',
-  festive: true,
-  eyebrow: 'Nouvelle version',
+  requiredAndroidVersionCode: 20,
+  requiredIosBuild: 20,
+  eyebrow: 'Mise à jour dispo',
   title: 'Fais la mise à jour',
-  subtitle: 'Une nouvelle version Talk Foot est en ligne. Voici ce qui change.',
+  subtitle: 'Une nouvelle version de l’appli t’attend sur le store. Sans ça, tu rates le partage et le reste.',
   highlights: [
     'Partage de prono façon story, avec QR pour installer l’app',
     'Tchat avant-match en plein écran',
     'Tifos aux couleurs du match',
   ],
-  cta: 'C’est noté',
+  cta: 'Plus tard',
+}
+
+export function nativeBuildIsBehind(opts: {
+  platform: string
+  build: number
+  requiredAndroidVersionCode: number
+  requiredIosBuild: number
+}): boolean {
+  if (opts.platform === 'android') return opts.build < opts.requiredAndroidVersionCode
+  if (opts.platform === 'ios') return opts.build < opts.requiredIosBuild
+  return false
 }
 
 export function shouldShowWhatsNew(opts: {
-  festive: boolean
+  force: boolean
+  native: boolean
+  updateNeeded: boolean
+  snoozed: boolean
   onboardingOpen: boolean
   isHome: boolean
-  force: boolean
   firstVisitHomePending: boolean
-  alreadySeen: boolean
 }): boolean {
   if (opts.force) return true
-  if (!opts.festive) return false
-  if (opts.alreadySeen) return false
+  if (!opts.native) return false
+  if (!opts.updateNeeded) return false
+  if (opts.snoozed) return false
   if (!opts.isHome) return false
   if (opts.onboardingOpen) return false
   if (opts.firstVisitHomePending) return false
