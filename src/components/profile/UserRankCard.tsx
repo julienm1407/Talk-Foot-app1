@@ -19,7 +19,7 @@ export function UserRankCard() {
             CLASSEMENT
           </div>
           <h3 className="mt-1 font-display text-lg font-black tracking-tight text-tf-app-fg">
-            Meilleurs parieurs
+            Meilleurs pronostiqueurs
           </h3>
         </div>
       </div>
@@ -64,7 +64,7 @@ export function UserRankCard() {
 
         <div className="flex-1 min-w-[160px]">
           <div className="flex items-center justify-between text-[10px] font-bold text-tf-app-muted">
-            <span>{totalActive > 0 ? `${totalActive} parieur${totalActive > 1 ? 's' : ''} actifs` : 'Classement'}</span>
+            <span>{totalActive > 0 ? `${totalActive} pronostiqueur${totalActive > 1 ? 's' : ''} actifs` : 'Classement'}</span>
             <span>Tu es dans le top {rankPercent}%</span>
           </div>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-tf-grey-pastel/40">

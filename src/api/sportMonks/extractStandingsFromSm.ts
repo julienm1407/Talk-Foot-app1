@@ -576,8 +576,7 @@ function sanitizeStandingMatchStats(stats: {
     return { played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0, form: [] }
   }
 
-  if (played > 0 && sumWdl > played) played = sumWdl
-  else if (!played && sumWdl > 0) played = sumWdl
+  if (sumWdl > 0) played = Math.max(played, sumWdl)
 
   if (played <= 0) {
     return { played: 0, won: 0, drawn: 0, lost: 0, gf, ga, points, form: [] }

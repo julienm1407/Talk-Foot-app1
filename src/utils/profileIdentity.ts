@@ -98,7 +98,7 @@ export function buildProfileIdentityLines(input: ProfileIdentityInput): ProfileI
       lines.push({
         id: 'rank-top50',
         emoji: '🇫🇷',
-        label: `Top ${input.leaderboardRank} des parieurs Talk Foot`,
+        label: `Top ${input.leaderboardRank} des pronostiqueurs Talk Foot`,
         featured: input.leaderboardRank <= 10,
       })
     } else if (input.totalBettors > 1) {

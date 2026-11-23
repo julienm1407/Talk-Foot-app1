@@ -457,7 +457,7 @@ export function HomeFeedContinuation({
             )}
           >
             <span aria-hidden>🎯</span>
-            Classement parieurs
+            Classement pronostiqueurs
           </Link>
         </div>
       </nav>

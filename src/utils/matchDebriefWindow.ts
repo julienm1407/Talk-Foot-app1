@@ -1,8 +1,14 @@
 import type { SmFixture } from '../api/sportMonks/types'
 import type { Match } from '../types/match'
+import { matchCalendarDayKeyParis, startOfParisCalendarDayMs } from './time'
 
-/** Fenêtre tchat débrief après le coup de sifflet final. */
-export const POST_MATCH_DEBRIEF_MS = 30 * 60 * 1000
+/** Fenêtre tchat débrief après le coup de sifflet final (écriture). */
+export const POST_MATCH_DEBRIEF_MS = 3 * 60 * 60 * 1000
+
+/** Ouverture lecture + écriture : minuit Paris du jour de match. */
+export function matchChatOpensAtMs(kickoffIso: string): number {
+  return startOfParisCalendarDayMs(matchCalendarDayKeyParis(kickoffIso))
+}
 
 /** Durée typique coup d'envoi → sifflet (90 + MT + arrêts). */
 const ESTIMATED_MATCH_DURATION_MS = 105 * 60 * 1000

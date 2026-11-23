@@ -4,6 +4,7 @@
 
 import type { AvatarItem } from '../types/profile'
 import { ALL_CLUBS_BY_ID } from './allClubsCatalog'
+import { boutiqueClubPlaceName } from './clubPublicLabels'
 import { CDM_SHORT_MEDALS } from './boutiqueMedalCosts'
 import {
   boutiqueClubShortsUrl,
@@ -15,15 +16,16 @@ import {
 function buildClubShort(clubId: ClubShortAssetId): AvatarItem | null {
   const meta = ALL_CLUBS_BY_ID[clubId]
   if (!meta) return null
+  const place = boutiqueClubPlaceName(clubId, meta.shortName)
   return {
     id: `club-short-${clubId}`,
-    name: `Short ${meta.shortName}`,
+    name: `Short ${place}`,
     slot: 'pants',
     emoji: '🩳',
     cost: CDM_SHORT_MEDALS,
     rarity: 'rare',
-    description: `Short ${meta.name} — ${meta.leagueName}.`,
-    inspirationNote: `Inspiré ${meta.name}`,
+    description: `Short inspiré · ${place} — ${meta.leagueName}.`,
+    inspirationNote: `Tenue ${place}`,
     collection: 'clubs',
     clubId,
     pantsVisual: {

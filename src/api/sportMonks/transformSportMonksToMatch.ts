@@ -3,6 +3,7 @@ import { COMP_NAMES, inferTalkFootCompIdFromSmLeague, resolveTalkFootClubId } fr
 import { resolveTeamLogoUrl } from '../../utils/catalogLogos'
 import { findNationByName } from '../../data/nations'
 import { teams, teamColors } from '../../data/teams'
+import { findTeamById } from '../../data/teamLookup'
 import { isNationalSideCompetitionId } from '../../utils/seasonMode'
 import { localizeMatchTeams, resolveSpotlightTeamColors } from '../../utils/matchSideColors'
 import { eventMinuteTotal, type SmEventMinuteRow } from '../../utils/matchEventMinute'
@@ -481,6 +482,7 @@ function getTeam(
 ): Team {
   const ourId = resolveTalkFootClubId({ apiName, sportMonksTeamId })
   const resolvedLogo = resolveTeamLogoUrl(ourId, { apiLogoUrl: logoUrl, sportMonksTeamId })
+  const catalogTeam = findTeamById(ourId)
   const compTeams = teams[compId as keyof typeof teams]
   const sm = {
     ...(sportMonksTeamId != null ? { sportMonksTeamId } : {}),
@@ -495,6 +497,9 @@ function getTeam(
       colors: { primary: nation.primary, secondary: nation.secondary },
       ...sm,
     }
+  }
+  if (catalogTeam) {
+    return { ...catalogTeam, ...sm }
   }
   if (!compTeams) {
     const shortName = apiName.slice(0, 3).toUpperCase()

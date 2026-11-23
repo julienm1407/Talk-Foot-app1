@@ -66,7 +66,7 @@ export function SubscriptionPlansPage() {
             <>
               Paiement sécurisé par Stripe.
               {isStripePublishableConfigured() ? (
-                <> Mode {stripeModeLabel() === 'live' ? 'production' : 'test'} actif.</>
+                stripeModeLabel() !== 'live' ? <> Mode test actif.</> : null
               ) : (
                 <>
                   {' '}

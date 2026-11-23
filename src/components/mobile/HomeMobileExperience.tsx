@@ -9,6 +9,7 @@ import { cn } from '../../utils/cn'
 import { hubGlassPanel, hubTrendsShell } from '../../utils/hubSurface'
 import { LiveMatchHero } from '../home/LiveMatchHero'
 import { HomeUpcomingHero } from '../home/HomeUpcomingHero'
+import { MatchTalkFootDuJour } from '../home/MatchTalkFootDuJour'
 import { DebateOfTheDayCard } from '../home/DebateOfTheDayCard'
 import { HomeLeftColumn } from '../home/HomeLeftColumn'
 import { HomeRightColumn } from '../home/HomeRightColumn'
@@ -43,6 +44,7 @@ export type HomeMobileExperienceProps = {
   isCdm: boolean
   loading: boolean
   heroLiveMatch: Match | null
+  matchOfTheDay?: Match | null
   heroLiveSim: LiveEncartSimulation | null
   hubLiveMatches: Match[]
   heroSlide: number
@@ -75,6 +77,7 @@ export function HomeMobileExperience({
   isCdm,
   loading,
   heroLiveMatch,
+  matchOfTheDay = null,
   heroLiveSim,
   hubLiveMatches,
   heroSlide,
@@ -152,19 +155,10 @@ export function HomeMobileExperience({
 
   const heroBlock = loading ? (
     matchesLoadingShell
-  ) : heroLiveMatch ? (
+  ) : matchOfTheDay ? (
     <div className="space-y-2">
-      <HubEncartTopAccent appearance={appearance} preset="live" />
-      <LiveMatchHero
-        match={heroLiveMatch}
-        simulation={heroLiveSim!}
-        carousel={
-          hubLiveMatches.length > 1
-            ? { count: hubLiveMatches.length, index: heroSlide, onSelect: setHeroSlide }
-            : undefined
-        }
-      />
-      {upcomingUnderLiveStrip.length > 0 ? (
+      <MatchTalkFootDuJour match={matchOfTheDay} />
+      {upcomingUnderLiveStrip.filter((m) => m.id !== matchOfTheDay.id).length > 0 ? (
         <div className={cn('min-w-0 border-t pt-2', L ? 'border-tf-dark/10' : 'border-white/10')}>
           <HubEncartTopAccent appearance={appearance} preset="upcoming" className="mb-2" />
           <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
@@ -174,7 +168,9 @@ export function HomeMobileExperience({
             </Link>
           </div>
           <div className="flex flex-col gap-2">
-            {upcomingUnderLiveStrip.map((m) => (
+            {upcomingUnderLiveStrip
+              .filter((m) => m.id !== matchOfTheDay.id)
+              .map((m) => (
               <HubStripUpcoming key={m.id} match={m} visualSize="minimal" className="min-w-0" />
             ))}
           </div>

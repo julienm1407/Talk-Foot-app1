@@ -40,30 +40,55 @@ export function getGroupAccess(
   return 'full'
 }
 
+const DISCOVER_MIN_MEMBERS = 3
+
+function affinityScore(g: SupporterGroup, prefs: FanPrefsForAccess): number {
+  const t = g.fanTags
+  if (!t) return 0
+  let s = 0
+  for (const cid of prefs.favoriteClubIds) {
+    if (t.clubIds.includes(cid)) s += 100
+  }
+  if (prefs.favoriteLeagueId && t.leagueIds.includes(prefs.favoriteLeagueId)) s += 40
+  return s
+}
+
+function activityScore(g: SupporterGroup): number {
+  return (g.messagesToday ?? 0) * 12 + (g.reactionsToday ?? 0) * 2 + (g.members ?? 0)
+}
+
+/** Tribunes vides hors découverte, sauf celles déjà rejointes / créées. */
+export function isDiscoverableGroup(
+  group: SupporterGroup,
+  prefs: FanPrefsForAccess,
+  keepIds: ReadonlySet<string>,
+): boolean {
+  if (getGroupAccess(group, prefs) === 'hidden') return false
+  if (keepIds.has(group.id) || group.createdBy === 'me') return true
+  return (group.members ?? 0) >= DISCOVER_MIN_MEMBERS
+}
+
+export function filterDiscoverableGroups(
+  groups: SupporterGroup[],
+  prefs: FanPrefsForAccess,
+  keepIds: ReadonlySet<string>,
+): SupporterGroup[] {
+  return groups.filter((g) => isDiscoverableGroup(g, prefs, keepIds))
+}
+
 export function sortGroupsByFanAffinity(
   groups: SupporterGroup[],
   prefs: FanPrefsForAccess,
 ): SupporterGroup[] {
-  const league = prefs.favoriteLeagueId
-  const clubs = prefs.favoriteClubIds
-
   return [...groups].sort((a, b) => {
-    const score = (g: SupporterGroup) => {
-      const t = g.fanTags
-      if (!t) return 0
-      let s = 0
-      for (const cid of clubs) {
-        if (t.clubIds.includes(cid)) s += 100
-      }
-      if (league && t.leagueIds.includes(league)) s += 40
-      return s
-    }
     const da = getGroupAccess(a, prefs)
     const db = getGroupAccess(b, prefs)
     if (da === 'hidden' && db !== 'hidden') return 1
     if (db === 'hidden' && da !== 'hidden') return -1
     if (da === 'readonly' && db === 'full') return 1
     if (db === 'readonly' && da === 'full') return -1
-    return score(b) - score(a) || b.intensity - a.intensity
+    const act = activityScore(b) - activityScore(a)
+    if (act !== 0) return act
+    return affinityScore(b, prefs) - affinityScore(a, prefs) || b.intensity - a.intensity
   })
 }

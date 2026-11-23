@@ -92,9 +92,9 @@ export function RankingsWc2026View() {
       <CdmSubNav className="max-w-full" />
 
       <p className="rounded-2xl border border-tf-electric/25 bg-tf-electric-soft/35 px-4 py-3 text-sm font-semibold text-tf-dark">
-        Classement des parieurs :{' '}
+        Classement des pronostiqueurs :{' '}
         <Link to="/pronostic?vue=classement" className="font-black text-tf-cta underline-offset-2 hover:underline">
-          Pronostic → Classement parieurs
+          Pronostic → Classement pronostiqueurs
         </Link>
         . Phase à élimination :{' '}
         <Link to="/cdm/bracket" className="font-black text-tf-cdm-gold underline-offset-2 hover:underline">

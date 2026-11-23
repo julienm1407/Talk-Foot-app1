@@ -4,6 +4,7 @@ import { translateSportMonksLiveTextToFr } from './translateSportMonksLiveEnToFr
 describe('translateSportMonksLiveTextToFr', () => {
   it('traduit buts, cartons, tirs et changements SportMonks', () => {
     expect(translateSportMonksLiveTextToFr('First Half begins.')).toBe('Début de la première mi-temps.')
+    expect(translateSportMonksLiveTextToFr("1' begins")).toBe('1′ : c’est parti.')
     expect(translateSportMonksLiveTextToFr('Yellow card for Vitinha.')).toBe('Carton jaune pour Vitinha.')
     expect(
       translateSportMonksLiveTextToFr(

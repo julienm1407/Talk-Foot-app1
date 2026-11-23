@@ -21,6 +21,10 @@ export function stripSportMonksCommentPrefix(raw: string): string {
 
 const SENTENCE_RULES: Array<{ re: RegExp; fr: string }> = [
   {
+    re: /^(\d{1,3})['′’]?\s*begins\.?$/i,
+    fr: '$1′ : c’est parti.',
+  },
+  {
     re: /^First Half begins\.?$/i,
     fr: 'Début de la première mi-temps.',
   },
@@ -283,6 +287,7 @@ const INLINE_PHRASES: Array<[RegExp, string]> = [
   [/ wins a coup franc /gi, ' obtient un coup franc '],
   [/The referee/gi, "L'arbitre"],
   [/Kick-?off/gi, 'Coup d’envoi'],
+  [/\b(\d{1,3})['′’]?\s*begins\b/gi, '$1′ : c’est parti'],
   [/second half/gi, 'deuxième mi-temps'],
   [/first half/gi, 'première mi-temps'],
   [/half[\s-]?time/gi, 'mi-temps'],

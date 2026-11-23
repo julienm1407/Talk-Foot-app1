@@ -31,20 +31,20 @@ describe('subscriptionEntitlements', () => {
     expect(canCreateGroup('freemium', 1).ok).toBe(true)
   })
 
-  it('canJoinGroup freemium max 5 tribunes au total', () => {
-    expect(canJoinGroup('freemium', 5).ok).toBe(false)
-    expect(canJoinGroup('freemium', 4).ok).toBe(true)
+  it('canJoinGroup freemium max 20 tribunes au total', () => {
+    expect(canJoinGroup('freemium', 20).ok).toBe(false)
+    expect(canJoinGroup('freemium', 19).ok).toBe(true)
     expect(canJoinGroup('supporter_plus', 99).ok).toBe(true)
   })
 
   it('messages de limite tribunes freemium', () => {
-    expect(joinGroupLimitMessage('freemium', 5, 5)).toContain('5/5')
-    expect(joinGroupLimitMessage('freemium', 5, 4)).toContain('4/5')
+    expect(joinGroupLimitMessage('freemium', 20, 20)).toContain('20/20')
+    expect(joinGroupLimitMessage('freemium', 20, 4)).toContain('4/20')
     expect(createGroupLimitMessage('freemium', 2)).toContain('tribunes créées')
   })
 
-  it('freemium ne peut pas créer de débat', () => {
-    expect(canCreateDebate('freemium', {}).ok).toBe(false)
+  it('freemium peut créer un débat', () => {
+    expect(canCreateDebate('freemium', {}).ok).toBe(true)
     expect(canCreateDebate('supporter_plus', {}).ok).toBe(true)
   })
 

@@ -1,5 +1,6 @@
 import type { AvatarAsset, AvatarAssetCategory } from '../features/avatar2d/types'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { boutiqueClubPlaceName } from '../data/clubPublicLabels'
 import { NATIONS } from '../data/nations'
 import { isModularAssetUnlocked, isModularGarmentFree } from './modularGarmentAccess'
 
@@ -19,7 +20,8 @@ function nationNameFromSlug(slug: string): string {
 }
 
 function clubNameFromId(clubId: string): string {
-  return ALL_CLUBS_BY_ID[clubId]?.shortName ?? clubId
+  const fallback = ALL_CLUBS_BY_ID[clubId]?.shortName ?? clubId
+  return boutiqueClubPlaceName(clubId, fallback)
 }
 
 /** Libellé studio : « Maillot France », « Maillot blanc », etc. */

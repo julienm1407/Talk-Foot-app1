@@ -1,4 +1,5 @@
 import { competitionThemes } from './competitionThemes'
+import { clubSearchAliases } from './clubPublicLabels'
 import { teams } from './teams'
 import type { Team } from '../types/match'
 
@@ -76,14 +77,24 @@ export function searchClubsCatalog(query: string, limit = 20): ClubCatalogEntry[
     const shortF = foldAccents(c.shortName)
     const idF = foldAccents(c.id)
     const leagueF = foldAccents(c.leagueName)
-    if (!nameF.includes(q) && !shortF.includes(q) && !idF.includes(q) && !leagueF.includes(q)) {
+    const aliasF = clubSearchAliases(c.id).map(foldAccents)
+    const aliasHit = aliasF.find((a) => a === q || a.startsWith(q) || (q.length >= 3 && a.includes(q)))
+    if (
+      !nameF.includes(q) &&
+      !shortF.includes(q) &&
+      !idF.includes(q) &&
+      !leagueF.includes(q) &&
+      !aliasHit
+    ) {
       continue
     }
     let score = 0
-    if (shortF.startsWith(q)) score += 80
-    else if (nameF.startsWith(q)) score += 70
+    if (aliasF.some((a) => a === q) || idF === q) score += 90
+    else if (shortF.startsWith(q) || nameF.startsWith(q)) score += 80
+    else if (aliasF.some((a) => a.startsWith(q))) score += 75
     else if (shortF.includes(q)) score += 50
     else if (nameF.includes(q)) score += 40
+    else if (aliasHit) score += 70
     else if (idF.includes(q)) score += 25
     else score += 15
     scored.push({ c, score })

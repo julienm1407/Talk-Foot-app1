@@ -1,5 +1,7 @@
 import type { LeagueStandingRow } from '../data/leagueStandings'
+import type { Match } from '../types/match'
 import type { WcStandingRow } from '../types/wc2026'
+import { matchCalendarDayKeyParis } from './time'
 
 function cloneRow(r: LeagueStandingRow): LeagueStandingRow {
   return { ...r, form: [...r.form] }
@@ -38,13 +40,27 @@ export function projectStandingsWithLiveMatch(
   away.gf += opts.awayScore
   away.ga += opts.homeScore
 
+  home.played += 1
+  away.played += 1
   if (opts.homeScore > opts.awayScore) {
     home.points += 3
+    home.won += 1
+    away.lost += 1
+    home.form = [...home.form.slice(-4), 'W']
+    away.form = [...away.form.slice(-4), 'L']
   } else if (opts.awayScore > opts.homeScore) {
     away.points += 3
+    away.won += 1
+    home.lost += 1
+    home.form = [...home.form.slice(-4), 'L']
+    away.form = [...away.form.slice(-4), 'W']
   } else {
     home.points += 1
     away.points += 1
+    home.drawn += 1
+    away.drawn += 1
+    home.form = [...home.form.slice(-4), 'D']
+    away.form = [...away.form.slice(-4), 'D']
   }
 
   adjusted.sort((a, b) => {
@@ -56,6 +72,58 @@ export function projectStandingsWithLiveMatch(
   })
 
   return adjusted.map((r, i) => ({ ...r, rank: i + 1 }))
+}
+
+function mostCommonPlayed(rows: LeagueStandingRow[]): number {
+  const counts = new Map<number, number>()
+  for (const r of rows) counts.set(r.played, (counts.get(r.played) ?? 0) + 1)
+  let best = 0
+  let n = -1
+  for (const [played, c] of counts) {
+    if (c > n) {
+      n = c
+      best = played
+    }
+  }
+  return best
+}
+
+/** Intègre les matchs du jour (live ou terminés) si SportMonks n’a pas encore incrémenté PJ. */
+export function projectLeagueStandingsFromTodayMatches(
+  rows: LeagueStandingRow[],
+  matches: Match[],
+  leagueId: string,
+  now: Date = new Date(),
+): LeagueStandingRow[] {
+  if (!rows.length) return rows
+  const today = matchCalendarDayKeyParis(now)
+  const relevant = matches.filter(
+    (m) =>
+      m.competition.id === leagueId &&
+      m.score != null &&
+      (m.status === 'live' ||
+        (m.status === 'finished' && matchCalendarDayKeyParis(m.kickoffAt) === today)),
+  )
+  let next = rows
+  for (const m of relevant) {
+    const homeScore = m.score?.home
+    const awayScore = m.score?.away
+    if (homeScore == null || awayScore == null) continue
+    const hi = next.find((r) => r.teamId === m.home.id)
+    const ai = next.find((r) => r.teamId === m.away.id)
+    if (!hi || !ai) continue
+    if (m.status === 'finished') {
+      const mode = mostCommonPlayed(next)
+      if (hi.played > mode || ai.played > mode) continue
+    }
+    next = projectStandingsWithLiveMatch(next, {
+      homeTeamId: m.home.id,
+      awayTeamId: m.away.id,
+      homeScore,
+      awayScore,
+    })
+  }
+  return next
 }
 
 function cloneWcRow(r: WcStandingRow): WcStandingRow {

@@ -47,7 +47,7 @@ export function HomeMobileMonEspaceStrip({ className }: { className?: string }) 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black text-tf-app-fg">{displayLabel}</p>
         <p className="text-[11px] font-semibold text-tf-app-muted">
-          Niv. {profile.level} · Paris, favoris, bonus
+          Niv. {profile.level} · Pronos, favoris, bonus
         </p>
       </div>
       <button

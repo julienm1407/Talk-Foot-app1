@@ -10,8 +10,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLiveEncartSimulation } from '../hooks/useLiveEncartSimulation'
 import { cn } from '../utils/cn'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
-import { sortGroupsByFanAffinity, getGroupAccess } from '../utils/groupAccess'
+import { sortGroupsByFanAffinity, filterDiscoverableGroups } from '../utils/groupAccess'
 import { filterNewsForFan } from '../utils/filterNews'
+import { pickTalkFootMatchOfTheDay } from '../utils/talkFootMatchOfTheDay'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { FavoritesEncart } from '../components/fan/FavoritesEncart'
@@ -61,14 +62,21 @@ export function HomePage() {
     [favoriteClubIds, favoriteLeagueId, hideRivalSalons],
   )
 
-  const sortedGroups = useMemo(
-    () => sortGroupsByFanAffinity(groups, accessPrefs),
-    [groups, accessPrefs],
-  )
+  const joinedGroupIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const g of groups) {
+      if (isJoined(g.id) || g.createdBy === 'me') ids.add(g.id)
+    }
+    return ids
+  }, [groups, isJoined])
 
   const visibleGroups = useMemo(
-    () => sortedGroups.filter((g) => getGroupAccess(g, accessPrefs) !== 'hidden'),
-    [sortedGroups, accessPrefs],
+    () =>
+      sortGroupsByFanAffinity(
+        filterDiscoverableGroups(groups, accessPrefs, joinedGroupIds),
+        accessPrefs,
+      ),
+    [groups, accessPrefs, joinedGroupIds],
   )
 
   const myCreatedGroups = useMemo(
@@ -94,8 +102,11 @@ export function HomePage() {
 
   /** Teinte supporter ≠ fil messages : seul le fil équipe de cœur (Profil) filtre chats / top com. */
   const personalizedNews = useMemo(
-    () => filterNewsForFan(publishedArticles, favoriteLeagueId, favoriteClubIds),
-    [publishedArticles, favoriteClubIds, favoriteLeagueId],
+    () =>
+      filterNewsForFan(publishedArticles, favoriteLeagueId, favoriteClubIds, {
+        demoteWorldCup: !isCdm,
+      }),
+    [publishedArticles, favoriteClubIds, favoriteLeagueId, isCdm],
   )
 
   const [createOpen, setCreateOpen] = useState(false)
@@ -117,7 +128,15 @@ export function HomePage() {
     setHeroSlide(0)
   }, [hubLiveIds])
 
-  const heroLiveMatch = useMemo(() => hubLiveMatches[heroSlide] ?? null, [hubLiveMatches, heroSlide])
+  const matchOfTheDay = useMemo(
+    () => pickTalkFootMatchOfTheDay(displayMatchesFull, favoriteClubIds),
+    [displayMatchesFull, favoriteClubIds],
+  )
+
+  const heroLiveMatch = useMemo(() => {
+    if (matchOfTheDay?.status === 'live') return matchOfTheDay
+    return hubLiveMatches[heroSlide] ?? hubLiveMatches[0] ?? null
+  }, [matchOfTheDay, hubLiveMatches, heroSlide])
   const heroLiveSim = useLiveEncartSimulation(heroLiveMatch)
 
   const clubFocusLabel = useMemo(() => {
@@ -241,6 +260,7 @@ export function HomePage() {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <HomeDesktopExperience
             liveMatches={hubLiveMatches}
+            matchOfTheDay={matchOfTheDay}
             upcomingMatches={displayMatchesFull}
             tribuneGroups={visibleGroups.slice(0, 4)}
             supporterGroupsPool={visibleGroups}
@@ -263,6 +283,7 @@ export function HomePage() {
           isCdm={isCdm}
           loading={loading}
           heroLiveMatch={heroLiveMatch}
+          matchOfTheDay={matchOfTheDay}
           heroLiveSim={heroLiveSim}
           hubLiveMatches={hubLiveMatches}
           heroSlide={heroSlide}

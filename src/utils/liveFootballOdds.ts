@@ -307,8 +307,8 @@ function guessSideFromTeams(
   const t = raw.toLowerCase()
 
   if (/\b(psg|paris\s*saint|saint[\s-]?germain)\b/i.test(raw)) {
-    if (away.sportMonksTeamId === 591 || away.shortName.toUpperCase() === 'PSG') return 'away'
-    if (home.sportMonksTeamId === 591 || home.shortName.toUpperCase() === 'PSG') return 'home'
+    if (away.sportMonksTeamId === 591) return 'away'
+    if (home.sportMonksTeamId === 591) return 'home'
   }
   if (/\b(paris\s*fc|paris\s*football|football\s*club)\b/i.test(raw)) {
     if (home.sportMonksTeamId === 4508) return 'home'

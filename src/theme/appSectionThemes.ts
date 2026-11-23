@@ -171,7 +171,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   pronostic: {
     id: 'pronostic',
     label: 'Pronostic',
-    hint: 'Paris & classement',
+    hint: 'Pronos & classement',
     shellStripe: stripePronostic,
     encart: ENCART_LIVE,
     page: {
@@ -410,7 +410,7 @@ export const BOTTOM_NAV_MORE_ROUTES: {
   hint: string
 }[] = [
   { to: '/formules', section: 'formules', icon: '⭐', hint: 'Ultra & Ambassadeur' },
-  { to: '/pronostic', section: 'pronostic', icon: '🎯', hint: 'Paris & gains' },
+  { to: '/pronostic', section: 'pronostic', icon: '🎯', hint: 'Pronos & gains' },
   { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Ligues & podium' },
 ]
 
@@ -429,7 +429,7 @@ export const OVERLAY_NAV_ROUTES: {
   { to: '/', end: true, section: 'home', icon: '🏟️', hint: 'Fil & actus' },
   { to: '/match', end: true, section: 'matches', icon: '⚽', hint: 'Matchs & lives' },
   { to: '/groups', section: 'groups', icon: '👥', hint: 'Tribunes & débats' },
-  { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Paris & ligues' },
+  { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Pronos & ligues' },
   { to: '/boutique', section: 'boutique', icon: '🛍️', hint: 'Maillots & médailles' },
   { to: '/formules', section: 'formules', icon: '⭐', hint: 'Ultra & Ambassadeur' },
 ]
@@ -447,7 +447,7 @@ export const ARTICLE_ENCART_TO_SECTION = {
 export type ArticleEncartKey = keyof typeof ARTICLE_ENCART_TO_SECTION
 
 const ARTICLE_ENCART_COPY: Partial<Record<ArticleEncartKey, { label?: string; hint?: string }>> = {
-  bets: { label: 'Classements', hint: 'Paris & ligues' },
+  bets: { label: 'Classements', hint: 'Pronos & ligues' },
 }
 
 export function getEncartThemeForArticle(key: ArticleEncartKey): SectionEncartTheme {

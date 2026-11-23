@@ -5,6 +5,7 @@
 
 import type { AvatarItem } from '../types/profile'
 import { ALL_CLUBS_BY_ID } from './allClubsCatalog'
+import { boutiqueClubPlaceName } from './clubPublicLabels'
 import { CDM_BUNDLE_MEDALS, CDM_JERSEY_MEDALS, CDM_SHORT_MEDALS } from './boutiqueMedalCosts'
 import { teamColors } from './teams'
 import {
@@ -23,15 +24,16 @@ function buildClubBundle(clubId: ClubJerseyAssetId): AvatarItem | null {
   const shortId = `club-short-${clubId}`
   const savings = CDM_JERSEY_MEDALS + CDM_SHORT_MEDALS - CDM_BUNDLE_MEDALS
   const [primary, secondary] = teamColors[clubId] ?? ['#111827', '#f9fafb']
+  const place = boutiqueClubPlaceName(clubId, meta.shortName)
 
   return {
     id: `club-pack-${clubId}`,
-    name: `Pack ${meta.shortName} · maillot + short`,
+    name: `Pack ${place} · maillot + short`,
     slot: 'jersey',
     emoji: '👕',
     cost: CDM_BUNDLE_MEDALS,
     rarity: 'epic',
-    description: `Maillot et short ${meta.name} — économise ${savings} médailles vs l’achat séparé.`,
+    description: `Maillot et short inspirés · ${place} — économise ${savings} médailles vs l’achat séparé.`,
     inspirationNote: `Pack club · ${meta.leagueName}`,
     collection: 'clubs',
     clubId,

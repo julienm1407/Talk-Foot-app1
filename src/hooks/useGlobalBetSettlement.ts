@@ -163,7 +163,10 @@ export function useGlobalBetSettlement() {
       const changed = betsFingerprint(workingBets) !== before || totalDelta !== 0
       if (!changed) return
 
-      if (allWonBetIds.length) grantBetWon(allWonBetIds)
+      if (allWonBetIds.length) {
+        grantBetWon(allWonBetIds)
+        window.dispatchEvent(new CustomEvent('talkfoot-prono-won', { detail: { count: allWonBetIds.length } }))
+      }
 
       if (isSupabaseConfigured() && cloud) {
         const finalBets = workingBets

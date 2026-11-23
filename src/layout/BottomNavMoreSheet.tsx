@@ -9,7 +9,7 @@ import {
 import { useAppearance } from '../contexts/AppearanceContext'
 import { TF_FOCUS_VISIBLE } from '../theme/designSystem'
 
-/** Sous-menu mobile — Paris, classements, boutique (au-dessus de la BottomNav). */
+/** Sous-menu mobile — Pronos, classements, boutique (au-dessus de la BottomNav). */
 export function BottomNavMoreSheet({
   open,
   onClose,

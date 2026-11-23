@@ -15,6 +15,7 @@ import { PageAdRails } from './PageAdRails'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
 import { BetSettlementRunner } from '../components/bet/BetSettlementRunner'
+import { AskAppReviewHost } from '../components/feedback/AskAppReviewHost'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useRouteViewReset } from '../hooks/useRouteViewReset'
 
@@ -38,7 +39,7 @@ export function AppShell() {
   const isGroupTribune = /^\/group\/[^/]+/.test(location.pathname)
   const isDebatePage = /^\/debate\/[^/]+/.test(location.pathname)
   const isProfile = location.pathname === '/profile' || location.pathname.startsWith('/profile/')
-  /** Dock Match / Compo / Paris / Tribune (portail fixe) — pas de footer légal en dessous. */
+  /** Dock Match / Compo / Pronos / Tribune (portail fixe) — pas de footer légal en dessous. */
   const hideChannelLegalFooter = isChannel && !isChannelStadium && isMobileTouch
 
   useSwipeNavigate({
@@ -61,6 +62,7 @@ export function AppShell() {
       <SkipLink />
       <ActivityRouteLogger />
       <BetSettlementRunner />
+      <AskAppReviewHost />
       <OAuthProfileSetupModal />
       <FanOnboardingModal />
       <FirstVisitGuideModal />

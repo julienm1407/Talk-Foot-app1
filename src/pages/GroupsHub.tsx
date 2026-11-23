@@ -6,7 +6,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
-import { sortGroupsByFanAffinity, getGroupAccess } from '../utils/groupAccess'
+import { sortGroupsByFanAffinity, getGroupAccess, filterDiscoverableGroups } from '../utils/groupAccess'
 import { CreateGroupModal } from '../components/group/CreateGroupModal'
 import { LeaveTribuneButton } from '../components/group/LeaveTribuneButton'
 import { SectionIntro } from '../components/ui/SectionIntro'
@@ -71,14 +71,21 @@ export function GroupsHubPage() {
     [favoriteClubIds, favoriteLeagueId, hideRivalSalons],
   )
 
-  const sorted = useMemo(
-    () => sortGroupsByFanAffinity(groups, accessPrefs),
-    [groups, accessPrefs],
-  )
+  const joinedIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const g of groups) {
+      if (isJoined(g.id) || g.createdBy === 'me') ids.add(g.id)
+    }
+    return ids
+  }, [groups, isJoined])
 
   const visibleDiscover = useMemo(
-    () => sorted.filter((g) => getGroupAccess(g, accessPrefs) !== 'hidden'),
-    [sorted, accessPrefs],
+    () =>
+      sortGroupsByFanAffinity(
+        filterDiscoverableGroups(groups, accessPrefs, joinedIds),
+        accessPrefs,
+      ),
+    [groups, accessPrefs, joinedIds],
   )
 
   /** Filtre « depuis page club » : mêmes groupes que le compteur de tribunes. */

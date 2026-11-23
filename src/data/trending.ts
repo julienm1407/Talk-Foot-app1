@@ -15,7 +15,7 @@ export function buildTrendingChannels(matches: Match[]): TrendingChannel[] {
     const activityScore = Math.max(15, Math.min(99, base + liveBoost))
     const activeUsers = Math.round(40 + activityScore * 2.2)
     const vibe: TrendingChannel['vibe'] =
-      m.home.shortName === 'PSG' && m.away.shortName === 'OM'
+      m.home.id === 'psg' && m.away.id === 'om'
         ? 'Derby'
         : m.status === 'live'
           ? 'Hype'

@@ -94,8 +94,8 @@ export function MesParisEncart({
       )}
       aria-label={
         total > 0
-          ? `Mes paris — ${open} en cours, ${settled} validés, ${tokens} jetons`
-          : `Mes paris — ${tokens} jetons`
+          ? `Mes pronos — ${open} en cours, ${settled} validés, ${tokens} jetons`
+          : `Mes pronos — ${tokens} jetons`
       }
     >
       <span className={cn('block w-full shrink-0', pronoTheme.shellStripe)} aria-hidden />
@@ -111,7 +111,7 @@ export function MesParisEncart({
             🎯
           </span>
           <div className="min-w-0 flex-1 text-left">
-            <p className="text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
+            <p className="text-sm font-black leading-tight text-tf-app-fg">Mes pronos</p>
             <p
               className={cn(
                 'mt-0.5 text-[10px] font-semibold leading-snug',
@@ -151,7 +151,7 @@ export function MesParisEncart({
             >
               Pronostic
             </p>
-            <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes paris</p>
+            <p className="truncate text-sm font-black leading-tight text-tf-app-fg">Mes pronos</p>
             <p
               className={cn(
                 'truncate text-[10px] font-semibold leading-snug',

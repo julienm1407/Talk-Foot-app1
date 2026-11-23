@@ -56,8 +56,8 @@ export const mockPredictions: Prediction[] = [
     match: {
       id: 'pm-inter-juve-1',
       competition: { id: 'serie-a', name: 'Serie A', shortName: 'SA' },
-      home: { id: 'int', name: 'Inter', shortName: 'INT' },
-      away: { id: 'juv', name: 'Juventus', shortName: 'JUV' },
+      home: { id: 'inter', name: 'Inter', shortName: 'INT' },
+      away: { id: 'juve', name: 'Juventus', shortName: 'JUV' },
       kickoffAt: daysAgo(1),
     },
     predictedScore: { home: 1, away: 0 },

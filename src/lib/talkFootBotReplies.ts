@@ -42,9 +42,9 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
       `1. Va dans ${link('Matchs', '/match')} et ouvre un match (idéalement en direct).`,
       '2. Choisis un marché (1N2, buts, buteur…).',
       '3. Règle ta mise en **jetons**.',
-      `4. Retrouve tes tickets dans ${link('Profil', '/profile')} / Mes paris.`,
+      `4. Retrouve tes tickets dans ${link('Profil', '/profile')} / Mes pronos.`,
       '',
-      `Classement des parieurs → ${link('Pronostics', '/pronostic?vue=classement')}`,
+      `Classement des pronostiqueurs → ${link('Pronostics', '/pronostic?vue=classement')}`,
     ].join('\n')
   }
 
@@ -60,7 +60,7 @@ export function pickTalkFootBotReply(userMessage: string): BotReply {
 
   if (/classement|ranking|leader|cdm|mondial|poule/.test(t)) {
     return [
-      `• Classement parieurs → ${link('Pronostics / classement', '/pronostic?vue=classement')}`,
+      `• Classement pronostiqueurs → ${link('Pronostics / classement', '/pronostic?vue=classement')}`,
       `• Poules Coupe du monde → ${link('Classements CDM', '/rankings')}`,
       '',
       'Invite des amis pour comparer vos scores plus tard.',

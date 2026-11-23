@@ -24,6 +24,8 @@ import { useSportMonksSeasonTopscorers } from '../../hooks/useSportMonksSeasonTo
 import { getSportMonksToken } from '../../utils/apiTokens'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { MatchLineupPlayerSheet, type LineupPlayerPick } from '../channel/MatchLineupPlayerSheet'
+import { useMatches } from '../../contexts/MatchesContext'
+import { projectLeagueStandingsFromTodayMatches } from '../../utils/liveStandingsProjection'
 
 type MainTab = 'ligues' | 'forme'
 type LeagueBoardTab = 'table' | 'scorers'
@@ -67,7 +69,11 @@ export function RankingsLeaguesView() {
     hasToken && boardTab === 'scorers',
   )
   const isUefaCup = (UEFA_CUP_LEAGUE_IDS as readonly string[]).includes(leagueId)
-  const standings = hasToken ? standingsRows : isUefaCup ? standingsRows : mockStandings
+  const { matches } = useMatches()
+  const standings = useMemo(() => {
+    const base = hasToken ? standingsRows : isUefaCup ? standingsRows : mockStandings
+    return projectLeagueStandingsFromTodayMatches(base, matches, leagueId)
+  }, [hasToken, standingsRows, isUefaCup, mockStandings, matches, leagueId])
   const seasonStartLabel = standingsSeasonMeta?.seasonStartsAt
     ? new Date(`${standingsSeasonMeta.seasonStartsAt}T12:00:00`).toLocaleDateString('fr-FR', {
         day: 'numeric',
@@ -141,9 +147,9 @@ export function RankingsLeaguesView() {
       />
 
       <p className="rounded-2xl border border-tf-electric/25 bg-tf-electric-soft/35 px-4 py-3 text-sm font-semibold text-tf-dark">
-        Classement des parieurs (points, victoires) :{' '}
+        Classement des pronostiqueurs (points, victoires) :{' '}
         <Link to="/pronostic?vue=classement" className="font-black text-tf-cta underline-offset-2 hover:underline">
-          Pronostic → Classement parieurs
+          Pronostic → Classement pronostiqueurs
         </Link>
         .
       </p>

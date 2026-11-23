@@ -79,7 +79,7 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     id: 'rankings',
     eyebrow: 'Classement',
     title: 'Ligues & podium',
-    body: 'Compare-toi aux autres parieurs et suis le classement de ta ligue favorite.',
+    body: 'Compare-toi aux autres pronostiqueurs et suis le classement de ta ligue favorite.',
     bullets: ['Podium de la saison', 'Classement clubs', 'Tes stats perso'],
   },
   profile: {

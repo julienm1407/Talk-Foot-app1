@@ -5,6 +5,7 @@
 import type { Team } from '../types/match'
 import type { ClubPageMock, ClubSquadNode, ClubDebateItem, ClubShopItem } from './clubPageMock'
 import { ALL_CLUBS_BY_ID } from './allClubsCatalog'
+import { boutiqueClubPlaceName } from './clubPublicLabels'
 import { competitionThemes } from './competitionThemes'
 
 const ELITE = new Set([
@@ -277,9 +278,10 @@ function buildDebates(
 }
 
 function defaultShop(id: string, shortName: string): ClubShopItem[] {
+  const place = boutiqueClubPlaceName(id, shortName)
   return [
     { id: `s1-${id}`, label: 'Skin fumigène (effet)', price: '450', emoji: '🌫️', kind: 'fx' },
-    { id: `s2-${id}`, label: `Badges ${shortName} ultras`, price: '200', emoji: '🏅', kind: 'badge' },
+    { id: `s2-${id}`, label: `Badges ${place} ultras`, price: '200', emoji: '🏅', kind: 'badge' },
     { id: `s3-${id}`, label: 'Maillot style tribune (générique)', price: '1200', emoji: '👕', kind: 'wear' },
     { id: `s4-${id}`, label: 'Halo vocal rétro', price: '320', emoji: '✨', kind: 'skin' },
   ]

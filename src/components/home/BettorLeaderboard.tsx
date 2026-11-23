@@ -274,21 +274,21 @@ export function BettorLeaderboard({
           {extended
             ? 'Classement public'
             : embedded
-              ? `Top ${EMBEDDED_PREVIEW_LIMIT} parieurs`
+              ? `Top ${EMBEDDED_PREVIEW_LIMIT} pronostiqueurs`
               : titleCount > 0
-                ? `Top ${titleCount} parieur${titleCount > 1 ? 's' : ''}`
-                : 'Classement parieurs'}
+                ? `Top ${titleCount} pronostiqueur${titleCount > 1 ? 's' : ''}`
+                : 'Classement pronostiqueurs'}
         </h3>
         <span className={cn('text-[10px] font-bold', dark ? 'text-sky-300/80' : 'text-tf-grey')}>
-          Paris réels
+          Pronos joués
         </span>
       </div>
       <p className={cn('mt-0.5 text-[11px] font-medium', dark ? 'text-sky-200/75' : 'text-tf-grey')}>
         {extended
-          ? 'Tous les parieurs Talk Foot — top 40 affichés'
+          ? 'Tous les pronostiqueurs Talk Foot — top 40 affichés'
           : embedded
-            ? `${totalActive} parieur${totalActive !== 1 ? 's' : ''} actif${totalActive !== 1 ? 's' : ''} — fais défiler`
-            : 'Parieurs actifs sur Talk Foot'}
+            ? `${totalActive} pronostiqueur${totalActive !== 1 ? 's' : ''} actif${totalActive !== 1 ? 's' : ''} — fais défiler`
+            : 'Pronostiqueurs actifs sur Talk Foot'}
       </p>
 
       {extended ? (
@@ -336,7 +336,7 @@ export function BettorLeaderboard({
               : 'border-tf-grey-pastel/60 bg-tf-ice/50 text-tf-grey',
           )}
         >
-          Aucun parieur actif pour l&apos;instant. Place un pari depuis un tribune live pour apparaître au
+          Aucun pronostiqueur actif pour l&apos;instant. Place un prono depuis une tribune live pour apparaître au
           classement.
         </p>
       ) : (

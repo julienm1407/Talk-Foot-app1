@@ -66,9 +66,9 @@ const MATCH: RouteSeoConfig = {
 }
 
 const PRONOSTIC: RouteSeoConfig = {
-  title: `Mes paris & pronostics — ${SITE_NAME}`,
+  title: `Mes pronos — ${SITE_NAME}`,
   description:
-    'Retrouve tes paris, ton solde de jetons, le classement des parieurs et accède à la tribune live pour parier.',
+    'Retrouve tes pronos, ton solde de jetons, le classement des pronostiqueurs et accède à la tribune live.',
   robots: 'noindex, nofollow',
 }
 

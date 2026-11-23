@@ -705,7 +705,7 @@ export function BetWidget({
                 aria-expanded={sheetOpen}
                 className="rounded-lg border border-[#00d1b6]/50 bg-[#18d3b8] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50"
               >
-                Parier
+                Pronostiquer
               </button>
               {showScorerMarket ? (
                 <button
@@ -754,7 +754,7 @@ export function BetWidget({
                 aria-expanded={sheetOpen}
                 className="min-h-11 flex-1 rounded-xl border border-[#00d1b6]/55 bg-[#18d3b8] px-3 py-2.5 text-center text-xs font-black uppercase tracking-wide text-[#06242a] shadow-sm transition hover:bg-[#2be0c6] focus-visible:outline focus-visible:ring-2 focus-visible:ring-cyan-300/50 sm:min-h-0 sm:flex-none sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]"
               >
-                Parier
+                Pronostiquer
               </button>
               {showScorerMarket ? (
                 <button
@@ -839,7 +839,7 @@ export function BetWidget({
               sheetLight ? 'text-sky-700 hover:text-sky-800' : 'text-cyan-300 hover:text-cyan-200',
             )}
           >
-            Mes paris →
+            Mes pronos →
           </Link>
         </div>
         {compact ? null : null}

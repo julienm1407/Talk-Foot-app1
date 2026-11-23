@@ -3,6 +3,7 @@ import type { SupporterGroup } from '../types/group'
 import type { Debate } from '../data/debates'
 import type { NewsItem } from '../data/news'
 import { ALL_CLUBS_CATALOG } from '../data/allClubsCatalog'
+import { clubSearchAliases } from '../data/clubPublicLabels'
 import {
   COMPETITION_SEARCH_ALIAS_TO_ID,
   COMPETITION_SEARCH_ENTRIES,
@@ -69,7 +70,7 @@ const STATIC_PAGES: { title: string; subtitle: string; href: string; kw: string 
   { title: 'Match', subtitle: 'Matchs par jour et par ligue', href: '/match', kw: 'match calendrier planning date programme agenda prochains matchs' },
   { title: 'Groupes & tribunes', subtitle: 'Tribunes de supporters', href: '/groups', kw: 'groupe tribune communauté' },
   { title: 'Débats', subtitle: 'Discussions tendance', href: '/debates', kw: 'débat discussion topic' },
-  { title: 'Classement parieurs', subtitle: 'Top paris & points', href: '/pronostic?vue=classement', kw: 'classement parieur paris pronostic leaderboard' },
+  { title: 'Classement pronostiqueurs', subtitle: 'Top pronos & points', href: '/pronostic?vue=classement', kw: 'classement pronostiqueur paris pronostic leaderboard' },
   { title: 'Classements CDM', subtitle: 'Poules Mondial 2026', href: '/rankings', kw: 'classement ranking poule coupe du monde cdm wc 2026' },
   { title: 'Profil', subtitle: 'Favoris & réglages', href: '/profile', kw: 'profil compte favoris paramètres' },
   { title: 'Boutique', subtitle: 'Maillots & goodies', href: '/boutique', kw: 'boutique shop maillot' },
@@ -127,16 +128,18 @@ export function runSiteSearch(
   }
 
   for (const c of ALL_CLUBS_CATALOG) {
+    const aliases = clubSearchAliases(c.id).join(' ')
     const blob = normalize(
-      [c.name, c.shortName, c.id, c.leagueName, `#${c.shortName}`, `#${c.id}`, 'club hub tribune supporters historique palmares page club calendrier prochains matchs'].join(' '),
+      [c.name, c.shortName, c.id, c.leagueName, aliases, `#${c.shortName}`, `#${c.id}`, 'club hub tribune supporters historique palmares page club calendrier prochains matchs'].join(' '),
     )
     const sc = scoreBlob(blob, queryNorm, words)
     if (sc > 0) {
       const short = normalize(c.shortName)
       const idNorm = normalize(c.id)
       const name = normalize(c.name)
+      const aliasNorm = clubSearchAliases(c.id).map(normalize)
       let score = sc + 1
-      if (queryNorm === short || queryNorm === idNorm) score += 48
+      if (queryNorm === short || queryNorm === idNorm || aliasNorm.includes(queryNorm)) score += 48
       if (queryNorm === name) score += 44
       out.push({
         kind: 'club',
@@ -156,6 +159,8 @@ export function runSiteSearch(
         m.home.shortName,
         m.away.name,
         m.away.shortName,
+        clubSearchAliases(m.home.id).join(' '),
+        clubSearchAliases(m.away.id).join(' '),
         m.competition.name,
         m.competition.shortName,
         m.status === 'live' ? 'direct live' : '',

@@ -14,6 +14,7 @@ import { cn } from '../../utils/cn'
 import { HubStripUpcoming } from '../match/HubMatchEncart'
 import { MatchSpotlightCard } from '../match/MatchSpotlightCard'
 import { LiveMatchHero } from './LiveMatchHero'
+import { MatchTalkFootDuJour } from './MatchTalkFootDuJour'
 import { HomeLandingHub } from './HomeLandingHub'
 import { HomeMonEspacePanel } from './HomeMonEspacePanel'
 import { DebateOfTheDayCard } from './DebateOfTheDayCard'
@@ -55,6 +56,7 @@ function DesktopHubLiveStrip({
 
 export function HomeDesktopExperience({
   liveMatches,
+  matchOfTheDay = null,
   upcomingMatches,
   tribuneGroups,
   supporterGroupsPool,
@@ -69,6 +71,7 @@ export function HomeDesktopExperience({
   centerContinuation,
 }: {
   liveMatches: Match[]
+  matchOfTheDay?: Match | null
   upcomingMatches: Match[]
   tribuneGroups: SupporterGroup[]
   /** Toutes les tribunes visibles (hors rivaux masqués) — pour le rail sans doublon avec la grille tribunes */
@@ -107,12 +110,13 @@ export function HomeDesktopExperience({
     [upcomingMatches, favoriteClubIds],
   )
 
-  const hasLive = liveMatches.length > 0
+  const restLiveMatches = liveMatches.filter((m) => m.id !== matchOfTheDay?.id)
+  const hasLive = restLiveMatches.length > 0
   const showUpcomingInHeader = !hasLive && upcomingSorted.length > 0
   const showMixedHeader = hasLive && upcomingSorted.length > 0
   /** Sous le live / encart « Prochains matchs » : 1 mise en avant + 2 bandeaux (comme le hero live + 2 à venir). */
-  const headerUpcomingPrimary = upcomingSorted.slice(0, 3)
-  const featuredLiveMatch = liveMatches[deskLiveIndex] ?? liveMatches[0]
+  const headerUpcomingPrimary = upcomingSorted.filter((m) => m.id !== matchOfTheDay?.id).slice(0, 3)
+  const featuredLiveMatch = restLiveMatches[deskLiveIndex] ?? restLiveMatches[0]
   const topDebates = useMemo(() => {
     const trending = trendingDebates.slice(0, 4)
     if (trending.length > 0) return trending
@@ -222,6 +226,7 @@ export function HomeDesktopExperience({
         >
           <HubEncartTopAccent appearance={appearance} preset={hasLive ? 'live' : 'upcoming'} />
           <div className="space-y-3 px-4 pt-3 sm:space-y-4 sm:px-5 sm:pt-4">
+          {matchOfTheDay ? <MatchTalkFootDuJour match={matchOfTheDay} /> : null}
           {matchesLoading && !hasLive && upcomingSorted.length === 0 ? (
             <div
               className="space-y-3"
@@ -254,18 +259,20 @@ export function HomeDesktopExperience({
               {showMixedHeader ? (
                 <div className="flex min-w-0 flex-col gap-4">
                   <div className="min-w-0 w-full">
+                    {featuredLiveMatch ? (
                     <DesktopHubLiveStrip
                       match={featuredLiveMatch}
                       carousel={
-                        liveMatches.length > 1
+                        restLiveMatches.length > 1
                           ? {
-                              count: liveMatches.length,
+                              count: restLiveMatches.length,
                               index: deskLiveIndex,
                               onSelect: setDeskLiveIndex,
                             }
                           : undefined
                       }
                     />
+                    ) : null}
                   </div>
                   <aside
                     className={cn(
@@ -302,23 +309,23 @@ export function HomeDesktopExperience({
                     </ul>
                   </aside>
                 </div>
-              ) : (
+              ) : featuredLiveMatch ? (
                 <DesktopHubLiveStrip
                   match={featuredLiveMatch}
                   carousel={
-                    liveMatches.length > 1
+                    restLiveMatches.length > 1
                       ? {
-                          count: liveMatches.length,
+                          count: restLiveMatches.length,
                           index: deskLiveIndex,
                           onSelect: setDeskLiveIndex,
                         }
                       : undefined
                   }
                 />
-              )}
-              {liveMatches.length > 2 ? (
+              ) : null}
+              {restLiveMatches.length > 2 ? (
                 <p className={cn('text-[10px] font-bold', hubSecondary)}>
-                  +{liveMatches.length - 2} autre{liveMatches.length - 2 > 1 ? 's' : ''} en direct —{' '}
+                  +{restLiveMatches.length - 2} autre{restLiveMatches.length - 2 > 1 ? 's' : ''} en direct —{' '}
                   <Link to="/match" className={cn(hubPillLink(appearance, 'xs'), 'align-middle')}>
                     tout voir
                   </Link>

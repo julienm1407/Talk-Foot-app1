@@ -5,7 +5,7 @@ import { useAppearance } from '../../contexts/AppearanceContext'
 
 /** Complète la BottomNav (Match / Groupes dans la barre ; reste ici en raccourcis). */
 const ACTIONS = [
-  { to: '/pronostic', label: 'Paris', icon: '🎯' },
+  { to: '/pronostic', label: 'Pronos', icon: '🎯' },
   { to: '/rankings', label: 'Classements', icon: '🏆' },
   { to: '/boutique', label: 'Boutique', icon: '🛍️' },
 ] as const

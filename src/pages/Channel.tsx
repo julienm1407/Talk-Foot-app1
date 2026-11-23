@@ -145,14 +145,13 @@ import {
 } from '../utils/liveFootballOdds'
 import {
   isPostMatchDebriefOpen,
+  matchChatOpensAtMs,
   postMatchDebriefMinutesLeft,
   resolveMatchFinishedAtMs,
 } from '../utils/matchDebriefWindow'
 import { MatchResultScore } from '../components/match/MatchResultScore'
 import { resolveDisplayedLineupKind } from '../utils/lineupStatus'
 
-/** Ouverture du tchat tribune avant coup d'envoi. */
-const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
 /** Pop-up coup d’envoi : uniquement si on arrive dans la fenêtre juste après le kickoff prévu. */
 const KICKOFF_FULLSCREEN_GRACE_AFTER_MS = 2 * 60 * 1000
 
@@ -1518,7 +1517,7 @@ export function ChannelPage() {
   const chatDebriefOpen = isFinished && isPostMatchDebriefOpen(finishedAtMs, nowMs)
   const chatClosedAfterMatch = isFinished && !chatDebriefOpen
   const debriefMinutesLeft = postMatchDebriefMinutesLeft(finishedAtMs, nowMs)
-  const showLiveChat = !chatClosedAfterMatch
+  const showLiveChat = true
   const timerText = useMemo(() => {
     const kickoffTs = match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null
     if (status === 'upcoming' && kickoffTs != null) {
@@ -1538,9 +1537,10 @@ export function ChannelPage() {
     () => (match?.kickoffAt ? new Date(match.kickoffAt).getTime() : null),
     [match?.kickoffAt],
   )
-  const chatOpenAtMs = kickoffMs != null ? kickoffMs - MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS : null
+  const chatOpenAtMs = match?.kickoffAt ? matchChatOpensAtMs(match.kickoffAt) : null
   const chatLocked = status === 'upcoming' && chatOpenAtMs != null && nowMs < chatOpenAtMs
-  const chatComposerLocked = chatLocked || isFinished
+  const guestChatWriter = !authUser?.id || Boolean(authUser.isAnonymous)
+  const chatComposerLocked = chatLocked || chatClosedAfterMatch || guestChatWriter
   const chatCountdownText = useMemo(() => {
     if (!chatLocked || chatOpenAtMs == null) return null
     const remainingMs = Math.max(0, chatOpenAtMs - nowMs)
@@ -1636,6 +1636,13 @@ export function ChannelPage() {
     () => chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune)),
     [chatMessages, selectedTribune],
   )
+  const bestReplayMessages = useMemo(() => {
+    if (!isFinished) return []
+    return [...filteredChatMessages]
+      .filter((m) => (m.likes ?? 0) > 0)
+      .sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))
+      .slice(0, 8)
+  }, [filteredChatMessages, isFinished])
 
   const chatAuthorKeys = useMemo(() => {
     const keys = new Set<string>()
@@ -1845,10 +1852,13 @@ export function ChannelPage() {
   }, [match?.id])
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
+    if (!match?.id) return
+    if (!authUser?.id || authUser.isAnonymous) {
+      navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
+      return
+    }
     if (chatClosedAfterMatch) return
     if (chatLocked) return
-    if (isFinished) return
-    if (!match?.id) return
     if (chatSendingRef.current) return
     const text = correctFrenchText(chatDraftRef.current).trim()
     if (!text) return
@@ -1932,6 +1942,10 @@ export function ChannelPage() {
     }
   }
   const onToggleLikeMessage = (id: string) => {
+    if (!authUser?.id || authUser.isAnonymous) {
+      if (match?.id) navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
+      return
+    }
     if (messageLikes.isConfigured) {
       void messageLikes.toggleLike(id).then(() => {
         if (channelTifoGroupId && match?.id) requestTifoEngagementSync(channelTifoGroupId, match.id)
@@ -4039,13 +4053,43 @@ export function ChannelPage() {
                       Tchat verrouillé
                     </p>
                     <p className="mt-1 text-[11px] font-semibold text-sky-200/80">
-                      Ouverture 1 h avant le coup d&apos;envoi
+                      Ouverture le matin du match (minuit, heure de Paris)
                     </p>
                     <p className="mt-2 text-2xl font-black text-cyan-200">{chatCountdownText ?? '00:00'}</p>
                   </div>
                 </div>
               ) : (
                 <>
+                  {isFinished ? (
+                    <div
+                      className={cn(
+                        'mb-2 rounded-lg border px-2 py-1.5 text-center',
+                        L ? 'border-slate-200 bg-white/90' : 'border-[#3a6690]/50 bg-[#0c2339]/70',
+                      )}
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-wide text-sky-100">
+                        Replay du tchat
+                      </p>
+                      <p className="text-[11px] font-semibold text-sky-200/80">
+                        {bestReplayMessages.length
+                          ? 'Les meilleurs messages, puis tout le fil.'
+                          : 'Le fil reste lisible après le match.'}
+                      </p>
+                    </div>
+                  ) : null}
+                  {bestReplayMessages.map((msg) => (
+                    <div
+                      key={`best-${msg.id}`}
+                      className="rounded-md border border-amber-300/25 bg-amber-500/10 px-2 py-1.5"
+                    >
+                      <p className="text-[10px] font-black uppercase tracking-wide text-amber-100/90">
+                        Meilleur message · {msg.likes ?? 0} ♥
+                      </p>
+                      <p className="mt-0.5 text-[12px] font-semibold leading-snug text-sky-50">
+                        {msg.text}
+                      </p>
+                    </div>
+                  ))}
                   {filteredChatMessages.map((msg) => (
                     <LiveMatchChatMessage
                       key={msg.id}
@@ -4112,6 +4156,19 @@ export function ChannelPage() {
                 'backdrop-blur-sm',
               )}
             >
+            {guestChatWriter && match?.id ? (
+              <div className="mb-2 text-center">
+                <p className="text-[11px] font-semibold text-sky-100/90">
+                  Lis le tchat librement — inscris-toi pour écrire.
+                </p>
+                <Link
+                  to={`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`}
+                  className="mt-1.5 inline-flex min-h-10 items-center justify-center rounded-xl bg-tf-cta px-4 text-xs font-black text-white"
+                >
+                  Se connecter pour participer
+                </Link>
+              </div>
+            ) : null}
             <form
               onSubmit={onSend}
               className="tf-channel-chat-form relative z-[20] mt-2 flex min-w-0 items-center gap-1.5 max-md:mt-0 md:gap-2"
@@ -4333,10 +4390,12 @@ export function ChannelPage() {
                   chatDraftRef.current = e.currentTarget.value
                 }}
                 placeholder={
-                  isFinished
-                    ? 'Match terminé — tchat fermé'
+                  guestChatWriter
+                    ? 'Connecte-toi pour écrire'
+                    : chatClosedAfterMatch
+                    ? 'Replay — lecture seule'
                     : chatLocked
-                    ? 'Tchat ouvert 1 h avant le match'
+                    ? 'Tchat ouvert dès le matin du match'
                     : !isCloudChatConfigured
                       ? 'Chat cloud indisponible'
                       : 'Écrire un message…'
@@ -4353,9 +4412,11 @@ export function ChannelPage() {
                 disabled={chatComposerLocked || !isCloudChatConfigured || chatSending}
                 className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:text-sm"
               >
-                {isFinished
-                  ? 'Terminé'
-                  : chatLocked
+                {guestChatWriter
+                  ? 'Connexion'
+                  : chatClosedAfterMatch
+                    ? 'Replay'
+                    : chatLocked
                     ? 'Bientôt'
                     : !isCloudChatConfigured
                       ? 'Cloud off'
@@ -5119,7 +5180,7 @@ export function ChannelPage() {
               {chatClosedAfterMatch
                 ? ' Le match est terminé : consultation seule, sans changement de tribune.'
                 : chatDebriefOpen
-                  ? ` Débrief : le tchat reste ouvert encore ~${debriefMinutesLeft} min (30 min max).`
+                  ? ` Débrief : tu peux encore écrire ~${debriefMinutesLeft} min.`
                   : ''}
             </p>
 

@@ -75,11 +75,11 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
     accentClass: 'from-slate-600 to-slate-800',
     limits: {
       maxGroupsCreated: 2,
-      maxGroupsJoined: 5,
+      maxGroupsJoined: 20,
       maxGroupMembers: 200,
       maxPublicSalonMembers: null,
-      debatesPerWeek: 0,
-      debatesPerDay: 0,
+      debatesPerWeek: null,
+      debatesPerDay: null,
       chatCooldownSeconds: 15,
       dailyChatMessages: 100,
       monthlyTokens: 0,
@@ -88,7 +88,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
       modularAvatarSlots: 'all',
     },
     flags: {
-      canCreateDebates: false,
+      canCreateDebates: true,
       canCreateLiveMatch: false,
       canStreamSalon: false,
       canJoinVoiceSalons: false,
@@ -108,11 +108,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTierId, SubscriptionPlanDefi
     },
     features: [
       { id: 'groups-create', label: 'Crée jusqu’à 2 tribunes', included: true },
-      { id: 'groups-join', label: '5 tribunes max au total (créées incluses)', included: true },
+      { id: 'groups-join', label: '20 tribunes max au total (créées incluses)', included: true },
       { id: 'avatar-base', label: 'Personnalisation de base de ton avatar', included: true },
       { id: 'tokens-live', label: '120 jetons / heure pendant les matchs (1 / 30 s)', included: true },
       { id: 'chat-day', label: '100 messages par jour', included: true },
-      { id: 'progress', label: 'Progression classique (paris, live…)', included: true },
+      { id: 'progress', label: 'Progression classique (pronos, live…)', included: true },
+      { id: 'debates-create', label: 'Lancer des débats', included: true },
     ],
   },
   supporter_plus: {

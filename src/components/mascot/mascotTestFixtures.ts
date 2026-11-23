@@ -5,7 +5,7 @@ import type { TorsoColors } from './layers/MascotJersey'
 export const MASCOT_JERSEY_GALLERY: { id: string; label: string; colors: TorsoColors }[] = [
   {
     id: 'psg',
-    label: 'PSG',
+    label: 'Paris',
     colors: {
       primary: '#051a5c',
       secondary: '#e11d48',

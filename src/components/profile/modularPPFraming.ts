@@ -61,5 +61,5 @@ export const MODULAR_PP_CHAT_FRAMING = { ...KIT_FRAMING }
 /** Chat live compact / présence tribune. */
 export const MODULAR_PP_CHAT_COMPACT_FRAMING = { ...KIT_FRAMING }
 
-/** Classement parieurs. */
+/** Classement pronostiqueurs. */
 export const MODULAR_PP_LEADERBOARD_FRAMING = { ...KIT_FRAMING }

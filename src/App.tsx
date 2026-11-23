@@ -203,9 +203,9 @@ export default function App() {
           <Route
             path="debate/:debateId"
             element={
-              <RequireAuthRoute>
+              <RouteSuspense>
                 <DebateDetailPage />
-              </RequireAuthRoute>
+              </RouteSuspense>
             }
           />
           <Route
@@ -243,9 +243,9 @@ export default function App() {
           <Route
             path="channel/:matchId"
             element={
-              <RequireAuthRoute>
+              <RouteSuspense>
                 <ChannelPage />
-              </RequireAuthRoute>
+              </RouteSuspense>
             }
           />
           <Route

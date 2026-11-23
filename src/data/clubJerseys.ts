@@ -1,5 +1,6 @@
 import type { AvatarItem } from '../types/profile'
 import { ALL_CLUBS_BY_ID } from './allClubsCatalog'
+import { boutiqueClubPlaceName } from './clubPublicLabels'
 import { CDM_JERSEY_MEDALS } from './boutiqueMedalCosts'
 import { teamColors } from './teams'
 import {
@@ -13,15 +14,16 @@ function buildClubJersey(clubId: ClubJerseyAssetId): AvatarItem | null {
   const meta = ALL_CLUBS_BY_ID[clubId]
   if (!meta) return null
   const [primary, secondary] = teamColors[clubId] ?? ['#111827', '#f9fafb']
+  const place = boutiqueClubPlaceName(clubId, meta.shortName)
   return {
     id: `club-${clubId}`,
-    name: `Maillot ${meta.shortName} (dom.)`,
+    name: `Maillot ${place} (dom.)`,
     slot: 'jersey',
     emoji: '👕',
     cost: CDM_JERSEY_MEDALS,
     rarity: 'rare',
-    description: `Maillot domicile ${meta.name} — ${meta.leagueName}.`,
-    inspirationNote: `Inspiré ${meta.name} · domicile`,
+    description: `Maillot domicile inspiré · ${place} — ${meta.leagueName}.`,
+    inspirationNote: `Tenue ${place} · domicile`,
     collection: 'clubs',
     clubId,
     jerseyVisual: {

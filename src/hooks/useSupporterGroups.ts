@@ -427,7 +427,7 @@ export function useSupporterGroups() {
               ok: false,
               reason: joinGroupLimitMessage(
                 tier,
-                plan.limits.maxGroupsJoined ?? 5,
+                plan.limits.maxGroupsJoined ?? 20,
                 synced.length || joinedGroupIds.length,
               ),
               limitKind: 'join',

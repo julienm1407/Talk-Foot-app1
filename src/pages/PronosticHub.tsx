@@ -29,7 +29,7 @@ const TABS: { id: BetFilterTab; label: string }[] = [
 type HubView = 'paris' | 'classement'
 
 /**
- * Hub « Pronostic » : mes paris, stats et classement parieurs.
+ * Hub « Pronostic » : mes pronos, stats et classement pronostiqueurs.
  */
 export function PronosticHubPage() {
   const { appearance } = useAppearance()
@@ -107,15 +107,15 @@ export function PronosticHubPage() {
         titleAs="h1"
         uppercaseTitle={false}
         eyebrow="Pronostic"
-        title="Mes paris"
-        description="Tes paris et le classement des meilleurs parieurs Talk Foot."
+        title="Mes pronos"
+        description="Tes pronos et le classement des meilleurs pronostiqueurs Talk Foot."
         actions={
           liveMatch ? (
             <Link
               to={`/channel/${liveMatch.id}?paris=1`}
               className="inline-flex min-h-10 items-center justify-center rounded-2xl border-2 border-tf-cta-hover/40 bg-tf-cta px-4 text-sm font-black text-white shadow-tf-cta transition hover:bg-tf-cta-hover"
             >
-              Parier en live
+              Pronostiquer en live
             </Link>
           ) : (
             <Link
@@ -141,19 +141,19 @@ export function PronosticHubPage() {
         <HubTabButton
           active={hubView === 'paris'}
           onClick={() => setHubView('paris')}
-          label="Mes paris"
+          label="Mes pronos"
           L={L}
         />
         <HubTabButton
           active={hubView === 'classement'}
           onClick={() => setHubView('classement')}
-          label="Classement parieurs"
+          label="Classement pronostiqueurs"
           L={L}
         />
       </div>
 
       {hubView === 'classement' ? (
-        <section className="space-y-4" aria-label="Classement des parieurs">
+        <section className="space-y-4" aria-label="Classement des pronostiqueurs">
           <PronoStatsPanel className="border-t-0 pt-0 sm:pt-0" />
           <FriendsParieurMiniRank />
           <Card className="p-5 sm:p-6" elevation="soft">
@@ -271,7 +271,7 @@ function EmptyBets({
                 : 'border-white/20 bg-white/10 text-white',
             )}
           >
-            Parier sur {liveMatch.home.shortName} — {liveMatch.away.shortName}
+            Pronostiquer {liveMatch.home.shortName} — {liveMatch.away.shortName}
           </Link>
         ) : null}
       </div>
