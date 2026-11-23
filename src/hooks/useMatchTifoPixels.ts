@@ -191,11 +191,13 @@ function useMatchTifoPixelsLocal(groupId: string, matchId: string | null) {
 export function useMatchTifoPixels(options: {
   groupId: string
   matchId: string | null
+  boardMatchId?: string | null
   isGroupAdmin: boolean
 }) {
   const { groupId, matchId, isGroupAdmin } = options
-  const cloud = useMatchTifoPixelsCloud({ groupId, matchId, isGroupAdmin })
-  const local = useMatchTifoPixelsLocal(groupId, matchId)
+  const pixelMatchId = options.boardMatchId ?? matchId
+  const cloud = useMatchTifoPixelsCloud({ groupId, matchId, boardMatchId: pixelMatchId, isGroupAdmin })
+  const local = useMatchTifoPixelsLocal(groupId, pixelMatchId)
   if (isSupabaseConfigured()) return cloud
   return local
 }

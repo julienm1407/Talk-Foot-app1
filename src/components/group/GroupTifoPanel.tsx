@@ -7,7 +7,13 @@ import { normalizeTifoDisplayColor, TIFO_BOARD_CELL_COUNT, TIFO_ENGAGEMENT_BONUS
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { matchInvolvesNation } from '../../utils/resolveMatchNation'
 import { isWorldCupCompetitionId } from '../../utils/seasonMode'
-import { buildMatchTifoTemplates, tifoMaskProgress, type TifoTemplateId } from '../../utils/tifoReadyTemplates'
+import {
+  buildMatchTifoTemplates,
+  tifoBoardLayerFromUi,
+  tifoBoardMatchId,
+  tifoMaskProgress,
+  type TifoTemplateId,
+} from '../../utils/tifoReadyTemplates'
 
 const CELL_PX_DESKTOP = 11
 /** Grille un peu plus grande dans les panneaux mobile (sheet / embedded). */
@@ -85,6 +91,11 @@ export function GroupTifoPanel({
     setModerationMode(false)
   }, [groupId, activeId])
 
+  const [tifoMode, setTifoMode] = useState<'modele' | 'libre'>('modele')
+  const [templateId, setTemplateId] = useState<TifoTemplateId>('camps')
+  const tifoLayer = tifoBoardLayerFromUi(tifoMode, templateId)
+  const boardMatchId = activeId ? tifoBoardMatchId(activeId, tifoLayer) : null
+
   const {
     pixels,
     placePixel,
@@ -107,6 +118,7 @@ export function GroupTifoPanel({
   } = useMatchTifoPixels({
     groupId,
     matchId: activeId,
+    boardMatchId,
     isGroupAdmin,
   })
 
@@ -116,8 +128,6 @@ export function GroupTifoPanel({
     return () => window.clearTimeout(t)
   }, [engagementNotice, clearEngagementNotice])
 
-  const [tifoMode, setTifoMode] = useState<'modele' | 'libre'>('modele')
-  const [templateId, setTemplateId] = useState<TifoTemplateId>('camps')
   const [followMatchColors, setFollowMatchColors] = useState(true)
   const activeMatch = useMemo(
     () => candidates.find((m) => m.id === activeId) ?? fixedMatch,
@@ -265,7 +275,7 @@ export function GroupTifoPanel({
         <p className={cn('mt-1.5 text-[11px] font-semibold leading-snug', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
           {activeTemplate?.hint ?? 'Modèle du match'}. Tape une case du dessin pour poser la couleur du club
           {followMatchColors ? '' : ' (couleur choisie à la place)'} ({templateProgress.filled}/
-          {templateProgress.total}).
+          {templateProgress.total}). Chaque modèle a sa propre grille.
         </p>
       ) : null}
       {templateProgress.total > 0 && templateProgress.filled >= templateProgress.total ? (

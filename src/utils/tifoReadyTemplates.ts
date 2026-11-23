@@ -7,6 +7,17 @@ import {
 import type { Match } from '../types/match'
 
 export type TifoTemplateId = 'camps' | 'echarpe' | 'lettres'
+export type TifoBoardLayer = TifoTemplateId | 'libre'
+
+/** Une grille par modèle. `camps` garde l’id match d’origine (pixels déjà posés). */
+export function tifoBoardMatchId(matchId: string, layer: TifoBoardLayer): string {
+  if (layer === 'camps') return matchId
+  return `${matchId}::__tifo_${layer}`
+}
+
+export function tifoBoardLayerFromUi(mode: 'modele' | 'libre', templateId: TifoTemplateId): TifoBoardLayer {
+  return mode === 'libre' ? 'libre' : templateId
+}
 
 export type MatchTifoTemplate = {
   id: TifoTemplateId

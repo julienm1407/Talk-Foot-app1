@@ -118,9 +118,11 @@ function broadcastDeleteToCell(payload: unknown, scope: TifoScope): { x: number;
 export function useMatchTifoPixelsCloud(options: {
   groupId: string
   matchId: string | null
+  boardMatchId?: string | null
   isGroupAdmin: boolean
 }) {
   const { groupId, matchId, isGroupAdmin } = options
+  const pixelMatchId = options.boardMatchId ?? matchId
   const { user: authUser } = useAuth()
   const isSiteAdmin = Boolean(authUser?.isAdmin)
   const [pixels, setPixels] = useState<PixelBoard>({})
@@ -138,8 +140,8 @@ export function useMatchTifoPixelsCloud(options: {
   )
 
   const scope = useMemo<TifoScope | null>(
-    () => (groupId && matchId ? { groupId, matchId } : null),
-    [groupId, matchId],
+    () => (groupId && pixelMatchId ? { groupId, matchId: pixelMatchId } : null),
+    [groupId, pixelMatchId],
   )
 
   const clearPixel = useCallback((x: number, y: number) => {
@@ -182,12 +184,12 @@ export function useMatchTifoPixelsCloud(options: {
 
   const refreshBoard = useCallback(
     async (sb: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>) => {
-      if (!groupId || !matchId) return
+      if (!groupId || !pixelMatchId) return
       const { data, error } = await sb
         .from('match_tifo_pixels')
         .select('x, y, color, user_id')
         .eq('group_id', groupId)
-        .eq('match_id', matchId)
+        .eq('match_id', pixelMatchId)
         .limit(10000)
       if (error) {
         if (import.meta.env.DEV) console.warn('[Talk Foot] match_tifo_pixels fetch:', error.message)
@@ -197,7 +199,7 @@ export function useMatchTifoPixelsCloud(options: {
       setPixels(nextPixels)
       setPixelOwners(nextOwners)
     },
-    [groupId, matchId],
+    [groupId, pixelMatchId],
   )
 
   useEffect(() => {
@@ -336,7 +338,7 @@ export function useMatchTifoPixelsCloud(options: {
       if (!detail) return
       if (detail.matchId === '*') {
         if (!detail.groupId || detail.groupId !== scopeSnapshot.groupId) return
-      } else if (detail.matchId !== scopeSnapshot.matchId) {
+      } else if (detail.matchId !== matchId) {
         return
       }
       if (detail.groupId && detail.groupId !== scopeSnapshot.groupId) return
@@ -381,7 +383,7 @@ export function useMatchTifoPixelsCloud(options: {
       const uid = session.user.id
       const chargesQuota = tifoPixelChargesQuota(previousColor, previousOwner, uid)
 
-      const preSync = await syncMatchTifoEngagementBonuses(scope.groupId, scope.matchId)
+      const preSync = await syncMatchTifoEngagementBonuses(scope.groupId, matchId ?? scope.matchId)
       const quotaRemaining = preSync?.remaining ?? remaining
       const quotaLimit = preSync?.daily_limit ?? dailyLimit
       if (preSync) {
@@ -466,7 +468,7 @@ export function useMatchTifoPixelsCloud(options: {
       void refreshUsage(sb, uid)
       return true
     },
-    [scope, remaining, dailyLimit, unlimitedPixels, pixels, pixelOwners, refreshBoard, refreshUsage],
+    [scope, matchId, remaining, dailyLimit, unlimitedPixels, pixels, pixelOwners, refreshBoard, refreshUsage],
   )
 
   const erasePixel = useCallback(
