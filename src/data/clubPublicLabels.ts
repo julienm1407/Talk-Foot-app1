@@ -45,10 +45,10 @@ export const CLUB_PUBLIC_LABELS: Record<string, ClubPublicLabel> = {
   redstar: { name: 'Saint-Ouen', shortName: 'Saint-Ouen', aliases: ['Red Star', 'RSFC', 'Red Star FC'] },
   rma: { name: 'Madrid', shortName: 'Madrid', aliases: ['RMA', 'Real Madrid', 'Real'] },
   fcb: { name: 'Barcelone', shortName: 'Barcelone', aliases: ['FCB', 'FC Barcelona', 'Barcelona', 'Barca', 'Barça'] },
-  atleti: { name: 'Madrid A.', shortName: 'Madrid A.', aliases: ['ATM', 'Atletico', 'Atlético Madrid', 'Atletico Madrid'] },
+  atleti: { name: 'Atlético', shortName: 'Atlético', aliases: ['ATM', 'Atletico', 'Atlético Madrid', 'Atletico Madrid'] },
   sevilla: { name: 'Séville', shortName: 'Séville', aliases: ['SEV', 'Sevilla', 'Sevilla FC'] },
   sociedad: { name: 'Saint-Sébastien', shortName: 'Saint-Sébastien', aliases: ['RSO', 'Real Sociedad'] },
-  betis: { name: 'Séville B.', shortName: 'Séville B.', aliases: ['BET', 'Real Betis', 'Betis'] },
+  betis: { name: 'Betis', shortName: 'Betis', aliases: ['BET', 'Real Betis'] },
   villarreal: { name: 'Villarreal', shortName: 'Villarreal', aliases: ['VIL', 'Villarreal CF'] },
   bilbao: { name: 'Bilbao', shortName: 'Bilbao', aliases: ['ATH', 'Athletic', 'Athletic Bilbao', 'Athletic Club'] },
   valencia: { name: 'Valence', shortName: 'Valence', aliases: ['VAL', 'Valencia', 'Valencia CF'] },
@@ -59,24 +59,24 @@ export const CLUB_PUBLIC_LABELS: Record<string, ClubPublicLabel> = {
   alaves: { name: 'Vitoria', shortName: 'Vitoria', aliases: ['ALA', 'Alaves', 'Alavés', 'Deportivo Alaves'] },
   celta: { name: 'Vigo', shortName: 'Vigo', aliases: ['CEL', 'Celta', 'Celta Vigo'] },
   rayo: { name: 'Vallecas', shortName: 'Vallecas', aliases: ['RAY', 'Rayo', 'Rayo Vallecano'] },
-  espanyol: { name: 'Barcelone E.', shortName: 'Barcelone E.', aliases: ['ESP', 'Espanyol', 'RCD Espanyol'] },
-  levante: { name: 'Valence L.', shortName: 'Valence L.', aliases: ['LEV', 'Levante', 'Levante UD'] },
+  espanyol: { name: 'Espanyol', shortName: 'Espanyol', aliases: ['ESP', 'RCD Espanyol'] },
+  levante: { name: 'Levante', shortName: 'Levante', aliases: ['LEV', 'Levante UD'] },
   elche: { name: 'Elche', shortName: 'Elche', aliases: ['ELC', 'Elche CF'] },
   malaga: { name: 'Malaga', shortName: 'Malaga', aliases: ['MLG', 'Málaga', 'Malaga CF'] },
   coruna: { name: 'La Corogne', shortName: 'La Corogne', aliases: ['DEP', 'Deportivo', 'Deportivo La Coruna'] },
   santander: { name: 'Santander', shortName: 'Santander', aliases: ['RAC', 'Racing Santander'] },
   mci: { name: 'Manchester', shortName: 'Manchester', aliases: ['MCI', 'Man City', 'Manchester City'] },
-  liv: { name: 'Liverpool', shortName: 'Liverpool', aliases: ['LIV'] },
-  ars: { name: 'Londres N.', shortName: 'Londres N.', aliases: ['ARS', 'Arsenal'] },
-  che: { name: 'Londres O.', shortName: 'Londres O.', aliases: ['CHE', 'Chelsea'] },
-  mun: { name: 'Manchester R.', shortName: 'Manchester R.', aliases: ['MUN', 'Man United', 'Manchester United', 'United'] },
-  tot: { name: 'Londres Tot.', shortName: 'Londres Tot.', aliases: ['TOT', 'Tottenham', 'Spurs'] },
+  liv: { name: 'Liverpool', shortName: 'Liverpool', aliases: ['LIV', 'Liverpool FC'] },
+  ars: { name: 'Arsenal', shortName: 'Arsenal', aliases: ['ARS'] },
+  che: { name: 'Chelsea', shortName: 'Chelsea', aliases: ['CHE'] },
+  mun: { name: 'Man United', shortName: 'Man United', aliases: ['MUN', 'Man United', 'Manchester United', 'United'] },
+  tot: { name: 'Tottenham', shortName: 'Tottenham', aliases: ['TOT', 'Spurs'] },
   new: { name: 'Newcastle', shortName: 'Newcastle', aliases: ['NEW', 'Newcastle United'] },
-  avl: { name: 'Birmingham', shortName: 'Birmingham', aliases: ['AVL', 'Aston Villa', 'Villa'] },
-  whu: { name: 'Londres E.', shortName: 'Londres E.', aliases: ['WHU', 'West Ham', 'West Ham United'] },
+  avl: { name: 'Villa', shortName: 'Villa', aliases: ['AVL', 'Aston Villa', 'Aston', 'Birmingham'] },
+  whu: { name: 'West Ham', shortName: 'West Ham', aliases: ['WHU', 'West Ham United'] },
   bha: { name: 'Brighton', shortName: 'Brighton', aliases: ['BHA'] },
   brentford: { name: 'Brentford', shortName: 'Brentford', aliases: ['BRE'] },
-  palace: { name: 'Londres S.', shortName: 'Londres S.', aliases: ['CRY', 'Crystal Palace', 'Palace'] },
+  palace: { name: 'Palace', shortName: 'Palace', aliases: ['CRY', 'Crystal Palace'] },
   fulham: { name: 'Fulham', shortName: 'Fulham', aliases: ['FUL'] },
   wolves: { name: 'Wolverhampton', shortName: 'Wolverhampton', aliases: ['WOL', 'Wolves'] },
   bournemouth: { name: 'Bournemouth', shortName: 'Bournemouth', aliases: ['BOU'] },
@@ -88,16 +88,16 @@ export const CLUB_PUBLIC_LABELS: Record<string, ClubPublicLabel> = {
   coventry: { name: 'Coventry', shortName: 'Coventry', aliases: ['COV'] },
   hull: { name: 'Hull', shortName: 'Hull', aliases: ['HUL', 'Hull City'] },
   leicester: { name: 'Leicester', shortName: 'Leicester', aliases: ['LEI', 'Leicester City'] },
-  everton: { name: 'Liverpool E.', shortName: 'Liverpool E.', aliases: ['EVE', 'Everton'] },
-  inter: { name: 'Milan N.', shortName: 'Milan N.', aliases: ['INT', 'Inter', 'Inter Milan', 'Internazionale'] },
+  everton: { name: 'Everton', shortName: 'Everton', aliases: ['EVE'] },
+  inter: { name: 'Inter', shortName: 'Inter', aliases: ['INT', 'Inter Milan', 'Internazionale'] },
   juve: { name: 'Turin', shortName: 'Turin', aliases: ['JUV', 'Juventus'] },
   napoli: { name: 'Naples', shortName: 'Naples', aliases: ['NAP', 'Napoli'] },
   milan: { name: 'Milan', shortName: 'Milan', aliases: ['MIL', 'AC Milan', 'Milan AC'] },
   roma: { name: 'Rome', shortName: 'Rome', aliases: ['ROM', 'AS Roma', 'Roma'] },
-  lazio: { name: 'Rome L.', shortName: 'Rome L.', aliases: ['LAZ', 'Lazio'] },
+  lazio: { name: 'Lazio', shortName: 'Lazio', aliases: ['LAZ'] },
   atalanta: { name: 'Bergame', shortName: 'Bergame', aliases: ['ATA', 'Atalanta'] },
   fiorentina: { name: 'Florence', shortName: 'Florence', aliases: ['FIO', 'Fiorentina'] },
-  torino: { name: 'Turin T.', shortName: 'Turin T.', aliases: ['TOR', 'Torino'] },
+  torino: { name: 'Torino', shortName: 'Torino', aliases: ['TOR'] },
   bologna: { name: 'Bologne', shortName: 'Bologne', aliases: ['BOL', 'Bologna'] },
   genoa: { name: 'Gênes', shortName: 'Gênes', aliases: ['GEN', 'Genoa'] },
   udinese: { name: 'Udine', shortName: 'Udine', aliases: ['UDI', 'Udinese'] },
@@ -143,4 +143,28 @@ export function boutiqueClubPlaceName(clubId: string, fallback: string): string 
 
 export function clubSearchAliases(clubId: string): string[] {
   return CLUB_PUBLIC_LABELS[clubId]?.aliases ?? []
+}
+
+export function foldBoutiqueQuery(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+}
+
+/** Noms officiels + ville + alias : « Aston Villa » retrouve le maillot Villa. */
+export function boutiqueClubSearchHaystack(clubId: string, officialName = '', officialShort = ''): string {
+  const label = CLUB_PUBLIC_LABELS[clubId]
+  return foldBoutiqueQuery(
+    [
+      clubId,
+      officialName,
+      officialShort,
+      label?.name,
+      label?.shortName,
+      ...(label?.aliases ?? []),
+    ]
+      .filter(Boolean)
+      .join(' '),
+  )
 }

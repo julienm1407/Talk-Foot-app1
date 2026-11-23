@@ -1,4 +1,6 @@
 import type { AvatarItem } from '../types/profile'
+import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
+import { boutiqueClubSearchHaystack, foldBoutiqueQuery } from '../data/clubPublicLabels'
 import { cdm2026BundleItems } from '../data/cdm2026Bundles'
 import { cdm2026JerseyItems } from '../data/cdm2026Jerseys'
 import { cdm2026ShortItems } from '../data/cdm2026Shorts'
@@ -27,11 +29,21 @@ export function findBoutiqueCatalogItem(itemId: string): AvatarItem | undefined 
   return BOUTIQUE_CATALOG_ITEMS.find((i) => i.id === itemId)
 }
 
+function itemSearchHaystack(item: AvatarItem): string {
+  const meta = item.clubId ? ALL_CLUBS_BY_ID[item.clubId] : undefined
+  const clubHay = item.clubId
+    ? boutiqueClubSearchHaystack(item.clubId, meta?.name ?? '', meta?.shortName ?? '')
+    : ''
+  return `${foldBoutiqueQuery(`${item.name} ${item.description ?? ''} ${item.id}`)} ${clubHay}`
+}
+
 function matchesQuery(item: AvatarItem, q: string): boolean {
   if (!q) return true
-  const n = item.name.toLowerCase()
-  const d = item.description?.toLowerCase() ?? ''
-  return n.includes(q) || d.includes(q)
+  const qf = foldBoutiqueQuery(q)
+  const hay = itemSearchHaystack(item)
+  if (hay.includes(qf)) return true
+  const words = qf.split(/\s+/).filter((w) => w.length >= 2)
+  return words.length > 0 && words.every((w) => hay.includes(w))
 }
 
 export function buildCatalogRows(filter: CatalogFilter, query: string): CatalogRow[] {

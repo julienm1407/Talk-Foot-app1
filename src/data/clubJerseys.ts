@@ -17,7 +17,7 @@ function buildClubJersey(clubId: ClubJerseyAssetId): AvatarItem | null {
   const place = boutiqueClubPlaceName(clubId, meta.shortName)
   return {
     id: `club-${clubId}`,
-    name: `Maillot ${place} (dom.)`,
+    name: `Maillot ${place}`,
     slot: 'jersey',
     emoji: '👕',
     cost: CDM_JERSEY_MEDALS,
