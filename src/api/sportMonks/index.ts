@@ -28,6 +28,7 @@ export {
   fetchSportMonksStandingsBySeason,
   fetchSportMonksTeamsBySeason,
   fetchSportMonksSeasonTopscorers,
+  fetchSportMonksHeadToHead,
 } from './sportMonksApi'
 export * from './includes'
 export {
@@ -51,6 +52,7 @@ export {
   lastFiveFormFromTeamSchedule,
   listClubCalendarFixtures,
   listRecentClubResults,
+  listRecentClubResultsFromLatest,
   smFixturesFromTeamLatestEnvelope,
   smFixturesFromTeamScheduleEnvelope,
   smFixturesFromSeasonScheduleEnvelope,

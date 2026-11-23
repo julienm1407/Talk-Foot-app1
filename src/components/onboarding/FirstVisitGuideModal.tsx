@@ -19,7 +19,7 @@ export function FirstVisitGuideModal() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const { onboardingOpen } = useFanPreferences()
-  const { user } = useAuth()
+  const { user, isReady } = useAuth()
   const [open, setOpen] = useState(false)
   const guideId = firstVisitGuideIdFromPath(location.pathname)
   const showLoginCta = guideId === 'home' && (!user || user.isAnonymous)
@@ -27,7 +27,7 @@ export function FirstVisitGuideModal() {
   const guide = guideId ? FIRST_VISIT_GUIDES[guideId] : null
 
   useEffect(() => {
-    if (onboardingOpen || !guideId || !guide) {
+    if (!isReady || onboardingOpen || !guideId || !guide || (user && !user.isAnonymous)) {
       setOpen(false)
       return
     }
@@ -38,7 +38,7 @@ export function FirstVisitGuideModal() {
     }
     const t = window.setTimeout(() => setOpen(true), 280)
     return () => window.clearTimeout(t)
-  }, [guideId, guide, force, onboardingOpen, location.pathname])
+  }, [guideId, guide, force, onboardingOpen, location.pathname, isReady, user])
 
   const dismiss = (remember: boolean) => {
     if (remember && guideId) markFirstVisitGuideSeen(guideId)

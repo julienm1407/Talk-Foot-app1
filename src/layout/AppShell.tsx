@@ -20,7 +20,7 @@ import { useRouteViewReset } from '../hooks/useRouteViewReset'
 
 const mainBottomPadMobile =
   'max-lg:pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom,0px)))] lg:pb-2'
-const mainBottomPadChannel = 'pb-[max(1rem,env(safe-area-inset-bottom,0px))]'
+const mainBottomPadChannel = 'pb-0'
 /** Réserve la zone tactile de la BottomNav fixe — le scroll ne doit pas s'étendre dessous. */
 const mobileMainClearBottomNav =
   'max-lg:mb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]'
@@ -82,8 +82,7 @@ export function AppShell() {
             className={cn(
               'tf-channel-shell mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col px-[var(--tf-page-gutter)] pt-3 sm:pt-4',
               /* Téléphone : scroll page. Tablette+ : hauteur cadrée, scroll dans les colonnes de la tribune. */
-              'min-h-0 max-md:touch-pan-y max-md:overflow-y-auto max-md:overscroll-y-contain',
-              'md:min-h-0 md:overflow-hidden',
+              'min-h-0 overflow-hidden',
               mainBottomPadChannel,
               isChannelStadium ? 'max-w-tf-channel-stadium' : 'max-w-tf-channel',
             )}

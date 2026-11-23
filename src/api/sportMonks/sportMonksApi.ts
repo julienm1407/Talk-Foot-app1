@@ -25,6 +25,7 @@ import {
   SM_INCLUDE_TEAM_UPCOMING_AND_LATEST,
   SM_INCLUDE_PLAYER_LATEST,
   SM_INCLUDE_SEASON_TOPSCORERS,
+  SM_INCLUDE_HEAD_TO_HEAD,
   SM_TOPSCORER_TYPE_GOALS,
 } from './includes'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
@@ -471,6 +472,22 @@ export async function fetchSportMonksSeasonTopscorers(token: string, seasonId: n
     include: SM_INCLUDE_SEASON_TOPSCORERS,
     filters: `seasontopscorerTypes:${SM_TOPSCORER_TYPE_GOALS}`,
   })
+}
+
+/** Confrontations directes (`GET /fixtures/head-to-head/{id}/{id}`). */
+export async function fetchSportMonksHeadToHead(
+  token: string,
+  teamIdA: number,
+  teamIdB: number,
+): Promise<SmFixture[]> {
+  const a = Math.min(teamIdA, teamIdB)
+  const b = Math.max(teamIdA, teamIdB)
+  const json = await sportMonksFetchJson<SportMonksListEnvelope<unknown>>(
+    `/fixtures/head-to-head/${a}/${b}`,
+    token,
+    { include: SM_INCLUDE_HEAD_TO_HEAD, per_page: 50 },
+  )
+  return asFixtureArray(json.data)
 }
 
 export type { SmFixture, SmPlayer }

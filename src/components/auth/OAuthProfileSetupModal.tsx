@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { isTalkFootOAuthProvider, oauthProviderDisplayName } from '../../config/oauthProviders'
-import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useOptionalCloudUserState } from '../../contexts/CloudUserStateContext'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -22,7 +21,6 @@ import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 export function OAuthProfileSetupModal() {
   const cloud = useOptionalCloudUserState()
   const { user } = useAuth()
-  const { preferencesComplete, openOnboarding } = useFanPreferences()
   const [displayName, setDisplayName] = useState('')
   const [aboutLine, setAboutLine] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -89,9 +87,6 @@ export function OAuthProfileSetupModal() {
     setSuggestions([])
     try {
       await cloud.completeOauthProfile(name, aboutLine)
-      queueMicrotask(() => {
-        if (!preferencesComplete) openOnboarding()
-      })
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Enregistrement impossible. Réessaie.'
       setError(msg)

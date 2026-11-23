@@ -12,7 +12,13 @@ import {
   DEMO_FAN_ONBOARDING_EVERY_LOGIN,
   PENDING_FAN_ONBOARDING_KEY,
 } from '../constants/fanSession'
-import type { FanPreferencesStoredShape, FavoritePlayerFollow } from '../types/fanPreferences'
+import type {
+  FanPreferencesStoredShape,
+  FavoritePlayerFollow,
+  MatchAlertKind,
+  MatchAlertPrefs,
+} from '../types/fanPreferences'
+import { DEFAULT_MATCH_ALERT_PREFS } from '../types/fanPreferences'
 import { useOptionalCloudUserState } from './CloudUserStateContext'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { useAuth } from './AuthContext'
@@ -61,6 +67,7 @@ export type FanPreferencesState = {
   hideRivalSalons: boolean
   virageMode: boolean
   kickoffAlertsEnabled: boolean
+  favoriteMatchAlertPrefs: Record<string, MatchAlertPrefs>
 }
 
 type FanPreferencesContextValue = FanPreferencesState & {
@@ -73,6 +80,8 @@ type FanPreferencesContextValue = FanPreferencesState & {
   maxFavoriteNations: number
   toggleFavoriteMatch: (matchId: string) => void
   isMatchFavorite: (matchId: string) => boolean
+  matchAlertPrefs: (matchId: string) => Record<MatchAlertKind, boolean>
+  setMatchAlertPref: (matchId: string, key: MatchAlertKind, value: boolean) => void
   toggleFavoritePlayer: (player: FavoritePlayerFollow, currentMatchId?: string) => void
   isPlayerFavorite: (playerId: number) => boolean
   maxFavoriteMatches: number
@@ -91,7 +100,7 @@ const FanPreferencesContext = createContext<FanPreferencesContextValue | null>(n
 
 export function FanPreferencesProvider({ children }: { children: React.ReactNode }) {
   const cloud = useOptionalCloudUserState()
-  const { user, isReady } = useAuth()
+  const { user } = useAuth()
   const persistLocal = !isSupabaseConfigured()
   const [localStored, setLocalStored] = useLocalStorageState<StoredShape>(
     STORAGE_KEY,
@@ -127,48 +136,39 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
             )
             .slice(0, MAX_FAVORITE_PLAYERS)
         : [],
-      preferencesComplete: stored.preferencesComplete ?? false,
+      preferencesComplete:
+        stored.preferencesComplete === true ||
+        Boolean(stored.favoriteLeagueId) ||
+        Boolean(user && !user.isAnonymous && cloud && !cloud.syncReady),
       hideRivalSalons: stored.hideRivalSalons ?? false,
       virageMode: stored.virageMode ?? false,
       kickoffAlertsEnabled: stored.kickoffAlertsEnabled ?? false,
+      favoriteMatchAlertPrefs:
+        stored.favoriteMatchAlertPrefs && typeof stored.favoriteMatchAlertPrefs === 'object'
+          ? stored.favoriteMatchAlertPrefs
+          : {},
     }
-  }, [stored])
+  }, [stored, user, cloud])
 
   /**
-   * Invité : jamais de modal ligue/club.
-   * Compte réel : seulement après hydratation cloud, si les préférences sont encore vides.
+   * Jamais de modal ligue au boot / à la reconnexion.
+   * Un compte existant doit arriver directement sur l’app ; ligue/clubs = profil.
    */
   useEffect(() => {
-    if (!isReady) return
     if (!user || user.isAnonymous) {
       setOnboardingOpen(false)
       offeredOnboardingForUser.current = null
       return
     }
-    if (cloud && !cloud.syncReady) return
-    if (cloud?.oauthNeedsProfile) return
     try {
       sessionStorage.removeItem(PENDING_FAN_ONBOARDING_KEY)
     } catch {
       /* ignore */
     }
-    if (!DEMO_FAN_ONBOARDING_EVERY_LOGIN && state.preferencesComplete) {
+    if (!DEMO_FAN_ONBOARDING_EVERY_LOGIN) {
       setOnboardingOpen(false)
-      return
     }
-    if (offeredOnboardingForUser.current === user.id) return
-    offeredOnboardingForUser.current = user.id
-    setOnboardingOpen(true)
-  }, [
-    isReady,
-    user,
-    user?.id,
-    user?.isAnonymous,
-    cloud,
-    cloud?.syncReady,
-    cloud?.oauthNeedsProfile,
-    state.preferencesComplete,
-  ])
+  }, [user, user?.isAnonymous])
 
   const patch = useCallback(
     (p: Partial<StoredShape>) => {
@@ -267,16 +267,43 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       const current = state.favoriteMatchIds
       const exists = current.includes(id)
       const favoriteMatchIds = exists ? current.filter((x) => x !== id) : [id, ...current]
+      const favoriteMatchAlertPrefs = { ...state.favoriteMatchAlertPrefs }
+      if (exists) delete favoriteMatchAlertPrefs[id]
+      else if (!favoriteMatchAlertPrefs[id]) favoriteMatchAlertPrefs[id] = { ...DEFAULT_MATCH_ALERT_PREFS }
       patch({
         favoriteMatchIds,
+        favoriteMatchAlertPrefs,
         kickoffAlertsEnabled: exists ? state.kickoffAlertsEnabled : true,
       })
     },
-    [patch, state.favoriteMatchIds, state.kickoffAlertsEnabled],
+    [patch, state.favoriteMatchIds, state.favoriteMatchAlertPrefs, state.kickoffAlertsEnabled],
   )
   const isMatchFavorite = useCallback(
     (matchId: string) => state.favoriteMatchIds.includes(matchId),
     [state.favoriteMatchIds],
+  )
+  const matchAlertPrefs = useCallback(
+    (matchId: string): Record<MatchAlertKind, boolean> => ({
+      ...DEFAULT_MATCH_ALERT_PREFS,
+      ...(state.favoriteMatchAlertPrefs[matchId] ?? {}),
+    }),
+    [state.favoriteMatchAlertPrefs],
+  )
+  const setMatchAlertPref = useCallback(
+    (matchId: string, key: MatchAlertKind, value: boolean) => {
+      const current = {
+        ...DEFAULT_MATCH_ALERT_PREFS,
+        ...(state.favoriteMatchAlertPrefs[matchId] ?? {}),
+        [key]: value,
+      }
+      patch({
+        favoriteMatchAlertPrefs: {
+          ...state.favoriteMatchAlertPrefs,
+          [matchId]: current,
+        },
+      })
+    },
+    [patch, state.favoriteMatchAlertPrefs],
   )
   const toggleFavoritePlayer = useCallback(
     (player: FavoritePlayerFollow, currentMatchId?: string) => {
@@ -289,13 +316,22 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
         !exists && currentMatchId && !state.favoriteMatchIds.includes(currentMatchId)
           ? [currentMatchId, ...state.favoriteMatchIds]
           : state.favoriteMatchIds
+      const favoriteMatchAlertPrefs = { ...state.favoriteMatchAlertPrefs }
+      if (
+        !exists &&
+        currentMatchId &&
+        !favoriteMatchAlertPrefs[currentMatchId]
+      ) {
+        favoriteMatchAlertPrefs[currentMatchId] = { ...DEFAULT_MATCH_ALERT_PREFS }
+      }
       patch({
         favoritePlayers,
         favoriteMatchIds,
+        favoriteMatchAlertPrefs,
         kickoffAlertsEnabled: exists ? state.kickoffAlertsEnabled : true,
       })
     },
-    [patch, state.favoritePlayers, state.favoriteMatchIds, state.kickoffAlertsEnabled],
+    [patch, state.favoritePlayers, state.favoriteMatchIds, state.favoriteMatchAlertPrefs, state.kickoffAlertsEnabled],
   )
   const isPlayerFavorite = useCallback(
     (playerId: number) => state.favoritePlayers.some((p) => p.playerId === playerId),
@@ -355,6 +391,8 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       maxFavoriteNations: MAX_FAVORITE_NATIONS,
       toggleFavoriteMatch,
       isMatchFavorite,
+      matchAlertPrefs,
+      setMatchAlertPref,
       toggleFavoritePlayer,
       isPlayerFavorite,
       maxFavoriteMatches: MAX_FAVORITE_MATCHES,
@@ -378,6 +416,8 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       isNationFavorite,
       toggleFavoriteMatch,
       isMatchFavorite,
+      matchAlertPrefs,
+      setMatchAlertPref,
       toggleFavoritePlayer,
       isPlayerFavorite,
       setHideRivalSalons,

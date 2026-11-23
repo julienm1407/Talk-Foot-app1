@@ -168,11 +168,17 @@ function profileScopeUpdate(sb: ReturnType<typeof getSupabaseBrowserClient>, use
 }
 
 export function CloudUserStateGate({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const sessionKey = user?.id ?? 'guest'
   if (!isSupabaseConfigured()) return <>{children}</>
   if (isClerkAuthMode()) {
-    return <CloudUserStateLoaderClerk>{children}</CloudUserStateLoaderClerk>
+    return <CloudUserStateLoaderClerk key={sessionKey}>{children}</CloudUserStateLoaderClerk>
   }
-  return <CloudUserStateLoader clerkSessionId={null}>{children}</CloudUserStateLoader>
+  return (
+    <CloudUserStateLoader key={sessionKey} clerkSessionId={null}>
+      {children}
+    </CloudUserStateLoader>
+  )
 }
 
 function CloudUserStateLoaderClerk({ children }: { children: ReactNode }) {
@@ -401,9 +407,15 @@ function CloudUserStateLoader({
       loadUserIdRef.current = user.id
       hasLocalEditsRef.current = false
       cloudHydratedRef.current = false
-      const fresh = defaultUserAppState()
-      appRef.current = fresh
-      setApp(fresh)
+      let next = defaultUserAppState()
+      next = mergeFanPreferencesBackupIntoApp(user.id, next).app
+      next = mergeWalletBackupIntoApp(user.id, next).app
+      next = mergeOwnedItemsBackupIntoApp(user.id, next).app
+      next = mergeModularAvatarBackupIntoApp(user.id, next).app
+      next = mergeBetsBackupIntoApp(user.id, next).app
+      appRef.current = next
+      setApp(next)
+      setOauthNeedsProfile(false)
       setReady(false)
     }
     let cancelled = false

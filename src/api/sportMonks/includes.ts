@@ -79,6 +79,10 @@ export const SM_INCLUDE_TEAM_FORM =
 export const SM_INCLUDE_TEAM_UPCOMING_AND_LATEST =
   'upcoming.participants;upcoming.league;latest.participants;latest.league;latest.state;latest.scores.type' as const
 
+/** GET `/fixtures/head-to-head/{id}/{id}` — confrontations directes. */
+export const SM_INCLUDE_HEAD_TO_HEAD =
+  'participants;scores.type;league;state;round' as const
+
 /** Stats équipe : avec `GET /teams/{id}` + `filters=teamstatisticSeasons:{seasonId}` (ou ancienne route listes `/teams/seasons/{seasonId}`). */
 export const SM_INCLUDE_TEAM_SEASON_STATS = 'statistics.details.type' as const
 

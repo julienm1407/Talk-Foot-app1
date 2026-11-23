@@ -28,6 +28,7 @@ import { checkDisplayNameAvailabilityCloud } from '../lib/supabase/displayName'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
 import { pickHumanDisplayName } from '../utils/displayNameFromAuth'
 import { flushCloudBeforeLogout } from '../utils/cloudLogoutFlush'
+import { hasPersistedRealSupabaseUser } from '../lib/supabase/persistedAuth'
 const AUTH_KEY = 'talkfoot.auth.v1'
 const AUTH_REGISTRY_KEY = 'talkfoot.auth.registry.v1'
 
@@ -407,9 +408,18 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     let cancelled = false
     const hydratedRef = { current: false }
+    const restoreDeadline = Date.now() + 4500
 
-    const applySession = async (session: Session | null) => {
+    const applySession = async (session: Session | null, opts?: { force?: boolean }) => {
       if (cancelled) return
+      const expectingReal = hasPersistedRealSupabaseUser()
+      const isAnon = Boolean(session?.user?.is_anonymous)
+      if (!opts?.force && expectingReal && (isAnon || !session?.user) && Date.now() < restoreDeadline) {
+        return
+      }
+      if (!opts?.force && expectingReal && isAnon) {
+        return
+      }
       hydratedRef.current = true
       if (!session?.user) {
         setState({
@@ -431,8 +441,15 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION' && !hydratedRef.current) {
+        if (session?.user && !session.user.is_anonymous) void applySession(session)
+        return
+      }
+      if (session?.user?.is_anonymous && hasPersistedRealSupabaseUser()) {
+        return
+      }
       void applySession(session)
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (event === 'SIGNED_IN' && session?.user && !session.user.is_anonymous) {
         void logSiteActivity('auth_sign_in', { metadata: { provider: session.user.app_metadata?.provider } })
       }
       if (event === 'SIGNED_OUT') {
@@ -440,24 +457,41 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    // Évite la course refresh : getSession() peut répondre null avant que le stockage PKCE soit prêt,
-    // alors que onAuthStateChange (INITIAL_SESSION) fournit la session. Filet si l’écouteur tarde.
-    void sb.auth.getSession().then(({ data: { session } }) => {
-      if (cancelled || hydratedRef.current) return
-      void applySession(session)
-    })
+    const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms))
 
-    const fallbackTimer = window.setTimeout(() => {
-      if (cancelled || hydratedRef.current) return
-      void sb.auth.getSession().then(({ data: { session } }) => {
+    void (async () => {
+      const expectingReal = hasPersistedRealSupabaseUser()
+      for (let i = 0; i < 12 && !cancelled && !hydratedRef.current; i += 1) {
+        const { data: { session } } = await sb.auth.getSession()
         if (cancelled || hydratedRef.current) return
-        void applySession(session)
-      })
-    }, 200)
+        if (session?.user && !session.user.is_anonymous) {
+          await applySession(session)
+          return
+        }
+        if (!expectingReal) {
+          await applySession(session)
+          return
+        }
+        await sleep(200)
+      }
+      if (cancelled || hydratedRef.current) return
+      const { data: refreshed } = await sb.auth.refreshSession().catch(() => ({ data: { session: null } }))
+      if (cancelled || hydratedRef.current) return
+      const session = refreshed.session
+      if (session?.user && !session.user.is_anonymous) {
+        await applySession(session, { force: true })
+        return
+      }
+      const { data: last } = await sb.auth.getSession()
+      if (cancelled || hydratedRef.current) return
+      await applySession(
+        last.session?.user && !last.session.user.is_anonymous ? last.session : null,
+        { force: true },
+      )
+    })()
 
     return () => {
       cancelled = true
-      window.clearTimeout(fallbackTimer)
       subscription.unsubscribe()
     }
   }, [])

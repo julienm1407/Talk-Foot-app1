@@ -443,6 +443,34 @@ function collectScheduleMatchRows(
   return rows
 }
 
+/** Derniers matchs terminés via `GET /teams/{id}` + `latest` (plus récent en premier). */
+export function listRecentClubResultsFromLatest(
+  envelope: { data?: unknown },
+  clubOurId: string,
+  opts?: { sportMonksTeamId?: number; limit?: number },
+): ClubScheduleListItem[] {
+  const smTeamId = opts?.sportMonksTeamId
+  const limit = opts?.limit ?? 5
+  const rows: Array<{ match: Match; roundName?: string }> = []
+  for (const fx of smFixturesFromTeamLatestEnvelope(envelope)) {
+    try {
+      const roundName =
+        fx.round && typeof fx.round === 'object' && typeof (fx.round as { name?: string }).name === 'string'
+          ? String((fx.round as { name: string }).name).trim() || undefined
+          : undefined
+      rows.push({ match: smFixtureToMatch(fx), roundName })
+    } catch {
+      /* fixture incomplète */
+    }
+  }
+  const finished = rows
+    .filter((x) => x.match.status === 'finished' && x.match.score != null)
+    .map((x) => ({ ...x, item: toClubScheduleListItem(x.match, clubOurId, smTeamId, x.roundName) }))
+    .filter((x): x is typeof x & { item: ClubScheduleListItem } => x.item != null)
+  finished.sort((a, b) => +new Date(b.match.kickoffAt) - +new Date(a.match.kickoffAt))
+  return finished.slice(0, Math.max(1, limit)).map((x) => x.item)
+}
+
 /** Derniers matchs terminés (plus récent en premier). */
 export function listRecentClubResults(
   envelope: { data?: unknown },

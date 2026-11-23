@@ -5,8 +5,10 @@ import { useMatches } from '../../contexts/MatchesContext'
 import { fetchTalkFootLiveBundleFixture } from '../../api/sportMonks/sportMonksApi'
 import {
   liveAlertsFromFixture,
+  playerNamesMatch,
   sportMonksFixtureIdFromMatch,
 } from '../../utils/liveMatchAlertEvents'
+import { DEFAULT_MATCH_ALERT_PREFS } from '../../types/fanPreferences'
 import { buildCloudFavoriteMatchWatches } from '../../utils/favoriteKickoffWatches'
 import { fireImmediateMatchNotification, isNativePushRuntime } from './nativeMatchPush'
 
@@ -32,13 +34,18 @@ function saveSeen(seen: Set<string>) {
 }
 
 /**
- * Buts / cartons en notif locale tant que l’app peut poller le live.
+ * Buts / cartons / mi-temps / final en notif locale tant que l’app peut poller le live.
  * Le premier snapshot d’un match ne notifie pas (évite un spam à l’ouverture).
  */
 export function LiveMatchAlertsHost() {
   const { matches } = useMatches()
-  const { favoriteClubIds, favoriteMatchIds, favoritePlayers, kickoffAlertsEnabled } =
-    useFanPreferences()
+  const {
+    favoriteClubIds,
+    favoriteMatchIds,
+    favoritePlayers,
+    kickoffAlertsEnabled,
+    matchAlertPrefs,
+  } = useFanPreferences()
   const primedRef = useRef(new Set<string>())
   const seenRef = useRef<Set<string> | null>(null)
 
@@ -54,9 +61,7 @@ export function LiveMatchAlertsHost() {
         favoriteMatchIds,
         favoritePlayerTeamIds: favoritePlayers.map((p) => p.teamId),
       })
-      const liveIds = new Set(
-        matches.filter((m) => m.status === 'live').map((m) => m.id),
-      )
+      const liveIds = new Set(matches.filter((m) => m.status === 'live').map((m) => m.id))
       const followed = watches.filter((w) => liveIds.has(w.matchId))
       if (followed.length === 0) return
 
@@ -70,18 +75,33 @@ export function LiveMatchAlertsHost() {
         if (cancelled || !fx) continue
         const alerts = liveAlertsFromFixture(fx)
         const primed = primedRef.current.has(watch.matchId)
+        const prefs = matchAlertPrefs(watch.matchId)
+        const effective = { ...DEFAULT_MATCH_ALERT_PREFS, ...prefs }
         for (const alert of alerts) {
           const key = `${watch.matchId}:${alert.kind}`
           if (seen.has(key)) continue
           seen.add(key)
-          if (primed) {
-            await fireImmediateMatchNotification({
-              idKey: key,
-              title: watch.title,
-              body: alert.body,
-              href: watch.href,
-            }).catch(() => undefined)
+          if (!primed) continue
+
+          const scorerFollowed = favoritePlayers.some((p) => playerNamesMatch(p.name, alert.playerName))
+          let allowed = false
+          if (alert.category === 'goal') {
+            allowed = effective.goal || (effective.scorer && scorerFollowed)
+          } else if (alert.category === 'card') {
+            allowed = effective.card
+          } else if (alert.category === 'halftime') {
+            allowed = effective.halftime
+          } else if (alert.category === 'fulltime') {
+            allowed = effective.fulltime
           }
+          if (!allowed) continue
+
+          await fireImmediateMatchNotification({
+            idKey: key,
+            title: watch.title,
+            body: alert.body,
+            href: watch.href,
+          }).catch(() => undefined)
         }
         primedRef.current.add(watch.matchId)
       }
@@ -109,6 +129,7 @@ export function LiveMatchAlertsHost() {
     favoriteMatchIds,
     favoritePlayers,
     kickoffAlertsEnabled,
+    matchAlertPrefs,
   ])
 
   return null

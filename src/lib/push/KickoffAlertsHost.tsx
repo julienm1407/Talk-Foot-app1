@@ -34,7 +34,7 @@ function pathFromOpenEvent(ev: Event): string | null {
 export function KickoffAlertsHost() {
   const navigate = useNavigate()
   const { matches } = useMatches()
-  const { favoriteClubIds, favoriteMatchIds, favoritePlayers, kickoffAlertsEnabled } =
+  const { favoriteClubIds, favoriteMatchIds, favoritePlayers, kickoffAlertsEnabled, matchAlertPrefs } =
     useFanPreferences()
   const { ensureCloudSession } = useTalkFootCloudSession()
   const tokenRef = useRef<string | null>(null)
@@ -83,7 +83,9 @@ export function KickoffAlertsHost() {
           favoriteMatchIds,
           favoritePlayerTeamIds: favoritePlayers.map((p) => p.teamId),
         }
-        const localWatches = kickoffAlertsEnabled ? buildKickoffWatches(matches, followOpts) : []
+        const localWatches = kickoffAlertsEnabled
+          ? buildKickoffWatches(matches, followOpts).filter((w) => matchAlertPrefs(w.matchId).kickoff)
+          : []
         const cloudWatches = kickoffAlertsEnabled
           ? buildCloudFavoriteMatchWatches(matches, followOpts)
           : []
@@ -110,6 +112,7 @@ export function KickoffAlertsHost() {
     favoriteMatchIds,
     favoritePlayers,
     kickoffAlertsEnabled,
+    matchAlertPrefs,
     ensureCloudSession,
   ])
 

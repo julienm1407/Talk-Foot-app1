@@ -58,6 +58,9 @@ export async function initCapacitorShell(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
   document.documentElement.classList.add('tf-native-shell')
+  if (Capacitor.getPlatform() === 'android') {
+    document.documentElement.classList.add('tf-native-android')
+  }
 
   const blockNativePinch = (e: Event) => {
     e.preventDefault()

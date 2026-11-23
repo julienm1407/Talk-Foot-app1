@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useOptionalCloudUserState } from '../../contexts/CloudUserStateContext'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { Button } from '../ui/Button'
 
@@ -7,9 +8,11 @@ import { Button } from '../ui/Button'
 export function FanSetupBanner() {
   const { pathname } = useLocation()
   const { user } = useAuth()
+  const cloud = useOptionalCloudUserState()
   const { preferencesComplete, onboardingOpen, openOnboarding } = useFanPreferences()
   const signedIn = Boolean(user && !user.isAnonymous)
-  if (pathname !== '/' || !signedIn || preferencesComplete || onboardingOpen) return null
+  const cloudHydrating = Boolean(cloud && signedIn && !cloud.syncReady)
+  if (pathname !== '/' || !signedIn || cloudHydrating || preferencesComplete || onboardingOpen) return null
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-3 pt-3 sm:px-5">

@@ -7,6 +7,7 @@ import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { ensureTalkFootSupabaseSession } from '../lib/supabase/talkfootSession'
 import { displayNameFromSession } from './useLiveMatchChatSync'
+import { isLikeUniqueViolation } from '../lib/supabase/likeToggleError'
 
 type LikeRow = {
   message_id: string
@@ -52,6 +53,7 @@ export function useSupporterGroupMessageLikesSync(options: {
   const { groupId, groupName, enabled, actorDisplayName } = options
   const [likeMap, setLikeMap] = useState<Map<string, MessageLikeState>>(() => new Map())
   const viewerIdRef = useRef<string | null>(null)
+  const inFlightRef = useRef(new Set<string>())
 
   const getLikeState = useCallback(
     (messageId: string): MessageLikeState => likeMap.get(messageId) ?? EMPTY_LIKE,
@@ -117,8 +119,14 @@ export function useSupporterGroupMessageLikesSync(options: {
   const toggleLike = useCallback(
     async (messageId: string) => {
       if (!isSupabaseConfigured() || !groupId) return
+      if (inFlightRef.current.has(messageId)) return
+      inFlightRef.current.add(messageId)
       const sb = getSupabaseBrowserClient()
-      if (!sb) return
+      if (!sb) {
+        inFlightRef.current.delete(messageId)
+        return
+      }
+      try {
       const session = await ensureTalkFootSupabaseSession(sb)
       if (!session) return
 
@@ -136,12 +144,19 @@ export function useSupporterGroupMessageLikesSync(options: {
         actorDisplayName?.trim() || displayNameFromSession(session.user)
 
       if (willLike) {
-        const { error } = await sb.from('supporter_group_message_likes').insert({
-          group_id: groupId,
-          message_id: messageId,
-          user_id: uid,
-        })
+        const { error } = await sb.from('supporter_group_message_likes').upsert(
+          {
+            group_id: groupId,
+            message_id: messageId,
+            user_id: uid,
+          },
+          { onConflict: 'message_id,user_id', ignoreDuplicates: true },
+        )
         if (error) {
+          if (isLikeUniqueViolation(error)) {
+            patchMessageLike(messageId, true)
+            return
+          }
           patchMessageLike(messageId, false)
           if (import.meta.env.DEV) console.warn('[Talk Foot] group like insert:', error.message)
           return
@@ -157,6 +172,9 @@ export function useSupporterGroupMessageLikesSync(options: {
           patchMessageLike(messageId, true)
           if (import.meta.env.DEV) console.warn('[Talk Foot] group like delete:', error.message)
         }
+      }
+      } finally {
+        inFlightRef.current.delete(messageId)
       }
     },
     [groupId, actorDisplayName, patchMessageLike, notifyAuthorOnLike],

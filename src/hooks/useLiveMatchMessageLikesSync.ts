@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
 import { postgresChangesEqFilter } from '../lib/supabase/realtimeEqFilter'
 import { syncRealtimeAuth } from '../lib/supabase/syncRealtimeAuth'
 import { displayNameFromSession } from './useLiveMatchChatSync'
+import { isLikeUniqueViolation } from '../lib/supabase/likeToggleError'
 
 type LikeRow = {
   message_id: string
@@ -58,6 +59,7 @@ export function useLiveMatchMessageLikesSync(options: {
   const [likeMap, setLikeMap] = useState<Map<string, MessageLikeState>>(() => new Map())
   const userIdRef = useRef(userId)
   userIdRef.current = userId
+  const inFlightRef = useRef(new Set<string>())
 
   const getLikeState = useCallback(
     (messageId: string): MessageLikeState => likeMap.get(messageId) ?? EMPTY_LIKE,
@@ -122,46 +124,62 @@ export function useLiveMatchMessageLikesSync(options: {
   const toggleLike = useCallback(
     async (messageId: string) => {
       if (!isSupabaseConfigured() || !matchId) return
+      if (inFlightRef.current.has(messageId)) return
+      inFlightRef.current.add(messageId)
       const sb = getSupabaseBrowserClient()
-      if (!sb) return
-      const session = await ensureSupabaseChatSession(sb)
-      if (!session) return
+      if (!sb) {
+        inFlightRef.current.delete(messageId)
+        return
+      }
+      try {
+        const session = await ensureSupabaseChatSession(sb)
+        if (!session) return
 
-      const uid = session.user.id
-      userIdRef.current = userIdRef.current ?? uid
-      let willLike = false
-      setLikeMap((prev) => {
-        const cur = prev.get(messageId) ?? EMPTY_LIKE
-        willLike = !cur.likedByMe
-        return prev
-      })
-      patchMessageLike(messageId, willLike)
-
-      const likerName =
-        actorDisplayName?.trim() || displayNameFromSession(session.user)
-
-      if (willLike) {
-        const { error } = await sb.from('live_match_message_likes').insert({
-          match_id: matchId,
-          message_id: messageId,
-          user_id: uid,
+        const uid = session.user.id
+        userIdRef.current = userIdRef.current ?? uid
+        let willLike = false
+        setLikeMap((prev) => {
+          const cur = prev.get(messageId) ?? EMPTY_LIKE
+          willLike = !cur.likedByMe
+          return prev
         })
-        if (error) {
-          patchMessageLike(messageId, false)
-          if (import.meta.env.DEV) console.warn('[Talk Foot] like insert:', error.message)
-          return
+        patchMessageLike(messageId, willLike)
+
+        const likerName =
+          actorDisplayName?.trim() || displayNameFromSession(session.user)
+
+        if (willLike) {
+          const { error } = await sb.from('live_match_message_likes').upsert(
+            {
+              match_id: matchId,
+              message_id: messageId,
+              user_id: uid,
+            },
+            { onConflict: 'message_id,user_id', ignoreDuplicates: true },
+          )
+          if (error) {
+            if (isLikeUniqueViolation(error)) {
+              patchMessageLike(messageId, true)
+              return
+            }
+            patchMessageLike(messageId, false)
+            if (import.meta.env.DEV) console.warn('[Talk Foot] like insert:', error.message)
+            return
+          }
+          void notifyAuthorOnLike(messageId, likerName)
+        } else {
+          const { error } = await sb
+            .from('live_match_message_likes')
+            .delete()
+            .eq('message_id', messageId)
+            .eq('user_id', uid)
+          if (error) {
+            patchMessageLike(messageId, true)
+            if (import.meta.env.DEV) console.warn('[Talk Foot] like delete:', error.message)
+          }
         }
-        void notifyAuthorOnLike(messageId, likerName)
-      } else {
-        const { error } = await sb
-          .from('live_match_message_likes')
-          .delete()
-          .eq('message_id', messageId)
-          .eq('user_id', uid)
-        if (error) {
-          patchMessageLike(messageId, true)
-          if (import.meta.env.DEV) console.warn('[Talk Foot] like delete:', error.message)
-        }
+      } finally {
+        inFlightRef.current.delete(messageId)
       }
     },
     [matchId, actorDisplayName, patchMessageLike, notifyAuthorOnLike],

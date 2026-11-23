@@ -47,7 +47,7 @@ import { useSubscription } from './hooks/useSubscription'
 import { useRevenueCatIdentity } from './hooks/useRevenueCatIdentity'
 import { MatchesProvider } from './contexts/MatchesContext'
 import { FanPreferencesProvider } from './contexts/FanPreferencesContext'
-import { CloudUserStateGate } from './contexts/CloudUserStateContext'
+import { CloudUserStateGate, useOptionalCloudUserState } from './contexts/CloudUserStateContext'
 import { MonEspaceDrawerProvider } from './contexts/MonEspaceDrawerContext'
 import { SeasonModeProvider } from './contexts/SeasonModeContext'
 import { Cdm2026DataProvider } from './contexts/Cdm2026DataContext'
@@ -91,18 +91,41 @@ function RequireAuthRoute({ children }: { children: React.ReactNode }) {
   return <RouteSuspense>{children}</RouteSuspense>
 }
 
+function AccountRestoreScreen({ label }: { label: string }) {
+  return (
+    <div className="relative flex min-h-dvh items-center justify-center">
+      <div className="tf-page-backdrop" aria-hidden />
+      <div className="relative text-sm font-semibold text-tf-grey">{label}</div>
+    </div>
+  )
+}
+
+function AccountRestoreGate({ children }: { children: React.ReactNode }) {
+  const { user, isReady } = useAuth()
+  const cloud = useOptionalCloudUserState()
+  if (!isReady) {
+    return <AccountRestoreScreen label="Connexion à ton compte…" />
+  }
+  if (user && !user.isAnonymous && cloud && !cloud.syncReady) {
+    return <AccountRestoreScreen label="Connexion à ton compte…" />
+  }
+  return <>{children}</>
+}
+
 function MainAppProviders({ children }: { children: React.ReactNode }) {
   return (
     <CloudUserStateGate>
-      <SeasonModeProvider>
-        <Cdm2026DataProvider>
-          <FanPreferencesProvider>
-            <MatchesProvider>
-              <AppShellProviders>{children}</AppShellProviders>
-            </MatchesProvider>
-          </FanPreferencesProvider>
-        </Cdm2026DataProvider>
-      </SeasonModeProvider>
+      <AccountRestoreGate>
+        <SeasonModeProvider>
+          <Cdm2026DataProvider>
+            <FanPreferencesProvider>
+              <MatchesProvider>
+                <AppShellProviders>{children}</AppShellProviders>
+              </MatchesProvider>
+            </FanPreferencesProvider>
+          </Cdm2026DataProvider>
+        </SeasonModeProvider>
+      </AccountRestoreGate>
     </CloudUserStateGate>
   )
 }

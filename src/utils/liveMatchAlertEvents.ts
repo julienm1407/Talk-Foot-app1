@@ -2,9 +2,13 @@
 const GOAL_TYPE_IDS = new Set([14, 15, 16])
 const CARD_TYPE_IDS = new Set([19, 20, 21])
 
+export type LiveMatchAlertCategory = 'goal' | 'card' | 'halftime' | 'fulltime'
+
 export type LiveMatchAlert = {
   kind: string
   body: string
+  category: LiveMatchAlertCategory
+  playerName?: string
 }
 
 export function sportMonksFixtureIdFromMatch(match: {
@@ -88,6 +92,8 @@ export function classifyLiveMatchEvent(ev: unknown): LiveMatchAlert | null {
   if (isGoal) {
     return {
       kind: `g:${eventId}`.slice(0, 80),
+      category: 'goal',
+      playerName: player || undefined,
       body: own
         ? `${minLabel ? `${minLabel}’ · ` : ''}CSC${player ? ` — ${player}` : ''}`
         : `${minLabel ? `${minLabel}’ · ` : ''}BUT${player ? ` — ${player}` : ''}`,
@@ -97,10 +103,80 @@ export function classifyLiveMatchEvent(ev: unknown): LiveMatchAlert | null {
   const second = typeId === 21 || /SECOND/.test(dev)
   return {
     kind: `c:${eventId}`.slice(0, 80),
+    category: 'card',
+    playerName: player || undefined,
     body: `${minLabel ? `${minLabel}’ · ` : ''}${second || red ? 'Carton rouge' : 'Carton jaune'}${
       player ? ` — ${player}` : ''
     }`,
   }
+}
+
+function scorelineFromFixture(fx: Record<string, unknown>): string | null {
+  const scores = fx.scores
+  const rows = Array.isArray(scores)
+    ? scores
+    : scores && typeof scores === 'object' && Array.isArray((scores as { data?: unknown[] }).data)
+      ? ((scores as { data: unknown[] }).data ?? [])
+      : []
+  let home: number | null = null
+  let away: number | null = null
+  for (const raw of rows) {
+    if (!raw || typeof raw !== 'object') continue
+    const row = raw as Record<string, unknown>
+    const desc = String(row.description ?? row.type_id ?? '').toUpperCase()
+    if (desc && !desc.includes('CURRENT') && !desc.includes('2ND_HALF') && desc.includes('1ST_HALF')) {
+      /* mi-temps handled separately */
+    }
+    const participant = row.score && typeof row.score === 'object' ? (row.score as Record<string, unknown>) : row
+    const goals = Number(participant.goals ?? participant.score)
+    const loc = String(row.participant?.location ?? participant.participant ?? '').toLowerCase()
+    if (!Number.isFinite(goals)) continue
+    if (loc.includes('home') || row.scoring_team === 'home') home = goals
+    if (loc.includes('away') || row.scoring_team === 'away') away = goals
+  }
+  if (home == null && away == null) {
+    const score = fx.score && typeof fx.score === 'object' ? (fx.score as Record<string, unknown>) : null
+    if (score) {
+      const h = Number(score.home ?? score.goals_home)
+      const a = Number(score.away ?? score.goals_away)
+      if (Number.isFinite(h) && Number.isFinite(a)) return `${h}-${a}`
+    }
+  }
+  if (home != null && away != null) return `${home}-${away}`
+  return null
+}
+
+function periodAlertsFromFixture(fx: Record<string, unknown>): LiveMatchAlert[] {
+  const out: LiveMatchAlert[] = []
+  const state = fx.state && typeof fx.state === 'object' ? (fx.state as Record<string, unknown>) : {}
+  const blob = `${state.developer_name ?? ''} ${state.state ?? ''} ${state.name ?? ''}`.toUpperCase()
+  const score = scorelineFromFixture(fx)
+  const scoreBit = score ? ` ${score}` : ''
+  if (
+    blob.includes('HT') ||
+    (blob.includes('HALF') && blob.includes('TIME')) ||
+    blob.includes('PAUSE') ||
+    /\bBREAK\b/.test(blob)
+  ) {
+    out.push({
+      kind: 'period:ht',
+      category: 'halftime',
+      body: `Mi-temps${scoreBit}`,
+    })
+  }
+  if (
+    blob.includes('FT') ||
+    (blob.includes('FULL') && blob.includes('TIME')) ||
+    blob.includes('FINISHED') ||
+    blob.includes('ENDED')
+  ) {
+    out.push({
+      kind: 'period:ft',
+      category: 'fulltime',
+      body: `Résultat final${scoreBit}`,
+    })
+  }
+  return out
 }
 
 export function liveAlertsFromFixture(fx: { events?: unknown } | null | undefined): LiveMatchAlert[] {
@@ -113,5 +189,21 @@ export function liveAlertsFromFixture(fx: { events?: unknown } | null | undefine
     seen.add(classified.kind)
     out.push(classified)
   }
+  for (const period of periodAlertsFromFixture(fx as Record<string, unknown>)) {
+    if (seen.has(period.kind)) continue
+    seen.add(period.kind)
+    out.push(period)
+  }
   return out
+}
+
+export function playerNamesMatch(followedName: string, eventName: string | undefined): boolean {
+  if (!eventName) return false
+  const a = followedName.trim().toLowerCase()
+  const b = eventName.trim().toLowerCase()
+  if (!a || !b) return false
+  if (a === b) return true
+  const lastA = a.split(/\s+/).pop() ?? a
+  const lastB = b.split(/\s+/).pop() ?? b
+  return lastA.length >= 4 && lastA === lastB
 }

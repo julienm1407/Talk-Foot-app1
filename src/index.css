@@ -192,6 +192,13 @@ html {
   /* Limite double-tap zoom rapide sans bloquer le zoom accessibilité iPad. */
   touch-action: manipulation;
   --tf-keyboard-offset: 0px;
+  --tf-sys-bottom-inset: env(safe-area-inset-bottom, 0px);
+}
+
+/* Android natif : la WebView passe sous la barre 3 boutons, env() est souvent à 0. */
+html.tf-native-android {
+  /* Samsung 3 boutons : env() est souvent 0 alors que la WebView passe sous la barre. */
+  --tf-sys-bottom-inset: max(env(safe-area-inset-bottom, 0px), 56px);
 }
 
 /* App native : ne pas hériter de la grosse police Android (sinon tout explose). */
@@ -2957,7 +2964,7 @@ body::before {
 }
 
 .tf-cookie-consent-shell--above-bottomnav {
-  bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px)) !important;
+  bottom: calc(4.25rem + var(--tf-sys-bottom-inset, 0px)) !important;
 }
 
 /* BottomNav — portail body (comme le dock chat), au-dessus du scroll profil sur mobile réel. */
@@ -3020,7 +3027,7 @@ body::before {
 }
 
 .tf-bottom-nav-more-sheet__backdrop {
-  bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px)) !important;
+  bottom: calc(4.25rem + var(--tf-sys-bottom-inset, 0px)) !important;
   pointer-events: auto !important;
 }
 
@@ -3065,7 +3072,7 @@ body::before {
 .tf-chat-compose-mobile-shell {
   position: fixed !important;
   inset-inline: 0 !important;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem) !important;
+  bottom: calc(var(--tf-sys-bottom-inset, 0px) + 4.25rem) !important;
   z-index: 2147482350 !important;
   pointer-events: auto !important;
   touch-action: manipulation;
@@ -3079,9 +3086,15 @@ body::before {
 
 /* Live : au-dessus de Match / Compo / Paris / Stade (BottomNav absente). */
 .tf-chat-compose-mobile-shell--channel {
-  /* min-h-11 + padding dock + 12px + petit écart */
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.85rem) !important;
+  /* Au-dessus de Match / Compo / Paris / Stade + barre système Android. */
+  bottom: calc(var(--tf-sys-bottom-inset, 0px) + 4.85rem) !important;
   z-index: 2147482510 !important;
+}
+
+html.tf-native-android .tf-chat-compose-mobile-shell,
+html.tf-native-android .tf-chat-compose-mobile-shell--channel,
+html.tf-native-android .tf-group-join-mobile-shell {
+  padding-bottom: 0.15rem;
 }
 
 body:has(.tf-chat-compose-mobile-shell--channel .tf-chat-field:focus) .tf-channel-mobile-dock-shell,
@@ -3103,6 +3116,7 @@ html.tf-keyboard-open .tf-chat-compose-mobile-shell,
 html.tf-keyboard-open .tf-chat-compose-mobile-shell--channel,
 html.tf-keyboard-open .tf-group-join-mobile-shell {
   bottom: 0 !important;
+  padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
 }
 
 /* iOS overlay : le clavier recouvre le WebView — remonter de la hauteur clavier. */
@@ -3138,7 +3152,7 @@ html.tf-keyboard-open:has(.tf-chat-compose-mobile-shell:focus-within) .tf-chat-q
 .tf-group-join-mobile-shell {
   position: fixed !important;
   inset-inline: 0 !important;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.25rem) !important;
+  bottom: calc(var(--tf-sys-bottom-inset, 0px) + 4.25rem) !important;
   z-index: 2147482400 !important;
   pointer-events: auto !important;
   touch-action: manipulation;
@@ -3153,7 +3167,7 @@ html.tf-keyboard-open:has(.tf-chat-compose-mobile-shell:focus-within) .tf-chat-q
 .tf-channel-mobile-dock-shell {
   position: fixed !important;
   left: 50% !important;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+  bottom: calc(var(--tf-sys-bottom-inset, 0px) + 12px) !important;
   z-index: 2147482500 !important;
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3171,7 +3185,18 @@ html.tf-keyboard-open:has(.tf-chat-compose-mobile-shell:focus-within) .tf-chat-q
 }
 
 body:has([data-tf-channel-dock='true']) .tf-channel-shell {
-  padding-bottom: calc(8.25rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(5.35rem + var(--tf-sys-bottom-inset, 0px));
+}
+
+@media (max-width: 767px) {
+  .tf-channel-shell:has(.tf-channel-live:not(.tf-channel-upcoming)) {
+    overflow: hidden;
+    min-height: 0;
+  }
+  .tf-channel-shell:has(.tf-channel-live:not(.tf-channel-upcoming)) > .tf-channel-live {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 /* FX tribune plein écran — au-dessus du dock mobile et hors overflow channel */

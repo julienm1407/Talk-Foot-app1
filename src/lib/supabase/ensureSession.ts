@@ -1,5 +1,6 @@
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { hasAuthCallbackInLocation } from './oauthCallbackLocation'
+import { hasPersistedRealSupabaseUser } from './persistedAuth'
 
 function isAnonymousUser(user: User | null | undefined): boolean {
   return user?.is_anonymous === true
@@ -98,6 +99,12 @@ async function resolveSupabaseChatSession(sb: SupabaseClient): Promise<Session |
 
   // Ne pas créer un invité pendant le retour Google : ça écrase le PKCE.
   if (typeof window !== 'undefined' && hasAuthCallbackInLocation()) return null
+  // Compte réel déjà stocké : ne jamais le remplacer par un invité au boot.
+  if (hasPersistedRealSupabaseUser()) {
+    const refreshed = await refreshSessionThrottled(sb)
+    if (refreshed?.user && !isAnonymousUser(refreshed.user)) return refreshed
+    return null
+  }
 
   return signInAnonymouslyOnce(sb)
 }

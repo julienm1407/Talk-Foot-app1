@@ -26,6 +26,7 @@ import { useSportMonksFixtureLiveStats } from '../hooks/useSportMonksFixtureLive
 import { BetWidget } from '../components/bet/BetWidget'
 import { GroupTifoPanel } from '../components/group/GroupTifoPanel'
 import { MatchFavoriteButton } from '../components/fan/MatchFavoriteButton'
+import { MatchHeadToHeadPanel } from '../components/channel/MatchHeadToHeadPanel'
 import { MatchHighlights } from '../components/channel/MatchHighlights'
 import { LivePitchActionBanner } from '../components/channel/LivePitchActionBanner'
 import { MatchLineupPitch } from '../components/channel/MatchLineupPitch'
@@ -155,7 +156,7 @@ const MATCH_CHAT_OPEN_BEFORE_KICKOFF_MS = 60 * 60 * 1000
 /** Pop-up coup d’envoi : uniquement si on arrive dans la fenêtre juste après le kickoff prévu. */
 const KICKOFF_FULLSCREEN_GRACE_AFTER_MS = 2 * 60 * 1000
 
-type ChannelMatchTab = 'stats' | 'infos' | 'compo' | 'actions' | 'classement'
+type ChannelMatchTab = 'stats' | 'infos' | 'tat' | 'compo' | 'actions' | 'classement'
 
 function isBigFiveLeagueId(id: string): id is BigFiveLeagueId {
   return (BIG_FIVE_LEAGUE_IDS as readonly string[]).includes(id)
@@ -1206,7 +1207,7 @@ export function ChannelPage() {
   const [tribuneModalOpen, setTribuneModalOpen] = useState(false)
   const [mobilePanel, setMobilePanel] = useState<'match' | 'paris' | 'tribune' | null>(null)
   const [mobileMatchTab, setMobileMatchTab] = useState<ChannelMatchTab>('stats')
-  const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'actions' | 'classement'>('actions')
+  const [desktopFeedTab, setDesktopFeedTab] = useState<'stats' | 'tat' | 'actions' | 'classement'>('actions')
   const { starters, bench, formations, lineupSource } = useSportMonksFixtureLineups(
     match?.sportMonksFixtureId,
     status,
@@ -3231,8 +3232,8 @@ export function ChannelPage() {
         'tf-channel-live relative flex min-h-0 w-full flex-1 flex-col bg-[#03172a]',
         L && 'tf-channel-live-light',
         isUpcoming
-          ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-3'
-          : 'max-md:overflow-y-auto p-3 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
+          ? 'tf-channel-upcoming max-md:overflow-y-auto p-3 pb-[calc(6.5rem+var(--tf-sys-bottom-inset,0px))] md:h-full md:overflow-hidden md:pb-3'
+          : 'max-md:min-h-0 max-md:h-full max-md:overflow-hidden p-3 pb-0 md:h-full md:overflow-hidden md:pb-4 md:p-3 lg:p-4',
       )}
       style={
         {
@@ -3924,10 +3925,10 @@ export function ChannelPage() {
 
         <div
           className={cn(
-            'tf-live-col tf-live-col-center min-w-0 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] md:flex md:h-full md:min-h-0 md:flex-1 md:flex-col',
+            'tf-live-col tf-live-col-center min-w-0 rounded-xl border border-[#3470a0]/35 bg-[#082038]/92 p-2.5 shadow-[0_14px_30px_rgba(2,8,18,0.34),inset_0_1px_0_rgba(125,211,252,0.06)] flex min-h-0 flex-1 flex-col md:h-full',
             isUpcoming
-              ? 'space-y-2 md:min-h-0 md:overflow-hidden'
-              : 'space-y-2 md:overflow-y-auto md:[scrollbar-width:thin]',
+              ? 'space-y-2 md:overflow-hidden'
+              : 'space-y-2 max-md:overflow-hidden md:overflow-y-auto md:[scrollbar-width:thin]',
           )}
         >
           {showLiveChat ? (
@@ -3935,7 +3936,9 @@ export function ChannelPage() {
             className={cn(
               'tf-card-chat relative',
               animationsOpen || livePanelOpen ? '!overflow-visible' : 'overflow-hidden',
-              isUpcoming ? 'min-h-0 md:flex md:min-h-0 md:flex-1 md:flex-col' : 'shrink-0 min-h-[280px] md:min-h-[360px]',
+              isUpcoming
+                ? 'min-h-0 md:flex md:min-h-0 md:flex-1 md:flex-col'
+                : 'flex min-h-0 flex-1 flex-col max-md:min-h-0 md:min-h-[360px]',
             )}
             style={
               status === 'live'
@@ -3952,7 +3955,7 @@ export function ChannelPage() {
               <div className="absolute -right-8 bottom-[20%] h-20 w-20 rounded-full bg-cyan-300/10 blur-2xl" />
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/55 to-transparent" />
             </div>
-            <div className="relative z-10">
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle>Chat live</SectionTitle>
             {chatDebriefOpen ? (
@@ -4020,7 +4023,7 @@ export function ChannelPage() {
                 'tf-chat-scroll space-y-1.5 overflow-y-auto rounded-lg bg-[#071525] p-1.5 shadow-[inset_0_0_0_1px_rgba(148,184,214,0.18)]',
                 isUpcoming
                   ? 'h-[min(28dvh,190px)] sm:h-[min(32dvh,210px)] md:min-h-0 md:flex-1 md:h-auto md:max-h-none'
-                  : 'min-h-[240px] h-[min(48dvh,420px)] sm:h-[min(50dvh,460px)] md:h-[min(58vh,560px)]',
+                  : 'min-h-0 flex-1 h-auto max-md:max-h-none md:min-h-[240px] md:h-[min(58vh,560px)]',
               )}
             >
               {chatLocked ? (
@@ -4483,6 +4486,17 @@ export function ChannelPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setDesktopFeedTab('tat')}
+                    className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
+                      desktopFeedTab === 'tat'
+                        ? 'bg-sky-300/25 text-sky-50'
+                        : 'text-sky-200/70 hover:text-sky-50'
+                    }`}
+                  >
+                    TAT
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setDesktopFeedTab('actions')}
                     className={`rounded px-2 py-0.5 text-[10px] font-bold transition ${
                       desktopFeedTab === 'actions'
@@ -4522,6 +4536,8 @@ export function ChannelPage() {
                       </p>
                     ) : null}
                   </div>
+                ) : desktopFeedTab === 'tat' ? (
+                  <MatchHeadToHeadPanel match={match} enabled={desktopFeedTab === 'tat'} light={L} />
                 ) : desktopFeedTab === 'actions' ? (
                   <MatchHighlights
                     items={smTimelineHighlights}
@@ -4800,6 +4816,7 @@ export function ChannelPage() {
                     [
                       ['stats', 'Stats'],
                       ['infos', 'Infos'],
+                      ['tat', 'TAT'],
                       ['compo', 'Compo'],
                       ['actions', 'Actions'],
                       ['classement', 'Class.'],
@@ -4853,6 +4870,13 @@ export function ChannelPage() {
                   </p>
                 ) : null}
               </div>
+            ) : null}
+            {mobilePanel === 'match' && mobileMatchTab === 'tat' ? (
+              <MatchHeadToHeadPanel
+                match={match}
+                enabled={mobilePanel === 'match' && mobileMatchTab === 'tat'}
+                light={L}
+              />
             ) : null}
             {mobilePanel === 'match' && mobileMatchTab === 'infos' ? (
               <div className="grid grid-cols-2 gap-1 text-xs">
