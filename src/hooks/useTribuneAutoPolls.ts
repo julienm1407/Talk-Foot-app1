@@ -13,6 +13,8 @@ import {
   isPenaltyShootoutContext,
   penaltyIncidentKey,
 } from '../utils/tribuneOfficialEvents'
+import { rankMotmPollNames } from '../utils/tribuneMotmPoll'
+import type { SmFixture } from '../api/sportMonks/types'
 
 function isRealGoalHighlight(h: Highlight): boolean {
   if (h.id.startsWith('sm-comment-')) return false
@@ -53,6 +55,7 @@ export function useTribuneAutoPolls({
   highlights,
   homeStarters,
   awayStarters,
+  fixture,
   ensurePoll,
 }: {
   match: Match | null
@@ -63,6 +66,7 @@ export function useTribuneAutoPolls({
   highlights: Highlight[]
   homeStarters: string[]
   awayStarters: string[]
+  fixture?: SmFixture | null
   ensurePoll: EnsurePoll
 }) {
   const primed = useRef(false)
@@ -122,11 +126,18 @@ export function useTribuneAutoPolls({
     }
 
     if (minute >= 80) {
-      const opts = playerOptions([...homeStarters, ...awayStarters], 'motm', 8)
+      const motm = rankMotmPollNames({
+        homeStarters,
+        awayStarters,
+        highlights,
+        fixture,
+        max: 18,
+      })
+      const opts = playerOptions(motm.length >= 2 ? motm : [...homeStarters, ...awayStarters], 'motm', 18)
       if (opts.length >= 2) {
-        fire(`motm:${match.id}`, {
+        fire(`motm:v2:${match.id}`, {
           kind: 'motm',
-          triggerKey: `motm:${match.id}`,
+          triggerKey: `motm:v2:${match.id}`,
           question: 'Homme du match ?',
           options: opts,
           officialBody: '80e minute — sondage : homme du match ?',
@@ -142,6 +153,8 @@ export function useTribuneAutoPolls({
     awayScore,
     homeStarters,
     awayStarters,
+    highlights,
+    fixture,
     ensurePoll,
   ])
 

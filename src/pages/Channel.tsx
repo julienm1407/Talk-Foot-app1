@@ -2588,6 +2588,7 @@ export function ChannelPage() {
     highlights: smTimelineHighlights,
     homeStarters: homeLineupNames,
     awayStarters: awayLineupNames,
+    fixture: liveBundleFixture,
     ensurePoll,
   })
   useTribuneOfficialMatchPosts({
