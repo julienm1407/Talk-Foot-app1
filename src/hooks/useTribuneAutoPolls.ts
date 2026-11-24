@@ -6,6 +6,13 @@ import type { TribunePollOption } from '../lib/supabase/tribunePolls'
 import { postOfficialTribune } from '../lib/supabase/tribunePolls'
 import { isTalkFootMultiplexId } from '../utils/talkFootMatchOfTheDay'
 import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
+import {
+  decisionPollKey,
+  isPenaltyAwardText,
+  isPenaltyMissedText,
+  isPenaltyShootoutContext,
+  penaltyIncidentKey,
+} from '../utils/tribuneOfficialEvents'
 
 function isRealGoalHighlight(h: Highlight): boolean {
   if (h.id.startsWith('sm-comment-')) return false
@@ -59,10 +66,12 @@ export function useTribuneAutoPolls({
   ensurePoll: EnsurePoll
 }) {
   const primed = useRef(false)
+  const incidentsPrimed = useRef(false)
   const seenKeys = useRef(new Set<string>())
 
   useEffect(() => {
     primed.current = false
+    incidentsPrimed.current = false
     seenKeys.current = new Set()
   }, [match?.id])
 
@@ -139,12 +148,29 @@ export function useTribuneAutoPolls({
   useEffect(() => {
     if (!match?.id || status !== 'live') return
     if (isTalkFootMultiplexId(match.id)) return
+    if (!incidentsPrimed.current) {
+      if (highlights.length === 0) return
+      incidentsPrimed.current = true
+      for (const h of highlights) {
+        const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
+        const min = typeof h.minute === 'number' ? h.minute : null
+        if (isPenaltyAwardText(raw) && !isPenaltyShootoutContext(raw, min)) {
+          seenKeys.current.add(decisionPollKey(match.id, 'pen', min))
+        }
+        if (cardColorFromHighlightText(raw) === 'red' || /rouge|red card/i.test(raw)) {
+          seenKeys.current.add(decisionPollKey(match.id, 'red', min))
+        }
+      }
+      return
+    }
     for (const h of highlights) {
       const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
+      const min = typeof h.minute === 'number' ? h.minute : null
+      if (isPenaltyShootoutContext(raw, min)) continue
       const red = cardColorFromHighlightText(raw) === 'red' || /rouge|red card/i.test(raw)
-      const pen = /penalty|pénalty|penalti|peno/i.test(raw)
+      const pen = isPenaltyAwardText(raw)
       if (!red && !pen) continue
-      const key = `dec:${match.id}:${h.id}`
+      const key = decisionPollKey(match.id, red ? 'red' : 'pen', min)
       if (seenKeys.current.has(key)) continue
       seenKeys.current.add(key)
       void ensurePoll({
@@ -155,8 +181,8 @@ export function useTribuneAutoPolls({
           { id: 'yes', label: 'Oui' },
           { id: 'no', label: 'Non' },
         ],
-        officialBody: `${red ? 'Carton rouge' : 'Penalty'} ${h.minute ?? ''}’ — sondage : décision juste ?`,
-        minute: typeof h.minute === 'number' ? h.minute : null,
+        officialBody: `${red ? 'Carton rouge' : 'Penalty'} ${min ?? ''}’ — sondage : décision juste ?`,
+        minute: min,
       })
     }
   }, [highlights, match, status, ensurePoll])
@@ -176,40 +202,75 @@ export function useTribuneOfficialMatchPosts({
   awayName: string
 }) {
   const primed = useRef(false)
+  const seenKeys = useRef(new Set<string>())
   useEffect(() => {
     primed.current = false
+    seenKeys.current = new Set()
   }, [match?.id])
 
   useEffect(() => {
     if (!match?.id || status !== 'live') return
     if (isTalkFootMultiplexId(match.id)) return
     if (!primed.current) {
+      if (highlights.length === 0) return
       primed.current = true
+      for (const h of highlights) {
+        seenKeys.current.add(h.id)
+        const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
+        const min = typeof h.minute === 'number' ? h.minute : null
+        if (isPenaltyMissedText(raw)) seenKeys.current.add(penaltyIncidentKey(match.id, min, 'miss'))
+        else if (isPenaltyAwardText(raw)) seenKeys.current.add(penaltyIncidentKey(match.id, min, 'award'))
+      }
       return
     }
     for (const h of highlights) {
+      if (seenKeys.current.has(h.id)) continue
+      seenKeys.current.add(h.id)
       const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
       const min = typeof h.minute === 'number' ? h.minute : null
+      if (isPenaltyShootoutContext(raw, min)) continue
       const team = h.side === 'home' ? homeName : h.side === 'away' ? awayName : ''
       const frDetail = translateSportMonksLiveTextToFr(String(h.detail || h.title || '').trim())
       if (isRealGoalHighlight(h)) {
         const scorer = h.scorerName?.trim()
+        const key = `goal:${match.id}:${min}:${(scorer ?? '').toLowerCase()}`
+        if (seenKeys.current.has(key)) continue
+        seenKeys.current.add(key)
         void postOfficialTribune(
           match.id,
           `${min ?? '?'}’ BUT${team ? ` ${team}` : ''}${scorer ? ` — ${scorer}` : frDetail ? ` — ${frDetail}` : ''}`.trim(),
           min,
-          `goal:${h.id}`,
+          key,
         )
       } else if (cardColorFromHighlightText(raw) === 'red' || /rouge|red card/i.test(raw)) {
-        void postOfficialTribune(match.id, `${min ?? '?'}’ Carton rouge${team ? ` ${team}` : ''}`, min, `red:${h.id}`)
-      } else if (/penalty|pénalty|penalti/i.test(raw) && !/\bbut it\b/i.test(raw)) {
-        void postOfficialTribune(match.id, `${min ?? '?'}’ Penalty${team ? ` ${team}` : ''}`, min, `pen:${h.id}`)
+        const key = `red:${match.id}:${min}`
+        if (seenKeys.current.has(key)) continue
+        seenKeys.current.add(key)
+        void postOfficialTribune(match.id, `${min ?? '?'}’ Carton rouge${team ? ` ${team}` : ''}`, min, key)
+      } else if (isPenaltyMissedText(raw)) {
+        const key = penaltyIncidentKey(match.id, min, 'miss')
+        if (seenKeys.current.has(key)) continue
+        seenKeys.current.add(key)
+        void postOfficialTribune(
+          match.id,
+          `${min ?? '?'}’ Penalty raté${team ? ` — ${team}` : ''}`.trim(),
+          min,
+          key,
+        )
+      } else if (isPenaltyAwardText(raw)) {
+        const key = penaltyIncidentKey(match.id, min, 'award')
+        if (seenKeys.current.has(key)) continue
+        seenKeys.current.add(key)
+        void postOfficialTribune(match.id, `${min ?? '?'}’ Penalty${team ? ` ${team}` : ''}`, min, key)
       } else if (/changement|substitution|remplacé|replaced/i.test(raw)) {
+        const key = `sub:${match.id}:${min}:${frDetail.slice(0, 40).toLowerCase()}`
+        if (seenKeys.current.has(key)) continue
+        seenKeys.current.add(key)
         void postOfficialTribune(
           match.id,
           `${min ?? '?'}’ Changement${frDetail ? ` — ${frDetail}` : ''}`,
           min,
-          `sub:${h.id}`,
+          key,
         )
       }
     }

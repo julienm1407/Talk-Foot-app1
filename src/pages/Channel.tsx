@@ -157,6 +157,7 @@ import { AdminTribunePollForm, TribuneLivePoll } from '../components/channel/Tri
 import { CreateMatchPrivateSalonButton } from '../components/channel/CreateMatchPrivateSalonButton'
 import { useTribunePolls } from '../hooks/useTribunePolls'
 import { useTribuneAutoPolls, useTribuneOfficialMatchPosts } from '../hooks/useTribuneAutoPolls'
+import { officialPostCollapseKey } from '../utils/tribuneOfficialEvents'
 import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { MatchResultScore } from '../components/match/MatchResultScore'
 import { resolveDisplayedLineupKind } from '../utils/lineupStatus'
@@ -1660,9 +1661,15 @@ export function ChannelPage() {
     actorDisplayName: authUser?.displayName,
     matchLabel: match ? `${homeHeaderLabel} vs ${awayHeaderLabel}` : null,
   })
-  const officialChatMessages = useMemo(
-    () =>
-      officialPosts.map((p) => {
+  const officialChatMessages = useMemo(() => {
+    const seen = new Set<string>()
+    const unique = officialPosts.filter((p) => {
+      const key = officialPostCollapseKey(p.body, p.minute)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    return unique.map((p) => {
         const created = new Date(p.createdAt)
         return {
           id: `off-${p.id}`,
@@ -1676,9 +1683,8 @@ export function ChannelPage() {
           createdAtMs: created.getTime(),
           isOfficial: true,
         }
-      }),
-    [officialPosts],
-  )
+      })
+  }, [officialPosts])
   const filteredChatMessages = useMemo(() => {
     const zoneFiltered = isFinished
       ? chatMessages
@@ -3393,7 +3399,7 @@ export function ChannelPage() {
                 })()
               : <span className="min-w-0 flex-1" />}
             {status !== 'finished' ? (
-              <div className="flex shrink-0 items-center gap-0.5">
+              <div className="relative z-30 flex shrink-0 items-center gap-0.5">
                 {match && !europeMultiplex ? (
                   <CreateMatchPrivateSalonButton match={match} light={L} compact />
                 ) : null}

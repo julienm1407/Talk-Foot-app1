@@ -63,16 +63,22 @@ export function CreateMatchPrivateSalonButton({
   }
 
   return (
-    <div>
+    <div className={cn(compact && 'relative z-30')}>
       <button
         type="button"
         disabled={busy}
-        onClick={() => void onCreate()}
-        title={hint ?? 'Créer mon salon pour ce match'}
-        aria-label="Créer mon salon pour ce match"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          void onCreate()
+        }}
+        title={hint ?? 'Créer un salon privé pour ce match'}
+        aria-label="Créer un salon privé pour ce match"
         className={cn(
-          'rounded-full font-black',
-          compact ? 'flex h-7 w-7 items-center justify-center text-xs' : 'px-3 py-1.5 text-[11px]',
+          'relative z-30 rounded-full font-black pointer-events-auto',
+          compact
+            ? 'flex h-9 w-9 items-center justify-center text-base'
+            : 'px-3 py-1.5 text-[11px]',
           light ? 'bg-slate-900 text-white' : 'bg-white/15 text-sky-50',
         )}
       >
