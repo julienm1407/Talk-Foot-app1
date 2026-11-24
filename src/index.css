@@ -3244,7 +3244,7 @@ body:has([data-tf-channel-dock='true']) .tf-channel-shell {
 
   .tf-channel-live .tf-chat-scroll {
     flex: 1 1 auto;
-    min-height: 12rem;
+    min-height: 16rem;
     height: auto !important;
   }
 }

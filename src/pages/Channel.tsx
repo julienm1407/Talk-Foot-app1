@@ -430,7 +430,7 @@ function Card({
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({ children, className }: { children: React.ReactNode; className?: string }) {
   const appearance = useAppearanceOptional()
   const light = appearance?.appearance === 'light'
   return (
@@ -438,6 +438,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
       className={cn(
         'inline-flex items-center gap-1.5 text-sm font-semibold tracking-wide',
         light ? 'text-[#023458]' : 'text-sky-100',
+        className,
       )}
     >
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#32d4ff] shadow-[0_0_8px_rgba(50,212,255,0.45)]" />
@@ -744,6 +745,7 @@ function LiveHeaderTeamEvents({
   cards,
   align,
   light,
+  compact,
 }: {
   goals: {
     name: string
@@ -754,12 +756,15 @@ function LiveHeaderTeamEvents({
   cards: { name: string; minute: number; inSecondHalf?: boolean; color: 'yellow' | 'red' }[]
   align: 'left' | 'right'
   light: boolean
+  compact?: boolean
 }) {
   if (!goals.length && !cards.length) return null
+  const g = compact ? goals.slice(-2) : goals
+  const c = compact ? cards.slice(-2) : cards
   return (
-    <div className="w-full min-w-0">
-      <LiveHeaderScorers goals={goals} align={align} light={light} />
-      <LiveHeaderCards cards={cards} align={align} light={light} />
+    <div className={cn('w-full min-w-0', compact && 'max-h-8 overflow-hidden')}>
+      <LiveHeaderScorers goals={g} align={align} light={light} />
+      <LiveHeaderCards cards={c} align={align} light={light} />
     </div>
   )
 }
@@ -3336,7 +3341,7 @@ export function ChannelPage() {
       <header
         className={cn(
           'relative z-10 shrink-0 overflow-hidden rounded-xl border shadow-[0_14px_30px_rgba(2,8,18,0.33),inset_0_1px_0_rgba(125,211,252,0.16)]',
-          isUpcoming ? 'p-2.5' : 'p-3',
+          'p-1.5 md:p-3',
           isLight ? 'border-[#8fb2d3] bg-[#f6fbff]' : 'border-[#2f5f8f] bg-[#0b2440]',
         )}
         style={
@@ -3363,11 +3368,30 @@ export function ChannelPage() {
           <div className="pointer-events-none absolute inset-0 rounded-xl border border-rose-400/80 animate-pulse" />
         ) : null}
         {status !== 'finished' ? (
-          <div className="absolute right-2 top-2 z-20">
+          <div className="absolute right-1.5 top-1.5 z-20 flex items-center gap-1">
+            {match && !europeMultiplex && showMobileChannelChrome ? (
+              <CreateMatchPrivateSalonButton match={match} light={L} compact />
+            ) : null}
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
         {(status === 'live' || isFinished) && !europeMultiplex ? (
+          showMobileChannelChrome ? (
+            (() => {
+              const total = campFx.home + campFx.away
+              const homePct = total > 0 ? Math.round((campFx.home / total) * 100) : 50
+              const awayPct = 100 - homePct
+              return (
+                <div
+                  className="mb-1 flex h-0.5 overflow-hidden rounded-full"
+                  title={`Ambiance ${match.home.shortName} ${homePct}% – ${match.away.shortName} ${awayPct}%`}
+                >
+                  <div className="h-full" style={{ width: `${homePct}%`, background: homeColor }} />
+                  <div className="h-full" style={{ width: `${awayPct}%`, background: awayColor }} />
+                </div>
+              )
+            })()
+          ) : (
           <div className="mb-2 space-y-1">
             {(() => {
               const total = campFx.home + campFx.away
@@ -3375,9 +3399,9 @@ export function ChannelPage() {
               const awayPct = 100 - homePct
               return (
                 <div>
-                  <p className="mb-0.5 text-[10px] font-black uppercase tracking-wide text-sky-100">
-                    Ambiance tribune : {match.home.shortName} {homePct}% – {match.away.shortName} {awayPct}%
-                  </p>
+                    <p className="mb-0.5 text-[10px] font-black uppercase tracking-wide text-sky-100">
+                      Ambiance tribune : {match.home.shortName} {homePct}% – {match.away.shortName} {awayPct}%
+                    </p>
                   <div className={`flex h-1.5 overflow-hidden rounded-full ${L ? 'bg-slate-200' : 'bg-[#0a1a2d]'}`}>
                     <div className="h-full transition-[width] duration-500" style={{ width: `${homePct}%`, background: homeColor }} />
                     <div className="h-full transition-[width] duration-500" style={{ width: `${awayPct}%`, background: awayColor }} />
@@ -3386,8 +3410,9 @@ export function ChannelPage() {
               )
             })()}
           </div>
+          )
         ) : null}
-        {match && !europeMultiplex ? (
+        {match && !europeMultiplex && !showMobileChannelChrome ? (
           <div className="mb-2">
             <CreateMatchPrivateSalonButton match={match} light={L} />
           </div>
@@ -3409,7 +3434,12 @@ export function ChannelPage() {
           </div>
         ) : null}
         <div className={cn('flex flex-col gap-1 md:hidden', europeMultiplex && 'hidden')}>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+          <div
+            className={cn(
+              'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2',
+              !isUpcoming && 'pr-14',
+            )}
+          >
             <div className="flex min-w-0 items-center gap-1.5">
               <TeamLogoLink
                 to={homeTeamPath}
@@ -3419,6 +3449,7 @@ export function ChannelPage() {
                 sportMonksTeamId={match?.home.sportMonksTeamId}
                 nationFlagSrc={homeFlagSrc}
               />
+              {isUpcoming ? (
               <Link
                 to={homeTeamPath ?? '#'}
                 title={homeName}
@@ -3428,8 +3459,9 @@ export function ChannelPage() {
               >
                 {homeHeaderLabel}
               </Link>
+              ) : null}
           </div>
-            <div className="flex shrink-0 flex-col items-center gap-0.5 px-1">
+            <div className="flex shrink-0 flex-col items-center gap-0 px-1">
               {isUpcoming ? (
                 <span
                   className={`rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${
@@ -3444,7 +3476,8 @@ export function ChannelPage() {
                 away={headerDisplayScore.away}
                 penaltyScore={penaltyScore}
                 wentToExtraTime={Boolean(shootoutDisplay?.wentToExtraTime)}
-                size="lg"
+                size="sm"
+                className="gap-0"
                 separator="-"
                 scoreClassName={L ? 'text-[#023458]' : 'text-white'}
                 extraTimeClassName={L ? 'text-[#3d5670]' : 'text-sky-200/85'}
@@ -3454,8 +3487,21 @@ export function ChannelPage() {
                     : 'border-white/25 bg-white/10 text-white'
                 }
               />
+              {!isUpcoming ? (
+                <p className={`text-center text-[10px] leading-none ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
+                  {status === 'live' ? (
+                    <span className="inline-flex items-center justify-center gap-1">
+                      <span className="tf-live-badge-dot inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />
+                      {timerText}
+                    </span>
+                  ) : (
+                    timerText
+                  )}
+                </p>
+              ) : null}
             </div>
             <div className="flex min-w-0 items-center justify-end gap-1.5">
+              {isUpcoming ? (
               <Link
                 to={awayTeamPath ?? '#'}
                 title={awayName}
@@ -3465,6 +3511,7 @@ export function ChannelPage() {
               >
                 {awayHeaderLabel}
               </Link>
+              ) : null}
               <TeamLogoLink
                 to={awayTeamPath}
                 clubId={match?.away.id}
@@ -3528,35 +3575,34 @@ export function ChannelPage() {
               )}
             </div>
           ) : null}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[auto_auto] gap-x-2 gap-y-0.5">
-            <div className="col-start-2 row-start-1 flex flex-col items-center gap-1">
-              <p className={`text-center text-sm ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
-              {status === 'live' ? (
-                  <span className="inline-flex items-center justify-center gap-1">
-                  <span className="tf-live-badge-dot inline-block h-2 w-2 rounded-full bg-rose-400" />
-                  {timerText}
-                </span>
-              ) : (
-                timerText
-              )}
-            </p>
-              {isUpcoming ? (
+          {isUpcoming ? (
+          <div className="flex flex-col items-center gap-1">
                 <span className={kickoffHeaderChipClass} title={`Coup d'envoi ${kickoffLabel}`}>
                   Coup d&apos;envoi · {kickoffLabel}
                 </span>
-              ) : null}
           </div>
-            {status === 'live' || status === 'finished' ? (
-              <>
-                <div className="col-start-1 row-start-2 min-w-0 justify-self-start self-start">
-                  <LiveHeaderTeamEvents goals={headerHomeScorers} cards={headerHomeCards} align="left" light={L} />
+          ) : status === 'live' || status === 'finished' ? (
+          <div className="grid grid-cols-2 gap-x-2">
+                <div className="min-w-0 justify-self-start">
+                  <LiveHeaderTeamEvents
+                    goals={headerHomeScorers}
+                    cards={headerHomeCards}
+                    align="left"
+                    light={L}
+                    compact
+                  />
           </div>
-                <div className="col-start-3 row-start-2 min-w-0 justify-self-end self-start">
-                  <LiveHeaderTeamEvents goals={headerAwayScorers} cards={headerAwayCards} align="right" light={L} />
+                <div className="min-w-0 justify-self-end">
+                  <LiveHeaderTeamEvents
+                    goals={headerAwayScorers}
+                    cards={headerAwayCards}
+                    align="right"
+                    light={L}
+                    compact
+                  />
         </div>
-              </>
-            ) : null}
           </div>
+          ) : null}
         </div>
         <div
           className={cn(
@@ -4061,7 +4107,7 @@ export function ChannelPage() {
             </div>
             <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
-            <SectionTitle>Chat live</SectionTitle>
+            <SectionTitle className="hidden md:inline-flex">Chat live</SectionTitle>
             {status === 'live' &&
             activePoll &&
             !isMuxSalon &&

@@ -6,7 +6,15 @@ import { useAuth } from '../../contexts/AuthContext'
 import { tribuneShareUrl } from '../../utils/tribuneShareLinks'
 import { cn } from '../../utils/cn'
 
-export function CreateMatchPrivateSalonButton({ match, light }: { match: Match; light: boolean }) {
+export function CreateMatchPrivateSalonButton({
+  match,
+  light,
+  compact,
+}: {
+  match: Match
+  light: boolean
+  compact?: boolean
+}) {
   const { user } = useAuth()
   const { createGroup } = useSupporterGroups()
   const navigate = useNavigate()
@@ -60,14 +68,16 @@ export function CreateMatchPrivateSalonButton({ match, light }: { match: Match; 
         type="button"
         disabled={busy}
         onClick={() => void onCreate()}
+        title={compact ? hint ?? 'Créer mon salon pour ce match' : undefined}
         className={cn(
-          'rounded-full px-3 py-1.5 text-[11px] font-black',
+          'rounded-full font-black',
+          compact ? 'px-2 py-0.5 text-[9px]' : 'px-3 py-1.5 text-[11px]',
           light ? 'bg-slate-900 text-white' : 'bg-white/15 text-sky-50',
         )}
       >
-        Créer mon salon pour ce match
+        {compact ? 'Salon' : 'Créer mon salon pour ce match'}
       </button>
-      {hint ? <p className="mt-1 text-[10px] font-semibold text-rose-300">{hint}</p> : null}
+      {hint && !compact ? <p className="mt-1 text-[10px] font-semibold text-rose-300">{hint}</p> : null}
     </div>
   )
 }
