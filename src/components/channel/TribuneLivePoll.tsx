@@ -78,7 +78,8 @@ export function TribuneLivePoll({
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const voted = Boolean(poll.myOptionId)
-  const showResults = voted || !canVote || replay
+  const isReplay = Boolean(replay)
+  const showResults = voted || !canVote || isReplay
   const mine = poll.options.find((o) => o.id === poll.myOptionId)
   const portalTarget = sheetOpen ? getModalPortalRoot() : null
 
@@ -139,7 +140,7 @@ export function TribuneLivePoll({
                           light ? 'text-slate-500' : 'text-sky-200/80',
                         )}
                       >
-                        {replay ? 'Sondage' : 'Sondage en cours'}
+                        {isReplay ? 'Sondage' : 'Sondage en cours'}
                       </p>
                       <h2 id="tf-tribune-poll-title" className="mt-1 text-base font-black leading-snug">
                         {poll.question}
@@ -161,7 +162,7 @@ export function TribuneLivePoll({
                       poll={poll}
                       canVote={canVote}
                       voted={voted}
-                      replay={Boolean(replay)}
+                      replay={isReplay}
                       showResults={showResults}
                       light={light}
                       stacked
@@ -170,7 +171,7 @@ export function TribuneLivePoll({
                         setSheetOpen(false)
                       }}
                     />
-                    {!canVote && !voted && !replay ? (
+                    {!canVote && !voted && !isReplay ? (
                       <p className="mt-3 text-[11px] font-semibold text-sky-200/80">
                         Les résultats s’affichent après un vote.{' '}
                         <Link to="/login" className="underline">
@@ -196,7 +197,7 @@ export function TribuneLivePoll({
       )}
     >
       <p className="text-[10px] font-black uppercase tracking-wide text-sky-100">
-        {replay ? 'Sondage' : 'Sondage en cours'}
+        {isReplay ? 'Sondage' : 'Sondage en cours'}
       </p>
       <p className={cn('mt-0.5 text-[12px] font-black', light ? 'text-slate-900' : 'text-sky-50')}>
         {poll.question}
@@ -206,14 +207,14 @@ export function TribuneLivePoll({
           poll={poll}
           canVote={canVote}
           voted={voted}
-          replay={Boolean(replay)}
+          replay={isReplay}
           showResults={showResults}
           light={light}
           stacked
           onVote={onVote}
         />
       </div>
-      {!canVote && !voted && !replay ? (
+      {!canVote && !voted && !isReplay ? (
         <p className="mt-1 text-[10px] font-semibold text-sky-200/80">
           Les résultats s’affichent après un vote.{' '}
           <Link to="/login" className="underline">
