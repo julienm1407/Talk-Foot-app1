@@ -138,7 +138,6 @@ export function multiplexSyntheticMatch(mux: TalkFootMultiplex): Match {
   const upcoming = mux.matches.some((m) => m.status === 'upcoming')
   const status: Match['status'] = live ? 'live' : upcoming ? 'upcoming' : 'finished'
   const kickoffAt = mux.matches[0]?.kickoffAt ?? `${mux.dayKey}T20:00:00+01:00`
-  const label = mux.title.replace('Multiplex ', '')
   return {
     id: mux.id,
     competition: {
@@ -149,13 +148,13 @@ export function multiplexSyntheticMatch(mux: TalkFootMultiplex): Match {
     home: {
       id: 'mux-home',
       name: mux.title,
-      shortName: mux.competitionId === 'ucl' ? 'LDC' : 'EUR',
+      shortName: mux.competitionId === 'ucl' ? 'C1' : mux.competitionId === 'uel' ? 'C3' : 'C4',
       colors: { primary: '#1d4ed8', secondary: '#fbbf24' },
     },
     away: {
       id: 'mux-away',
-      name: label,
-      shortName: 'Soirée',
+      name: 'Tribune commune',
+      shortName: 'Salon',
       colors: { primary: '#0f172a', secondary: '#e2e8f0' },
     },
     kickoffAt,

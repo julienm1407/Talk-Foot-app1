@@ -1661,7 +1661,7 @@ export function ChannelPage() {
           id: `off-${p.id}`,
           userId: 'talk-foot-official',
           username: 'Talk Foot',
-          text: p.body,
+          text: translateSportMonksLiveTextToFr(p.body),
           time: Number.isFinite(created.getTime()) ? formatChatAtLabel(created) : '--:--',
           avatarSeed: 'talk-foot-official',
           avatarAccent: 'amber' as const,
@@ -3365,7 +3365,7 @@ export function ChannelPage() {
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
-        {status === 'live' || isFinished ? (
+        {(status === 'live' || isFinished) && !europeMultiplex ? (
           <div className="mb-2 space-y-1">
             {(() => {
               const total = campFx.home + campFx.away
@@ -3390,7 +3390,23 @@ export function ChannelPage() {
             <CreateMatchPrivateSalonButton match={match} light={L} />
           </div>
         ) : null}
-        <div className="flex flex-col gap-1 md:hidden">
+        {europeMultiplex ? (
+          <div className="mb-1">
+            <p className="text-center text-[10px] font-black uppercase tracking-[0.16em] text-sky-200/80">
+              Tribune commune
+            </p>
+            <h2 className={`text-center text-base font-black ${L ? 'text-[#052032]' : 'text-white'}`}>
+              {europeMultiplex.title}
+            </h2>
+            <p className={`mt-0.5 text-center text-[11px] font-semibold ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
+              Salon de la soirée — clique un match pour sa tribune.
+            </p>
+            <div className="mt-2 max-h-[28vh] overflow-y-auto">
+              <EuropeMultiplexScoreboard multiplex={europeMultiplex} light={L} />
+            </div>
+          </div>
+        ) : null}
+        <div className={cn('flex flex-col gap-1 md:hidden', europeMultiplex && 'hidden')}>
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
             <div className="flex min-w-0 items-center gap-1.5">
               <TeamLogoLink
@@ -3544,6 +3560,7 @@ export function ChannelPage() {
           className={cn(
             'hidden grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-x-3 gap-y-0.5 sm:gap-4 md:grid',
             isUpcoming ? 'grid-rows-[auto_auto]' : 'grid-rows-[auto_auto_auto]',
+            europeMultiplex && '!hidden',
           )}
         >
           <div className="col-start-1 row-start-1 flex min-w-0 flex-col gap-0.5 justify-self-start self-start">
@@ -4043,8 +4060,7 @@ export function ChannelPage() {
             <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle>Chat live</SectionTitle>
-            {europeMultiplex ? <EuropeMultiplexScoreboard multiplex={europeMultiplex} light={L} /> : null}
-            {status === 'live' && activePoll ? (
+            {status === 'live' && activePoll && !europeMultiplex ? (
               <div className="mt-1 shrink-0">
                 <TribuneLivePoll
                   poll={activePoll}
@@ -4054,7 +4070,7 @@ export function ChannelPage() {
                 />
               </div>
             ) : null}
-            {status === 'live' && showMobileChannelChrome ? (
+            {status === 'live' && showMobileChannelChrome && !europeMultiplex ? (
               <p className="mt-1 shrink-0 truncate rounded-md bg-[#122940] px-2 py-1 text-[10px] font-semibold text-sky-100/90">
                 {latestHighlight
                   ? `${highlightMinuteLabel(latestHighlight)} ${latestHighlightText}`

@@ -67,6 +67,7 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
     selfClerkUserId,
     cloudDisplayName: user?.username,
     socialEnabled,
+    isBot: Boolean(message.isOfficial || user?.isTalkFootBot || user?.isGroupSalonBot),
   })
 
   const chatUser: User | undefined =
@@ -76,6 +77,7 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
       username: message.username,
       avatarSeed: message.avatarSeed,
       accent: message.avatarAccent ?? 'violet',
+      isTalkFootBot: Boolean(message.isOfficial),
     } satisfies User)
 
   return (

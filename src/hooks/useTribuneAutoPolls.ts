@@ -4,6 +4,22 @@ import type { Match } from '../types/match'
 import { cardColorFromHighlightText } from '../utils/liveFootballOdds'
 import type { TribunePollOption } from '../lib/supabase/tribunePolls'
 import { postOfficialTribune } from '../lib/supabase/tribunePolls'
+import { isTalkFootMultiplexId } from '../utils/talkFootMatchOfTheDay'
+import { translateSportMonksLiveTextToFr } from '../utils/translateSportMonksLiveEnToFr'
+
+function isRealGoalHighlight(h: Highlight): boolean {
+  if (h.id.startsWith('sm-comment-')) return false
+  const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
+  if (
+    /\b(but it|goes to the (right|left)|goes wide|goes over|off target|saved by|blocked|missed)\b/i.test(
+      raw,
+    )
+  ) {
+    return false
+  }
+  if (h.type === 'But') return true
+  return /\b(goal|scored|marque)\b/i.test(raw)
+}
 
 type EnsurePoll = (input: {
   question: string
@@ -52,6 +68,7 @@ export function useTribuneAutoPolls({
 
   useEffect(() => {
     if (!match?.id) return
+    if (isTalkFootMultiplexId(match.id)) return
     if (status !== 'live') return
     if (!primed.current) {
       primed.current = true
@@ -121,6 +138,7 @@ export function useTribuneAutoPolls({
 
   useEffect(() => {
     if (!match?.id || status !== 'live') return
+    if (isTalkFootMultiplexId(match.id)) return
     for (const h of highlights) {
       const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
       const red = cardColorFromHighlightText(raw) === 'red' || /rouge|red card/i.test(raw)
@@ -164,6 +182,7 @@ export function useTribuneOfficialMatchPosts({
 
   useEffect(() => {
     if (!match?.id || status !== 'live') return
+    if (isTalkFootMultiplexId(match.id)) return
     if (!primed.current) {
       primed.current = true
       return
@@ -172,19 +191,26 @@ export function useTribuneOfficialMatchPosts({
       const raw = `${h.title ?? ''} ${h.detail ?? ''} ${h.type ?? ''}`
       const min = typeof h.minute === 'number' ? h.minute : null
       const team = h.side === 'home' ? homeName : h.side === 'away' ? awayName : ''
-      if (h.type === 'But' || /but|goal/i.test(raw)) {
+      const frDetail = translateSportMonksLiveTextToFr(String(h.detail || h.title || '').trim())
+      if (isRealGoalHighlight(h)) {
+        const scorer = h.scorerName?.trim()
         void postOfficialTribune(
           match.id,
-          `${min ?? '?'}’ BUT${team ? ` ${team}` : ''}${h.scorerName ? ` — ${h.scorerName}` : ''}`.trim(),
+          `${min ?? '?'}’ BUT${team ? ` ${team}` : ''}${scorer ? ` — ${scorer}` : frDetail ? ` — ${frDetail}` : ''}`.trim(),
           min,
           `goal:${h.id}`,
         )
       } else if (cardColorFromHighlightText(raw) === 'red' || /rouge|red card/i.test(raw)) {
         void postOfficialTribune(match.id, `${min ?? '?'}’ Carton rouge${team ? ` ${team}` : ''}`, min, `red:${h.id}`)
-      } else if (/penalty|pénalty|penalti/i.test(raw)) {
+      } else if (/penalty|pénalty|penalti/i.test(raw) && !/\bbut it\b/i.test(raw)) {
         void postOfficialTribune(match.id, `${min ?? '?'}’ Penalty${team ? ` ${team}` : ''}`, min, `pen:${h.id}`)
       } else if (/changement|substitution|remplacé|replaced/i.test(raw)) {
-        void postOfficialTribune(match.id, `${min ?? '?'}’ Changement${h.detail ? ` — ${h.detail}` : ''}`, min, `sub:${h.id}`)
+        void postOfficialTribune(
+          match.id,
+          `${min ?? '?'}’ Changement${frDetail ? ` — ${frDetail}` : ''}`,
+          min,
+          `sub:${h.id}`,
+        )
       }
     }
   }, [highlights, match, status, homeName, awayName])

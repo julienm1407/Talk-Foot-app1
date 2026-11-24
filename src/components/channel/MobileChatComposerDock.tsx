@@ -6,9 +6,8 @@ import { cn } from '../../utils/cn'
 /** Hauteur du dock saisie seul — la BottomNav est déjà réservée par le shell (`mb`). */
 export const MOBILE_CHAT_COMPOSER_DOCK_HEIGHT = '7.25rem'
 
-/** Live match : saisie + barre Match / Compo / Paris / Stade. */
-export const CHANNEL_MOBILE_COMPOSER_STACK_HEIGHT =
-  'calc(8.75rem + var(--tf-sys-bottom-inset, 0px))'
+/** Live match : saisie seulement — le dock Match/Compo est déjà réservé par le shell. */
+export const CHANNEL_MOBILE_COMPOSER_STACK_HEIGHT = '4.25rem'
 
 /**
  * Sur mobile tactile : barre de saisie fixée au-dessus de la BottomNav (portail body).

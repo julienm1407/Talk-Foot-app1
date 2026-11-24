@@ -34,15 +34,24 @@ export function EuropeMultiplexCard({ multiplex }: { multiplex: TalkFootMultiple
       </div>
       <ul className="mt-2 space-y-1.5">
         {multiplex.matches.map((m) => (
-          <li key={m.id} className="flex items-center justify-between gap-2 text-[12px] font-bold">
-            <span className="min-w-0 truncate text-tf-app-fg">
-              {m.home.shortName} – {m.away.shortName}
-            </span>
-            <span className="shrink-0 tabular-nums text-tf-app-muted">
-              {m.status === 'upcoming'
-                ? formatKickoff(m.kickoffAt)
-                : `${m.score?.home ?? 0}–${m.score?.away ?? 0}`}
-            </span>
+          <li key={m.id}>
+            <Link
+              to={`/channel/${m.id}`}
+              className={cn(
+                TF_FOCUS_VISIBLE,
+                'flex items-center justify-between gap-2 rounded-lg px-1 py-1 text-[12px] font-bold hover:bg-white/5',
+              )}
+            >
+              <span className="min-w-0 truncate text-tf-app-fg">
+                {m.home.shortName} – {m.away.shortName}
+                {m.status === 'live' ? ' · LIVE' : ''}
+              </span>
+              <span className="shrink-0 tabular-nums text-tf-app-muted">
+                {m.status === 'upcoming'
+                  ? formatKickoff(m.kickoffAt)
+                  : `${m.score?.home ?? 0}–${m.score?.away ?? 0}`}
+              </span>
+            </Link>
           </li>
         ))}
       </ul>

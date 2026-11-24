@@ -18,7 +18,7 @@ import { HomeRightColumn } from '../home/HomeRightColumn'
 import { TrendingDebatesSection } from '../home/TrendingDebatesSection'
 import { HomeFeedContinuation } from '../home/HomeFeedContinuation'
 import { HomeEditorialIntro } from '../ads/HomeEditorialIntro'
-import { HubStripFinished, HubStripUpcoming } from '../match/HubMatchEncart'
+import { HubStripFinished, HubStripLive, HubStripUpcoming } from '../match/HubMatchEncart'
 import { Card } from '../ui/Card'
 import { CdmHomeHero } from '../cdm/CdmHomeHero'
 import { CdmHomeReminder } from '../cdm/CdmHomeReminder'
@@ -84,6 +84,7 @@ export function HomeMobileExperience({
   alsoTonight = [],
   europeMultiplex = null,
   heroLiveSim,
+  hubLiveMatches = [],
   upcomingSortedForHome,
   upcomingUnderLiveStrip: _upcomingUnderLiveStrip,
   displayMatchesFull,
@@ -156,11 +157,25 @@ export function HomeMobileExperience({
     </div>
   )
 
+  const liveNow = hubLiveMatches.filter((m) => m.id !== matchOfTheDay?.id).slice(0, 8)
+
   const heroBlock = loading ? (
     matchesLoadingShell
-  ) : matchOfTheDay || alsoTonight.length || europeMultiplex ? (
+  ) : matchOfTheDay || alsoTonight.length || europeMultiplex || liveNow.length ? (
     <div className="space-y-2">
       {matchOfTheDay ? <MatchTalkFootDuJour match={matchOfTheDay} /> : null}
+      {liveNow.length ? (
+        <div className={cn('min-w-0 border-t pt-2', L ? 'border-tf-dark/10' : 'border-white/10')}>
+          <h3 className="mb-1.5 px-0.5 text-[11px] font-black uppercase tracking-wider text-tf-app-fg">
+            En direct
+          </h3>
+          <div className="flex flex-col gap-2">
+            {liveNow.map((m) => (
+              <HubStripLive key={m.id} match={m} visualSize="compact" className="min-w-0" />
+            ))}
+          </div>
+        </div>
+      ) : null}
       <CeSoirAussiStrip matches={alsoTonight} />
       <EuropeMultiplexCard multiplex={europeMultiplex} />
     </div>

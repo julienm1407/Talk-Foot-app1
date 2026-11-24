@@ -33,31 +33,21 @@ export function ChannelSubscriptionExtras({
 
   if (!isLive && !canCreatePrivateLiveMatches) return null
 
+  const showTokens = isLive && limit > 0
+  const showPrivate = Boolean(canCreatePrivateLiveMatches && matchId && user?.id)
+  if (!showTokens && !showPrivate) return null
+
   return (
     <div
       className={cn(
-        'mb-2 flex min-w-0 flex-col gap-1.5 rounded-lg border px-2.5 py-2 text-[10px] font-semibold',
-        light
-          ? 'border-emerald-200/80 bg-emerald-50/90 text-emerald-950'
-          : 'border-emerald-500/25 bg-emerald-950/35 text-emerald-100',
+        'mb-1 flex min-w-0 items-center gap-2 px-0.5 text-[9px] font-semibold leading-tight',
+        light ? 'text-emerald-900/80' : 'text-emerald-100/75',
       )}
     >
-      {isLive && limit > 0 ? (
-        <p>
-          Jetons live :{' '}
-          <span className="font-black tabular-nums">
-            {earned}/{limit}
-          </span>{' '}
-          cette heure
-          {remaining > 0 ? (
-            <>
-              {' '}
-              · encore <span className="font-black tabular-nums">{remaining}</span> (1 / 30 s en
-              tribune)
-            </>
-          ) : (
-            ' · plafond atteint — repasse à l’heure suivante'
-          )}
+      {showTokens ? (
+        <p className="min-w-0 truncate">
+          +{earned}/{limit} j/h
+          {remaining <= 0 ? ' · plafond' : null}
         </p>
       ) : null}
 
