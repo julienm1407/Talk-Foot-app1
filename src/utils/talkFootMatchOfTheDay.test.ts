@@ -92,7 +92,7 @@ describe('pickTalkFootHomeBoard', () => {
     )
     expect(board.featured?.id).toBe('lyon-bayern')
     expect(board.multiplex?.id).toBe('m-mux-ucl-2026-11-24')
-    expect(board.multiplex?.matches.map((m) => m.id)).toEqual(['city-liv'])
+    expect(board.multiplex?.matches.map((m) => m.id)).toEqual(['city-liv', 'lyon-bayern'])
   })
 
   it('ne met pas en avant un filler L1 ni une affiche étrangère', () => {

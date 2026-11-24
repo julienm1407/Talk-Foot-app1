@@ -146,6 +146,7 @@ import {
   resolveMatchFinishedAtMs,
 } from '../utils/matchDebriefWindow'
 import {
+  emptyTalkFootMultiplex,
   isTalkFootFeaturedMatch,
   isTalkFootMultiplexId,
   resolveTalkFootMultiplex,
@@ -1526,7 +1527,8 @@ export function ChannelPage() {
     [match, liveBundleFixture, witnessedFinishedAtMs],
   )
   const chatDebriefOpen = isFinished && isPostMatchDebriefOpen(finishedAtMs, nowMs)
-  const chatClosedAfterMatch = isFinished && !chatDebriefOpen
+  const isMuxSalon = Boolean(match?.id && isTalkFootMultiplexId(match.id))
+  const chatClosedAfterMatch = !isMuxSalon && isFinished && !chatDebriefOpen
   const debriefMinutesLeft = postMatchDebriefMinutesLeft(finishedAtMs, nowMs)
   const showLiveChat = true
   const timerText = useMemo(() => {
@@ -1549,12 +1551,12 @@ export function ChannelPage() {
     [match?.kickoffAt],
   )
   const isFeaturedMatch = Boolean(
-    match?.id && isTalkFootFeaturedMatch(match.id, matches, favoriteClubIds),
+    (match?.id && isTalkFootFeaturedMatch(match.id, matches, favoriteClubIds)) || isMuxSalon,
   )
-  const europeMultiplex = useMemo(
-    () => (match?.id && isTalkFootMultiplexId(match.id) ? resolveTalkFootMultiplex(matches, match.id) : null),
-    [match?.id, matches],
-  )
+  const europeMultiplex = useMemo(() => {
+    if (!match?.id || !isTalkFootMultiplexId(match.id)) return null
+    return resolveTalkFootMultiplex(matches, match.id) ?? emptyTalkFootMultiplex(match.id)
+  }, [match?.id, matches])
   const chatOpenAtMs = match?.kickoffAt ? matchChatOpensAtMs(match.kickoffAt, isFeaturedMatch) : null
   const chatLocked = status === 'upcoming' && !isFeaturedMatch && chatOpenAtMs != null && nowMs < chatOpenAtMs
   const guestChatWriter = !authUser?.id || Boolean(authUser.isAnonymous)
@@ -4060,7 +4062,7 @@ export function ChannelPage() {
             <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle>Chat live</SectionTitle>
-            {status === 'live' && activePoll && !europeMultiplex ? (
+            {status === 'live' && activePoll && !isMuxSalon ? (
               <div className="mt-1 shrink-0">
                 <TribuneLivePoll
                   poll={activePoll}
@@ -4077,7 +4079,7 @@ export function ChannelPage() {
                   : 'Live · stats et terrain dans l’onglet Match'}
               </p>
             ) : null}
-            {authUser?.isAdmin && match && status !== 'finished' ? (
+            {authUser?.isAdmin && match && status !== 'finished' && !isMuxSalon ? (
               <AdminTribunePollForm
                 light={L}
                 onCreate={(question, options) =>
@@ -4212,7 +4214,7 @@ export function ChannelPage() {
                       ))}
                     </div>
                   ) : null}
-                  {isFinished ? (
+                  {isFinished && !isMuxSalon ? (
                     <div
                       className={cn(
                         'mb-2 rounded-lg border px-2 py-1.5 text-center',
@@ -5711,6 +5713,10 @@ export function ChannelPage() {
           player={lineupPlayerPick}
           matchId={match?.id}
           excludeFixtureId={match?.sportMonksFixtureId}
+          liveOverlay={resolveLineupPlayerOverlay(lineupOverlays, {
+            playerId: lineupPlayerPick.playerId,
+            name: lineupPlayerPick.name,
+          })}
           light={L}
           onClose={() => setLineupPlayerPick(null)}
         />

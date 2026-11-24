@@ -103,10 +103,7 @@ export function buildEuropeMultiplex(
   competitionId: EuropeCompetitionId,
 ): TalkFootMultiplex | null {
   const matches = dayMatches
-    .filter(
-      (m) =>
-        m.competition.id === competitionId && !isLigue1Club(m.home.id) && !isLigue1Club(m.away.id),
-    )
+    .filter((m) => m.competition.id === competitionId)
     .sort(rankLiveFirst)
   if (!matches.length) return null
   return {
@@ -133,10 +130,34 @@ export function resolveTalkFootMultiplex(matches: Match[], muxId: string): TalkF
   return buildEuropeMultiplex(dayMatches, parsed.dayKey, parsed.competitionId)
 }
 
-export function multiplexSyntheticMatch(mux: TalkFootMultiplex): Match {
-  const live = mux.matches.some((m) => m.status === 'live')
-  const upcoming = mux.matches.some((m) => m.status === 'upcoming')
-  const status: Match['status'] = live ? 'live' : upcoming ? 'upcoming' : 'finished'
+/** Salon multiplex même si le calendrier n’a pas encore chargé les matchs. */
+export function emptyTalkFootMultiplex(muxId: string): TalkFootMultiplex | null {
+  const parsed = parseTalkFootMultiplexId(muxId)
+  if (!parsed) return null
+  return {
+    id: muxId,
+    competitionId: parsed.competitionId,
+    title: EUROPE_MULTIPLEX_TITLES[parsed.competitionId],
+    dayKey: parsed.dayKey,
+    matches: [],
+  }
+}
+
+function multiplexSalonStatus(mux: TalkFootMultiplex, now: Date): Match['status'] {
+  if (mux.matches.some((m) => m.status === 'live')) return 'live'
+  if (mux.matches.some((m) => m.status === 'upcoming')) return 'upcoming'
+  const today = matchCalendarDayKeyParis(now)
+  if (mux.dayKey > today) return 'upcoming'
+  if (mux.dayKey === today) {
+    if (mux.matches.length === 0) return 'upcoming'
+    if (mux.matches.every((m) => m.status === 'finished')) return 'finished'
+    return 'upcoming'
+  }
+  return 'finished'
+}
+
+export function multiplexSyntheticMatch(mux: TalkFootMultiplex, now: Date = new Date()): Match {
+  const status = multiplexSalonStatus(mux, now)
   const kickoffAt = mux.matches[0]?.kickoffAt ?? `${mux.dayKey}T20:00:00+01:00`
   return {
     id: mux.id,

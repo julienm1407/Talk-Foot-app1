@@ -4,6 +4,7 @@ import { useMatches } from '../contexts/MatchesContext'
 import { fetchMatchByTalkFootId, readBetMatchCache } from '../utils/betMatchResolve'
 import { readMatchesSessionCache } from '../utils/matchesSessionCache'
 import {
+  emptyTalkFootMultiplex,
   isTalkFootMultiplexId,
   multiplexSyntheticMatch,
   resolveTalkFootMultiplex,
@@ -11,7 +12,7 @@ import {
 
 function matchFromLocalSources(matchId: string, matches: Match[]): Match | null {
   if (isTalkFootMultiplexId(matchId)) {
-    const mux = resolveTalkFootMultiplex(matches, matchId)
+    const mux = resolveTalkFootMultiplex(matches, matchId) ?? emptyTalkFootMultiplex(matchId)
     if (mux) return multiplexSyntheticMatch(mux)
   }
   const fromList = matches.find((m) => m.id === matchId)

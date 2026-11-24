@@ -34,8 +34,14 @@ function pathFromOpenEvent(ev: Event): string | null {
 export function KickoffAlertsHost() {
   const navigate = useNavigate()
   const { matches } = useMatches()
-  const { favoriteClubIds, favoriteMatchIds, favoritePlayers, kickoffAlertsEnabled, matchAlertPrefs } =
-    useFanPreferences()
+  const {
+    favoriteClubIds,
+    favoriteMatchIds,
+    favoritePlayers,
+    kickoffAlertsEnabled,
+    matchAlertPrefs,
+    setKickoffAlertsEnabled,
+  } = useFanPreferences()
   const { ensureCloudSession } = useTalkFootCloudSession()
   const tokenRef = useRef<string | null>(null)
 
@@ -58,7 +64,11 @@ export function KickoffAlertsHost() {
     let cancelled = false
     void (async () => {
       const ok = await ensureMatchNotificationPermission()
-      if (!ok || cancelled) return
+      if (cancelled) return
+      if (!ok) {
+        setKickoffAlertsEnabled(false)
+        return
+      }
       await registerNativePush((token) => {
         tokenRef.current = token
         void (async () => {
@@ -73,7 +83,7 @@ export function KickoffAlertsHost() {
     return () => {
       cancelled = true
     }
-  }, [kickoffAlertsEnabled, ensureCloudSession])
+  }, [kickoffAlertsEnabled, ensureCloudSession, setKickoffAlertsEnabled])
 
   useEffect(() => {
     const t = window.setTimeout(() => {

@@ -10,6 +10,7 @@ import {
 } from '../../api/sportMonks/extractPlayerProfileFromSm'
 import { formatHubDayLabel } from '../../utils/time'
 import { formatLineupRating, lineupRatingBackground } from '../../utils/lineupPlayerRatingColor'
+import type { LineupPlayerMatchOverlay } from '../../api/sportMonks/extractPlayerMatchOverlaysFromSmFixture'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
@@ -194,12 +195,14 @@ export function MatchLineupPlayerSheet({
   player,
   matchId,
   excludeFixtureId,
+  liveOverlay,
   light,
   onClose,
 }: {
   player: LineupPlayerPick
   matchId?: string
   excludeFixtureId?: number | null
+  liveOverlay?: LineupPlayerMatchOverlay | null
   light?: boolean
   onClose: () => void
 }) {
@@ -344,6 +347,30 @@ export function MatchLineupPlayerSheet({
             </button>
           </div>
         </div>
+
+        {liveOverlay &&
+        (liveOverlay.rating != null ||
+          liveOverlay.goals > 0 ||
+          liveOverlay.ownGoals > 0 ||
+          liveOverlay.yellowCards > 0 ||
+          liveOverlay.redCards > 0) ? (
+          <div
+            className={cn(
+              'mb-3 grid grid-cols-4 gap-1.5 rounded-xl border px-2 py-2',
+              light ? 'border-slate-200 bg-white' : 'border-white/12 bg-white/[0.06]',
+            )}
+          >
+            <p className="col-span-4 text-[9px] font-black uppercase tracking-wider text-sky-200/80">Ce match</p>
+            <InfoCell
+              value={liveOverlay.rating != null ? formatLineupRating(liveOverlay.rating) : '—'}
+              label="Note"
+              light={light}
+            />
+            <InfoCell value={String(liveOverlay.goals)} label="Buts" light={light} />
+            <InfoCell value={String(liveOverlay.yellowCards)} label="Jaunes" light={light} />
+            <InfoCell value={String(liveOverlay.redCards)} label="Rouges" light={light} />
+          </div>
+        ) : null}
 
         {loading ? (
           <p className={cn('py-8 text-center text-sm font-semibold', light ? 'text-slate-600' : 'text-sky-200/80')}>

@@ -22,16 +22,24 @@ export function isNativePushRuntime(): boolean {
   return Capacitor.isNativePlatform()
 }
 
+let permissionPromptedThisSession = false
+
 export async function ensureMatchNotificationPermission(): Promise<boolean> {
   if (!isNativePushRuntime()) return false
   try {
     let perm = await PushNotifications.checkPermissions()
     if (perm.receive !== 'granted') {
+      if (perm.receive === 'denied' || permissionPromptedThisSession) return false
+      permissionPromptedThisSession = true
       perm = await PushNotifications.requestPermissions()
     }
     if (perm.receive !== 'granted') return false
-    const local = await LocalNotifications.requestPermissions()
-    return local.display === 'granted'
+    const local = await LocalNotifications.checkPermissions()
+    if (local.display === 'granted') return true
+    if (permissionPromptedThisSession && local.display === 'denied') return false
+    permissionPromptedThisSession = true
+    const asked = await LocalNotifications.requestPermissions()
+    return asked.display === 'granted'
   } catch {
     return false
   }

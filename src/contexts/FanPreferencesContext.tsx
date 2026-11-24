@@ -273,7 +273,6 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       patch({
         favoriteMatchIds,
         favoriteMatchAlertPrefs,
-        kickoffAlertsEnabled: exists ? state.kickoffAlertsEnabled : true,
       })
     },
     [patch, state.favoriteMatchIds, state.favoriteMatchAlertPrefs, state.kickoffAlertsEnabled],
@@ -330,7 +329,6 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
         favoritePlayers,
         favoriteMatchIds,
         favoriteMatchAlertPrefs,
-        kickoffAlertsEnabled: exists ? state.kickoffAlertsEnabled : true,
       })
     },
     [patch, state.favoritePlayers, state.favoriteMatchIds, state.favoriteMatchAlertPrefs, state.kickoffAlertsEnabled],
