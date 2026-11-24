@@ -8,7 +8,6 @@ import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 function PollOptions({
   poll,
   canVote,
-  voted,
   replay,
   showResults,
   light,
@@ -17,7 +16,6 @@ function PollOptions({
 }: {
   poll: TribunePollRow
   canVote: boolean
-  voted: boolean
   replay?: boolean
   showResults: boolean
   light: boolean
@@ -169,7 +167,6 @@ export function TribuneLivePoll({
                     <PollOptions
                       poll={poll}
                       canVote={canVote}
-                      voted={voted}
                       replay={isReplay}
                       showResults={showResults}
                       light={light}
@@ -213,7 +210,6 @@ export function TribuneLivePoll({
         <PollOptions
           poll={poll}
           canVote={canVote}
-          voted={voted}
           replay={isReplay}
           showResults={showResults}
           light={light}
