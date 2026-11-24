@@ -3372,7 +3372,7 @@ export function ChannelPage() {
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
-        {showMobileChannelChrome && (status !== 'finished' || (!europeMultiplex && (status === 'live' || isFinished))) ? (
+        {showMobileChannelChrome && (status !== 'finished' || !europeMultiplex) ? (
           <div className="mb-1 flex items-center gap-1">
             {(status === 'live' || isFinished) && !europeMultiplex
               ? (() => {
