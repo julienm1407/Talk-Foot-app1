@@ -9,12 +9,14 @@ export function TribuneLivePoll({
   onVote,
   light,
   replay,
+  compact,
 }: {
   poll: TribunePollRow
   canVote: boolean
   onVote: (optionId: string) => void
   light: boolean
   replay?: boolean
+  compact?: boolean
 }) {
   const total = Object.values(poll.counts).reduce((a, b) => a + b, 0)
   const voted = Boolean(poll.myOptionId)
@@ -22,15 +24,25 @@ export function TribuneLivePoll({
   return (
     <div
       className={cn(
-        'mb-2 rounded-lg border px-2 py-1.5',
+        compact ? 'mb-1 rounded-md border px-1.5 py-1' : 'mb-2 rounded-lg border px-2 py-1.5',
         light ? 'border-slate-200 bg-white/90' : 'border-[#3a6690]/50 bg-[#0c2339]/70',
       )}
     >
-      <p className="text-[10px] font-black uppercase tracking-wide text-sky-100">
-        {replay ? 'Sondage' : 'Sondage en cours'}
-      </p>
-      <p className={cn('mt-0.5 text-[12px] font-black', light ? 'text-slate-900' : 'text-sky-50')}>{poll.question}</p>
-      <div className="mt-1.5 space-y-1">
+      {compact ? (
+        <p className={cn('truncate text-[10px] font-black', light ? 'text-slate-800' : 'text-sky-50')}>
+          {poll.question}
+        </p>
+      ) : (
+        <>
+          <p className="text-[10px] font-black uppercase tracking-wide text-sky-100">
+            {replay ? 'Sondage' : 'Sondage en cours'}
+          </p>
+          <p className={cn('mt-0.5 text-[12px] font-black', light ? 'text-slate-900' : 'text-sky-50')}>
+            {poll.question}
+          </p>
+        </>
+      )}
+      <div className={cn(compact ? 'mt-1 flex gap-1' : 'mt-1.5 space-y-1')}>
         {poll.options.map((opt) => {
           const n = poll.counts[opt.id] ?? 0
           const pct = total > 0 ? Math.round((n / total) * 100) : 0
@@ -42,7 +54,10 @@ export function TribuneLivePoll({
               disabled={!canVote || voted || replay}
               onClick={() => onVote(opt.id)}
               className={cn(
-                'relative w-full overflow-hidden rounded-md border px-2 py-1.5 text-left text-[11px] font-bold',
+                'relative overflow-hidden rounded-md border font-bold',
+                compact
+                  ? 'min-w-0 flex-1 px-1 py-1 text-center text-[10px] leading-tight'
+                  : 'w-full px-2 py-1.5 text-left text-[11px]',
                 light ? 'border-slate-200' : 'border-white/15',
                 mine ? 'ring-1 ring-tf-cta' : '',
                 !canVote || voted || replay ? 'cursor-default' : 'hover:border-tf-cta/60',
@@ -54,15 +69,16 @@ export function TribuneLivePoll({
                   style={{ width: `${pct}%` }}
                 />
               ) : null}
-              <span className="relative z-10 flex justify-between gap-2">
+              <span className={cn('relative z-10', compact ? 'block truncate' : 'flex justify-between gap-2')}>
                 <span>{opt.label}</span>
-                {showResults ? <span>{pct}%</span> : null}
+                {showResults && !compact ? <span>{pct}%</span> : null}
+                {showResults && compact ? <span className="ml-0.5 opacity-80">{pct}%</span> : null}
               </span>
             </button>
           )
         })}
       </div>
-      {!canVote && !voted && !replay ? (
+      {!compact && !canVote && !voted && !replay ? (
         <p className="mt-1 text-[10px] font-semibold text-sky-200/80">
           Les résultats s’affichent après un vote.{' '}
           <Link to="/login" className="underline">

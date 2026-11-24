@@ -4069,14 +4069,13 @@ export function ChannelPage() {
                   canVote={Boolean(pollVoterKey)}
                   onVote={(optionId) => void vote(activePoll.id, optionId)}
                   light={L}
+                  compact={showMobileChannelChrome}
                 />
               </div>
             ) : null}
-            {status === 'live' && showMobileChannelChrome && !europeMultiplex ? (
-              <p className="mt-1 shrink-0 truncate rounded-md bg-[#122940] px-2 py-1 text-[10px] font-semibold text-sky-100/90">
-                {latestHighlight
-                  ? `${highlightMinuteLabel(latestHighlight)} ${latestHighlightText}`
-                  : 'Live · stats et terrain dans l’onglet Match'}
+            {status === 'live' && showMobileChannelChrome && !europeMultiplex && latestHighlight ? (
+              <p className="mt-1 shrink-0 truncate rounded-md bg-[#122940] px-2 py-0.5 text-[10px] font-semibold text-sky-100/90">
+                {highlightMinuteLabel(latestHighlight)} {latestHighlightText}
               </p>
             ) : null}
             {authUser?.isAdmin && match && status !== 'finished' && !isMuxSalon ? (
@@ -4131,26 +4130,13 @@ export function ChannelPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-1 flex items-center gap-1 md:hidden">
-              <span className="rounded-md border border-[#8b7bff]/80 bg-[#8b7bff]/18 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#ece8ff]">
-                Général
-              </span>
-              <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-1.5 py-0.5">
-                <p className="text-[9px] font-semibold leading-none text-sky-100/75">
-                  Viewers <span className="ml-1 text-[10px] font-bold text-white">{viewersDisplay}</span>
-                </p>
-              </div>
-              <div className="tf-live-soft-surface rounded-md bg-[#12273d]/80 px-1.5 py-0.5">
-                <p className="text-[9px] font-semibold leading-none text-sky-100/75">
-                  FX <span className="ml-1 text-[10px] font-bold text-white">{fxActiveCount}</span>
-                </p>
-              </div>
-            </div>
+            {showMobileChannelChrome ? null : (
             <ChannelSubscriptionExtras
               matchId={match?.id}
               isLive={status === 'live'}
               light={L}
             />
+            )}
             <ChannelPrivateSalonGate matchId={match?.id} light={L}>
             <ChatPanelErrorBoundary light={L}>
             <div
