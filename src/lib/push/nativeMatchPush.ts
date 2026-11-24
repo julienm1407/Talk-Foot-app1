@@ -34,12 +34,16 @@ export async function ensureMatchNotificationPermission(): Promise<boolean> {
       perm = await PushNotifications.requestPermissions()
     }
     if (perm.receive !== 'granted') return false
-    const local = await LocalNotifications.checkPermissions()
-    if (local.display === 'granted') return true
-    if (permissionPromptedThisSession && local.display === 'denied') return false
-    permissionPromptedThisSession = true
-    const asked = await LocalNotifications.requestPermissions()
-    return asked.display === 'granted'
+    try {
+      const local = await LocalNotifications.checkPermissions()
+      if (local.display !== 'granted' && !permissionPromptedThisSession && local.display !== 'denied') {
+        permissionPromptedThisSession = true
+        await LocalNotifications.requestPermissions()
+      }
+    } catch {
+      /* FCM suffit pour les buts en arrière-plan */
+    }
+    return true
   } catch {
     return false
   }

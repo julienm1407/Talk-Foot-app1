@@ -2,12 +2,17 @@ import { useEffect, useRef } from 'react'
 import { App } from '@capacitor/app'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useMatches } from '../../contexts/MatchesContext'
-import { fetchTalkFootLiveBundleFixture } from '../../api/sportMonks/sportMonksApi'
+import {
+  fetchSportMonksFixtureEventsTimeline,
+  fetchTalkFootLiveBundleFixture,
+} from '../../api/sportMonks/sportMonksApi'
+import { extractLiveMinuteFromSmFixture } from '../../api/sportMonks/transformSportMonksToMatch'
 import {
   liveAlertsFromFixture,
   playerNamesMatch,
   sportMonksFixtureIdFromMatch,
 } from '../../utils/liveMatchAlertEvents'
+import { getSportMonksToken } from '../../utils/apiTokens'
 import { DEFAULT_MATCH_ALERT_PREFS } from '../../types/fanPreferences'
 import { buildCloudFavoriteMatchWatches } from '../../utils/favoriteKickoffWatches'
 import { fireImmediateMatchNotification, isNativePushRuntime } from './nativeMatchPush'
@@ -71,9 +76,16 @@ export function LiveMatchAlertsHost() {
         const match = matches.find((m) => m.id === watch.matchId)
         const fixtureId = match ? sportMonksFixtureIdFromMatch(match) : null
         if (!fixtureId) continue
-        const fx = await fetchTalkFootLiveBundleFixture(fixtureId)
+        let fx = await fetchTalkFootLiveBundleFixture(fixtureId)
+        if (!fx) {
+          const token = getSportMonksToken()
+          if (token) {
+            fx = await fetchSportMonksFixtureEventsTimeline(token, fixtureId).catch(() => null)
+          }
+        }
         if (cancelled || !fx) continue
         const alerts = liveAlertsFromFixture(fx)
+        const liveMinute = extractLiveMinuteFromSmFixture(fx)
         const primed = primedRef.current.has(watch.matchId)
         const prefs = matchAlertPrefs(watch.matchId)
         const effective = { ...DEFAULT_MATCH_ALERT_PREFS, ...prefs }
@@ -81,7 +93,12 @@ export function LiveMatchAlertsHost() {
           const key = `${watch.matchId}:${alert.kind}`
           if (seen.has(key)) continue
           seen.add(key)
-          if (!primed) continue
+          if (!primed) {
+            const eventMin = alert.minute ?? 0
+            const stale =
+              eventMin > 0 && liveMinute > 0 && liveMinute - eventMin > 2
+            if (stale) continue
+          }
 
           const scorerFollowed = favoritePlayers.some((p) => playerNamesMatch(p.name, alert.playerName))
           let allowed = false

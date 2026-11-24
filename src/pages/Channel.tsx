@@ -4062,7 +4062,13 @@ export function ChannelPage() {
             <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle>Chat live</SectionTitle>
-            {status === 'live' && activePoll && !isMuxSalon ? (
+            {status === 'live' &&
+            activePoll &&
+            !isMuxSalon &&
+            !(
+              activePoll.kind === 'kickoff_first_goal' &&
+              headerDisplayScore.home + headerDisplayScore.away > 0
+            ) ? (
               <div className="mt-1 shrink-0">
                 <TribuneLivePoll
                   poll={activePoll}

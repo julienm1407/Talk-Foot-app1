@@ -40,7 +40,6 @@ export function KickoffAlertsHost() {
     favoritePlayers,
     kickoffAlertsEnabled,
     matchAlertPrefs,
-    setKickoffAlertsEnabled,
   } = useFanPreferences()
   const { ensureCloudSession } = useTalkFootCloudSession()
   const tokenRef = useRef<string | null>(null)
@@ -64,11 +63,7 @@ export function KickoffAlertsHost() {
     let cancelled = false
     void (async () => {
       const ok = await ensureMatchNotificationPermission()
-      if (cancelled) return
-      if (!ok) {
-        setKickoffAlertsEnabled(false)
-        return
-      }
+      if (cancelled || !ok) return
       await registerNativePush((token) => {
         tokenRef.current = token
         void (async () => {
@@ -83,7 +78,7 @@ export function KickoffAlertsHost() {
     return () => {
       cancelled = true
     }
-  }, [kickoffAlertsEnabled, ensureCloudSession, setKickoffAlertsEnabled])
+  }, [kickoffAlertsEnabled, ensureCloudSession])
 
   useEffect(() => {
     const t = window.setTimeout(() => {

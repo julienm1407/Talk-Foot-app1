@@ -81,7 +81,7 @@ export function useTribuneAutoPolls({
       void ensurePoll(payload)
     }
 
-    if (minute <= 8) {
+    if (minute <= 8 && homeScore + awayScore === 0) {
       fire(`kickoff:${match.id}`, {
         kind: 'kickoff_first_goal',
         triggerKey: `kickoff:${match.id}`,

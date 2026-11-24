@@ -9,6 +9,7 @@ export type LiveMatchAlert = {
   body: string
   category: LiveMatchAlertCategory
   playerName?: string
+  minute?: number
 }
 
 export function sportMonksFixtureIdFromMatch(match: {
@@ -94,6 +95,7 @@ export function classifyLiveMatchEvent(ev: unknown): LiveMatchAlert | null {
       kind: `g:${eventId}`.slice(0, 80),
       category: 'goal',
       playerName: player || undefined,
+      minute: minute + extra,
       body: own
         ? `${minLabel ? `${minLabel}’ · ` : ''}CSC${player ? ` — ${player}` : ''}`
         : `${minLabel ? `${minLabel}’ · ` : ''}BUT${player ? ` — ${player}` : ''}`,
@@ -105,6 +107,7 @@ export function classifyLiveMatchEvent(ev: unknown): LiveMatchAlert | null {
     kind: `c:${eventId}`.slice(0, 80),
     category: 'card',
     playerName: player || undefined,
+    minute: minute + extra,
     body: `${minLabel ? `${minLabel}’ · ` : ''}${second || red ? 'Carton rouge' : 'Carton jaune'}${
       player ? ` — ${player}` : ''
     }`,
