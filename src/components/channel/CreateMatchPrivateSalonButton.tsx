@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useState, type MouseEvent, type PointerEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import { useSupporterGroups } from '../../hooks/useSupporterGroups'
 import { useAuth } from '../../contexts/AuthContext'
 import { tribuneShareUrl } from '../../utils/tribuneShareLinks'
 import { cn } from '../../utils/cn'
+
+function stopHeaderNav(e: MouseEvent | PointerEvent) {
+  e.stopPropagation()
+  e.nativeEvent.stopImmediatePropagation()
+}
 
 export function CreateMatchPrivateSalonButton({
   match,
@@ -67,22 +72,33 @@ export function CreateMatchPrivateSalonButton({
       <button
         type="button"
         disabled={busy}
+        onPointerDown={(e) => {
+          stopHeaderNav(e)
+        }}
         onClick={(e) => {
           e.preventDefault()
-          e.stopPropagation()
+          stopHeaderNav(e)
           void onCreate()
         }}
         title={hint ?? 'Créer un salon privé pour ce match'}
         aria-label="Créer un salon privé pour ce match"
         className={cn(
-          'relative z-30 rounded-full font-black pointer-events-auto',
+          'relative z-30 touch-manipulation rounded-full font-black pointer-events-auto',
           compact
-            ? 'flex h-9 w-9 items-center justify-center text-base'
+            ? 'flex size-9 items-center justify-center text-base'
             : 'px-3 py-1.5 text-[11px]',
           light ? 'bg-slate-900 text-white' : 'bg-white/15 text-sky-50',
+          busy && 'opacity-50',
         )}
       >
-        {compact ? '🔒' : 'Créer mon salon pour ce match'}
+        {compact ? (
+          <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
+        ) : (
+          'Créer mon salon pour ce match'
+        )}
       </button>
       {hint && !compact ? <p className="mt-1 text-[10px] font-semibold text-rose-300">{hint}</p> : null}
     </div>

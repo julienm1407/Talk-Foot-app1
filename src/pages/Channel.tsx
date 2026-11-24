@@ -3371,7 +3371,7 @@ export function ChannelPage() {
         }
       >
         {status === 'live' ? (
-          <div className="pointer-events-none absolute inset-0 rounded-xl border border-rose-400/80 animate-pulse" />
+          <div className="pointer-events-none absolute inset-0 z-0 rounded-xl border border-rose-400/80 animate-pulse" />
         ) : null}
         {status !== 'finished' && !showMobileChannelChrome ? (
           <div className="absolute right-2 top-2 z-20">
@@ -3379,7 +3379,7 @@ export function ChannelPage() {
           </div>
         ) : null}
         {showMobileChannelChrome && (status !== 'finished' || !europeMultiplex) ? (
-          <div className="mb-1 flex items-center gap-1">
+          <div className="relative z-20 mb-1 flex items-center gap-1">
             {(status === 'live' || isFinished) && !europeMultiplex
               ? (() => {
                   const total = campFx.home + campFx.away
