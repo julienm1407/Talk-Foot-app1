@@ -3,7 +3,14 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import type { TribunePollOption, TribunePollRow } from '../../lib/supabase/tribunePolls'
 import { cn } from '../../utils/cn'
+import { isPlausibleGoalScorerName } from '../../utils/liveFootballOdds'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
+
+function pollChoices(poll: TribunePollRow): TribunePollOption[] {
+  if (poll.kind !== 'motm') return poll.options
+  const cleaned = poll.options.filter((opt) => isPlausibleGoalScorerName(opt.label))
+  return cleaned.length >= 2 ? cleaned : poll.options
+}
 
 function PollOptions({
   poll,
@@ -23,9 +30,10 @@ function PollOptions({
   stacked: boolean
 }) {
   const total = Object.values(poll.counts).reduce((a, b) => a + b, 0)
+  const options = pollChoices(poll)
   return (
     <div className={cn(stacked ? 'space-y-1.5' : 'flex gap-1')}>
-      {poll.options.map((opt) => {
+      {options.map((opt) => {
         const n = poll.counts[opt.id] ?? 0
         const pct = total > 0 ? Math.round((n / total) * 100) : 0
         const mine = poll.myOptionId === opt.id
@@ -81,7 +89,7 @@ export function TribuneLivePoll({
   const voted = Boolean(poll.myOptionId)
   const isReplay = Boolean(replay)
   const showResults = voted || !canVote || isReplay
-  const mine = poll.options.find((o) => o.id === poll.myOptionId)
+  const mine = pollChoices(poll).find((o) => o.id === poll.myOptionId) ?? poll.options.find((o) => o.id === poll.myOptionId)
   const portalTarget = sheetOpen ? getModalPortalRoot() : null
 
   if (compact) {

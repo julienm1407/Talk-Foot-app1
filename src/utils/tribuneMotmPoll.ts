@@ -1,6 +1,6 @@
 import type { Highlight } from '../data/highlights'
 import type { SmFixture, SmLineupRow } from '../api/sportMonks/types'
-import { compactScorerDisplayName, slugScorer } from './liveFootballOdds'
+import { isPlausibleGoalScorerName, slugScorer } from './liveFootballOdds'
 
 export type MotmCandidate = {
   name: string
@@ -12,11 +12,18 @@ export type MotmCandidate = {
 }
 
 function slug(name: string): string {
-  return slugScorer(compactScorerDisplayName(name))
+  return slugScorer(name)
 }
 
 function preferName(a: string, b: string): string {
-  return b.trim().length > a.trim().length ? b.trim() : a.trim()
+  const left = a.trim()
+  const right = b.trim()
+  const leftOk = isPlausibleGoalScorerName(left)
+  const rightOk = isPlausibleGoalScorerName(right)
+  if (rightOk && !leftOk) return right
+  if (!rightOk && leftOk) return left
+  if (rightOk && right.length > left.length) return right
+  return left
 }
 
 function lineupPlayerName(row: SmLineupRow): string {
@@ -53,7 +60,9 @@ function bump(
     played?: boolean
   },
 ): void {
-  const key = slug(name)
+  const trimmed = name.trim()
+  if (!trimmed || !isPlausibleGoalScorerName(trimmed)) return
+  const key = slug(trimmed)
   if (!key) return
   const cur = map.get(key) ?? {
     name: name.trim(),
@@ -65,7 +74,7 @@ function bump(
   }
   const assistsFromEvents = cur.assists + (patch.addAssists ?? 0)
   map.set(key, {
-    name: preferName(cur.name, name),
+    name: preferName(cur.name, trimmed),
     goals: cur.goals + (patch.addGoals ?? 0),
     assists: Math.max(assistsFromEvents, patch.assists ?? 0),
     saves: Math.max(cur.saves, patch.saves ?? 0),

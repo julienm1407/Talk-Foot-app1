@@ -1,10 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import {
+  compactScorerDisplayName,
   groupGoalRowsForHeader,
+  isPlausibleGoalScorerName,
+  parseGoalScorerName,
   resolveUniqueLineupSlugForGoal,
   scorerLineupMatchesScoredGoal,
   toAnytimeScorerSettleEvent,
 } from './liveFootballOdds'
+
+describe('compactScorerDisplayName / parseGoalScorerName', () => {
+  it('affiche Vinicius Jr et pas Junior seul', () => {
+    expect(compactScorerDisplayName('Vinicius Junior')).toBe('Vinicius Jr')
+    expect(compactScorerDisplayName('Kylian Mbappé')).toBe('Mbappé')
+  })
+
+  it('ne prend pas un commentaire SM pour un buteur', () => {
+    expect(parseGoalScorerName('left-footed shot from the center of the box')).toBeNull()
+    expect(isPlausibleGoalScorerName('footed shot from the center of the box')).toBe(false)
+    expect(isPlausibleGoalScorerName('Vinicius Junior')).toBe(true)
+  })
+})
 
 describe('scorerLineupMatchesScoredGoal', () => {
   it('matche le bon Neves après un but de João', () => {

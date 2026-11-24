@@ -127,7 +127,7 @@ export function resolveUniqueLineupSlugForGoal(
 
   const surname =
     goal.slug.split('-').filter(Boolean).at(-1) ||
-    (goal.name ? slugScorer(compactScorerDisplayName(goal.name)) : '')
+    (goal.name ? slugScorer(scorerLastNameToken(goal.name)) : '')
   if (!surname) return null
 
   const bySurname = lineupSlugsOnSide.filter((s) => {
@@ -158,11 +158,26 @@ export function toAnytimeScorerSettleEvent(
   return { side: row.side, slug, name: rawName }
 }
 
-/** Nom court affiché sous le score (nom de famille si possible). */
+const NAME_SUFFIX = /^(jr\.?|jnr\.?|junior|sr\.?|snr\.?|ii|iii|iv)$/i
+
+/** Dernier mot du nom, y compris Junior (pour matcher la compo). */
+export function scorerLastNameToken(name: string): string {
+  const cleaned = name.replace(/\s+/g, ' ').trim()
+  const parts = cleaned.split(' ').filter(Boolean)
+  return parts[parts.length - 1] ?? cleaned
+}
+
+/** Nom court affiché sous le score (nom de famille ; Vinicius Junior → Vinicius Jr). */
 export function compactScorerDisplayName(name: string): string {
   const cleaned = name.replace(/\s+/g, ' ').trim()
   if (!cleaned) return 'Buteur'
   const parts = cleaned.split(' ').filter(Boolean)
+  if (parts.length >= 2 && NAME_SUFFIX.test(parts[parts.length - 1] ?? '')) {
+    const family = parts[parts.length - 2] ?? cleaned
+    const last = parts[parts.length - 1] ?? ''
+    const suffix = /^junior$/i.test(last) ? 'Jr' : last.replace(/\.$/, '')
+    return `${family} ${suffix}`.trim()
+  }
   if (parts.length >= 2) return parts[parts.length - 1] ?? cleaned
   return cleaned
 }
@@ -216,8 +231,8 @@ export function parseGoalScorerName(raw: string): string | null {
     const tail = s.slice(i + sep.length).trim()
     return tail.length >= 2 ? tail : null
   }
-  const fromSep = cut('·') ?? cut('–') ?? cut('-') ?? cut(':')
-  if (fromSep) return fromSep
+  const fromSep = cut('·') ?? cut('–') ?? cut(' - ') ?? cut(':')
+  if (fromSep && isPlausibleGoalScorerName(fromSep)) return fromSep
   const badLast = new Set([
     'goal',
     'gol',
@@ -254,6 +269,7 @@ export function parseGoalScorerName(raw: string): string | null {
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     const p = parts[i].replace(/[^A-Za-zÀ-ÿ'-]/g, '')
     if (p.length < 4 || /^\d+$/.test(p) || badLast.has(p.toLowerCase())) continue
+    if (!isPlausibleGoalScorerName(p)) continue
     return p
   }
   return null
@@ -570,9 +586,13 @@ export function isLikelyGeographicFragment(name: string): boolean {
   return GEO_NAME_FRAGMENTS.has(cleaned) || (slug ? GEO_NAME_FRAGMENTS.has(slug) : false)
 }
 
+const COMMENTARY_PLAYER_NAME =
+  /\b(shot|footed|header|attempt|box|centre|center|penalty\s+area|inside\s+the|outside\s+the|from\s+the|close\s+range|long\s+range|the\s+ball|left\s+footed|right\s+footed)\b/i
+
 function looksLikePlayerDisplayName(name: string): boolean {
   const parts = name.split(/\s+/).filter(Boolean)
-  if (!parts.length) return false
+  if (!parts.length || parts.length > 4) return false
+  if (COMMENTARY_PLAYER_NAME.test(name)) return false
   const last = parts[parts.length - 1] ?? name
   if (/^[A-ZÀ-ÖØ-Þ]/.test(last)) return true
   if (/^[A-ZÀ-ÖØ-Þ]{2,}$/.test(last)) return true

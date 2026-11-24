@@ -101,7 +101,7 @@ function LineupPlayerToken({
           )}
 
           {(yellowCards > 0 || redCards > 0) && (
-            <div className="absolute -left-0.5 -top-0.5 z-20 flex gap-0.5">
+            <div className="absolute -right-1 -bottom-0.5 z-20 flex gap-0.5">
               {yellowCards > 0 ? <CardBadge kind="yellow" /> : null}
               {redCards > 0 ? <CardBadge kind="red" /> : null}
             </div>
