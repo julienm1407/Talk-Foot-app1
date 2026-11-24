@@ -161,7 +161,7 @@ export function TribuneLivePoll({
                       poll={poll}
                       canVote={canVote}
                       voted={voted}
-                      replay={replay}
+                      replay={Boolean(replay)}
                       showResults={showResults}
                       light={light}
                       stacked
@@ -206,7 +206,7 @@ export function TribuneLivePoll({
           poll={poll}
           canVote={canVote}
           voted={voted}
-          replay={replay}
+          replay={Boolean(replay)}
           showResults={showResults}
           light={light}
           stacked
