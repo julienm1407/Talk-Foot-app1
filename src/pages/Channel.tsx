@@ -3367,31 +3367,42 @@ export function ChannelPage() {
         {status === 'live' ? (
           <div className="pointer-events-none absolute inset-0 rounded-xl border border-rose-400/80 animate-pulse" />
         ) : null}
-        {status !== 'finished' ? (
-          <div className="absolute right-1.5 top-1.5 z-20 flex items-center gap-1">
-            {match && !europeMultiplex && showMobileChannelChrome ? (
-              <CreateMatchPrivateSalonButton match={match} light={L} compact />
-            ) : null}
+        {status !== 'finished' && !showMobileChannelChrome ? (
+          <div className="absolute right-2 top-2 z-20">
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
-        {(status === 'live' || isFinished) && !europeMultiplex ? (
-          showMobileChannelChrome ? (
-            (() => {
-              const total = campFx.home + campFx.away
-              const homePct = total > 0 ? Math.round((campFx.home / total) * 100) : 50
-              const awayPct = 100 - homePct
-              return (
-                <div
-                  className="mb-1 flex h-0.5 overflow-hidden rounded-full"
-                  title={`Ambiance ${match.home.shortName} ${homePct}% – ${match.away.shortName} ${awayPct}%`}
-                >
-                  <div className="h-full" style={{ width: `${homePct}%`, background: homeColor }} />
-                  <div className="h-full" style={{ width: `${awayPct}%`, background: awayColor }} />
-                </div>
-              )
-            })()
-          ) : (
+        {showMobileChannelChrome && (status !== 'finished' || (!europeMultiplex && (status === 'live' || isFinished))) ? (
+          <div className="mb-1 flex items-center gap-1">
+            {(status === 'live' || isFinished) && !europeMultiplex
+              ? (() => {
+                  const total = campFx.home + campFx.away
+                  const homePct = total > 0 ? Math.round((campFx.home / total) * 100) : 50
+                  const awayPct = 100 - homePct
+                  return (
+                    <div
+                      className="h-1 min-w-0 flex-1 overflow-hidden rounded-full"
+                      title={`Ambiance ${match.home.shortName} ${homePct}% – ${match.away.shortName} ${awayPct}%`}
+                    >
+                      <div className="flex h-full w-full">
+                        <div className="h-full" style={{ width: `${homePct}%`, background: homeColor }} />
+                        <div className="h-full" style={{ width: `${awayPct}%`, background: awayColor }} />
+                      </div>
+                    </div>
+                  )
+                })()
+              : <span className="min-w-0 flex-1" />}
+            {status !== 'finished' ? (
+              <div className="flex shrink-0 items-center gap-0.5">
+                {match && !europeMultiplex ? (
+                  <CreateMatchPrivateSalonButton match={match} light={L} compact />
+                ) : null}
+                <MatchFavoriteButton matchId={match.id} compact light={L} />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {(status === 'live' || isFinished) && !europeMultiplex && !showMobileChannelChrome ? (
           <div className="mb-2 space-y-1">
             {(() => {
               const total = campFx.home + campFx.away
@@ -3410,7 +3421,6 @@ export function ChannelPage() {
               )
             })()}
           </div>
-          )
         ) : null}
         {match && !europeMultiplex && !showMobileChannelChrome ? (
           <div className="mb-2">
@@ -3434,13 +3444,8 @@ export function ChannelPage() {
           </div>
         ) : null}
         <div className={cn('flex flex-col gap-1 md:hidden', europeMultiplex && 'hidden')}>
-          <div
-            className={cn(
-              'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2',
-              !isUpcoming && 'pr-14',
-            )}
-          >
-            <div className="flex min-w-0 items-center gap-1.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+            <div className="flex min-w-0 flex-col items-center gap-0.5">
               <TeamLogoLink
                 to={homeTeamPath}
                 clubId={match?.home.id}
@@ -3449,19 +3454,17 @@ export function ChannelPage() {
                 sportMonksTeamId={match?.home.sportMonksTeamId}
                 nationFlagSrc={homeFlagSrc}
               />
-              {isUpcoming ? (
               <Link
                 to={homeTeamPath ?? '#'}
                 title={homeName}
-                className={`min-w-0 truncate text-sm font-semibold leading-tight hover:underline ${
+                className={`w-full truncate text-center text-xs font-bold leading-tight hover:underline ${
                   L ? 'text-[#052032]' : 'text-white'
                 }`}
               >
                 {homeHeaderLabel}
               </Link>
-              ) : null}
-          </div>
-            <div className="flex shrink-0 flex-col items-center gap-0 px-1">
+            </div>
+            <div className="flex shrink-0 flex-col items-center gap-0.5 px-2">
               {isUpcoming ? (
                 <span
                   className={`rounded border px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${
@@ -3476,7 +3479,7 @@ export function ChannelPage() {
                 away={headerDisplayScore.away}
                 penaltyScore={penaltyScore}
                 wentToExtraTime={Boolean(shootoutDisplay?.wentToExtraTime)}
-                size="sm"
+                size="md"
                 className="gap-0"
                 separator="-"
                 scoreClassName={L ? 'text-[#023458]' : 'text-white'}
@@ -3488,7 +3491,7 @@ export function ChannelPage() {
                 }
               />
               {!isUpcoming ? (
-                <p className={`text-center text-[10px] leading-none ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
+                <p className={`text-center text-[11px] font-semibold leading-none ${L ? 'text-[#3d5670]' : 'text-sky-200/80'}`}>
                   {status === 'live' ? (
                     <span className="inline-flex items-center justify-center gap-1">
                       <span className="tf-live-badge-dot inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />
@@ -3500,18 +3503,7 @@ export function ChannelPage() {
                 </p>
               ) : null}
             </div>
-            <div className="flex min-w-0 items-center justify-end gap-1.5">
-              {isUpcoming ? (
-              <Link
-                to={awayTeamPath ?? '#'}
-                title={awayName}
-                className={`min-w-0 truncate text-right text-sm font-semibold leading-tight hover:underline ${
-                  L ? 'text-[#052032]' : 'text-white'
-                }`}
-              >
-                {awayHeaderLabel}
-              </Link>
-              ) : null}
+            <div className="flex min-w-0 flex-col items-center gap-0.5">
               <TeamLogoLink
                 to={awayTeamPath}
                 clubId={match?.away.id}
@@ -3520,6 +3512,15 @@ export function ChannelPage() {
                 sportMonksTeamId={match?.away.sportMonksTeamId}
                 nationFlagSrc={awayFlagSrc}
               />
+              <Link
+                to={awayTeamPath ?? '#'}
+                title={awayName}
+                className={`w-full truncate text-center text-xs font-bold leading-tight hover:underline ${
+                  L ? 'text-[#052032]' : 'text-white'
+                }`}
+              >
+                {awayHeaderLabel}
+              </Link>
             </div>
           </div>
           {isUpcoming && (homeFullName !== homeHeaderLabel || awayFullName !== awayHeaderLabel) ? (

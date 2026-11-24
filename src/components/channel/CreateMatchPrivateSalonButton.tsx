@@ -68,14 +68,15 @@ export function CreateMatchPrivateSalonButton({
         type="button"
         disabled={busy}
         onClick={() => void onCreate()}
-        title={compact ? hint ?? 'Créer mon salon pour ce match' : undefined}
+        title={hint ?? 'Créer mon salon pour ce match'}
+        aria-label="Créer mon salon pour ce match"
         className={cn(
           'rounded-full font-black',
-          compact ? 'px-2 py-0.5 text-[9px]' : 'px-3 py-1.5 text-[11px]',
+          compact ? 'flex h-7 w-7 items-center justify-center text-xs' : 'px-3 py-1.5 text-[11px]',
           light ? 'bg-slate-900 text-white' : 'bg-white/15 text-sky-50',
         )}
       >
-        {compact ? 'Salon' : 'Créer mon salon pour ce match'}
+        {compact ? '🔒' : 'Créer mon salon pour ce match'}
       </button>
       {hint && !compact ? <p className="mt-1 text-[10px] font-semibold text-rose-300">{hint}</p> : null}
     </div>
