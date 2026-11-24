@@ -3346,7 +3346,7 @@ export function ChannelPage() {
       <div className="pointer-events-none absolute right-6 top-4 z-0 h-20 w-20 rounded-full blur-2xl" style={{ backgroundColor: `color-mix(in srgb, ${awayToneColor} 28%, transparent)` }} />
       <header
         className={cn(
-          'relative z-10 shrink-0 overflow-hidden rounded-xl border shadow-[0_14px_30px_rgba(2,8,18,0.33),inset_0_1px_0_rgba(125,211,252,0.16)]',
+          'relative z-10 shrink-0 overflow-visible rounded-xl border shadow-[0_14px_30px_rgba(2,8,18,0.33),inset_0_1px_0_rgba(125,211,252,0.16)]',
           'p-1.5 md:p-3',
           isLight ? 'border-[#8fb2d3] bg-[#f6fbff]' : 'border-[#2f5f8f] bg-[#0b2440]',
         )}
@@ -3370,7 +3370,7 @@ export function ChannelPage() {
               }
         }
       >
-        {status === 'live' ? (
+        {status === 'live' && !showMobileChannelChrome ? (
           <div className="pointer-events-none absolute inset-0 z-0 rounded-xl border border-rose-400/80 animate-pulse" />
         ) : null}
         {status !== 'finished' && !showMobileChannelChrome ? (
@@ -3378,35 +3378,31 @@ export function ChannelPage() {
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
-        {showMobileChannelChrome && (status !== 'finished' || !europeMultiplex) ? (
-          <div className="relative z-20 mb-1 flex items-center gap-1">
-            {(status === 'live' || isFinished) && !europeMultiplex
-              ? (() => {
-                  const total = campFx.home + campFx.away
-                  const homePct = total > 0 ? Math.round((campFx.home / total) * 100) : 50
-                  const awayPct = 100 - homePct
-                  return (
-                    <div
-                      className="h-1 min-w-0 flex-1 overflow-hidden rounded-full"
-                      title={`Ambiance ${match.home.shortName} ${homePct}% – ${match.away.shortName} ${awayPct}%`}
-                    >
-                      <div className="flex h-full w-full">
-                        <div className="h-full" style={{ width: `${homePct}%`, background: homeColor }} />
-                        <div className="h-full" style={{ width: `${awayPct}%`, background: awayColor }} />
-                      </div>
-                    </div>
-                  )
-                })()
-              : <span className="min-w-0 flex-1" />}
-            {status !== 'finished' ? (
-              <div className="relative z-30 flex shrink-0 items-center gap-0.5">
-                {match && !europeMultiplex ? (
-                  <CreateMatchPrivateSalonButton match={match} light={L} compact />
-                ) : null}
-                <MatchFavoriteButton matchId={match.id} compact light={L} />
-              </div>
+        {showMobileChannelChrome && status !== 'finished' ? (
+          <div className="relative z-30 mb-1 flex items-center justify-end gap-1">
+            {match && !europeMultiplex ? (
+              <CreateMatchPrivateSalonButton match={match} light={L} compact />
             ) : null}
+            <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
+        ) : null}
+        {showMobileChannelChrome && (status === 'live' || isFinished) && !europeMultiplex ? (
+          (() => {
+            const total = campFx.home + campFx.away
+            const homePct = total > 0 ? Math.round((campFx.home / total) * 100) : 50
+            const awayPct = 100 - homePct
+            return (
+              <div
+                className="mb-1 h-1 overflow-hidden rounded-full"
+                title={`Ambiance ${match.home.shortName} ${homePct}% – ${match.away.shortName} ${awayPct}%`}
+              >
+                <div className="flex h-full w-full">
+                  <div className="h-full" style={{ width: `${homePct}%`, background: homeColor }} />
+                  <div className="h-full" style={{ width: `${awayPct}%`, background: awayColor }} />
+                </div>
+              </div>
+            )
+          })()
         ) : null}
         {(status === 'live' || isFinished) && !europeMultiplex && !showMobileChannelChrome ? (
           <div className="mb-2 space-y-1">

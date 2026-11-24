@@ -35,8 +35,11 @@ function PollOptions({
           <button
             key={opt.id}
             type="button"
-            disabled={!canVote || voted || replay}
-            onClick={() => onVote(opt.id)}
+            disabled={!canVote || replay}
+            onClick={() => {
+              if (!canVote || replay || mine) return
+              onVote(opt.id)
+            }}
             className={cn(
               'relative overflow-hidden rounded-md border font-bold',
               stacked
@@ -44,7 +47,7 @@ function PollOptions({
                 : 'min-w-0 flex-1 px-1 py-1 text-center text-[10px] leading-tight',
               light ? 'border-slate-200' : 'border-white/15',
               mine ? 'ring-1 ring-tf-cta' : '',
-              !canVote || voted || replay ? 'cursor-default' : 'hover:border-tf-cta/60',
+              !canVote || replay ? 'cursor-default' : 'hover:border-tf-cta/60',
             )}
           >
             {showResults ? (
@@ -99,7 +102,7 @@ export function TribuneLivePoll({
               Sondage · {poll.question}
             </span>
             <span className={cn('mt-0.5 block truncate text-[10px] font-semibold', light ? 'text-slate-500' : 'text-sky-200/80')}>
-              {mine ? `Ton vote : ${mine.label}` : 'Touche pour voir les choix'}
+              {mine ? `Ton vote : ${mine.label} · tu peux changer` : 'Touche pour voter'}
             </span>
           </span>
           <span className={cn('shrink-0 text-[11px] font-black', light ? 'text-slate-400' : 'text-sky-200/70')} aria-hidden>
@@ -158,6 +161,11 @@ export function TribuneLivePoll({
                     </button>
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
+                    {canVote && !isReplay ? (
+                      <p className={cn('mb-2 text-[11px] font-semibold', light ? 'text-slate-500' : 'text-sky-200/80')}>
+                        {voted ? 'Touche un autre choix pour changer ton vote.' : 'Un tap pour voter — tu pourras changer ensuite.'}
+                      </p>
+                    ) : null}
                     <PollOptions
                       poll={poll}
                       canVote={canVote}
@@ -168,7 +176,6 @@ export function TribuneLivePoll({
                       stacked
                       onVote={(id) => {
                         onVote(id)
-                        setSheetOpen(false)
                       }}
                     />
                     {!canVote && !voted && !isReplay ? (

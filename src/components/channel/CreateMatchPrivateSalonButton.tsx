@@ -1,15 +1,12 @@
-import { useState, type MouseEvent, type PointerEvent } from 'react'
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import type { Match } from '../../types/match'
 import { useSupporterGroups } from '../../hooks/useSupporterGroups'
 import { useAuth } from '../../contexts/AuthContext'
 import { tribuneShareUrl } from '../../utils/tribuneShareLinks'
 import { cn } from '../../utils/cn'
-
-function stopHeaderNav(e: MouseEvent | PointerEvent) {
-  e.stopPropagation()
-  e.nativeEvent.stopImmediatePropagation()
-}
+import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 
 export function CreateMatchPrivateSalonButton({
   match,
@@ -27,6 +24,7 @@ export function CreateMatchPrivateSalonButton({
   const [hint, setHint] = useState<string | null>(null)
 
   const onCreate = async () => {
+    if (busy) return
     if (!user?.id || user.isAnonymous) {
       navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
       return
@@ -67,32 +65,33 @@ export function CreateMatchPrivateSalonButton({
     navigate(`/group/${res.group.id}`)
   }
 
+  const portalRoot = hint && compact ? getModalPortalRoot() : null
+
   return (
-    <div className={cn(compact && 'relative z-30')}>
+    <div className="relative z-30 shrink-0">
       <button
         type="button"
         disabled={busy}
-        onPointerDown={(e) => {
-          stopHeaderNav(e)
-        }}
-        onClick={(e) => {
-          e.preventDefault()
-          stopHeaderNav(e)
-          void onCreate()
-        }}
-        title={hint ?? 'Créer un salon privé pour ce match'}
+        onClick={() => void onCreate()}
+        title="Créer un salon privé pour ce match"
         aria-label="Créer un salon privé pour ce match"
         className={cn(
-          'relative z-30 touch-manipulation rounded-full font-black pointer-events-auto',
+          'touch-manipulation rounded-full font-black',
           compact
-            ? 'flex size-9 items-center justify-center text-base'
+            ? 'inline-flex size-10 items-center justify-center border'
             : 'px-3 py-1.5 text-[11px]',
-          light ? 'bg-slate-900 text-white' : 'bg-white/15 text-sky-50',
+          light
+            ? compact
+              ? 'border-slate-300 bg-white text-slate-800'
+              : 'bg-slate-900 text-white'
+            : compact
+              ? 'border-white/35 bg-[#102f4d] text-sky-50'
+              : 'bg-white/15 text-sky-50',
           busy && 'opacity-50',
         )}
       >
         {compact ? (
-          <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg viewBox="0 0 24 24" aria-hidden className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="5" y="11" width="14" height="10" rx="2" />
             <path d="M8 11V8a4 4 0 0 1 8 0v3" />
           </svg>
@@ -101,6 +100,17 @@ export function CreateMatchPrivateSalonButton({
         )}
       </button>
       {hint && !compact ? <p className="mt-1 text-[10px] font-semibold text-rose-300">{hint}</p> : null}
+      {hint && compact && portalRoot
+        ? createPortal(
+            <div
+              className="pointer-events-auto fixed inset-x-4 bottom-[calc(var(--tf-sys-bottom-inset,0px)+6.5rem)] z-[2147482960] rounded-xl border border-rose-300/40 bg-[#1a0b12] px-3 py-2 text-center text-[12px] font-semibold text-rose-100 shadow-lg"
+              role="status"
+            >
+              {hint}
+            </div>,
+            portalRoot,
+          )
+        : null}
     </div>
   )
 }
