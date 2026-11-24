@@ -91,7 +91,7 @@ export function TribuneLivePoll({
           type="button"
           onClick={() => setSheetOpen(true)}
           className={cn(
-            'mb-1 flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left',
+            'flex w-full items-center gap-2 rounded-md border px-2 py-1.5 text-left',
             light ? 'border-slate-200 bg-white/90' : 'border-[#3a6690]/50 bg-[#0c2339]/70',
           )}
         >

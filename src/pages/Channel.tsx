@@ -760,12 +760,15 @@ function LiveHeaderTeamEvents({
   compact?: boolean
 }) {
   if (!goals.length && !cards.length) return null
-  const g = compact ? goals.slice(-2) : goals
-  const c = compact ? cards.slice(-2) : cards
   return (
-    <div className={cn('w-full min-w-0', compact && 'max-h-8 overflow-hidden')}>
-      <LiveHeaderScorers goals={g} align={align} light={light} />
-      <LiveHeaderCards cards={c} align={align} light={light} />
+    <div
+      className={cn(
+        'w-full min-w-0',
+        compact && 'max-h-[2.7rem] overflow-y-auto overscroll-y-contain touch-pan-y [-webkit-overflow-scrolling:touch]',
+      )}
+    >
+      <LiveHeaderScorers goals={goals} align={align} light={light} />
+      <LiveHeaderCards cards={cards} align={align} light={light} />
     </div>
   )
 }
@@ -3379,10 +3382,7 @@ export function ChannelPage() {
           </div>
         ) : null}
         {showMobileChannelChrome && status !== 'finished' ? (
-          <div className="absolute right-1 top-1 z-30 flex items-center gap-0.5">
-            {match && !europeMultiplex ? (
-              <CreateMatchPrivateSalonButton match={match} light={L} compact />
-            ) : null}
+          <div className="absolute right-1 top-1 z-30">
             <MatchFavoriteButton matchId={match.id} compact light={L} />
           </div>
         ) : null}
@@ -3446,12 +3446,7 @@ export function ChannelPage() {
           </div>
         ) : null}
         <div className={cn('flex flex-col gap-1 md:hidden', europeMultiplex && 'hidden')}>
-          <div
-            className={cn(
-              'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2',
-              !isUpcoming && 'pr-10',
-            )}
-          >
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
             <div className="flex min-w-0 flex-col items-center gap-0.5">
               <TeamLogoLink
                 to={homeTeamPath}
@@ -4116,13 +4111,36 @@ export function ChannelPage() {
             <div className="relative z-10 flex min-h-0 flex-1 flex-col">
             <div className="pointer-events-none absolute -left-4 -right-4 -top-4 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <SectionTitle className="hidden md:inline-flex">Chat live</SectionTitle>
-            {status === 'live' &&
-            activePoll &&
-            !isMuxSalon &&
-            !(
-              activePoll.kind === 'kickoff_first_goal' &&
-              headerDisplayScore.home + headerDisplayScore.away > 0
-            ) ? (
+            {showMobileChannelChrome && match && status !== 'finished' && !europeMultiplex ? (
+              <div className="mt-0.5 flex shrink-0 items-center gap-1">
+                {status === 'live' &&
+                activePoll &&
+                !isMuxSalon &&
+                !(
+                  activePoll.kind === 'kickoff_first_goal' &&
+                  headerDisplayScore.home + headerDisplayScore.away > 0
+                ) ? (
+                  <div className="min-w-0 flex-1">
+                    <TribuneLivePoll
+                      poll={activePoll}
+                      canVote={Boolean(pollVoterKey)}
+                      onVote={(optionId) => void vote(activePoll.id, optionId)}
+                      light={L}
+                      compact
+                    />
+                  </div>
+                ) : (
+                  <span className="min-w-0 flex-1" />
+                )}
+                <CreateMatchPrivateSalonButton match={match} light={L} compact />
+              </div>
+            ) : status === 'live' &&
+              activePoll &&
+              !isMuxSalon &&
+              !(
+                activePoll.kind === 'kickoff_first_goal' &&
+                headerDisplayScore.home + headerDisplayScore.away > 0
+              ) ? (
               <div className="mt-1 shrink-0">
                 <TribuneLivePoll
                   poll={activePoll}
