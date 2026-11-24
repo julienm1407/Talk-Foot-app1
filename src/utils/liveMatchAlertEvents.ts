@@ -127,9 +127,7 @@ function scorelineFromFixture(fx: Record<string, unknown>): string | null {
     if (!raw || typeof raw !== 'object') continue
     const row = raw as Record<string, unknown>
     const desc = String(row.description ?? row.type_id ?? '').toUpperCase()
-    if (desc && !desc.includes('CURRENT') && !desc.includes('2ND_HALF') && desc.includes('1ST_HALF')) {
-      /* mi-temps handled separately */
-    }
+    if (!desc.includes('CURRENT')) continue
     const participant = row.score && typeof row.score === 'object' ? (row.score as Record<string, unknown>) : row
     const goals = Number(participant.goals ?? participant.score)
     const participantMeta =

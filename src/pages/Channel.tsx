@@ -3379,7 +3379,7 @@ export function ChannelPage() {
           </div>
         ) : null}
         {showMobileChannelChrome && status !== 'finished' ? (
-          <div className="relative z-30 mb-1 flex items-center justify-end gap-1">
+          <div className="absolute right-1 top-1 z-30 flex items-center gap-0.5">
             {match && !europeMultiplex ? (
               <CreateMatchPrivateSalonButton match={match} light={L} compact />
             ) : null}
@@ -3446,7 +3446,12 @@ export function ChannelPage() {
           </div>
         ) : null}
         <div className={cn('flex flex-col gap-1 md:hidden', europeMultiplex && 'hidden')}>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+          <div
+            className={cn(
+              'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2',
+              !isUpcoming && 'pr-10',
+            )}
+          >
             <div className="flex min-w-0 flex-col items-center gap-0.5">
               <TeamLogoLink
                 to={homeTeamPath}

@@ -33,6 +33,21 @@ describe('liveMatchAlertEvents', () => {
     assert.equal(sportMonksFixtureIdFromMatch({ id: 'm-sm-194012' }), 194012)
   })
 
+  it('prend le score CURRENT, pas le 2ND_HALF (0-1 à 2-0 déjà)', () => {
+    const alerts = liveAlertsFromFixture({
+      scores: [
+        { description: 'CURRENT', score: { participant: 'home', goals: 2 } },
+        { description: 'CURRENT', score: { participant: 'away', goals: 1 } },
+        { description: '2ND_HALF', score: { participant: 'home', goals: 0 } },
+        { description: '2ND_HALF', score: { participant: 'away', goals: 1 } },
+      ],
+      events: [{ id: 9, type_id: 14, minute: 62, player: { name: 'Thomasson' } }],
+    })
+    assert.equal(alerts.length, 1)
+    assert.match(alerts[0]?.body ?? '', /2-1/)
+    assert.doesNotMatch(alerts[0]?.body ?? '', /0-1/)
+  })
+
   it('déduplique les events d’une fixture', () => {
     const alerts = liveAlertsFromFixture({
       events: [
