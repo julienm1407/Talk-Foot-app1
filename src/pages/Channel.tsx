@@ -155,6 +155,18 @@ import { EuropeMultiplexScoreboard } from '../components/channel/EuropeMultiplex
 import { ShareStoryActions } from '../components/share/ShareStoryActions'
 import { AdminTribunePollForm, TribuneLivePoll } from '../components/channel/TribuneLivePoll'
 import { CreateMatchPrivateSalonButton } from '../components/channel/CreateMatchPrivateSalonButton'
+import { MatchChatPromptChips } from '../components/channel/MatchChatPromptChips'
+import {
+  MATCH_CHAT_PROMPTS,
+  isBareMatchChatPromptQuestion,
+  isUnfilledMatchChatPromptDraft,
+  matchChatPromptIdFromReply,
+  matchChatPromptStarter,
+  readUsedMatchChatPrompts,
+  rememberUsedMatchChatPrompt,
+  usedMatchChatPromptsFromOwnMessages,
+  type MatchChatPromptId,
+} from '../utils/matchChatPrompts'
 import { useTribunePolls } from '../hooks/useTribunePolls'
 import { useTribuneAutoPolls, useTribuneOfficialMatchPosts } from '../hooks/useTribuneAutoPolls'
 import { officialPostCollapseKey } from '../utils/tribuneOfficialEvents'
@@ -1591,6 +1603,8 @@ export function ChannelPage() {
   const chatInputRef = useRef<HTMLInputElement>(null)
   const chatSendingRef = useRef(false)
   const [chatSending, setChatSending] = useState(false)
+  const [exactScoreFocusNonce, setExactScoreFocusNonce] = useState(0)
+  const [promptUsedTick, setPromptUsedTick] = useState(0)
   const { tribune: selectedTribune, setTribune: setSelectedTribune } = useMatchTribune(
     match?.id ?? matchId,
   )
@@ -1696,6 +1710,24 @@ export function ChannelPage() {
       (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
     )
   }, [chatMessages, selectedTribune, isFinished, officialChatMessages])
+  const usedMatchChatPromptIds = useMemo(() => {
+    const fromStore =
+      match?.id && authUser?.id ? readUsedMatchChatPrompts(match.id, authUser.id) : new Set<MatchChatPromptId>()
+    const ownTexts = chatMessages
+      .filter(
+        (m) =>
+          m.userId === selfChatUserId ||
+          m.userId === authUser?.id ||
+          (m.clerkActorKey != null && m.clerkActorKey === authUser?.id),
+      )
+      .map((m) => m.text)
+    const fromMsgs = usedMatchChatPromptsFromOwnMessages(ownTexts)
+    return new Set<MatchChatPromptId>([...fromStore, ...fromMsgs])
+  }, [match?.id, authUser?.id, chatMessages, selfChatUserId, promptUsedTick])
+  const visibleMatchChatPrompts = useMemo(
+    () => MATCH_CHAT_PROMPTS.filter((p) => !usedMatchChatPromptIds.has(p.id)),
+    [usedMatchChatPromptIds],
+  )
   const bestReplayMessages = useMemo(() => {
     if (!isFinished) return []
     return [...filteredChatMessages]
@@ -1936,6 +1968,8 @@ export function ChannelPage() {
     if (chatSendingRef.current) return
     const text = correctFrenchText(chatDraftRef.current).trim()
     if (!text) return
+    if (isBareMatchChatPromptQuestion(text)) return
+    if (isUnfilledMatchChatPromptDraft(text, homeHeaderLabel, awayHeaderLabel)) return
     chatSendingRef.current = true
     setChatSending(true)
     // Vider tout de suite pour éviter 5 clics → 5 envois quand le cloud est lent.
@@ -1991,6 +2025,11 @@ export function ChannelPage() {
       return
     }
       recordChatSend()
+      const answeredPrompt = matchChatPromptIdFromReply(text)
+      if (answeredPrompt && authUser?.id) {
+        rememberUsedMatchChatPrompt(match.id, authUser.id, answeredPrompt)
+        setPromptUsedTick((n) => n + 1)
+      }
       if (channelTifoGroupId) requestTifoEngagementSync(channelTifoGroupId, match.id)
       if (res.message) {
         const mapped = cloudMessageToUi(res.message)
@@ -2014,6 +2053,41 @@ export function ChannelPage() {
       chatSendingRef.current = false
       setChatSending(false)
     }
+  }
+  const applyMatchChatPrompt = (id: MatchChatPromptId) => {
+    if (!match?.id) return
+    if (!authUser?.id || authUser.isAnonymous) {
+      navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
+      return
+    }
+    const starter = matchChatPromptStarter(id, homeHeaderLabel, awayHeaderLabel)
+    chatDraftRef.current = starter.text
+    const input = chatInputRef.current
+    if (input) {
+      input.value = starter.text
+      const selectEnd = starter.selectNext ?? starter.cursor
+      try {
+        input.setSelectionRange(starter.cursor, selectEnd)
+      } catch {
+        /* ignore */
+      }
+    }
+    if (id === 'exact_score') {
+      setMobilePanel('paris')
+      setExactScoreFocusNonce((n) => n + 1)
+      return
+    }
+    window.setTimeout(() => {
+      const field = chatInputRef.current
+      if (!field) return
+      field.focus()
+      const selectEnd = starter.selectNext ?? starter.cursor
+      try {
+        field.setSelectionRange(starter.cursor, selectEnd)
+      } catch {
+        /* ignore */
+      }
+    }, 30)
   }
   const onToggleLikeMessage = (id: string) => {
     if (!authUser?.id || authUser.isAnonymous) {
@@ -4152,6 +4226,18 @@ export function ChannelPage() {
                 />
               </div>
             ) : null}
+            {isUpcoming &&
+            !chatLocked &&
+            !europeMultiplex &&
+            visibleMatchChatPrompts.length > 0 ? (
+              <div className="mt-1 shrink-0">
+                <MatchChatPromptChips
+                  prompts={visibleMatchChatPrompts}
+                  light={L}
+                  onPick={applyMatchChatPrompt}
+                />
+              </div>
+            ) : null}
             {status === 'live' && showMobileChannelChrome && !europeMultiplex && latestHighlight ? (
               <p className="mt-1 shrink-0 truncate rounded-md bg-[#122940] px-2 py-0.5 text-[10px] font-semibold text-sky-100/90">
                 {highlightMinuteLabel(latestHighlight)} {latestHighlightText}
@@ -4245,40 +4331,6 @@ export function ChannelPage() {
                 </div>
               ) : (
                 <>
-                  {isFeaturedMatch && isUpcoming ? (
-                    <div className="mb-2 flex flex-wrap justify-center gap-1.5">
-                      {[
-                        'Ton score exact ?',
-                        'Ta compo rêvée ?',
-                        'Qui marque en premier ?',
-                      ].map((prompt) => (
-                        <button
-                          key={prompt}
-                          type="button"
-                          onClick={() => {
-                            if (!match?.id) return
-                            if (!authUser?.id || authUser.isAnonymous) {
-                              navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
-                              return
-                            }
-                            chatDraftRef.current = prompt
-                            if (chatInputRef.current) {
-                              chatInputRef.current.value = prompt
-                              chatInputRef.current.focus()
-                            }
-                          }}
-                          className={cn(
-                            'rounded-full border px-2.5 py-1 text-[11px] font-bold',
-                            L
-                              ? 'border-sky-200 bg-sky-50 text-sky-800'
-                              : 'border-sky-400/35 bg-sky-500/15 text-sky-100',
-                          )}
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
                   {isFinished && !isMuxSalon ? (
                     <div
                       className={cn(
@@ -4982,6 +5034,7 @@ export function ChannelPage() {
                   liveStatRows={liveStatRows}
                   lineupScorers={lineupScorerPicks}
                   scoredButeurs={scoredButeurSlugs}
+                  focusExactScoreNonce={showMobileChannelChrome ? 0 : exactScoreFocusNonce}
                 />
               ) : (
                 <div className="rounded-lg bg-[#0a1f35]/80 px-3 py-2 text-sm font-semibold text-sky-100">
@@ -5284,6 +5337,7 @@ export function ChannelPage() {
                     liveStatRows={liveStatRows}
                     lineupScorers={lineupScorerPicks}
                     scoredButeurs={scoredButeurSlugs}
+                    focusExactScoreNonce={showMobileChannelChrome ? exactScoreFocusNonce : 0}
                   />
                 ) : (
                   <div className={chAlertBoxPlain}>Match indisponible pour les pronos.</div>

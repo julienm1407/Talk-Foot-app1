@@ -222,6 +222,17 @@ export function useTribuneOfficialMatchPosts({
   }, [match?.id])
 
   useEffect(() => {
+    if (!match?.id || status !== 'upcoming') return
+    if (isTalkFootMultiplexId(match.id)) return
+    void postOfficialTribune(
+      match.id,
+      'Question du salon 🎯 : ton score exact ?',
+      0,
+      `salon-q:score:${match.id}`,
+    )
+  }, [match?.id, status])
+
+  useEffect(() => {
     if (!match?.id || status !== 'live') return
     if (isTalkFootMultiplexId(match.id)) return
     if (!primed.current) {

@@ -74,6 +74,7 @@ export function BetWidget({
   oddsAlreadyLiveAdjusted = false,
   bettingSuspended = false,
   bettingSuspendReason,
+  focusExactScoreNonce = 0,
 }: {
   match: Match
   bookOdds1x2?: SmBookOdds1x2 | null
@@ -105,6 +106,8 @@ export function BetWidget({
   oddsAlreadyLiveAdjusted?: boolean
   bettingSuspended?: boolean
   bettingSuspendReason?: string
+  /** Incrémenté depuis le chat pour ouvrir la feuille sur Score exact. */
+  focusExactScoreNonce?: number
   betting?: {
     wallet: Wallet
     matchBets: Bet[]
@@ -585,6 +588,15 @@ export function BetWidget({
       requestAnimationFrame(() => scrollSheetToSection(scorersSectionRef))
     })
   }, [scrollSheetToSection])
+
+  useEffect(() => {
+    if (!focusExactScoreNonce) return
+    setSheetOpen(true)
+    const timer = window.setTimeout(() => {
+      scrollSheetToSection(exactScoreSectionRef)
+    }, 160)
+    return () => window.clearTimeout(timer)
+  }, [focusExactScoreNonce, scrollSheetToSection])
 
   const pick1x2Side = useCallback(
     (side: 'home' | 'draw' | 'away') => {
