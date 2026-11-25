@@ -13,6 +13,7 @@ import { useFanPreferences } from '../contexts/FanPreferencesContext'
 import { sortGroupsByFanAffinity, filterDiscoverableGroups } from '../utils/groupAccess'
 import { filterNewsForFan } from '../utils/filterNews'
 import { pickTalkFootHomeBoard, rememberTalkFootFeaturedIds } from '../utils/talkFootMatchOfTheDay'
+import { pickHomeDebateOfTheDay } from '../utils/dailyDebateRotation'
 import { useSupporterTintMode } from '../hooks/useSupporterTintMode'
 import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { FavoritesEncart } from '../components/fan/FavoritesEncart'
@@ -40,7 +41,7 @@ export function HomePage() {
   const { carouselMatches, matches, loading } = useMatches()
   const { groups, createGroup, isJoined } = useSupporterGroups()
   const { articles: publishedArticles, loading: articlesLoading } = useArticles()
-  const { debates, debateOfTheDay, trendingDebates, loading: debatesLoading } = useDebates()
+  const { debates, trendingDebates, loading: debatesLoading } = useDebates()
   const {
     favoriteLeagueId,
     favoriteClubIds,
@@ -133,6 +134,10 @@ export function HomePage() {
     [displayMatchesFull],
   )
   const matchOfTheDay = talkFootBoard.featured
+  const homeDebateOfTheDay = useMemo(
+    () => pickHomeDebateOfTheDay(debates, matchOfTheDay),
+    [debates, matchOfTheDay],
+  )
   const alsoTonight = talkFootBoard.alsoTonight
   const europeMultiplex = talkFootBoard.multiplex
 
@@ -280,8 +285,8 @@ export function HomePage() {
             myCreatedGroups={myCreatedGroups}
             allDebates={debates}
             trendingDebates={trendingDebates}
-            debateOfTheDay={debateOfTheDay}
-            debatesLoading={debatesLoading}
+            debateOfTheDay={homeDebateOfTheDay}
+            debatesLoading={debatesLoading && !homeDebateOfTheDay}
             matchesLoading={loading}
             onCreateTribune={() => setCreateOpen(true)}
             centerContinuation={wideHomeBelowFold}
@@ -307,8 +312,8 @@ export function HomePage() {
           upcomingUnderLiveStrip={upcomingUnderLiveStrip}
           displayMatchesFull={displayMatchesFull}
           displayMatches={displayMatches}
-          debateOfTheDay={debateOfTheDay}
-          debatesLoading={debatesLoading}
+          debateOfTheDay={homeDebateOfTheDay}
+          debatesLoading={debatesLoading && !homeDebateOfTheDay}
           trendingDebates={trendingDebates}
           activeGroupsRail={activeGroupsRail}
           personalizedNews={personalizedNews}

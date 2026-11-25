@@ -273,7 +273,7 @@ export function GroupTifoPanel({
       ) : null}
       {tifoMode === 'modele' ? (
         <p className={cn('mt-1.5 text-[11px] font-semibold leading-snug', L ? 'text-tf-grey/80' : 'text-sky-200/80')}>
-          {activeTemplate?.hint ?? 'Modèle du match'}. Tape une case du dessin pour poser la couleur du club
+          {(activeTemplate?.hint ?? 'Modèle du match').replace(/\.+$/, '')}. Tape une case du dessin pour poser la couleur du club
           {followMatchColors ? '' : ' (couleur choisie à la place)'} ({templateProgress.filled}/
           {templateProgress.total}). Chaque modèle a sa propre grille.
         </p>

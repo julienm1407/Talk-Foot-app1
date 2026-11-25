@@ -1703,9 +1703,10 @@ export function ChannelPage() {
       })
   }, [officialPosts])
   const filteredChatMessages = useMemo(() => {
-    const zoneFiltered = isFinished
+    const zoneFiltered = (isFinished
       ? chatMessages
       : chatMessages.filter((m) => liveChatVisibleInTribune(m, selectedTribune))
+    ).filter((m) => !isBareMatchChatPromptQuestion(m.text))
     return [...zoneFiltered, ...officialChatMessages].sort(
       (a, b) => (a.createdAtMs ?? 0) - (b.createdAtMs ?? 0) || a.id.localeCompare(b.id),
     )
@@ -3849,13 +3850,13 @@ export function ChannelPage() {
               <SectionTitle>Avant-match</SectionTitle>
                 <div className="mt-2 space-y-1.5">
                   <SideEncartRow
-                    label="Ouverture tchat"
+                    label="Tchat"
                     value={
                       chatLocked
                         ? chatCountdownText
-                          ? `dans ${chatCountdownText}`
+                          ? `ouverture dans ${chatCountdownText}`
                           : '—'
-                        : 'ouverte'
+                        : 'Tchat ouvert ✅'
                     }
                   />
                   <SideEncartRow

@@ -17,7 +17,7 @@ export function DebateOfTheDayCard({
   hubCompact?: boolean
   className?: string
 }) {
-  if (loading) {
+  if (loading && !debate) {
     return (
       <Card className={cn('px-4 py-8 text-center text-sm font-semibold text-tf-grey', className)}>
         Chargement du débat du jour…
@@ -44,6 +44,12 @@ export function DebateOfTheDayCard({
 
   const previews = hubCompact ? [] : debate.previewMessages.slice(0, 2)
   const participants = debate.activeParticipants ?? []
+  const title = debate.title.trim() || debate.excerpt.trim() || 'Débat du jour'
+  const excerpt =
+    debate.excerpt.trim() && debate.excerpt.trim() !== title ? debate.excerpt.trim() : ''
+  const participateTo = debate.id.startsWith('d-motd-')
+    ? `/channel/${debate.id.slice('d-motd-'.length)}`
+    : `/debate/${debate.id}`
 
   return (
     <Card
@@ -108,16 +114,18 @@ export function DebateOfTheDayCard({
                 hubCompact ? 'text-sm sm:text-base' : 'text-lg sm:text-2xl lg:text-[1.65rem]',
               )}
             >
-              {debate.title}
+              {title}
             </h2>
+            {excerpt ? (
             <p
               className={cn(
                 'font-semibold leading-snug text-white/80',
                 hubCompact ? 'line-clamp-2 text-[11px]' : 'line-clamp-2 text-xs sm:line-clamp-3 sm:text-sm',
               )}
             >
-              {debate.excerpt}
+              {excerpt}
             </p>
+            ) : null}
             <p className={cn('font-black text-white/75', hubCompact ? 'text-[10px]' : 'text-[11px] sm:text-xs')}>
               👥 {debate.participantsCount.toLocaleString('fr-FR')} · 💬{' '}
               {debate.messagesCount.toLocaleString('fr-FR')} messages
@@ -147,7 +155,7 @@ export function DebateOfTheDayCard({
             )}
           >
             <Link
-              to={`/debate/${debate.id}`}
+              to={participateTo}
               className={cn(
                 'tf-interactive-press inline-flex w-full items-center justify-center gap-2 rounded-2xl text-center font-black text-white shadow-lg sm:w-auto',
                 hubCompact
@@ -159,7 +167,7 @@ export function DebateOfTheDayCard({
               ✍️ Participer au débat
             </Link>
             <Link
-              to={`/debate/${debate.id}`}
+              to={participateTo}
               className={cn(
                 'tf-interactive-press inline-flex w-full items-center justify-center rounded-2xl border border-white/40 bg-white/10 text-center font-black text-white backdrop-blur-sm hover:bg-white/20 sm:w-auto',
                 hubCompact ? 'rounded-xl px-3 py-1.5 text-[10px]' : 'px-5 py-2.5 text-[11px] sm:text-xs',

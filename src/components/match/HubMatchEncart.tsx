@@ -19,6 +19,7 @@ import { SalonAudienceFooter } from './SalonAudienceFooter'
 import { MatchResultScore } from './MatchResultScore'
 import { MatchClubHit } from './MatchClubHit'
 import { MatchFavoriteButton } from '../fan/MatchFavoriteButton'
+import { hubTeamLabel } from '../../utils/teamCardLabel'
 
 /** DA hub TalkFoot — même visuel partout (desktop, mobile, carrousel, colonnes). */
 export const HUB_STADIUM_URL =
@@ -206,7 +207,7 @@ export function HubStripLive({
                   visualSize === 'hero' ? 'text-sm' : 'text-xs',
                 )}
               >
-                {match.home.shortName}
+                {hubTeamLabel(match.home)}
               </span>
             </MatchClubHit>
             <div className="flex shrink-0 flex-col items-center px-1">
@@ -242,7 +243,7 @@ export function HubStripLive({
                   visualSize === 'hero' ? 'text-sm' : 'text-xs',
                 )}
               >
-                {match.away.shortName}
+                {hubTeamLabel(match.away)}
               </span>
               <MatchTeamCrest
                 team={match.away}
@@ -304,7 +305,7 @@ export function HubStripLive({
       <Link
         to={`/channel/${match.id}`}
         className={shellClass}
-        aria-label={`${match.home.shortName} contre ${match.away.shortName}, en direct`}
+        aria-label={`${hubTeamLabel(match.home)} contre ${hubTeamLabel(match.away)}, en direct`}
       >
         {inner}
       </Link>
@@ -347,20 +348,17 @@ export function HubStripUpcoming({
             : 'border-white/11 bg-[#050b14]/92 hover:border-white/22 hover:bg-[#071422]',
           className,
         )}
-        aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+        aria-label={`${hubTeamLabel(match.home)} contre ${hubTeamLabel(match.away)}, à venir`}
       >
         <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
           <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={22} />
-          <span className={cn('mx-0.5 text-[9px] font-black opacity-35', L ? 'text-tf-dark' : 'text-white')}>
-            –
-          </span>
           <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={22} />
         </div>
         <div className="min-w-0 flex-1">
           <p className={cn('truncate text-[11px] font-black leading-tight', L ? 'text-tf-dark' : 'text-white')}>
-            {match.home.shortName}
-            <span className="mx-1 font-semibold opacity-45">·</span>
-            {match.away.shortName}
+            {hubTeamLabel(match.home)}
+            <span className="mx-1 font-semibold opacity-50">–</span>
+            {hubTeamLabel(match.away)}
           </p>
           <p className={cn('truncate text-[9px] font-bold', L ? 'text-tf-dark/55' : 'text-sky-200/72')}>
             {match.competition.shortName}
@@ -399,7 +397,7 @@ export function HubStripUpcoming({
             : 'border border-transparent hover:border-white/10 hover:bg-white/[0.05]',
           className,
         )}
-        aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+        aria-label={`${hubTeamLabel(match.home)} contre ${hubTeamLabel(match.away)}, à venir`}
       >
         <div className="flex shrink-0 items-center gap-1.5" aria-hidden>
           <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={22} />
@@ -415,9 +413,9 @@ export function HubStripUpcoming({
               L ? 'text-tf-dark/92' : 'text-sky-100/95',
             )}
           >
-            {match.home.shortName}
+            {hubTeamLabel(match.home)}
             <span className="mx-0.5 font-semibold opacity-40">·</span>
-            {match.away.shortName}
+            {hubTeamLabel(match.away)}
           </p>
           <p className={cn('truncate text-[10px] font-semibold', L ? 'text-tf-dark/55' : 'text-sky-200/70')}>
             {match.competition.shortName}
@@ -451,7 +449,7 @@ export function HubStripUpcoming({
               ),
           className,
         )}
-        aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+        aria-label={`${hubTeamLabel(match.home)} contre ${hubTeamLabel(match.away)}, à venir`}
       >
         <HubEncartTopAccent appearance={appearance} competitionId={match.competition.id} preset="upcoming" />
         {!L && compTh ? (
@@ -503,7 +501,7 @@ export function HubStripUpcoming({
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={34} />
               <span className="truncate text-sm font-black leading-tight text-tf-app-fg sm:text-[0.9375rem]">
-                {match.home.shortName}
+                {hubTeamLabel(match.home)}
               </span>
             </div>
             <div
@@ -531,7 +529,7 @@ export function HubStripUpcoming({
             />
             <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
               <span className="truncate text-right text-sm font-black leading-tight text-tf-app-fg sm:text-[0.9375rem]">
-                {match.away.shortName}
+                {hubTeamLabel(match.away)}
               </span>
               <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={34} />
             </div>
@@ -631,7 +629,7 @@ export function HubStripUpcoming({
           ? { borderColor: `${compTh.accent2}55` }
           : undefined
       }
-      aria-label={`${match.home.shortName} contre ${match.away.shortName}, à venir`}
+      aria-label={`${hubTeamLabel(match.home)} contre ${hubTeamLabel(match.away)}, à venir`}
     >
       <div className="absolute right-2 top-2 z-20">
         <MatchFavoriteButton matchId={match.id} compact />
@@ -706,7 +704,7 @@ export function HubStripUpcoming({
               clickable={false}
             />
             <span className={cn(nameCls(isSidebar), 'underline-offset-2 hover:underline')}>
-              {match.home.shortName}
+              {hubTeamLabel(match.home)}
             </span>
           </MatchClubHit>
           <div className="flex shrink-0 flex-col items-center px-0.5">
@@ -719,7 +717,7 @@ export function HubStripUpcoming({
             className={cn('flex min-w-0 items-center justify-end text-right', isSidebar ? 'gap-1' : 'gap-2')}
           >
             <span className={cn(nameCls(isSidebar), 'underline-offset-2 hover:underline')}>
-              {match.away.shortName}
+              {hubTeamLabel(match.away)}
             </span>
             <MatchTeamCrest
               team={match.away}
@@ -770,7 +768,7 @@ export function HubStripFinished({ match, className }: { match: Match; className
     <Link
       to={`/channel/${match.id}`}
       className={cn(stripLinkBase, 'border-white/15 opacity-[0.92]', className)}
-      aria-label={`${match.home.shortName} contre ${match.away.shortName}, terminé`}
+      aria-label={`${hubTeamLabel(match.home)} contre ${hubTeamLabel(match.away)}, terminé`}
     >
       <div className={cn('relative shrink-0 overflow-hidden rounded-t-2xl', imageAreaH)}>
         <img
@@ -791,7 +789,7 @@ export function HubStripFinished({ match, className }: { match: Match; className
               clickable={false}
             />
             <span className="truncate text-xs font-black text-white drop-shadow-md underline-offset-2 hover:underline">
-              {match.home.shortName}
+              {hubTeamLabel(match.home)}
             </span>
           </MatchClubHit>
           <div className="flex shrink-0 flex-col items-center px-1">
@@ -811,7 +809,7 @@ export function HubStripFinished({ match, className }: { match: Match; className
             className="flex min-w-0 items-center justify-end gap-2 text-right"
           >
             <span className="truncate text-xs font-black text-white drop-shadow-md underline-offset-2 hover:underline">
-              {match.away.shortName}
+              {hubTeamLabel(match.away)}
             </span>
             <MatchTeamCrest
               team={match.away}
@@ -877,14 +875,14 @@ export function HubRailRowUpcoming({ match, className }: { match: Match; classNa
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
             <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={crestSm} />
-            <span className="truncate text-[11px] font-black text-white">{match.home.shortName}</span>
+            <span className="truncate text-[11px] font-black text-white">{hubTeamLabel(match.home)}</span>
           </div>
           <span className="shrink-0 text-[10px] font-black text-emerald-400">{formatKickoff(match.kickoffAt)}</span>
         </div>
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
             <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={crestSm} />
-            <span className="truncate text-[11px] font-black text-white">{match.away.shortName}</span>
+            <span className="truncate text-[11px] font-black text-white">{hubTeamLabel(match.away)}</span>
           </div>
           <span className="shrink-0 text-[9px] font-bold text-sky-100/78">{formatHubDayLabel(match.kickoffAt)}</span>
         </div>
@@ -918,7 +916,7 @@ export function HubRailRowLive({ match, className }: { match: Match; className?:
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
             <MatchTeamCrest team={match.home} competitionId={match.competition.id} size={crestSm} />
-            <span className="truncate text-[11px] font-black text-white">{match.home.shortName}</span>
+            <span className="truncate text-[11px] font-black text-white">{hubTeamLabel(match.home)}</span>
           </div>
           <span className="shrink-0 font-display text-sm font-black tabular-nums text-white">
             {sc.home}–{sc.away}
@@ -927,7 +925,7 @@ export function HubRailRowLive({ match, className }: { match: Match; className?:
         <div className="flex items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
             <MatchTeamCrest team={match.away} competitionId={match.competition.id} size={crestSm} />
-            <span className="truncate text-[11px] font-black text-white">{match.away.shortName}</span>
+            <span className="truncate text-[11px] font-black text-white">{hubTeamLabel(match.away)}</span>
           </div>
           <span className="shrink-0 text-[9px] font-black text-emerald-400">{clockLabel || '—'}</span>
         </div>
@@ -954,7 +952,7 @@ export function HubRailRowMatch({ match, className }: { match: Match; className?
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2.5 py-2">
         <span className="truncate text-[11px] font-black text-white">
-          {match.home.shortName} · {match.away.shortName}
+          {hubTeamLabel(match.home)} · {hubTeamLabel(match.away)}
         </span>
         <MatchResultScore
           home={sc.home}

@@ -11,6 +11,7 @@ import { extractRegulationGoalsFromScores, extractPenaltyShootoutFromScores } fr
 import type { SmFixture, SmLeague, SmScoreRow } from './types'
 import { normalizeSmFixtureIncludes } from './normalizeSmFixtureIncludes'
 import { coerceElapsedLiveStatus } from '../../utils/footballMatchAttention'
+import { shortNameFromApiTeamName } from '../../utils/teamCardLabel'
 
 const LIVE_STATE_IDS = new Set([2, 3, 4, 6, 9, 21, 22, 25])
 const FINISHED_STATE_IDS = new Set([5, 7, 8, 10, 12, 14, 15, 17])
@@ -502,7 +503,7 @@ function getTeam(
     return { ...catalogTeam, ...sm }
   }
   if (!compTeams) {
-    const shortName = apiName.slice(0, 3).toUpperCase()
+    const shortName = shortNameFromApiTeamName(apiName)
     const stub: Team = {
       id: ourId,
       name: apiName,
@@ -521,7 +522,7 @@ function getTeam(
   return {
     id: ourId,
     name: apiName,
-    shortName: apiName.slice(0, 3).toUpperCase(),
+    shortName: shortNameFromApiTeamName(apiName),
     colors: { primary, secondary },
     ...sm,
   }
