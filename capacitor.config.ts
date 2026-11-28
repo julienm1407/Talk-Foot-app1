@@ -6,12 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    // https sur iOS = WebView noire. Schéma Capacitor + server.url .com.
+    // Pas de `url` prod : l’UI est le bundle `dist/` dans l’APK/IPA.
+    // Scores / relais : fetch https://talk-foot.com/api/* (CDN, 1 origine pour N fans).
+    // OAuth : Custom Tabs + bridge HTTPS, pas une WebView du site entier.
     iosScheme: 'capacitor',
-    // Phase test USB : charge le site prod. allowNavigation = OAuth Google/Clerk
-    // reste DANS la WebView (sinon Android ouvre Chrome hors de l’app).
-    // Note : talk-foot.fr ne résout pas partout (ERR_NAME_NOT_RESOLVED) → .com.
-    url: 'https://talk-foot.com',
     cleartext: false,
     allowNavigation: [
       'talk-foot.com',

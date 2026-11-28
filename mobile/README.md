@@ -64,15 +64,12 @@ Dans le dashboard Clerk → **Paths / Redirect URLs**, ajouter :
 
 Mêmes redirect URLs + Associated Domains si tu utilises Universal Links (`applinks:talk-foot.com`).
 
-## Mode « site distant » (optionnel)
+## Mode stores : bundle local (pas le site)
 
-Dans `capacitor.config.ts`, décommente :
+`capacitor.config.ts` n’a **pas** de `server.url`. L’UI est le dossier `dist/` dans l’APK/IPA.
+Les scores passent par `https://talk-foot.com/api/*` (CDN partagé). L’OAuth ouvre Custom Tabs, pas le site entier.
 
-```ts
-server: { url: 'https://talk-foot.com', cleartext: false }
-```
-
-L’app charge alors le site en prod sans rebundler le JS à chaque release native (mises à jour web instantanées). Utile en phase beta ; pour les stores, le mode **bundlé** (`dist`) est recommandé.
+Ne pas remettre `url: 'https://talk-foot.com'` : l’app redeviendrait une WebView du site (pause Vercel = écran bloqué).
 
 ## Structure
 
