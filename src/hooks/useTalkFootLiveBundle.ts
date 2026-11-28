@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchTalkFootLiveBundleFixture, normalizeSmFixtureIncludes, type SmFixture } from '../api/sportMonks'
+import { fetchTalkFootLiveBundleFixture, type SmFixture } from '../api/sportMonks'
 
 type MatchStatus = 'upcoming' | 'live' | 'finished'
 
@@ -9,17 +9,18 @@ type FixtureChannel = {
   fixture: SmFixture | null
   pollSettled: boolean
   listeners: Set<FixtureListener>
-  es: EventSource | null
   pollId: ReturnType<typeof setInterval> | null
   pollMs: number | null
+  onVis: (() => void) | null
 }
 
 const CHANNELS = new Map<number, FixtureChannel>()
 
+/** Aligné sur s-maxage live-bundle : le chrono UI tick à 1 s, SM toutes les 5 s. */
 function pollMsForStatus(status: MatchStatus): number {
-  if (status === 'live') return 2_000
-  if (status === 'upcoming') return 12_000
-  return 30_000
+  if (status === 'live') return 5_000
+  if (status === 'upcoming') return 20_000
+  return 60_000
 }
 
 function channelFor(fixtureId: number): FixtureChannel {
@@ -29,9 +30,9 @@ function channelFor(fixtureId: number): FixtureChannel {
       fixture: null,
       pollSettled: false,
       listeners: new Set(),
-      es: null,
       pollId: null,
       pollMs: null,
+      onVis: null,
     }
     CHANNELS.set(fixtureId, ch)
   }
@@ -44,36 +45,10 @@ function broadcast(ch: FixtureChannel) {
 
 function ensureTransport(fixtureId: number, status: MatchStatus) {
   const ch = channelFor(fixtureId)
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const pollMs = pollMsForStatus(status)
 
-  if (!ch.es && typeof EventSource !== 'undefined' && origin) {
-    try {
-      const es = new EventSource(`${origin}/api/live-stream?fixtureId=${fixtureId}`)
-      es.addEventListener('fixture', (ev) => {
-        try {
-          const msg = JSON.parse((ev as MessageEvent).data) as { fixture?: SmFixture | null }
-          ch.fixture = normalizeSmFixtureIncludes((msg?.fixture as SmFixture | null) ?? null)
-          broadcast(ch)
-        } catch {
-          // ignore parse issues, polling stays active
-        }
-      })
-      es.onerror = () => {
-        try {
-          es.close()
-        } catch {
-          // noop
-        }
-        if (ch.es === es) ch.es = null
-      }
-      ch.es = es
-    } catch {
-      ch.es = null
-    }
-  }
-
   const runPoll = async () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
     try {
       const fx = await fetchTalkFootLiveBundleFixture(fixtureId)
       if (fx) ch.fixture = fx
@@ -96,20 +71,23 @@ function ensureTransport(fixtureId: number, status: MatchStatus) {
       void runPoll()
     }, pollMs)
   }
+
+  if (!ch.onVis && typeof document !== 'undefined') {
+    ch.onVis = () => {
+      if (document.visibilityState === 'visible') void runPoll()
+    }
+    document.addEventListener('visibilitychange', ch.onVis)
+  }
 }
 
 function maybeStopTransport(fixtureId: number) {
   const ch = CHANNELS.get(fixtureId)
   if (!ch) return
   if (ch.listeners.size > 0) return
-  if (ch.es) {
-    try {
-      ch.es.close()
-    } catch {
-      // noop
-    }
-  }
   if (ch.pollId) clearInterval(ch.pollId)
+  if (ch.onVis && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', ch.onVis)
+  }
   CHANNELS.delete(fixtureId)
 }
 

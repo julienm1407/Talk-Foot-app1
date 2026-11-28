@@ -53,7 +53,7 @@ export function useLiveMatchForClock(match: Match | null | undefined): Match | n
     }
 
     void poll()
-    const id = window.setInterval(() => void poll(), 2_000)
+    const id = window.setInterval(() => void poll(), 5_000)
     return () => {
       cancelled = true
       fallbackPollActiveRef.current = false

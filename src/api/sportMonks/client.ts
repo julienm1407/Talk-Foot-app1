@@ -54,13 +54,20 @@ function readBrowserSportMonksToken(): string | null {
   }
 }
 
-async function fetchJsonBody(url: string, headers: Record<string, string>): Promise<{
+async function fetchJsonBody(
+  url: string,
+  headers: Record<string, string>,
+  cacheMode: RequestCache = 'no-store',
+): Promise<{
   ok: boolean
   status: number
   text: string
   body: unknown
 }> {
-  const res = await fetch(url, { headers, cache: 'no-store' })
+  const res = await fetch(url, {
+    headers,
+    cache: cacheMode,
+  })
   const text = await res.text()
   let body: unknown
   try {
@@ -101,7 +108,11 @@ export async function sportMonksFetchJson<T>(
   let p = smInflightJson.get(urlKey) as Promise<T> | undefined
   if (!p) {
     p = (async (): Promise<T> => {
-      const first = await fetchJsonBody(urlKey, viaServerRelay ? {} : { Authorization: token })
+      const first = await fetchJsonBody(
+        urlKey,
+        viaServerRelay ? {} : { Authorization: token },
+        viaServerRelay ? 'default' : 'no-store',
+      )
       if (!first.ok) {
         const msg =
           typeof first.body === 'object' && first.body && 'message' in first.body

@@ -130,8 +130,8 @@ export default async function handler(req, res) {
 
   function cachePolicyForPath(pathname) {
     // Cache partagé CDN (s-maxage) : plusieurs visiteurs = moins d’appels vers api.sportmonks.com.
-    if (pathname.startsWith('/livescores/inplay')) return 'public, s-maxage=30, stale-while-revalidate=60'
-    if (pathname.startsWith('/fixtures/')) return 'public, s-maxage=45, stale-while-revalidate=90'
+    if (pathname.startsWith('/livescores/inplay')) return 'public, s-maxage=20, stale-while-revalidate=60'
+    if (pathname.startsWith('/fixtures/')) return 'public, s-maxage=20, stale-while-revalidate=60'
     if (pathname.startsWith('/rounds/')) return 'public, s-maxage=60, stale-while-revalidate=120'
     if (pathname.startsWith('/leagues/date/')) return 'public, s-maxage=300, stale-while-revalidate=600'
     if (pathname.startsWith('/standings/')) return 'public, s-maxage=180, stale-while-revalidate=360'

@@ -290,10 +290,7 @@ export async function fetchTalkFootLiveBundleFixture(
   if (!p) {
     p = (async () => {
       try {
-        const res = await fetch(
-          `${getTalkFootApiOrigin()}/api/live-bundle?fixtureId=${fixtureId}`,
-          { cache: 'no-store' },
-        )
+        const res = await fetch(`${getTalkFootApiOrigin()}/api/live-bundle?fixtureId=${fixtureId}`)
         if (!res.ok) return null
         const body = (await res.json()) as { fixture?: unknown }
         const fx = body?.fixture

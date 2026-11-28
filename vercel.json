@@ -1,4 +1,17 @@
 {
+  "functions": {
+    "api/live-stream.js": { "maxDuration": 5 },
+    "api/live-bundle.js": { "maxDuration": 10 },
+    "api/sm.js": { "maxDuration": 10 },
+    "api/push-kickoff.mjs": { "maxDuration": 10 },
+    "api/stripe-webhook.mjs": { "maxDuration": 10 },
+    "api/stripe-checkout.mjs": { "maxDuration": 10 },
+    "api/stripe-fulfill.mjs": { "maxDuration": 10 },
+    "api/stripe-revoke-fulfillment.mjs": { "maxDuration": 10 },
+    "api/refund-request.mjs": { "maxDuration": 10 },
+    "api/stripeCatalog.mjs": { "maxDuration": 10 },
+    "api/bind-talkfoot-actor.mjs": { "maxDuration": 10 }
+  },
   "headers": [
     {
       "source": "/",

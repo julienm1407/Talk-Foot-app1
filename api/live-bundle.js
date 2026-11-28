@@ -36,7 +36,7 @@ function ttlSecondsForFixture(fx) {
     dev.includes('extra') ||
     dev.includes('pen')
   ) {
-    return 2
+    return 5
   }
   if (dev.includes('finished') || /\bft\b/.test(dev) || [5, 7, 8, 10].includes(sid)) return 45
   return 8
@@ -180,8 +180,8 @@ export default async function handler(req, res) {
 
   try {
     const payload = await p
-    if (payload?.fixture) scheduleLivePushNudge([payload.fixture], { force: true })
-    const ttl = Math.max(2, Number(payload?.meta?.ttlSec) || 6)
+    if (payload?.fixture) scheduleLivePushNudge([payload.fixture])
+    const ttl = Math.max(5, Number(payload?.meta?.ttlSec) || 8)
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
     res.setHeader('Cache-Control', `public, s-maxage=${ttl}, stale-while-revalidate=${Math.max(2 * ttl, 12)}`)
