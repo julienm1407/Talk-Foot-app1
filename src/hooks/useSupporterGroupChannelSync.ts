@@ -21,7 +21,11 @@ type GroupMsgRow = {
   body: string
   metadata: Record<string, unknown> | null
   created_at: string
+  updated_at?: string | null
 }
+
+const GROUP_MSG_COLUMNS =
+  'id, group_id, channel_id, user_id, display_name, body, metadata, created_at, updated_at'
 
 function pickTribune(v: unknown): TribuneId | undefined {
   if (v === 'virage' || v === 'analyse' || v === 'chill') return v
@@ -57,6 +61,10 @@ function rowToMessage(row: GroupMsgRow): Message {
     gifUrl: typeof meta.gifUrl === 'string' ? meta.gifUrl : undefined,
     emoteId: typeof meta.emoteId === 'string' ? meta.emoteId : undefined,
     groupScarf: scarfOk ? (groupScarf as NonNullable<Message['groupScarf']>) : undefined,
+    editedAt:
+      row.updated_at && row.updated_at !== row.created_at
+        ? new Date(row.updated_at).getTime()
+        : undefined,
   }
 }
 
@@ -82,13 +90,18 @@ export function useSupporterGroupChannelSync(options: {
   skipMembershipUpsert?: boolean
   /** `history` = lot initial ; `live` = temps réel ; `older` = pagination passée (voir merge côté page). */
   onRemoteMessages: (msgs: Message[], origin: SupporterGroupRemoteOrigin, meta?: SupporterGroupRemoteMeta) => void
+  onRemoteDeleted?: (ids: string[]) => void
 }) {
-  const { groupId, channelId, debateId, enabled, skipMembershipUpsert, onRemoteMessages } = options
+  const { groupId, channelId, debateId, enabled, skipMembershipUpsert, onRemoteMessages, onRemoteDeleted } = options
   const { ensureCloudSession } = useTalkFootCloudSession()
   const onRemoteMessagesRef = useRef(onRemoteMessages)
+  const onRemoteDeletedRef = useRef(onRemoteDeleted)
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
+  useLayoutEffect(() => {
+    onRemoteDeletedRef.current = onRemoteDeleted
+  }, [onRemoteDeleted])
 
   const rowMatchesDebateScope = useCallback(
     (row: GroupMsgRow): boolean => {
@@ -149,7 +162,7 @@ export function useSupporterGroupChannelSync(options: {
           body,
           metadata,
         })
-        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
+        .select(GROUP_MSG_COLUMNS)
         .single()
 
       if (error || !data) {
@@ -160,6 +173,53 @@ export function useSupporterGroupChannelSync(options: {
       }
 
       return { ok: true as const, message: rowToMessage(data as GroupMsgRow) }
+    },
+    [ensureCloudSession],
+  )
+
+  const editMessage = useCallback(
+    async (id: string, text: string) => {
+      if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false as const, error: 'no_client' }
+      const session = await ensureCloudSession()
+      if (!session) return { ok: false as const, error: 'no_session' }
+      const body = text.trim()
+      if (!validateOutgoingChatPayload({ text: body }).ok) {
+        return { ok: false as const, error: 'moderation' as const }
+      }
+      const { data, error } = await sb
+        .from('supporter_group_channel_messages')
+        .update({ body })
+        .eq('id', id)
+        .eq('user_id', session.user.id)
+        .select(GROUP_MSG_COLUMNS)
+        .single()
+      if (error || !data) {
+        if (isSupabaseModerationError(error?.message)) {
+          return { ok: false as const, error: 'moderation' as const }
+        }
+        return { ok: false as const, error: error?.message ?? 'update_failed' }
+      }
+      return { ok: true as const, message: rowToMessage(data as GroupMsgRow) }
+    },
+    [ensureCloudSession],
+  )
+
+  const deleteMessage = useCallback(
+    async (id: string) => {
+      if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false as const, error: 'no_client' }
+      const session = await ensureCloudSession()
+      if (!session) return { ok: false as const, error: 'no_session' }
+      const { error } = await sb
+        .from('supporter_group_channel_messages')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', session.user.id)
+      if (error) return { ok: false as const, error: error.message }
+      return { ok: true as const }
     },
     [ensureCloudSession],
   )
@@ -179,7 +239,7 @@ export function useSupporterGroupChannelSync(options: {
       if (!session || cancelled) return
       const { data: rows, error: fetchErr } = await sb
         .from('supporter_group_channel_messages')
-        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
+        .select(GROUP_MSG_COLUMNS)
         .eq('group_id', groupId)
         .eq('channel_id', channelId)
         .order('created_at', { ascending: false })
@@ -245,6 +305,38 @@ export function useSupporterGroupChannelSync(options: {
             onRemoteMessagesRef.current([rowToMessage(r)], 'live', undefined)
           },
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'supporter_group_channel_messages',
+            filter: groupFilter,
+          },
+          (payload: RealtimePostgresChangesPayload<GroupMsgRow>) => {
+            const row = payload.new
+            if (!row || typeof row !== 'object') return
+            const r = row as GroupMsgRow
+            if (r.group_id !== groupId || r.channel_id !== channelId) return
+            if (!rowMatchesDebateScope(r)) return
+            onRemoteMessagesRef.current([rowToMessage(r)], 'live', undefined)
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'supporter_group_channel_messages',
+            filter: groupFilter,
+          },
+          (payload: RealtimePostgresChangesPayload<GroupMsgRow>) => {
+            const row = payload.old
+            const id = row && typeof row === 'object' && 'id' in row ? String((row as GroupMsgRow).id ?? '') : ''
+            if (!id) return
+            onRemoteDeletedRef.current?.([id])
+          },
+        )
         .subscribe((status) => {
           if (import.meta.env.DEV && status === 'CHANNEL_ERROR') {
             console.warn('[Talk Foot] supporter_group_channel_messages realtime:', status)
@@ -294,7 +386,7 @@ export function useSupporterGroupChannelSync(options: {
 
       const { data, error } = await sb
         .from('supporter_group_channel_messages')
-        .select('id, group_id, channel_id, user_id, display_name, body, metadata, created_at')
+        .select(GROUP_MSG_COLUMNS)
         .eq('group_id', groupId)
         .eq('channel_id', channelId)
         .lt('created_at', beforeCreatedAtIso)
@@ -317,5 +409,5 @@ export function useSupporterGroupChannelSync(options: {
     [groupId, channelId, rowMatchesDebateScope, ensureCloudSession],
   )
 
-  return { publishMessage, loadOlderMessages, isCloudChatConfigured: isSupabaseConfigured() }
+  return { publishMessage, editMessage, deleteMessage, loadOlderMessages, isCloudChatConfigured: isSupabaseConfigured() }
 }

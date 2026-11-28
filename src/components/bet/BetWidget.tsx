@@ -32,6 +32,7 @@ import {
 } from './BetSheetMarketUi'
 import { exactScorePicksFrom1x2 } from '../../odds/exactScoreOdds'
 import { ShareStoryActions } from '../share/ShareStoryActions'
+import { DefyPoteButton } from '../pronostic/DefyPoteButton'
 
 function fmtOdds(n: number) {
   return n.toFixed(2).replace('.', ',')
@@ -1208,6 +1209,7 @@ export function BetWidget({
                       kind="prono"
                       tone={sheetLight ? 'light' : 'dark'}
                     />
+                    <DefyPoteButton className="mt-2" bet={shareBet} match={match} />
                   ) : null}
                 </div>
               ) : null}

@@ -370,15 +370,11 @@ export function GroupPage() {
         }
 
         if (!incoming.length) return prev
-        const seen = new Set((prev[key] ?? []).map((m) => m.id))
-        const next = [...(prev[key] ?? [])]
+        const byId = new Map((prev[key] ?? []).map((m) => [m.id, m]))
         for (const m of incoming) {
-          if (!seen.has(m.id)) {
-            next.push(m)
-            seen.add(m.id)
-          }
+          byId.set(m.id, m)
         }
-        next.sort((a, b) => a.createdAt - b.createdAt)
+        const next = Array.from(byId.values()).sort((a, b) => a.createdAt - b.createdAt)
         return { ...prev, [key]: next.slice(-MAX_GROUP_CHANNEL_MESSAGES) }
       })
     },
@@ -407,7 +403,12 @@ export function GroupPage() {
           isOpenPublicDebateSalon),
     )
 
-  const { publishMessage: publishGroupChannelMessage, loadOlderMessages: loadOlderCloudMessages } =
+  const {
+    publishMessage: publishGroupChannelMessage,
+    editMessage: editGroupChannelMessage,
+    deleteMessage: deleteGroupChannelMessage,
+    loadOlderMessages: loadOlderCloudMessages,
+  } =
     useSupporterGroupChannelSync({
       groupId: group?.id ?? '',
       channelId: channel?.id ?? '',
@@ -415,6 +416,14 @@ export function GroupPage() {
       enabled: groupCloudChatEnabled,
       skipMembershipUpsert: skipCloudMemberUpsert,
       onRemoteMessages: mergeRemoteGroupMessages,
+      onRemoteDeleted: (ids) => {
+        const gone = new Set(ids)
+        setMessagesByThread((prev) => {
+          const key = threadKeyRef.current
+          if (!key || !prev[key]) return prev
+          return { ...prev, [key]: prev[key].filter((m) => !gone.has(m.id)) }
+        })
+      },
     })
 
   /** Ré-enregistre l’adhésion côté Supabase à l’ouverture de la tribune (répare un « Rejoindre » raté ou hors-ligne). */
@@ -2061,6 +2070,41 @@ export function GroupPage() {
               selfChatActorId={chatActorId}
               selfClerkUserId={authUser?.id}
               salonTone={L ? 'light' : 'dark'}
+              onEditOwn={async (id, text) => {
+                if (isUuidMessageId(id) && groupCloudChatEnabled) {
+                  const r = await editGroupChannelMessage(id, text)
+                  if (!r.ok) return r.error === 'moderation' ? 'moderation' : 'error'
+                  setMessagesByThread((prev) => {
+                    const key = threadKey
+                    if (!key) return prev
+                    return {
+                      ...prev,
+                      [key]: (prev[key] ?? []).map((m) => (m.id === id ? r.message : m)),
+                    }
+                  })
+                  return 'ok'
+                }
+                if (!threadKey) return 'error'
+                setMessagesByThread((prev) => ({
+                  ...prev,
+                  [threadKey]: (prev[threadKey] ?? []).map((m) =>
+                    m.id === id ? { ...m, text, editedAt: Date.now() } : m,
+                  ),
+                }))
+                return 'ok'
+              }}
+              onDeleteOwn={async (id) => {
+                if (isUuidMessageId(id) && groupCloudChatEnabled) {
+                  const r = await deleteGroupChannelMessage(id)
+                  if (!r.ok) return false
+                }
+                if (!threadKey) return false
+                setMessagesByThread((prev) => ({
+                  ...prev,
+                  [threadKey]: (prev[threadKey] ?? []).filter((m) => m.id !== id),
+                }))
+                return true
+              }}
               getLikes={(id) =>
                 isUuidMessageId(id) ? groupMessageLikes.getLikeState(id).likes : 0
               }

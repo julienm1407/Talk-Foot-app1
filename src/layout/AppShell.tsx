@@ -16,6 +16,7 @@ import { PageAdRails } from './PageAdRails'
 import { SiteLegalFooter } from '../components/legal/SiteLegalFooter'
 import { cn } from '../utils/cn'
 import { BetSettlementRunner } from '../components/bet/BetSettlementRunner'
+import { PronoSettlementHost } from '../components/pronostic/PronoSettlementHost'
 import { AskAppReviewHost } from '../components/feedback/AskAppReviewHost'
 import { useIsMobileTouchViewport } from '../hooks/useIsMobileTouchViewport'
 import { useRouteViewReset } from '../hooks/useRouteViewReset'
@@ -63,6 +64,7 @@ export function AppShell() {
       <SkipLink />
       <ActivityRouteLogger />
       <BetSettlementRunner />
+      <PronoSettlementHost />
       <AskAppReviewHost />
       <OAuthProfileSetupModal />
       <FanOnboardingModal />

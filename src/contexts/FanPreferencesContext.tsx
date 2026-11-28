@@ -67,6 +67,7 @@ export type FanPreferencesState = {
   hideRivalSalons: boolean
   virageMode: boolean
   kickoffAlertsEnabled: boolean
+  pronoResultAlertsEnabled: boolean
   favoriteMatchAlertPrefs: Record<string, MatchAlertPrefs>
 }
 
@@ -89,6 +90,7 @@ type FanPreferencesContextValue = FanPreferencesState & {
   setHideRivalSalons: (v: boolean) => void
   setVirageMode: (v: boolean) => void
   setKickoffAlertsEnabled: (v: boolean) => void
+  setPronoResultAlertsEnabled: (v: boolean) => void
   completeOnboarding: (leagueId: string, clubIds: string[]) => void
   resetPreferences: () => void
   openOnboarding: () => void
@@ -143,6 +145,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       hideRivalSalons: stored.hideRivalSalons ?? false,
       virageMode: stored.virageMode ?? false,
       kickoffAlertsEnabled: stored.kickoffAlertsEnabled ?? false,
+      pronoResultAlertsEnabled: stored.pronoResultAlertsEnabled ?? false,
       favoriteMatchAlertPrefs:
         stored.favoriteMatchAlertPrefs && typeof stored.favoriteMatchAlertPrefs === 'object'
           ? stored.favoriteMatchAlertPrefs
@@ -341,10 +344,18 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
     (v: boolean) => patch({ hideRivalSalons: v }),
     [patch],
   )
+  const setPronoResultAlertsEnabled = useCallback(
+    (v: boolean) => patch({ pronoResultAlertsEnabled: v }),
+    [patch],
+  )
   const setVirageMode = useCallback((v: boolean) => patch({ virageMode: v }), [patch])
   const setKickoffAlertsEnabled = useCallback(
-    (v: boolean) => patch({ kickoffAlertsEnabled: v }),
-    [patch],
+    (v: boolean) =>
+      patch({
+        kickoffAlertsEnabled: v,
+        ...(v && stored.pronoResultAlertsEnabled == null ? { pronoResultAlertsEnabled: true } : {}),
+      }),
+    [patch, stored.pronoResultAlertsEnabled],
   )
 
   const completeOnboarding = useCallback(
@@ -400,6 +411,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       setHideRivalSalons,
       setVirageMode,
       setKickoffAlertsEnabled,
+      setPronoResultAlertsEnabled,
       completeOnboarding,
       resetPreferences,
       openOnboarding,
@@ -423,6 +435,7 @@ export function FanPreferencesProvider({ children }: { children: React.ReactNode
       setHideRivalSalons,
       setVirageMode,
       setKickoffAlertsEnabled,
+      setPronoResultAlertsEnabled,
       completeOnboarding,
       resetPreferences,
       openOnboarding,

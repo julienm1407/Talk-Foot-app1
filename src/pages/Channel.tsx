@@ -155,6 +155,8 @@ import {
 } from '../utils/talkFootMatchOfTheDay'
 import { EuropeMultiplexScoreboard } from '../components/channel/EuropeMultiplexScoreboard'
 import { ShareStoryActions } from '../components/share/ShareStoryActions'
+import { MatchRecapCard } from '../components/match/MatchRecapCard'
+import { scorersFromHighlights } from '../utils/matchRecap'
 import { AdminTribunePollForm, TribuneLivePoll } from '../components/channel/TribuneLivePoll'
 import { CreateMatchPrivateSalonButton } from '../components/channel/CreateMatchPrivateSalonButton'
 import { MatchChatPromptChips } from '../components/channel/MatchChatPromptChips'
@@ -803,6 +805,7 @@ function cloudMessageToUi(m: Message): ChatMessageItem {
     matchTribune: m.matchTribune,
     createdAtMs: Number.isFinite(m.createdAt) ? m.createdAt : Date.now(),
     clerkActorKey: m.clerkActorKey,
+    edited: Boolean(m.editedAt),
   }
 }
 
@@ -1657,11 +1660,15 @@ export function ChannelPage() {
   const [liveMicEnabled, setLiveMicEnabled] = useState(true)
   const [liveCamEnabled, setLiveCamEnabled] = useState(false)
   const [liveBroadcastActive, setLiveBroadcastActive] = useState(false)
-  const { publishMessage, isCloudChatConfigured } = useLiveMatchChatSync({
+  const { publishMessage, editMessage, deleteMessage, isCloudChatConfigured } = useLiveMatchChatSync({
     matchId: match?.id ?? '',
     enabled: Boolean(match?.id),
     getChatSession: ensureCloudSession,
     onReset: () => setChatMessages([]),
+    onRemoteDeleted: (ids) => {
+      const gone = new Set(ids)
+      setChatMessages((prev) => prev.filter((m) => !gone.has(m.id)))
+    },
     onRemoteMessages: (msgs) => {
       setChatMessages((prev) => {
         const byId = new Map(prev.map((m) => [m.id, m]))
@@ -1753,6 +1760,23 @@ export function ChannelPage() {
     () => betting.matchBets.find((b) => b.status === 'won') ?? betting.matchBets[0] ?? null,
     [betting.matchBets],
   )
+  const matchRecap = useMemo(() => {
+    if (!match || !isFinished) return null
+    const won = betting.matchBets.filter((b) => b.status === 'won')
+    const bestOwn = [...won].sort((a, b) => (b.payout ?? 0) - (a.payout ?? 0))[0]
+    const topMessages = bestReplayMessages.slice(0, 3).map((m) => ({
+      username: m.username,
+      text: m.text,
+      likes: m.likes ?? 0,
+    }))
+    return {
+      match,
+      scorers: scorersFromHighlights(smTimelineHighlights),
+      bestBettorName: bestOwn && authUser?.displayName ? authUser.displayName : null,
+      topMessages,
+      correctPronos: won.length,
+    }
+  }, [match, isFinished, betting.matchBets, bestReplayMessages, smTimelineHighlights, authUser?.displayName])
 
   const chatAuthorKeys = useMemo(() => {
     const keys = new Set<string>()
@@ -2089,6 +2113,20 @@ export function ChannelPage() {
         /* ignore */
       }
     }, 30)
+  }
+  const onEditOwnChatMessage = async (id: string, text: string) => {
+    const res = await editMessage(id, text)
+    if (!res.ok) return res.error === 'moderation' ? 'moderation' : 'error'
+    setChatMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, text: res.message.text, edited: true } : m)),
+    )
+    return 'ok' as const
+  }
+  const onDeleteOwnChatMessage = async (id: string) => {
+    const res = await deleteMessage(id)
+    if (!res.ok) return false
+    setChatMessages((prev) => prev.filter((m) => m.id !== id))
+    return true
   }
   const onToggleLikeMessage = (id: string) => {
     if (!authUser?.id || authUser.isAnonymous) {
@@ -4332,6 +4370,11 @@ export function ChannelPage() {
                 </div>
               ) : (
                 <>
+                  {isFinished && !isMuxSalon && matchRecap ? (
+                    <div className="mb-2">
+                      <MatchRecapCard recap={matchRecap} light={L} />
+                    </div>
+                  ) : null}
                   {isFinished && !isMuxSalon ? (
                     <div
                       className={cn(
@@ -4396,6 +4439,8 @@ export function ChannelPage() {
                       light={L}
                       likeState={messageLikes.getLikeState(msg.id)}
                       onToggleLike={onToggleLikeMessage}
+                      onEditOwn={onEditOwnChatMessage}
+                      onDeleteOwn={onDeleteOwnChatMessage}
                       onOpenPeerMenu={() =>
                         chatPeerMenu.openPeerMenu(
                           buildChatPeerMenuTarget(

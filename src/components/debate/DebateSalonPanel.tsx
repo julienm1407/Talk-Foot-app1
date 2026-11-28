@@ -93,27 +93,29 @@ export function DebateSalonPanel({
           return cloud.sort((a, b) => a.createdAt - b.createdAt).slice(-MAX_DEBATE_MESSAGES)
         }
         if (!incoming.length) return prev
-        const seen = new Set(prev.map((m) => m.id))
-        const next = [...prev]
+        const byId = new Map(prev.map((m) => [m.id, m]))
         for (const m of incoming) {
-          if (!seen.has(m.id)) {
-            next.push(m)
-            seen.add(m.id)
-          }
+          byId.set(m.id, m)
         }
-        return next.sort((a, b) => a.createdAt - b.createdAt).slice(-MAX_DEBATE_MESSAGES)
+        return Array.from(byId.values())
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .slice(-MAX_DEBATE_MESSAGES)
       })
     },
     [],
   )
 
-  const { publishMessage, loadOlderMessages } = useSupporterGroupChannelSync({
+  const { publishMessage, editMessage, deleteMessage, loadOlderMessages } = useSupporterGroupChannelSync({
     groupId: messageGroupId,
     channelId: CHANNEL_ID,
     debateId: debate.id,
     enabled: chatEnabled,
     skipMembershipUpsert: true,
     onRemoteMessages: mergeRemote,
+    onRemoteDeleted: (ids) => {
+      const gone = new Set(ids)
+      setMessages((prev) => prev.filter((m) => !gone.has(m.id)))
+    },
   })
 
   const messageLikes = useSupporterGroupMessageLikesSync({
@@ -375,6 +377,18 @@ export function DebateSalonPanel({
             selfChatActorId={chatActorId}
             selfClerkUserId={authUser?.id}
             salonTone={L ? 'light' : 'dark'}
+            onEditOwn={async (id, text) => {
+              const r = await editMessage(id, text)
+              if (!r.ok) return r.error === 'moderation' ? 'moderation' : 'error'
+              setMessages((prev) => prev.map((m) => (m.id === id ? r.message : m)))
+              return 'ok'
+            }}
+            onDeleteOwn={async (id) => {
+              const r = await deleteMessage(id)
+              if (!r.ok) return false
+              setMessages((prev) => prev.filter((m) => m.id !== id))
+              return true
+            }}
             getLikes={(id) => (isUuidMessageId(id) ? messageLikes.getLikeState(id).likes : 0)}
             hasLiked={(id) => (isUuidMessageId(id) ? messageLikes.getLikeState(id).likedByMe : false)}
             onToggleLike={

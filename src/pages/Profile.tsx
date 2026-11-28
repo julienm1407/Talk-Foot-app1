@@ -72,6 +72,8 @@ export function ProfilePage() {
     setHideRivalSalons,
     kickoffAlertsEnabled,
     setKickoffAlertsEnabled,
+    pronoResultAlertsEnabled,
+    setPronoResultAlertsEnabled,
     openOnboarding,
     preferencesComplete,
   } = useFanPreferences()
@@ -243,8 +245,9 @@ export function ProfilePage() {
             {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer les notifications'}
           </h2>
           <p className="mt-1 text-sm font-semibold text-tf-app-muted">
-            1 h avant le coup d’envoi, au coup d’envoi, puis buts et cartons : clubs favoris,
-            matchs étoilés, ou joueurs suivis. Sur l’app, ça ouvre « Autoriser les notifications ».
+            15 min avant le coup d’envoi, au coup d’envoi, puis buts et cartons : clubs favoris,
+            matchs étoilés, ou joueurs suivis. Sur l’app, ça ouvre « Autoriser les notifications »
+            seulement après un premier prono ou un match suivi.
           </p>
           {favoriteClubIds.length === 0 ? (
             <p
@@ -298,6 +301,26 @@ export function ProfilePage() {
             >
               {kickoffAlertsEnabled ? 'Alertes ON' : 'Activer les notifications'}
             </span>
+          </button>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={pronoResultAlertsEnabled}
+            aria-label="Notifications résultat de prono"
+            onClick={() => setPronoResultAlertsEnabled(!pronoResultAlertsEnabled)}
+            className={cn(
+              'mt-3 flex w-full max-w-[280px] items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-black',
+              pronoResultAlertsEnabled
+                ? L
+                  ? 'border-emerald-400 bg-emerald-50 text-emerald-900'
+                  : 'border-emerald-400/40 bg-emerald-950/40 text-emerald-100'
+                : L
+                  ? 'border-tf-dark/15 bg-white text-tf-app-fg'
+                  : 'border-white/15 bg-white/10 text-sky-100',
+            )}
+          >
+            <span>Résultat de tes pronos</span>
+            <span>{pronoResultAlertsEnabled ? 'ON' : 'OFF'}</span>
           </button>
         </div>
       </Card>

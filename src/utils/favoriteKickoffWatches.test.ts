@@ -48,14 +48,16 @@ describe('favoriteClubKickoffWatches', () => {
       ['psg'],
       now,
     )
-    assert.equal(watches.length, 2)
+    assert.equal(watches.length, 3)
     assert.equal(watches[0]?.matchId, 'a')
     assert.equal(watches[0]?.kind, 't60')
     assert.equal(watches[0]?.title, 'Paris SG – Marseille')
     assert.equal(watches[0]?.href, '/channel/a')
     assert.equal(watches[0]?.fireAtMs, Date.parse('2026-09-22T19:00:00.000Z'))
-    assert.equal(watches[1]?.kind, 'kickoff')
-    assert.equal(watches[1]?.fireAtMs, Date.parse('2026-09-22T20:00:00.000Z'))
+    assert.equal(watches[1]?.kind, 't15')
+    assert.equal(watches[1]?.fireAtMs, Date.parse('2026-09-22T19:45:00.000Z'))
+    assert.equal(watches[2]?.kind, 'kickoff')
+    assert.equal(watches[2]?.fireAtMs, Date.parse('2026-09-22T20:00:00.000Z'))
   })
 
   it('n’envoie plus le rappel 1 h si le coup d’envoi est trop proche', () => {
@@ -65,8 +67,8 @@ describe('favoriteClubKickoffWatches', () => {
       ['psg'],
       now,
     )
-    assert.equal(watches.length, 1)
-    assert.equal(watches[0]?.kind, 'kickoff')
+    assert.equal(watches.map((w) => w.kind).join(','), 't15,kickoff')
+    assert.equal(watches[0]?.kind, 't15')
   })
 
   it('inclut un match étoilé même sans club favori', () => {
@@ -98,7 +100,7 @@ describe('favoriteClubKickoffWatches', () => {
       { favoritePlayerTeamIds: ['psg'] },
       now,
     )
-    assert.equal(watches.length, 2)
+    assert.equal(watches.length, 3)
     assert.equal(watches[0]?.matchId, 'a')
   })
 

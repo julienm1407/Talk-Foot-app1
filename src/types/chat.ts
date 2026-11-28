@@ -45,6 +45,8 @@ export type Message = {
   authorDisplayName?: string
   text: string
   createdAt: number
+  /** Présent si le texte a été modifié après envoi. */
+  editedAt?: number
   gifUrl?: string
   emoteId?: string
   /** Tribune du stade digital ; absent = visible dans toutes les tribunes (ex. messages globaux). */

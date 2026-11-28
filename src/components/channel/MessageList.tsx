@@ -14,6 +14,8 @@ import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { tribuneById } from '../../data/tribunes'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { formatChatAtLabel } from '../../utils/time'
+import { OwnChatMessageMenu } from '../chat/OwnChatMessageMenu'
+import { isOwnChatTextEditable } from '../../utils/ownChatMessage'
 
 export type MessageListTone = 'light' | 'dark'
 
@@ -72,6 +74,8 @@ export function MessageList({
   getLikes,
   hasLiked,
   onToggleLike,
+  onEditOwn,
+  onDeleteOwn,
 }: {
   messages: Message[]
   usersById: Record<string, User>
@@ -85,6 +89,8 @@ export function MessageList({
   getLikes?: (messageId: string) => number
   hasLiked?: (messageId: string) => boolean
   onToggleLike?: (message: Message) => void
+  onEditOwn?: (id: string, text: string) => Promise<'ok' | 'moderation' | 'error'>
+  onDeleteOwn?: (id: string) => Promise<boolean>
 }) {
   const { profile } = useProfile()
   const dm = useDirectMessagesOptional()
@@ -210,7 +216,17 @@ export function MessageList({
                   )}
                 >
                   {time}
+                  {m.editedAt ? ' · modifié' : ''}
                 </span>
+                {peer.isSelfMessage && kind !== 'bot' && onDeleteOwn ? (
+                  <OwnChatMessageMenu
+                    dark={dark}
+                    canEdit={Boolean(onEditOwn) && isOwnChatTextEditable(m)}
+                    messageText={m.text}
+                    onSave={onEditOwn ? (text) => onEditOwn(m.id, text) : undefined}
+                    onDelete={() => onDeleteOwn(m.id)}
+                  />
+                ) : null}
                 {kind === 'vip' && (
                   <span
                     className={cn(

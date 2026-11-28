@@ -8,6 +8,8 @@ import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { ChatCharacterThumb } from './ChatCharacterThumb'
 import { ChatMessageErrorBoundary } from './ChatMessageErrorBoundary'
 import { VerifiedBadge } from '../subscription/VerifiedBadge'
+import { OwnChatMessageMenu } from '../chat/OwnChatMessageMenu'
+import { isOwnChatTextEditable } from '../../utils/ownChatMessage'
 
 export type LiveMatchChatMessageItem = {
   id: string
@@ -26,6 +28,7 @@ export type LiveMatchChatMessageItem = {
   /** Compte Clerk pour charger l'avatar modulaire. */
   clerkActorKey?: string
   isOfficial?: boolean
+  edited?: boolean
 }
 
 export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
@@ -41,6 +44,8 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
   onOpenPeerMenu,
   showVerifiedBadge = false,
   light = false,
+  onEditOwn,
+  onDeleteOwn,
 }: {
   message: LiveMatchChatMessageItem
   user?: User
@@ -54,6 +59,8 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
   onOpenPeerMenu?: () => void
   showVerifiedBadge?: boolean
   light?: boolean
+  onEditOwn?: (id: string, text: string) => Promise<'ok' | 'moderation' | 'error'>
+  onDeleteOwn?: (id: string) => Promise<boolean>
 }) {
   const likes = likeState?.likes ?? message.likes ?? 0
   const likedByMe = likeState?.likedByMe ?? Boolean(message.likedByMe)
@@ -178,9 +185,21 @@ export const LiveMatchChatMessage = memo(function LiveMatchChatMessage({
               </span>
             ) : null}
           </div>
-          <p className={cn('shrink-0 text-[10px] tabular-nums', light ? 'text-tf-app-muted' : 'text-tf-app-muted')}>
-            {message.time}
-          </p>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <p className={cn('text-[10px] tabular-nums', light ? 'text-tf-app-muted' : 'text-tf-app-muted')}>
+              {message.time}
+              {message.edited ? ' · modifié' : ''}
+            </p>
+            {peer.isSelfMessage && !message.isOfficial && onDeleteOwn ? (
+              <OwnChatMessageMenu
+                dark={!light}
+                canEdit={Boolean(onEditOwn) && isOwnChatTextEditable({ text: message.text, emoteId: message.emoteId })}
+                messageText={message.text}
+                onSave={onEditOwn ? (text) => onEditOwn(message.id, text) : undefined}
+                onDelete={() => onDeleteOwn(message.id)}
+              />
+            ) : null}
+          </div>
         </div>
         <p className={cn('tf-chat-text mt-0.5 text-xs', light ? 'text-tf-app-fg' : 'text-tf-app-fg')}>
           {message.text}

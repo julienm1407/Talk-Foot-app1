@@ -17,6 +17,7 @@ type LiveMsgRow = {
   body: string
   metadata: Record<string, unknown> | null
   created_at: string
+  updated_at?: string | null
 }
 
 function pickMatchTribune(v: unknown): MatchTribuneZone | undefined {
@@ -66,6 +67,10 @@ function rowToMessage(row: LiveMsgRow): Message {
     gifUrl: typeof meta.gifUrl === 'string' ? meta.gifUrl : undefined,
     emoteId: typeof meta.emoteId === 'string' ? meta.emoteId : undefined,
     groupScarf: scarfOk ? (groupScarf as NonNullable<Message['groupScarf']>) : undefined,
+    editedAt:
+      row.updated_at && row.updated_at !== row.created_at
+        ? safeCreatedAtMs(row.updated_at)
+        : undefined,
   }
 }
 
@@ -90,25 +95,35 @@ export function displayNameFromSession(user: {
 }
 
 function messageIdsSignature(rows: LiveMsgRow[]): string {
-  if (!rows.length) return ''
+  if (!rows.length) return 'empty'
   const last = rows[rows.length - 1]
-  return `${rows.length}:${last.id}:${last.created_at}`
+  const bodies = rows.reduce((n, r) => n + (r.body?.length ?? 0), 0)
+  const updated = last.updated_at ?? ''
+  return `${rows.length}:${last.id}:${last.created_at}:${updated}:${bodies}`
 }
+
+const LIVE_MSG_COLUMNS = 'id, match_id, user_id, display_name, body, metadata, created_at, updated_at'
 
 export function useLiveMatchChatSync(options: {
   matchId: string
   enabled: boolean
   onRemoteMessages: (msgs: Message[]) => void
+  onRemoteDeleted?: (ids: string[]) => void
   onReset?: () => void
   getChatSession?: (sb: SupabaseClient) => Promise<Session | null>
 }) {
-  const { matchId, enabled, onRemoteMessages, onReset, getChatSession } = options
+  const { matchId, enabled, onRemoteMessages, onRemoteDeleted, onReset, getChatSession } = options
   const onRemoteMessagesRef = useRef(onRemoteMessages)
+  const onRemoteDeletedRef = useRef(onRemoteDeleted)
   const onResetRef = useRef(onReset)
   const lastHistorySigRef = useRef('')
+  const lastIdsRef = useRef<Set<string>>(new Set())
   useLayoutEffect(() => {
     onRemoteMessagesRef.current = onRemoteMessages
   }, [onRemoteMessages])
+  useLayoutEffect(() => {
+    onRemoteDeletedRef.current = onRemoteDeleted
+  }, [onRemoteDeleted])
   useLayoutEffect(() => {
     onResetRef.current = onReset
   }, [onReset])
@@ -158,7 +173,7 @@ export function useLiveMatchChatSync(options: {
           body,
           metadata,
         })
-        .select('id, match_id, user_id, display_name, body, metadata, created_at')
+        .select(LIVE_MSG_COLUMNS)
         .single()
 
       if (error || !data) {
@@ -169,6 +184,49 @@ export function useLiveMatchChatSync(options: {
       }
 
       return { ok: true as const, message: rowToMessage(data as LiveMsgRow) }
+    },
+    [resolveChatSession],
+  )
+
+  const editMessage = useCallback(
+    async (id: string, text: string) => {
+      if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false as const, error: 'no_client' }
+      const session = await resolveChatSession(sb)
+      if (!session) return { ok: false as const, error: 'no_session' }
+      const body = text.trim()
+      if (!validateOutgoingChatPayload({ text: body }).ok) {
+        return { ok: false as const, error: 'moderation' as const }
+      }
+      const { data, error } = await sb
+        .from('live_match_messages')
+        .update({ body })
+        .eq('id', id)
+        .eq('user_id', session.user.id)
+        .select(LIVE_MSG_COLUMNS)
+        .single()
+      if (error || !data) {
+        if (isSupabaseModerationError(error?.message)) {
+          return { ok: false as const, error: 'moderation' as const }
+        }
+        return { ok: false as const, error: error?.message ?? 'update_failed' }
+      }
+      return { ok: true as const, message: rowToMessage(data as LiveMsgRow) }
+    },
+    [resolveChatSession],
+  )
+
+  const deleteMessage = useCallback(
+    async (id: string) => {
+      if (!isSupabaseConfigured()) return { ok: false as const, error: 'no_supabase' }
+      const sb = getSupabaseBrowserClient()
+      if (!sb) return { ok: false as const, error: 'no_client' }
+      const session = await resolveChatSession(sb)
+      if (!session) return { ok: false as const, error: 'no_session' }
+      const { error } = await sb.from('live_match_messages').delete().eq('id', id).eq('user_id', session.user.id)
+      if (error) return { ok: false as const, error: error.message }
+      return { ok: true as const }
     },
     [resolveChatSession],
   )
@@ -189,7 +247,7 @@ export function useLiveMatchChatSync(options: {
       if (session) await syncRealtimeAuth(sb)
       const { data: rows, error: fetchErr } = await sb
         .from('live_match_messages')
-        .select('id, match_id, user_id, display_name, body, metadata, created_at')
+        .select(LIVE_MSG_COLUMNS)
         .eq('match_id', matchId)
         .order('created_at', { ascending: true })
         .limit(200)
@@ -199,6 +257,10 @@ export function useLiveMatchChatSync(options: {
         return
       }
       const typed = (rows ?? []) as LiveMsgRow[]
+      const nextIds = new Set(typed.map((r) => r.id))
+      const removed = [...lastIdsRef.current].filter((id) => !nextIds.has(id))
+      lastIdsRef.current = nextIds
+      if (removed.length) onRemoteDeletedRef.current?.(removed)
       const sig = messageIdsSignature(typed)
       if (sig === lastHistorySigRef.current) return
       lastHistorySigRef.current = sig
@@ -223,8 +285,39 @@ export function useLiveMatchChatSync(options: {
           },
           (payload: RealtimePostgresChangesPayload<LiveMsgRow>) => {
             const row = payload.new
-            if (!row || typeof row !== 'object') return
+            if (!row || typeof row !== 'object' || !('id' in row)) return
+            lastIdsRef.current.add((row as LiveMsgRow).id)
             onRemoteMessagesRef.current([rowToMessage(row as LiveMsgRow)])
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'live_match_messages',
+            filter: matchFilter,
+          },
+          (payload: RealtimePostgresChangesPayload<LiveMsgRow>) => {
+            const row = payload.new
+            if (!row || typeof row !== 'object' || !('id' in row)) return
+            onRemoteMessagesRef.current([rowToMessage(row as LiveMsgRow)])
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'live_match_messages',
+            filter: matchFilter,
+          },
+          (payload: RealtimePostgresChangesPayload<LiveMsgRow>) => {
+            const row = payload.old
+            const id = row && typeof row === 'object' && 'id' in row ? String((row as LiveMsgRow).id ?? '') : ''
+            if (!id) return
+            lastIdsRef.current.delete(id)
+            onRemoteDeletedRef.current?.([id])
           },
         )
         .subscribe((status) => {
@@ -241,6 +334,7 @@ export function useLiveMatchChatSync(options: {
     }
 
     lastHistorySigRef.current = ''
+    lastIdsRef.current = new Set()
     onResetRef.current?.()
     void run()
 
@@ -270,5 +364,5 @@ export function useLiveMatchChatSync(options: {
     }
   }, [matchId, enabled, resolveChatSession])
 
-  return { publishMessage, isCloudChatConfigured: isSupabaseConfigured() }
+  return { publishMessage, editMessage, deleteMessage, isCloudChatConfigured: isSupabaseConfigured() }
 }

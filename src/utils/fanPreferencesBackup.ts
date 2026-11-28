@@ -104,6 +104,7 @@ export function mergeFanPreferencesKeepFilled(
     hideRivalSalons: left.hideRivalSalons ?? right.hideRivalSalons ?? false,
     virageMode: left.virageMode ?? right.virageMode ?? false,
     kickoffAlertsEnabled: left.kickoffAlertsEnabled ?? right.kickoffAlertsEnabled,
+    pronoResultAlertsEnabled: left.pronoResultAlertsEnabled ?? right.pronoResultAlertsEnabled,
   }
 }
 

@@ -7,7 +7,7 @@ import { cn } from '../../utils/cn'
 export function UserRankCard() {
   const { appearance } = useAppearance()
   const L = appearance === 'light'
-  const { myRank, myEntry, totalActive } = useLeaderboard()
+  const { myRank, myEntry, totalActive, myIsActive } = useLeaderboard()
   const pool = Math.max(1, totalActive)
   const rankPercent = Math.min(100, Math.round((myRank / pool) * 100))
 
@@ -19,7 +19,7 @@ export function UserRankCard() {
             CLASSEMENT
           </div>
           <h3 className="mt-1 font-display text-lg font-black tracking-tight text-tf-app-fg">
-            Meilleurs pronostiqueurs
+            {myIsActive ? `Tu es ${myRank}e` : 'Meilleurs pronostiqueurs'}
           </h3>
         </div>
       </div>

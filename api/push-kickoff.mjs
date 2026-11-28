@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { handleCapacitorCors } from './_lib/corsCapacitor.js'
 
 const T60_LEAD_MS = 60 * 60 * 1000
+const T15_LEAD_MS = 15 * 60 * 1000
 const WINDOW_MS = 12 * 60 * 1000
 const KICKOFF_BEFORE_MS = 2 * 60 * 1000
 const KICKOFF_AFTER_MS = 10 * 60 * 1000
@@ -483,6 +484,7 @@ export default async function handler(req, res) {
   const now = Date.now()
   const stale = []
   let t60
+  let t15
   let kickoff
   let live
   try {
@@ -496,6 +498,18 @@ export default async function handler(req, res) {
       new Date(now + T60_LEAD_MS - WINDOW_MS).toISOString(),
       new Date(now + T60_LEAD_MS + WINDOW_MS).toISOString(),
       () => 'Coup d’envoi dans 1 h — ouvre la tribune Talk Foot.',
+    )
+    t15 = await sendKickoffWindow(
+      sb,
+      sa,
+      accessToken,
+      stale,
+      now,
+      't15',
+      new Date(now + T15_LEAD_MS - WINDOW_MS).toISOString(),
+      new Date(now + T15_LEAD_MS + WINDOW_MS).toISOString(),
+      (watch) =>
+        `${watch.title ?? 'Ton match'} commence dans 15 min, la tribune est ouverte 🔥`,
     )
     kickoff = await sendKickoffWindow(
       sb,
@@ -521,6 +535,7 @@ export default async function handler(req, res) {
   json(res, 200, {
     ok: true,
     t60,
+    t15,
     kickoff,
     live,
     stale: stale.length,

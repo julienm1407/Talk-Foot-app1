@@ -6,7 +6,7 @@ import type { LiveEncartSimulation } from '../../types/liveSimulation'
 import type { Debate } from '../../data/debates'
 import type { SupporterGroup } from '../../types/group'
 import { cn } from '../../utils/cn'
-import { hubGlassPanel, hubTrendsShell } from '../../utils/hubSurface'
+import { hubTrendsShell } from '../../utils/hubSurface'
 import { HomeUpcomingHero } from '../home/HomeUpcomingHero'
 import { MatchTalkFootDuJour } from '../home/MatchTalkFootDuJour'
 import { CeSoirAussiStrip } from '../home/CeSoirAussiStrip'
@@ -236,10 +236,11 @@ export function HomeMobileExperience({
         </p>
       ) : null}
 
-      <section aria-label="Match en direct" className={cn('rounded-[20px] p-3', hubGlassPanel(appearance))}>
+      <section aria-label="Prochain match" className="min-w-0">
         {heroBlock}
       </section>
 
+      <div className="space-y-3 sm:space-y-4 [&_.font-display]:tracking-tight">
       <DebateOfTheDayCard debate={debateOfTheDay} loading={debatesLoading} />
 
       <MobileQuickActionsBar onCreateGroup={onCreateGroup} />
@@ -405,6 +406,7 @@ export function HomeMobileExperience({
           />
         </div>
       </MobileCollapsibleSection>
+      </div>
     </div>
   )
 }

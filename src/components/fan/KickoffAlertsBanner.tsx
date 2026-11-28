@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFanPreferences } from '../../contexts/FanPreferencesContext'
 import { useAppearance } from '../../contexts/AppearanceContext'
+import { useUserBets } from '../../hooks/useUserBets'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 
@@ -29,16 +30,18 @@ function markPromptSeen() {
 export function KickoffAlertsBanner() {
   const { pathname } = useLocation()
   const { user } = useAuth()
-  const { kickoffAlertsEnabled, setKickoffAlertsEnabled } = useFanPreferences()
+  const { kickoffAlertsEnabled, setKickoffAlertsEnabled, favoriteMatchIds } = useFanPreferences()
   const { appearance } = useAppearance()
   const L = appearance === 'light'
+  const [bets] = useUserBets()
   const [seen, setSeen] = useState(promptAlreadySeen)
+  const readyToAsk = bets.length > 0 || favoriteMatchIds.length > 0
 
   useEffect(() => {
     if (kickoffAlertsEnabled) markPromptSeen()
   }, [kickoffAlertsEnabled])
 
-  if (!user || kickoffAlertsEnabled || seen) return null
+  if (!user || kickoffAlertsEnabled || seen || !readyToAsk) return null
   if (HIDDEN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null
 
   const dismiss = () => {
@@ -57,7 +60,7 @@ export function KickoffAlertsBanner() {
         )}
       >
         <p className="min-w-0 flex-1 text-sm font-black">
-          Activer les notifications match ? 1 h avant, au coup d’envoi, buts et cartons (clubs, matchs ★, joueurs).
+          Activer les notifications ? 15 min avant le match suivi, résultat de tes pronos, buts et cartons.
         </p>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button

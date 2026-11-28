@@ -1,12 +1,13 @@
 import type { Match } from '../types/match'
 
 export const MATCH_KICKOFF_ALERT_LEAD_MS = 60 * 60 * 1000
+export const MATCH_KICKOFF_T15_MS = 15 * 60 * 1000
 const WATCH_HORIZON_MS = 8 * 24 * 60 * 60 * 1000
 const MIN_FIRE_AHEAD_MS = 8_000
 /** Garder le match en base après le KO pour les FCM buts / cartons. */
 const LIVE_CLOUD_KEEP_MS = 4 * 60 * 60 * 1000
 
-export type KickoffWatchKind = 't60' | 'kickoff'
+export type KickoffWatchKind = 't60' | 't15' | 'kickoff'
 
 export type KickoffWatch = {
   matchId: string
@@ -23,7 +24,7 @@ export function localNotificationIdForMatch(matchId: string, kind: KickoffWatchK
   for (let i = 0; i < matchId.length; i += 1) {
     h = (Math.imul(h, 31) + matchId.charCodeAt(i)) | 0
   }
-  const salt = kind === 'kickoff' ? 1_000_003 : 0
+  const salt = kind === 'kickoff' ? 1_000_003 : kind === 't15' ? 1_000_015 : 0
   const n = Math.abs(h + salt) % 2_000_000_000
   return n === 0 ? 1 : n
 }
@@ -43,6 +44,9 @@ function viaBody(kind: KickoffWatchKind, via: 'match' | 'player' | 'club'): stri
     if (via === 'match') return 'C’est parti — ton match suivi commence.'
     if (via === 'player') return 'C’est parti — le match de ton joueur commence.'
     return 'C’est parti — le match commence. Ouvre la tribune Talk Foot.'
+  }
+  if (kind === 't15') {
+    return 'commence dans 15 min, la tribune est ouverte 🔥'
   }
   if (via === 'match') return 'Match suivi — coup d’envoi dans 1 h.'
   if (via === 'player') return 'Joueur suivi — coup d’envoi dans 1 h.'
@@ -74,6 +78,19 @@ function watchesFromMatch(
       href,
       fireAtMs: t60At,
       kind: 't60',
+    })
+  }
+
+  const t15At = kickoffMs - MATCH_KICKOFF_T15_MS
+  if (t15At > nowMs + MIN_FIRE_AHEAD_MS && kickoffMs > nowMs + MIN_FIRE_AHEAD_MS) {
+    out.push({
+      matchId: match.id,
+      kickoffAt: match.kickoffAt,
+      title,
+      body: viaBody('t15', via),
+      href,
+      fireAtMs: t15At,
+      kind: 't15',
     })
   }
 

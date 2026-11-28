@@ -10,6 +10,9 @@ import { SectionIntro } from '../components/ui/SectionIntro'
 import { useBetMatchesMap } from '../hooks/useBetMatchesMap'
 import { useMatches } from '../contexts/MatchesContext'
 import { useUserBets } from '../hooks/useUserBets'
+import { useLeaderboard } from '../hooks/useLeaderboard'
+import { useFanPreferences } from '../contexts/FanPreferencesContext'
+import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { useAppearance } from '../contexts/AppearanceContext'
 import {
   filterBetsByTab,
@@ -38,7 +41,11 @@ export function PronosticHubPage() {
   const hubView: HubView = searchParams.get('vue') === 'classement' ? 'classement' : 'paris'
   const [bets] = useUserBets()
   const { matches } = useMatches()
+  const { myRank, myIsActive, myMonthScore, myMonthWins } = useLeaderboard()
+  const { favoriteClubIds } = useFanPreferences()
   const [tab, setTab] = useState<BetFilterTab>('all')
+  const [boardScope, setBoardScope] = useState<'season' | 'month'>('season')
+  const [clubFilter, setClubFilter] = useState<string>('all')
 
   const setHubView = (view: HubView) => {
     if (view === 'classement') {
@@ -62,9 +69,15 @@ export function PronosticHubPage() {
   )
 
   const visibleBets = useMemo(() => {
-    const filtered = filterBetsByTab(bets, tab)
+    const filtered = filterBetsByTab(bets, tab).filter((b) => {
+      if (clubFilter === 'all') return true
+      const m = getBetMatch(b)
+      const home = m?.home.id ?? ''
+      const away = m?.away.id ?? ''
+      return home === clubFilter || away === clubFilter
+    })
     return sortBetsForSlipList(filtered)
-  }, [bets, tab])
+  }, [bets, tab, clubFilter, getBetMatch])
 
   const tabBtn = (t: BetFilterTab, label: string) => {
     const active = tab === t
@@ -108,7 +121,11 @@ export function PronosticHubPage() {
         uppercaseTitle={false}
         eyebrow="Pronostic"
         title="Mes pronos"
-        description="Tes pronos et le classement des meilleurs pronostiqueurs Talk Foot."
+        description={
+          myIsActive
+            ? `Tu es ${myRank}e au classement saison. Tes pronos et la ligue des supporters.`
+            : 'Tes pronos et le classement des meilleurs pronostiqueurs Talk Foot.'
+        }
         actions={
           liveMatch ? (
             <Link
@@ -154,6 +171,37 @@ export function PronosticHubPage() {
 
       {hubView === 'classement' ? (
         <section className="space-y-4" aria-label="Classement des pronostiqueurs">
+          {myIsActive ? <p className="text-sm font-black text-tf-app-fg">Tu es {myRank}e</p> : null}
+          <div className="flex gap-2">
+            <HubTabButton active={boardScope === 'season'} onClick={() => setBoardScope('season')} label="Saison" L={L} />
+            <HubTabButton active={boardScope === 'month'} onClick={() => setBoardScope('month')} label="Ce mois" L={L} />
+          </div>
+          {boardScope === 'month' && myMonthWins + myMonthScore > 0 ? (
+            <Card className="p-4" elevation="soft">
+              <p className="text-sm font-black text-tf-app-fg">
+                Ce mois : {myMonthScore} pts · {myMonthWins} pronos justes
+              </p>
+            </Card>
+          ) : null}
+          {favoriteClubIds.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              <HubTabButton active={clubFilter === 'all'} onClick={() => setClubFilter('all')} label="Tous" L={L} />
+              {favoriteClubIds.map((id) => (
+                <HubTabButton
+                  key={id}
+                  active={clubFilter === id}
+                  onClick={() => setClubFilter(id)}
+                  label={`Supporters ${ALL_CLUBS_BY_ID[id]?.shortName ?? id}`}
+                  L={L}
+                />
+              ))}
+            </div>
+          ) : null}
+          {clubFilter !== 'all' ? (
+            <p className="text-xs font-semibold text-tf-app-muted">
+              Filtre {ALL_CLUBS_BY_ID[clubFilter]?.name ?? clubFilter} : tes pronos sur leurs matchs.
+            </p>
+          ) : null}
           <PronoStatsPanel className="border-t-0 pt-0 sm:pt-0" />
           <FriendsParieurMiniRank />
           <Card className="p-5 sm:p-6" elevation="soft">

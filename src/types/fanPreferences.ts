@@ -10,8 +10,10 @@ export type FanPreferencesStoredShape = {
   preferencesComplete?: boolean
   hideRivalSalons?: boolean
   virageMode?: boolean
-  /** Pop-up native : 1 h avant, coup d’envoi, buts et cartons des matchs suivis. */
+  /** Pop-up native : 15 min avant, coup d’envoi, buts et cartons des matchs suivis. */
   kickoffAlertsEnabled?: boolean
+  /** Notif à la fin d’un prono (gagné / perdu). */
+  pronoResultAlertsEnabled?: boolean
   /** Matchs suivis unitairement (étoile) — alertes même hors clubs favoris. */
   favoriteMatchIds?: string[]
   /** Cases notif par match suivi. */
