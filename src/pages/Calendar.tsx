@@ -442,11 +442,11 @@ export function CalendarPage() {
                   )}
                 >
                   <span className="md:hidden">
-                    Fais défiler la liste horizontale pour voir les {liveFeatured.length} matchs, puis touche un
+                    Fais défiler la liste horizontale pour voir les {liveFeatured.length} matchs, puis touche une
                     tribune pour entrer.
                   </span>
                   <span className="hidden md:inline">
-                    {liveFeatured.length} rencontres en cours — choisis un match pour ouvrir le tribune live.
+                    {liveFeatured.length} rencontres en cours — choisis un match pour ouvrir la tribune live.
                   </span>
                 </p>
               ) : null}

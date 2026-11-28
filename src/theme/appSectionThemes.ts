@@ -146,7 +146,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   },
   matches: {
     id: 'matches',
-    label: 'Match',
+    label: 'Matchs',
     hint: 'Direct & calendrier',
     shellStripe: stripeMatch,
     encart: ENCART_LIVE,
@@ -158,7 +158,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   },
   calendar: {
     id: 'calendar',
-    label: 'Match',
+    label: 'Matchs',
     hint: 'Matchs à venir',
     shellStripe: stripeMatch,
     encart: ENCART_AGENDA,
@@ -170,7 +170,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   },
   pronostic: {
     id: 'pronostic',
-    label: 'Pronostic',
+    label: 'Pronos',
     hint: 'Pronos & classement',
     shellStripe: stripePronostic,
     encart: ENCART_LIVE,
@@ -182,7 +182,7 @@ export const APP_SECTION_THEMES: Record<AppSectionId, SectionTheme> = {
   },
   groups: {
     id: 'groups',
-    label: 'Groupes',
+    label: 'Tribunes',
     hint: 'Tribunes & débats',
     shellStripe: stripeGroups,
     encart: ENCART_GROUPS,
@@ -398,8 +398,8 @@ export type BottomNavRoute = { to: string; end?: boolean; section: AppSectionId;
 export const BOTTOM_NAV_PRIMARY_ROUTES: BottomNavRoute[] = [
   { to: '/', end: true, section: 'home', icon: '🏟️' },
   { to: '/match', end: true, section: 'matches', icon: '⚽' },
+  { to: '/pronostic', section: 'pronostic', icon: '🎯' },
   { to: '/groups', section: 'groups', icon: '👥' },
-  { to: '/boutique', section: 'boutique', icon: '🛍️' },
 ]
 
 /** Entrées du sous-menu « Plus » (sheet au-dessus de la barre). */
@@ -409,9 +409,9 @@ export const BOTTOM_NAV_MORE_ROUTES: {
   icon: string
   hint: string
 }[] = [
+  { to: '/boutique', section: 'boutique', icon: '🛍️', hint: 'Maillots, jetons, médailles' },
   { to: '/formules', section: 'formules', icon: '⭐', hint: 'Ultra & Ambassadeur' },
-  { to: '/pronostic', section: 'pronostic', icon: '🎯', hint: 'Pronos & gains' },
-  { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Ligues & podium' },
+  { to: '/rankings', section: 'rankings', icon: '🏆', hint: 'Ligues & forme' },
 ]
 
 export const BOTTOM_NAV_ROUTES: BottomNavRoute[] = [

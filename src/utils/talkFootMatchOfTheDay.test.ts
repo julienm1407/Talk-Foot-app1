@@ -95,7 +95,7 @@ describe('pickTalkFootHomeBoard', () => {
     expect(board.multiplex?.matches.map((m) => m.id)).toEqual(['city-liv', 'lyon-bayern'])
   })
 
-  it('ne met pas en avant un filler L1 ni une affiche étrangère', () => {
+  it('L1 domestique avant un choc étranger hors Europe', () => {
     const now = new Date('2026-11-23T16:00:00+01:00')
     const picked = pickTalkFootMatchOfTheDay(
       [
@@ -119,7 +119,35 @@ describe('pickTalkFootHomeBoard', () => {
       [],
       now,
     )
-    expect(picked).toBeNull()
+    expect(picked?.id).toBe('aux-tro')
+  })
+
+  it('OM Ligue 1 avant OL en Conference', () => {
+    const now = new Date('2026-11-27T12:00:00+01:00')
+    const board = pickTalkFootHomeBoard(
+      [
+        match({
+          id: 'ol-lsk',
+          competitionId: 'uecl',
+          kickoffAt: '2026-11-27T18:00:00.000Z',
+          status: 'upcoming',
+          home: 'lyon',
+          away: 'lillestrom',
+        }),
+        match({
+          id: 'om-rennes',
+          competitionId: 'ligue-1',
+          kickoffAt: '2026-11-27T21:00:00.000Z',
+          status: 'upcoming',
+          home: 'om',
+          away: 'rennes',
+        }),
+      ],
+      now,
+      editorial,
+    )
+    expect(board.featured?.id).toBe('om-rennes')
+    expect(board.alsoTonight.map((m) => m.id)).not.toContain('ol-lsk')
   })
 
   it('prend un choc Ligue 1 (top 5) comme Match Talk Foot', () => {

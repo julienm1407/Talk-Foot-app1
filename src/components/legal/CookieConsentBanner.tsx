@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '../../utils/cn'
 import { CONSENT_DISMISS_SESSION_KEY } from '../../constants/privacyStorage'
 import { hasRecordedConsent, recordEssentialConsent } from '../../utils/privacyLocal'
+import { hasSeenFirstVisitGuide } from '../../utils/firstVisitGuidesStorage'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { useIsMobileTouchViewport } from '../../hooks/useIsMobileTouchViewport'
 
@@ -28,7 +29,8 @@ export function CookieConsentBanner() {
     } catch {
       /* ignore */
     }
-    setVisible(!hasRecordedConsent())
+    const firstVisitHomePending = !hasSeenFirstVisitGuide('home')
+    setVisible(!hasRecordedConsent() && !firstVisitHomePending)
   }, [])
 
   if (!visible) return null

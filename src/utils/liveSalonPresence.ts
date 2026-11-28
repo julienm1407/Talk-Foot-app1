@@ -20,7 +20,7 @@ export function getLiveSalonPresenceFromStats(
     return {
       intensity: 0,
       tier: 'calm',
-      tierLabel: 'Tribune calme',
+      tierLabel: 'Tchat ouvert',
       viewers,
       messages: 0,
     }

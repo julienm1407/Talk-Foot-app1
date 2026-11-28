@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import { resolveArticleExcerpt } from '../../utils/articleExcerpt'
 import { formatRelativeMinutesAgo } from '../../utils/formatRelativeMinutes'
+import { newsFeedTag } from '../../utils/socialCountDisplay'
 
 function tagClass(tag: NewsItem['tag'], light: boolean): string {
   if (light) {
@@ -87,6 +88,7 @@ export function NewsFeed({
   const list = (
     <div className={cn('divide-y', L ? 'divide-slate-200/80' : 'divide-white/10')}>
       {items.map((n) => {
+        const tag = newsFeedTag(n.tag, { publishedAt: n.publishedAt, minutesAgo: n.minutesAgo })
         const excerpt = resolveArticleExcerpt(n)
         const rowClass = cn(
           'grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_8.75rem] sm:items-stretch sm:gap-4 lg:grid-cols-[minmax(0,1fr)_10rem]',
@@ -107,10 +109,10 @@ export function NewsFeed({
                   <span
                     className={cn(
                       'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black ring-1 sm:px-2.5 sm:py-1 sm:text-[11px]',
-                      tagClass(n.tag, L),
+                      tagClass(tag as NewsItem['tag'], L),
                     )}
                   >
-                    {n.tag}
+                    {tag}
                   </span>
                   <span
                     className={cn(

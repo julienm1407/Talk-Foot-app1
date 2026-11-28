@@ -25,13 +25,8 @@ export const FIRST_VISIT_GUIDES: Record<FirstVisitGuideId, FirstVisitGuide> = {
     id: 'home',
     eyebrow: 'Accueil',
     title: 'Bienvenue sur Talk Foot',
-    body: 'Barre du bas : Accueil, Matchs, Groupes, Boutique, puis Plus. Tu peux tout parcourir tout de suite.',
-    bullets: [
-      '⚽ Matchs : calendrier, scores live, tape une affiche → tribune',
-      '👥 Groupes : tes tribunes de club',
-      '🛍️ Boutique : maillots, jetons et médailles',
-      'Connexion (haut à droite) si tu veux garder ton compte',
-    ],
+    body: 'Vis chaque match avec des supporters, en direct. Chat, pronos, débats.',
+    bullets: [],
   },
   match: {
     id: 'match',

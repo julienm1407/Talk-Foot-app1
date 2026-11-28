@@ -7,6 +7,7 @@ import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
 import { ALL_CLUBS_BY_ID } from '../../data/allClubsCatalog'
 import { formatGroupAmbianceLabel } from '../../utils/groupIntensity'
+import { formatMembersLabel, formatSocialCount } from '../../utils/socialCountDisplay'
 import { GroupIdentityBackdrop } from './GroupIdentityBackdrop'
 
 const kindLabel: Record<NonNullable<SupporterGroup['groupKind']>, string> = {
@@ -48,11 +49,12 @@ function ActiveSupportersFacepile({
   const labelCls = size === 'sm' ? 'text-[11px] leading-tight' : 'text-xs leading-snug'
   const shown = participants.slice(0, 4)
 
-  if (online <= 0 && shown.length === 0) return null
+  const onlineShown = formatSocialCount(online)
+  if (!onlineShown && shown.length === 0) return null
 
   const label =
-    online > 0
-      ? `${online.toLocaleString('fr-FR')} en ligne`
+    onlineShown
+      ? `${onlineShown} en ligne`
       : shown.length > 0
         ? 'Soutiens actifs'
         : 'Soutiens en ligne'
@@ -104,6 +106,9 @@ export function GroupCard({
   const online = group.onlineNow ?? 0
   const msgs = group.messagesToday ?? 0
   const ambianceLabel = formatGroupAmbianceLabel(group.intensity)
+  const membersLabel = formatMembersLabel(group.members)
+  const onlineLabel = formatSocialCount(online)
+  const msgsLabel = formatSocialCount(msgs)
   const preview = group.lastMessagePreview
   const rail = variant === 'encartRail'
   const encart = variant === 'encart'
@@ -225,13 +230,13 @@ export function GroupCard({
               <div className={cn('mt-0.5 text-[10px] font-semibold leading-snug', subC)}>
                 {railDense ? (
                   <span className="line-clamp-2">
-                    {group.location ? `${group.location} · ` : ''}
-                    {group.members.toLocaleString('fr-FR')} membres
+                    {group.location ? `${group.location}${membersLabel ? ' · ' : ''}` : ''}
+                    {membersLabel ?? ''}
                   </span>
                 ) : (
                   <>
-                    {group.location ? `${group.location} · ` : ''}
-                    {group.members} membres
+                    {group.location ? `${group.location}${membersLabel ? ' · ' : ''}` : ''}
+                    {membersLabel ?? ''}
                   </>
                 )}
               </div>
@@ -248,14 +253,14 @@ export function GroupCard({
           {railDense ? (
             <>
               <div className="flex flex-wrap items-center gap-1">
-                {online > 0 ? (
+                {onlineLabel ? (
                   <Badge className={cn('px-1.5 py-0.5', hotBadgeC)}>
-                    🔥 {online.toLocaleString('fr-FR')} en ligne
+                    🔥 {onlineLabel} en ligne
                   </Badge>
                 ) : null}
-                {msgs > 0 ? (
+                {msgsLabel ? (
                   <Badge className={cn('px-1.5 py-0.5', msgBadgeC)}>
-                    📈 {msgs.toLocaleString('fr-FR')} msg
+                    📈 {msgsLabel} msg
                   </Badge>
                 ) : null}
               </div>
@@ -274,9 +279,9 @@ export function GroupCard({
                       : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
                   )}
                 >
-                  {online > 0 ? `🔥 ${online.toLocaleString('fr-FR')} en ligne` : 'Tribune calme'}
+                  {onlineLabel ? `🔥 ${onlineLabel} en ligne` : 'Tchat ouvert'}
                 </Badge>
-                {msgs > 0 ? (
+                {msgsLabel ? (
                   <Badge
                     className={cn(
                       'px-2 py-0.5 text-[10px]',
@@ -285,7 +290,7 @@ export function GroupCard({
                         : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
                     )}
                   >
-                    📈 {msgs.toLocaleString('fr-FR')} msg
+                    📈 {msgsLabel} msg
                   </Badge>
                 ) : null}
                 <Badge
@@ -326,7 +331,7 @@ export function GroupCard({
             <div
               className={cn('flex items-center justify-between gap-2 text-[10px] font-bold', L ? 'text-slate-600' : 'text-tf-app-muted')}
             >
-              {ambianceLabel ? <span>{ambianceLabel}</span> : <span className="opacity-80">Tribune calme</span>}
+              {ambianceLabel ? <span>{ambianceLabel}</span> : null}
               <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}</span>
             </div>
           ) : null}
@@ -376,8 +381,8 @@ export function GroupCard({
                 {group.name}
               </div>
               <div className={cn('mt-1 line-clamp-1 text-xs font-semibold leading-snug sm:text-sm', subC)}>
-                {group.location ? `${group.location} • ` : ''}
-                {group.members} membres
+                {group.location ? `${group.location}${membersLabel ? ' • ' : ''}` : ''}
+                {membersLabel ?? ''}
               </div>
               {countryLabel || mainClubName ? (
                 <div className={cn('mt-1 line-clamp-1 text-[11px] font-bold', subC)}>
@@ -390,7 +395,7 @@ export function GroupCard({
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            {online > 0 ? (
+            {onlineLabel ? (
               <Badge
                 className={cn(
                   'text-[11px] font-bold leading-tight sm:text-xs',
@@ -399,10 +404,10 @@ export function GroupCard({
                     : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
                 )}
               >
-                🔥 {online.toLocaleString('fr-FR')} en ligne
+                🔥 {onlineLabel} en ligne
               </Badge>
             ) : null}
-            {msgs > 0 ? (
+            {msgsLabel ? (
               <Badge
                 className={cn(
                   'text-[11px] font-bold leading-tight sm:text-xs',
@@ -411,7 +416,7 @@ export function GroupCard({
                     : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
                 )}
               >
-                📈 {msgs.toLocaleString('fr-FR')} msg
+                📈 {msgsLabel} msg
               </Badge>
             ) : null}
             <Badge
@@ -493,11 +498,7 @@ export function GroupCard({
                 L ? 'text-slate-600' : 'text-tf-app-muted',
               )}
             >
-              {ambianceLabel ? (
-                <span className="tabular-nums">{ambianceLabel}</span>
-              ) : (
-                <span className="opacity-80">Tribune calme</span>
-              )}
+              {ambianceLabel ? <span className="tabular-nums">{ambianceLabel}</span> : null}
               <span>{group.createdBy === 'me' ? 'Ton groupe' : 'Tribune communautaire'}</span>
             </div>
             <span
@@ -526,8 +527,8 @@ export function GroupCard({
             <div className="min-w-0">
               <div className={cn('truncate text-sm font-black sm:text-base', titleC)}>{group.name}</div>
               <div className={cn('mt-0.5 truncate text-[11px] font-semibold sm:text-sm', subC)}>
-                {group.location ? `${group.location} • ` : ''}
-                {group.members} membres
+                {group.location ? `${group.location}${membersLabel ? ' • ' : ''}` : ''}
+                {membersLabel ?? ''}
               </div>
               {countryLabel || mainClubName ? (
                 <div className={cn('mt-0.5 truncate text-[10px] font-bold sm:mt-1 sm:text-xs', subC)}>
@@ -540,7 +541,7 @@ export function GroupCard({
           </div>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-1 sm:mt-3 sm:gap-2">
-            {online > 0 ? (
+            {onlineLabel ? (
               <Badge
                 className={cn(
                   'px-1.5 py-0 text-[9px] leading-tight sm:px-2 sm:py-0.5 sm:text-[10px]',
@@ -549,10 +550,10 @@ export function GroupCard({
                     : 'border-amber-500/25 bg-amber-500/10 text-amber-200',
                 )}
               >
-                🔥 {online.toLocaleString('fr-FR')} en ligne
+                🔥 {onlineLabel} en ligne
               </Badge>
             ) : null}
-            {msgs > 0 ? (
+            {msgsLabel ? (
               <Badge
                 className={cn(
                   'px-1.5 py-0 text-[9px] leading-tight sm:px-2 sm:py-0.5 sm:text-[10px]',
@@ -561,8 +562,8 @@ export function GroupCard({
                     : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
                 )}
               >
-                <span className="sm:hidden">📈 {msgs.toLocaleString('fr-FR')} msg</span>
-                <span className="hidden sm:inline">📈 {msgs.toLocaleString('fr-FR')} msg aujourd’hui</span>
+                <span className="sm:hidden">📈 {msgsLabel} msg</span>
+                <span className="hidden sm:inline">📈 {msgsLabel} msg aujourd’hui</span>
               </Badge>
             ) : null}
             <Badge

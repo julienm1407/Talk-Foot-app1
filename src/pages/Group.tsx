@@ -1094,7 +1094,7 @@ export function GroupPage() {
                         )}
                       >
                         {group.location ? `${group.location} • ` : ''}
-                        {group.members.toLocaleString('fr-FR')} membres
+                        {group.members >= 5 ? `${group.members.toLocaleString('fr-FR')} membres` : ''}
                         {group.intensity > 0 ? ` • ${group.intensity}% ambiance` : ''}
                       </p>
                       <div

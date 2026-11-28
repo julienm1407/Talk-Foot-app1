@@ -11,10 +11,16 @@ export function isTalkFootOAuthProvider(p: string): p is TalkFootOauthProviderId
   return (TALKFOOT_OAUTH_IDS as readonly string[]).includes(p)
 }
 
-/** Seul OAuth proposé à l’inscription / connexion. */
+/** Seul OAuth proposé à l’inscription / connexion (web). */
 export const LOGIN_OAUTH_PROVIDERS = [
   { id: 'google' as const, label: 'Continuer avec Google', variant: 'google' as const },
 ]
+
+export const LOGIN_OAUTH_APPLE = {
+  id: 'apple' as const,
+  label: 'Se connecter avec Apple',
+  variant: 'apple' as const,
+}
 
 /** @deprecated Utiliser {@link LOGIN_OAUTH_PROVIDERS} */
 export const TALKFOOT_OAUTH_PROVIDERS = LOGIN_OAUTH_PROVIDERS

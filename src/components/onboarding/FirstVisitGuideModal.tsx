@@ -11,6 +11,9 @@ import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { getModalPortalRoot } from '../../utils/modalPortalRoot'
 import { hasSeenFirstVisitGuide, markFirstVisitGuideSeen } from '../../utils/firstVisitGuidesStorage'
 import { useAuth } from '../../contexts/AuthContext'
+import { useMatches } from '../../contexts/MatchesContext'
+import { pickTalkFootHomeBoard } from '../../utils/talkFootMatchOfTheDay'
+import { recordEssentialConsent } from '../../utils/privacyLocal'
 
 const FORCE_QUERY = 'tuto'
 
@@ -20,11 +23,13 @@ export function FirstVisitGuideModal() {
   const [params] = useSearchParams()
   const { onboardingOpen } = useFanPreferences()
   const { user, isReady } = useAuth()
+  const { matches } = useMatches()
   const [open, setOpen] = useState(false)
-  const guideId = firstVisitGuideIdFromPath(location.pathname)
-  const showLoginCta = guideId === 'home' && (!user || user.isAnonymous)
+  const pathGuideId = firstVisitGuideIdFromPath(location.pathname)
   const force = params.get(FORCE_QUERY) === '1'
+  const guideId = force ? pathGuideId : pathGuideId === 'home' ? 'home' : null
   const guide = guideId ? FIRST_VISIT_GUIDES[guideId] : null
+  const isHomeWelcome = guideId === 'home'
 
   useEffect(() => {
     if (!isReady || onboardingOpen || !guideId || !guide || (user && !user.isAnonymous)) {
@@ -41,7 +46,10 @@ export function FirstVisitGuideModal() {
   }, [guideId, guide, force, onboardingOpen, location.pathname, isReady, user])
 
   const dismiss = (remember: boolean) => {
-    if (remember && guideId) markFirstVisitGuideSeen(guideId)
+    if (remember && guideId) {
+      markFirstVisitGuideSeen(guideId)
+      if (guideId === 'home') recordEssentialConsent()
+    }
     setOpen(false)
     if (force) {
       const next = new URLSearchParams(params)
@@ -49,6 +57,12 @@ export function FirstVisitGuideModal() {
       const q = next.toString()
       navigate({ pathname: location.pathname, search: q ? `?${q}` : '', hash: location.hash }, { replace: true })
     }
+  }
+
+  const enterMatchOfTheDay = () => {
+    const featured = pickTalkFootHomeBoard(matches).featured
+    dismiss(true)
+    navigate(featured ? `/channel/${featured.id}` : '/match')
   }
 
   if (!open || !guide || !guideId) return null
@@ -74,13 +88,13 @@ export function FirstVisitGuideModal() {
         type="button"
         className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
         onClick={() => dismiss(true)}
-        aria-label="Fermer le mini-tuto"
+        aria-label="Fermer"
       />
       <div className="relative z-10 w-full max-w-[22rem] overflow-hidden rounded-[28px] border border-white/20 bg-tf-white text-tf-dark shadow-[0_28px_80px_rgba(1,30,51,0.32)]">
         <div className="h-1.5 w-full bg-gradient-to-r from-sky-500 via-violet-500 to-amber-400" />
         <div className="space-y-3 px-5 pb-5 pt-4">
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-sky-700">
-            {guide.eyebrow} · première visite
+            {guide.eyebrow}
           </p>
           <h2
             id="tf-first-visit-title"
@@ -89,31 +103,29 @@ export function FirstVisitGuideModal() {
             {guide.title}
           </h2>
           <p className="text-[15px] font-semibold leading-relaxed text-slate-600">{guide.body}</p>
-          <ul className="space-y-2 pt-0.5 text-[14px] font-semibold leading-snug text-tf-dark">
-            {guide.bullets.map((b) => (
-              <li key={b} className="flex gap-2.5">
-                <span className="mt-px font-black text-sky-600" aria-hidden>
-                  ·
-                </span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="pt-1 text-[11px] font-semibold text-tf-grey">Une seule fois sur cet écran.</p>
+          {guide.bullets.length > 0 ? (
+            <ul className="space-y-2 pt-0.5 text-[14px] font-semibold leading-snug text-tf-dark">
+              {guide.bullets.map((b) => (
+                <li key={b} className="flex gap-2.5">
+                  <span className="mt-px font-black text-sky-600" aria-hidden>
+                    ·
+                  </span>
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="flex flex-col gap-2 pt-2">
-            {showLoginCta ? (
+            {isHomeWelcome ? (
               <button
                 type="button"
                 className={cn(
                   TF_FOCUS_VISIBLE,
-                  'inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-sky-600 px-4 text-sm font-black text-white shadow-md transition hover:bg-sky-500',
+                  'inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-tf-cta px-4 text-sm font-black text-white shadow-md transition hover:bg-tf-cta-hover',
                 )}
-                onClick={() => {
-                  dismiss(true)
-                  navigate('/login')
-                }}
+                onClick={enterMatchOfTheDay}
               >
-                Créer / connecter mon compte
+                Entrer dans la tribune du match du jour
               </button>
             ) : null}
             <button
@@ -124,17 +136,7 @@ export function FirstVisitGuideModal() {
               )}
               onClick={() => dismiss(true)}
             >
-              Compris
-            </button>
-            <button
-              type="button"
-              className={cn(
-                TF_FOCUS_VISIBLE,
-                'inline-flex min-h-11 w-full items-center justify-center rounded-2xl text-sm font-bold text-tf-grey transition hover:text-tf-dark',
-              )}
-              onClick={() => dismiss(true)}
-            >
-              Passer
+              {isHomeWelcome ? 'Continuer sur l’accueil' : 'Compris'}
             </button>
           </div>
         </div>

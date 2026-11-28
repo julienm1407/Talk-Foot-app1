@@ -4,6 +4,7 @@ import { Card } from '../ui/Card'
 import { Avatar } from '../ui/Avatar'
 import { cn } from '../../utils/cn'
 import { DebateMessagePreview } from '../debate/DebateMessagePreview'
+import { formatDebateSocialLine } from '../../utils/socialCountDisplay'
 
 export function DebateOfTheDayCard({
   debate,
@@ -126,10 +127,11 @@ export function DebateOfTheDayCard({
               {excerpt}
             </p>
             ) : null}
+            {formatDebateSocialLine(debate.participantsCount, debate.messagesCount) ? (
             <p className={cn('font-black text-white/75', hubCompact ? 'text-[10px]' : 'text-[11px] sm:text-xs')}>
-              👥 {debate.participantsCount.toLocaleString('fr-FR')} · 💬{' '}
-              {debate.messagesCount.toLocaleString('fr-FR')} messages
+              {formatDebateSocialLine(debate.participantsCount, debate.messagesCount)}
             </p>
+            ) : null}
             {!hubCompact && participants.length > 0 ? (
               <div className="flex items-center gap-2 pt-1">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-sky-100/85">Actifs</span>

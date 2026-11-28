@@ -1,15 +1,22 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 import { TF_FOCUS_VISIBLE } from '../../theme/designSystem'
 import { useAppearance } from '../../contexts/AppearanceContext'
 import type { TalkFootMultiplex } from '../../utils/talkFootMatchOfTheDay'
 import { formatKickoff } from '../../utils/time'
+import { hubTeamLabel } from '../../utils/teamCardLabel'
+
+const PREVIEW_LINES = 5
 
 export function EuropeMultiplexCard({ multiplex }: { multiplex: TalkFootMultiplex | null }) {
-  if (!multiplex) return null
+  const [expanded, setExpanded] = useState(false)
   const { appearance } = useAppearance()
+  if (!multiplex) return null
   const L = appearance === 'light'
   const live = multiplex.matches.some((m) => m.status === 'live')
+  const shown = expanded ? multiplex.matches : multiplex.matches.slice(0, PREVIEW_LINES)
+  const hidden = multiplex.matches.length - shown.length
   return (
     <section
       className={cn(
@@ -33,7 +40,7 @@ export function EuropeMultiplexCard({ multiplex }: { multiplex: TalkFootMultiple
         </Link>
       </div>
       <ul className="mt-2 space-y-1.5">
-        {multiplex.matches.map((m) => (
+        {shown.map((m) => (
           <li key={m.id}>
             <Link
               to={`/channel/${m.id}`}
@@ -43,7 +50,7 @@ export function EuropeMultiplexCard({ multiplex }: { multiplex: TalkFootMultiple
               )}
             >
               <span className="min-w-0 truncate text-tf-app-fg">
-                {m.home.shortName} – {m.away.shortName}
+                {hubTeamLabel(m.home)} – {hubTeamLabel(m.away)}
                 {m.status === 'live' ? ' · LIVE' : ''}
               </span>
               <span className="shrink-0 tabular-nums text-tf-app-muted">
@@ -55,6 +62,15 @@ export function EuropeMultiplexCard({ multiplex }: { multiplex: TalkFootMultiple
           </li>
         ))}
       </ul>
+      {hidden > 0 || expanded ? (
+        <button
+          type="button"
+          className={cn(TF_FOCUS_VISIBLE, 'mt-1.5 text-[11px] font-black text-tf-electric-deep')}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? 'Replier' : `Voir tout (${multiplex.matches.length})`}
+        </button>
+      ) : null}
     </section>
   )
 }

@@ -5,13 +5,7 @@ import { Input } from '../components/ui/Input'
 import { TokenGlyph } from '../components/ui/TokenGlyph'
 import { useBoutiquePurchase } from '../hooks/useBoutiquePurchase'
 import { useSubscription } from '../hooks/useSubscription'
-import {
-  CDM_BUNDLE_MEDALS,
-  CDM_JERSEY_MEDALS,
-  CDM_SHORT_MEDALS,
-  TOKENS_PER_MEDAL,
-  isCosmeticOwned,
-} from '../data/boutiqueEconomy'
+import { isCosmeticOwned } from '../data/boutiqueEconomy'
 import type { AvatarItem as AvatarItemType } from '../types/profile'
 import { cn } from '../utils/cn'
 import { getAppSectionTheme } from '../theme/appSectionThemes'
@@ -203,12 +197,12 @@ export function BoutiquePage() {
 
   const filterHint =
     catalogFilter === 'jerseys'
-      ? `${CDM_JERSEY_MEDALS} médailles par maillot`
+      ? 'Maillots clubs et sélections'
       : catalogFilter === 'shorts'
-        ? `${CDM_SHORT_MEDALS} médailles par short`
+        ? 'Shorts assortis'
         : catalogFilter === 'packs'
-          ? `${CDM_BUNDLE_MEDALS} médailles par pack maillot + short`
-          : 'Chaussures standards'
+          ? 'Packs maillot + short'
+          : 'Chaussures — aussi en jetons'
 
   const purchaseModal = purchaseFlow ? (
     <Suspense fallback={null}>
@@ -253,8 +247,8 @@ export function BoutiquePage() {
             </h1>
             <p className="max-w-xl text-sm font-medium text-sky-100/90">
               Visuel produit · achat en <strong className="text-white">médailles 🏅</strong> ou{' '}
-              <strong className="text-white">jetons</strong> (1 🏅 = {TOKENS_PER_MEDAL.toLocaleString('fr-FR')}{' '}
-              jetons). Catalogue identique pour toutes les formules — ta formule{' '}
+              <strong className="text-white">jetons</strong>. Les accessoires de départ (sifflet, écharpe, casquette)
+              passent en jetons en 1 à 2 semaines de bonus quotidien. Catalogue identique pour toutes les formules — ta formule{' '}
               <strong className="text-white">{plan.name}</strong>
               {monthlyTokens > 0
                 ? ` : +${monthlyTokens.toLocaleString('fr-FR')} jetons / mois`

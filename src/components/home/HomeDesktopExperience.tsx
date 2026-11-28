@@ -236,6 +236,16 @@ export function HomeDesktopExperience({
           {matchOfTheDay || alsoTonight.length || europeMultiplex ? (
             <div className="space-y-3">
               {matchOfTheDay ? <MatchTalkFootDuJour match={matchOfTheDay} /> : null}
+              {restLiveMatches.slice(0, 3).map((m) => (
+                <DesktopHubLiveStrip key={m.id} match={m} />
+              ))}
+              {restLiveMatches.length > 3 ? (
+                <div className="flex justify-end">
+                  <Link to="/match" className={cn(hubPillLink(appearance, 'sm'), 'shrink-0')}>
+                    Voir tout
+                  </Link>
+                </div>
+              ) : null}
               <CeSoirAussiStrip matches={alsoTonight} />
               <EuropeMultiplexCard multiplex={europeMultiplex} />
               <div className="flex justify-end">

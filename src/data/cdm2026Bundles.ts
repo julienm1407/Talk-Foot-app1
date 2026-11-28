@@ -21,7 +21,7 @@ function buildBundle(nation: Nation): AvatarItem {
     cost: CDM_BUNDLE_MEDALS,
     rarity: 'epic',
     description: `Maillot et short ${nation.nameFr} — économise ${savings} médailles vs l’achat séparé.`,
-    inspirationNote: 'Pack Coupe du Monde 2026',
+    inspirationNote: 'Pack maillot + short',
     collection: 'cdm2026',
     nationIso: nation.iso,
     bundleIncludes: [jerseyId, shortId],

@@ -95,7 +95,7 @@ export function RankingsLeaguesView() {
       'min-h-11 flex-1 rounded-2xl px-3 py-2.5 text-center text-xs font-black transition sm:min-h-0 sm:flex-none sm:px-5 sm:text-sm',
       mainTab === t
         ? 'bg-tf-dark text-white shadow-sm'
-        : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-tf-grey-pastel/50',
+        : 'border border-tf-dark/25 bg-white text-tf-dark hover:bg-tf-grey-pastel/40',
     )
 
   const matrixCaption = standingsRows.length

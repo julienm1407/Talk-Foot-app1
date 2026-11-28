@@ -15,6 +15,7 @@ import { useSupporterGroups } from '../hooks/useSupporterGroups'
 import { canCreateDebate } from '../utils/subscriptionEntitlements'
 import { debatePageHref } from '../utils/debateAccess'
 import { DebateGroupBadge } from '../components/debate/DebateGroupBadge'
+import { formatDebateSocialLine } from '../utils/socialCountDisplay'
 
 export function DebatesPage() {
   const { debates: all, loading, deleteDebateAsAdmin } = useDebates()
@@ -160,10 +161,11 @@ export function DebatesPage() {
                       >
                         {d.excerpt}
                       </p>
+                      {formatDebateSocialLine(d.participantsCount, d.messagesCount) ? (
                       <p className="mt-2 text-xs font-bold text-white/92 [text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">
-                        👥 {d.participantsCount.toLocaleString('fr-FR')} participants · 💬{' '}
-                        {d.messagesCount.toLocaleString('fr-FR')} messages
+                        {formatDebateSocialLine(d.participantsCount, d.messagesCount)}
                       </p>
+                      ) : null}
                     </div>
                     <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                       <Link

@@ -11,6 +11,7 @@ import { getAppSectionTheme } from '../theme/appSectionThemes'
 import { DebateSalonPanel } from '../components/debate/DebateSalonPanel'
 import { DebateGroupBadge } from '../components/debate/DebateGroupBadge'
 import { useAuth } from '../contexts/AuthContext'
+import { formatSocialCount } from '../utils/socialCountDisplay'
 
 export function DebateDetailPage() {
   const { debateId } = useParams()
@@ -146,12 +147,16 @@ export function DebateDetailPage() {
               {debate.excerpt}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black max-lg:mt-1.5 sm:mt-4 sm:gap-2 sm:text-sm">
+              {formatSocialCount(debate.participantsCount) ? (
               <span className="rounded-lg border border-white/30 bg-white/14 px-2 py-1 text-white/95 backdrop-blur-sm sm:rounded-xl sm:px-4 sm:py-2">
-                👥 {debate.participantsCount.toLocaleString('fr-FR')} participants
+                👥 {formatSocialCount(debate.participantsCount)} participants
               </span>
+              ) : null}
+              {formatSocialCount(debate.messagesCount) ? (
               <span className="rounded-lg border border-white/30 bg-white/14 px-2 py-1 text-white/95 backdrop-blur-sm sm:rounded-xl sm:px-4 sm:py-2">
-                💬 {debate.messagesCount.toLocaleString('fr-FR')} messages
+                💬 {formatSocialCount(debate.messagesCount)} messages
               </span>
+              ) : null}
               {isSiteAdmin ? (
                 <button
                   type="button"

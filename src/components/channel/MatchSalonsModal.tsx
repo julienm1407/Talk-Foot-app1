@@ -105,7 +105,7 @@ export function MatchSalonsModal({
               Fermer
             </Button>
             <Link to="/groups" onClick={onClose} className="flex-1">
-              <Button variant="soft" className="w-full">
+              <Button variant="primary" className="w-full">
                 Toutes les tribunes
               </Button>
             </Link>

@@ -72,7 +72,7 @@ export function NationTribuneCard({ nation }: { nation: Nation }) {
         {group ? (
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-tf-app-muted">
             <span className="rounded-full border border-tf-c30-border bg-white/[0.04] px-2.5 py-1">
-              {group.members} membre{group.members > 1 ? 's' : ''}
+              {group.members >= 5 ? `${group.members} membre${group.members > 1 ? 's' : ''}` : 'Tribune'}
             </span>
             {(group.onlineNow ?? 0) > 0 ? (
               <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-200">

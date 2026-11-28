@@ -58,6 +58,8 @@ import {
 } from '../components/channel/ChannelSubscriptionExtras'
 import { ChatPanelErrorBoundary } from '../components/channel/ChatPanelErrorBoundary'
 import { MobileChatComposerDock } from '../components/channel/MobileChatComposerDock'
+import { GuestChatPseudoModal } from '../components/channel/GuestChatPseudoModal'
+import { readGuestChatPseudo, writeGuestChatPseudo } from '../utils/guestChatPseudo'
 import {
   LiveMatchChatMessage,
   type LiveMatchChatMessageItem,
@@ -1581,7 +1583,7 @@ export function ChannelPage() {
   const chatOpenAtMs = match?.kickoffAt ? matchChatOpensAtMs(match.kickoffAt, isFeaturedMatch) : null
   const chatLocked = status === 'upcoming' && !isFeaturedMatch && chatOpenAtMs != null && nowMs < chatOpenAtMs
   const guestChatWriter = !authUser?.id || Boolean(authUser.isAnonymous)
-  const chatComposerLocked = chatLocked || chatClosedAfterMatch || guestChatWriter
+  const chatComposerLocked = chatLocked || chatClosedAfterMatch
   const chatCountdownText = useMemo(() => {
     if (!chatLocked || chatOpenAtMs == null) return null
     const remainingMs = Math.max(0, chatOpenAtMs - nowMs)
@@ -1603,6 +1605,8 @@ export function ChannelPage() {
   const chatInputRef = useRef<HTMLInputElement>(null)
   const chatSendingRef = useRef(false)
   const [chatSending, setChatSending] = useState(false)
+  const [guestPseudo, setGuestPseudo] = useState(() => readGuestChatPseudo())
+  const [guestPseudoOpen, setGuestPseudoOpen] = useState(false)
   const [exactScoreFocusNonce, setExactScoreFocusNonce] = useState(0)
   const [promptUsedTick, setPromptUsedTick] = useState(0)
   const { tribune: selectedTribune, setTribune: setSelectedTribune } = useMatchTribune(
@@ -1960,8 +1964,8 @@ export function ChannelPage() {
   const onSend = async (e: FormEvent) => {
     e.preventDefault()
     if (!match?.id) return
-    if (!authUser?.id || authUser.isAnonymous) {
-      navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
+    if (guestChatWriter && !guestPseudo) {
+      setGuestPseudoOpen(true)
       return
     }
     if (chatClosedAfterMatch) return
@@ -1994,7 +1998,7 @@ export function ChannelPage() {
         return
       }
       const sb = getSupabaseBrowserClient()
-      if (sb && authUser?.id && chatActorId) {
+      if (sb && authUser?.id && chatActorId && !authUser.isAnonymous) {
         try {
           await syncClerkProfileToChatActor(
             sb,
@@ -2011,8 +2015,8 @@ export function ChannelPage() {
         matchId: match.id,
         text,
         matchTribune: selectedTribune,
-        displayName: authUser?.displayName,
-        clerkActorKey: authUser?.id,
+        displayName: guestChatWriter ? guestPseudo ?? undefined : authUser?.displayName,
+        clerkActorKey: guestChatWriter ? undefined : authUser?.id,
       })
     if (!res.ok) {
         chatDraftRef.current = text
@@ -2057,10 +2061,6 @@ export function ChannelPage() {
   }
   const applyMatchChatPrompt = (id: MatchChatPromptId) => {
     if (!match?.id) return
-    if (!authUser?.id || authUser.isAnonymous) {
-      navigate(`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`)
-      return
-    }
     const starter = matchChatPromptStarter(id, homeHeaderLabel, awayHeaderLabel)
     chatDraftRef.current = starter.text
     const input = chatInputRef.current
@@ -4424,7 +4424,7 @@ export function ChannelPage() {
                       }`}
                     >
                       {chatMessages.length === 0
-                        ? 'Aucun message réel pour le moment.'
+                        ? "Sois le premier à lancer l'ambiance 🔥"
                         : 'Aucun message dans cette tribune pour le moment — change de zone ou attends les autres supporters.'}
                     </div>
                   ) : null}
@@ -4450,17 +4450,9 @@ export function ChannelPage() {
               )}
             >
             {guestChatWriter && match?.id ? (
-              <div className="mb-2 text-center">
-                <p className="text-[11px] font-semibold text-sky-100/90">
-                  Lis le tchat librement — inscris-toi pour écrire.
-                </p>
-                <Link
-                  to={`/login?next=${encodeURIComponent(`/channel/${match.id}`)}`}
-                  className="mt-1.5 inline-flex min-h-10 items-center justify-center rounded-xl bg-tf-cta px-4 text-xs font-black text-white"
-                >
-                  Se connecter pour participer
-                </Link>
-              </div>
+              <p className="mb-1.5 text-center text-[10px] font-semibold text-sky-100/80">
+                Pseudo pour le tchat — compte complet pour les pronos, la boutique et la sauvegarde.
+              </p>
             ) : null}
             <form
               onSubmit={onSend}
@@ -4683,15 +4675,15 @@ export function ChannelPage() {
                   chatDraftRef.current = e.currentTarget.value
                 }}
                 placeholder={
-                  guestChatWriter
-                    ? 'Connecte-toi pour écrire'
-                    : chatClosedAfterMatch
+                  chatClosedAfterMatch
                     ? 'Replay — lecture seule'
                     : chatLocked
                     ? 'Tchat ouvert dès le matin du match'
                     : !isCloudChatConfigured
                       ? 'Chat cloud indisponible'
-                      : 'Écrire un message…'
+                      : guestChatWriter && !guestPseudo
+                        ? 'Écrire un message (pseudo ensuite)…'
+                        : 'Écrire un message…'
                 }
                 disabled={chatComposerLocked || !isCloudChatConfigured || chatSending}
                 className={`tf-chat-field min-w-0 flex-1 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-base text-[#0a223a] outline-none transition focus:border-[#5a86af] md:px-3 ${
@@ -4705,11 +4697,9 @@ export function ChannelPage() {
                 disabled={chatComposerLocked || !isCloudChatConfigured || chatSending}
                 className="shrink-0 rounded-lg border border-[#3a6690] bg-white px-2.5 py-2 text-xs font-semibold text-[#0a223a] transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:text-sm"
               >
-                {guestChatWriter
-                  ? 'Connexion'
-                  : chatClosedAfterMatch
-                    ? 'Replay'
-                    : chatLocked
+                {chatClosedAfterMatch
+                  ? 'Replay'
+                  : chatLocked
                     ? 'Bientôt'
                     : !isCloudChatConfigured
                       ? 'Cloud off'
@@ -4734,7 +4724,7 @@ export function ChannelPage() {
           >
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${homeToneColor}, ${awayToneColor})` }} />
             <div className="flex flex-col items-start gap-1.5 md:flex-row md:items-center md:justify-between md:gap-2">
-              <SectionTitle>{status === 'finished' ? 'Résumé' : 'Live'}</SectionTitle>
+              <SectionTitle>{status === 'finished' ? 'RÉSUMÉ' : 'Live'}</SectionTitle>
               <div className="tf-live-soft-surface min-w-0 w-full rounded-md bg-[#122940] px-2 py-1 text-[10px] text-sky-100/90 md:w-[90%]">
                 {latestHighlight ? (
                   <span className="block truncate font-semibold">
@@ -5441,6 +5431,18 @@ export function ChannelPage() {
           </div>
         </div>
       ) : null}
+
+      <GuestChatPseudoModal
+        open={guestPseudoOpen}
+        onClose={() => setGuestPseudoOpen(false)}
+        onConfirm={(raw) => {
+          const saved = writeGuestChatPseudo(raw)
+          if (!saved) return
+          setGuestPseudo(saved)
+          setGuestPseudoOpen(false)
+          window.setTimeout(() => chatInputRef.current?.form?.requestSubmit(), 0)
+        }}
+      />
 
       {tribuneModalOpen ? (
         <div

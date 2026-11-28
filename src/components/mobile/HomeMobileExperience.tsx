@@ -157,7 +157,9 @@ export function HomeMobileExperience({
     </div>
   )
 
-  const liveNow = hubLiveMatches.filter((m) => m.id !== matchOfTheDay?.id).slice(0, 8)
+  const livePool = hubLiveMatches.filter((m) => m.id !== matchOfTheDay?.id)
+  const liveNow = livePool.slice(0, 3)
+  const liveHidden = Math.max(0, livePool.length - liveNow.length)
 
   const heroBlock = loading ? (
     matchesLoadingShell
@@ -173,6 +175,14 @@ export function HomeMobileExperience({
             {liveNow.map((m) => (
               <HubStripLive key={m.id} match={m} visualSize="compact" className="min-w-0" />
             ))}
+            {liveHidden > 0 ? (
+              <Link
+                to="/match"
+                className={cn(TF_FOCUS_VISIBLE, 'px-0.5 text-[11px] font-black text-tf-electric-deep')}
+              >
+                Voir tout
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}

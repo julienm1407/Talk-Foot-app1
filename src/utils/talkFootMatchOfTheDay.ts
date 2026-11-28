@@ -51,8 +51,21 @@ function isLigue1Choc(match: Match, editorial: TalkFootEditorialResolved): boole
   return editorial.chocPairs.some(([x, y]) => pairKey(x, y) === key)
 }
 
+function isLigue1Domestic(match: Match): boolean {
+  return match.competition.id === 'ligue-1'
+}
+
+function isLigue1InUclUel(match: Match): boolean {
+  if (match.competition.id !== 'ucl' && match.competition.id !== 'uel') return false
+  return isLigue1Club(match.home.id) || isLigue1Club(match.away.id)
+}
+
+function isBigEuropeanClash(match: Match): boolean {
+  return match.competition.id === 'ucl' || match.competition.id === 'uel'
+}
+
 function isPriority2(match: Match, editorial: TalkFootEditorialResolved): boolean {
-  return isLigue1InEurope(match) || isLigue1Choc(match, editorial)
+  return isLigue1Domestic(match) || isLigue1Choc(match, editorial) || isLigue1InUclUel(match)
 }
 
 function onParisDay(match: Match, dayKey: string): boolean {
@@ -197,6 +210,10 @@ export function pickTalkFootHomeBoard(
   const forced = forcedId ? matches.find((m) => m.id === forcedId) ?? null : null
 
   const psgToday = dayMatches.filter(isPsgMatch).sort(rankLiveFirst)
+  const ligue1Today = dayMatches.filter(isLigue1Domestic).sort(rankLiveFirst)
+  const l1EuropeToday = dayMatches.filter(isLigue1InUclUel).sort(rankLiveFirst)
+  const bigEuToday = dayMatches.filter(isBigEuropeanClash).sort(rankLiveFirst)
+  const l1UeclToday = dayMatches.filter(isLigue1InEurope).sort(rankLiveFirst)
   const prio2Today = dayMatches.filter((m) => isPriority2(m, editorial)).sort(rankLiveFirst)
 
   const weekPool = matches
@@ -207,14 +224,25 @@ export function pickTalkFootHomeBoard(
     })
     .sort((a, b) => kickoffMs(a.kickoffAt) - kickoffMs(b.kickoffAt))
   const weekMatch =
-    weekPool.find(isPsgMatch) ?? weekPool.find((m) => isPriority2(m, editorial)) ?? null
+    weekPool.find(isPsgMatch) ??
+    weekPool.find(isLigue1Domestic) ??
+    weekPool.find(isLigue1InUclUel) ??
+    weekPool.find(isBigEuropeanClash) ??
+    weekPool.find((m) => isPriority2(m, editorial)) ??
+    null
 
   let featured: Match | null = forced
   if (!featured) featured = psgToday[0] ?? null
+  if (!featured) featured = ligue1Today[0] ?? null
+  if (!featured) featured = l1EuropeToday[0] ?? null
+  if (!featured) featured = bigEuToday[0] ?? null
+  if (!featured) featured = l1UeclToday[0] ?? null
   if (!featured) featured = prio2Today[0] ?? null
   if (!featured) featured = weekMatch
 
-  const alsoTonight = prio2Today.filter((m) => m.id !== featured?.id).slice(0, 2)
+  const alsoTonight = [...ligue1Today, ...l1EuropeToday, ...bigEuToday]
+    .filter((m, i, arr) => arr.findIndex((x) => x.id === m.id) === i && m.id !== featured?.id)
+    .slice(0, 2)
 
   return { featured, weekMatch, alsoTonight, multiplex }
 }

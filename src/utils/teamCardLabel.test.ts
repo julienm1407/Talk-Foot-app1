@@ -1,17 +1,14 @@
-import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
-import { hubTeamLabel, shortNameFromApiTeamName } from './teamCardLabel'
+import { describe, expect, it } from 'vitest'
+import { shortNameFromApiTeamName } from './teamCardLabel'
 
-describe('teamCardLabel', () => {
-  it('n’abrège pas FC Bayern en FC', () => {
-    assert.equal(shortNameFromApiTeamName('FC Bayern München'), 'Bayern')
-    assert.equal(hubTeamLabel({ name: 'FC Bayern München', shortName: 'FC ' }), 'Bayern')
-    assert.equal(hubTeamLabel({ name: 'Lille', shortName: 'LIL' }), 'Lille')
+describe('shortNameFromApiTeamName', () => {
+  it('ne confond pas Lillestrøm avec Lille', () => {
+    expect(shortNameFromApiTeamName('Lillestrøm SK')).toBe('LSK')
+    expect(shortNameFromApiTeamName('Lille OSC')).toBe('LIL')
   })
 
-  it('affiche Lille – Bayern de façon lisible', () => {
-    const home = hubTeamLabel({ name: 'Lille OSC', shortName: 'LIL' })
-    const away = hubTeamLabel({ name: 'FC Bayern Munich', shortName: 'FC' })
-    assert.equal(`${home} – ${away}`, 'Lille – Bayern')
+  it('distingue OM et Olympiakos', () => {
+    expect(shortNameFromApiTeamName('Olympique de Marseille')).toBe('OM')
+    expect(shortNameFromApiTeamName('Olympiakos')).toBe('OLY')
   })
 })

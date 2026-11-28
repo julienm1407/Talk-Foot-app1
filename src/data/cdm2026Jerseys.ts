@@ -14,8 +14,8 @@ function buildJersey(nation: Nation): AvatarItem {
     emoji: nation.flag,
     cost: CDM_JERSEY_MEDALS,
     rarity: 'epic',
-    description: `Maillot ${nation.nameFr} — Coupe du Monde 2026.`,
-    inspirationNote: 'Collection officielle Talk Foot · CDM 2026',
+    description: `Maillot ${nation.nameFr}.`,
+    inspirationNote: 'Collection sélections Talk Foot',
     collection: 'cdm2026',
     nationIso: nation.iso,
     jerseyVisual: {

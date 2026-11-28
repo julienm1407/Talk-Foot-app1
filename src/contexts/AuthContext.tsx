@@ -307,7 +307,7 @@ function LocalAuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithOAuthProvider = useCallback(
     async (provider: TalkFootOauthProviderId) => {
-      if (provider !== 'google') return false
+      if (provider !== 'google' && provider !== 'apple') return false
       login({
         id: `${provider}-${Date.now()}`,
         email: `${provider}@demo.talkfoot.local`,
@@ -626,7 +626,7 @@ function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   )
 
   const loginWithOAuthProvider = useCallback(async (provider: TalkFootOauthProviderId): Promise<boolean> => {
-    if (provider !== 'google') return false
+    if (provider !== 'google' && provider !== 'apple') return false
     const sb = getSupabaseBrowserClient()
     if (!sb) {
       setAuthNotice('Supabase non configuré (VITE_SUPABASE_URL / ANON_KEY).')
@@ -931,14 +931,14 @@ function ClerkAuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithOAuthProvider = useCallback(
     async (provider: TalkFootOauthProviderId): Promise<boolean> => {
-      if (provider !== 'google') return false
+      if (provider !== 'google' && provider !== 'apple') return false
       const next = new URLSearchParams(window.location.search).get('next') || '/'
       const fallback = next.startsWith('/') ? next : '/'
       setAuthNotice(null)
       if (signIn) {
         try {
           await signIn.authenticateWithRedirect({
-            strategy: 'oauth_google',
+            strategy: provider === 'apple' ? 'oauth_apple' : 'oauth_google',
             redirectUrl: getClerkOAuthRedirectUrl(),
             redirectUrlComplete: getClerkOAuthCompleteUrl(fallback),
           })

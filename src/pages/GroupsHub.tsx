@@ -132,7 +132,7 @@ export function GroupsHubPage() {
         'tf-interactive-press min-h-11 flex-1 rounded-2xl px-4 py-2.5 text-center text-xs font-black sm:min-h-0 sm:flex-none sm:px-6 sm:text-sm',
         activeTab === t
           ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-violet-400/45'
-          : 'bg-tf-grey-pastel/30 text-tf-dark hover:bg-violet-50/80 hover:text-tf-dark',
+          : 'border border-tf-dark/25 bg-white text-tf-dark hover:bg-violet-50 hover:text-tf-dark',
       )}
     >
       {label}

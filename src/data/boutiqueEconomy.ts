@@ -56,6 +56,7 @@ export function isCosmeticOwned(
 }
 
 export function cosmeticTokenPrice(medalCost: number): number {
+  if (medalCost <= 16) return Math.max(50, medalCost * 30)
   return Math.max(1, medalCost * TOKENS_PER_MEDAL)
 }
 

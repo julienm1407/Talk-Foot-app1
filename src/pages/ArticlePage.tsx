@@ -45,6 +45,7 @@ import {
 import { subscribeNewsletter } from '../lib/supabase/newsletter'
 import { resolveArticleExcerpt } from '../utils/articleExcerpt'
 import { getArticleSidebarEncart } from '../utils/articleSidebarEncart'
+import { newsFeedTag } from '../utils/socialCountDisplay'
 
 /** Lisibles sur panneau clair (jour) et sur verre sombre (nuit). */
 function articleTagClass(tag: string, light: boolean): string {
@@ -333,6 +334,7 @@ export function ArticlePage() {
     )
   }
 
+  const articleTag = newsFeedTag(article.tag, { publishedAt: article.publishedAt })
   const leadImageSrc = article.coverImageUrl || footballImageUrl(article.id, 'articleLead')
   const published = new Date(
     article.publishedAt ?? article.updatedAt ?? '1970-01-01T00:00:00.000Z',
@@ -519,10 +521,10 @@ export function ArticlePage() {
                   <span
                     className={cn(
                       'inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ring-1',
-                      articleTagClass(article.tag, isLight),
+                      articleTagClass(articleTag, isLight),
                     )}
                   >
-                    {article.tag}
+                    {articleTag}
                   </span>
                   <time
                     dateTime={published.toISOString()}

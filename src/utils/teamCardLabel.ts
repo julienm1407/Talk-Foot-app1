@@ -12,7 +12,19 @@ const NAME_ALIASES: { test: RegExp; label: string }[] = [
   { test: /\batl[eé]tico(\s+madrid)?\b/i, label: 'Atlético' },
   { test: /\binter\s+milan\b|\bfc\s+internazionale\b/i, label: 'Inter' },
   { test: /\b(borussia\s+)?dortmund\b/i, label: 'Dortmund' },
+  { test: /lillestr[øo]m/i, label: 'Lillestrøm' },
+  { test: /\bolympiak?os\b|\bolympiacos\b/i, label: 'Olympiakos' },
+  { test: /olympique de marseille|\bmarseille\b/i, label: 'OM' },
+  { test: /olympique lyonnais|\blyon\b/i, label: 'OL' },
   { test: /\blille(\s+osc)?\b/i, label: 'Lille' },
+]
+
+const SHORT_CODES: { test: RegExp; code: string }[] = [
+  { test: /lillestr[øo]m/i, code: 'LSK' },
+  { test: /\bolympiak?os\b|\bolympiacos\b/i, code: 'OLY' },
+  { test: /olympique de marseille|\bmarseille\b/i, code: 'OM' },
+  { test: /olympique lyonnais|\blyon\b/i, code: 'OL' },
+  { test: /\blille(\s+osc)?\b/i, code: 'LIL' },
 ]
 
 function collapseSpaces(s: string): string {
@@ -43,6 +55,9 @@ function isWeakShortName(short: string, name: string): boolean {
 export function shortNameFromApiTeamName(apiName: string): string {
   const name = collapseSpaces(apiName)
   if (!name) return '?'
+  for (const a of SHORT_CODES) {
+    if (a.test.test(name)) return a.code
+  }
   const localized = localizeClubDisplayName(name)
   if (localized.length <= 8) return localized
   const stripped = collapseSpaces(localized.replace(CLUB_PREFIX, ''))

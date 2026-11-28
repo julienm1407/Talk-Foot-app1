@@ -65,6 +65,7 @@ export function isDiscoverableGroup(
   if (group.groupKind === 'private' && !keepIds.has(group.id) && group.createdBy !== 'me') return false
   if (keepIds.has(group.id) || group.createdBy === 'me') return true
   if (group.groupKind === 'private') return false
+  if ((group.members ?? 0) < 1) return false
   return true
 }
 

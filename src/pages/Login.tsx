@@ -10,7 +10,8 @@ import { useAppearance } from '../contexts/AppearanceContext'
 import { ThemeAppearanceToggle } from '../components/ui/ThemeAppearanceToggle'
 import { safeInternalNext } from '../utils/safeInternalPath'
 import { isSupabaseConfigured } from '../lib/supabase/isEnabled'
-import { LOGIN_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../config/oauthProviders'
+import { Capacitor } from '@capacitor/core'
+import { LOGIN_OAUTH_APPLE, LOGIN_OAUTH_PROVIDERS, type TalkFootOauthProviderId } from '../config/oauthProviders'
 import { OAuthProviderIcon } from '../components/auth/OAuthProviderIcon'
 import { containsBannedWord, MODERATION_REFUSED_MESSAGE_FR } from '../utils/bannedWords'
 import { sanitizeDisplayNameInput, validateDisplayNameFormat } from '../utils/displayNameRules'
@@ -31,6 +32,11 @@ type VerificationDialogState = {
 const GOOGLE_BUTTON_CLASS = cn(
   'flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2',
   'border-slate-200/80 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-300 focus:ring-tf-grey/30',
+)
+
+const APPLE_BUTTON_CLASS = cn(
+  'flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-3 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2',
+  'border-black bg-black text-white hover:bg-zinc-800 focus:ring-zinc-500/40',
 )
 
 export function LoginPage() {
@@ -158,11 +164,16 @@ export function LoginPage() {
     }
   }
 
-  const runGoogleOAuth = async () => {
+  const oauthButtons =
+    Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'
+      ? [...LOGIN_OAUTH_PROVIDERS, LOGIN_OAUTH_APPLE]
+      : LOGIN_OAUTH_PROVIDERS
+
+  const runOAuth = async (provider: TalkFootOauthProviderId) => {
     setError(null)
     setOauthLoading(true)
     try {
-      await loginWithOAuthProvider('google')
+      await loginWithOAuthProvider(provider)
     } finally {
       setOauthLoading(false)
     }
@@ -454,18 +465,21 @@ export function LoginPage() {
             </section>
 
             <section className="rounded-2xl border border-tf-grey-pastel/60 bg-white/75 p-4">
-              <h3 className="text-sm font-black text-tf-dark">Connexion Google</h3>
+              <h3 className="text-sm font-black text-tf-dark">Connexion rapide</h3>
               <p className="mt-1 text-[11px] font-medium text-tf-grey">
-                Un clic avec ton compte Google
+                Un clic avec ton compte
               </p>
               <div className="mt-4 space-y-3">
-                {LOGIN_OAUTH_PROVIDERS.map((p) => (
+                {oauthButtons.map((p) => (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => void runGoogleOAuth()}
+                    onClick={() => void runOAuth(p.id)}
                     disabled={oauthLoading}
-                    className={cn(GOOGLE_BUTTON_CLASS, oauthLoading && 'pointer-events-none opacity-60')}
+                    className={cn(
+                      p.id === 'apple' ? APPLE_BUTTON_CLASS : GOOGLE_BUTTON_CLASS,
+                      oauthLoading && 'pointer-events-none opacity-60',
+                    )}
                   >
                     <OAuthProviderIcon id={p.id as TalkFootOauthProviderId} />
                     {oauthLoading ? 'Redirection…' : p.label}
@@ -478,7 +492,7 @@ export function LoginPage() {
           <p className="mt-4 text-center text-[11px] font-medium leading-snug text-tf-grey">
             {isSupabaseConfigured() || clerkEnabled ? (
               <>
-                Connexion par email ou Google uniquement. En continuant, tu reconnais la{' '}
+                Connexion par email ou OAuth. En continuant, tu reconnais la{' '}
                 <Link to="/privacy" className="font-bold text-tf-cta underline-offset-2 hover:underline">
                   politique de confidentialité
                 </Link>{' '}

@@ -14,8 +14,8 @@ function buildShorts(nation: Nation): AvatarItem {
     emoji: nation.flag,
     cost: CDM_SHORT_MEDALS,
     rarity: 'rare',
-    description: `Short ${nation.nameFr} — Coupe du Monde 2026.`,
-    inspirationNote: 'Collection officielle Talk Foot · CDM 2026',
+    description: `Short ${nation.nameFr}.`,
+    inspirationNote: 'Collection sélections Talk Foot',
     collection: 'cdm2026',
     nationIso: nation.iso,
     pantsVisual: {

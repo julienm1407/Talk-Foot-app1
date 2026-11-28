@@ -3,6 +3,7 @@ import { ALL_CLUBS_BY_ID } from '../data/allClubsCatalog'
 import { SPORTMONKS_TEAM_ID_BY_CLUB_ID } from '../data/sportMonksKnownTeamIds'
 import { teams } from '../data/teams'
 import { apiNameToOurId } from '../api/footballApi'
+import { shortNameFromApiTeamName } from './teamCardLabel'
 
 function catalogShortName(teamId: string): string | null {
   const fromAll = ALL_CLUBS_BY_ID[teamId]?.shortName?.trim()
@@ -39,6 +40,8 @@ export function rankingsTeamShort(leagueId: string, row: LeagueStandingRow): str
     const fromGuess = catalogShortName(guessed)
     if (fromGuess) return fromGuess
 
+    const fromApi = shortNameFromApiTeamName(dn)
+    if (fromApi && fromApi !== '?') return fromApi
     // Sigle SM déjà court et propre.
     if (dn.length <= 4 && /^[A-Za-zÀ-ÿ0-9]+$/.test(dn)) return dn.toUpperCase()
   }

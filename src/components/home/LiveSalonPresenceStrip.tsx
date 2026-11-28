@@ -17,6 +17,7 @@ import {
 import type { ModularAvatarState } from '../../features/avatar2d/modularAvatarState'
 import type { UserProfile } from '../../types/profile'
 import { dicebearAvatarUrl } from '../../utils/dicebearAvatar'
+import { formatSocialCount } from '../../utils/socialCountDisplay'
 
 const heatFillByTier = {
   calm: 'bg-gradient-to-r from-emerald-400/95 via-teal-400/90 to-cyan-500/85',
@@ -259,6 +260,7 @@ export function LiveSalonPresenceStrip({
           dense && 'text-[9px]',
         )}
       >
+        {formatSocialCount(snap.viewers) || formatSocialCount(snap.messages) ? (
         <p
           className={cn(
             'min-w-0 max-w-full font-black text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]',
@@ -266,10 +268,17 @@ export function LiveSalonPresenceStrip({
             !dense && !compact && 'w-full',
           )}
         >
-          <span className="whitespace-nowrap">👥 {snap.viewers.toLocaleString('fr-FR')}</span>
-          <span className="text-white/40"> · </span>
-          <span className="whitespace-nowrap">💬 {snap.messages.toLocaleString('fr-FR')}</span>
+          {formatSocialCount(snap.viewers) ? (
+            <span className="whitespace-nowrap">👥 {formatSocialCount(snap.viewers)}</span>
+          ) : null}
+          {formatSocialCount(snap.viewers) && formatSocialCount(snap.messages) ? (
+            <span className="text-white/40"> · </span>
+          ) : null}
+          {formatSocialCount(snap.messages) ? (
+            <span className="whitespace-nowrap">💬 {formatSocialCount(snap.messages)}</span>
+          ) : null}
         </p>
+        ) : null}
         {activeUserIds.length > 0 ? (
           <div
             className={cn(

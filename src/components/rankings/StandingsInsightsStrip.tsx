@@ -50,7 +50,7 @@ export function StandingsInsightsStrip({
       )}
     >
       <p className="text-[10px] font-black uppercase tracking-[0.12em] text-tf-app-muted">
-        Resume classement
+        RÉSUMÉ classement
       </p>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <motion.div
@@ -95,7 +95,7 @@ export function StandingsInsightsStrip({
           animate={reducedMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ duration: 0.24, delay: 0.06 }}
         >
-          <p className="text-[10px] font-black uppercase tracking-wide text-tf-app-fg">Defense</p>
+          <p className="text-[10px] font-black uppercase tracking-wide text-tf-app-fg">DÉFENSE</p>
           <p className="mt-1 text-xs font-bold text-tf-app-fg">
             {bestDefense ? rankingsTeamShort(leagueId, bestDefense) : '—'} ({bestDefense?.ga ?? '—'} BC)
           </p>
@@ -123,7 +123,7 @@ export function StandingsInsightsStrip({
             Moyenne: {redZonePointsAvg != null ? `${redZonePointsAvg} pts` : '—'} · {relegationCut} equipes
           </p>
           <p className="mt-1 text-[11px] font-semibold text-tf-app-muted">
-            Ecart 1-4: {gap14 != null ? `${gap14} pts` : '—'}
+            Écart 1-4: {gap14 != null ? `${gap14} pts` : '—'}
           </p>
           <p className="mt-1 text-[11px] font-semibold text-tf-app-muted">
             Rythme buts: {avgGoalsPerTeamGame != null ? `${avgGoalsPerTeamGame.toFixed(2)} / match` : '—'}
