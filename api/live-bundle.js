@@ -9,7 +9,7 @@
  */
 
 import { handleCapacitorCors } from './_lib/corsCapacitor.js'
-import { scheduleLivePushNudge } from './push-kickoff.mjs'
+import { applyCdnCache } from './_lib/cdnCache.js'
 
 const INFLIGHT = new Map()
 const MEM_CACHE = new Map()
@@ -36,7 +36,7 @@ function ttlSecondsForFixture(fx) {
     dev.includes('extra') ||
     dev.includes('pen')
   ) {
-    return 5
+    return 8
   }
   if (dev.includes('finished') || /\bft\b/.test(dev) || [5, 7, 8, 10].includes(sid)) return 45
   return 8
@@ -180,11 +180,10 @@ export default async function handler(req, res) {
 
   try {
     const payload = await p
-    if (payload?.fixture) scheduleLivePushNudge([payload.fixture])
-    const ttl = Math.max(5, Number(payload?.meta?.ttlSec) || 8)
+    const ttl = Math.max(8, Number(payload?.meta?.ttlSec) || 8)
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
-    res.setHeader('Cache-Control', `public, s-maxage=${ttl}, stale-while-revalidate=${Math.max(2 * ttl, 12)}`)
+    applyCdnCache(res, ttl, Math.max(ttl * 6, 48))
     res.end(JSON.stringify(payload))
   } catch (e) {
     res.statusCode = 502

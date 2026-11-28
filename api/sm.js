@@ -4,7 +4,9 @@
  * La clé API est lue ici : SPORTMONKS_TOKEN ou VITE_SPORTMONKS_TOKEN (Project → Environment Variables).
  */
 import { handleCapacitorCors } from './_lib/corsCapacitor.js'
-import { scheduleLivePushNudge } from './push-kickoff.mjs'
+import { applyCdnCache } from './_lib/cdnCache.js'
+
+const SM_INFLIGHT = new Map()
 
 function decodeInlineProno(id) {
   if (!id || !String(id).startsWith('b.')) return null
@@ -128,39 +130,47 @@ export default async function handler(req, res) {
     upstream.searchParams.set('timezone', 'Europe/Paris')
   }
 
-  function cachePolicyForPath(pathname) {
-    // Cache partagé CDN (s-maxage) : plusieurs visiteurs = moins d’appels vers api.sportmonks.com.
-    if (pathname.startsWith('/livescores/inplay')) return 'public, s-maxage=20, stale-while-revalidate=60'
-    if (pathname.startsWith('/fixtures/')) return 'public, s-maxage=20, stale-while-revalidate=60'
-    if (pathname.startsWith('/rounds/')) return 'public, s-maxage=60, stale-while-revalidate=120'
-    if (pathname.startsWith('/leagues/date/')) return 'public, s-maxage=300, stale-while-revalidate=600'
-    if (pathname.startsWith('/standings/')) return 'public, s-maxage=180, stale-while-revalidate=360'
-    if (pathname.startsWith('/schedules/')) return 'public, s-maxage=120, stale-while-revalidate=240'
-    if (pathname.startsWith('/teams/')) return 'public, s-maxage=120, stale-while-revalidate=240'
-    if (pathname.startsWith('/squads/')) return 'public, s-maxage=300, stale-while-revalidate=600'
-    return 'public, s-maxage=60, stale-while-revalidate=120'
+  function cacheSecondsForPath(pathname) {
+    if (pathname.startsWith('/livescores/inplay')) return { s: 20, swr: 80 }
+    if (pathname.startsWith('/fixtures/between')) return { s: 60, swr: 180 }
+    if (pathname.startsWith('/fixtures/')) return { s: 20, swr: 80 }
+    if (pathname.startsWith('/rounds/')) return { s: 90, swr: 240 }
+    if (pathname.startsWith('/leagues/date/')) return { s: 300, swr: 600 }
+    if (pathname.startsWith('/standings/')) return { s: 180, swr: 360 }
+    if (pathname.startsWith('/schedules/')) return { s: 120, swr: 240 }
+    if (pathname.startsWith('/teams/')) return { s: 120, swr: 240 }
+    if (pathname.startsWith('/squads/')) return { s: 300, swr: 600 }
+    return { s: 60, swr: 180 }
   }
 
   try {
-    const smRes = await fetch(upstream.toString(), {
-      headers: { Authorization: token },
-      cache: 'no-store',
-    })
-    const text = await smRes.text()
-    const ct = smRes.headers.get('content-type') || 'application/json; charset=utf-8'
+    const upKey = upstream.toString()
+    let pending = SM_INFLIGHT.get(upKey)
+    if (!pending) {
+      pending = (async () => {
+        const smRes = await fetch(upKey, {
+          headers: { Authorization: token },
+          cache: 'no-store',
+        })
+        const text = await smRes.text()
+        return {
+          status: smRes.status,
+          ct: smRes.headers.get('content-type') || 'application/json; charset=utf-8',
+          text,
+        }
+      })().finally(() => {
+        if (SM_INFLIGHT.get(upKey) === pending) SM_INFLIGHT.delete(upKey)
+      })
+      SM_INFLIGHT.set(upKey, pending)
+    }
+    const smRes = await pending
+    const text = smRes.text
+    const ct = smRes.ct
     res.statusCode = smRes.status
     res.setHeader('Content-Type', ct)
     if (smRes.status >= 200 && smRes.status < 300) {
-      res.setHeader('Cache-Control', cachePolicyForPath(smPath))
-      if (smPath.includes('livescores/inplay') || smPath.includes('fixtures/inplay')) {
-        try {
-          const payload = JSON.parse(text)
-          const fixtures = Array.isArray(payload?.data) ? payload.data : []
-          scheduleLivePushNudge(fixtures)
-        } catch {
-          /* ignore */
-        }
-      }
+      const { s, swr } = cacheSecondsForPath(smPath)
+      applyCdnCache(res, s, swr)
     } else {
       res.setHeader('Cache-Control', 'no-store')
     }

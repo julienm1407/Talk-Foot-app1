@@ -16,11 +16,11 @@ type FixtureChannel = {
 
 const CHANNELS = new Map<number, FixtureChannel>()
 
-/** Aligné sur s-maxage live-bundle : le chrono UI tick à 1 s, SM toutes les 5 s. */
+/** Aligné sur s-maxage live-bundle : chrono UI à 1 s, SM toutes les 8 s (CDN partagé). */
 function pollMsForStatus(status: MatchStatus): number {
-  if (status === 'live') return 5_000
-  if (status === 'upcoming') return 20_000
-  return 60_000
+  if (status === 'live') return 8_000
+  if (status === 'upcoming') return 25_000
+  return 90_000
 }
 
 function channelFor(fixtureId: number): FixtureChannel {
