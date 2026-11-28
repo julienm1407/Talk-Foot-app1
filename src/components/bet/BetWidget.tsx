@@ -1203,13 +1203,15 @@ export function BetWidget({
                     </Link>
                   ) : null}
                   {notice.tone === 'ok' && shareBet ? (
-                    <ShareStoryActions
-                      match={match}
-                      bet={shareBet}
-                      kind="prono"
-                      tone={sheetLight ? 'light' : 'dark'}
-                    />
-                    <DefyPoteButton className="mt-2" bet={shareBet} match={match} />
+                    <>
+                      <ShareStoryActions
+                        match={match}
+                        bet={shareBet}
+                        kind="prono"
+                        tone={sheetLight ? 'light' : 'dark'}
+                      />
+                      <DefyPoteButton className="mt-2" bet={shareBet} match={match} />
+                    </>
                   ) : null}
                 </div>
               ) : null}
